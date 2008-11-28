@@ -1,0 +1,54 @@
+<html> 
+<head>
+<style type="text/css">
+embed.hidden,
+object.hidden {
+    height: 1px;
+    width: 1px;
+    position: absolute;
+    top: -1000px;
+    left: -1000px;
+}
+</style>
+<head>
+<body>
+<object
+    id="socket_bridge" class="hidden"
+    classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000"
+    codebase="http://fpdownload.adobe.com/pub/shockwave/cabs/flash/swflash.cab#version=9,0,0,0">
+    <param name="movie" value="socket_bridge.swf?onloadcallback=test" />
+    <param name="allowScriptAccess" value="always" />
+    <embed
+        class="hidden"
+        src="socket_bridge.swf?onloadcallback=test"
+        allowScriptAccess="always"
+        type="application/x-shockwave-flash"
+        pluginspage="http://www.adobe.com/shockwave/download/index.cgi?P1_Prod_Version=ShockwaveFlash"> 
+    </embed>
+</object>
+<textarea id="datapanel" style="width: 500px; height: 300px;">
+</textarea>
+<script type="text/javascript">
+function test() {
+    var s = new FlashSocket({
+        on_data: function(data) {
+            document.getElementById('datapanel').value = data;
+        },
+        on_io_error: function(msg) {
+            alert("IO ERROR: "+msg);
+        },
+        on_security_error: function(msg) {
+            alert("SECURITY ERROR: "+msg);
+        },
+        on_close: function(msg) {
+            alert("Connection closed.");
+        },
+        on_connect: function() {
+            s.write("GET / HTTP/1.0\r\n\r\n");
+        }
+    });
+    s.connect('example.com', 80);
+}
+</script>
+</body>
+</html>
