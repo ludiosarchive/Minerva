@@ -10,6 +10,8 @@ object.hidden {
     left: -1000px;
 }
 </style>
+
+
 <head>
 <body>
 <object
@@ -30,6 +32,11 @@ object.hidden {
 </textarea>
 <script type="text/javascript">
 function test() {
+    var script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.src = 'makefile.js';
+    document.getElementsByTagName("head")[0].appendChild(script);
+    
     var s = new FlashSocket({
         on_data: function(data) {
             document.getElementById('datapanel').value = data;
@@ -44,10 +51,11 @@ function test() {
             alert("Connection closed.");
         },
         on_connect: function() {
+            alert('s1 connect');
             s.write("GET / HTTP/1.0\r\n\r\n");
         }
     });
-    s.connect('example.com', 80);
+    //~ s.connect('example.com', 80);
 }
 </script>
 </body>

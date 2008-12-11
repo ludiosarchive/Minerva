@@ -84,7 +84,6 @@ class SocketBridge {
         ExternalInterface.call([
         "(function(){",
             "if (window.FlashSocket) return;",
-            "var Class = function(properties){",
                 "var klass = function(event_handlers){ ",
                     "for (var p in event_handlers) {",
                         "if (event_handlers.hasOwnProperty(p)) {",
