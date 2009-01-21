@@ -4,6 +4,7 @@ import flash.events.SecurityErrorEvent;
 import flash.events.ProgressEvent;
 import flash.external.ExternalInterface;
 import flash.net.Socket;
+import flash.system.Security;
 
 class SocketBridge {
     public static var sockets:Hash<Socket> = new Hash();
@@ -76,7 +77,12 @@ class SocketBridge {
             }
         }
     }
+    public static function loadPolicyFile(path:String):Void {
+      Security.loadPolicyFile(path);
+    }
     public static function main() {
+        ExternalInterface.addCallback("loadPolicyFile", loadPolicyFile);    
+        
         ExternalInterface.addCallback("connect", connect);    
         ExternalInterface.addCallback("close", close);    
         ExternalInterface.addCallback("write", write);    
@@ -110,6 +116,9 @@ class SocketBridge {
                 "},",
                 "connect: function(host, port) {",
                     "window.FlashSocket._bridge.connect(this._instance, host, port);",
+                "}",
+                "loadPolicyFile: function(path) {",
+                    "window.FlashSocket._bridge.loadPolicyFile(path);",
                 "}",
             "});",
             "window.FlashSocket._instances = [];",
