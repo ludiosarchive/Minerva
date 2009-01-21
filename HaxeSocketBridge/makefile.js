@@ -25,25 +25,25 @@ FileLike.prototype.on_recv = function(data) {
         }
     }
 }
-mu = new FileLike({
-    on_line: function(data) {
-        console.log('line: '+data);
-        document.getElementById('datapanel').value += data + '\n\n';
-    },
-    on_io_error: function(msg) {
-        alert("IO ERROR: "+msg);
-    },
-    on_security_error: function(msg) {
-        alert("SECURITY ERROR: "+msg);
-    },
-    on_close: function(msg) {
-        alert("Connection closed.");
-    },
-    on_connect: function() {
-        alert('Connected!');
-        mu.write("GET / HTTP/1.0\r\n\r\n");
-    }
-});
+//~ mu = new FileLike({
+    //~ on_line: function(data) {
+        //~ console.log('line: '+data);
+        //~ document.getElementById('datapanel').value += data + '\n\n';
+    //~ },
+    //~ on_io_error: function(msg) {
+        //~ alert("IO ERROR: "+msg);
+    //~ },
+    //~ on_security_error: function(msg) {
+        //~ alert("SECURITY ERROR: "+msg);
+    //~ },
+    //~ on_close: function(msg) {
+        //~ alert("Connection closed.");
+    //~ },
+    //~ on_connect: function() {
+        //~ alert('Connected!');
+        //~ mu.write("GET / HTTP/1.0\r\n\r\n");
+    //~ }
+//~ });
 //~ mu.connect('example.com', 80);
-mu.connect('localhost', 1200);
-console.log(mu);
+//~ mu.connect('localhost', 1200);
+//~ console.log(mu);
