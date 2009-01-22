@@ -90,6 +90,7 @@ class SocketBridge {
         ExternalInterface.call([
         "(function(){",
             "if (window.FlashSocket) return;",
+            "var Class = function(properties){",
                 "var klass = function(event_handlers){ ",
                     "for (var p in event_handlers) {",
                         "if (event_handlers.hasOwnProperty(p)) {",
@@ -116,7 +117,7 @@ class SocketBridge {
                 "},",
                 "connect: function(host, port) {",
                     "window.FlashSocket._bridge.connect(this._instance, host, port);",
-                "}",
+                "},",
                 "loadPolicyFile: function(path) {",
                     "window.FlashSocket._bridge.loadPolicyFile(path);",
                 "}",
