@@ -3,22 +3,32 @@ from twisted.web import server, _newclient
 from twisted.internet import reactor, protocol, defer
 
 from minerva import link
+import random
 
 
 class DummyHTTPProtocol(protocol.Protocol):
 
 	saved = ''
+	myId = '1'*32
+
+	def __init__(self):
+		self.ack = 0
+
 
 	def dataReceived(self, data):
 		self.saved += data
 
 
 	def connectionMade(self):
-		print 'made'
-		self.transport.write('GET /d/ HTTP/1.0\r\n\r\n')
+		self.transport.write('''\
+GET /d/%s,%s HTTP/1.0\r
+Cookie: i=%s\r
+\r
+''' % (random.random(), self.ack, self.myId))
 
 
 	def connectionLost(self, reason):
+		print self.saved
 		self.factory.d.callback(None)
 
 
