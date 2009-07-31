@@ -44,8 +44,18 @@ class DummyHTTPFactory(protocol.ClientFactory):
 
 class TestXHRStream(unittest.TestCase):
 
+	def _makeASendQueue(self, qFinder):
+		sq = link.SendQueue(('1'*32).decode('hex'))
+		sq.add(["one", "two"])
+		sq.add(["three", "four"])
+		qFinder.register(sq)
+
+
 	def startServer(self):
-		root = link.Index(reactor)
+		qFinder = link.QueueFinder()
+		self._makeASendQueue(qFinder)
+
+		root = link.Index(reactor, qFinder)
 		site = server.Site(root)
 		self.p = reactor.listenTCP(0, site, interface='127.0.0.1')
 		port = self.p.getHost().port

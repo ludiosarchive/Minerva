@@ -5,7 +5,7 @@ from twisted.python.filepath import FilePath
 from twisted.web import resource, static, server
 
 
-# This is sort of like djb netstrings
+# This is sort of like djb netstrings, but without the trailing comma
 def lenPrefix(s):
 	return str(len(s)) + ',' + s
 
@@ -28,8 +28,6 @@ class QueueFinder(object):
 	def register(self, sendQueue):
 		self.registry[sendQueue.qID] = sendQueue 
 
-
-theFinder = QueueFinder()
 
 
 class EmptyQueueError(Exception):
@@ -55,31 +53,23 @@ class SendQueue(object):
 
 
 
-def _makeASendQueue():
-	sq = SendQueue(('1'*32).decode('hex'))
-	sq.add(["one", "two"])
-	sq.add(["three", "four"])
-	theFinder.register(sq)
-
-
-
 class XHRStream(resource.Resource):
 	isLeaf = True
 
-	def __init__(self, reactor):
+	def __init__(self, reactor, qFinder):
 		self._reactor = reactor
-		_makeASendQueue()
+		self._qFinder = qFinder
 
 
 	def render_GET(self, request):
-		ack = ['``a', 0]
+		ack = ['`^a', 0]
 		request.write(lenPrefix(compactDump(ack)))
 
 		qID = request.getCookie('i').decode('hex')
 		if qID is None:
 			1/0
 
-		sendQueue = theFinder.find(qID)
+		sendQueue = self._qFinder.find(qID)
 
 		while True:
 			try:
@@ -104,8 +94,9 @@ class XHRStream(resource.Resource):
 
 class Index(resource.Resource):
 
-	def __init__(self, reactor):
+	def __init__(self, reactor, qFinder):
 		self._reactor = reactor
+		self._qFinder = qFinder
 
 		resource.Resource.__init__(self)
-		self.putChild('d', XHRStream(self._reactor))
+		self.putChild('d', XHRStream(self._reactor, self._qFinder))
