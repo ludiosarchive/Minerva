@@ -6,7 +6,6 @@ from twisted.web import resource, static, server
 from twisted.internet import protocol
 from zope.interface import Interface
 
-
 """
    C2STransport \
    S2CTransport -\
@@ -151,9 +150,16 @@ class Stream(object):
 		if len(self._transports) > 1:
 			raise NotImplementedError("More than 1 transport - don't know which one to use.")
 
+		count = 0
+
 		t = self._transports[0]
-		for box in self._queue:
-			t.
+		okayToWriteMore = True
+		while okayToWriteMore:
+			box = self._queue.popleft()
+			okayToWriteMore = t.writeBox(box)
+			count += 1
+
+		return count
 
 
 	def transportOnline(self, transport):
@@ -212,20 +218,49 @@ class _BaseHTTPTransport(object):
 		"""
 		self._request = request
 		self._sentFirstSeq = False
+		self._boxesSent = 0
+		self._bytesSent = 0
+
+
+	def _reallyWriteBox(self, box):
+		s = self._stringOne(box)
+		self._request.write(s)
+		self._boxesSent += 1
+		self._bytesSent += len(s)
 
 
 	def writeBox(self, box):
+		"""
+		Write box L{box} to the HTTP response.
+
+		Return True if this transport could write another box,
+		False otherwise.
+		"""
 		if not self._sentFirstSeq:
 			self._sentFirstSeq = True
-			self._request.write(self._stringOne(['`^a', 0]))
+			# NEED to send real sequence number, not 0
+			self._reallyWriteBox(['`^a', 0])
 
-		self._request.write(self._stringOne(box))
+		self._reallyWriteBox(box)
+		if self._bytesSent > self.maxKB:
+			# Can't send any more.
+			self._request = None
+			return False
+		else:
+			return True
 
 
 
 class XHRTransport(_BaseHTTPTransport):
 
 	# TODO: long-polling mode
+
+	maxKB = 300
+
+	def __repr__(self):
+		return '<XHRTransport at %s attached to %r with %d boxes sent>' %
+			(hex(id(self)), self._request, self._boxesSent)
+
 
 	def _stringOne(self, box):
 		"""
@@ -243,6 +278,7 @@ class ScriptTransport(_BaseHTTPTransport):
 	(both the IE htmlfile and the Firefox iframe variants)
 	"""
 
+	maxKB = 300
 
 	def _stringOne(self, box):
 		"""
@@ -256,6 +292,9 @@ class ScriptTransport(_BaseHTTPTransport):
 
 
 class SSETransport(_BaseHTTPTransport):
+
+	maxKB = 1024 # Does this even need a limit?
+
 	pass # TODO
 
 
@@ -305,7 +344,7 @@ class HTTPS2C(resource.Resource):
 	def render_GET(self, request):
 		# TODO: verify that the stream belongs to the UA,
 		# to make it slightly harder to hijack a stream over HTTP.
-		streamId = request.args['s'][0]
+		streamId = request.args['s'][0].decode('hex')
 		transportString = request.args['t'][0]
 
 		if transportString == 's':
@@ -344,98 +383,39 @@ class HTTPC2S(resource.Resource):
 
 
 
-class QueueFinder(object):
-
-	def __init__(self):
-		self.registry = {}
-
-
-	def find(self, qID):
-		return self.registry[qID]
-
-
-	def register(self, sendQueue):
-		self.registry[sendQueue.qID] = sendQueue 
-
-
-
-class EmptyQueueError(Exception):
-	pass
-
-
-class SendQueue(object):
-
-	def __init__(self, qID):
-		self.qID = qID
-		self.queue = deque()
-
-
-	def add(self, obj):
-		self.queue.append(obj)
-
-
-	def getOne(self):
-		try:
-			return self.queue.popleft()
-		except IndexError:
-			raise EmptyQueueError()
-
-
-
-# This is sort of like djb netstrings, but without the trailing comma
-def lenPrefix(s):
-	return str(len(s)) + ',' + s
-
-
-def compactDump(obj):
-	return json.dumps(obj, separators=(',', ':'))
-
-
-
-class XHRStream(resource.Resource):
-	isLeaf = True
-
-	def __init__(self, reactor, qFinder):
-		self._reactor = reactor
-		self._qFinder = qFinder
-
-
-	def render_GET(self, request):
-		ack = ['`^a', 0]
-		request.write(lenPrefix(compactDump(ack)))
-
-		qID = request.getCookie('i').decode('hex')
-		if qID is None:
-			1/0
-
-		sendQueue = self._qFinder.find(qID)
-
-		while True:
-			try:
-				obj = sendQueue.getOne()
-			except EmptyQueueError:
-				break
-			request.write(lenPrefix(compactDump(obj)))
-
-		def _finish():
-			request.finish()
-
-		self._reactor.callLater(0.0001, _finish)
-
-		return 1 # NOT_DONE_YET
-
-
-
-#class TalkTestPage(testing.TestPage):
-#	testPackage = 'Talk.Test'
-
-
-
-class Index(resource.Resource):
-
-	def __init__(self, reactor, qFinder):
-		self._reactor = reactor
-		self._qFinder = qFinder
-
-		resource.Resource.__init__(self)
-		self.putChild('d', XHRStream(self._reactor, self._qFinder))
+#class QueueFinder(object):
+#
+#	def __init__(self):
+#		self.registry = {}
+#
+#
+#	def find(self, qID):
+#		return self.registry[qID]
+#
+#
+#	def register(self, sendQueue):
+#		self.registry[sendQueue.qID] = sendQueue
+#
+#
+#
+#class EmptyQueueError(Exception):
+#	pass
+#
+#
+#class SendQueue(object):
+#
+#	def __init__(self, qID):
+#		self.qID = qID
+#		self.queue = deque()
+#
+#
+#	def add(self, obj):
+#		self.queue.append(obj)
+#
+#
+#	def getOne(self):
+#		try:
+#			return self.queue.popleft()
+#		except IndexError:
+#			raise EmptyQueueError()
+#
