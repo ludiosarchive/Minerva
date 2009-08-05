@@ -149,11 +149,19 @@ class ReasonStreamTimeout(object):
 	pass
 
 
+
+class ClientSentTooHighAck(Exception):
+	"""
+	Client sent a bogus S2C ACK number.
+	"""
+
+
+
 class Stream(object, policies.TimeoutMixin):
 	"""
 	I am Stream. Transports attach to me. I can send and receive over
 	a new transport, or a completely different transport, without restarting
-	the Stream..
+	the Stream.
 
 	I know my StreamFactory, L{self.factory}
 	"""
@@ -163,12 +171,16 @@ class Stream(object, policies.TimeoutMixin):
 		# now-obsolete messages)
 		self._queue = deque()
 		self._transports = set()
-		self.id = streamId
 
+		# The S2C sequence number of the 0th item in the queue
+		self._queue0seqS2C = 0
+		self._seqC2S = 0 # TODO: use it
+		self.id = streamId
+		
 
 	def __repr__(self):
-		return '<Stream %r with transports %r and %d items in queue>' %
-			(self.id, self._transports, len(self._queue))
+		return '<Stream %r (%d,%d) with transports %r and %d items in queue>' %
+			(self.id, self._seqS2C, self._seqC2S, self._transports, len(self._queue))
 
 
 	def streamBegun(self):
@@ -209,11 +221,38 @@ class Stream(object, policies.TimeoutMixin):
 		self._queue.append(box)
 
 
+	def clientReceivedUpTo(self, seqNum):
+		"""
+		The client claims to have received S2C messages up to sequence
+		number L{seqNum}, so now it is okay to clear the messages from
+		the queue.
+		"""
+		noisy = True
+		assert seqNum >= 0, seqNum
+
+		if seqNum > (len(self._queue) + self._queue0seqS2C):
+			raise ClientSentTooHighAck(
+				"seqNum = %d, len(self._queue) = %d, self._queue0seqS2C = %d"
+				% (seqNum, len(self._queue), self._queue0seqS2C))
+
+		if seqNum - self._queue0seqS2C < 0:
+			if noisy:
+				print "Client sent a strangely low S2C ACK."
+			return
+
+		for i in xrange(seqNum - self._queue0seqS2C):
+			self._queue.popleft()
+
+		self._queue0seqS2C += seqNum
+
+
 	def _sendBoxes(self):
 		"""
 		Try to send boxes. Return integer representing how many were
 		written to any transport.
 		"""
+		noisy = True
+
 		if len(self._transports) == 0:
 			return 0
 
@@ -225,9 +264,13 @@ class Stream(object, policies.TimeoutMixin):
 		t = self._transports[0]
 		okayToWriteMore = True
 		while okayToWriteMore:
-			box = self._queue.popleft()
-			okayToWriteMore = t.writeBox(box)
-			count += 1
+			for n, box in enumerate(self._queue):
+				seqNumber = self._queue0seqS2C + n
+				okayToWriteMore = t.writeBox(seqNumber, box)
+				count += 1
+
+		if noisy:
+			print "Wrote %d out of %d boxes" % (count, len(self._queue))
 
 		return count
 
@@ -318,7 +361,7 @@ class _BaseHTTPTransport(object):
 		self._bytesSent += len(s)
 
 
-	def writeBox(self, box):
+	def writeBox(self, seqNumber, box):
 		"""
 		Write box L{box} to the HTTP response.
 
@@ -327,12 +370,10 @@ class _BaseHTTPTransport(object):
 		"""
 		if not self._sentFirstSeq:
 			self._sentFirstSeq = True
-			# NEED to send real sequence number, not 0
-
 			# Streaming transports write an sequence number
 			# only before the first box. The client knows that
 			# each box increments the S2C sequence number by 1.
-			self._reallyWriteBox(['`^a', 0])
+			self._reallyWriteBox(['`^a', seqNumber])
 
 		self._reallyWriteBox(box)
 		if self._bytesSent > self.maxKB:
@@ -450,10 +491,12 @@ class HTTPS2C(resource.Resource):
 			streamId = request.args['i'][0].decode('hex') # "(i)d"
 
 			# Incremented each time the client makes a HTTP request for S2C
+			# TODO: disconnect the old S2C transport if a newer transport has arrived
+			# (with higher connectionNumber)
 			connectionNumber = nonnegint(request.args['n'][0]) # "(n)umber"
 
 			# Last box that the client received
-			seqS2C = nonnegint(request.args['s'][0]) # "(s)eq"
+			ackS2C = nonnegint(request.args['s'][0]) # "(s)eq"
 
 			# The type of S2C transport requested.
 			transportString = request.args['t'][0] # "(t)ype"
@@ -470,6 +513,7 @@ class HTTPS2C(resource.Resource):
 			_fail()
 
 		s = self._streamFactory.locateOrBuild(streamId)
+		s.clientReceivedUpTo(ackS2C)
 
 		s.transportOnline(transport)
 
