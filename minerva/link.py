@@ -7,27 +7,6 @@ from zope.interface import Interface
 
 
 """
-Design notes:
-
-A user might be logged in from more than once place.
-
-We might sometimes want to send a connection to a specific client,
-not a specific user.
-"""
-
-
-# This is sort of like djb netstrings, but without the trailing comma
-def lenPrefix(s):
-	return str(len(s)) + ',' + s
-
-
-def compactDump(obj):
-	return json.dumps(obj, separators=(',', ':'))
-
-
-
-
-"""
    C2STransport \
    S2CTransport -\
    S2CTransport <-> Stream -\
@@ -87,39 +66,47 @@ Client should know how to get establish a downstream and upstream transport
 in one step (using just the information on the generated HTML page). There
 should be no additional negotiation, unless absolutely necessary.
 
+The server will generate a "base Stream ID" (128 bits), and the client will
+add a "-<number>" suffix where <number> is incremented for each stream
+created with the same "base Stream ID". Client will always upload the Stream ID
+for both S2C and C2S (both HTTP), and for Flash socket.
+
+We actually don't need the client to send the session ID (though they'll do it
+anyway over HTTP), because server already knows which stream IDs belong to
+a session ID.
 """
-
-class IMinCom(Interface):
-
-
-	def sendMessage(stream, message):
-		"""
-		Enqueue L{message} for L{stream}
-		"""
-
-	def messageReceived(stream, message):
-		"""
-		A message L{message} was received from stream L{stream}
-		"""
-
-	def streamBegun(stream):
-		"""
-		Stream L{stream} has started or resumed communicating.
-		"""
-
-	def streamEnded(stream):
-		"""
-		Stream L{stream} no longer appears to be online. This method
-		can help determine when "a user is no longer online", but keep
-		in mind that they are only "offline" when *all* streams for a session
-		are gone.
-
-		Most likely reasons are:
-			they closed the page
-			they shut down computer
-			JavaScript execution has stopped for any reason
-		"""
-
+#
+#class IMinCom(Interface):
+#
+#
+#	def sendMessage(stream, message):
+#		"""
+#		Enqueue L{message} for L{stream}
+#		"""
+#
+#	def messageReceived(stream, message):
+#		"""
+#		A message L{message} was received from stream L{stream}
+#		"""
+#
+#	def streamBegun(stream):
+#		"""
+#		Stream L{stream} has started or resumed communicating.
+#		"""
+#
+#	def streamEnded(stream):
+#		"""
+#		Stream L{stream} no longer appears to be online. This method
+#		can help determine when "a user is no longer online", but keep
+#		in mind that they are only "offline" when *all* streams for a session
+#		are gone.
+#
+#		Most likely reasons are:
+#			they closed the page
+#			they shut down computer
+#			JavaScript execution has stopped for any reason
+#		"""
+#
 
 
 class HTTPS2C(resource.Resource):
@@ -181,6 +168,16 @@ class SendQueue(object):
 			return self.queue.popleft()
 		except IndexError:
 			raise EmptyQueueError()
+
+
+
+# This is sort of like djb netstrings, but without the trailing comma
+def lenPrefix(s):
+	return str(len(s)) + ',' + s
+
+
+def compactDump(obj):
+	return json.dumps(obj, separators=(',', ':'))
 
 
 
