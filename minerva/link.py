@@ -173,13 +173,6 @@ class SocketTransport(protocol.Protocol):
 		"""
 		Client needs to send server the stream ID, because server
 		doesn't know anything about the client yet.
-
-		Once we get a (mapping to a) stream ID, ask StreamFactory for
-		the Stream instance. Pass received boxes to the Stream instance.
-
-		Invalid stream IDs should be rejected with some error message.
-		This works unlike HTTP(S) and L{SocketTransport} because
-		stream IDs are not intended by be decipherable.
 		"""
 
 
