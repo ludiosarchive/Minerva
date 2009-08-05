@@ -151,7 +151,11 @@ class ReasonStreamTimeout(object):
 
 class Stream(object, policies.TimeoutMixin):
 	"""
-	I am Stream. I know my StreamFactory, L{self.factory}
+	I am Stream. Transports attach to me. I can send and receive over
+	a new transport, or a completely different transport, without restarting
+	the Stream..
+
+	I know my StreamFactory, L{self.factory}
 	"""
 
 	def __init__(self, streamId):
@@ -444,8 +448,14 @@ class HTTPS2C(resource.Resource):
 
 		try:
 			streamId = request.args['i'][0].decode('hex') # "(i)d"
+
+			# Incremented each time the client makes a HTTP request for S2C
 			connectionNumber = nonnegint(request.args['n'][0]) # "(n)umber"
+
+			# Last box that the client received
 			seqS2C = nonnegint(request.args['s'][0]) # "(s)eq"
+
+			# The type of S2C transport requested.
 			transportString = request.args['t'][0] # "(t)ype"
 		except (KeyError, IndexError, ValueError, TypeError):
 			_fail()
