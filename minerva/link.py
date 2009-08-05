@@ -260,16 +260,20 @@ class Stream(object, policies.TimeoutMixin):
 			return 0
 
 		if len(self._transports) > 1:
-			raise NotImplementedError("More than 1 transport - don't know which one to use.")
+			# Select the transport with the highest connectionNumber.
+			# TODO: should there be any other criteria?
+			transport = sorted(self._transports, key=lambda t: t.connectionNumber, reverse=True)
+			if noisy:
+				log.msg("More than one S2C transport, so I picked the newest: %r" % (transport,))
 
 		count = 0
 
-		t = self._transports[0]
+		transport = self._transports[0]
 		okayToWriteMore = True
 		while okayToWriteMore:
 			for n, box in enumerate(self._queue):
 				seqNumber = self._queue0seqS2C + n
-				okayToWriteMore = t.writeBox(seqNumber, box)
+				okayToWriteMore = transport.writeBox(seqNumber, box)
 				count += 1
 
 		if noisy:
@@ -347,11 +351,12 @@ class StreamFactory(object):
 
 class _BaseHTTPTransport(object):
 
-	def __init__(self, request):
+	def __init__(self, request, connectionNumber):
 		"""
 		I run on a twisted.web.http.Request
 		"""
 		self._request = request
+		self.connectionNumber = connectionNumber
 		self._sentFirstSeq = False
 		self._boxesSent = 0
 		self._bytesSent = 0
@@ -506,11 +511,11 @@ class HTTPS2C(resource.Resource):
 			_fail()
 
 		if transportString == 's':
-			transport = ScriptTransport(request)
+			transport = ScriptTransport(request, connectionNumber)
 		elif transportString == 'x':
-			transport = XHRTransport(request)
+			transport = XHRTransport(request, connectionNumber)
 		elif transportString == 'o':
-			transport = SSETransport(request)
+			transport = SSETransport(request, connectionNumber)
 		else:
 			_fail()
 
