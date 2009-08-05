@@ -202,6 +202,8 @@ class Stream(object, GenericTimeoutMixin):
 	I know my StreamFactory, L{self.factory}
 	"""
 
+	noisy = True
+
 	def __init__(self, streamId):
 		# TODO: a better queue that one can manipulate (remove
 		# now-obsolete messages)
@@ -261,7 +263,6 @@ class Stream(object, GenericTimeoutMixin):
 		number L{seqNum}, so now it is okay to clear the messages from
 		the queue.
 		"""
-		noisy = True
 		assert seqNum >= 0, seqNum
 
 		if seqNum > (len(self._queue) + self._queue.seqNumAt0):
@@ -270,7 +271,7 @@ class Stream(object, GenericTimeoutMixin):
 				% (seqNum, len(self._queue), self._queue.seqNumAt0))
 
 		if seqNum - self._queue.seqNumAt0 < 0:
-			if noisy:
+			if self.noisy:
 				log.msg("Client sent a strangely low S2C ACK; not removing anything from the queue.")
 			return
 
@@ -279,16 +280,15 @@ class Stream(object, GenericTimeoutMixin):
 
 	def _selectS2CTransport(self):
 		if len(self._transports) == 0:
-			if noisy:
-				log.msg("Don't have any S2C transports.")
-			return 0
+			return None
 
 		if len(self._transports) > 1:
 			# Select the transport with the highest connectionNumber.
 			# TODO: should there be any other criteria?
 			transport = sorted(self._transports, key=lambda t: t.connectionNumber, reverse=True)
-			if noisy:
-				log.msg("More than one S2C transport, so I picked the newest: %r" % (transport,))
+			if self.noisy:
+				log.msg("Multiple S2C transports: %r, so I picked the newest: %r" % (
+					self._transports, transport,))
 
 		transport = self._transports[0]
 
@@ -300,15 +300,11 @@ class Stream(object, GenericTimeoutMixin):
 		Try to send boxes.
 		"""
 		transport = self._selectS2CTransport()
+		if not transport:
+			if self.noisy:
+				log.msg("Don't have any S2C transports; can't send.")
+			return
 		transport.handle(self._queue)
-
-#		okayToWriteMore = True
-#		while okayToWriteMore:
-#			for n, box in enumerate(self._queue):
-#				seqNumber = self._queue0seqS2C + n
-#				okayToWriteMore = transport.writeBox(seqNumber, box)
-#				count += 1
-
 
 
 	def transportOnline(self, transport):
@@ -379,23 +375,77 @@ class StreamFactory(object):
 
 
 class _BaseHTTPTransport(object):
+	"""
+	frags (fragments) are any object, including metadata needed for connection management.
+	boxes are something that was actually in a queue.
+	"""
+
+	maxKB = None
 
 	def __init__(self, request, connectionNumber):
 		"""
-		I run on a twisted.web.http.Request
+		I need a L{twisted.web.http.Request}.
+		
+		L{connectionNumber} is incremented by the client as they
+			open S2C transports.
 		"""
 		self._request = request
+		# TODO: set tcp no delay
 		self.connectionNumber = connectionNumber
-		self._sentFirstSeq = False
-		self._boxesSent = 0
+		self._sentFirstFrag = False
+		self._fragsSent = 0
 		self._bytesSent = 0
 
+		# TCP nodelay is good and increases server performance, as
+		# long as we don't accidentally send small packets.
+		request.channel.transport.setTcpNoDelay(True)
 
-	def _reallyWriteBox(self, box):
-		s = self._stringOne(box)
-		self._request.write(s)
-		self._boxesSent += 1
-		self._bytesSent += len(s)
+
+	def getFooter(self):
+		return ''
+		
+	
+	def getHeader(self):
+		return ''
+
+
+	def handle(self, queue):
+		"""
+		Write as many messages from the queue as possible.
+		"""
+		toSend = ''
+		fragCount = 0
+		byteCount = 0
+
+		if not self._sentFirstFrag:
+			self._sentFirstFrag = True
+
+			# the header is not a frag, so only increment byteCount
+			header = self.getHeader()
+			byteCount += len(header)
+
+			seqString = self._stringOne(['`^a', queue.seqNumAt0])
+			toSend += seqString
+			fragCount += 1
+			byteCount += len(seqString)
+
+		for n, box in enumerate(queue):
+			boxString = self._stringOne(box)
+			toSend += boxString
+			fragCount += 1
+			byteCount += len(boxString)
+			if byteCount > self.maxKB:
+				break
+
+		if byteCount > self.maxKB:
+			footer = self.getFooter()
+
+			# the footer is not a frag, so only increment byteCount
+			byteCount += len(footer)
+
+		self._request.write(toSend)
+		self._bytesSent += byteCount
+		self._fragsSent += fragCount
 
 
 	# writeBox is very bad:
@@ -408,8 +458,8 @@ class _BaseHTTPTransport(object):
 		Return True if this transport could write another box,
 		False otherwise.
 		"""
-		if not self._sentFirstSeq:
-			self._sentFirstSeq = True
+		if not self._sentFirstFrag:
+			self._sentFirstFrag = True
 			# Streaming transports write an sequence number
 			# only before the first box. The client knows that
 			# each box increments the S2C sequence number by 1.
