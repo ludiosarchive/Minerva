@@ -426,8 +426,10 @@ class _BaseHTTPTransport(object):
 
 			# the seqString includes the 4KB padding.
 			# TODO: use less padding when possible. Can't rely on just
-			# browser information (proxies could be in the way), so maybe
-			# negotiate less padding with the client.
+			# 	browser information (proxies could be in the way), so maybe
+			# 	negotiate less padding with the client.
+			# TODO: don't write the padding when long-polling, it's just
+			# 	a waste
 			seqString = self._stringOne(['`^a', queue.seqNumAt0, (' '*1024*4)])
 			toSend += seqString
 			fragCount += 1
