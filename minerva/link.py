@@ -165,6 +165,9 @@ class ClientSentTooHighAck(Exception):
 
 class Queue(object):
 
+	# TODO: more features to manipulate a Queue
+	# example: remove now-obsolete messages
+
 	def __init__(self):
 		# The sequence number of the 0th item in the queue
 		self.seqNumAt0 = 0
@@ -204,8 +207,6 @@ class Stream(object, GenericTimeoutMixin):
 	noisy = True
 
 	def __init__(self, streamId):
-		# TODO: a better queue that one can manipulate (remove
-		# now-obsolete messages)
 		self._queue = Queue()
 		self._transports = set()
 
