@@ -76,13 +76,6 @@ class IMinCom(Interface):
 		FlashSocketTransport (s2c,c2s)
 		
 
-
-	Why not create a new Stream instance for each stream like Twisted Factories
-	create Protocol instances? Because:
-		- when a stream "begins" or "ends" is much more ambigious than
-		when a TCP/IP connection begins or ends.
-
-		- object lifetime is a pain
 	"""
 
 	def sendMessage(stream, message):
