@@ -401,11 +401,11 @@ class _BaseHTTPTransport(object):
 		request.channel.transport.setTcpNoDelay(True)
 
 
-	def getFooter(self):
-		return ''
-		
-	
 	def getHeader(self):
+		return ''
+
+
+	def getFooter(self):
 		return ''
 
 
@@ -479,11 +479,14 @@ class XHRTransport(_BaseHTTPTransport):
 
 	# TODO: long-polling mode
 
+	# TODO: need to send the 256/512/2KB/4KB prefix
+	# to bypass content detection (which blocks the stream in many browsers)
+
 	maxKB = 300
 
 	def __repr__(self):
-		return '<XHRTransport at %s attached to %r with %d boxes sent>' % (
-			hex(id(self)), self._request, self._boxesSent)
+		return '<XHRTransport at %s attached to %r with %d frags sent>' % (
+			hex(id(self)), self._request, self._fragsSent)
 
 
 	def _stringOne(self, box):
@@ -506,6 +509,24 @@ class ScriptTransport(_BaseHTTPTransport):
 
 	maxKB = 300
 
+	def __repr__(self):
+		return '<ScriptTransport at %s attached to %r with %d frags sent>' % (
+			hex(id(self)), self._request, self._fragsSent)
+
+
+	# TODO: maybe this header should be written earlier, even before the first attempt
+	# to send to queue?
+	def getHeader(self):
+		# CWNet = CW.Net
+		# 'fr' = "frame"
+		# 'o' = object
+		return '''<!doctype html><head><script>function f(o){parent.__CWNet_fr(o)}</script></head><body>'''
+
+
+	def getFooter(self):
+		return '</body></html>'
+
+
 	def _stringOne(self, box):
 		"""
 		Return a serialized string for one box.
@@ -514,15 +535,19 @@ class ScriptTransport(_BaseHTTPTransport):
 		s = json.dumps(box, separators=(',', ':'))
 		# TODO: find out if there's a way to close a script tag in IE or FF/Safari
 		# without sending an entire </script>
-		return '<script>%s</script>' % (s,)
+		return '<script>f(%s)</script>' % (s,)
 
 
 
+# TODO
 class SSETransport(_BaseHTTPTransport):
 
 	maxKB = 1024 # Does this even need a limit?
 
-	pass # TODO
+	def __repr__(self):
+		return '<SSETransport at %s attached to %r with %d frags sent>' % (
+			hex(id(self)), self._request, self._fragsSent)
+
 
 
 
