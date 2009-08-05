@@ -145,15 +145,51 @@ class GenericTimeoutMixin(object):
 		"""
 
 
-class ReasonStreamTimeout(object):
-	pass
+class StreamEndedReasonTimeout(object):
+	"""
+	The client failed to establish a [transport that has S2C] in time.
+	"""
 
+
+# TODO: actually decide what the "close connection" box looks like.
+class StreamEndedReasonClosed(object):
+	"""
+	The client closed the stream explicitly.
+	"""
 
 
 class ClientSentTooHighAck(Exception):
 	"""
 	Client sent a bogus S2C ACK number.
 	"""
+
+
+class Queue(object):
+
+	def __init__(self):
+		# The sequence number of the 0th item in the queue
+		self.seqNumAt0 = 0
+		self._items = deque()
+
+
+	def append(self, item):
+		return self._items.append(item)
+
+
+	def __len__(self):
+		return len(self._items)
+
+
+	def removeUpTo(self, seqNum):
+		"""
+		Remove items up to sequence number L{seqNum}.
+		"""
+		assert seqNum >= 0, seqNum
+
+		for i in xrange(seqNum - self.seqNumAt0):
+			self._items.popleft()
+
+		self.seqNumAt0 += seqNum
 
 
 
@@ -169,11 +205,9 @@ class Stream(object, policies.TimeoutMixin):
 	def __init__(self, streamId):
 		# TODO: a better queue that one can manipulate (remove
 		# now-obsolete messages)
-		self._queue = deque()
+		self._queue = Queue()
 		self._transports = set()
 
-		# The S2C sequence number of the 0th item in the queue
-		self._queue0seqS2C = 0
 		self._seqC2S = 0 # TODO: use it
 		self.id = streamId
 		
@@ -230,32 +264,23 @@ class Stream(object, policies.TimeoutMixin):
 		noisy = True
 		assert seqNum >= 0, seqNum
 
-		if seqNum > (len(self._queue) + self._queue0seqS2C):
+		if seqNum > (len(self._queue) + self._queue.seqNumAt0):
 			raise ClientSentTooHighAck(
-				"seqNum = %d, len(self._queue) = %d, self._queue0seqS2C = %d"
-				% (seqNum, len(self._queue), self._queue0seqS2C))
+				"seqNum = %d, len(self._queue) = %d, self._queue.seqNumAt0 = %d"
+				% (seqNum, len(self._queue), self._queue.seqNumAt0))
 
-		if seqNum - self._queue0seqS2C < 0:
+		if seqNum - self._queue.seqNumAt0 < 0:
 			if noisy:
 				log.msg("Client sent a strangely low S2C ACK; not removing anything from the queue.")
 			return
 
-		for i in xrange(seqNum - self._queue0seqS2C):
-			self._queue.popleft()
-
-		self._queue0seqS2C += seqNum
+		self._queue.removeUpTo(seqNum)
 
 
-	def _sendBoxes(self):
-		"""
-		Try to send boxes. Return integer representing how many were
-		written to any transport.
-		"""
-		noisy = True
-
+	def _selectS2CTransport(self):
 		if len(self._transports) == 0:
 			if noisy:
-				log.msg("Don't have any transports, can't send boxes right now.")
+				log.msg("Don't have any S2C transports.")
 			return 0
 
 		if len(self._transports) > 1:
@@ -265,20 +290,25 @@ class Stream(object, policies.TimeoutMixin):
 			if noisy:
 				log.msg("More than one S2C transport, so I picked the newest: %r" % (transport,))
 
-		count = 0
-
 		transport = self._transports[0]
-		okayToWriteMore = True
-		while okayToWriteMore:
-			for n, box in enumerate(self._queue):
-				seqNumber = self._queue0seqS2C + n
-				okayToWriteMore = transport.writeBox(seqNumber, box)
-				count += 1
 
-		if noisy:
-			log.msg("Wrote %d out of %d boxes" % (count, len(self._queue)))
+		return transport
 
-		return count
+
+	def _sendBoxes(self):
+		"""
+		Try to send boxes.
+		"""
+		transport = self._selectS2CTransport()
+		transport.handle(self._queue)
+
+#		okayToWriteMore = True
+#		while okayToWriteMore:
+#			for n, box in enumerate(self._queue):
+#				seqNumber = self._queue0seqS2C + n
+#				okayToWriteMore = transport.writeBox(seqNumber, box)
+#				count += 1
+
 
 
 	def transportOnline(self, transport):
@@ -306,7 +336,7 @@ class Stream(object, policies.TimeoutMixin):
 
 
 	def timedOut(self):
-		self.streamEnded(ReasonStreamTimeout())
+		self.streamEnded(StreamEndedReasonTimeout())
 
 
 
@@ -343,7 +373,7 @@ class StreamFactory(object):
 	def locateOrBuild(self, streamId):
 		s = self.locateStream(streamId)
 		if s is None:
-			s = self.buildStream()
+			s = self.buildStream(streamId)
 		return s
 
 
@@ -368,6 +398,9 @@ class _BaseHTTPTransport(object):
 		self._bytesSent += len(s)
 
 
+	# writeBox is very bad:
+	#	- uses a TCP packet per write()
+	#	- ScriptTransport may need a header and footer
 	def writeBox(self, seqNumber, box):
 		"""
 		Write box L{box} to the HTTP response.
