@@ -8,15 +8,15 @@ import random
 
 class DummyHTTPProtocol(protocol.Protocol):
 
-	saved = ''
-	myId = '1'*32
+	received = ''
+	myId = '1' * 32
 
 	def __init__(self):
 		self.ack = 0
 
 
 	def dataReceived(self, data):
-		self.saved += data
+		self.received += data
 
 
 	def connectionMade(self):
@@ -28,7 +28,7 @@ Cookie: i=%s\r
 
 
 	def connectionLost(self, reason):
-		print self.saved
+		print self.received
 		self.factory.d.callback(None)
 
 
@@ -45,7 +45,7 @@ class DummyHTTPFactory(protocol.ClientFactory):
 class TestXHRStream(unittest.TestCase):
 
 	def _makeASendQueue(self, qFinder):
-		sq = link.SendQueue(('1'*32).decode('hex'))
+		sq = link.SendQueue(('1' * 32).decode('hex'))
 		sq.add(["one", "two"])
 		sq.add(["three", "four"])
 		qFinder.register(sq)
