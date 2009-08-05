@@ -238,7 +238,7 @@ class Stream(object, policies.TimeoutMixin):
 
 		if seqNum - self._queue0seqS2C < 0:
 			if noisy:
-				log.msg("Client sent a strangely low S2C ACK.")
+				log.msg("Client sent a strangely low S2C ACK; not removing anything from the queue.")
 			return
 
 		for i in xrange(seqNum - self._queue0seqS2C):
@@ -478,9 +478,8 @@ class InvalidArgumentsError(Exception):
 class HTTPS2C(resource.Resource):
 	isLeaf = True
 
-	def __init__(self, reactor, streamFactory):
-		self._reactor = reactor
-		self._streamFactory = streamFactory(reactor)
+	def __init__(self, streamFactory):
+		self._streamFactory = streamFactory
 
 
 	def render_GET(self, request):
