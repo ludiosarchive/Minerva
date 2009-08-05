@@ -3,6 +3,7 @@ import simplejson as json
 
 from twisted.python.filepath import FilePath
 from twisted.web import resource, static, server
+from twisted.internet import protocol
 from zope.interface import Interface
 
 
@@ -109,15 +110,100 @@ a session ID.
 #
 
 
+class Stream(object):
+	"""
+	I am Stream.
+
+	I know my StreamFactory, L{self.factory}
+	"""
+
+	def __init__(self, streamID):
+		self._queue = deque()
+		self.id = streamID
+
+
+	def boxReceived(self, box):
+		print 'Received box:', box
+
+
+	def sendBox(self, box):
+		print 'Queuing box for sending:', box
+		self._queue.append(box)
+
+
+
+class StreamFactory(object):
+	"""
+	I make Stream instances.
+
+	I can locate a Stream by Stream ID. This is important
+	because we want to send messages to other Streams.
+	"""
+
+	stream = Stream
+
+	def __init__(self):
+		self._streams = {}
+
+
+	def buildStream(self):
+		s = self.stream()
+		s.factory = self
+		return s
+
+
+	def locateStream(self, streamID):
+		"""
+		Returns the Stream instance for L{streamID}, or L{None} if not found.
+		"""
+		return self._streams.get(streamID)
+
+
+
+class SocketTransport(protocol.Protocol):
+	"""
+	Right now, this is only used for the Flash socket.
+	"""
+
+	def connectionMade(self):
+		pass
+
+
+	def dataReceived(self, data):
+		"""
+		Client needs to send server the stream ID, because server
+		doesn't know anything about the client yet.
+
+		Once we get a (mapping to a) stream ID, ask StreamFactory for
+		the Stream instance. Pass received boxes to the Stream instance.
+
+		Invalid stream IDs should be rejected with some error message.
+		This works unlike HTTP(S) and L{SocketTransport} because
+		stream IDs are not intended by be decipherable.
+		"""
+
+
+	def connectionLost(self, reason):
+		"""
+		The socket connection has been lost, so notify the stream.
+		"""
+
+
+
 class HTTPS2C(resource.Resource):
 	isLeaf = True
 
+	def __init__(self, streamFactory):
+		self._streamFactory = streamFactory
+
+
 	def render_GET(self, request):
+		streamID = request.args['s'][0]
 		return 'GET S2C'
 
 
 	def render_POST(self, request):
-		return 'POST S2C'
+		return 'POST S2C TODO IMPLEMENT'
 
 
 
