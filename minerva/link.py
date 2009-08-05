@@ -2,6 +2,7 @@ from collections import deque
 import simplejson as json
 
 from twisted.python.filepath import FilePath
+from twisted.protocols import policies
 from twisted.web import resource, static, server
 from twisted.internet import protocol
 from zope.interface import Interface
@@ -77,26 +78,91 @@ a session ID.
 """
 
 
-class Stream(object):
+class GenericTimeoutMixin(object):
+	"""
+	Mixin for any instance that has a L{_reactor} attribute and wants a timeout.
+
+	This is mostly a copy/paste of twisted.protocols.policies.TimeoutMixin
+
+	@cvar timeOut: The number of seconds after which to timeout the connection.
+	"""
+	timeOut = None
+
+	__timeoutCall = None
+
+	def resetTimeout(self):
+		"""
+		Reset the timeout count down.
+		"""
+		if self.__timeoutCall is not None and self.timeOut is not None:
+			self.__timeoutCall.reset(self.timeOut)
+
+
+	def setTimeout(self, period):
+		"""
+		Change the timeout period
+
+		@type period: C{int} or C{NoneType}
+		@param period: The period, in seconds, to change the timeout to, or
+		C{None} to disable the timeout.
+		"""
+		prev = self.timeOut
+		self.timeOut = period
+
+		if self.__timeoutCall is not None:
+			if period is None:
+				self.__timeoutCall.cancel()
+				self.__timeoutCall = None
+			else:
+				self.__timeoutCall.reset(period)
+		elif period is not None:
+			self.__timeoutCall = self._reactor.callLater(period, self.__timedOut)
+
+		return prev
+
+
+	def __timedOut(self):
+		self.__timeoutCall = None
+		self.timedOut()
+
+
+	def 	timedOut(self):
+		"""
+		The timeout has been triggered. Override this.
+		"""
+
+
+class ReasonStreamTimeout(object):
+	pass
+
+
+class Stream(object, policies.TimeoutMixin):
 	"""
 	I am Stream. I know my StreamFactory, L{self.factory}
 	"""
 
 	def __init__(self, streamId):
+		# TODO: a better queue that one can manipulate (remove
+		# now-obsolete messages)
 		self._queue = deque()
 		self._transports = set()
 		self.id = streamId
 
 
+	def __repr__(self):
+		return '<Stream %r with transports %r and %d items in queue>' %
+			(self.id, self._transports, len(self._queue))
+
+
 	def streamBegun(self):
 		"""
-		The stream has begun. Subclass this if necessary.
+		The stream has begun. Override this if necessary.
 		"""
 
 
 	def streamEnded(self, reason):
 		"""
-		(Subclass this to do something with the UA, or
+		(Override this to do something with the UA, or
 		clear circular references if necessary.)
 
 		Stream L{stream} no longer appears to be online. This method
@@ -113,7 +179,7 @@ class Stream(object):
 
 	def boxReceived(self, box):
 		"""
-		Received box L{box}. Subclass this.
+		Received box L{box}. Override this.
 		"""
 		print 'Received box:', box
 
@@ -153,6 +219,7 @@ class Stream(object):
 		"""
 		For internal use.
 		"""
+		self.setTimeout(None)
 		print 'New transport has come online:', transport
 		self._transports.add(transport)
 		self._sendBoxes()
@@ -166,6 +233,15 @@ class Stream(object):
 		# This will raise an exception if it's not there
 		self._transports.remove(transport)
 
+		if len(self._transports) == 0:
+			# Start the timer. If no transports come in 30 seconds,
+			# the stream has ended.
+			self.setTimeout(30)
+
+
+	def timedOut(self):
+		self.streamEnded(ReasonStreamTimeout())
+
 
 
 class StreamFactory(object):
@@ -178,13 +254,15 @@ class StreamFactory(object):
 
 	stream = Stream
 
-	def __init__(self):
+	def __init__(self, reactor):
+		self._reactor = reactor
 		self._streams = {}
 
 
 	def buildStream(self, streamId):
 		s = self.stream(streamId)
 		s.factory = self
+		s._reactor = self._reactor
 		s.streamBegun()
 		return s
 
@@ -335,8 +413,9 @@ class InvalidTransportTypeError(Exception):
 class HTTPS2C(resource.Resource):
 	isLeaf = True
 
-	def __init__(self, streamFactory):
-		self._streamFactory = streamFactory
+	def __init__(self, reactor, streamFactory):
+		self._reactor = reactor
+		self._streamFactory = streamFactory(reactor)
 
 
 	def render_GET(self, request):
