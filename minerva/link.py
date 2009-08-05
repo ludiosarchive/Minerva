@@ -2,6 +2,7 @@ from collections import deque
 import simplejson as json
 
 from twisted.python.filepath import FilePath
+from twisted.python import log
 from twisted.protocols import policies
 from twisted.web import resource, static, server
 from twisted.internet import protocol
@@ -210,14 +211,14 @@ class Stream(object, policies.TimeoutMixin):
 		"""
 		Received box L{box}. Override this.
 		"""
-		print 'Received box:', box
+		log.msg('Received box:', box)
 
 
 	def sendBox(self, box):
 		"""
 		Enqueue box L{box} for sending soon.
 		"""
-		print 'Queuing box for sending:', box
+		log.msg('Queuing box for sending:', box)
 		self._queue.append(box)
 
 
@@ -237,7 +238,7 @@ class Stream(object, policies.TimeoutMixin):
 
 		if seqNum - self._queue0seqS2C < 0:
 			if noisy:
-				print "Client sent a strangely low S2C ACK."
+				log.msg("Client sent a strangely low S2C ACK.")
 			return
 
 		for i in xrange(seqNum - self._queue0seqS2C):
@@ -254,6 +255,8 @@ class Stream(object, policies.TimeoutMixin):
 		noisy = True
 
 		if len(self._transports) == 0:
+			if noisy:
+				log.msg("Don't have any transports, can't send boxes right now.")
 			return 0
 
 		if len(self._transports) > 1:
@@ -270,7 +273,7 @@ class Stream(object, policies.TimeoutMixin):
 				count += 1
 
 		if noisy:
-			print "Wrote %d out of %d boxes" % (count, len(self._queue))
+			log.msg("Wrote %d out of %d boxes" % (count, len(self._queue)))
 
 		return count
 
@@ -280,7 +283,7 @@ class Stream(object, policies.TimeoutMixin):
 		For internal use.
 		"""
 		self.setTimeout(None)
-		print 'New transport has come online:', transport
+		log.msg('New transport has come online:', transport)
 		self._transports.add(transport)
 		self._sendBoxes()
 
@@ -289,7 +292,7 @@ class Stream(object, policies.TimeoutMixin):
 		"""
 		For internal use.
 		"""
-		print 'Transport has left:', transport
+		log.msg('Transport has left:', transport)
 		# This will raise an exception if it's not there
 		self._transports.remove(transport)
 
