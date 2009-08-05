@@ -193,7 +193,7 @@ class Queue(object):
 
 
 
-class Stream(object, policies.TimeoutMixin):
+class Stream(object, GenericTimeoutMixin):
 	"""
 	I am Stream. Transports attach to me. I can send and receive over
 	a new transport, or a completely different transport, without restarting
@@ -214,7 +214,7 @@ class Stream(object, policies.TimeoutMixin):
 
 	def __repr__(self):
 		return '<Stream %r (%d,%d) with transports %r and %d items in queue>' % (
-			self.id, self._seqS2C, self._seqC2S, self._transports, len(self._queue))
+			self.id, self._queue.seqNumAt0, self._seqC2S, self._transports, len(self._queue))
 
 
 	def streamBegun(self):
