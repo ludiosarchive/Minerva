@@ -29,30 +29,43 @@ def compactDump(obj):
 class IMinCom(Interface):
 
 	"""
-	Stream -\
-	Stream <-> Session <-> User
-	Stream <-> Session -/
+	C2SLink \
+	S2CLink -\
+	S2CLink <-> Stream -\
+	(both)Link <-> Stream <-> UA <-> User
+	(both)Link <-> Stream <-> UA -/
 
-	A session (held together by a cookie) can have more than stream:
+	A Stream can have more than one S2CLink:
 
 		Client-side Minerva might be in the middle of upgrading or
-		downgrading to a different type of stream.
+		downgrading to a different type of S2CLink.
+		(for example, from XHR stream to Flash, or from XHR stream to long-poll)
 
-		With Chrome, we might have the same session cookie,
+		Client-side Minerva may establish a second S2CLink before first S2CLink
+		is "done", to reduce the small time gap caused by request/connection
+		re-establishment. 
+
+	A UA (held together by a cookie) can have more than Stream:
+
+		With Chrome, we might have the same cookie,
 		yet not be able to share data between tabs.
 
-		Some minor browsers may make it too difficult (like Chrome)
-		to share a stream across tabs/windows, yet still have the
-		same session cookie.
+		Some minor or future browsers may make it too difficult (like Chrome)
+		to share a stream across tabs/windows, yet still have the same
+		session cookie.
 
-	A user can have more than one session:
+	A user can have more than one UA:
 
 		A user might be connecting from multiple browsers.
 
 		A user might be connecting from multiple IPs.
 
 		Many browsers provide an "incognito" mode where cookies are not shared
-		with the non-incognito mode.
+		with the non-incognito mode. This is sort of like having a second UA.
+
+	Clients will spend most of their time dealing with a Stream by receiving and
+	sending boxes over it.
+
 
 
 
