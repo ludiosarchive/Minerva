@@ -75,45 +75,11 @@ We actually don't need the client to send the session ID (though they'll do it
 anyway over HTTP), because server already knows which stream IDs belong to
 a session ID.
 """
-#
-#class IMinCom(Interface):
-#
-#
-#	def sendMessage(stream, message):
-#		"""
-#		Enqueue L{message} for L{stream}
-#		"""
-#
-#	def messageReceived(stream, message):
-#		"""
-#		A message L{message} was received from stream L{stream}
-#		"""
-#
-#	def streamBegun(stream):
-#		"""
-#		Stream L{stream} has started or resumed communicating.
-#		"""
-#
-#	def streamEnded(stream):
-#		"""
-#		Stream L{stream} no longer appears to be online. This method
-#		can help determine when "a user is no longer online", but keep
-#		in mind that they are only "offline" when *all* streams for a session
-#		are gone.
-#
-#		Most likely reasons are:
-#			they closed the page
-#			they shut down computer
-#			JavaScript execution has stopped for any reason
-#		"""
-#
 
 
 class Stream(object):
 	"""
-	I am Stream.
-
-	I know my StreamFactory, L{self.factory}
+	I am Stream. I know my StreamFactory, L{self.factory}
 	"""
 
 	def __init__(self, streamId):
@@ -123,18 +89,39 @@ class Stream(object):
 
 
 	def streamBegun(self):
-		pass
+		"""
+		The stream has begun. Subclass this if necessary.
+		"""
 
 
 	def streamEnded(self, reason):
-		pass
+		"""
+		(Subclass this to do something with the UA, or
+		clear circular references if necessary.)
+
+		Stream L{stream} no longer appears to be online. This method
+		can help determine when "a user is no longer online", but keep
+		in mind that they are only "offline" when *all* streams for a UA
+		are gone.
+
+		Most likely reasons are:
+			they closed the page
+			they shut down computer
+			JavaScript execution has stopped for any reason
+		"""
 
 
 	def boxReceived(self, box):
+		"""
+		Received box L{box}. Subclass this.
+		"""
 		print 'Received box:', box
 
 
 	def sendBox(self, box):
+		"""
+		Enqueue box L{box} for sending soon.
+		"""
 		print 'Queuing box for sending:', box
 		self._queue.append(box)
 
@@ -163,12 +150,18 @@ class Stream(object):
 
 
 	def transportOnline(self, transport):
+		"""
+		For internal use.
+		"""
 		print 'New transport has come online:', transport
 		self._transports.add(transport)
 		self._sendBoxes()
 
 
 	def transportOffline(self, transport):
+		"""
+		For internal use.
+		"""
 		print 'Transport has left:', transport
 		# This will raise an exception if it's not there
 		self._transports.remove(transport)
@@ -192,6 +185,7 @@ class StreamFactory(object):
 	def buildStream(self, streamId):
 		s = self.stream(streamId)
 		s.factory = self
+		s.streamBegun()
 		return s
 
 
@@ -266,7 +260,9 @@ class XHRTransport(_BaseHTTPTransport):
 		"""
 		Return a serialized string for one box.
 		"""
-		# This is sort of like djb netstrings, but without the trailing comma
+		# TODO: For some browsers (without the native JSON object),
+		# dump more compact "JSON" without the single quotes around properties
+
 		s = json.dumps(box, separators=(',', ':'))
 		return str(len(s)) + ',' + s
 
@@ -284,6 +280,7 @@ class ScriptTransport(_BaseHTTPTransport):
 		"""
 		Return a serialized string for one box.
 		"""
+		# TODO: dump more compact "JSON" without the single quotes around properties
 		s = json.dumps(box, separators=(',', ':'))
 		# TODO: find out if there's a way to close a script tag in IE or FF/Safari
 		# without sending an entire </script>
@@ -327,6 +324,7 @@ class SocketTransport(protocol.Protocol):
 class EncryptedSocketTransport(protocol.Protocol):
 	pass
 	# TODO: need to port Scrypto to non-ctypes
+
 
 
 class InvalidTransportTypeError(Exception):
