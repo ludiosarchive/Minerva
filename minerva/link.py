@@ -78,6 +78,19 @@ a session ID.
 """
 
 
+def nonnegint(value):
+	"""
+	Everybody forgets to check that an integer is non-negative.
+	So use nonnegint() instead of int() where possible.
+
+	This can still return either a L{TypeError} or a L{ValueError}.
+	"""
+	out = int(value)
+	if out < 0:
+		raise ValueError("value %r was negative" % (value,))
+	return out
+
+
 class GenericTimeoutMixin(object):
 	"""
 	Mixin for any instance that has a L{_reactor} attribute and wants a timeout.
@@ -311,6 +324,10 @@ class _BaseHTTPTransport(object):
 		if not self._sentFirstSeq:
 			self._sentFirstSeq = True
 			# NEED to send real sequence number, not 0
+
+			# Streaming transports write an sequence number
+			# only before the first box. The client knows that
+			# each box increments the S2C sequence number by 1.
 			self._reallyWriteBox(['`^a', 0])
 
 		self._reallyWriteBox(box)
@@ -405,7 +422,7 @@ class EncryptedSocketTransport(protocol.Protocol):
 
 
 
-class InvalidTransportTypeError(Exception):
+class InvalidArgumentsError(Exception):
 	pass
 
 
@@ -421,8 +438,17 @@ class HTTPS2C(resource.Resource):
 	def render_GET(self, request):
 		# TODO: verify that the stream belongs to the UA,
 		# to make it slightly harder to hijack a stream over HTTP.
-		streamId = request.args['s'][0].decode('hex')
-		transportString = request.args['t'][0]
+
+		def _fail():
+			raise InvalidArgumentsError("request.args = " + repr(request.args))
+
+		try:
+			streamId = request.args['i'][0].decode('hex') # "(i)d"
+			connectionNumber = nonnegint(request.args['n'][0]) # "(n)umber"
+			seqS2C = nonnegint(request.args['s'][0]) # "(s)eq"
+			transportString = request.args['t'][0] # "(t)ype"
+		except (KeyError, IndexError, ValueError, TypeError):
+			_fail()
 
 		if transportString == 's':
 			transport = ScriptTransport(request)
@@ -431,7 +457,7 @@ class HTTPS2C(resource.Resource):
 		elif transportString == 'o':
 			transport = SSETransport(request)
 		else:
-			raise InvalidTransportTypeError("request.args['t'] = " + repr(request.args['t']))
+			_fail()
 
 		s = self._streamFactory.locateOrBuild(streamId)
 
