@@ -1,10 +1,9 @@
 from collections import deque
 import simplejson as json
 
-from twisted.python.filepath import FilePath
 from twisted.python import log
 from twisted.protocols import policies
-from twisted.web import resource, static, server
+from twisted.web import resource
 from twisted.internet import protocol
 from zope.interface import Interface
 
@@ -180,8 +179,8 @@ class Stream(object, policies.TimeoutMixin):
 		
 
 	def __repr__(self):
-		return '<Stream %r (%d,%d) with transports %r and %d items in queue>' %
-			(self.id, self._seqS2C, self._seqC2S, self._transports, len(self._queue))
+		return '<Stream %r (%d,%d) with transports %r and %d items in queue>' % (
+			self.id, self._seqS2C, self._seqC2S, self._transports, len(self._queue))
 
 
 	def streamBegun(self):
@@ -400,8 +399,8 @@ class XHRTransport(_BaseHTTPTransport):
 	maxKB = 300
 
 	def __repr__(self):
-		return '<XHRTransport at %s attached to %r with %d boxes sent>' %
-			(hex(id(self)), self._request, self._boxesSent)
+		return '<XHRTransport at %s attached to %r with %d boxes sent>' % (
+			hex(id(self)), self._request, self._boxesSent)
 
 
 	def _stringOne(self, box):
