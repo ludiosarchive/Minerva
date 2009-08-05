@@ -26,57 +26,71 @@ def compactDump(obj):
 
 
 
+
+"""
+   C2STransport \
+   S2CTransport -\
+   S2CTransport <-> Stream -\
+(both)Transport <-> Stream <-> UA <-> User
+(both)Transport <-> Stream <-> UA -/
+
+A Stream can have more than one S2CTransport:
+
+	Client-side Minerva might be in the middle of upgrading or downgrading
+	to a different type of S2CTransport. (for example, from XHR stream to
+	Flash, or from XHR stream to long-poll)
+
+	Client-side Minerva may establish a second S2CTransport before first
+	S2CTransport is "done", to reduce the small time gap caused by
+	request/connection re-establishment.
+
+A UA (held together by a cookie) can have more than Stream:
+
+	With Chrome, we might have the same cookie,
+	yet not be able to share data between tabs.
+
+	Some minor or future browsers may make it too difficult (like Chrome)
+	to share a stream across tabs/windows, yet still have the same
+	session cookie.
+
+User can have more than one UA:
+
+	User might be connecting from multiple browsers.
+
+	User might be connecting from multiple IPs.
+
+	Many browsers provide an "incognito" mode where cookies are not shared
+	with the non-incognito mode. This is sort of like having a second browser.
+
+Clients will spend most of their time dealing with a Stream by receiving
+and sending boxes over it. Clients upload boxes to the Stream, not the
+UA.
+
+A FlashSocketTransport would just give the box to the Stream.  The
+other C2S transport (XHR calls) is not represented by an instance of
+some kind of Transport The twisted.web Resource just gives the box to
+the Stream.
+
+Ideas for Transport types:
+	XHRTransport (s2c)
+		both "stream" and 1-shot mode.
+	ScriptTransport (s2c)
+		both htmlfile and Firefox/Safari mode.
+	SSETransport (s2c)
+		Server-sent events (Opera)
+	FlashSocketTransport (s2c,c2s)
+
+
+Client-side notes:
+
+Client should know how to get establish a downstream and upstream transport
+in one step (using just the information on the generated HTML page). There
+should be no additional negotiation, unless absolutely necessary.
+
+"""
+
 class IMinCom(Interface):
 
-	"""
-	   C2STransport \
-	   S2CTransport -\
-	   S2CTransport <-> Stream -\
-	(both)Transport <-> Stream <-> UA <-> User
-	(both)Transport <-> Stream <-> UA -/
-
-	A Stream can have more than one S2CTransport:
-
-		Client-side Minerva might be in the middle of upgrading or
-		downgrading to a different type of S2CTransport.
-		(for example, from XHR stream to Flash, or from XHR stream to long-poll)
-
-		Client-side Minerva may establish a second S2CTransport before first S2CTransport
-		is "done", to reduce the small time gap caused by request/connection
-		re-establishment. 
-
-	A UA (held together by a cookie) can have more than Stream:
-
-		With Chrome, we might have the same cookie,
-		yet not be able to share data between tabs.
-
-		Some minor or future browsers may make it too difficult (like Chrome)
-		to share a stream across tabs/windows, yet still have the same
-		session cookie.
-
-	A user can have more than one UA:
-
-		A user might be connecting from multiple browsers.
-
-		A user might be connecting from multiple IPs.
-
-		Many browsers provide an "incognito" mode where cookies are not shared
-		with the non-incognito mode. This is sort of like having a second UA.
-
-	Clients will spend most of their time dealing with a Stream by receiving and
-	sending boxes over it.
-
-	Ideas for Transport types:
-		XHRTransport (s2c)
-			both "stream" and 1-shot mode.
-		ScriptTransport (s2c)
-			both htmlfile and Firefox/Safari mode.
-		SSETransport (s2c)
-			Server-sent events (Opera)
-		FlashSocketTransport (s2c,c2s)
-		
-
-	"""
 
 	def sendMessage(stream, message):
 		"""
