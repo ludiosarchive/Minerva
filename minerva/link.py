@@ -29,19 +29,19 @@ def compactDump(obj):
 class IMinCom(Interface):
 
 	"""
-	C2SLink \
-	S2CLink -\
-	S2CLink <-> Stream -\
-	(both)Link <-> Stream <-> UA <-> User
-	(both)Link <-> Stream <-> UA -/
+	   C2STransport \
+	   S2CTransport -\
+	   S2CTransport <-> Stream -\
+	(both)Transport <-> Stream <-> UA <-> User
+	(both)Transport <-> Stream <-> UA -/
 
-	A Stream can have more than one S2CLink:
+	A Stream can have more than one S2CTransport:
 
 		Client-side Minerva might be in the middle of upgrading or
-		downgrading to a different type of S2CLink.
+		downgrading to a different type of S2CTransport.
 		(for example, from XHR stream to Flash, or from XHR stream to long-poll)
 
-		Client-side Minerva may establish a second S2CLink before first S2CLink
+		Client-side Minerva may establish a second S2CTransport before first S2CTransport
 		is "done", to reduce the small time gap caused by request/connection
 		re-establishment. 
 
@@ -66,7 +66,15 @@ class IMinCom(Interface):
 	Clients will spend most of their time dealing with a Stream by receiving and
 	sending boxes over it.
 
-
+	Ideas for Transport types:
+		XHRTransport (s2c)
+			both "stream" and 1-shot mode.
+		ScriptTransport (s2c)
+			both htmlfile and Firefox/Safari mode.
+		SSETransport (s2c)
+			Server-sent events (Opera)
+		FlashSocketTransport (s2c,c2s)
+		
 
 
 	Why not create a new Stream instance for each stream like Twisted Factories
