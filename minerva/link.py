@@ -117,9 +117,18 @@ class Stream(object):
 	I know my StreamFactory, L{self.factory}
 	"""
 
-	def __init__(self, streamID):
+	def __init__(self, streamId):
 		self._queue = deque()
-		self.id = streamID
+		self._transports = set()
+		self.id = streamId
+
+
+	def streamBegun(self):
+		pass
+
+
+	def streamEnded(self, reason):
+		pass
 
 
 	def boxReceived(self, box):
@@ -129,6 +138,34 @@ class Stream(object):
 	def sendBox(self, box):
 		print 'Queuing box for sending:', box
 		self._queue.append(box)
+
+
+	def _sendBoxes(self):
+		"""
+		Try to send boxes. Return integer representing how many were
+		written to any transport.
+		"""
+		if len(self._transports) == 0:
+			return 0
+
+		if len(self._transports) > 1:
+			raise NotImplementedError("More than 1 transport - don't know which one to use.")
+
+		t = self._transports[0]
+		for box in self._queue:
+			t.
+
+
+	def transportOnline(self, transport):
+		print 'New transport has come online:', transport
+		self._transports.add(transport)
+		self._sendBoxes()
+
+
+	def transportOffline(self, transport):
+		print 'Transport has left:', transport
+		# This will raise an exception if it's not there
+		self._transports.remove(transport)
 
 
 
@@ -146,21 +183,86 @@ class StreamFactory(object):
 		self._streams = {}
 
 
-	def buildStream(self):
-		s = self.stream()
+	def buildStream(self, streamId):
+		s = self.stream(streamId)
 		s.factory = self
 		return s
 
 
-	def locateStream(self, streamID):
+	def locateStream(self, streamId):
 		"""
-		Returns the Stream instance for L{streamID}, or L{None} if not found.
+		Returns the Stream instance for L{streamId}, or L{None} if not found.
 		"""
-		return self._streams.get(streamID)
+		return self._streams.get(streamId)
+
+
+	def locateOrBuild(self, streamId):
+		s = self.locateStream(streamId)
+		if s is None:
+			s = self.buildStream()
+		return s
+
+
+
+class _BaseHTTPTransport(object):
+
+	def __init__(self, request):
+		"""
+		I run on a twisted.web.http.Request
+		"""
+		self._request = request
+		self._sentFirstSeq = False
+
+
+	def writeBox(self, box):
+		if not self._sentFirstSeq:
+			self._sentFirstSeq = True
+			self._request.write(self._stringOne(['`^a', 0]))
+
+		self._request.write(self._stringOne(box))
+
+
+
+class XHRTransport(_BaseHTTPTransport):
+
+	# TODO: long-polling mode
+
+	def _stringOne(self, box):
+		"""
+		Return a serialized string for one box.
+		"""
+		# This is sort of like djb netstrings, but without the trailing comma
+		s = json.dumps(box, separators=(',', ':'))
+		return str(len(s)) + ',' + s
+
+
+
+class ScriptTransport(_BaseHTTPTransport):
+	"""
+	I'm a transport that writes <script> tags to a forever-frame
+	(both the IE htmlfile and the Firefox iframe variants)
+	"""
+
+
+	def _stringOne(self, box):
+		"""
+		Return a serialized string for one box.
+		"""
+		s = json.dumps(box, separators=(',', ':'))
+		# TODO: find out if there's a way to close a script tag in IE or FF/Safari
+		# without sending an entire </script>
+		return '<script>%s</script>' % (s,)
+
+
+
+class SSETransport(_BaseHTTPTransport):
+	pass # TODO
 
 
 
 class SocketTransport(protocol.Protocol):
+	# XXX Should this be both a Protocol and a Minerva transport?
+	# That would be kind of strange?
 	"""
 	Right now, this is only used for the Flash socket.
 	"""
@@ -183,6 +285,16 @@ class SocketTransport(protocol.Protocol):
 
 
 
+class EncryptedSocketTransport(protocol.Protocol):
+	pass
+	# TODO: need to port Scrypto to non-ctypes
+
+
+class InvalidTransportTypeError(Exception):
+	pass
+
+
+
 class HTTPS2C(resource.Resource):
 	isLeaf = True
 
@@ -191,7 +303,27 @@ class HTTPS2C(resource.Resource):
 
 
 	def render_GET(self, request):
-		streamID = request.args['s'][0]
+		# TODO: verify that the stream belongs to the UA,
+		# to make it slightly harder to hijack a stream over HTTP.
+		streamId = request.args['s'][0]
+		transportString = request.args['t'][0]
+
+		if transportString == 's':
+			transport = ScriptTransport(request)
+		elif transportString == 'x':
+			transport = XHRTransport(request)
+		elif transportString == 'o':
+			transport = SSETransport(request)
+		else:
+			raise InvalidTransportTypeError("request.args['t'] = " + repr(request.args['t']))
+
+		s = self._streamFactory.locateOrBuild(streamId)
+
+		s.transportOnline(transport)
+
+		d = request.notifyFinish()
+		d.addCallback(s.transportOffline, transport)
+		
 		return 'GET S2C'
 
 
