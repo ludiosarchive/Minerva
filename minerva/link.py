@@ -2,7 +2,6 @@ from collections import deque
 import simplejson as json
 
 from twisted.python import log
-from twisted.protocols import policies
 from twisted.web import resource
 from twisted.internet import protocol
 from zope.interface import Interface
