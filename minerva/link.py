@@ -463,6 +463,12 @@ class _BaseHTTPTransport(object):
 		self._fragsSent += fragCount
 
 
+# TODO: long-polling transport should:
+#	- not write a single byte to the Response until there's something to send.
+#		(save on TCP packets)
+#	- put the sequence number in [seqNum, box] so that no parsing besides
+#		eval() or JSON.parse is needed
+
 
 class XHRTransport(_BaseHTTPTransport):
 
