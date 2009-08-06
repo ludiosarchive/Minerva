@@ -135,6 +135,15 @@ class TestHTTPS2C(unittest.TestCase):
 		return port
 
 
+	def setUp(self):
+		self.p = None
+
+
+	def tearDown(self):
+		if self.p:
+			return self.p.stopListening()
+
+
 	def test_S2C(self):
 		port = self.startServer()
 

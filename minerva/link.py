@@ -666,7 +666,7 @@ class HTTPS2C(resource.Resource):
 		d.addCallback(lambda _None: s.transportOffline(transport))
 		d.addErrback(log.err)
 		
-		return 'GET S2C'
+		return 1 # NOT_DONE_YET
 
 
 	def render_POST(self, request):
