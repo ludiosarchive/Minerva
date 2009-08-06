@@ -1,3 +1,5 @@
+import re
+
 class ParseError(Exception):
 	pass
 
@@ -5,6 +7,11 @@ class ParseError(Exception):
 class NoCommaNetstringParseError(ValueError):
 	"""The incoming data is not in valid nocomma-Netstring format."""
 	pass
+
+
+LENGTH, DATA, COMMA = range(3)
+NUMBER = re.compile('(\d*)(:?)')
+DEBUG = True
 
 
 class NoCommaNetstringReceiver(object):
