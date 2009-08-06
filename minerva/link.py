@@ -182,6 +182,14 @@ class Queue(object):
 		return len(self._items)
 
 
+	def getItems(self):
+		"""
+		Return all items in the queue so that someone else can
+		look at them.
+		"""
+		return self._items
+
+
 	def removeUpTo(self, seqNum):
 		"""
 		Remove items up to sequence number L{seqNum}.
@@ -435,8 +443,8 @@ class _BaseHTTPTransport(object):
 			fragCount += 1
 			byteCount += len(seqString)
 
-		# TODO: give queue an iteration protocol instead of looking inside ._items
-		for n, box in enumerate(queue._items):
+		# TODO: maybe give queue an iteration protocol instead of .getItems()
+		for n, box in enumerate(queue.getItems()):
 			boxString = self._stringOne(box)
 			toSend += boxString
 			fragCount += 1
