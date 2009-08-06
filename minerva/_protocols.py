@@ -18,7 +18,7 @@ NUMBER = re.compile('(\d*)(:?)')
 DEBUG = True
 
 
-class NetStringReceiver(object):
+class NetStringDecoder(object):
 	"""
 	This is a copy/paste from twisted.protocols.basic.NetstringReceiver.
 	Modified to remove all notions of Protocol.
@@ -30,7 +30,7 @@ class NetStringReceiver(object):
 	This uses djb's Netstrings protocol to break up the
 	input into strings.
 
-	Each string makes a callback to stringReceived, with a single
+	Each string makes a callback to dataCallback, with a single
 	argument of that string.
 
 	Security features:
@@ -45,7 +45,7 @@ class NetStringReceiver(object):
 	_readerState = LENGTH
 	_readerLength = 0
 
-	def stringReceived(self, line):
+	def dataCallback(self, line):
 		"""
 		Override this.
 		"""
@@ -58,7 +58,7 @@ class NetStringReceiver(object):
 		self.__buffer = self.__buffer + buffer
 		if self._readerLength != 0:
 			return
-		self.stringReceived(self.__buffer)
+		self.dataCallback(self.__buffer)
 		self._readerState = COMMA
 
 
@@ -110,7 +110,7 @@ class NetStringReceiver(object):
 
 
 
-class BencodeStringReceiver(object):
+class BencodeStringDecoder(object):
 	"""
 	This is a copy/paste from twisted.protocols.basic.NetstringReceiver.
 	Modified to remove all notions of Protocol.
@@ -123,7 +123,7 @@ class BencodeStringReceiver(object):
 	This uses djb's Netstrings protocol to break up the
 	input into strings.
 
-	Each string makes a callback to stringReceived, with a single
+	Each string makes a callback to dataCallback, with a single
 	argument of that string.
 
 	Security features:
@@ -138,7 +138,7 @@ class BencodeStringReceiver(object):
 	_readerState = LENGTH
 	_readerLength = 0
 
-	def stringReceived(self, line):
+	def dataCallback(self, line):
 		"""
 		Override this.
 		"""
@@ -151,7 +151,7 @@ class BencodeStringReceiver(object):
 		self.__buffer = self.__buffer + buffer
 		if self._readerLength != 0:
 			return
-		self.stringReceived(self.__buffer)
+		self.dataCallback(self.__buffer)
 		self._readerState = LENGTH
 
 

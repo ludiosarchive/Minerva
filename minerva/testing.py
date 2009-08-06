@@ -1,4 +1,4 @@
-from twisted.web import
+from twisted.web import resource
 
 from cwtools import testing
 

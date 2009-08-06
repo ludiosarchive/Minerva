@@ -3,30 +3,30 @@ from twisted.trial import unittest
 import _protocols
 
 
-class DummyNetStringReceiver(_protocols.NetStringReceiver):
+class DummyNetStringDecoder(_protocols.NetStringDecoder):
 
 	def __init__(self):
 		self.gotStrings = []
 
 
-	def stringReceived(self, line):
+	def dataCallback(self, line):
 		self.gotStrings.append(line)
 
 
 
-class DummyBencodeStringReceiver(_protocols.BencodeStringReceiver):
+class DummyBencodeStringDecoder(_protocols.BencodeStringDecoder):
 
 	def __init__(self):
 		self.gotStrings = []
 
 
-	def stringReceived(self, line):
+	def dataCallback(self, line):
 		self.gotStrings.append(line)
 
 
 
 # modified copy/paste from twisted.test.test_protocols
-class NetStringReceiverTestCase(unittest.TestCase):
+class NetStringDecoderTestCase(unittest.TestCase):
 
 	# for max length 699
 	strings = ['hello', 'world', 'how', 'are', 'you123', ':today', "a"*515]
@@ -38,7 +38,7 @@ class NetStringReceiverTestCase(unittest.TestCase):
 
 	trailingComma = ','
 
-	receiver = DummyNetStringReceiver
+	receiver = DummyNetStringDecoder
 
 	def test_buffer(self):
 		"""
@@ -108,7 +108,7 @@ class NetStringReceiverTestCase(unittest.TestCase):
 
 
 
-class BencodeReceiverTestCase(NetStringReceiverTestCase):
+class BencodeDecoderTestCase(NetStringDecoderTestCase):
 
 	# for max length 50
 	illegalSequences = [
@@ -117,4 +117,4 @@ class BencodeReceiverTestCase(NetStringReceiverTestCase):
 
 	trailingComma = ''
 
-	receiver = receiver = DummyBencodeStringReceiver
+	receiver = receiver = DummyBencodeStringDecoder
