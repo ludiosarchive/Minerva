@@ -84,9 +84,9 @@ class NetStringReceiver(object):
 			try:
 				self._readerLength = self._readerLength * (10**len(m.group(1))) + long(m.group(1))
 			except OverflowError:
-				raise ParseError, "netstring too long"
+				raise ParseError("netstring too long")
 			if self._readerLength > self.MAX_LENGTH:
-				raise ParseError, "netstring too long"
+				raise ParseError("netstring too long")
 		if m.group(2):
 			self.__buffer = ''
 			self._readerState = DATA
@@ -103,7 +103,7 @@ class NetStringReceiver(object):
 				elif self._readerState == LENGTH:
 					self.doLength()
 				else:
-					raise RuntimeError, "mode is not DATA, COMMA or LENGTH"
+					raise RuntimeError("mode is not DATA, COMMA or LENGTH")
 		except ParseError:
 			self.brokenPeer = 1
 			raise
@@ -167,9 +167,9 @@ class BencodeStringReceiver(object):
 			try:
 				self._readerLength = self._readerLength * (10**len(m.group(1))) + long(m.group(1))
 			except OverflowError:
-				raise ParseError, "bencode string too long"
+				raise ParseError("bencode string too long")
 			if self._readerLength > self.MAX_LENGTH:
-				raise ParseError, "bencode string too long"
+				raise ParseError("bencode string too long")
 		if m.group(2):
 			self.__buffer = ''
 			self._readerState = DATA
@@ -184,7 +184,7 @@ class BencodeStringReceiver(object):
 				elif self._readerState == LENGTH:
 					self.doLength()
 				else:
-					raise RuntimeError, "mode is not DATA or LENGTH"
+					raise RuntimeError("mode is not DATA or LENGTH")
 		except ParseError:
 			self.brokenPeer = 1
 			raise

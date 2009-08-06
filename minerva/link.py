@@ -289,8 +289,8 @@ class Stream(GenericTimeoutMixin):
 			if self.noisy:
 				log.msg("Multiple S2C transports: %r, so I picked the newest: %r" % (
 					self._transports, transport,))
-
-		transport = self._transports[0]
+		else:
+			transport = list(self._transports)[0]
 
 		return transport
 
@@ -435,7 +435,8 @@ class _BaseHTTPTransport(object):
 			fragCount += 1
 			byteCount += len(seqString)
 
-		for n, box in enumerate(queue):
+		# TODO: give queue an iteration protocol instead of looking inside ._items
+		for n, box in enumerate(queue._items):
 			boxString = self._stringOne(box)
 			toSend += boxString
 			fragCount += 1
@@ -661,7 +662,8 @@ class HTTPS2C(resource.Resource):
 		s.transportOnline(transport)
 
 		d = request.notifyFinish()
-		d.addCallback(s.transportOffline, transport)
+		# TODO: OPTIMIZE: don't create a closure
+		d.addCallback(lambda _None: s.transportOffline(transport))
 		d.addErrback(log.err)
 		
 		return 'GET S2C'
