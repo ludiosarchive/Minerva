@@ -1,15 +1,18 @@
 from twisted.trial import unittest
-from twisted.web import server, _newclient
+from twisted.web import server, resource, _newclient
 from twisted.internet import reactor, protocol, defer
 
 from minerva import link
 import random
 
 
-class DummyHTTPProtocol(protocol.Protocol):
+class DownloadS2CProtocol(protocol.Protocol):
 
 	received = ''
-	myId = '1' * 32
+	streamId = '1000'
+	transportString = 'x' # xhr
+	connectionNumber = str(0)
+	
 
 	def __init__(self):
 		self.ack = 0
@@ -20,9 +23,9 @@ class DummyHTTPProtocol(protocol.Protocol):
 
 
 	def connectionMade(self):
+		# Used to have: Cookie: i=%s\r
 		self.transport.write('''\
-GET /d/%s,%s HTTP/1.0\r
-Cookie: i=%s\r
+GET /d/?i=%s&n=%s&s=%s&t=%s HTTP/1.0\r
 \r
 ''' % (random.random(), self.ack, self.myId))
 
@@ -33,12 +36,50 @@ Cookie: i=%s\r
 
 
 
-class DummyHTTPFactory(protocol.ClientFactory):
+class DownloadS2CFactory(protocol.ClientFactory):
 
-	protocol = DummyHTTPProtocol
+	protocol = DownloadS2CProtocol
 
 	def __init__(self):
 		self.d = defer.Deferred()
+
+
+
+class DummyIndex(resource.Resource):
+
+	def __init__(self, sf):
+		self.putChild('d', link.HTTPS2C(sf))
+
+
+
+class DummyStream(link.Stream):
+
+	def __init__(self):
+		link.Stream.__init__(self)
+		self._gotBoxes = []
+
+
+	def boxReceived(self, box):
+		self._gotBoxes.append(box)
+
+
+
+class DummyStreamFactory(link.StreamFactory):
+	stream = DummyStream
+
+
+
+class TestHTTPS2C(unittest.TestCase):
+
+	def startServer(self):
+		sf = link.StreamFactory(reactor)
+		root = DummyIndex(sf)
+
+		site = server.Site(root)
+		self.p = reactor.listenTCP(0, site, interface='127.0.0.1')
+		port = self.p.getHost().port
+		return port
+
 
 
 

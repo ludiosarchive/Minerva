@@ -366,11 +366,11 @@ class StreamFactory(object):
 		return self._streams.get(streamId)
 
 
-	def locateOrBuild(self, streamId):
-		s = self.locateStream(streamId)
-		if s is None:
-			s = self.buildStream(streamId)
-		return s
+#	def locateOrBuild(self, streamId):
+#		s = self.locateStream(streamId)
+#		if s is None:
+#			s = self.buildStream(streamId)
+#		return s
 
 
 
@@ -593,6 +593,16 @@ class InvalidArgumentsError(Exception):
 
 
 
+class ConnectionNumberNonZeroError(Exception):
+	pass
+
+
+
+class AckS2CNonZeroError(Exception):
+	pass
+
+
+
 class HTTPS2C(resource.Resource):
 	isLeaf = True
 
@@ -623,22 +633,36 @@ class HTTPS2C(resource.Resource):
 		except (KeyError, IndexError, ValueError, TypeError):
 			_fail()
 
+		if not transportString in ('s', 'x', 'o'):
+			_fail()
+
+		existingStream = self._streamFactory.locateStream(streamId)
+		if not existingStream:
+			if connectionNumber != 0:
+				raise ConnectionNumberNonZeroError(
+					"Connection number was %r, should be 0 for new stream." % (connectionNumber,))
+			if ackS2C != 0:
+				raise AckS2CNonZeroError(
+					"ackS2C was %r, should be 0 for new stream." % (ackS2C,))
+
+			s = self._streamFactory.buildStream(streamId)
+		else:
+			s = existingStream
+
+		s.clientReceivedUpTo(ackS2C)
+
 		if transportString == 's':
 			transport = ScriptTransport(request, connectionNumber)
 		elif transportString == 'x':
 			transport = XHRTransport(request, connectionNumber)
 		elif transportString == 'o':
 			transport = SSETransport(request, connectionNumber)
-		else:
-			_fail()
-
-		s = self._streamFactory.locateOrBuild(streamId)
-		s.clientReceivedUpTo(ackS2C)
 
 		s.transportOnline(transport)
 
 		d = request.notifyFinish()
 		d.addCallback(s.transportOffline, transport)
+		d.addErrback(log.err)
 		
 		return 'GET S2C'
 
