@@ -472,11 +472,6 @@ class _BaseHTTPTransport(object):
 
 class XHRTransport(_BaseHTTPTransport):
 
-	# TODO: long-polling mode
-
-	# TODO: need to send the 256/512/2KB/4KB prefix
-	# to bypass content detection (which blocks the stream in many browsers)
-
 	maxKB = 300
 
 	def __repr__(self):
