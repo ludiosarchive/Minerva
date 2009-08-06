@@ -463,32 +463,6 @@ class _BaseHTTPTransport(object):
 		self._fragsSent += fragCount
 
 
-	# writeBox is very bad:
-	#	- uses a TCP packet per write()
-	#	- ScriptTransport may need a header and footer
-	def writeBox(self, seqNumber, box):
-		"""
-		Write box L{box} to the HTTP response.
-
-		Return True if this transport could write another box,
-		False otherwise.
-		"""
-		if not self._sentFirstFrag:
-			self._sentFirstFrag = True
-			# Streaming transports write an sequence number
-			# only before the first box. The client knows that
-			# each box increments the S2C sequence number by 1.
-			self._reallyWriteBox(['`^a', seqNumber])
-
-		self._reallyWriteBox(box)
-		if self._bytesSent > self.maxKB:
-			# Can't send any more.
-			self._request = None
-			return False
-		else:
-			return True
-
-
 
 class XHRTransport(_BaseHTTPTransport):
 
