@@ -1,9 +1,20 @@
 from twisted.trial import unittest
 
-import no_comma_ns
+import _protocols
 
 
-class DummyReceiver(no_comma_ns.NoCommaNetstringReceiver):
+class DummyNetStringReceiver(_protocols.NetStringReceiver):
+
+	def __init__(self):
+		self.gotStrings = []
+
+
+	def stringReceived(self, line):
+		self.gotStrings.append(line)
+
+
+
+class DummyBencodeStringReceiver(_protocols.BencodeStringReceiver):
 
 	def __init__(self):
 		self.gotStrings = []
@@ -15,7 +26,7 @@ class DummyReceiver(no_comma_ns.NoCommaNetstringReceiver):
 
 
 # modified copy/paste from twisted.test.test_protocols
-class NetstringReceiverTestCase(unittest.TestCase):
+class NetStringReceiverTestCase(unittest.TestCase):
 
 	# for max length 699
 	strings = ['hello', 'world', 'how', 'are', 'you123', ':today', "a"*515]
@@ -25,8 +36,9 @@ class NetstringReceiverTestCase(unittest.TestCase):
 		'9999999999999999999999', 'abc', '4:abcde',
 		'51:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab,',]
 
-	# len('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab') == 51 
-	# so, wtf?
+	trailingComma = ','
+
+	receiver = DummyNetStringReceiver
 
 	def test_buffer(self):
 		"""
@@ -35,11 +47,11 @@ class NetstringReceiverTestCase(unittest.TestCase):
 		"""
 		out = ''
 		for s in self.strings:
-			out += str(len(s))+':'+s+','		
+			out += str(len(s))+':'+s+self.trailingComma
 
 		for packet_size in range(1, 20):
 			##print "packet_size", packet_size
-			a = DummyReceiver()
+			a = self.receiver()
 			a.MAX_LENGTH = 699
 
 			for i in range(len(out)/packet_size + 1):
@@ -59,10 +71,10 @@ class NetstringReceiverTestCase(unittest.TestCase):
 		but keep it anyway for debugging.
 		"""
 		for s in self.illegalSequences:
-			a = DummyReceiver()
+			a = self.receiver()
 			a.MAX_LENGTH = 50
 			##print 'Sending', repr(s)
-			self.assertRaises(no_comma_ns.ParseError, lambda s=s: a.dataReceived(s))
+			self.assertRaises(_protocols.ParseError, lambda s=s: a.dataReceived(s))
 
 
 	def test_illegalWithPacketSizes(self):
@@ -84,12 +96,25 @@ class NetstringReceiverTestCase(unittest.TestCase):
 
 				##print 'packet_size', packet_size
 
-				a = DummyReceiver()
+				a = self.receiver()
 				a.MAX_LENGTH = 50
 
 				##print 'Sending in pieces', repr(sequence)
 
 				self.assertRaises(
-					no_comma_ns.ParseError,
+					_protocols.ParseError,
 					lambda: sendData(a, sequence, packet_size)
 				)
+
+
+
+class BencodeReceiverTestCase(NetStringReceiverTestCase):
+
+	# for max length 50
+	illegalSequences = [
+		'9999999999999999999999', 'abc', '4:abcde',
+		'51:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab',]
+
+	trailingComma = ''
+
+	receiver = receiver = DummyBencodeStringReceiver

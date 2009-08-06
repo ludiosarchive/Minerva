@@ -195,7 +195,7 @@ class Queue(object):
 
 
 
-class Stream(object, GenericTimeoutMixin):
+class Stream(GenericTimeoutMixin):
 	"""
 	I am Stream. Transports attach to me. I can send and receive over
 	a new transport, or a completely different transport, without restarting
