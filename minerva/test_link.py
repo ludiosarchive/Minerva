@@ -6,20 +6,25 @@ from minerva import link
 import random
 
 
+
+
+
 class DownloadS2CProtocol(protocol.Protocol):
 
-	received = ''
-	streamId = '1000'
-	transportString = 'x' # xhr
-	connectionNumber = str(0)
-	
-
 	def __init__(self):
-		self.ack = 0
+		self.received = []
+
+		self.ackS2C = 0
+		self.connectionNumber = 0
+		self.streamId = '1000'
+		self.transportString = 'x' # XHR # the type of transport 
 
 
 	def dataReceived(self, data):
-		self.received += data
+		# TODO: if the kernel TCP stack is lagging, we might get the "wrong"
+		# number of dataReceived calls. Need to avoid using kernel's TCP
+		# entirely.
+		self.received.append(data)
 
 
 	def connectionMade(self):
@@ -27,7 +32,7 @@ class DownloadS2CProtocol(protocol.Protocol):
 		self.transport.write('''\
 GET /d/?i=%s&n=%s&s=%s&t=%s HTTP/1.0\r
 \r
-''' % (random.random(), self.ack, self.myId))
+''' % (self.myId, self.connectionNumber, self.ackS2C, self.transportString))
 
 
 	def connectionLost(self, reason):
@@ -38,7 +43,18 @@ GET /d/?i=%s&n=%s&s=%s&t=%s HTTP/1.0\r
 
 class DownloadS2CFactory(protocol.ClientFactory):
 
-	protocol = DownloadS2CProtocol
+	def __init__(self):
+		protocol.ClientFactory.__init__(self)
+		
+		self.ackS2C = 0
+		self.connectionNumber = 0
+
+
+	def buildProtocol(self):
+		p = DownloadS2CProtocol()
+		p.factory = self
+		return p
+
 
 	def __init__(self):
 		self.d = defer.Deferred()
