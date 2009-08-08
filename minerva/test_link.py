@@ -218,39 +218,3 @@ class TestHTTPS2C(unittest.TestCase):
 		# Stream set a 30 second timeout waiting for another S2C transport
 		# to connect, so move the clock 30 seconds forward. 
 		self.clock.pump(reactor, [30])
-
-
-#class TestXHRStream(unittest.TestCase):
-#
-#	def _makeASendQueue(self, qFinder):
-#		sq = link.SendQueue(('1' * 32).decode('hex'))
-#		sq.add(["one", "two"])
-#		sq.add(["three", "four"])
-#		qFinder.register(sq)
-#
-#
-#	def startServer(self):
-#		qFinder = link.QueueFinder()
-#		self._makeASendQueue(qFinder)
-#
-#		root = link.Index(reactor, qFinder)
-#		site = server.Site(root)
-#		self.p = reactor.listenTCP(0, site, interface='127.0.0.1')
-#		port = self.p.getHost().port
-#		return port
-#
-#
-#	def setUp(self):
-#		self.p = None
-#
-#
-#	def tearDown(self):
-#		if self.p:
-#			return self.p.stopListening()
-#
-#
-#	def test_XHRStream(self):
-#		port = self.startServer()
-#		c = DummyHTTPFactory()
-#		conn = reactor.connectTCP('127.0.0.1', port, c)
-#		return c.d
