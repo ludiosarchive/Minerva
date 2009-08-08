@@ -2,6 +2,7 @@ from twisted.trial import unittest
 from twisted.web import client, server, resource, http_headers, _newclient, iweb
 from twisted.python import log
 from twisted.internet import reactor, protocol, defer, task
+from twisted.test import time_helpers
 
 from minerva import link
 import random
@@ -169,11 +170,14 @@ class TestHTTPS2C(unittest.TestCase):
 
 	def setUp(self):
 		self.p = None
+		self.clock = time_helpers.Clock()
+		self.clock.install()
 
 
 	def tearDown(self):
 		if self.p:
 			return self.p.stopListening()
+		self.clock.uninstall()
 
 
 	@_startReactorDecorator
@@ -181,28 +185,21 @@ class TestHTTPS2C(unittest.TestCase):
 	def test_S2C(self):
 		port = self.startServer()
 
-		streamId = '1000'
+		streamId = '1000'.decode('hex')
 		transportString = 'x' # XHR # type of transport
 		connectionNumber = 0
 		ackS2C = 0
 
 		url = 'http://127.0.0.1:%d/d/?i=%s&n=%d&s=%d&t=%s' % (
-			port, streamId, connectionNumber, ackS2C, transportString)
+			port, streamId.encode('hex'), connectionNumber, ackS2C, transportString)
 
 		proto = HandleMinervaResponse()
 
 		d = makeRequest(reactor, url, proto)
 
-		#yield proto.onConnMade
-		#print self._sf._streams
-		while True:
-			stream1000 = self._sf.getStream(streamId.decode('hex'))
-			if stream1000 is not None:
-				break
-			print "."
-			yield task.deferLater(reactor, 0.01, lambda: None)
+		yield proto.onConnMade
 
-		#stream1000 = self._sf.getStream(streamId.decode('hex'))
+		stream1000 = self._sf.getStream(streamId)
 
 		# 300 KB is the limit.
 		# This will overflow one request because there's the padding
@@ -218,6 +215,9 @@ class TestHTTPS2C(unittest.TestCase):
 
 		yield d
 
+		# Stream set a 30 second timeout waiting for another S2C transport
+		# to connect, so move the clock 30 seconds forward. 
+		self.clock.pump(reactor, [30])
 
 
 #class TestXHRStream(unittest.TestCase):

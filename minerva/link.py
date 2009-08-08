@@ -13,6 +13,12 @@ from zope.interface import Interface
 (both)Transport <-> Stream <-> UA <-> User
 (both)Transport <-> Stream <-> UA -/
 
+C2S means client to server, S2C means server to client.
+S2C doesn't mean that the server establishes the connection (although
+it is maybe possible with future standards).
+In an HTTP-push scenario, the client (browser) establishes both the
+S2C and C2S transports.
+
 A Stream can have more than one S2CTransport:
 
 	Client-side Minerva might be in the middle of upgrading or downgrading
@@ -306,12 +312,13 @@ class Stream(GenericTimeoutMixin):
 		"""
 		assert seqNum >= 0, seqNum
 
-		if seqNum > (len(self.queue) + self.queue.seqNumAt0):
+		# TODO: what to do about _seqNumAt0?
+		if seqNum > (len(self.queue) + self.queue._seqNumAt0):
 			raise ClientSentTooHighAck(
-				"seqNum = %d, len(self.queue) = %d, self.queue.seqNumAt0 = %d"
-				% (seqNum, len(self.queue), self.queue.seqNumAt0))
+				"seqNum = %d, len(self.queue) = %d, self.queue._seqNumAt0 = %d"
+				% (seqNum, len(self.queue), self.queue._seqNumAt0))
 
-		if seqNum - self.queue.seqNumAt0 < 0:
+		if seqNum - self.queue._seqNumAt0 < 0:
 			if self.noisy:
 				log.msg("Client sent a strangely low S2C ACK; not removing anything from the queue.")
 			return
@@ -434,7 +441,7 @@ class _BaseHTTPTransport(object):
 		"""
 		self._request = request
 		self.connectionNumber = connectionNumber
-		self._sentFirstFrag = False
+		self._preparedSeqMsg = False
 		self._fragsSent = 0
 		self._bytesSent = 0
 
@@ -473,27 +480,27 @@ class _BaseHTTPTransport(object):
 		byteCount = 0
 		needRequestFinish = False
 
-		if not self._sentFirstFrag:
-			self._sentFirstFrag = True
-
-			# the header is not a frag, so only increment byteCount
-			header = self.getHeader()
-			byteCount += len(header)
-
-			# the seqString includes the 4KB padding.
-			# TODO: use less padding when possible. Can't rely on just
-			# 	browser information (proxies could be in the way), so maybe
-			# 	negotiate less padding with the client.
-			# TODO: don't write the padding when long-polling, it's just
-			# 	a waste
-			seqString = self._stringOne(['`^a', queue.seqNumAt0, (' '*(1024*4))])
-			toSend += seqString
-			fragCount += 1
-			byteCount += len(seqString)
-
 		seqNum = 0
 		# TODO: maybe give queue an iteration protocol instead of .getItems()
 		for seqNum, box in queue.iterItems(self._lastS2CWritten):
+			if not self._preparedSeqMsg:
+				self._preparedSeqMsg = True
+
+				# the header is not a frag, so only increment byteCount
+				header = self.getHeader()
+				byteCount += len(header)
+
+				# the seqString includes the 4KB padding.
+				# TODO: use less padding when possible. Can't rely on just
+				# 	browser information (proxies could be in the way), so maybe
+				# 	negotiate less padding with the client.
+				# TODO: don't write the padding when long-polling, it's just
+				# 	a waste
+				seqString = self._stringOne(['`^a', seqNum, (' ' * (1024 * 4))])
+				toSend += seqString
+				fragCount += 1
+				byteCount += len(seqString)
+
 			boxString = self._stringOne(box)
 			toSend += boxString
 			fragCount += 1
