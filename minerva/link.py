@@ -175,7 +175,7 @@ class Queue(object):
 
 	def __init__(self):
 		# The sequence number of the 0th item in the queue
-		self.seqNumAt0 = 0
+		self._seqNumAt0 = 0
 		self._items = deque()
 
 
@@ -196,7 +196,7 @@ class Queue(object):
 		Yield (seqNumber, box) for every item in the queue starting
 		at L{start}.
 		"""
-		baseN = self.seqNumAt0
+		baseN = self._seqNumAt0
 		for n, item in enumerate(self._items):
 			seqNum = baseN + n
 			if seqNum >= start:
@@ -209,10 +209,10 @@ class Queue(object):
 		"""
 		assert seqNum >= 0, seqNum
 
-		for i in xrange(seqNum - self.seqNumAt0):
+		for i in xrange(seqNum - self._seqNumAt0):
 			self._items.popleft()
 
-		self.seqNumAt0 += seqNum
+		self._seqNumAt0 += seqNum
 
 
 
@@ -725,42 +725,3 @@ class HTTPC2S(resource.Resource):
 
 	def render_POST(self, request):
 		return 'POST C2S'
-
-
-
-#class QueueFinder(object):
-#
-#	def __init__(self):
-#		self.registry = {}
-#
-#
-#	def find(self, qID):
-#		return self.registry[qID]
-#
-#
-#	def register(self, sendQueue):
-#		self.registry[sendQueue.qID] = sendQueue
-#
-#
-#
-#class EmptyQueueError(Exception):
-#	pass
-#
-#
-#class SendQueue(object):
-#
-#	def __init__(self, qID):
-#		self.qID = qID
-#		self.queue = deque()
-#
-#
-#	def add(self, obj):
-#		self.queue.append(obj)
-#
-#
-#	def getOne(self):
-#		try:
-#			return self.queue.popleft()
-#		except IndexError:
-#			raise EmptyQueueError()
-#
