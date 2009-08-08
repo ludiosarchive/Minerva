@@ -164,9 +164,14 @@ class ClientSentTooHighAck(Exception):
 
 
 class Queue(object):
+	"""
+	This is a queue that assigns a never-repeating sequence number
+	to each item.
+	"""
 
 	# TODO: more features to manipulate a Queue
-	# example: remove now-obsolete messages
+	# example: remove specific items that are no longer needed
+	# (a Stream might not have sent them yet, because there were no transports)
 
 	def __init__(self):
 		# The sequence number of the 0th item in the queue
@@ -178,16 +183,24 @@ class Queue(object):
 		return self._items.append(item)
 
 
+	def extend(self, items):
+		return self._items.extend(items)
+
+
 	def __len__(self):
 		return len(self._items)
 
 
-	def getItems(self):
+	def iterItems(self, start):
 		"""
-		Return all items in the queue so that someone else can
-		look at them.
+		Yield (seqNumber, box) for every item in the queue starting
+		at L{start}.
 		"""
-		return self._items
+		baseN = self.seqNumAt0
+		for n, item in enumerate(self._items):
+			seqNum = baseN + n
+			if seqNum >= start:
+				yield (seqNum, item)
 
 
 	def removeUpTo(self, seqNum):
@@ -218,7 +231,7 @@ class Stream(GenericTimeoutMixin):
 		self.queue = Queue()
 		self._transports = set()
 
-		self._seqC2S = 0 # TODO: use it
+		self._seqC2S = 0 # TODO: implement C2S, use it
 		self.id = streamId
 		
 
@@ -425,14 +438,18 @@ class _BaseHTTPTransport(object):
 		self._fragsSent = 0
 		self._bytesSent = 0
 
+
 		# We never want to write a box we already wrote to the
 		# S2C channel, because the transport is assumed to be not
 		# misorder or lose bytes.
+
 		# The only transport mangling we can handle are dropped
 		# requests/TCP connections, and full or partial buffering of
 		# requests/TCP connections.
-		self._lastS2CWritten = None
-		1/0
+
+		# 0 is sort of a special value that works; this number may
+		# increase dramatically after the first write
+		self._lastS2CWritten = 0
 
 		# TCP nodelay is good and increases server performance, as
 		# long as we don't accidentally send small packets.
@@ -474,8 +491,9 @@ class _BaseHTTPTransport(object):
 			fragCount += 1
 			byteCount += len(seqString)
 
+		seqNum = 0
 		# TODO: maybe give queue an iteration protocol instead of .getItems()
-		for n, box in enumerate(queue.getItems()):
+		for seqNum, box in queue.iterItems(self._lastS2CWritten):
 			boxString = self._stringOne(box)
 			toSend += boxString
 			fragCount += 1
@@ -491,6 +509,7 @@ class _BaseHTTPTransport(object):
 			needRequestFinish = True
 
 		self._request.write(toSend)
+		self._lastS2CWritten = seqNum
 		if needRequestFinish:
 			self._request.finish()
 		self._bytesSent += byteCount

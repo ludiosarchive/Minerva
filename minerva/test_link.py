@@ -210,8 +210,11 @@ class TestHTTPS2C(unittest.TestCase):
 
 		extraLen = len("['']")
 		amount = (300*1024)/100
+		boxes = []
 		for i in xrange(amount):
-			stream1000.sendBox(['x' * (100 - extraLen)])
+			boxes.append(['x' * (100 - extraLen)])
+		
+		stream1000.sendBoxes(boxes)
 
 		yield d
 
