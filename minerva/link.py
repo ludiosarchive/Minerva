@@ -287,9 +287,9 @@ class Stream(GenericTimeoutMixin):
 		It is often correct to buffer boxes in a list and give them to
 		L{sendBoxes} all at once.
 		"""
-		if self.noisy:
-			log.msg('Queuing boxes for sending:', boxes)
 		self.queue.extend(boxes)
+		if self.noisy:
+			log.msg('Queued %d boxes for sending.' % len(boxes))
 		self._sendIfPossible()
 		
 
@@ -298,9 +298,9 @@ class Stream(GenericTimeoutMixin):
 		Enqueue box L{box} for sending soon. Use L{sendBoxes} instead
 		if you are sending multiple boxes.
 		"""
-		if self.noisy:
-			log.msg('Queuing box for sending:', box)
 		self.queue.append(box)
+		if self.noisy:
+			log.msg('Queued 1 box for sending.')
 		self._sendIfPossible()
 
 
@@ -522,18 +522,19 @@ class _BaseHTTPTransport(object):
 		self._bytesSent += byteCount
 		self._fragsSent += fragCount
 
-		print "Wrote", byteCount, "(%d frags)" % fragCount
-		if needRequestFinish:
-			print "and finished the request"
-		else:
-			print
+		finishedText = " and finished the request" if needRequestFinish else ""
+		log.msg("Wrote %d bytes (%d frags) %s" % (byteCount, fragCount, finishedText))
 
 
-# TODO: long-polling transport should:
-#	- not write a single byte to the Response until there's something to send.
-#		(save on TCP packets)
-#	- put the sequence number in [seqNum, box] so that no parsing besides
-#		eval() or JSON.parse is needed
+"""
+ TODO: long-polling transport should:
+	- not write a single byte to the Response until there's something to send.
+		(save on TCP packets)
+			but wait, shouldn't XHRTransport do this too?
+			(unless we're writing something to kill a network read timeout)
+	- put the sequence number in [seqNum, box] so that no parsing besides
+		eval() or JSON.parse is needed
+"""
 
 
 class XHRTransport(_BaseHTTPTransport):
