@@ -1,10 +1,40 @@
 from twisted.trial import unittest
 from twisted.web import client, server, resource, http_headers, _newclient, iweb
 from twisted.python import log
-from twisted.internet import reactor, protocol, defer
+from twisted.internet import reactor, protocol, defer, task
 
 from minerva import link
 import random
+
+
+# copy/paste from ecmaster/test_yuicompressor.py
+def _startReactorDecorator(fn):
+	"""
+	Decorator to wrap a test to make the reactor start before running the test.
+
+	This is helpful for tests that run a process, avoiding this warning:
+
+	twisted/internet/utils.py:24: PotentialZombieWarning: spawnProcess
+	called, but the SIGCHLD handler is not installed. This probably means
+	you have not yet called reactor.run, or called
+	reactor.run(installSignalHandler=0). You will probably never see this
+	process finish, and it may become a zombie process.
+	"""
+
+	def newfunc(*args, **kwargs):
+
+		d = defer.Deferred()
+
+		def _actualTest():
+			d2 = fn(*args, **kwargs)
+			d2.addCallback(d.callback)
+			d2.addErrback(d.errback)
+
+		reactor.callWhenRunning(_actualTest)
+
+		return d
+
+	return newfunc
 
 
 	
@@ -12,10 +42,12 @@ class HandleMinervaResponse(protocol.Protocol):
 
 	def __init__(self):
 		self.received = []
+		self.onConnMade = defer.Deferred()
 
 
 	def connectionMade(self):
 		self.onConnLost = defer.Deferred()
+		self.onConnMade.callback(None)
 
 
 	def dataReceived(self, data):
@@ -126,8 +158,8 @@ class DummyStreamFactory(link.StreamFactory):
 class TestHTTPS2C(unittest.TestCase):
 
 	def startServer(self):
-		sf = link.StreamFactory(reactor)
-		root = DummyIndex(sf)
+		self._sf = link.StreamFactory(reactor)
+		root = DummyIndex(self._sf)
 
 		site = server.Site(root)
 		self.p = reactor.listenTCP(0, site, interface='127.0.0.1')
@@ -144,6 +176,8 @@ class TestHTTPS2C(unittest.TestCase):
 			return self.p.stopListening()
 
 
+	@_startReactorDecorator
+	@defer.inlineCallbacks
 	def test_S2C(self):
 		port = self.startServer()
 
@@ -159,7 +193,27 @@ class TestHTTPS2C(unittest.TestCase):
 
 		d = makeRequest(reactor, url, proto)
 
-		return d
+		#yield proto.onConnMade
+		#print self._sf._streams
+		while True:
+			stream1000 = self._sf.getStream(streamId.decode('hex'))
+			if stream1000 is not None:
+				break
+			print "."
+			yield task.deferLater(reactor, 0.01, lambda: None)
+
+		#stream1000 = self._sf.getStream(streamId.decode('hex'))
+
+		# 300 KB is the limit.
+		# This will overflow one request because there's the padding
+		# and the S2C seq fragment count in the byteLimit 
+
+		extraLen = len("['']")
+		amount = (300*1024)/100
+		for i in xrange(amount):
+			stream1000.sendBox(['x' * (100 - extraLen)])
+
+		yield d
 
 
 

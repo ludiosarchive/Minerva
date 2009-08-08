@@ -108,7 +108,7 @@ class NetStringDecoderTestCase(unittest.TestCase):
 
 
 
-class BencodeDecoderTestCase(NetStringDecoderTestCase):
+class BencodeStringDecoderTestCase(NetStringDecoderTestCase):
 
 	# for max length 50
 	illegalSequences = [

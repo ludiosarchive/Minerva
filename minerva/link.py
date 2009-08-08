@@ -215,7 +215,7 @@ class Stream(GenericTimeoutMixin):
 	noisy = True
 
 	def __init__(self, streamId):
-		self._queue = Queue()
+		self.queue = Queue()
 		self._transports = set()
 
 		self._seqC2S = 0 # TODO: use it
@@ -224,7 +224,7 @@ class Stream(GenericTimeoutMixin):
 
 	def __repr__(self):
 		return '<Stream %r (%d,%d) with transports %r and %d items in queue>' % (
-			self.id, self._queue.seqNumAt0, self._seqC2S, self._transports, len(self._queue))
+			self.id, self.queue.seqNumAt0, self._seqC2S, self._transports, len(self.queue))
 
 
 	def streamBegun(self):
@@ -257,12 +257,32 @@ class Stream(GenericTimeoutMixin):
 		log.msg('Received box:', box)
 
 
+	def sendBoxes(self, boxes):
+		"""
+		Enqueue boxes L{boxes} for sending soon.
+		
+		Use L{sendBoxes} to send multiple boxes instead of repeated calls
+		to L{sendBox}. L{sendBoxes} lets a transport use fewer TCP packets
+		when possible.
+
+		It is often correct to buffer boxes in a list and give them to
+		L{sendBoxes} all at once.
+		"""
+		if self.noisy:
+			log.msg('Queuing boxes for sending:', boxes)
+		self.queue.extend(boxes)
+		self._sendIfPossible()
+		
+
 	def sendBox(self, box):
 		"""
-		Enqueue box L{box} for sending soon.
+		Enqueue box L{box} for sending soon. Use L{sendBoxes} instead
+		if you are sending multiple boxes.
 		"""
-		log.msg('Queuing box for sending:', box)
-		self._queue.append(box)
+		if self.noisy:
+			log.msg('Queuing box for sending:', box)
+		self.queue.append(box)
+		self._sendIfPossible()
 
 
 	def clientReceivedUpTo(self, seqNum):
@@ -273,17 +293,17 @@ class Stream(GenericTimeoutMixin):
 		"""
 		assert seqNum >= 0, seqNum
 
-		if seqNum > (len(self._queue) + self._queue.seqNumAt0):
+		if seqNum > (len(self.queue) + self.queue.seqNumAt0):
 			raise ClientSentTooHighAck(
-				"seqNum = %d, len(self._queue) = %d, self._queue.seqNumAt0 = %d"
-				% (seqNum, len(self._queue), self._queue.seqNumAt0))
+				"seqNum = %d, len(self.queue) = %d, self.queue.seqNumAt0 = %d"
+				% (seqNum, len(self.queue), self.queue.seqNumAt0))
 
-		if seqNum - self._queue.seqNumAt0 < 0:
+		if seqNum - self.queue.seqNumAt0 < 0:
 			if self.noisy:
 				log.msg("Client sent a strangely low S2C ACK; not removing anything from the queue.")
 			return
 
-		self._queue.removeUpTo(seqNum)
+		self.queue.removeUpTo(seqNum)
 
 
 	def _selectS2CTransport(self):
@@ -303,16 +323,16 @@ class Stream(GenericTimeoutMixin):
 		return transport
 
 
-	def _sendBoxes(self):
+	def _sendIfPossible(self):
 		"""
-		Try to send boxes.
+		Try to send.
 		"""
 		transport = self._selectS2CTransport()
 		if not transport:
 			if self.noisy:
 				log.msg("Don't have any S2C transports; can't send.")
 			return
-		transport.handle(self._queue)
+		transport.handle(self.queue)
 
 
 	def transportOnline(self, transport):
@@ -322,7 +342,7 @@ class Stream(GenericTimeoutMixin):
 		self.setTimeout(None)
 		log.msg('New transport has come online:', transport)
 		self._transports.add(transport)
-		self._sendBoxes()
+		self._sendIfPossible()
 
 
 	def transportOffline(self, transport):
@@ -363,11 +383,13 @@ class StreamFactory(object):
 		s = self.stream(streamId)
 		s.factory = self
 		s._reactor = self._reactor
+		# TODO: use weakref dictionary?
+		self._streams[streamId] = s
 		s.streamBegun()
 		return s
 
 
-	def locateStream(self, streamId):
+	def getStream(self, streamId):
 		"""
 		Returns the Stream instance for L{streamId}, or L{None} if not found.
 		"""
@@ -375,7 +397,7 @@ class StreamFactory(object):
 
 
 #	def locateOrBuild(self, streamId):
-#		s = self.locateStream(streamId)
+#		s = self.getStream(streamId)
 #		if s is None:
 #			s = self.buildStream(streamId)
 #		return s
@@ -388,7 +410,7 @@ class _BaseHTTPTransport(object):
 	boxes are something that was actually in a queue.
 	"""
 
-	maxKB = None
+	maxBytes = None # override this
 
 	def __init__(self, request, connectionNumber):
 		"""
@@ -398,11 +420,19 @@ class _BaseHTTPTransport(object):
 			open S2C transports.
 		"""
 		self._request = request
-		# TODO: set tcp no delay
 		self.connectionNumber = connectionNumber
 		self._sentFirstFrag = False
 		self._fragsSent = 0
 		self._bytesSent = 0
+
+		# We never want to write a box we already wrote to the
+		# S2C channel, because the transport is assumed to be not
+		# misorder or lose bytes.
+		# The only transport mangling we can handle are dropped
+		# requests/TCP connections, and full or partial buffering of
+		# requests/TCP connections.
+		self._lastS2CWritten = None
+		1/0
 
 		# TCP nodelay is good and increases server performance, as
 		# long as we don't accidentally send small packets.
@@ -424,6 +454,7 @@ class _BaseHTTPTransport(object):
 		toSend = ''
 		fragCount = 0
 		byteCount = 0
+		needRequestFinish = False
 
 		if not self._sentFirstFrag:
 			self._sentFirstFrag = True
@@ -438,7 +469,7 @@ class _BaseHTTPTransport(object):
 			# 	negotiate less padding with the client.
 			# TODO: don't write the padding when long-polling, it's just
 			# 	a waste
-			seqString = self._stringOne(['`^a', queue.seqNumAt0, (' '*1024*4)])
+			seqString = self._stringOne(['`^a', queue.seqNumAt0, (' '*(1024*4))])
 			toSend += seqString
 			fragCount += 1
 			byteCount += len(seqString)
@@ -449,18 +480,27 @@ class _BaseHTTPTransport(object):
 			toSend += boxString
 			fragCount += 1
 			byteCount += len(boxString)
-			if byteCount > self.maxKB:
+			if byteCount > self.maxBytes:
 				break
 
-		if byteCount > self.maxKB:
+		if byteCount > self.maxBytes:
 			footer = self.getFooter()
 
 			# the footer is not a frag, so only increment byteCount
 			byteCount += len(footer)
+			needRequestFinish = True
 
 		self._request.write(toSend)
+		if needRequestFinish:
+			self._request.finish()
 		self._bytesSent += byteCount
 		self._fragsSent += fragCount
+
+		print "Wrote", byteCount, "(%d frags)" % fragCount
+		if needRequestFinish:
+			print "and finished the request"
+		else:
+			print
 
 
 # TODO: long-polling transport should:
@@ -472,7 +512,7 @@ class _BaseHTTPTransport(object):
 
 class XHRTransport(_BaseHTTPTransport):
 
-	maxKB = 300
+	maxBytes = 300*1024
 
 	def __repr__(self):
 		return '<XHRTransport at %s attached to %r with %d frags sent>' % (
@@ -497,7 +537,7 @@ class ScriptTransport(_BaseHTTPTransport):
 	(both the IE htmlfile and the Firefox iframe variants)
 	"""
 
-	maxKB = 300
+	maxBytes = 300*1024
 
 	def __repr__(self):
 		return '<ScriptTransport at %s attached to %r with %d frags sent>' % (
@@ -532,7 +572,7 @@ class ScriptTransport(_BaseHTTPTransport):
 # TODO
 class SSETransport(_BaseHTTPTransport):
 
-	maxKB = 1024 # Does this even need a limit?
+	maxBytes = 1024*1024 # Does this even need a limit?
 
 	def __repr__(self):
 		return '<SSETransport at %s attached to %r with %d frags sent>' % (
@@ -620,7 +660,7 @@ class HTTPS2C(resource.Resource):
 		if not transportString in ('s', 'x', 'o'):
 			_fail()
 
-		existingStream = self._streamFactory.locateStream(streamId)
+		existingStream = self._streamFactory.getStream(streamId)
 		if not existingStream:
 			if connectionNumber != 0:
 				raise ConnectionNumberNonZeroError(
