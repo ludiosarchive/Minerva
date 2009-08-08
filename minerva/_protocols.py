@@ -1,5 +1,5 @@
 """
-These are protocols that convert a stream to fragments.
+These are protocols that convert a bytestream to frames.
 
 Useful for testing. Most of the time, JavaScript/Flash
 code will be parsing the streams.

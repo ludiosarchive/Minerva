@@ -163,9 +163,10 @@ class StreamEndedReasonClosed(object):
 	"""
 
 
-class ClientSentTooHighAck(Exception):
+class SeqNumTooHighError(Exception):
 	"""
-	Client sent a bogus S2C ACK number.
+	Could not delete up to a certain seqNum, because that seqNum
+	is too high. (Client sent a bogus S2C ACK number.)
 	"""
 
 
@@ -214,6 +215,19 @@ class Queue(object):
 		Remove items up to sequence number L{seqNum}.
 		"""
 		assert seqNum >= 0, seqNum
+
+		if seqNum > (len(self._items) + self._seqNumAt0):
+			raise SeqNumTooHighError(
+				"seqNum = %d, len(self._items) = %d, self._seqNumAt0 = %d"
+				% (seqNum, len(self._items), self._seqNumAt0))
+
+		if seqNum - self._seqNumAt0 < 0:
+			if self.noisy:
+				# If Stream is using removeUpTo, the client sent a strangely low
+				# S2C ACK; not removing anything from the queue.
+				log.msg("I was asked to remove items up to "
+					"%d but those are long gone. My lowest is %d" % (seqNum, self._seqNumAt0))
+			return
 
 		for i in xrange(seqNum - self._seqNumAt0):
 			self._items.popleft()
@@ -310,19 +324,6 @@ class Stream(GenericTimeoutMixin):
 		number L{seqNum}, so now it is okay to clear the messages from
 		the queue.
 		"""
-		assert seqNum >= 0, seqNum
-
-		# TODO: what to do about _seqNumAt0?
-		if seqNum > (len(self.queue) + self.queue._seqNumAt0):
-			raise ClientSentTooHighAck(
-				"seqNum = %d, len(self.queue) = %d, self.queue._seqNumAt0 = %d"
-				% (seqNum, len(self.queue), self.queue._seqNumAt0))
-
-		if seqNum - self.queue._seqNumAt0 < 0:
-			if self.noisy:
-				log.msg("Client sent a strangely low S2C ACK; not removing anything from the queue.")
-			return
-
 		self.queue.removeUpTo(seqNum)
 
 
@@ -426,8 +427,8 @@ class StreamFactory(object):
 
 class _BaseHTTPTransport(object):
 	"""
-	frags (fragments) are any object, including metadata needed for connection management.
-	boxes are something that was actually in a queue.
+	frames are any frame, including metadata needed for connection management.
+	boxes are application-level frames that came from a queue.
 	"""
 
 	maxBytes = None # override this
@@ -442,7 +443,7 @@ class _BaseHTTPTransport(object):
 		self._request = request
 		self.connectionNumber = connectionNumber
 		self._preparedSeqMsg = False
-		self._fragsSent = 0
+		self._framesSent = 0
 		self._bytesSent = 0
 
 
@@ -476,7 +477,7 @@ class _BaseHTTPTransport(object):
 		Write as many messages from the queue as possible.
 		"""
 		toSend = ''
-		fragCount = 0
+		frameCount = 0
 		byteCount = 0
 		needRequestFinish = False
 
@@ -486,7 +487,7 @@ class _BaseHTTPTransport(object):
 			if not self._preparedSeqMsg:
 				self._preparedSeqMsg = True
 
-				# the header is not a frag, so only increment byteCount
+				# the header is not a frame, so only increment byteCount
 				header = self.getHeader()
 				byteCount += len(header)
 
@@ -498,12 +499,12 @@ class _BaseHTTPTransport(object):
 				# 	a waste
 				seqString = self._stringOne(['`^a', seqNum, (' ' * (1024 * 4))])
 				toSend += seqString
-				fragCount += 1
+				frameCount += 1
 				byteCount += len(seqString)
 
 			boxString = self._stringOne(box)
 			toSend += boxString
-			fragCount += 1
+			frameCount += 1
 			byteCount += len(boxString)
 			if byteCount > self.maxBytes:
 				break
@@ -511,7 +512,7 @@ class _BaseHTTPTransport(object):
 		if byteCount > self.maxBytes:
 			footer = self.getFooter()
 
-			# the footer is not a frag, so only increment byteCount
+			# the footer is not a frame, so only increment byteCount
 			byteCount += len(footer)
 			needRequestFinish = True
 
@@ -520,10 +521,10 @@ class _BaseHTTPTransport(object):
 		if needRequestFinish:
 			self._request.finish()
 		self._bytesSent += byteCount
-		self._fragsSent += fragCount
+		self._framesSent += frameCount
 
 		finishedText = " and finished the request" if needRequestFinish else ""
-		log.msg("Wrote %d bytes (%d frags) %s" % (byteCount, fragCount, finishedText))
+		log.msg("Wrote %d bytes (%d frames) %s" % (byteCount, frameCount, finishedText))
 
 
 """
@@ -542,8 +543,8 @@ class XHRTransport(_BaseHTTPTransport):
 	maxBytes = 300*1024
 
 	def __repr__(self):
-		return '<XHRTransport at %s attached to %r with %d frags sent>' % (
-			hex(id(self)), self._request, self._fragsSent)
+		return '<XHRTransport at %s attached to %r with %d frames sent>' % (
+			hex(id(self)), self._request, self._framesSent)
 
 
 	def _stringOne(self, box):
@@ -567,8 +568,8 @@ class ScriptTransport(_BaseHTTPTransport):
 	maxBytes = 300*1024
 
 	def __repr__(self):
-		return '<ScriptTransport at %s attached to %r with %d frags sent>' % (
-			hex(id(self)), self._request, self._fragsSent)
+		return '<ScriptTransport at %s attached to %r with %d frames sent>' % (
+			hex(id(self)), self._request, self._framesSent)
 
 
 	# TODO: maybe this header should be written earlier, even before the first attempt
@@ -602,8 +603,8 @@ class SSETransport(_BaseHTTPTransport):
 	maxBytes = 1024*1024 # Does this even need a limit?
 
 	def __repr__(self):
-		return '<SSETransport at %s attached to %r with %d frags sent>' % (
-			hex(id(self)), self._request, self._fragsSent)
+		return '<SSETransport at %s attached to %r with %d frames sent>' % (
+			hex(id(self)), self._request, self._framesSent)
 
 
 

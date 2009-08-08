@@ -202,8 +202,8 @@ class TestHTTPS2C(unittest.TestCase):
 		stream1000 = self._sf.getStream(streamId)
 
 		# 300 KB is the limit.
-		# This will overflow one request because there's the padding
-		# and the S2C seq fragment count in the byteLimit 
+		# This will overflow one request because the padding
+		# and the S2C seq frame count for the byteLimit.
 
 		extraLen = len("['']")
 		amount = (300*1024)/100
