@@ -85,6 +85,38 @@ anyway over HTTP), because server already knows which stream IDs belong to
 a session ID.
 """
 
+# Error codes for closing a transport
+ERROR_CODES = {
+	# This transport cannot send the boxes the client asked for,
+	# probably because they are longer in the queue.
+	'LOST_S2C_BOXES': 101,
+
+	# Stream is being reset because server load is too high.
+	'SERVER_LOAD': 102,
+}
+
+
+def get_tcp_info(sock):
+	# The idea comes from
+	# http://burmesenetworker.blogspot.com/2008/11/reading-tcp-kernel-parameters-using.html
+	# (which incorrectly uses "L")
+
+	# see /usr/include/linux/tcp.h if you need to update this
+	BI = ('B' * 7) + ('I' * 24)
+
+	length = struct.calcsize(BI)
+
+	# The call to getsockopt from Python takes about 1.106 microseconds on
+	# Ubuntu 9.04 64-bit (server) in VMWare workstation 6.5, with a 2.93ghz Q6600
+
+	tcp_info = sock.getsockopt(socket.SOL_TCP, socket.TCP_INFO, length)
+	##print len(tcp_info), repr(tcp_info)
+	data = struct.unpack(BI, tcp_info)
+	# tcpi_unacked is the [11]th item
+	##print data, "tcpi_unacked", data[11]
+	return data
+
+
 
 def nonnegint(value):
 	"""
@@ -173,6 +205,13 @@ class SeqNumTooHighError(Exception):
 	"""
 
 
+class WantedItemsTooLowError(Exception):
+	"""
+	Queue was asked for items that are long gone.
+	"""
+	
+
+
 class Queue(object):
 	"""
 	This is a queue that assigns a never-repeating sequence number
@@ -209,6 +248,8 @@ class Queue(object):
 		at L{start}.
 		"""
 		baseN = self._seqNumAt0
+		if start < baseN:
+			raise WantedItemsTooLowError("I was asked for %d+; my lowest item is %d" % (start, baseN))
 		for n, item in enumerate(self._items):
 			seqNum = baseN + n
 			if seqNum >= start:
@@ -257,12 +298,12 @@ class Stream(GenericTimeoutMixin):
 		self._transports = set()
 
 		self._seqC2S = 0 # TODO: implement C2S, use it
-		self.id = streamId
+		self.streamId = streamId
 		
 
 	def __repr__(self):
 		return '<Stream %r (%d,%d) with transports %r and %d items in queue>' % (
-			self.id, self.queue.seqNumAt0, self._seqC2S, self._transports, len(self.queue))
+			self.streamId, self.queue.seqNumAt0, self._seqC2S, self._transports, len(self.queue))
 
 
 	def streamBegun(self):
@@ -358,7 +399,29 @@ class Stream(GenericTimeoutMixin):
 			if self.noisy:
 				log.msg("Don't have any S2C transports; can't send.")
 			return
-		transport.handle(self.queue)
+		try:
+			transport.writeFrom(self.queue)
+		except WantedItemsTooLow:
+			# The client opened an S2C transport wanting boxes that
+			# we no longer have. We need to close this "bad" S2C transport.
+			# This doesn't imply that the Stream is toast, because the client
+			# may already have received these boxes over another transport.
+			# If the client really cannot continue, it will send server a Stream
+			# reset message.
+			# TODO: define Stream reset message
+			transport.close(ERROR_CODES['LOST_S2C_BOXES'])
+
+
+#	def reset(self):
+#		"""
+#		Reset the stream
+#		"""
+#		if len(self._transports) == 0:
+#			# The client will usually discover that the Stream is toast later.
+#			log.msg("Tried to notify transports connected to "
+#				"%s of a Stream reset, but there were no transports." % (self,))
+#		for t in self._transports:
+#			t.reset(ERROR_CODES['LOST_S2C_BOXES'])
 
 
 	def transportOnline(self, transport):
@@ -386,7 +449,23 @@ class Stream(GenericTimeoutMixin):
 
 
 	def timedOut(self):
+		# We timed out because there are no transports connected,
+		# so we don't need to notify any transports. If client connects
+		# back with a disappeared streamId, client will get an error.
 		self.streamEnded(StreamEndedReasonTimeout())
+		self._done()
+
+
+	def _done(self):
+		"""
+		I am no longer useful for anything; let the StreamFactory know.
+		"""
+		self.factory.streamIsDone(self)
+		# TODO: use object graph visualization to figure out if these are
+		# helpful or not.
+		self.factory = None
+		self.queue = None
+		self._transports = None
 
 
 
@@ -403,6 +482,10 @@ class StreamFactory(object):
 	def __init__(self, reactor):
 		self._reactor = reactor
 		self._streams = {}
+
+
+	def streamIsDone(self, aStream):
+		del self._streams[aStream.streamId]
 
 
 	def buildStream(self, streamId):
@@ -438,55 +521,37 @@ class _BaseHTTPTransport(object):
 
 	maxBytes = None # override this
 
-	def __init__(self, request, connectionNumber):
+	def __init__(self, request, connectionNumber, firstS2CToWrite):
 		"""
 		I need a L{twisted.web.http.Request}.
 		
 		L{connectionNumber} is incremented by the client as they
 			open S2C transports.
+
+		The only transport mangling we can handle are dropped
+		requests/TCP connections, and full or partial buffering of
+		requests/TCP connections.
 		"""
 		self._request = request
 		self.connectionNumber = connectionNumber
+		self._firstS2CToWrite = firstS2CToWrite
+
 		self._preparedSeqMsg = False
 		self._framesSent = 0
 		self._bytesSent = 0
-
 
 		# We never want to write a box we already wrote to the
 		# S2C channel, because the transport is assumed to be not
 		# misorder or lose bytes.
 
-		# The only transport mangling we can handle are dropped
-		# requests/TCP connections, and full or partial buffering of
-		# requests/TCP connections.
-
-		# 0 is sort of a special value that works; this number may
-		# increase dramatically after the first write
-		self._lastS2CWritten = 0
+		self._lastS2CWritten = firstS2CToWrite
 
 		# TCP nodelay is good and increases server performance, as
 		# long as we don't accidentally send small packets.
 		self._request.channel.transport.setTcpNoDelay(True)
 
 		sock = self._request.channel.transport.socket
-
-		# The idea comes from
-		# http://burmesenetworker.blogspot.com/2008/11/reading-tcp-kernel-parameters-using.html
-		# (which incorrectly uses "L")
-		
-		# see /usr/include/linux/tcp.h if you need to update this
-		BI = ('B' * 7) + ('I' * 24)
-
-		length = struct.calcsize(BI)
-
-		# The call to getsockopt from Python takes about 1.106 microseconds on
-		# Ubuntu 9.04 64-bit (server) in VMWare workstation 6.5, with a 2.93ghz Q6600
-
-		tcp_info = sock.getsockopt(socket.SOL_TCP, socket.TCP_INFO, length)
-		##print len(tcp_info), repr(tcp_info)
-		data = struct.unpack(BI, tcp_info)
-		# tcpi_unacked is the [11]th item
-		print data, "tcpi_unacked", data[11]
+		print get_tcp_info(sock)
 
 
 	def getHeader(self):
@@ -497,7 +562,28 @@ class _BaseHTTPTransport(object):
 		return ''
 
 
-	def handle(self, queue):
+	def close(self, code):
+		"""
+		Close this transport with numeric reason L{code}.
+		"""
+		self.forceWrite(['`^e', code])
+		self._request.finish()
+		log.msg("Closed transport %s with reason %d." % (self, code))
+
+
+	def forceWrite(self, frame):
+		"""
+		Write a frame to the connection without any coalescing with
+		other frames. This is useful for notifying clients of Stream resets,
+		and possibly sending keep-alive frames.
+		"""
+		serialized = self._stringOne(frame)
+		self._request.write(serialized)
+		self._bytesSent += len(serialized)
+		self._framesSent += 1
+
+
+	def writeFrom(self, queue):
 		"""
 		Write as many messages from the queue as possible.
 		"""
@@ -507,8 +593,11 @@ class _BaseHTTPTransport(object):
 		needRequestFinish = False
 
 		seqNum = 0
-		# TODO: maybe give queue an iteration protocol instead of .getItems()
-		for seqNum, box in queue.iterItems(self._lastS2CWritten):
+
+		# This can raise a WantedItemsTooLowError exception.
+		boxIterator = queue.iterItems(self._lastS2CWritten)
+
+		for seqNum, box in boxIterator:
 			if not self._preparedSeqMsg:
 				self._preparedSeqMsg = True
 
@@ -702,10 +791,10 @@ class HTTPS2C(resource.Resource):
 			# (with higher connectionNumber)
 			connectionNumber = nonnegint(request.args['n'][0]) # "(n)umber"
 
-			# Last box that the client received
+			# The sequence number of the first S2C box that the client demands.
 			ackS2C = nonnegint(request.args['s'][0]) # "(s)eq"
 
-			# The type of S2C transport requested.
+			# The type of S2C transport the client demands.
 			transportString = request.args['t'][0] # "(t)ype"
 		except (KeyError, IndexError, ValueError, TypeError):
 			_fail()
@@ -729,11 +818,11 @@ class HTTPS2C(resource.Resource):
 		s.clientReceivedUpTo(ackS2C)
 
 		if transportString == 's':
-			transport = ScriptTransport(request, connectionNumber)
+			transport = ScriptTransport(request, connectionNumber, ackS2C)
 		elif transportString == 'x':
-			transport = XHRTransport(request, connectionNumber)
+			transport = XHRTransport(request, connectionNumber, ackS2C)
 		elif transportString == 'o':
-			transport = SSETransport(request, connectionNumber)
+			transport = SSETransport(request, connectionNumber, ackS2C)
 
 		s.transportOnline(transport)
 
