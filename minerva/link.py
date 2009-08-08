@@ -475,15 +475,18 @@ class _BaseHTTPTransport(object):
 		# (which incorrectly uses "L")
 		
 		# see /usr/include/linux/tcp.h if you need to update this
-		B = 'B' * 7
-		I = 'I' * 24
-		BI = B + I
+		BI = ('B' * 7) + ('I' * 24)
 
-		tcp_info = sock.getsockopt(
-			socket.SOL_TCP, socket.TCP_INFO,
-			struct.calcsize(BI))
+		length = struct.calcsize(BI)
+
+		# The call to getsockopt from Python takes about 1.106 microseconds on
+		# Ubuntu 9.04 64-bit (server) in VMWare workstation 6.5, with a 2.93ghz Q6600
+
+		tcp_info = sock.getsockopt(socket.SOL_TCP, socket.TCP_INFO, length)
 		##print len(tcp_info), repr(tcp_info)
-		print struct.unpack(BI, tcp_info)
+		data = struct.unpack(BI, tcp_info)
+		# tcpi_unacked is the [11]th item
+		print data, "tcpi_unacked", data[11]
 
 
 	def getHeader(self):
