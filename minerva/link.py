@@ -1,6 +1,9 @@
 from collections import deque
 import simplejson as json
 
+import socket
+import struct
+
 from twisted.python import log
 from twisted.web import resource
 from twisted.internet import protocol
@@ -179,6 +182,8 @@ class Queue(object):
 	# TODO: more features to manipulate a Queue
 	# example: remove specific items that are no longer needed
 	# (a Stream might not have sent them yet, because there were no transports)
+
+	noisy = True
 
 	def __init__(self):
 		# The sequence number of the 0th item in the queue
@@ -461,7 +466,24 @@ class _BaseHTTPTransport(object):
 
 		# TCP nodelay is good and increases server performance, as
 		# long as we don't accidentally send small packets.
-		request.channel.transport.setTcpNoDelay(True)
+		self._request.channel.transport.setTcpNoDelay(True)
+
+		sock = self._request.channel.transport.socket
+
+		# The idea comes from
+		# http://burmesenetworker.blogspot.com/2008/11/reading-tcp-kernel-parameters-using.html
+		# (which incorrectly uses "L")
+		
+		# see /usr/include/linux/tcp.h if you need to update this
+		B = 'B' * 7
+		I = 'I' * 24
+		BI = B + I
+
+		tcp_info = sock.getsockopt(
+			socket.SOL_TCP, socket.TCP_INFO,
+			struct.calcsize(BI))
+		##print len(tcp_info), repr(tcp_info)
+		print struct.unpack(BI, tcp_info)
 
 
 	def getHeader(self):
