@@ -722,6 +722,12 @@ class SSETransport(_BaseHTTPTransport):
 
 
 
+class WebSocketTransport(protocol.Protocol):
+	# XXX Should this be both a Protocol and a Minerva transport?
+	# That would be kind of strange?
+	pass
+
+
 
 class SocketTransport(protocol.Protocol):
 	# XXX Should this be both a Protocol and a Minerva transport?
@@ -784,6 +790,7 @@ class HTTPS2C(resource.Resource):
 			raise InvalidArgumentsError("request.args = " + repr(request.args))
 
 		try:
+			# raises TypeError on non-hex
 			streamId = request.args['i'][0].decode('hex') # "(i)d"
 
 			# Incremented each time the client makes a HTTP request for S2C
@@ -801,6 +808,10 @@ class HTTPS2C(resource.Resource):
 
 		if not transportString in ('s', 'x', 'o'):
 			_fail()
+
+		# TODO: instead of any _fail() or error-raising, create the transport, DO NOT
+		# register it with any Stream, send an error frame over the transport. If no
+		# valid transportString, ????
 
 		existingStream = self._streamFactory.getStream(streamId)
 		if not existingStream:
