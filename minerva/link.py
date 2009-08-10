@@ -546,12 +546,17 @@ class _BaseHTTPTransport(object):
 
 		self._lastS2CWritten = firstS2CToWrite
 
+		self.setTcpOptions()
+
+
+	def setTcpOptions(self):
 		# TCP nodelay is good and increases server performance, as
 		# long as we don't accidentally send small packets.
 		self._request.channel.transport.setTcpNoDelay(True)
 
+		# TODO: remove this
 		sock = self._request.channel.transport.socket
-		print get_tcp_info(sock)
+		log.msg(get_tcp_info(sock))
 
 
 	def getHeader(self):
@@ -696,7 +701,9 @@ class ScriptTransport(_BaseHTTPTransport):
 
 
 	def getFooter(self):
-		return '</body></html>'
+		# </body></html> is unnecessary
+		return ''
+		#return '</body></html>'
 
 
 	def _stringOne(self, box):

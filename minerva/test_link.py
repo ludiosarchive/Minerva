@@ -218,3 +218,62 @@ class TestHTTPS2C(unittest.TestCase):
 		# Stream set a 30 second timeout waiting for another S2C transport
 		# to connect, so move the clock 30 seconds forward. 
 		self.clock.pump(reactor, [30])
+
+
+
+class TestXHRTransport(unittest.TestCase):
+	def test_emptyHeaderEmptyFooter(self):
+		"""
+		XHR transport has no header or footer.
+		"""
+
+		class NoRequestObjXHRTransport(link.XHRTransport):
+			def setTcpOptions(self): pass
+
+		t = NoRequestObjXHRTransport(None, None, 0)
+		self.assertEqual('', t.getHeader())
+		self.assertEqual('', t.getFooter())
+
+
+
+class TestScriptTransport(unittest.TestCase):
+
+	def test_scriptInHeader(self):
+		"""
+		There should be a <script> that defines a short function
+		that relays messages to the parent window.
+		"""
+
+		class NoRequestObjScriptTransport(link.ScriptTransport):
+			def setTcpOptions(self): pass
+
+		t = NoRequestObjScriptTransport(None, None, 0)
+		header = t.getHeader()
+		self.assert_('<script>' in header, header)
+		self.assert_('</script>' in header, header)
+		self.assert_('function ' in header, header)
+		self.assert_('parent' in header, header)
+
+
+	def test_emptyFooter(self):
+
+		class NoRequestObjScriptTransport(link.ScriptTransport):
+			def setTcpOptions(self): pass
+
+		t = NoRequestObjScriptTransport(None, None, 0)
+		self.assertEqual('', t.getFooter())
+
+
+
+class TestSSETransport(unittest.TestCase):
+	pass
+
+
+
+class TestWebSocketTransport(unittest.TestCase):
+	pass
+
+
+
+class TestSocketTransport(unittest.TestCase):
+	pass
