@@ -361,6 +361,11 @@ class Stream(GenericTimeoutMixin):
 		"""
 		Enqueue box L{box} for sending soon. Use L{sendBoxes} instead
 		if you are sending multiple boxes.
+
+		Limitations (same applies to sendBoxes):
+			Do not send more than 2^16 - 1 (65535) items per list in the box; if you
+			do, IE6 will drop the box and the Stream will break.
+			See http://code.google.com/p/google-web-toolkit/issues/detail?id=1336
 		"""
 		self.queue.append(box)
 		if self.noisy:
