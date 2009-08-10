@@ -277,6 +277,9 @@ class TestHTTPS2C(unittest.TestCase):
 
 
 class HelperBaseHTTPTransports(object):
+	"""
+	This is "mixed in" to all the HTTP transport test classes.
+	"""
 
 	transportClass = None
 
