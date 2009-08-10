@@ -281,6 +281,8 @@ class HelperBaseHTTPTransports(object):
 	transportClass = None
 
 	def setUp(self):
+		# We don't need a dummy request, just a dummy channel for a
+		# real Request.
 		self.dummyTcpChannel = DummyChannel()
 		assert self.dummyTcpChannel.transport.noDelayEnabled == False
 
