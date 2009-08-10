@@ -221,18 +221,34 @@ class TestHTTPS2C(unittest.TestCase):
 
 
 
+class XHRTransportNoTcpOpts(link.XHRTransport):
+	def setTcpOptions(self):
+		pass
+
+
+
+class ScriptTransportNoTcpOpts(link.ScriptTransport):
+		def setTcpOptions(self):
+			pass
+
+
+
 class TestXHRTransport(unittest.TestCase):
+
 	def test_emptyHeaderEmptyFooter(self):
 		"""
 		XHR transport has no header or footer.
 		"""
 
-		class NoRequestObjXHRTransport(link.XHRTransport):
-			def setTcpOptions(self): pass
-
-		t = NoRequestObjXHRTransport(None, None, 0)
+		t = XHRTransportNoTcpOpts(None, None, 0)
 		self.assertEqual('', t.getHeader())
 		self.assertEqual('', t.getFooter())
+
+
+	def test_repr(self):
+		t = XHRTransportNoTcpOpts(None, None, 0)
+		self.assert_('frames sent' in repr(t))
+		self.assert_('attached to' in repr(t))
 
 
 
@@ -244,10 +260,7 @@ class TestScriptTransport(unittest.TestCase):
 		that relays messages to the parent window.
 		"""
 
-		class NoRequestObjScriptTransport(link.ScriptTransport):
-			def setTcpOptions(self): pass
-
-		t = NoRequestObjScriptTransport(None, None, 0)
+		t = ScriptTransportNoTcpOpts(None, None, 0)
 		header = t.getHeader()
 		self.assert_('<script>' in header, header)
 		self.assert_('</script>' in header, header)
@@ -256,12 +269,14 @@ class TestScriptTransport(unittest.TestCase):
 
 
 	def test_emptyFooter(self):
-
-		class NoRequestObjScriptTransport(link.ScriptTransport):
-			def setTcpOptions(self): pass
-
-		t = NoRequestObjScriptTransport(None, None, 0)
+		t = ScriptTransportNoTcpOpts(None, None, 0)
 		self.assertEqual('', t.getFooter())
+
+
+	def test_repr(self):
+		t = ScriptTransportNoTcpOpts(None, None, 0)
+		self.assert_('frames sent' in repr(t))
+		self.assert_('attached to' in repr(t))
 
 
 
