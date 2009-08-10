@@ -93,11 +93,20 @@ a session ID.
 ERROR_CODES = {
 	# This transport cannot send the boxes the client asked for,
 	# probably because they are longer in the queue.
-	'LOST_S2C_BOXES': 101,
+	# This error can only be received at the start of an S2C transport.
+	'LOST_S2C_BOXES': 801,
+
+	# This S2C transport is obsoleted by a newer transport that client
+	# has connected (and possibly already disconnected).
+	# This error can be received at any time in an S2C transport.
+	'S2C_TRANSPORT_OBSOLETE': 802,
 
 	# Stream is being reset because server load is too high.
-	'SERVER_LOAD': 102,
+	'SERVER_LOAD': 810,
 }
+
+# Make sure no numeric codes were duplicated
+assert len(set(ERROR_CODES.values())) == len(ERROR_CODES), ERROR_CODES
 
 
 def get_tcp_info(sock):
@@ -128,11 +137,50 @@ def nonnegint(value):
 	So use nonnegint() instead of int() where possible.
 
 	This can still return either a L{TypeError} or a L{ValueError}.
+
+	This doesn't accept stringified floats.
+	This accepts leading zeroes in strings.
 	"""
 	out = int(value)
 	if out < 0:
 		raise ValueError("value %r was negative" % (value,))
 	return out
+
+
+quickConvert_strToPosInt = {}
+for num in xrange(10000):
+	quickConvert_strToPosInt[str(num)] = num
+
+def strToNonNeg(value):
+	"""
+	A very strict numeric-string to non-zero integer converter.
+	This should help prevent people from developing buggy clients
+	that just happen to work with our current server.
+	"""
+
+	# This (probably) makes things faster, but also conveniently avoids
+	# the `value.lstrip('0')` logic for value == "0" 
+	quick = quickConvert_strToPosInt.get(value)
+	if quick is not None:
+		return quick
+
+	digits = '012345679'
+
+	if not isinstance(value, str):
+		raise TypeError("%r is not a str" % (value,))
+
+	valueLen = len(value)
+	if valueLen == 0:
+		raise ValueError("str was of length 0")
+	if len(value.lstrip('0')) != valueLen:
+		raise ValueError("%r had leading zeroes" % (value,))
+
+	for c in value:
+		if c not in digits:
+			raise ValueError("%r had non-digits characters" % (value,))
+
+	return int(value)
+
 
 
 class GenericTimeoutMixin(object):
@@ -830,10 +878,10 @@ class HTTPS2C(resource.Resource):
 			# Incremented each time the client makes a HTTP request for S2C
 			# TODO: disconnect the old S2C transport if a newer transport has arrived
 			# (with higher connectionNumber)
-			connectionNumber = nonnegint(request.args['n'][0]) # "(n)umber"
+			connectionNumber = strToNonNeg(request.args['n'][0]) # "(n)umber"
 
 			# The sequence number of the first S2C box that the client demands.
-			ackS2C = nonnegint(request.args['s'][0]) # "(s)eq"
+			ackS2C = strToNonNeg(request.args['s'][0]) # "(s)eq"
 
 			# The type of S2C transport the client demands.
 			transportString = request.args['t'][0] # "(t)ype"
@@ -862,17 +910,12 @@ class HTTPS2C(resource.Resource):
 
 		s.clientReceivedUpTo(ackS2C)
 
-		if transportString == 's':
-			transport = ScriptTransport(request, connectionNumber, ackS2C)
-		elif transportString == 'x':
-			transport = XHRTransport(request, connectionNumber, ackS2C)
-		elif transportString == 'o':
-			transport = SSETransport(request, connectionNumber, ackS2C)
+		transportMap = dict(s=ScriptTransport, x=XHRTransport, o=SSETransport)
+		transport = transportMap[transportString](request, connectionNumber, ackS2C)
 
 		s.transportOnline(transport)
 
 		d = request.notifyFinish()
-		# TODO: OPTIMIZE: don't create a closure
 		d.addCallback(lambda _None: s.transportOffline(transport))
 		d.addErrback(log.err)
 		

@@ -392,3 +392,54 @@ class TestWebSocketTransport(unittest.TestCase):
 
 class TestSocketTransport(unittest.TestCase):
 	pass
+
+
+
+class TestQueue(unittest.TestCase):
+	pass
+	
+
+
+class TestHelpers(unittest.TestCase):
+
+	def test_nonnegint(self):
+		self.assertEqual(0, link.nonnegint(0))
+		self.assertEqual(0, link.nonnegint(0.1))
+		# Not an error!
+		self.assertEqual(0, link.nonnegint(-0.1))
+		self.assertRaises(ValueError, lambda: link.nonnegint("-0.1"))
+		self.assertRaises(ValueError, lambda: link.nonnegint(-1))
+		self.assertRaises(ValueError, lambda: link.nonnegint(-3))
+		self.assertRaises(ValueError, lambda: link.nonnegint("-3"))
+		self.assertRaises(TypeError, lambda: link.nonnegint(None))
+
+
+	def test_strToNonNeg_okay(self):
+		self.assertEqual(0, link.strToNonNeg("0"))
+		self.assertEqual(3, link.strToNonNeg("3"))
+		self.assertEqual(12390, link.strToNonNeg("12390"))
+
+
+	def test_strToNonNeg_TypeErrors(self):
+		self.assertRaises(TypeError, lambda: link.strToNonNeg(None))
+		self.assertRaises(TypeError, lambda: link.strToNonNeg([]))
+		self.assertRaises(TypeError, lambda: link.strToNonNeg({}))
+
+
+	def test_strToNonNeg_ValueErrors(self):
+		# Empty str is invalid
+		self.assertRaises(ValueError, lambda: link.strToNonNeg(""))
+
+		# Anything with a leading zero is invalid
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("07"))
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("08"))
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("09"))
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("007"))
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("0007"))
+
+		# Anything with non-digit character is invalid
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("-7"))
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("7e4"))
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("7.0"))
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("7."))
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("0.0"))
