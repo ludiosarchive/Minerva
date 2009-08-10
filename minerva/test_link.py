@@ -1,17 +1,65 @@
+import random
+from cStringIO import StringIO
+from zope.interface import implements
+
 from twisted.trial import unittest
 from twisted.web import client, server, resource, http_headers, _newclient, iweb
 from twisted.python import log
-from twisted.internet import reactor, protocol, defer, task
+from twisted.internet import reactor, protocol, defer, task, address, interfaces
 from twisted.test import time_helpers
-from twisted.web.test.test_web import DummyRequest 
+#from twisted.web.test.test_web import DummyRequest as TwistedDummyRequest
 
 from minerva import link
-import random
+
+#
+#
+#class DummyRequest(TwistedDummyRequest):
+#	def setHeader(self, name, value):
+#		self.responseHeaders.setRawHeaders(name, [value])
 
 
-class MinervaDummyRequest(DummyRequest):
-	def setHeader(self, name, value):
-		self.responseHeaders.setRawHeaders(name, [value])
+# copy/paste from twisted.web.test.test_web, but added a setTcpNoDelay
+class DummyChannel(object):
+	class TCP(object):
+		port = 80
+		socket = None
+
+		def __init__(self):
+			self.noDelayEnabled = False
+			self.written = StringIO()
+			self.producers = []
+
+		def getPeer(self):
+			return address.IPv4Address("TCP", '192.168.1.1', 12344)
+
+		def write(self, bytes):
+			assert isinstance(bytes, str)
+			self.written.write(bytes)
+
+		def writeSequence(self, iovec):
+			map(self.write, iovec)
+
+		def getHost(self):
+			return address.IPv4Address("TCP", '10.0.0.1', self.port)
+
+		def registerProducer(self, producer, streaming):
+			self.producers.append((producer, streaming))
+
+		def setTcpNoDelay(self, enabled):
+			self.noDelayEnabled = bool(enabled)
+
+
+	class SSL(TCP):
+		implements(interfaces.ISSLTransport)
+
+	site = server.Site(resource.Resource())
+
+	def __init__(self):
+		self.transport = self.TCP()
+
+
+	def requestDone(self, request):
+		pass
 
 
 
@@ -228,25 +276,26 @@ class TestHTTPS2C(unittest.TestCase):
 
 
 
-class XHRTransportNoTcpOpts(link.XHRTransport):
-	def setTcpOptions(self):
-		pass
-
-
-
-class ScriptTransportNoTcpOpts(link.ScriptTransport):
-		def setTcpOptions(self):
-			pass
-
-
-
 class HelperBaseHTTPTransports(object):
 
 	transportClass = None
 
 	def setUp(self):
-		self.dummy = MinervaDummyRequest([''])
-		self.t = self.transportClass(self.dummy, 0, 0)
+		self.dummyTcpChannel = DummyChannel()
+		assert self.dummyTcpChannel.transport.noDelayEnabled == False
+
+		self.dummyRequest = server.Request(self.dummyTcpChannel, True)
+		self.t = self.transportClass(self.dummyRequest, 0, 0)
+
+
+	def test_initialValues(self):
+		self.assertEqual(0, self.t._framesSent)
+		self.assertEqual(0, self.t._bytesSent)
+
+
+	def test_noDelayEnabled(self):
+		# instantiating L{transportClass} will have set the 'TCP no delay' option
+		self.assertEqual(True, self.dummyTcpChannel.transport.noDelayEnabled)
 
 
 	def test_repr(self):
@@ -266,7 +315,7 @@ class HelperBaseHTTPTransports(object):
 
 class TestXHRTransport(HelperBaseHTTPTransports, unittest.TestCase):
 
-	transportClass = XHRTransportNoTcpOpts
+	transportClass = link.XHRTransport
 
 	def test_emptyHeaderEmptyFooter(self):
 		"""
@@ -301,7 +350,7 @@ class TestXHRTransport(HelperBaseHTTPTransports, unittest.TestCase):
 
 class TestScriptTransport(HelperBaseHTTPTransports, unittest.TestCase):
 
-	transportClass = ScriptTransportNoTcpOpts
+	transportClass = link.ScriptTransport
 
 	def test_scriptInHeader(self):
 		"""

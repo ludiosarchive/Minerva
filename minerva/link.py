@@ -571,7 +571,8 @@ class _BaseHTTPTransport(object):
 
 		# TODO: remove this
 		sock = self._request.channel.transport.socket
-		log.msg(get_tcp_info(sock))
+		if sock is not None: # it'll be None when run from test_link.py
+			log.msg(get_tcp_info(sock))
 
 
 	def getHeader(self):
