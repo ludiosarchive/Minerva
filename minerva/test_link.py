@@ -375,9 +375,8 @@ class TestScriptTransport(HelperBaseHTTPTransports, unittest.TestCase):
 
 
 	def test_stringOne(self):
-		t = self.t
-
-		self.assertEqual('<script>f([1,"T"])</script>', t._stringOne([1, "T"]))
+		self.assertEqual(r'<script>f([1,"T"])</script>', self.t._stringOne([1, "T"]))
+		self.assertEqual(r'<script>f([1,"T<\/script>T"])</script>', self.t._stringOne([1, "T</script>T"]))
 
 
 

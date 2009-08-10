@@ -729,7 +729,11 @@ class ScriptTransport(_BaseHTTPTransport):
 		Return a serialized string for one box.
 		"""
 		# TODO: dump more compact "JSON" without the single quotes around properties
-		s = json.dumps(box, separators=(',', ':'))
+
+		# Although most browsers will handle a </script> inside a quoted string just fine,
+		# it's bad to rely on this behavior; SGML says </script> closes a script no matter
+		# what.
+		s = json.dumps(box, separators=(',', ':')).replace(r'</script>', r'<\/script>')
 		# TODO: find out if there's a way to close a script tag in IE or FF/Safari
 		# without sending an entire </script>
 		return '<script>f(%s)</script>' % (s,)
