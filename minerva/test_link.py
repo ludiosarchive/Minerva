@@ -3,9 +3,16 @@ from twisted.web import client, server, resource, http_headers, _newclient, iweb
 from twisted.python import log
 from twisted.internet import reactor, protocol, defer, task
 from twisted.test import time_helpers
+from twisted.web.test.test_web import DummyRequest 
 
 from minerva import link
 import random
+
+
+class MinervaDummyRequest(DummyRequest):
+	def setHeader(self, name, value):
+		self.responseHeaders.setRawHeaders(name, [value])
+
 
 
 # copy/paste from ecmaster/test_yuicompressor.py
@@ -233,26 +240,68 @@ class ScriptTransportNoTcpOpts(link.ScriptTransport):
 
 
 
-class TestXHRTransport(unittest.TestCase):
+class HelperBaseHTTPTransports(object):
+
+	transportClass = None
+
+	def setUp(self):
+		self.dummy = MinervaDummyRequest([''])
+		self.t = self.transportClass(self.dummy, 0, 0)
+
+
+	def test_repr(self):
+		self.assert_('frames sent' in repr(self.t))
+		self.assert_('attached to' in repr(self.t))
+
+
+	def test_noCacheHeaders(self):
+		headers = dict(self.t._request.responseHeaders.getAllRawHeaders())
+		self.assert_('Pragma' in headers, headers)
+		self.assertEqual('no-cache', headers['Pragma'][0])
+		self.assert_('no-cache' in headers['Cache-Control'][0])
+		self.assert_('Expires' in headers)
+		self.assert_(' 1997 ' in headers['Expires'][0])
+
+
+
+class TestXHRTransport(HelperBaseHTTPTransports, unittest.TestCase):
+
+	transportClass = XHRTransportNoTcpOpts
 
 	def test_emptyHeaderEmptyFooter(self):
 		"""
 		XHR transport has no header or footer.
 		"""
 
-		t = XHRTransportNoTcpOpts(None, None, 0)
-		self.assertEqual('', t.getHeader())
-		self.assertEqual('', t.getFooter())
+		self.assertEqual('', self.t.getHeader())
+		self.assertEqual('', self.t.getFooter())
 
 
-	def test_repr(self):
-		t = XHRTransportNoTcpOpts(None, None, 0)
-		self.assert_('frames sent' in repr(t))
-		self.assert_('attached to' in repr(t))
+	def test_stringOne(self):
+		t = self.t
+
+		self.assertEqual('7,[1,"T"]', t._stringOne([1, "T"]))
+		self.assertEqual(
+			'48,{"something":null,"unicode":"\\u3456","else":1.5}',
+			t._stringOne({'something': None, 'else': 1.5, 'unicode': u'\u3456'}))
+
+		# Bare strings are allowed, but should they be?
+		self.assertEqual('7,"Hello"', t._stringOne("Hello"))
+
+		# Bare nulls are allowed, but should they be?
+		self.assertEqual('4,null', t._stringOne(None))
+
+		# Bare Numbers are allowed, but should they be?
+		self.assertEqual('3,1.5', t._stringOne(1.5))
+
+		# Bare Numbers are allowed, but should they be?
+		self.assertEqual('101,'+'1'+('0'*100), t._stringOne(10**100))
 
 
 
-class TestScriptTransport(unittest.TestCase):
+class TestScriptTransport(HelperBaseHTTPTransports, unittest.TestCase):
+
+	transportClass = ScriptTransportNoTcpOpts
 
 	def test_scriptInHeader(self):
 		"""
@@ -260,8 +309,7 @@ class TestScriptTransport(unittest.TestCase):
 		that relays messages to the parent window.
 		"""
 
-		t = ScriptTransportNoTcpOpts(None, None, 0)
-		header = t.getHeader()
+		header = self.t.getHeader()
 		self.assert_('<script>' in header, header)
 		self.assert_('</script>' in header, header)
 		self.assert_('function ' in header, header)
@@ -269,14 +317,13 @@ class TestScriptTransport(unittest.TestCase):
 
 
 	def test_emptyFooter(self):
-		t = ScriptTransportNoTcpOpts(None, None, 0)
-		self.assertEqual('', t.getFooter())
+		self.assertEqual('', self.t.getFooter())
 
 
-	def test_repr(self):
-		t = ScriptTransportNoTcpOpts(None, None, 0)
-		self.assert_('frames sent' in repr(t))
-		self.assert_('attached to' in repr(t))
+	def test_stringOne(self):
+		t = self.t
+
+		self.assertEqual('<script>f([1,"T"])</script>', t._stringOne([1, "T"]))
 
 
 

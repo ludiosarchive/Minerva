@@ -69,6 +69,10 @@ Ideas for Transport types:
 	FlashSocketTransport (s2c,c2s)
 
 
+Just for fun, this is the full path from the User to a socket (when using some HTTP transport):
+ [[user]].[[ua]].[[stream]].[[transport]]._request.channel.transport.socket
+
+
 Client-side notes:
 
 Client should know how to get establish a downstream and upstream transport
@@ -546,6 +550,17 @@ class _BaseHTTPTransport(object):
 
 		self._lastS2CWritten = firstS2CToWrite
 
+		# We have multiple goals when setting no-cache headers:
+		#	- Prevent browsers from caching the response
+		#		(avoid possible collision; save user's cache space for other things)
+		#	- Prevent proxies from caching the response
+
+		# Headers copied from facebook.com chat HTTP responses
+		# TODO: send fewer headers when possible
+		self._request.setHeader('cache-control', 'private, no-store, no-cache, must-revalidate, post-check=0, pre-check=0')
+		self._request.setHeader('pragma', 'no-cache')
+		self._request.setHeader('expires', 'Mon, 26 Jul 1997 05:00:00 GMT')
+
 		self.setTcpOptions()
 
 
@@ -697,7 +712,9 @@ class ScriptTransport(_BaseHTTPTransport):
 		# CWNet = CW.Net
 		# 'fr' = "frame"
 		# 'o' = object
-		return '''<!doctype html><head><script>function f(o){parent.__CWNet_fr(o)}</script></head><body>'''
+		# Don't use nested CW.Something.something because property lookups are
+		# slow in IE.
+		return '''<!doctype html><head><script>var p=parent;function f(o){p.__CWNet_fr(o)}</script></head><body>'''
 
 
 	def getFooter(self):
