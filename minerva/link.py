@@ -221,17 +221,16 @@ class GenericTimeoutMixin(object):
 		"""
 
 
-class StreamEndedReasonTimeout(object):
-	"""
-	The client failed to establish a [transport that has S2C] in time.
-	"""
-
+"""
+The client failed to establish a [transport that has S2C] in time.
+"""
+STREAM_TIMEOUT = "minerva.link.STREAM_TIMEOUT"
 
 # TODO: actually decide what the "close connection" box looks like.
-class StreamEndedReasonClosed(object):
-	"""
-	The client closed the stream explicitly.
-	"""
+"""
+The client closed the stream explicitly.
+"""
+STREAM_CLIENT_CLOSED = "minerva.link.STREAM_CLIENT_CLOSED"
 
 
 
@@ -496,7 +495,7 @@ class Stream(GenericTimeoutMixin):
 		# We timed out because there are no transports connected,
 		# so we don't need to notify any transports. If client connects
 		# back with a disappeared streamId, client will get an error.
-		self.streamEnded(StreamEndedReasonTimeout())
+		self.streamEnded(STREAM_TIMEOUT)
 		self._done()
 
 
