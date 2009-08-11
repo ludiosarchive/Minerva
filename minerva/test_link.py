@@ -431,6 +431,9 @@ class TestQueue(unittest.TestCase):
 		q.removeUpTo(1)
 		self.assertRaises(link.WantedItemsTooLowError, lambda: list(q.iterItems(start=0)))
 		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems(start=1)))
+		# Removing again should be idempotent (even if it generates a log message)
+		q.removeUpTo(1)
+		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems(start=1)))
 
 
 	def test_removeUpToTooHigh0(self):
