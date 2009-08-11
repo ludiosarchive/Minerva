@@ -1,11 +1,10 @@
-import random
 from cStringIO import StringIO
 from zope.interface import implements
 
 from twisted.trial import unittest
 from twisted.web import client, server, resource, http_headers, _newclient, iweb
 from twisted.python import log
-from twisted.internet import reactor, protocol, defer, task, address, interfaces
+from twisted.internet import reactor, protocol, defer, address, interfaces
 from twisted.test import time_helpers
 #from twisted.web.test.test_web import DummyRequest as TwistedDummyRequest
 
@@ -443,24 +442,52 @@ class TestQueue(unittest.TestCase):
 
 
 
-class TestUATracker(unittest.TestCase):
+class TestUAStreamKnower(unittest.TestCase):
 
-	def test_identifierLengthIs16Bytes(self):
-		uat = link.UATracker()
+	def test_uaIdentifierLengthIs16Bytes(self):
+		usk = link.UAStreamKnower()
 
-		identifier = uat.makeUA()
+		ua = usk.makeUA()
 		# 128 bit identifier string
-		self.assertEqual(128/8, len(identifier))
+		self.assertEqual(128/8, len(ua))
 
 
-	def test_identifierLengthIsDifferent(self):
-		uat = link.UATracker()
+	def test_identifierIsDifferent(self):
+		usk = link.UAStreamKnower()
 
-		identifier1 = uat.makeUA()
-		identifier2 = uat.makeUA()
+		ua1 = usk.makeUA()
+		ua2 = usk.makeUA()
 
-		self.assertNotEqual(idenfifier1, identifier2)
+		self.assertNotEqual(ua1, ua2)
 
 
+	def test_stream(self):
+		usk = link.UAStreamKnower()
 
-	test_tracker.todo = 'todo'
+		ua = usk.makeUA()
+
+		streamId1 = usk.makeStream(ua)
+		self.assertEqual(128/8, len(streamId1))
+
+		streamId2 = usk.makeStream(ua)
+		self.assertNotEqual(streamId1, streamId2)
+
+		self.assertEqual(set([streamId1, streamId2]), usk.getStreamsForUA(ua))
+
+		usk.forgetStream(ua, streamId2)
+		self.assertEqual(set([streamId1]), usk.getStreamsForUA(ua))
+
+		usk.forgetStream(ua, streamId1)
+		self.assertEqual(set(), usk.getStreamsForUA(ua))
+
+
+	def test_doesUAExistNo(self):
+		usk = link.UAStreamKnower()
+		self.assertEqual(False, usk.doesUAExist('0'*16))
+		
+
+	def test_doesUAExistYes(self):
+		usk = link.UAStreamKnower()
+
+		identifier = usk.makeUA()
+		self.assertEqual(True, usk.doesUAExist(identifier))

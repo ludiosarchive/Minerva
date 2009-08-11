@@ -4,10 +4,9 @@ import simplejson as json
 import socket
 import struct
 
-from twisted.python import log
+from twisted.python import log, randbytes
 from twisted.web import resource
 from twisted.internet import protocol
-from zope.interface import Interface
 
 """
    C2STransport \
@@ -924,3 +923,56 @@ class HTTPC2S(resource.Resource):
 
 	def render_POST(self, request):
 		return 'POST C2S'
+
+
+
+class UAStreamKnower(object):
+	"""
+	I know the relationships between UAs and Streams.
+	I can make new identifiers for UAs and Streams.
+	"""
+	# TODO: garbage collection to remove old UAs?
+
+	def __init__(self):
+		self.uaToStream = {}
+
+
+	def makeUA(self):
+		ua = randbytes.secureRandom(16, fallback=True)
+		self.uaToStream[ua] = set()
+		return ua
+
+
+	def doesUAExist(self, ua):
+		"""
+		Sometimes you need to check if a UA ID that the client sent is
+		valid. For example, if it isn't valid, you could send them a real UA ID.
+		"""
+		exists = self.uaToStream.get(ua) is not None
+		return exists
+
+
+	def makeStream(self, ua):
+		"""
+		Make a streamId for UA L{ua}
+		"""
+		if not self.doesUAExist(ua):
+			raise ValueError("I don't know UA %r" % (ua,))
+		streamId = randbytes.secureRandom(16, fallback=True)
+		self.uaToStream[ua].add(streamId)
+		return streamId
+
+
+	def forgetStream(self, ua, streamId):
+		"""
+		This will raise an exception is L{ua} does not exist,
+		but not if L{streamId} doesn't exist.
+		"""
+		if not self.doesUAExist(ua):
+			raise ValueError("I don't know UA %r" % (ua,))
+		self.uaToStream[ua].discard(streamId)
+
+
+	def getStreamsForUA(self, ua):
+		return self.uaToStream.get(ua)
+
