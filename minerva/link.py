@@ -330,13 +330,15 @@ class Stream(GenericTimeoutMixin):
 
 	noisy = True
 
-	def __init__(self, streamId):
+	def __init__(self, reactor, streamId):
+		self._reactor = reactor
+		self.streamId = streamId
+
 		self.queue = Queue()
 		self._transports = set()
 		self._notifications = []
 
 		self._seqC2S = 0 # TODO: implement C2S, use it
-		self.streamId = streamId
 		
 
 	def __repr__(self):
@@ -918,9 +920,8 @@ class UserAgent(object):
 	def buildStream(self):
 		streamId = randbytes.secureRandom(16, fallback=True)
 
-		s = self.stream(streamId)
+		s = self.stream(reactor, streamId)
 		s.factory = self
-		s._reactor = self._reactor
 		d = s.notifyFinish()
 		d.addCallback(lambda _: streamIsDone(s))
 
@@ -941,22 +942,23 @@ class UserAgentFactory(object):
 
 	agent = UserAgent
 
-	def __init__(self):
+	def __init__(self, reactor):
+		self._reactor = reactor
 		self.uas = {}
 
 
 	def buildUA(self):
-		ua = UserAgent()
+		ua = UserAgent(self._reactor)
 		ua.factory = self
 		ua.uaId = randbytes.secureRandom(16, fallback=True)
 		self.uas[ua.uaId] = ua
 		return ua
 
 
-	def doesUAExist(self, ua):
+	def doesUAExist(self, uaId):
 		"""
 		Sometimes you need to check if a UA ID that the client sent is
 		valid. One use case: if it isn't valid, send them a valid UA ID.
 		"""
-		exists = self.uas.get(ua) is not None
+		exists = self.uas.get(uaId) is not None
 		return exists

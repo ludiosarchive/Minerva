@@ -154,11 +154,6 @@ class DummyStream(link.Stream):
 
 
 
-class DummyStreamFactory(link.StreamFactory):
-	stream = DummyStream
-
-
-
 class TestHTTPS2C(unittest.TestCase):
 
 	def startServer(self):
@@ -439,6 +434,29 @@ class TestQueue(unittest.TestCase):
 		q.removeUpTo(1)
 
 		self.assertEqual([], list(q.iterItems(start=1)))
+
+
+
+class TestUserAgentFactory(unittest.TestCase):
+
+	def test_idIsLength16(self):
+		uaf = link.UserAgentFactory(None)
+		ua = uaf.buildUA()
+		self.assertEqual(16, len(ua.uaId))
+
+
+	def test_hasFactoryRef(self):
+		uaf = link.UserAgentFactory(None)
+		ua = uaf.buildUA()
+		self.assertIdentical(uaf, ua.factory)
+
+
+	def test_doesUAExist(self):
+		uaf = link.UserAgentFactory(None)
+		ua = uaf.buildUA()
+		self.assertEqual(False, uaf.doesUAExist('\x00'*16))
+		self.assertEqual(True, uaf.doesUAExist(ua.uaId))
+
 
 
 #
