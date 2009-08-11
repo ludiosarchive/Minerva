@@ -62,37 +62,6 @@ class DummyChannel(object):
 		pass
 
 
-
-# copy/paste from ecmaster/test_yuicompressor.py
-def _startReactorDecorator(fn):
-	"""
-	Decorator to wrap a test to make the reactor start before running the test.
-
-	This is helpful for tests that run a process, avoiding this warning:
-
-	twisted/internet/utils.py:24: PotentialZombieWarning: spawnProcess
-	called, but the SIGCHLD handler is not installed. This probably means
-	you have not yet called reactor.run, or called
-	reactor.run(installSignalHandler=0). You will probably never see this
-	process finish, and it may become a zombie process.
-	"""
-
-	def newfunc(*args, **kwargs):
-
-		d = defer.Deferred()
-
-		def _actualTest():
-			d2 = fn(*args, **kwargs)
-			d2.addCallback(d.callback)
-			d2.addErrback(d.errback)
-
-		reactor.callWhenRunning(_actualTest)
-
-		return d
-
-	return newfunc
-
-
 	
 class HandleMinervaResponse(protocol.Protocol):
 
@@ -235,7 +204,6 @@ class TestHTTPS2C(unittest.TestCase):
 		self.clock.uninstall()
 
 
-	@_startReactorDecorator
 	@defer.inlineCallbacks
 	def test_S2C(self):
 		port = self.startServer()
