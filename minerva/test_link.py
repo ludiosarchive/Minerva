@@ -135,26 +135,6 @@ def makeRequest(reactor, url, responseProtocol):
 
 
 
-class DownloadS2CFactory(protocol.ClientFactory):
-
-	def __init__(self):
-		protocol.ClientFactory.__init__(self)
-		
-		self.ackS2C = 0
-		self.connectionNumber = 0
-
-
-	def buildProtocol(self):
-		p = DownloadS2CProtocol()
-		p.factory = self
-		return p
-
-
-	def __init__(self):
-		self.d = defer.Deferred()
-
-
-
 class DummyIndex(resource.Resource):
 
 	def __init__(self, sf):
@@ -463,3 +443,24 @@ class TestQueue(unittest.TestCase):
 
 
 
+class TestUATracker(unittest.TestCase):
+
+	def test_identifierLengthIs16Bytes(self):
+		uat = link.UATracker()
+
+		identifier = uat.makeUA()
+		# 128 bit identifier string
+		self.assertEqual(128/8, len(identifier))
+
+
+	def test_identifierLengthIsDifferent(self):
+		uat = link.UATracker()
+
+		identifier1 = uat.makeUA()
+		identifier2 = uat.makeUA()
+
+		self.assertNotEqual(idenfifier1, identifier2)
+
+
+
+	test_tracker.todo = 'todo'
