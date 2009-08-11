@@ -380,8 +380,9 @@ class TestScriptTransport(HelperBaseHTTPTransports, unittest.TestCase):
 
 
 
-class TestSSETransport(unittest.TestCase):
-	pass
+class TestSSETransport(HelperBaseHTTPTransports, unittest.TestCase):
+	transportClass = link.SSETransport
+	# TODO
 
 
 
