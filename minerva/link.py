@@ -234,6 +234,7 @@ class StreamEndedReasonClosed(object):
 	"""
 
 
+
 class SeqNumTooHighError(Exception):
 	"""
 	Could not delete up to a certain seqNum, because that seqNum
@@ -288,6 +289,7 @@ class Queue(object):
 		baseN = self._seqNumAt0
 		if start < baseN:
 			raise WantedItemsTooLowError("I was asked for %d+; my lowest item is %d" % (start, baseN))
+		# TODO: do we need to list() this to avoid re-entrancy bugs?
 		for n, item in enumerate(self._items):
 			seqNum = baseN + n
 			if seqNum >= start:
@@ -305,18 +307,17 @@ class Queue(object):
 				"seqNum = %d, len(self._items) = %d, self._seqNumAt0 = %d"
 				% (seqNum, len(self._items), self._seqNumAt0))
 
-		if seqNum - self._seqNumAt0 < 0:
+		if seqNum - self._seqNumAt0 <= 0:
 			if self.noisy:
 				# If Stream is using removeUpTo, the client sent a strangely low
 				# S2C ACK; not removing anything from the queue.
 				log.msg("I was asked to remove items up to "
 					"%d but those are long gone. My lowest is %d" % (seqNum, self._seqNumAt0))
-			return
+		else:
+			for i in xrange(seqNum - self._seqNumAt0):
+				self._items.popleft()
 
-		for i in xrange(seqNum - self._seqNumAt0):
-			self._items.popleft()
-
-		self._seqNumAt0 += seqNum
+			self._seqNumAt0 += seqNum
 
 
 

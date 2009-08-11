@@ -432,6 +432,29 @@ class TestQueue(unittest.TestCase):
 		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems(start=1)))
 
 
+	def test_removeUpToTooHigh0(self):
+		q = link.Queue()
+		self.assertRaises(link.SeqNumTooHighError, lambda: q.removeUpTo(1))
+
+
+	def test_removeUpToTooHigh1(self):
+		q = link.Queue()
+		q.append('zero')
+		self.assertRaises(link.SeqNumTooHighError, lambda: q.removeUpTo(2))
+
+
+	def test_removeUpToAgain(self):
+		q = link.Queue()
+		q.append('zero')
+		q.removeUpTo(1)
+
+		# This will print a log message
+		q.removeUpTo(1)
+
+		self.assertEqual([], list(q.iterItems(start=1)))
+
+
+
 
 class TestHelpers(unittest.TestCase):
 
