@@ -396,8 +396,16 @@ class TestSocketTransport(unittest.TestCase):
 
 
 class TestQueue(unittest.TestCase):
-	pass
-	
+
+	def test_iterEmptyQueue(self):
+		q = link.Queue()
+		self.assertEqual([], list(q.iterItems(start=0)))
+
+
+	def test_iterEmptyQueueError(self):
+		q = link.Queue()
+		self.assertRaises(link.WantedItemsTooLowError, lambda: list(q.iterItems(start=1)))
+
 
 
 class TestHelpers(unittest.TestCase):

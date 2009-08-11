@@ -105,7 +105,7 @@ ERROR_CODES = {
 	'SERVER_LOAD': 810,
 }
 
-# Make sure no numeric codes were duplicated
+# Make sure no numeric code was used more than once
 assert len(set(ERROR_CODES.values())) == len(ERROR_CODES), ERROR_CODES
 
 
@@ -284,7 +284,7 @@ class Queue(object):
 		at L{start}.
 		"""
 		baseN = self._seqNumAt0
-		if start < baseN:
+		if start > baseN:
 			raise WantedItemsTooLowError("I was asked for %d+; my lowest item is %d" % (start, baseN))
 		for n, item in enumerate(self._items):
 			seqNum = baseN + n
