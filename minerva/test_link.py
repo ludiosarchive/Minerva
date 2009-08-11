@@ -441,70 +441,70 @@ class TestQueue(unittest.TestCase):
 		self.assertEqual([], list(q.iterItems(start=1)))
 
 
-
-class TestUAStreamKnower(unittest.TestCase):
-
-	def test_uaIdentifierLengthIs16Bytes(self):
-		usk = link.UAStreamKnower()
-
-		ua = usk.makeUA()
-		# 128 bit identifier string
-		self.assertEqual(128/8, len(ua))
-
-
-	def test_identifierIsDifferent(self):
-		usk = link.UAStreamKnower()
-
-		ua1 = usk.makeUA()
-		ua2 = usk.makeUA()
-
-		self.assertNotEqual(ua1, ua2)
-
-
-	def test_stream(self):
-		"""Test some normal operation."""
-		usk = link.UAStreamKnower()
-
-		ua = usk.makeUA()
-
-		streamId1 = usk.makeStream(ua)
-		self.assertEqual(128/8, len(streamId1))
-
-		streamId2 = usk.makeStream(ua)
-		self.assertNotEqual(streamId1, streamId2)
-
-		self.assertEqual(set([streamId1, streamId2]), usk.getStreamsForUA(ua))
-
-		usk.forgetStream(ua, streamId2)
-		self.assertEqual(set([streamId1]), usk.getStreamsForUA(ua))
-
-		usk.forgetStream(ua, streamId1)
-		self.assertEqual(set(), usk.getStreamsForUA(ua))
-
-		# Forgetting a stream that doesn't exist does not raise an exception
-		usk.forgetStream(ua, '\x22'*16)
-
-
-	def test_forgetStreamForNonexistentUA(self):
-		usk = link.UAStreamKnower()
-
-		# Forgetting a stream for a UA that doesn't exist raise a ValueError
-		self.assertRaises(ValueError, lambda: usk.forgetStream('\x00'*16, '\x11'*16))
-
-
-	def test_makeStreamForNonexistentUA(self):
-		usk = link.UAStreamKnower()
-
-		self.assertRaises(ValueError, lambda: usk.makeStream('\x00'*16))
-
-
-	def test_doesUAExistNo(self):
-		usk = link.UAStreamKnower()
-		self.assertEqual(False, usk.doesUAExist('\x00'*16))
-		
-
-	def test_doesUAExistYes(self):
-		usk = link.UAStreamKnower()
-
-		identifier = usk.makeUA()
-		self.assertEqual(True, usk.doesUAExist(identifier))
+#
+#class TestUAStreamKnower(unittest.TestCase):
+#
+#	def test_uaIdentifierLengthIs16Bytes(self):
+#		usk = link.UAStreamKnower()
+#
+#		ua = usk.makeUA()
+#		# 128 bit identifier string
+#		self.assertEqual(128/8, len(ua))
+#
+#
+#	def test_identifierIsDifferent(self):
+#		usk = link.UAStreamKnower()
+#
+#		ua1 = usk.makeUA()
+#		ua2 = usk.makeUA()
+#
+#		self.assertNotEqual(ua1, ua2)
+#
+#
+#	def test_stream(self):
+#		"""Test some normal operation."""
+#		usk = link.UAStreamKnower()
+#
+#		ua = usk.makeUA()
+#
+#		streamId1 = usk.makeStream(ua)
+#		self.assertEqual(128/8, len(streamId1))
+#
+#		streamId2 = usk.makeStream(ua)
+#		self.assertNotEqual(streamId1, streamId2)
+#
+#		self.assertEqual(set([streamId1, streamId2]), usk.getStreamsForUA(ua))
+#
+#		usk.forgetStream(ua, streamId2)
+#		self.assertEqual(set([streamId1]), usk.getStreamsForUA(ua))
+#
+#		usk.forgetStream(ua, streamId1)
+#		self.assertEqual(set(), usk.getStreamsForUA(ua))
+#
+#		# Forgetting a stream that doesn't exist does not raise an exception
+#		usk.forgetStream(ua, '\x22'*16)
+#
+#
+#	def test_forgetStreamForNonexistentUA(self):
+#		usk = link.UAStreamKnower()
+#
+#		# Forgetting a stream for a UA that doesn't exist raise a ValueError
+#		self.assertRaises(ValueError, lambda: usk.forgetStream('\x00'*16, '\x11'*16))
+#
+#
+#	def test_makeStreamForNonexistentUA(self):
+#		usk = link.UAStreamKnower()
+#
+#		self.assertRaises(ValueError, lambda: usk.makeStream('\x00'*16))
+#
+#
+#	def test_doesUAExistNo(self):
+#		usk = link.UAStreamKnower()
+#		self.assertEqual(False, usk.doesUAExist('\x00'*16))
+#
+#
+#	def test_doesUAExistYes(self):
+#		usk = link.UAStreamKnower()
+#
+#		identifier = usk.makeUA()
+#		self.assertEqual(True, usk.doesUAExist(identifier))

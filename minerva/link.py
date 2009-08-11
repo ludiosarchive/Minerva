@@ -325,7 +325,7 @@ class Stream(GenericTimeoutMixin):
 	a new transport, or a completely different transport, without restarting
 	the Stream.
 
-	I know my StreamFactory, L{self.factory}
+	I know my UserAgent, L{self.factory}
 	"""
 
 	noisy = True
@@ -333,6 +333,7 @@ class Stream(GenericTimeoutMixin):
 	def __init__(self, streamId):
 		self.queue = Queue()
 		self._transports = set()
+		self._notifications = []
 
 		self._seqC2S = 0 # TODO: implement C2S, use it
 		self.streamId = streamId
@@ -498,60 +499,32 @@ class Stream(GenericTimeoutMixin):
 		self._done()
 
 
+	# This API resembles twisted.web.server.Request.notifyFinish
+	def notifyFinish(self):
+		"""Notify when finishing the request
+
+		@return: A deferred. The deferred will be triggered when the
+		stream is finished -- always with a C{None} value.
+		"""
+		self._notifications.append(defer.Deferred())
+		return self._notifications[-1]
+
+
 	def _done(self):
 		"""
-		I am no longer useful for anything; let the StreamFactory know.
+		I am longer useful; notify anyone who cares, so they
+		can drop references to me.
 		"""
-		self.factory.streamIsDone(self)
+
+		for d in self._notifications:
+			d.callback(None)
+		self._notifications = None
+
 		# TODO: use object graph visualization to figure out if these are
 		# helpful or not.
 		self.factory = None
 		self.queue = None
 		self._transports = None
-
-
-
-class StreamFactory(object):
-	"""
-	I make Stream instances.
-
-	I can locate a Stream by Stream ID. This is important
-	because we want to send messages to other Streams.
-	"""
-
-	stream = Stream
-
-	def __init__(self, reactor):
-		self._reactor = reactor
-		self._streams = {}
-
-
-	def streamIsDone(self, aStream):
-		del self._streams[aStream.streamId]
-
-
-	def buildStream(self, streamId):
-		s = self.stream(streamId)
-		s.factory = self
-		s._reactor = self._reactor
-		# TODO: use weakref dictionary?
-		self._streams[streamId] = s
-		s.streamBegun()
-		return s
-
-
-	def getStream(self, streamId):
-		"""
-		Returns the Stream instance for L{streamId}, or L{None} if not found.
-		"""
-		return self._streams.get(streamId)
-
-
-#	def locateOrBuild(self, streamId):
-#		s = self.getStream(streamId)
-#		if s is None:
-#			s = self.buildStream(streamId)
-#		return s
 
 
 
@@ -882,19 +855,19 @@ class HTTPS2C(resource.Resource):
 		# register it with any Stream, send an error frame over the transport. If no
 		# valid transportString, ????
 
-		existingStream = self._streamFactory.getStream(streamId)
-		if not existingStream:
-			if connectionNumber != 0:
-				raise ConnectionNumberNonZeroError(
-					"Connection number was %r, should be 0 for new stream." % (connectionNumber,))
-			if ackS2C != 0:
-				raise AckS2CNonZeroError(
-					"ackS2C was %r, should be 0 for new stream." % (ackS2C,))
-
-			s = self._streamFactory.buildStream(streamId)
-		else:
-			s = existingStream
-
+		s = self._streamFactory.getStream(streamId)
+#		if not existingStream:
+#			if connectionNumber != 0:
+#				raise ConnectionNumberNonZeroError(
+#					"Connection number was %r, should be 0 for new stream." % (connectionNumber,))
+#			if ackS2C != 0:
+#				raise AckS2CNonZeroError(
+#					"ackS2C was %r, should be 0 for new stream." % (ackS2C,))
+#
+#			s = self._streamFactory.buildStream(streamId)
+#		else:
+#			s = existingStream
+#
 		s.clientReceivedUpTo(ackS2C)
 
 		transportMap = dict(s=ScriptTransport, x=XHRTransport, o=SSETransport)
@@ -903,8 +876,7 @@ class HTTPS2C(resource.Resource):
 		s.transportOnline(transport)
 
 		d = request.notifyFinish()
-		d.addCallback(lambda _None: s.transportOffline(transport))
-		d.addErrback(log.err)
+		d.addBoth(lambda _None: s.transportOffline(transport))
 		
 		return 1 # NOT_DONE_YET
 
@@ -926,53 +898,65 @@ class HTTPC2S(resource.Resource):
 
 
 
-class UAStreamKnower(object):
+class UserAgent(object):
 	"""
-	I know the relationships between UAs and Streams.
-	I can make new identifiers for UAs and Streams.
+	I am a UserAgent. I can make Stream instances and find one
+	of my Streams.
 	"""
-	# TODO: garbage collection to remove old UAs?
+
+	stream = Stream
+
+	def __init__(self, reactor):
+		self._reactor = reactor
+		self._streams = {}
+
+
+	def streamIsDone(self, aStream):
+		del self._streams[aStream.streamId]
+
+
+	def buildStream(self):
+		streamId = randbytes.secureRandom(16, fallback=True)
+
+		s = self.stream(streamId)
+		s.factory = self
+		s._reactor = self._reactor
+		d = s.notifyFinish()
+		d.addCallback(lambda _: streamIsDone(s))
+
+		self._streams[streamId] = s
+		s.streamBegun()
+		return s
+
+
+	def getStream(self, streamId):
+		"""
+		Returns the Stream instance for L{streamId}, or L{None} if not found.
+		"""
+		return self._streams.get(streamId)
+
+
+
+class UserAgentFactory(object):
+
+	agent = UserAgent
 
 	def __init__(self):
-		self.uaToStream = {}
+		self.uas = {}
 
 
-	def makeUA(self):
-		ua = randbytes.secureRandom(16, fallback=True)
-		self.uaToStream[ua] = set()
+	def buildUA(self):
+		ua = UserAgent()
+		ua.factory = self
+		ua.uaId = randbytes.secureRandom(16, fallback=True)
+		self.uas[ua.uaId] = ua
 		return ua
 
 
 	def doesUAExist(self, ua):
 		"""
 		Sometimes you need to check if a UA ID that the client sent is
-		valid. For example, if it isn't valid, you could send them a real UA ID.
+		valid. One use case: if it isn't valid, send them a valid UA ID.
 		"""
-		exists = self.uaToStream.get(ua) is not None
+		exists = self.uas.get(ua) is not None
 		return exists
-
-
-	def makeStream(self, ua):
-		"""
-		Make a streamId for UA L{ua}
-		"""
-		if not self.doesUAExist(ua):
-			raise ValueError("I don't know UA %r" % (ua,))
-		streamId = randbytes.secureRandom(16, fallback=True)
-		self.uaToStream[ua].add(streamId)
-		return streamId
-
-
-	def forgetStream(self, ua, streamId):
-		"""
-		This will raise an exception is L{ua} does not exist,
-		but not if L{streamId} doesn't exist.
-		"""
-		if not self.doesUAExist(ua):
-			raise ValueError("I don't know UA %r" % (ua,))
-		self.uaToStream[ua].discard(streamId)
-
-
-	def getStreamsForUA(self, ua):
-		return self.uaToStream.get(ua)
-
