@@ -462,6 +462,7 @@ class TestUAStreamKnower(unittest.TestCase):
 
 
 	def test_stream(self):
+		"""Test some normal operation."""
 		usk = link.UAStreamKnower()
 
 		ua = usk.makeUA()
@@ -480,10 +481,26 @@ class TestUAStreamKnower(unittest.TestCase):
 		usk.forgetStream(ua, streamId1)
 		self.assertEqual(set(), usk.getStreamsForUA(ua))
 
+		# Forgetting a stream that doesn't exist does not raise an exception
+		usk.forgetStream(ua, '\x22'*16)
+
+
+	def test_forgetStreamForNonexistentUA(self):
+		usk = link.UAStreamKnower()
+
+		# Forgetting a stream for a UA that doesn't exist raise a ValueError
+		self.assertRaises(ValueError, lambda: usk.forgetStream('\x00'*16, '\x11'*16))
+
+
+	def test_makeStreamForNonexistentUA(self):
+		usk = link.UAStreamKnower()
+
+		self.assertRaises(ValueError, lambda: usk.makeStream('\x00'*16))
+
 
 	def test_doesUAExistNo(self):
 		usk = link.UAStreamKnower()
-		self.assertEqual(False, usk.doesUAExist('0'*16))
+		self.assertEqual(False, usk.doesUAExist('\x00'*16))
 		
 
 	def test_doesUAExistYes(self):
