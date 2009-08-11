@@ -131,22 +131,6 @@ def get_tcp_info(sock):
 
 
 
-def nonnegint(value):
-	"""
-	Everybody forgets to check that an integer is non-negative.
-	So use nonnegint() instead of int() where possible.
-
-	This can still return either a L{TypeError} or a L{ValueError}.
-
-	This doesn't accept stringified floats.
-	This accepts leading zeroes in strings.
-	"""
-	out = int(value)
-	if out < 0:
-		raise ValueError("value %r was negative" % (value,))
-	return out
-
-
 quickConvert_strToPosInt = {}
 for num in xrange(10000):
 	quickConvert_strToPosInt[str(num)] = num

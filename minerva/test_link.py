@@ -402,18 +402,6 @@ class TestQueue(unittest.TestCase):
 
 class TestHelpers(unittest.TestCase):
 
-	def test_nonnegint(self):
-		self.assertEqual(0, link.nonnegint(0))
-		self.assertEqual(0, link.nonnegint(0.1))
-		# Not an error!
-		self.assertEqual(0, link.nonnegint(-0.1))
-		self.assertRaises(ValueError, lambda: link.nonnegint("-0.1"))
-		self.assertRaises(ValueError, lambda: link.nonnegint(-1))
-		self.assertRaises(ValueError, lambda: link.nonnegint(-3))
-		self.assertRaises(ValueError, lambda: link.nonnegint("-3"))
-		self.assertRaises(TypeError, lambda: link.nonnegint(None))
-
-
 	def test_strToNonNeg_okay(self):
 		self.assertEqual(0, link.strToNonNeg("0"))
 		self.assertEqual(3, link.strToNonNeg("3"))
