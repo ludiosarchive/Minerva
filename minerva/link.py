@@ -602,6 +602,10 @@ class _BaseHTTPTransport(object):
 
 		self.setTcpOptions()
 
+		# Write out the headers right away to increase the chances of connection staying alive;
+		# hopefully these headers will ride along with the TCP-ACK for the HTTP request.
+		self._request.write('')
+
 
 	def setTcpOptions(self):
 		# TCP nodelay is good and increases server performance, as
@@ -749,9 +753,7 @@ class ScriptTransport(_BaseHTTPTransport):
 	# TODO: maybe this header should be written earlier, even before the first attempt
 	# to send to queue?
 	def getHeader(self):
-		# CWNet = CW.Net
-		# 'fr' = "frame"
-		# 'o' = object
+		# CWNet = CW.Net ; 'fr' = "frame" ; 'o' = object
 		# Don't use nested CW.Something.something because property lookups are
 		# slow in IE.
 		return '''<!doctype html><head><script>var p=parent;function f(o){p.__CWNet_fr(o)}</script></head><body>'''

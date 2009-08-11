@@ -276,6 +276,40 @@ class TestHTTPS2C(unittest.TestCase):
 
 
 
+class TestHelpers(unittest.TestCase):
+
+	def test_strToNonNeg_okay(self):
+		self.assertEqual(0, link.strToNonNeg("0"))
+		self.assertEqual(3, link.strToNonNeg("3"))
+		self.assertEqual(12390, link.strToNonNeg("12390"))
+
+
+	def test_strToNonNeg_TypeErrors(self):
+		self.assertRaises(TypeError, lambda: link.strToNonNeg(None))
+		self.assertRaises(TypeError, lambda: link.strToNonNeg([]))
+		self.assertRaises(TypeError, lambda: link.strToNonNeg({}))
+
+
+	def test_strToNonNeg_ValueErrors(self):
+		# Empty str is invalid
+		self.assertRaises(ValueError, lambda: link.strToNonNeg(""))
+
+		# Anything with a leading zero is invalid
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("07"))
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("08"))
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("09"))
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("007"))
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("0007"))
+
+		# Anything with non-digit character is invalid
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("-7"))
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("7e4"))
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("7.0"))
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("7."))
+		self.assertRaises(ValueError, lambda: link.strToNonNeg("0.0"))
+
+
+
 class HelperBaseHTTPTransports(object):
 	"""
 	This is "mixed in" to all the HTTP transport test classes.
@@ -428,9 +462,11 @@ class TestQueue(unittest.TestCase):
 		q = link.Queue()
 		q.append('zero')
 		q.extend(['one', 'two'])
+
 		q.removeUpTo(1)
 		self.assertRaises(link.WantedItemsTooLowError, lambda: list(q.iterItems(start=0)))
 		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems(start=1)))
+
 		# Removing again should be idempotent (even if it generates a log message)
 		q.removeUpTo(1)
 		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems(start=1)))
@@ -459,35 +495,3 @@ class TestQueue(unittest.TestCase):
 
 
 
-
-class TestHelpers(unittest.TestCase):
-
-	def test_strToNonNeg_okay(self):
-		self.assertEqual(0, link.strToNonNeg("0"))
-		self.assertEqual(3, link.strToNonNeg("3"))
-		self.assertEqual(12390, link.strToNonNeg("12390"))
-
-
-	def test_strToNonNeg_TypeErrors(self):
-		self.assertRaises(TypeError, lambda: link.strToNonNeg(None))
-		self.assertRaises(TypeError, lambda: link.strToNonNeg([]))
-		self.assertRaises(TypeError, lambda: link.strToNonNeg({}))
-
-
-	def test_strToNonNeg_ValueErrors(self):
-		# Empty str is invalid
-		self.assertRaises(ValueError, lambda: link.strToNonNeg(""))
-
-		# Anything with a leading zero is invalid
-		self.assertRaises(ValueError, lambda: link.strToNonNeg("07"))
-		self.assertRaises(ValueError, lambda: link.strToNonNeg("08"))
-		self.assertRaises(ValueError, lambda: link.strToNonNeg("09"))
-		self.assertRaises(ValueError, lambda: link.strToNonNeg("007"))
-		self.assertRaises(ValueError, lambda: link.strToNonNeg("0007"))
-
-		# Anything with non-digit character is invalid
-		self.assertRaises(ValueError, lambda: link.strToNonNeg("-7"))
-		self.assertRaises(ValueError, lambda: link.strToNonNeg("7e4"))
-		self.assertRaises(ValueError, lambda: link.strToNonNeg("7.0"))
-		self.assertRaises(ValueError, lambda: link.strToNonNeg("7."))
-		self.assertRaises(ValueError, lambda: link.strToNonNeg("0.0"))
