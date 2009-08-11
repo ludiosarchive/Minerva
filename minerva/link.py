@@ -809,16 +809,6 @@ class InvalidArgumentsError(Exception):
 
 
 
-class ConnectionNumberNonZeroError(Exception):
-	pass
-
-
-
-class AckS2CNonZeroError(Exception):
-	pass
-
-
-
 class HTTPS2C(resource.Resource):
 	isLeaf = True
 	cookieName = 'm'
@@ -858,20 +848,9 @@ class HTTPS2C(resource.Resource):
 
 		# TODO: instead of any _fail() or error-raising, create the transport, DO NOT
 		# register it with any Stream, send an error frame over the transport. If no
-		# valid transportString, ????
+		# valid transportString, send some kind of HTTP error.
 
 		s = ua.getStream(streamId)
-#		if not existingStream:
-#			if connectionNumber != 0:
-#				raise ConnectionNumberNonZeroError(
-#					"Connection number was %r, should be 0 for new stream." % (connectionNumber,))
-#			if ackS2C != 0:
-#				raise AckS2CNonZeroError(
-#					"ackS2C was %r, should be 0 for new stream." % (ackS2C,))
-#
-#			s = ua.buildStream(streamId)
-#		else:
-#			s = existingStream
 
 		s.clientReceivedUpTo(ackS2C)
 
