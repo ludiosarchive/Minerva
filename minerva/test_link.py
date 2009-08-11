@@ -402,9 +402,34 @@ class TestQueue(unittest.TestCase):
 		self.assertEqual([], list(q.iterItems(start=0)))
 
 
-	def test_iterEmptyQueueError(self):
+	def test_appendExtendQueue(self):
 		q = link.Queue()
-		self.assertRaises(link.WantedItemsTooLowError, lambda: list(q.iterItems(start=1)))
+		q.append('zero')
+		q.extend(['one', 'two'])
+		self.assertEqual([(0, 'zero'), (1, 'one'), (2, 'two')], list(q.iterItems(start=0)))
+
+
+	def test_appendExtendQueueStart1(self):
+		q = link.Queue()
+		q.append('zero')
+		q.extend(['one', 'two'])
+		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems(start=1)))
+
+
+	def test_appendExtendQueueStart3(self):
+		q = link.Queue()
+		q.append('zero')
+		q.extend(['one', 'two'])
+		self.assertEqual([], list(q.iterItems(start=3)))
+
+
+	def test_removeUpTo(self):
+		q = link.Queue()
+		q.append('zero')
+		q.extend(['one', 'two'])
+		q.removeUpTo(1)
+		self.assertRaises(link.WantedItemsTooLowError, lambda: list(q.iterItems(start=0)))
+		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems(start=1)))
 
 
 

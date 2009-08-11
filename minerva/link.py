@@ -283,8 +283,10 @@ class Queue(object):
 		Yield (seqNumber, box) for every item in the queue starting
 		at L{start}.
 		"""
+		assert start >= 0, start
+
 		baseN = self._seqNumAt0
-		if start > baseN:
+		if start < baseN:
 			raise WantedItemsTooLowError("I was asked for %d+; my lowest item is %d" % (start, baseN))
 		for n, item in enumerate(self._items):
 			seqNum = baseN + n
@@ -442,7 +444,7 @@ class Stream(GenericTimeoutMixin):
 			return
 		try:
 			transport.writeFrom(self.queue)
-		except WantedItemsTooLow:
+		except WantedItemsTooLowError:
 			# The client opened an S2C transport wanting boxes that
 			# we no longer have. We need to close this "bad" S2C transport.
 			# This doesn't imply that the Stream is toast, because the client
