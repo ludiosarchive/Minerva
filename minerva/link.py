@@ -6,7 +6,7 @@ import struct
 
 from twisted.python import log, randbytes
 from twisted.web import resource
-from twisted.internet import protocol
+from twisted.internet import protocol, defer
 
 """
    C2STransport \
@@ -821,14 +821,17 @@ class AckS2CNonZeroError(Exception):
 
 class HTTPS2C(resource.Resource):
 	isLeaf = True
+	cookieName = 'm'
 
-	def __init__(self, streamFactory):
-		self._streamFactory = streamFactory
+	def __init__(self, uaFactory):
+		self._uaFactory = uaFactory
 
 
 	def render_GET(self, request):
-		# TODO: verify that the stream belongs to the UA,
-		# to make it slightly harder to hijack a stream over HTTP.
+		##print request.getCookie('m')
+
+		uaId = request.getCookie(self.cookieName).decode('base64')
+		ua = self._uaFactory.getOrBuildUAWithId(uaId)
 
 		def _fail():
 			raise InvalidArgumentsError("request.args = " + repr(request.args))
@@ -857,7 +860,7 @@ class HTTPS2C(resource.Resource):
 		# register it with any Stream, send an error frame over the transport. If no
 		# valid transportString, ????
 
-		s = self._streamFactory.getStream(streamId)
+		s = ua.getStream(streamId)
 #		if not existingStream:
 #			if connectionNumber != 0:
 #				raise ConnectionNumberNonZeroError(
@@ -866,10 +869,10 @@ class HTTPS2C(resource.Resource):
 #				raise AckS2CNonZeroError(
 #					"ackS2C was %r, should be 0 for new stream." % (ackS2C,))
 #
-#			s = self._streamFactory.buildStream(streamId)
+#			s = ua.buildStream(streamId)
 #		else:
 #			s = existingStream
-#
+
 		s.clientReceivedUpTo(ackS2C)
 
 		transportMap = dict(s=ScriptTransport, x=XHRTransport, o=SSETransport)
@@ -908,9 +911,14 @@ class UserAgent(object):
 
 	stream = Stream
 
-	def __init__(self, reactor):
+	def __init__(self, reactor, uaId):
+		self.uaId = uaId
 		self._reactor = reactor
 		self._streams = {}
+
+
+	def __repr__(self):
+		return '<UserAgent %r at %r with %d streams>' % (self.uaId, id(self), len(self._streams))
 
 
 	def streamIsDone(self, aStream):
@@ -918,12 +926,15 @@ class UserAgent(object):
 
 
 	def buildStream(self):
+		# TODO: this should be called every time someone hits a webpage
+		# that includes Minerva, to generate a valid Stream that the client
+		# could connect to.
 		streamId = randbytes.secureRandom(16, fallback=True)
 
-		s = self.stream(reactor, streamId)
+		s = self.stream(self._reactor, streamId)
 		s.factory = self
 		d = s.notifyFinish()
-		d.addCallback(lambda _: streamIsDone(s))
+		d.addCallback(lambda _: self.streamIsDone(s))
 
 		self._streams[streamId] = s
 		s.streamBegun()
@@ -947,12 +958,41 @@ class UserAgentFactory(object):
 		self.uas = {}
 
 
-	def buildUA(self):
-		ua = UserAgent(self._reactor)
+	def __repr__(self):
+		return '<UserAgentFactory at %r, knowing %d UAs>' % (id(self), len(self.uas))
+
+
+	def _buildUA(self, uaId):
+		ua = UserAgent(self._reactor, uaId)
 		ua.factory = self
-		ua.uaId = randbytes.secureRandom(16, fallback=True)
-		self.uas[ua.uaId] = ua
+		self.uas[uaId] = ua
 		return ua
+
+
+	def buildUA(self):
+		"""
+		Build a UA with a uaId of UserAgentFactory's choice.
+		"""
+		uaId = randbytes.secureRandom(16, fallback=True)
+		return self._buildUA(uaId)
+
+
+	def buildUAWithId(self, uaId):
+		"""
+		Build a UA with a specific uaId.
+		"""
+		return self._buildUA(uaId)
+
+
+	def getOrBuildUAWithId(self, uaId):
+		ua = self.getUA(uaId)
+		if ua is None:
+			ua = self.buildUAWithId(uaId)
+		return ua
+
+
+	def getUA(self, uaId):
+		return self.uas.get(uaId)
 
 
 	def doesUAExist(self, uaId):

@@ -88,7 +88,7 @@ class HandleMinervaResponse(protocol.Protocol):
 
 
 
-def makeRequest(reactor, url, responseProtocol):
+def makeRequest(reactor, url, headers, responseProtocol):
 	cc = protocol.ClientCreator(reactor, _newclient.HTTP11ClientProtocol)
 	scheme, host, port, path = client._parse(url)
 
@@ -107,13 +107,8 @@ def makeRequest(reactor, url, responseProtocol):
 		hostHeader = host
 		if defaultPorts[scheme] != port:
 			hostHeader += ':%d' % port
-		return proto.request(_newclient.Request(
-				'GET', path,
-				http_headers.Headers({
-					'host': [hostHeader],
-					'user-agent': ['Twisted/test_link.py']
-				}),
-				None))
+		headers.addRawHeader('host', hostHeader)
+		return proto.request(_newclient.Request('GET', path, headers, None))
 	d.addCallback(cbConnected)
 
 	def cbResponse(response):
@@ -136,9 +131,9 @@ def makeRequest(reactor, url, responseProtocol):
 
 class DummyIndex(resource.Resource):
 
-	def __init__(self, sf):
+	def __init__(self, uaf):
 		resource.Resource.__init__(self)
-		self.putChild('d', link.HTTPS2C(sf))
+		self.putChild('d', link.HTTPS2C(uaf))
 
 
 
@@ -157,8 +152,10 @@ class DummyStream(link.Stream):
 class TestHTTPS2C(unittest.TestCase):
 
 	def startServer(self):
-		self._sf = link.StreamFactory(reactor)
-		root = DummyIndex(self._sf)
+		self._uaf = link.UserAgentFactory(reactor)
+		self._ua = self._uaf.buildUA()
+		self._stream = self._ua.buildStream()
+		root = DummyIndex(self._uaf)
 
 		site = server.Site(root)
 		self.p = reactor.listenTCP(0, site, interface='127.0.0.1')
@@ -182,7 +179,7 @@ class TestHTTPS2C(unittest.TestCase):
 	def test_S2C(self):
 		port = self.startServer()
 
-		streamId = '1000'.decode('hex')
+		streamId = self._stream.streamId
 		transportString = 'x' # XHR # type of transport
 		connectionNumber = 0
 		ackS2C = 0
@@ -192,11 +189,19 @@ class TestHTTPS2C(unittest.TestCase):
 
 		proto = HandleMinervaResponse()
 
-		d = makeRequest(reactor, url, proto)
+		cookieName = 'm'
+
+		headers = http_headers.Headers({
+			'user-agent': ['Twisted/test_link.py'],
+			'cookie': [cookieName+'='+self._ua.uaId.encode('base64')],
+		})
+
+		d = makeRequest(reactor, url, headers, proto)
+		del headers # they were mutated
 
 		yield proto.onConnMade
 
-		stream1000 = self._sf.getStream(streamId)
+		stream1000 = self._ua.getStream(streamId)
 
 		# 300 KB is the limit.
 		# This will overflow one request because the padding
@@ -215,6 +220,8 @@ class TestHTTPS2C(unittest.TestCase):
 		# Stream set a 30 second timeout waiting for another S2C transport
 		# to connect, so move the clock 30 seconds forward. 
 		self.clock.pump(reactor, [30])
+
+		# TODO: assert that the notifyFinish deferreds were triggered
 
 
 
