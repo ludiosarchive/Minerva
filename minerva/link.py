@@ -9,11 +9,18 @@ from twisted.web import resource
 from twisted.internet import protocol, defer
 
 """
-   C2STransport \
-   S2CTransport -\
-   S2CTransport <-> Stream -\
-(both)Transport <-> Stream <-> UA <-> User
-(both)Transport <-> Stream <-> UA -/
+   [[C2STransport]] \
+   [[S2CTransport]] -\
+   [[S2CTransport]] <-> Stream -\
+[[(both)Transport]] <-> Stream <-> UserAgent (UA) <-> User
+[[(both)Transport]] <-> Stream <-> UserAgent (UA) -/
+
+`User' is not implemented in Minerva; Minerva does not care that one
+person/user/account/robot can be logged in at multiple places.
+
+A User does not "have" UserAgents. A UserAgent should be re-used
+if UserAgent logs into another User. Implement `User' in your application
+code and allow UserAgents to temporarily associate themselves with a User.
 
 C2S means client to server, S2C means server to client.
 S2C doesn't mean that the server establishes the connection (although
@@ -911,7 +918,7 @@ class UserAgent(object):
 		streamId = randbytes.secureRandom(16, fallback=True)
 
 		s = self.stream(self._reactor, streamId)
-		s.factory = self
+		s.ua = self
 		d = s.notifyFinish()
 		d.addCallback(lambda _: self.streamIsDone(s))
 

@@ -196,7 +196,7 @@ class TestHTTPS2C(unittest.TestCase):
 			'cookie': [cookieName+'='+self._ua.uaId.encode('base64')],
 		})
 
-		d = makeRequest(reactor, url, headers, proto)
+		connLostD = makeRequest(reactor, url, headers, proto)
 		del headers # they were mutated
 
 		yield proto.onConnMade
@@ -215,7 +215,7 @@ class TestHTTPS2C(unittest.TestCase):
 		
 		stream1000.sendBoxes(boxes)
 
-		yield d
+		yield connLostD
 
 		# Stream set a 30 second timeout waiting for another S2C transport
 		# to connect, so move the clock 30 seconds forward. 
@@ -456,6 +456,12 @@ class TestUserAgentFactory(unittest.TestCase):
 		uaf = link.UserAgentFactory(None)
 		ua = uaf.buildUA()
 		self.assertIdentical(uaf, ua.factory)
+
+
+	def test_getUA(self):
+		uaf = link.UserAgentFactory(None)
+		ua = uaf.buildUA()
+		self.assertIdentical(ua, uaf.getUA(ua.uaId))
 
 
 	def test_doesUAExist(self):
