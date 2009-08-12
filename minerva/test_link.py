@@ -464,6 +464,13 @@ class TestUserAgentFactory(unittest.TestCase):
 		self.assertIdentical(ua, uaf.getUA(ua.uaId))
 
 
+	def test_getOrBuildUAWithId(self):
+		uaf = link.UserAgentFactory(None)
+		ua = uaf.getOrBuildUAWithId('\x11'*16)
+		uaAgain = uaf.getOrBuildUAWithId('\x11'*16)
+		self.assertIdentical(ua, uaAgain)
+
+
 	def test_doesUAExist(self):
 		uaf = link.UserAgentFactory(None)
 		ua = uaf.buildUA()
