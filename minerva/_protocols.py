@@ -117,7 +117,7 @@ class BencodeStringDecoder(object):
 	Modified to exclude the trailing comma from the Netstring protocol.
 
 	WARNING: This class doesn't protect against [Twisted bug #3803]-style attacks.
-	The 'secure features' below are a joke.
+	The 'security features' below are a joke.
 
 
 	This uses djb's Netstrings protocol to break up the

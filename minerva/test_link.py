@@ -9,6 +9,7 @@ from twisted.test import time_helpers
 #from twisted.web.test.test_web import DummyRequest as TwistedDummyRequest
 
 from minerva import link
+from _protocols import BencodeStringDecoder
 
 #
 #
@@ -62,11 +63,15 @@ class DummyChannel(object):
 
 
 	
-class HandleMinervaResponse(protocol.Protocol):
+class HandleXHRResponse(protocol.Protocol):
 
 	def __init__(self):
 		self.received = []
 		self.onConnMade = defer.Deferred()
+		class Decoder(BencodeStringDecoder):
+			def dataCallback(self2, data):
+				self.received.append(data)
+		self.decoder = Decoder()
 
 
 	def connectionMade(self):
@@ -76,7 +81,11 @@ class HandleMinervaResponse(protocol.Protocol):
 
 	def dataReceived(self, data):
 		log.msg('dataReceived: %r' % (data,))
-		self.received.append(data)
+		try:
+			self.decoder.dataReceived(data)
+		except:
+			log.err()
+			raise
 
 
 	def connectionLost(self, reason):
@@ -186,11 +195,8 @@ class TestHTTPS2C(unittest.TestCase):
 
 		url = 'http://127.0.0.1:%d/d/?i=%s&n=%d&s=%d&t=%s' % (
 			port, streamId.encode('hex'), connectionNumber, ackS2C, transportString)
-
-		proto = HandleMinervaResponse()
-
+		proto = HandleXHRResponse()
 		cookieName = 'm'
-
 		headers = http_headers.Headers({
 			'user-agent': ['Twisted/test_link.py'],
 			'cookie': [cookieName+'='+self._ua.uaId.encode('base64')],
@@ -216,6 +222,8 @@ class TestHTTPS2C(unittest.TestCase):
 		stream1000.sendBoxes(boxes)
 
 		yield connLostD
+
+		self.assertEqual(1014, len(proto.received))
 
 		# Stream set a 30 second timeout waiting for another S2C transport
 		# to connect, so move the clock 30 seconds forward. 
@@ -317,22 +325,22 @@ class TestXHRTransport(HelperBaseHTTPTransports, unittest.TestCase):
 	def test_stringOne(self):
 		t = self.t
 
-		self.assertEqual('7,[1,"T"]', t._stringOne([1, "T"]))
+		self.assertEqual('7:[1,"T"]', t._stringOne([1, "T"]))
 		self.assertEqual(
-			'48,{"something":null,"unicode":"\\u3456","else":1.5}',
+			'48:{"something":null,"unicode":"\\u3456","else":1.5}',
 			t._stringOne({'something': None, 'else': 1.5, 'unicode': u'\u3456'}))
 
 		# Bare strings are allowed, but should they be?
-		self.assertEqual('7,"Hello"', t._stringOne("Hello"))
+		self.assertEqual('7:"Hello"', t._stringOne("Hello"))
 
 		# Bare nulls are allowed, but should they be?
-		self.assertEqual('4,null', t._stringOne(None))
+		self.assertEqual('4:null', t._stringOne(None))
 
 		# Bare Numbers are allowed, but should they be?
-		self.assertEqual('3,1.5', t._stringOne(1.5))
+		self.assertEqual('3:1.5', t._stringOne(1.5))
 
 		# Bare Numbers are allowed, but should they be?
-		self.assertEqual('101,'+'1'+('0'*100), t._stringOne(10**100))
+		self.assertEqual('101:'+'1'+('0'*100), t._stringOne(10**100))
 
 
 

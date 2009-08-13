@@ -714,7 +714,7 @@ class XHRTransport(_BaseHTTPTransport):
 		# dump more compact "JSON" without the single quotes around properties
 
 		s = json.dumps(box, separators=(',', ':'))
-		return str(len(s)) + ',' + s
+		return str(len(s)) + ':' + s
 
 
 
@@ -752,9 +752,11 @@ class ScriptTransport(_BaseHTTPTransport):
 		"""
 		# TODO: dump more compact "JSON" without the single quotes around properties
 
-		# Although most browsers will handle a </script> inside a quoted string just fine,
-		# it's bad to rely on this behavior; SGML says </script> closes a script no matter
-		# what.
+		# Browsers will end the script if they see a </script> anywhere inside an inline script,
+		# even if the </script> is in a quoted string.
+		# Officially, other SGML tags could close something in the document, but in practice,
+		# this doesn't happen.
+		# TODO: build the </script> escaping into simplejson for speed
 		s = json.dumps(box, separators=(',', ':')).replace(r'</script>', r'<\/script>')
 		# TODO: find out if there's a way to close a script tag in IE or FF/Safari
 		# without sending an entire </script>
@@ -959,6 +961,7 @@ class UserAgentFactory(object):
 		"""
 		Build a UA with a uaId of UserAgentFactory's choice.
 		"""
+		# no real chance of collision
 		uaId = randbytes.secureRandom(16, fallback=True)
 		return self._buildUA(uaId)
 
