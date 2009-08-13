@@ -37,7 +37,7 @@ class NetStringDecoder(object):
 		1. Messages are limited in size, useful if you don't want someone
 		   sending you a 500MB netstring (change MAX_LENGTH to the maximum
 		   length you wish to accept).
-		2. The connection is lost if an illegal message is received.
+		2. ParseError is raised if an illegal message is received.
 	"""
 
 	MAX_LENGTH = 99999
@@ -53,7 +53,7 @@ class NetStringDecoder(object):
 
 
 	def doData(self):
-		buffer,self.__data = self.__data[:int(self._readerLength)],self.__data[int(self._readerLength):]
+		buffer, self.__data = self.__data[:self._readerLength], self.__data[self._readerLength:]
 		self._readerLength = self._readerLength - len(buffer)
 		self.__buffer = self.__buffer + buffer
 		if self._readerLength != 0:
@@ -130,7 +130,7 @@ class BencodeStringDecoder(object):
 		1. Messages are limited in size, useful if you don't want someone
 		   sending you a 500MB netstring (change MAX_LENGTH to the maximum
 		   length you wish to accept).
-		2. The connection is lost if an illegal message is received.
+		2. ParseError is raised if an illegal message is received.
 	"""
 
 	MAX_LENGTH = 99999
@@ -146,7 +146,7 @@ class BencodeStringDecoder(object):
 
 
 	def doData(self):
-		buffer,self.__data = self.__data[:int(self._readerLength)],self.__data[int(self._readerLength):]
+		buffer, self.__data = self.__data[:self._readerLength], self.__data[self._readerLength:]
 		self._readerLength = self._readerLength - len(buffer)
 		self.__buffer = self.__buffer + buffer
 		if self._readerLength != 0:
