@@ -129,14 +129,7 @@ class ScriptFunctionDecoderTests(unittest.TestCase):
 
 	receiver = DummyScriptFunctionDecoder
 
-	def test_buffer(self):
-		"""
-		Test that when strings are received in chunks of different lengths,
-		they are still parsed correctly.
-		"""
-		toSend = '<script>f()</script><script>f("astring")</script>\nnonscriptstuff\n\t<script>f({})</script>\t\t\t'
-		expected = ['', '"astring"', '{}']
-
+	def _sendAndAssert(self, toSend, expected):
 		for packet_size in range(1, 20):
 			##print "packet_size", packet_size
 			a = self.receiver()
@@ -148,3 +141,36 @@ class ScriptFunctionDecoderTests(unittest.TestCase):
 					a.dataReceived(s)
 
 			self.assertEquals(expected, a.gotStrings)
+
+
+	def test_basicUsage(self):
+		"""
+		Test that when strings are received in chunks of different lengths,
+		they are still parsed correctly.
+		"""
+		toSend = '<script>f()</script><script>f("astring")</script>\nnonscriptstuff\n\t<script>f({})</script>\t\t\t'
+		expected = ['', '"astring"', '{}']
+		self._sendAndAssert(toSend, expected)
+
+
+	def test_endScriptNotLikeBrowser(self):
+		"""
+		Show that </script> in quoted string is _not_ handled like a browser would,
+		because _protocols.ScriptFunctionDecoder is looking for ")</script>"
+
+		If you make it work like a browser, replace this test.
+		"""
+		toSend = '<script>f("hello</script>there")</script><script>f([])</script>'
+		expected = ['"hello</script>there"', "[]"]
+		self._sendAndAssert(toSend, expected)
+
+
+	def test_spaceInScriptNotLikeBrowser(self):
+		"""
+		Show that </ script> is not handled like a browser would.
+
+		If you make it work like a browser, replace this test.
+		"""
+		toSend = '<script>f("hi")< /script>'
+		expected = []
+		self._sendAndAssert(toSend, expected)
