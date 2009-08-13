@@ -54,7 +54,6 @@ class XHRResponse(_BaseResponse):
 
 
 
-
 def makeRequest(reactor, url, headers, responseProtocol):
 	cc = protocol.ClientCreator(reactor, _newclient.HTTP11ClientProtocol)
 	scheme, host, port, path = client._parse(url)
@@ -93,3 +92,38 @@ def makeRequest(reactor, url, headers, responseProtocol):
 	d.addErrback(log.err)
 
 	return d
+
+
+
+class TwoWayCommunicator(object):
+	"""
+	I am a client that makes requests to communicate with a Minerva server.
+	"""
+
+	def __init__(self):
+		self.finished = defer.Deferred()
+		self.boxesReceived = 0
+		self.finishAfterBoxesN = 0 # 0 means never finish
+		self.activeS2C = None
+
+
+	def finishAfterNMoreBoxes(self, n):
+		"""
+		By design, Minerva keeps connections open, so I'll never running.
+		But you can tell me to disconnect and finish after receiving L{n} more
+		boxes.
+		"""
+		self.finishAfterBoxesN += n
+
+
+	def boxReceived(self, box):
+		self.boxesReceived += 1
+		if self.boxesReceived >= self.finishAfterBoxesN:
+			self.finish()
+
+
+	def finish(self):
+		self.activeS2C.abort()
+
+	# TODO
+
