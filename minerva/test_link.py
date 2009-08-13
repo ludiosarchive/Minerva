@@ -2,13 +2,13 @@ from cStringIO import StringIO
 from zope.interface import implements
 
 from twisted.trial import unittest
-from twisted.web import client, server, resource, http_headers, _newclient, iweb
+from twisted.web import client, server, resource, http_headers
 from twisted.python import log
 from twisted.internet import reactor, protocol, defer, address, interfaces
 from twisted.test import time_helpers
 #from twisted.web.test.test_web import DummyRequest as TwistedDummyRequest
 
-from minerva import link
+from minerva import link, pyclient
 from _protocols import BencodeStringDecoder
 
 #
@@ -26,7 +26,7 @@ class DummyChannel(object):
 
 		def __init__(self):
 			self.noDelayEnabled = False
-			self.written = StringIO()
+			self.written = ''
 			self.producers = []
 
 		def getPeer(self):
@@ -34,7 +34,7 @@ class DummyChannel(object):
 
 		def write(self, bytes):
 			assert isinstance(bytes, str)
-			self.written.write(bytes)
+			self.written += bytes
 
 		def writeSequence(self, iovec):
 			map(self.write, iovec)
@@ -60,81 +60,6 @@ class DummyChannel(object):
 
 	def requestDone(self, request):
 		pass
-
-
-	
-class HandleXHRResponse(protocol.Protocol):
-
-	def __init__(self):
-		self.received = []
-		self.onConnMade = defer.Deferred()
-		class Decoder(BencodeStringDecoder):
-			def dataCallback(self2, data):
-				self.received.append(data)
-		self.decoder = Decoder()
-
-
-	def connectionMade(self):
-		self.onConnLost = defer.Deferred()
-		self.onConnMade.callback(None)
-
-
-	def dataReceived(self, data):
-		log.msg('dataReceived: %r' % (data,))
-		try:
-			self.decoder.dataReceived(data)
-		except:
-			log.err()
-			raise
-
-
-	def connectionLost(self, reason):
-		if not reason.check(_newclient.ResponseDone):
-			reason.printTraceback()
-		else:
-			log.msg('Response done')
-		self.onConnLost.callback(None)
-
-
-
-def makeRequest(reactor, url, headers, responseProtocol):
-	cc = protocol.ClientCreator(reactor, _newclient.HTTP11ClientProtocol)
-	scheme, host, port, path = client._parse(url)
-
-	if scheme == 'http':
-		d = cc.connectTCP(host, port)
-	elif scheme == 'https':
-		from twisted.internet.ssl import ClientContextFactory
-		contextFactory = ClientContextFactory()
-		d = cc.connectSSL(host, port, contextFactory)
-	else:
-		raise SystemExit("Unsupported scheme: %r" % (scheme,))
-
-	def cbConnected(proto):
-		# XXX This port information is redundant with the numbers in t.w.client._parse
-		defaultPorts = {'http': 80, 'https': 443}
-		hostHeader = host
-		if defaultPorts[scheme] != port:
-			hostHeader += ':%d' % port
-		headers.addRawHeader('host', hostHeader)
-		return proto.request(_newclient.Request('GET', path, headers, None))
-	d.addCallback(cbConnected)
-
-	def cbResponse(response):
-		##pprint(vars(response))
-		proto = responseProtocol
-		if response.length is not iweb.UNKNOWN_LENGTH:
-			log.msg('The response body will consist of %d bytes.' % (response.length,))
-		else:
-			log.msg('The response body length is unknown.')
-
-		response.deliverBody(proto)
-		return proto.onConnLost
-
-	d.addCallback(cbResponse)
-	d.addErrback(log.err)
-
-	return d
 
 
 
@@ -195,14 +120,14 @@ class TestHTTPS2C(unittest.TestCase):
 
 		url = 'http://127.0.0.1:%d/d/?i=%s&n=%d&s=%d&t=%s' % (
 			port, streamId.encode('hex'), connectionNumber, ackS2C, transportString)
-		proto = HandleXHRResponse()
+		proto = pyclient.XHRResponse()
 		cookieName = 'm'
 		headers = http_headers.Headers({
 			'user-agent': ['Twisted/test_link.py'],
 			'cookie': [cookieName+'='+self._ua.uaId.encode('base64')],
 		})
 
-		connLostD = makeRequest(reactor, url, headers, proto)
+		connLostD = pyclient.makeRequest(reactor, url, headers, proto)
 		del headers # they were mutated
 
 		yield proto.onConnMade
@@ -382,9 +307,9 @@ class TestScriptTransport(HelperBaseHTTPTransports, unittest.TestCase):
 
 
 
-class TestSSETransport(HelperBaseHTTPTransports, unittest.TestCase):
-	transportClass = link.SSETransport
-	# TODO
+#class TestSSETransport(HelperBaseHTTPTransports, unittest.TestCase):
+#	transportClass = link.SSETransport
+#	# TODO
 
 
 

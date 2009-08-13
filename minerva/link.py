@@ -768,15 +768,15 @@ class ScriptTransport(_BaseHTTPTransport):
 		return '<script>f(%s)</script>' % (s,)
 
 
-
-# TODO
-class SSETransport(_BaseHTTPTransport):
-
-	maxBytes = 1024*1024 # Does this even need a limit?
-
-	def __repr__(self):
-		return '<SSETransport at %s attached to %r with %d frames sent>' % (
-			hex(id(self)), self._request, self._framesSent)
+#
+## TODO
+#class SSETransport(_BaseHTTPTransport):
+#
+#	maxBytes = 1024*1024 # Does this even need a limit?
+#
+#	def __repr__(self):
+#		return '<SSETransport at %s attached to %r with %d frames sent>' % (
+#			hex(id(self)), self._request, self._framesSent)
 
 
 
@@ -868,7 +868,7 @@ class HTTPS2C(resource.Resource):
 
 		s.clientReceivedUpTo(ackS2C)
 
-		transportMap = dict(s=ScriptTransport, x=XHRTransport, o=SSETransport)
+		transportMap = dict(s=ScriptTransport, x=XHRTransport) #, o=SSETransport)
 		transport = transportMap[transportString](request, connectionNumber, ackS2C)
 
 		s.transportOnline(transport)

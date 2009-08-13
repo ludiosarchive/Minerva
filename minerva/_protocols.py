@@ -40,7 +40,7 @@ class NetStringDecoder(object):
 		2. ParseError is raised if an illegal message is received.
 	"""
 
-	MAX_LENGTH = 99999
+	MAX_LENGTH = 1024*1024*1024 # 1GB
 	brokenPeer = 0
 	_readerState = LENGTH
 	_readerLength = 0
@@ -133,7 +133,7 @@ class BencodeStringDecoder(object):
 		2. ParseError is raised if an illegal message is received.
 	"""
 
-	MAX_LENGTH = 99999
+	MAX_LENGTH = 1024*1024*1024 # 1GB
 	brokenPeer = 0
 	_readerState = LENGTH
 	_readerLength = 0
@@ -188,3 +188,33 @@ class BencodeStringDecoder(object):
 		except ParseError:
 			self.brokenPeer = 1
 			raise
+
+
+
+class ScriptFunctionDecoder(object):
+	"""
+	This is not as loose as an SGML parser (which will handle whitespace
+	inside the "<script>" or "</script>", but it's good enough for testing.
+
+	This might have a re-entrancy bug; write a unit test for it if it matters to you.
+	"""
+
+	startText = '<script>f('
+	endText = ')</script>'
+	_buffer = ''
+
+	def dataCallback(self, line):
+		"""
+		Override this.
+		"""
+		raise NotImplementedError
+
+
+	def dataReceived(self, data):
+		self._buffer += data
+		while self.startText in self._buffer and self.endText in self._buffer:
+			start = self._buffer.find(self.startText) + len(self.startText)
+			end = self._buffer.find(self.endText)
+			extracted = self._buffer[start:end]
+			self._buffer = self._buffer[end + len(self.endText):]
+			self.dataCallback(extracted)

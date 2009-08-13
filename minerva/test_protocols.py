@@ -3,7 +3,7 @@ from twisted.trial import unittest
 import _protocols
 
 
-class DummyNetStringDecoder(_protocols.NetStringDecoder):
+class _BaseDummy(object):
 
 	def __init__(self):
 		self.gotStrings = []
@@ -14,19 +14,23 @@ class DummyNetStringDecoder(_protocols.NetStringDecoder):
 
 
 
-class DummyBencodeStringDecoder(_protocols.BencodeStringDecoder):
-
-	def __init__(self):
-		self.gotStrings = []
+class DummyNetStringDecoder(_BaseDummy, _protocols.NetStringDecoder):
+	pass
 
 
-	def dataCallback(self, line):
-		self.gotStrings.append(line)
 
+class DummyBencodeStringDecoder(_BaseDummy, _protocols.BencodeStringDecoder):
+	pass
+
+
+
+class DummyScriptFunctionDecoder(_BaseDummy, _protocols.ScriptFunctionDecoder):
+	pass
+	
 
 
 # modified copy/paste from twisted.test.test_protocols
-class NetStringDecoderTestCase(unittest.TestCase):
+class NetStringDecoderTests(unittest.TestCase):
 
 	# for max length 699
 	strings = ['hello', 'world', 'how', 'are', 'you123', ':today', "a"*515]
@@ -45,17 +49,17 @@ class NetStringDecoderTestCase(unittest.TestCase):
 		Test that when strings are received in chunks of different lengths,
 		they are still parsed correctly.
 		"""
-		out = ''
+		toSend = ''
 		for s in self.strings:
-			out += str(len(s))+':'+s+self.trailingComma
+			toSend += str(len(s))+':'+s+self.trailingComma
 
 		for packet_size in range(1, 20):
 			##print "packet_size", packet_size
 			a = self.receiver()
 			a.MAX_LENGTH = 699
 
-			for i in range(len(out)/packet_size + 1):
-				s = out[i*packet_size:(i+1)*packet_size]
+			for i in range(len(toSend)/packet_size + 1):
+				s = toSend[i*packet_size:(i+1)*packet_size]
 				if s != '':
 					##print 'sending', repr(s)
 					a.dataReceived(s)
@@ -108,7 +112,7 @@ class NetStringDecoderTestCase(unittest.TestCase):
 
 
 
-class BencodeStringDecoderTestCase(NetStringDecoderTestCase):
+class BencodeStringDecoderTests(NetStringDecoderTests):
 
 	# for max length 50
 	illegalSequences = [
@@ -118,3 +122,29 @@ class BencodeStringDecoderTestCase(NetStringDecoderTestCase):
 	trailingComma = ''
 
 	receiver = receiver = DummyBencodeStringDecoder
+
+
+
+class ScriptFunctionDecoderTests(unittest.TestCase):
+
+	receiver = DummyScriptFunctionDecoder
+
+	def test_buffer(self):
+		"""
+		Test that when strings are received in chunks of different lengths,
+		they are still parsed correctly.
+		"""
+		toSend = '<script>f()</script><script>f("astring")</script>\nnonscriptstuff\n\t<script>f({})</script>\t\t\t'
+		expected = ['', '"astring"', '{}']
+
+		for packet_size in range(1, 20):
+			##print "packet_size", packet_size
+			a = self.receiver()
+
+			for i in range(len(toSend)/packet_size + 1):
+				s = toSend[i*packet_size:(i+1)*packet_size]
+				if s != '':
+					##print 'sending', repr(s)
+					a.dataReceived(s)
+
+			self.assertEquals(expected, a.gotStrings)
