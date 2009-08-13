@@ -367,7 +367,17 @@ class TestScriptTransport(HelperBaseHTTPTransports, unittest.TestCase):
 
 	def test_stringOne(self):
 		self.assertEqual(r'<script>f([1,"T"])</script>', self.t._stringOne([1, "T"]))
+
+
+	def test_stringOneEscapesEndScripts(self):
+		"""
+		Make sure stringOne for script streaming escapes all forms of </script>
+		These are not exhaustive tests; SGML parsers are very loose.
+		"""
 		self.assertEqual(r'<script>f([1,"T<\/script>T"])</script>', self.t._stringOne([1, "T</script>T"]))
+		self.assertEqual(r'<script>f([1,"T<\/ script>T"])</script>', self.t._stringOne([1, "T</ script>T"]))
+		self.assertEqual(r'<script>f([1,"T<\/script >T"])</script>', self.t._stringOne([1, "T</script >T"]))
+		self.assertEqual(r'<script>f([1,"T<\/script\t>T"])</script>', self.t._stringOne([1, "T</script\t>T"]))
 
 
 

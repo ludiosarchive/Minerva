@@ -756,8 +756,10 @@ class ScriptTransport(_BaseHTTPTransport):
 		# even if the </script> is in a quoted string.
 		# Officially, other SGML tags could close something in the document, but in practice,
 		# this doesn't happen.
+		# We escape more than just </script> because </ script> acts just like </script>
+		# (there are a lot of combinations)
 		# TODO: build the </script> escaping into simplejson for speed
-		s = json.dumps(box, separators=(',', ':')).replace(r'</script>', r'<\/script>')
+		s = json.dumps(box, separators=(',', ':')).replace(r'</', r'<\/')
 		# TODO: find out if there's a way to close a script tag in IE or FF/Safari
 		# without sending an entire </script>
 		return '<script>f(%s)</script>' % (s,)
