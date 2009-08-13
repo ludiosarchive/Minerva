@@ -214,7 +214,7 @@ class TestHTTPS2C(unittest.TestCase):
 		# and the S2C seq frame count for the byteLimit.
 
 		extraLen = len("['']")
-		amount = (300*1024)/100
+		amount = (300*1024)/100 # == 3072
 		boxes = []
 		for i in xrange(amount):
 			boxes.append(['x' * (100 - extraLen)])
@@ -223,7 +223,7 @@ class TestHTTPS2C(unittest.TestCase):
 
 		yield connLostD
 
-		self.assertEqual(1014, len(proto.received))
+		self.assertEqual(2916, len(proto.received))
 
 		# Stream set a 30 second timeout waiting for another S2C transport
 		# to connect, so move the clock 30 seconds forward. 

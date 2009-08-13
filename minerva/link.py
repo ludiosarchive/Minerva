@@ -665,6 +665,9 @@ class _BaseHTTPTransport(object):
 			toSend += boxString
 			frameCount += 1
 			byteCount += len(boxString)
+			# This logic means that we'll usually go over maxBytes.
+			# It also means that at least one box will be sent, no matter
+			# how big it is.
 			if byteCount > self.maxBytes:
 				break
 
