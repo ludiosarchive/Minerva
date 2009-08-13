@@ -223,7 +223,8 @@ class TestHTTPS2C(unittest.TestCase):
 
 		yield connLostD
 
-		self.assertEqual(2916, len(proto.received))
+		self.assert_(len(proto.received) < 3072, len(proto.received))
+		self.assert_(len(proto.received) > 2800, len(proto.received))
 
 		# Stream set a 30 second timeout waiting for another S2C transport
 		# to connect, so move the clock 30 seconds forward. 
