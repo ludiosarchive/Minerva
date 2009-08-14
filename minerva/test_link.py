@@ -123,7 +123,7 @@ class TestHTTPS2C(unittest.TestCase):
 		streamId = stream1000.streamId
 
 		extraLen = len("['']")
-		amount = (300*1024)/100 # == 3072
+		amount = (3000*1024)/100 # == 3072
 		boxes = []
 		for i in xrange(amount):
 			boxes.append(['x' * (100 - extraLen)])
@@ -136,6 +136,8 @@ class TestHTTPS2C(unittest.TestCase):
 		comm.connect()
 
 		yield comm.finished
+
+		print "StopConditionCommunicator used %d connections to get the data." % (comm._connectionNumber + 1,)
 
 		self.assertEqual(comm.gotBoxes, boxes)
 

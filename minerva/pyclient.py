@@ -4,6 +4,7 @@ A pure-Python client that can connect to Minerva using any of its transports.
 Useful for manual testing (Wireshark, etc), automated testing, and various experiments.
 """
 import simplejson
+import time
 
 from twisted.web import client, server, resource, http_headers, _newclient, iweb
 from twisted.internet import reactor, protocol, defer, address, interfaces
@@ -109,7 +110,7 @@ class TwoWayCommunicator(object):
 			contextFactory = ClientContextFactory()
 			d = cc.connectSSL(host, port, contextFactory)
 		else:
-			raise SystemExit("Unsupported scheme: %r" % (scheme,))
+			raise ValueError("Unsupported scheme: %r" % (scheme,))
 
 		def cbConnected(proto):
 			self._S2CConnections.add(proto)
@@ -154,6 +155,7 @@ class TwoWayCommunicator(object):
 
 
 	def _doHTTPRequest(self):
+		print "_doHTTPRequest at %s" % time.time()
 		if self._finished:
 			log.msg('I am finished; not making an HTTP request.')
 			return
@@ -189,6 +191,8 @@ class TwoWayCommunicator(object):
 		"""
 		The next frame L{frame} has been received from the server.
 		"""
+		self.framesReceived += 1
+
 		# Verify S2C number
 		if isinstance(frame, list) and frame[0] == '`^a':
 			if frame[1] != self._ackS2C:
@@ -196,7 +200,12 @@ class TwoWayCommunicator(object):
 				raise UnexpectedS2CNumber(
 					"I was expecting the stream to start at S2C #%d; received %d" % (self._ackS2C, frame[1]))
 
-		self.framesReceived += 1
+		# Stop on errors
+		if isinstance(frame, list) and frame[0] == '`^e':
+			log.msg('Got error frame: %r' % (frame,))
+			self.finish()
+			return
+
 		if not self._isControlFrame(frame):
 			self.boxesReceived += 1
 			self._ackS2C += 1
