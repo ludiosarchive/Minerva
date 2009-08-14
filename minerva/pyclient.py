@@ -56,7 +56,7 @@ class _BaseResponse(protocol.Protocol):
 
 
 class ScriptResponse(_BaseResponse):
-	decoder = _protocols.ScriptFunctionDecoder
+	decoder = _protocols.ScriptDecoder
 
 
 
@@ -237,7 +237,7 @@ class TwoWayXHRCommunicator(BaseTwoWayCommunicator):
 
 
 
-class TwoWayScriptFunctionCommunicator(BaseTwoWayCommunicator):
+class TwoWayScriptCommunicator(BaseTwoWayCommunicator):
 	transportString = 's'
 	decoder = ScriptResponse
 
@@ -278,7 +278,7 @@ class StopConditionXHRCommunicator(BaseStopConditionCommunicator):
 
 
 
-class StopConditionScriptFunctionCommunicator(BaseStopConditionCommunicator):
+class StopConditionScriptCommunicator(BaseStopConditionCommunicator):
 	transportString = 's'
 	decoder = ScriptResponse
 

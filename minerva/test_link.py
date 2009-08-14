@@ -111,10 +111,10 @@ class BaseTestIntegration(object):
 		Run through most of the features.
 		"""
 		# make maxBytes smaller so that the test runs faster
-		_oldValue = link.XHRTransport.maxBytes
-		link.XHRTransport.maxBytes = 30*1024
+		_oldValue = self.transportHandler.maxBytes
+		self.transportHandler.maxBytes = 30*1024
 		def cleanup():
-			link.XHRTransport.maxBytes = _oldValue
+			self.transportHandler.maxBytes = _oldValue
 		self.addCleanup(cleanup)
 
 		port = self.startServer()
@@ -153,7 +153,7 @@ class BaseTestIntegration(object):
 		# Assert that notifyFinish called the Stream to remove the stale transports
 		self.assertEqual(0, len(stream1000._transports))
 
-		log.msg("StopConditionCommunicator used %d connections to get the data." % (
+		log.msg("I used %d connections to get the data." % (
 			comm._connectionNumber + 1,))
 		self.assertEqual(6, comm._connectionNumber + 1)
 
@@ -169,11 +169,13 @@ class BaseTestIntegration(object):
 
 class TestXHRIntegration(BaseTestIntegration, unittest.TestCase):
 	communicator = pyclient.StopConditionXHRCommunicator
+	transportHandler = link.XHRTransport
 
 
 
-class TestScriptFunctionIntegration(BaseTestIntegration, unittest.TestCase):
-	communicator = pyclient.StopConditionScriptFunctionCommunicator
+class TestScriptIntegration(BaseTestIntegration, unittest.TestCase):
+	communicator = pyclient.StopConditionScriptCommunicator
+	transportHandler = link.ScriptTransport
 
 
 

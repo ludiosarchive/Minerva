@@ -24,7 +24,7 @@ class DummyBencodeStringDecoder(_BaseDummy, _protocols.BencodeStringDecoder):
 
 
 
-class DummyScriptFunctionDecoder(_BaseDummy, _protocols.ScriptFunctionDecoder):
+class DummyScriptDecoder(_BaseDummy, _protocols.ScriptDecoder):
 	pass
 	
 
@@ -125,9 +125,9 @@ class TestBencodeStringDecoder(TestNetStringDecoder):
 
 
 
-class TestScriptFunctionDecoder(unittest.TestCase):
+class TestScriptDecoder(unittest.TestCase):
 
-	receiver = DummyScriptFunctionDecoder
+	receiver = DummyScriptDecoder
 
 	def _sendAndAssert(self, toSend, expected):
 		for packet_size in range(1, 20):
@@ -156,7 +156,7 @@ class TestScriptFunctionDecoder(unittest.TestCase):
 	def test_endScriptNotLikeBrowser(self):
 		"""
 		Show that </script> in quoted string is _not_ handled like a browser would,
-		because _protocols.ScriptFunctionDecoder is looking for ")</script>"
+		because _protocols.ScriptDecoder is looking for ")</script>"
 
 		If you make it work like a browser, replace this test.
 		"""

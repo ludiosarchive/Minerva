@@ -191,7 +191,7 @@ class BencodeStringDecoder(object):
 
 
 
-class ScriptFunctionDecoder(object):
+class ScriptDecoder(object):
 	"""
 	This is not as loose as an SGML parser (which will handle whitespace
 	inside the "<script>" or "</script>", but it's good enough for testing.
