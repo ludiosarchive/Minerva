@@ -85,6 +85,7 @@ class TwoWayCommunicator(object):
 		self._ackS2C = 0
 
 		self._S2CConnections = set()
+		self._finished = False
 
 		self.framesReceived = 0
 		self.boxesReceived = 0
@@ -129,7 +130,7 @@ class TwoWayCommunicator(object):
 
 				response.deliverBody(responseProtocol)
 				def deleteFromConnections(passthru):
-					self._S2CConnections.remove(proto)
+					self._S2CConnections.discard(proto)
 					return passthru
 				responseProtocol.onConnLost.addCallback(deleteFromConnections)
 				return responseProtocol.onConnLost
@@ -153,11 +154,15 @@ class TwoWayCommunicator(object):
 
 
 	def _doHTTPRequest(self):
+		if self._finished:
+			log.msg('I am finished; not making an HTTP request.')
+			return
+
 		transportString = 'x'
 
 		class BodyDecoder(XHRResponse):
 			def frameReceived(self2, frame):
-				self.frameReceived(frame)
+				self._handleFrame(frame)
 		bodyProto = BodyDecoder()
 
 		self._connectionNumber += 1
@@ -180,7 +185,7 @@ class TwoWayCommunicator(object):
 		return isinstance(frame, list) and frame[0] in ['`^a', '`^e']
 
 
-	def frameReceived(self, frame):
+	def _handleFrame(self, frame):
 		"""
 		The next frame L{frame} has been received from the server.
 		"""
@@ -203,6 +208,7 @@ class TwoWayCommunicator(object):
 
 
 	def finish(self):
+		self._finished = True
 		self.abortAll()
 		return self.connLostD
 
@@ -210,17 +216,19 @@ class TwoWayCommunicator(object):
 
 class StopConditionCommunicator(TwoWayCommunicator):
 	"""
-	Stops after receiving N boxes. Useful for testing.
+	Keeps every box it gets and stops after receiving L{_finishAfterBoxesN} boxes.
+	Useful for testing.
 	"""
 	def __init__(self, *args, **kwargs):
 		TwoWayCommunicator.__init__(self,  *args, **kwargs)
 		self._finishAfterBoxesN = 0 # 0 means never finish
 		self.finished = defer.Deferred()
+		self.gotBoxes = []
 
 
-	def frameReceived(self, frame):
-		TwoWayCommunicator.frameReceived(self, frame)
-		if self.framesReceived and self.boxesReceived >= self._finishAfterBoxesN:
+	def boxReceived(self, box):
+		self.gotBoxes.append(box)
+		if self._finishAfterBoxesN and self.boxesReceived >= self._finishAfterBoxesN:
 			self.finish()
 			self.finished.callback(None)
 

@@ -130,19 +130,14 @@ class TestHTTPS2C(unittest.TestCase):
 
 		stream1000.sendBoxes(boxes)
 
-		received = []
-		class SaveBoxesStopConditionCommunicator(pyclient.StopConditionCommunicator):
-			def boxReceived(self2, box):
-				received.append(box)
-
-
 		comm = pyclient.StopConditionCommunicator(
 			reactor, 'http://127.0.0.1:%d/' % port, self._ua.uaId, streamId, cookieName)
+		comm.finishAfterNMoreBoxes(amount)
 		comm.connect()
 
 		yield comm.finished
 
-		self.assertEqual(received, boxes)
+		self.assertEqual(comm.gotBoxes, boxes)
 
 		# Stream set a 30 second timeout waiting for another S2C transport
 		# to connect, so move the clock 30 seconds forward. 
