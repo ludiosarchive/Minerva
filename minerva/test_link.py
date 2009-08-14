@@ -112,6 +112,13 @@ class TestHTTPS2C(unittest.TestCase):
 		# use a pyclient.StopConditionCommunicator, connect it,
 		# make sure it got all the boxes we expected.
 
+		# make maxBytes smaller so that the test runs faster
+		_oldValue = link.XHRTransport.maxBytes
+		link.XHRTransport.maxBytes = 30*1024
+		def cleanup():
+			link.XHRTransport.maxBytes = _oldValue
+		self.addCleanup(cleanup)
+
 		port = self.startServer()
 
 		cookieName = 'm'
@@ -123,12 +130,14 @@ class TestHTTPS2C(unittest.TestCase):
 		streamId = stream1000.streamId
 
 		extraLen = len("['']")
-		amount = (1500*1024)/100
+		amount = (150*1024)/100
 		boxes = []
 		for i in xrange(amount):
 			boxes.append(['x' * (100 - extraLen)])
 
 		stream1000.sendBoxes(boxes)
+
+		self.assertEqual(0, len(stream1000._transports))
 
 		comm = pyclient.StopConditionCommunicator(
 			reactor, 'http://127.0.0.1:%d/' % port, self._ua.uaId, streamId, cookieName)
@@ -136,6 +145,9 @@ class TestHTTPS2C(unittest.TestCase):
 		comm.connect()
 
 		yield comm.finished
+
+		# Make sure that there are no notifyFinish-related bugs. 
+		self.assertEqual(0, len(stream1000._transports))
 
 		log.msg("StopConditionCommunicator used %d connections to get the data." % (
 			comm._connectionNumber + 1,))
@@ -328,6 +340,8 @@ class TestQueue(unittest.TestCase):
 		q.append('zero')
 		q.extend(['one', 'two'])
 		self.assertEqual([(0, 'zero'), (1, 'one'), (2, 'two')], list(q.iterItems(start=0)))
+		# iterItems is idempotent
+		self.assertEqual([(0, 'zero'), (1, 'one'), (2, 'two')], list(q.iterItems(start=0)))
 
 
 	def test_appendExtendQueueStart1(self):
@@ -335,12 +349,16 @@ class TestQueue(unittest.TestCase):
 		q.append('zero')
 		q.extend(['one', 'two'])
 		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems(start=1)))
+		# iterItems is idempotent
+		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems(start=1)))
 
 
 	def test_appendExtendQueueStart3(self):
 		q = link.Queue()
 		q.append('zero')
 		q.extend(['one', 'two'])
+		self.assertEqual([], list(q.iterItems(start=3)))
+		# iterItems is idempotent
 		self.assertEqual([], list(q.iterItems(start=3)))
 
 
@@ -386,7 +404,7 @@ class TestQueue(unittest.TestCase):
 		q.removeUpTo(2)
 		q.removeUpTo(4)
 
-		# There should be four items in the queue left
+		# There should be four items left in the queue
 		self.assertEqual([(4,4),(5,5),(6,6),(7,7)], list(q.iterItems(start=4)))
 
 
