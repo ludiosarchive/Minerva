@@ -105,58 +105,64 @@ class BaseTestIntegration(object):
 			return self.p.stopListening()
 
 
+	def _makeTransportsSmaller(self):
+		# make maxBytes smaller so that the test runs faster
+		_oldValue = self.transportHandler.maxBytes
+		self.transportHandler.maxBytes = 30*1024
+		def _restoreTransports():
+			self.transportHandler.maxBytes = _oldValue
+		self.addCleanup(_restoreTransports)
+
+
+	def _makeBoxes(self, numBoxes):
+		"""
+		Return L{numBoxes} unique, 100-byte boxes.
+		"""
+		extraLen = len("['']")
+		boxes = []
+		for i in xrange(numBoxes):
+			strNumber = str(i).zfill(6)
+			boxes.append([strNumber + ('x' * (94 - extraLen))])
+		return boxes
+
+
+	def _buildStreamWithBoxes(self, boxes):
+		"""
+		Builds and returns a Stream filled with boxes L{boxes}.
+		"""
+		stream = self._ua.buildStream()
+		clock = task.Clock()
+		stream._clock = clock
+
+		stream.sendBoxes(boxes)
+
+		return stream
+
+
 	@defer.inlineCallbacks
 	def test_integration(self):
 		"""
 		Run through most of the features.
 		"""
-		# make maxBytes smaller so that the test runs faster
-		_oldValue = self.transportHandler.maxBytes
-		self.transportHandler.maxBytes = 30*1024
-		def cleanup():
-			self.transportHandler.maxBytes = _oldValue
-		self.addCleanup(cleanup)
-
+		self._makeTransportsSmaller()
 		port = self.startServer()
 
-		cookieName = 'm'
-
-		stream1000 = self._ua.buildStream()
-		clock = task.Clock()
-		stream1000._clock = clock
-
-		serverFinished = [False]
-		def cbServerSideFinished(*args, **kwargs):
-			serverFinished[0] = True
-
-		serverDone = stream1000.notifyFinish().addCallback(cbServerSideFinished)
-
-		streamId = stream1000.streamId
-
-		extraLen = len("['']")
-		amount = (150*1024)/100
-		boxes = []
-		for i in xrange(amount):
-			strNumber = str(i).zfill(6)
-			boxes.append([strNumber + ('x' * (94 - extraLen))])
-
-		stream1000.sendBoxes(boxes)
-
-		self.assertEqual(0, len(stream1000._transports))
+		numBoxes = (150*1024)/100
+		boxes = self._makeBoxes(numBoxes)
+		stream = self._buildStreamWithBoxes(boxes)
 
 		comm = self.communicator(
-			reactor, 'http://127.0.0.1:%d/' % port, self._ua.uaId, streamId, cookieName)
-		comm.finishAfterNMoreBoxes(amount)
+			reactor, 'http://127.0.0.1:%d/' % port, self._ua.uaId, stream.streamId, cookieName='m')
+		comm.finishAfterNMoreBoxes(numBoxes)
 		comm.connect()
 
-		# Twisted does not guarantee if the client or server loses the connection first.
-
+		# Note: Twisted does not guarantee if the client or server has loseConnection called first.
+		# Which means we can't easily test for "serverFinished" or if server still has transports
+		# attached.
+		
 		yield comm.finished
-		# Wait a bit to make sure both have lost connection. 0.001 is not small enough.
-		yield task.deferLater(reactor, 0.01, lambda: None)
-		clock.advance(30)
 
-		self.assertEqual(None, stream1000._transports)
+		self.assertEqual(comm.gotBoxes, boxes)
 
 		log.msg("I used %d connections to get the data." % (
 			comm._connectionNumber + 1,))
@@ -167,10 +173,6 @@ class BaseTestIntegration(object):
 			# because "<script>" and "</script>" take up so many bytes.
 			# So, it uses more connections to deliver the same boxes.
 			self.assertEqual(7, comm._connectionNumber + 1)
-
-		self.assertEqual(comm.gotBoxes, boxes)
-
-		self.assertEqual(True, serverFinished[0])
 
 
 
