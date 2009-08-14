@@ -45,8 +45,9 @@ class _BaseResponse(protocol.Protocol):
 
 
 	def connectionLost(self, reason):
+		print 'Client connection %r lost at %.09f' % (self, time.time())
 		if self.noisy:
-			log.msg('Connection %r lost at %s' % (self, time.time()))
+			log.msg('Connection %r lost at %.09f' % (self, time.time()))
 		if not reason.check(_newclient.ResponseDone):
 			reason.printTraceback()
 		else:

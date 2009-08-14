@@ -129,7 +129,7 @@ class BaseTestIntegration(object):
 		def cbServerSideFinished(*args, **kwargs):
 			serverFinished[0] = True
 
-		stream1000.notifyFinish().addCallback(cbServerSideFinished)
+		serverDone = stream1000.notifyFinish().addCallback(cbServerSideFinished)
 
 		streamId = stream1000.streamId
 
@@ -149,15 +149,14 @@ class BaseTestIntegration(object):
 		comm.finishAfterNMoreBoxes(amount)
 		comm.connect()
 
+		# Twisted does not guarantee if the client or server loses the connection first.
+
 		yield comm.finished
-		yield task.deferLater(reactor, 0.001, lambda: None)
+		# Wait a bit to make sure both have lost connection.
+		yield task.deferLater(reactor, 0.01, lambda: None)
+		clock.advance(30)
 
-		# TO fix bug: maybe we need to wait for actual connection loss on the server?
-		# Maybe it's being triggered not because of <script> specialness but because
-		# of the precise amount of bytes sent?
-
-		# Assert that notifyFinish called the Stream to remove the stale transports
-		self.assertEqual(0, len(stream1000._transports))
+		self.assertEqual(None, stream1000._transports)
 
 		log.msg("I used %d connections to get the data." % (
 			comm._connectionNumber + 1,))
@@ -171,10 +170,6 @@ class BaseTestIntegration(object):
 
 		self.assertEqual(comm.gotBoxes, boxes)
 
-		self.assertEqual(False, serverFinished[0])
-		# Stream set a 30 second timeout waiting for another S2C transport
-		# to connect, so move the clock 30 seconds forward.
-		clock.advance(30)
 		self.assertEqual(True, serverFinished[0])
 
 
