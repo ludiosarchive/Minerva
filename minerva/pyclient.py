@@ -214,6 +214,9 @@ class BaseTwoWayCommunicator(object):
 			self.finish()
 			return
 
+		if self._isControlFrame(frame):
+			print 'Got control frame', frame[0:2]
+
 		if not self._isControlFrame(frame):
 			self.boxesReceived += 1
 			self._ackS2C += 1
@@ -264,11 +267,14 @@ class BaseStopConditionCommunicator(BaseTwoWayCommunicator):
 
 	def finishAfterNMoreBoxes(self, n):
 		"""
-		By design, Minerva keeps connections open, so I'll never running.
+		By design, Minerva keeps connections open, so I'll never stop running.
 		But you can tell me to disconnect and finish after receiving L{n} more
-		boxes.
+		boxes. If I have already received L{n} boxes, I will finish immediately.
 		"""
 		self._finishAfterBoxesN += n
+		if self.boxesReceived >= self._finishAfterBoxesN:
+			self.finish()
+			self.finished.callback(None)
 
 
 

@@ -137,7 +137,8 @@ class BaseTestIntegration(object):
 		amount = (150*1024)/100
 		boxes = []
 		for i in xrange(amount):
-			boxes.append(['x' * (100 - extraLen)])
+			strNumber = str(i).zfill(6)
+			boxes.append([strNumber + ('x' * (94 - extraLen))])
 
 		stream1000.sendBoxes(boxes)
 
@@ -149,6 +150,10 @@ class BaseTestIntegration(object):
 		comm.connect()
 
 		yield comm.finished
+
+		# TO fix bug: maybe we need to wait for actual connection loss on the server?
+		# Maybe it's being triggered not because of <script> specialness but because
+		# of the precise amount of bytes sent?
 
 		# Assert that notifyFinish called the Stream to remove the stale transports
 		self.assertEqual(0, len(stream1000._transports))
