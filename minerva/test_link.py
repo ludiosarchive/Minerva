@@ -4,7 +4,7 @@ from zope.interface import implements
 from twisted.trial import unittest
 from twisted.web import client, server, resource, http_headers
 from twisted.python import log
-from twisted.internet import reactor, protocol, defer, address, interfaces
+from twisted.internet import reactor, protocol, defer, address, interfaces, task
 from twisted.test import time_helpers
 #from twisted.web.test.test_web import DummyRequest as TwistedDummyRequest
 
@@ -98,14 +98,11 @@ class TestHTTPS2C(unittest.TestCase):
 
 	def setUp(self):
 		self.p = None
-		self.clock = time_helpers.Clock()
-		self.clock.install()
 
 
 	def tearDown(self):
 		if self.p:
 			return self.p.stopListening()
-		self.clock.uninstall()
 
 
 	@defer.inlineCallbacks
@@ -120,10 +117,13 @@ class TestHTTPS2C(unittest.TestCase):
 		cookieName = 'm'
 
 		stream1000 = self._ua.buildStream()
+		clock = task.Clock()
+		stream1000._clock = clock
+
 		streamId = stream1000.streamId
 
 		extraLen = len("['']")
-		amount = (3000*1024)/100 # == 3072
+		amount = (1500*1024)/100
 		boxes = []
 		for i in xrange(amount):
 			boxes.append(['x' * (100 - extraLen)])
@@ -137,13 +137,15 @@ class TestHTTPS2C(unittest.TestCase):
 
 		yield comm.finished
 
-		log.msg("StopConditionCommunicator used %d connections to get the data." % (comm._connectionNumber + 1,))
+		log.msg("StopConditionCommunicator used %d connections to get the data." % (
+			comm._connectionNumber + 1,))
+		self.assertEqual(6, comm._connectionNumber + 1)
 
 		self.assertEqual(comm.gotBoxes, boxes)
 
 		# Stream set a 30 second timeout waiting for another S2C transport
-		# to connect, so move the clock 30 seconds forward. 
-		self.clock.pump(reactor, [30])
+		# to connect, so move the clock 30 seconds forward.
+		clock.advance(30)
 
 		# TODO: assert that the notifyFinish deferreds were triggered
 

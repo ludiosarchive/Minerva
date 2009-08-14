@@ -1,6 +1,7 @@
 from collections import deque
 import simplejson as json
 
+import pprint
 import socket
 import struct
 
@@ -183,7 +184,7 @@ def strToNonNeg(value):
 
 class GenericTimeoutMixin(object):
 	"""
-	Mixin for any instance that has a L{_reactor} attribute and wants a timeout.
+	Mixin for any instance that has a L{_clock} attribute and wants a timeout.
 
 	This is mostly a copy/paste of twisted.protocols.policies.TimeoutMixin
 
@@ -219,7 +220,7 @@ class GenericTimeoutMixin(object):
 			else:
 				self.__timeoutCall.reset(period)
 		elif period is not None:
-			self.__timeoutCall = self._reactor.callLater(period, self.__timedOut)
+			self.__timeoutCall = self._clock.callLater(period, self.__timedOut)
 
 		return prev
 
@@ -229,10 +230,11 @@ class GenericTimeoutMixin(object):
 		self.timedOut()
 
 
-	def 	timedOut(self):
+	def timedOut(self):
 		"""
 		The timeout has been triggered. Override this.
 		"""
+		raise NotImplementedError("override timedOut")
 
 
 """
@@ -349,6 +351,7 @@ class Stream(GenericTimeoutMixin):
 
 	def __init__(self, reactor, streamId):
 		self._reactor = reactor
+		self._clock = reactor
 		self.streamId = streamId
 
 		self.queue = Queue()
@@ -444,8 +447,8 @@ class Stream(GenericTimeoutMixin):
 			# TODO: should there be any other criteria?
 			transport = sorted(self._transports, key=lambda t: t.connectionNumber, reverse=True)[0]
 			if self.noisy:
-				log.msg("Multiple S2C transports: %r, so I picked the newest: %r" % (
-					self._transports, transport,))
+				log.msg("Multiple S2C transports: \n%s\n, so I picked the newest: %r" % (
+					pprint.pformat(self._transports), transport,))
 		else:
 			transport = list(self._transports)[0]
 
@@ -501,7 +504,7 @@ class Stream(GenericTimeoutMixin):
 		"""
 		For internal use.
 		"""
-		log.msg('Transport has left:', transport)
+		log.msg('Transport has gone offline:', transport)
 		# This will raise an exception if it's not there
 		self._transports.remove(transport)
 
@@ -852,6 +855,10 @@ class HTTPS2C(resource.Resource):
 	def render_GET(self, request):
 		##print request.getCookie('m')
 
+		# notifyFinish should be called as early as possible; see its docstring
+		# in Twisted.
+		requestFinishedD = request.notifyFinish()
+
 		uaId = request.getCookie(self.cookieName).decode('base64')
 		ua = self._uaFactory.getOrBuildUAWithId(uaId)
 
@@ -875,25 +882,29 @@ class HTTPS2C(resource.Resource):
 		except (KeyError, IndexError, ValueError, TypeError):
 			_fail()
 
-		if not transportString in ('s', 'x', 'o'):
+		if not transportString in ('s', 'x'):#, 'o'):
 			_fail()
 
 		# TODO: instead of any _fail() or error-raising, create the transport, DO NOT
 		# register it with any Stream, send an error frame over the transport. If no
 		# valid transportString, send some kind of HTTP error.
 
-		s = ua.getStream(streamId)
+		stream = ua.getStream(streamId)
 
-		s.clientReceivedUpTo(ackS2C)
+		stream.clientReceivedUpTo(ackS2C)
 
 		transportMap = dict(s=ScriptTransport, x=XHRTransport) #, o=SSETransport)
 		transport = transportMap[transportString](request, connectionNumber, ackS2C)
 
-		s.transportOnline(transport)
+		stream.transportOnline(transport)
 
-		d = request.notifyFinish()
-		d.addBoth(lambda _None: s.transportOffline(transport))
-		
+		requestFinishedD.addBoth(lambda *args: stream.transportOffline(transport))
+		requestFinishedD.addErrback(log.err)
+
+		# Just because we're returning NOT_DONE_YET, doesn't mean the request
+		# is unfinished. It might already be finished, and the NOT_DONE_YET return
+		# is superflous (it does not harm anything).
+
 		return 1 # NOT_DONE_YET
 
 
