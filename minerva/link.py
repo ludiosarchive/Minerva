@@ -495,7 +495,8 @@ class Stream(GenericTimeoutMixin):
 		For internal use.
 		"""
 		self.setTimeout(None)
-		log.msg('New transport has come online:', transport)
+		if self.noisy:
+			log.msg('New transport has come online:', transport)
 		self._transports.add(transport)
 		self._sendIfPossible()
 
@@ -504,7 +505,8 @@ class Stream(GenericTimeoutMixin):
 		"""
 		For internal use.
 		"""
-		log.msg('Transport has gone offline:', transport)
+		if self.noisy:
+			log.msg('Transport has gone offline:', transport)
 		# This will raise an exception if it's not there
 		self._transports.remove(transport)
 
