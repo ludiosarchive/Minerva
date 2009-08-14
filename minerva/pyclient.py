@@ -43,6 +43,7 @@ class _BaseResponse(protocol.Protocol):
 
 
 	def connectionLost(self, reason):
+		print 'Connection %r lost at %s' % (self, time.time())
 		if not reason.check(_newclient.ResponseDone):
 			reason.printTraceback()
 		else:

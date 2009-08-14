@@ -312,6 +312,8 @@ class Queue(object):
 	def removeUpTo(self, seqNum):
 		"""
 		Remove items up to sequence number L{seqNum}.
+
+		This does NOT mean to remove L{seqNum} items.
 		"""
 		assert seqNum >= 0, seqNum
 
@@ -330,7 +332,7 @@ class Queue(object):
 			for i in xrange(seqNum - self._seqNumAt0):
 				self._items.popleft()
 
-			self._seqNumAt0 += seqNum
+			self._seqNumAt0 = seqNum
 
 
 
@@ -469,6 +471,7 @@ class Stream(GenericTimeoutMixin):
 			# If the client really cannot continue, it will send server a Stream
 			# reset message.
 			# TODO: define Stream reset message
+			log.err()
 			transport.close(ERROR_CODES['LOST_S2C_BOXES'])
 
 
