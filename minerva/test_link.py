@@ -107,11 +107,6 @@ class TestHTTPS2C(unittest.TestCase):
 
 	@defer.inlineCallbacks
 	def test_S2C(self):
-		# TODO: replacement for test:
-		# Make the Stream beforehand, fill it with boxes,
-		# use a pyclient.StopConditionCommunicator, connect it,
-		# make sure it got all the boxes we expected.
-
 		# make maxBytes smaller so that the test runs faster
 		_oldValue = link.XHRTransport.maxBytes
 		link.XHRTransport.maxBytes = 30*1024
