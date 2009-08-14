@@ -82,7 +82,7 @@ class DummyIndex(resource.Resource):
 #
 
 
-class TestHTTPS2C(unittest.TestCase):
+class BaseTestIntegration(object):
 
 	def startServer(self):
 		self._uaf = link.UserAgentFactory(reactor)
@@ -106,7 +106,10 @@ class TestHTTPS2C(unittest.TestCase):
 
 
 	@defer.inlineCallbacks
-	def test_S2C(self):
+	def test_integration(self):
+		"""
+		Run through most of the features.
+		"""
 		# make maxBytes smaller so that the test runs faster
 		_oldValue = link.XHRTransport.maxBytes
 		link.XHRTransport.maxBytes = 30*1024
@@ -140,7 +143,7 @@ class TestHTTPS2C(unittest.TestCase):
 
 		self.assertEqual(0, len(stream1000._transports))
 
-		comm = pyclient.StopConditionCommunicator(
+		comm = self.communicator(
 			reactor, 'http://127.0.0.1:%d/' % port, self._ua.uaId, streamId, cookieName)
 		comm.finishAfterNMoreBoxes(amount)
 		comm.connect()
@@ -161,6 +164,18 @@ class TestHTTPS2C(unittest.TestCase):
 		# to connect, so move the clock 30 seconds forward.
 		clock.advance(30)
 		self.assertEqual(True, finished[0])
+
+
+
+class TestXHRIntegration(BaseTestIntegration, unittest.TestCase):
+	communicator = pyclient.StopConditionXHRCommunicator
+
+
+
+class TestScriptFunctionIntegration(BaseTestIntegration, unittest.TestCase):
+	communicator = pyclient.StopConditionScriptFunctionCommunicator
+
+
 
 
 class TestHelpers(unittest.TestCase):

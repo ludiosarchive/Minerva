@@ -70,10 +70,13 @@ class UnexpectedS2CNumber(Exception):
 
 
 
-class TwoWayCommunicator(object):
+class BaseTwoWayCommunicator(object):
 	"""
-	I am a client that makes requests to communicate with a Minerva server.
+	I am a base class client that makes requests to communicate with a Minerva server.
 	"""
+
+	transportString = None # override this
+	decoder = None # override this
 
 	def __init__(self, reactor, rootURL, uaId, streamId, cookieName):
 		"""
@@ -164,9 +167,7 @@ class TwoWayCommunicator(object):
 			log.msg('I am finished; not making an HTTP request.')
 			return
 
-		transportString = 'x'
-
-		class BodyDecoder(XHRResponse):
+		class BodyDecoder(self.decoder):
 			def frameReceived(self2, frame):
 				self._handleFrame(frame)
 		bodyProto = BodyDecoder()
@@ -174,7 +175,7 @@ class TwoWayCommunicator(object):
 		self._connectionNumber += 1
 
 		url = self._rootURL + 'd/?i=%s&n=%d&s=%d&t=%s' % (
-			self._streamId.encode('hex'), self._connectionNumber, self._ackS2C, transportString)
+			self._streamId.encode('hex'), self._connectionNumber, self._ackS2C, self.transportString)
 		headers = http_headers.Headers({
 			'user-agent': ['Minerva pyclient 2009-08-13'],
 			'cookie': [self._cookieName+'='+self._uaId.encode('base64')],
@@ -230,13 +231,25 @@ class TwoWayCommunicator(object):
 
 
 
-class StopConditionCommunicator(TwoWayCommunicator):
+class TwoWayXHRCommunicator(BaseTwoWayCommunicator):
+	transportString = 'x'
+	decoder = XHRResponse
+
+
+
+class TwoWayScriptFunctionCommunicator(BaseTwoWayCommunicator):
+	transportString = 's'
+	decoder = ScriptResponse
+
+
+
+class BaseStopConditionCommunicator(BaseTwoWayCommunicator):
 	"""
 	Keeps every box it gets and stops after receiving L{_finishAfterBoxesN} boxes.
 	Useful for testing.
 	"""
 	def __init__(self, *args, **kwargs):
-		TwoWayCommunicator.__init__(self,  *args, **kwargs)
+		BaseTwoWayCommunicator.__init__(self,  *args, **kwargs)
 		self._finishAfterBoxesN = 0 # 0 means never finish
 		self.finished = defer.Deferred()
 		self.gotBoxes = []
@@ -256,3 +269,16 @@ class StopConditionCommunicator(TwoWayCommunicator):
 		boxes.
 		"""
 		self._finishAfterBoxesN += n
+
+
+
+class StopConditionXHRCommunicator(BaseStopConditionCommunicator):
+	transportString = 'x'
+	decoder = XHRResponse
+
+
+
+class StopConditionScriptFunctionCommunicator(BaseStopConditionCommunicator):
+	transportString = 's'
+	decoder = ScriptResponse
+
