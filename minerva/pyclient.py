@@ -7,7 +7,7 @@ import simplejson
 import time
 
 from twisted.web import client, server, resource, http_headers, _newclient, iweb
-from twisted.internet import reactor, protocol, defer, address, interfaces
+from twisted.internet import reactor, protocol, defer, address, interfaces, task
 from twisted.python import log
 
 from minerva import _protocols
@@ -15,6 +15,7 @@ from minerva import _protocols
 
 class _BaseResponse(protocol.Protocol):
 	decoder = None
+	noisy = False
 
 	def __init__(self):
 		self.onConnMade = defer.Deferred()
@@ -30,7 +31,8 @@ class _BaseResponse(protocol.Protocol):
 
 
 	def dataReceived(self, data):
-		log.msg('dataReceived: %r' % (data,))
+		if self.noisy:
+			log.msg('dataReceived: %r' % (data,))
 		try:
 			self.decoder.dataReceived(data)
 		except:
@@ -43,7 +45,8 @@ class _BaseResponse(protocol.Protocol):
 
 
 	def connectionLost(self, reason):
-		print 'Connection %r lost at %s' % (self, time.time())
+		if self.noisy:
+			log.msg('Connection %r lost at %s' % (self, time.time()))
 		if not reason.check(_newclient.ResponseDone):
 			reason.printTraceback()
 		else:
@@ -156,7 +159,7 @@ class TwoWayCommunicator(object):
 
 
 	def _doHTTPRequest(self):
-		print "_doHTTPRequest at %s" % time.time()
+		##print "_doHTTPRequest at %s" % time.time()
 		if self._finished:
 			log.msg('I am finished; not making an HTTP request.')
 			return
@@ -180,7 +183,10 @@ class TwoWayCommunicator(object):
 		self.connLostD = self.makeRequest(url, headers, bodyProto)
 		del headers # they were mutated
 		# After it's done, make another request.
+
 		self.connLostD.addCallback(lambda ignored: self._doHTTPRequest())
+		### This alternative won't work because the clock isn't being pumped during the test
+		###self.connLostD.addCallback(lambda ignored: task.deferLater(self._reactor, 0.001, lambda ignored2: self._doHTTPRequest()))
 		self.connLostD.addErrback(log.err)
 
 

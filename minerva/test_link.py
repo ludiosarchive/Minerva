@@ -137,7 +137,7 @@ class TestHTTPS2C(unittest.TestCase):
 
 		yield comm.finished
 
-		print "StopConditionCommunicator used %d connections to get the data." % (comm._connectionNumber + 1,)
+		log.msg("StopConditionCommunicator used %d connections to get the data." % (comm._connectionNumber + 1,))
 
 		self.assertEqual(comm.gotBoxes, boxes)
 
