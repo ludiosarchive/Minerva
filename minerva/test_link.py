@@ -125,11 +125,11 @@ class BaseTestIntegration(object):
 		clock = task.Clock()
 		stream1000._clock = clock
 
-		finished = [False]
-		def cbFinished(*args, **kwargs):
-			finished[0] = True
+		serverFinished = [False]
+		def cbServerSideFinished(*args, **kwargs):
+			serverFinished[0] = True
 
-		stream1000.notifyFinish().addCallback(cbFinished)
+		stream1000.notifyFinish().addCallback(cbServerSideFinished)
 
 		streamId = stream1000.streamId
 
@@ -150,6 +150,7 @@ class BaseTestIntegration(object):
 		comm.connect()
 
 		yield comm.finished
+		yield task.deferLater(reactor, 0.001, lambda: None)
 
 		# TO fix bug: maybe we need to wait for actual connection loss on the server?
 		# Maybe it's being triggered not because of <script> specialness but because
@@ -160,15 +161,21 @@ class BaseTestIntegration(object):
 
 		log.msg("I used %d connections to get the data." % (
 			comm._connectionNumber + 1,))
-		self.assertEqual(6, comm._connectionNumber + 1)
+		if self.communicator is pyclient.StopConditionXHRCommunicator:
+			self.assertEqual(6, comm._connectionNumber + 1)
+		else:
+			# Less data can fit in a same-maxBytes <script> transport
+			# because "<script>" and "</script>" take up so many bytes.
+			# So, it uses more connections to deliver the same boxes.
+			self.assertEqual(7, comm._connectionNumber + 1)
 
 		self.assertEqual(comm.gotBoxes, boxes)
 
-		self.assertEqual(False, finished[0])
+		self.assertEqual(False, serverFinished[0])
 		# Stream set a 30 second timeout waiting for another S2C transport
 		# to connect, so move the clock 30 seconds forward.
 		clock.advance(30)
-		self.assertEqual(True, finished[0])
+		self.assertEqual(True, serverFinished[0])
 
 
 

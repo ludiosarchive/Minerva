@@ -95,6 +95,9 @@ class BaseTwoWayCommunicator(object):
 		self._S2CConnections = set()
 		self._finished = False
 
+		self.connLostD = defer.succeed(None)
+		self._previousConnectionLost = defer.succeed(None)
+
 		self.framesReceived = 0
 		self.boxesReceived = 0
 
@@ -181,6 +184,7 @@ class BaseTwoWayCommunicator(object):
 			'cookie': [self._cookieName+'='+self._uaId.encode('base64')],
 		})
 
+		self._previousConnectionLost = self.connLostD
 		self.connLostD = self.makeRequest(url, headers, bodyProto)
 		del headers # they were mutated
 		# After it's done, make another request.
@@ -230,7 +234,7 @@ class BaseTwoWayCommunicator(object):
 	def finish(self):
 		self._finished = True
 		self.abortAll()
-		return self.connLostD
+		return defer.DeferredList([self.connLostD, self._previousConnectionLost])
 
 
 
@@ -261,8 +265,8 @@ class BaseStopConditionCommunicator(BaseTwoWayCommunicator):
 	def boxReceived(self, box):
 		self.gotBoxes.append(box)
 		if self._finishAfterBoxesN and self.boxesReceived >= self._finishAfterBoxesN:
-			self.finish()
-			self.finished.callback(None)
+			d = self.finish()
+			d.addCallback(lambda _: self.finished.callback(None))
 
 
 	def finishAfterNMoreBoxes(self, n):
@@ -273,8 +277,8 @@ class BaseStopConditionCommunicator(BaseTwoWayCommunicator):
 		"""
 		self._finishAfterBoxesN += n
 		if self.boxesReceived >= self._finishAfterBoxesN:
-			self.finish()
-			self.finished.callback(None)
+			d = self.finish()
+			d.addCallback(lambda _: self.finished.callback(None))
 
 
 
