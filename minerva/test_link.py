@@ -122,6 +122,12 @@ class TestHTTPS2C(unittest.TestCase):
 		clock = task.Clock()
 		stream1000._clock = clock
 
+		finished = [False]
+		def cbFinished(*args, **kwargs):
+			finished[0] = True
+
+		stream1000.notifyFinish().addCallback(cbFinished)
+
 		streamId = stream1000.streamId
 
 		extraLen = len("['']")
@@ -141,7 +147,7 @@ class TestHTTPS2C(unittest.TestCase):
 
 		yield comm.finished
 
-		# Make sure that there are no notifyFinish-related bugs. 
+		# Assert that notifyFinish called the Stream to remove the stale transports
 		self.assertEqual(0, len(stream1000._transports))
 
 		log.msg("StopConditionCommunicator used %d connections to get the data." % (
@@ -150,10 +156,11 @@ class TestHTTPS2C(unittest.TestCase):
 
 		self.assertEqual(comm.gotBoxes, boxes)
 
+		self.assertEqual(False, finished[0])
 		# Stream set a 30 second timeout waiting for another S2C transport
 		# to connect, so move the clock 30 seconds forward.
 		clock.advance(30)
-
+		self.assertEqual(True, finished[0])
 
 
 class TestHelpers(unittest.TestCase):
