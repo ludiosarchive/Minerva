@@ -9,7 +9,6 @@ from twisted.test import time_helpers
 #from twisted.web.test.test_web import DummyRequest as TwistedDummyRequest
 
 from minerva import link, pyclient
-from _protocols import BencodeStringDecoder
 
 #
 #
@@ -71,16 +70,16 @@ class DummyIndex(resource.Resource):
 
 
 
-class DummyStream(link.Stream):
-
-	def __init__(self):
-		link.Stream.__init__(self)
-		self._gotBoxes = []
-
-
-	def boxReceived(self, box):
-		self._gotBoxes.append(box)
-
+#class DummyStream(link.Stream):
+#
+#	def __init__(self):
+#		link.Stream.__init__(self)
+#		self._gotBoxes = []
+#
+#
+#	def boxReceived(self, box):
+#		self._gotBoxes.append(box)
+#
 
 
 class TestHTTPS2C(unittest.TestCase):
@@ -111,45 +110,39 @@ class TestHTTPS2C(unittest.TestCase):
 
 	@defer.inlineCallbacks
 	def test_S2C(self):
+		# TODO: replacement for test:
+		# Make the Stream beforehand, fill it with boxes,
+		# use a pyclient.StopConditionCommunicator, connect it,
+		# make sure it got all the boxes we expected.
+
 		port = self.startServer()
 
-		streamId = self._stream.streamId
-		transportString = 'x' # XHR # type of transport
-		connectionNumber = 0
-		ackS2C = 0
-
-		url = 'http://127.0.0.1:%d/d/?i=%s&n=%d&s=%d&t=%s' % (
-			port, streamId.encode('hex'), connectionNumber, ackS2C, transportString)
-		proto = pyclient.XHRResponse()
 		cookieName = 'm'
-		headers = http_headers.Headers({
-			'user-agent': ['Twisted/test_link.py'],
-			'cookie': [cookieName+'='+self._ua.uaId.encode('base64')],
-		})
 
-		connLostD = pyclient.makeRequest(reactor, url, headers, proto)
-		del headers # they were mutated
-
-		yield proto.onConnMade
-
-		stream1000 = self._ua.getStream(streamId)
-
-		# 300 KB is the limit.
-		# This will overflow one request because the padding
-		# and the S2C seq frame count for the byteLimit.
+		stream1000 = self._ua.buildStream()
+		streamId = stream1000.streamId
 
 		extraLen = len("['']")
 		amount = (300*1024)/100 # == 3072
 		boxes = []
 		for i in xrange(amount):
 			boxes.append(['x' * (100 - extraLen)])
-		
+
 		stream1000.sendBoxes(boxes)
 
-		yield connLostD
+		received = []
+		class SaveBoxesStopConditionCommunicator(pyclient.StopConditionCommunicator):
+			def boxReceived(self2, box):
+				received.append(box)
 
-		self.assert_(len(proto.received) < 3072, len(proto.received))
-		self.assert_(len(proto.received) > 2800, len(proto.received))
+
+		comm = pyclient.StopConditionCommunicator(
+			reactor, 'http://127.0.0.1:%d/' % port, self._ua.uaId, streamId, cookieName)
+		comm.connect()
+
+		yield comm.finished
+
+		self.assertEqual(received, boxes)
 
 		# Stream set a 30 second timeout waiting for another S2C transport
 		# to connect, so move the clock 30 seconds forward. 

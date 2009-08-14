@@ -15,18 +15,26 @@ from twisted.internet import protocol, defer
 [[(both)Transport]] <-> Stream <-> UserAgent (UA) <-> User
 [[(both)Transport]] <-> Stream <-> UserAgent (UA) -/
 
+`UserAgent' is implemented in Minerva because Minerva receives cookies
+and wants to make it slightly harder to hijack a Stream (you need to
+steal the cookie as well, not just the streamID which will be flying
+over GET all the time.) Minerva might also have to make decisions based
+on the user agent - some browsers will have more problems that we need
+to work around. In the Minerva world, `UserAgent' really means "user
+agent and nearby configuration, such as annoying proxies".
+
 `User' is not implemented in Minerva; Minerva does not care that one
 person/user/account/robot can be logged in at multiple places.
 
-A User does not "have" UserAgents. A UserAgent should be re-used
-if UserAgent logs into another User. Implement `User' in your application
-code and allow UserAgents to temporarily associate themselves with a User.
+A User does not "have" UserAgents. A UserAgent should be re-used if
+UserAgent logs into another User. Implement `User' in your application
+code and allow UserAgents to temporarily associate themselves with a
+User.
 
-C2S means client to server, S2C means server to client.
-S2C doesn't mean that the server establishes the connection (although
-it is maybe possible with future standards).
-In an HTTP-push scenario, the client (browser) establishes both the
-S2C and C2S transports.
+C2S means client to server, S2C means server to client. S2C doesn't mean
+that the server establishes the connection (although it is maybe
+possible with future standards). In an HTTP-push scenario, the client
+(browser) establishes both the S2C and C2S transports.
 
 A Stream can have more than one S2CTransport:
 
@@ -432,7 +440,7 @@ class Stream(GenericTimeoutMixin):
 		if len(self._transports) > 1:
 			# Select the transport with the highest connectionNumber.
 			# TODO: should there be any other criteria?
-			transport = sorted(self._transports, key=lambda t: t.connectionNumber, reverse=True)
+			transport = sorted(self._transports, key=lambda t: t.connectionNumber, reverse=True)[0]
 			if self.noisy:
 				log.msg("Multiple S2C transports: %r, so I picked the newest: %r" % (
 					self._transports, transport,))
@@ -637,7 +645,7 @@ class _BaseHTTPTransport(object):
 		byteCount = 0
 		needRequestFinish = False
 
-		seqNum = 0
+		seqNum = None
 
 		# This can raise a WantedItemsTooLowError exception.
 		boxIterator = queue.iterItems(self._lastS2CWritten)
@@ -649,6 +657,11 @@ class _BaseHTTPTransport(object):
 				# the header is not a frame, so only increment byteCount
 				header = self.getHeader()
 				byteCount += len(header)
+
+				# Why even bother writing out the first seqNum when the client
+				# already sent a ackS2C?
+				# Well, maybe a proxy or something mixed up requests.
+				# Give the client some redundancy.
 
 				# the seqString includes the 4KB padding.
 				# TODO: use less padding when possible. Can't rely on just
@@ -678,8 +691,10 @@ class _BaseHTTPTransport(object):
 			byteCount += len(footer)
 			needRequestFinish = True
 
-		self._request.write(toSend)
-		self._lastS2CWritten = seqNum
+		if toSend:
+			self._request.write(toSend)
+		if seqNum:
+			self._lastS2CWritten = seqNum
 		if needRequestFinish:
 			self._request.finish()
 		self._bytesSent += byteCount
