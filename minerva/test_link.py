@@ -154,8 +154,6 @@ class TestHTTPS2C(unittest.TestCase):
 		# to connect, so move the clock 30 seconds forward.
 		clock.advance(30)
 
-		# TODO: assert that the notifyFinish deferreds were triggered
-
 
 
 class TestHelpers(unittest.TestCase):
