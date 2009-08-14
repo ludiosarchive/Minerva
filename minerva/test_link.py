@@ -152,7 +152,7 @@ class BaseTestIntegration(object):
 		# Twisted does not guarantee if the client or server loses the connection first.
 
 		yield comm.finished
-		# Wait a bit to make sure both have lost connection.
+		# Wait a bit to make sure both have lost connection. 0.001 is not small enough.
 		yield task.deferLater(reactor, 0.01, lambda: None)
 		clock.advance(30)
 
