@@ -316,6 +316,7 @@ class TestSocketTransport(unittest.TestCase):
 
 
 class TestQueue(unittest.TestCase):
+	"""Tests for minerva.link.Queue"""
 
 	def test_iterEmptyQueue(self):
 		q = link.Queue()
@@ -379,8 +380,21 @@ class TestQueue(unittest.TestCase):
 		self.assertEqual([], list(q.iterItems(start=1)))
 
 
+	def test_removeUpToToHigherNum(self):
+		q = link.Queue()
+		q.extend([0,1,2,3,4,5,6,7])
+		q.removeUpTo(2)
+		q.removeUpTo(4)
+
+		# There should be four items in the queue left
+		self.assertEqual([(4,4),(5,5),(6,6),(7,7)], list(q.iterItems(start=4)))
+
+
+
+
 
 class TestUserAgentFactory(unittest.TestCase):
+	"""Tests for minerva.link.UserAgentFactory"""
 
 	def test_idIsLength16(self):
 		uaf = link.UserAgentFactory(None)

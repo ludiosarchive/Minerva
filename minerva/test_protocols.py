@@ -30,7 +30,7 @@ class DummyScriptFunctionDecoder(_BaseDummy, _protocols.ScriptFunctionDecoder):
 
 
 # modified copy/paste from twisted.test.test_protocols
-class NetStringDecoderTests(unittest.TestCase):
+class TestNetStringDecoder(unittest.TestCase):
 
 	# for max length 699
 	strings = ['hello', 'world', 'how', 'are', 'you123', ':today', "a"*515]
@@ -112,7 +112,7 @@ class NetStringDecoderTests(unittest.TestCase):
 
 
 
-class BencodeStringDecoderTests(NetStringDecoderTests):
+class TestBencodeStringDecoder(TestNetStringDecoder):
 
 	# for max length 50
 	illegalSequences = [
@@ -125,7 +125,7 @@ class BencodeStringDecoderTests(NetStringDecoderTests):
 
 
 
-class ScriptFunctionDecoderTests(unittest.TestCase):
+class TestScriptFunctionDecoder(unittest.TestCase):
 
 	receiver = DummyScriptFunctionDecoder
 
