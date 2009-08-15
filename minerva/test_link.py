@@ -133,9 +133,7 @@ class BaseTestIntegration(object):
 		stream = self._ua.buildStream()
 		clock = task.Clock()
 		stream._clock = clock
-
 		stream.sendBoxes(boxes)
-
 		return stream
 
 
@@ -426,12 +424,12 @@ class TestQueue(unittest.TestCase):
 
 	def test_removeUpToToHigherNum(self):
 		q = link.Queue()
-		q.extend([0,1,2,3,4,5,6,7])
+		q.extend([0,1,2,3,4,5,6,7,8])
 		q.removeUpTo(2)
 		q.removeUpTo(4)
 
-		# There should be four items left in the queue
-		self.assertEqual([(4,4),(5,5),(6,6),(7,7)], list(q.iterItems(start=4)))
+		# There should be 5 items left in the queue
+		self.assertEqual([(4,4), (5,5), (6,6), (7,7), (8,8)], list(q.iterItems(start=4)))
 
 
 

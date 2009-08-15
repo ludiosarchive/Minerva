@@ -45,7 +45,7 @@ class _BaseResponse(protocol.Protocol):
 
 
 	def connectionLost(self, reason):
-		print 'Client connection %r lost at %.09f' % (self, time.time())
+		##print 'Client connection %r lost at %.09f' % (self, time.time())
 		if self.noisy:
 			log.msg('Connection %r lost at %.09f' % (self, time.time()))
 		if not reason.check(_newclient.ResponseDone):
@@ -219,8 +219,8 @@ class BaseTwoWayCommunicator(object):
 			self.finish()
 			return
 
-		if self._isControlFrame(frame):
-			print 'Got control frame', frame[0:2]
+		##if self._isControlFrame(frame):
+		##	print 'Got control frame', frame[0:2]
 
 		if not self._isControlFrame(frame):
 			self.boxesReceived += 1

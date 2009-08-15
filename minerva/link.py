@@ -900,11 +900,11 @@ class HTTPS2C(resource.Resource):
 
 		stream.transportOnline(transport)
 
-		def printDisconnectTime(*args, **kwargs):
-			import time
-			print 'Server connection %r lost at %.09f' % (self, time.time())
+		##def printDisconnectTime(*args, **kwargs):
+		##	import time
+		##	print 'Server connection %r lost at %.09f' % (self, time.time())
 
-		requestFinishedD.addBoth(printDisconnectTime)
+		##requestFinishedD.addBoth(printDisconnectTime)
 		requestFinishedD.addBoth(lambda *args: stream.transportOffline(transport))
 		requestFinishedD.addErrback(log.err)
 
