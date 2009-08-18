@@ -380,6 +380,7 @@ class Incoming(object):
 
 			self._cached[num] = item
 
+			# TODO	: need to handle MemoryErrors? Probably not.
 			while self._lastAck + 1 in self._cached:
 				self._deliverable.append(self._cached[self._lastAck + 1])
 				del self._cached[self._lastAck + 1]
