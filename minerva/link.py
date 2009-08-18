@@ -374,17 +374,11 @@ class Incoming(object):
 			if num < 0:
 				raise ValueError("Sequence num must be 0 or above, was %r" % (num,))
 
-			if num in self._cached:
+			if num in self._cached or num <= self._lastAck:
 				alreadyGiven.append(num)
 				continue
 
-			if self._lastAck + 1 == num:
-				self._deliverable.append(item)
-				self._lastAck += 1
-			elif num <= self._lastAck:
-				alreadyGiven.append(num)
-			else:
-				self._cached[num] = item
+			self._cached[num] = item
 
 			while self._lastAck + 1 in self._cached:
 				self._deliverable.append(self._cached[self._lastAck + 1])
