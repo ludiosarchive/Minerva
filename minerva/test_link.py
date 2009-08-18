@@ -433,6 +433,101 @@ class TestQueue(unittest.TestCase):
 
 
 
+class TestIncoming(unittest.TestCase):
+	"""Tests for minerva.link.Incoming"""
+
+	def test_SACKNoItems(self):
+		i = link.Incoming(None)
+
+		self.assertEqual((-1, None), i.getSACK())
+
+
+	def test_threeItems(self):
+		boxes = []
+		def handle(box):
+			boxes.append(box)
+
+		i = link.Incoming(handle)
+		i.give([[0, 'box0'], [1, 'box1'], [2, 'box2']])
+
+		self.assertEqual(boxes, ['box0', 'box1', 'box2'])
+		self.assertEqual((2, None), i.getSACK())
+
+
+	def test_itemMissing(self):
+		boxes = []
+		def handle(box):
+			boxes.append(box)
+
+		i = link.Incoming(handle)
+		i.give([[0, 'box0'], [1, 'box1'], [3, 'box3']])
+
+		self.assertEqual(boxes, ['box0', 'box1'])
+		self.assertEqual((3, (2, 1)), i.getSACK())
+
+
+	def test_twoItemsMissing(self):
+		boxes = []
+		def handle(box):
+			boxes.append(box)
+
+		i = link.Incoming(handle)
+		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4']])
+
+		self.assertEqual(boxes, ['box0', 'box1'])
+		self.assertEqual((4, (2, 2)), i.getSACK())
+
+
+	def test_twoRangesMissing(self):
+		boxes = []
+		def handle(box):
+			boxes.append(box)
+
+		i = link.Incoming(handle)
+		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']])
+
+		self.assertEqual(boxes, ['box0', 'box1'])
+		self.assertEqual((6, (2, 2), (5, 1)), i.getSACK())
+
+
+	def test_twoRangesMissingThenFill(self):
+		boxes = []
+		def handle(box):
+			boxes.append(box)
+
+		i = link.Incoming(handle)
+		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']])
+
+		self.assertEqual(boxes, ['box0', 'box1'])
+		self.assertEqual((6, (2, 2), (5, 1)), i.getSACK())
+
+		i.give([[2, 'box2'], [3, 'box3'], [5, 'box5']])
+
+		self.assertEqual(boxes, ['box0', 'box1', 'box2', 'box3', 'box4', 'box5', 'box6'])
+		self.assertEqual((6, None), i.getSACK())
+
+
+	def test_outOfOrder(self):
+		boxes = []
+		def handle(box):
+			boxes.append(box)
+
+		i = link.Incoming(handle)
+		# 0 missing
+		i.give([[1, 'box1'], [2, 'box2']])
+		self.assertEqual(boxes, [])
+		self.assertEqual((2, (0, 1)), i.getSACK())
+		i.give([[0, 'box0']]) # finally deliver it
+		i.give([[4, 'box3']])
+		self.assertEqual(boxes, ['box0', 'box1', 'box2', 'box3'])
+		self.assertEqual((3, None), i.getSACK())
+
+
+	def test_negativeSequenceNum(self):
+		i = link.Incoming(None)
+		self.assertRaises(ValueError, lambda: i.give([[-1, 'box']]))
+		self.assertRaises(ValueError, lambda: i.give([[-2, 'box']]))
+
 
 
 class TestUserAgentFactory(unittest.TestCase):

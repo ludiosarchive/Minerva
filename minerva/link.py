@@ -342,6 +342,29 @@ class Queue(object):
 
 
 
+class Incoming(object):
+	"""
+	I'm a processor for incoming boxes to ensure that boxes are delivered
+	to the Stream reliably and in-order. 
+	"""
+	def __init__(self, handler):
+		self._handler = handler
+		self._lastAck = -1
+		self._unhandled = {}
+
+
+	def give(self, numAndItemSeq):
+		for num, item in numAndItemSeq:
+			if num < 0:
+				raise ValueError("Sequence num must be 0 or above, was %r" % (num,))
+			self._handler(item)
+
+
+	def getSACK(self):
+		return (self._lastAck, None)
+
+
+
 class Stream(GenericTimeoutMixin):
 	"""
 	I am Stream. Transports attach to me. I can send and receive over
