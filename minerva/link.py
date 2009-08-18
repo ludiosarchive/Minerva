@@ -345,23 +345,59 @@ class Queue(object):
 class Incoming(object):
 	"""
 	I'm a processor for incoming boxes to ensure that boxes are delivered
-	to the Stream reliably and in-order. 
+	to the Stream reliably and in-order.
+
+	I accept only the earliest-delivered item if items with identical sequence
+	numbers arrived.
 	"""
+	# TODO: make Incoming resistant to attacks
 	def __init__(self, handler):
 		self._handler = handler
 		self._lastAck = -1
-		self._unhandled = {}
+
+		# A dictionary to store items given to us, but not yet deliverable
+		# (because there are gaps)
+		self._cached = {}
 
 
 	def give(self, numAndItemSeq):
+		"""
+		Handle a sequence of already-sorted (seqNum, box). These may or
+		may not be immediately delivered to L{self._handler}.
+
+		Returns a list of sequence numbers that were ignored (because items with
+		such sequence numbers were already received - not necessarily delivered)
+		"""
+		alreadyGiven = []
 		for num, item in numAndItemSeq:
 			if num < 0:
 				raise ValueError("Sequence num must be 0 or above, was %r" % (num,))
-			self._handler(item)
+
+			if num in self._cached:
+				alreadyGiven.append(num)
+				continue
+
+			if self._lastAck + 1 == num:
+				self._handler(item)
+				self._lastAck += 1
+			elif num <= self._lastAck:
+				alreadyGiven.append(num)
+			else:
+				self._cached[num] = item
+
+			while self._lastAck + 1 in self._cached:
+				self._handler(self._cached[self._lastAck + 1])
+				del self._cached[self._lastAck + 1]
+				self._lastAck += 1
+
+		return alreadyGiven
 
 
 	def getSACK(self):
-		return (self._lastAck, None)
+		# Positive SACK
+		sackNumbers = sorted(self._cached.keys())
+
+		return (self._lastAck, sackNumbers)
 
 
 
