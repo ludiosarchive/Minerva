@@ -125,23 +125,27 @@ assert len(set(ERROR_CODES.values())) == len(ERROR_CODES), ERROR_CODES
 
 
 def get_tcp_info(sock):
-	# The idea comes from
-	# http://burmesenetworker.blogspot.com/2008/11/reading-tcp-kernel-parameters-using.html
-	# (which incorrectly uses "L")
+	try:
+		# The idea comes from
+		# http://burmesenetworker.blogspot.com/2008/11/reading-tcp-kernel-parameters-using.html
+		# (which incorrectly uses "L")
 
-	# see /usr/include/linux/tcp.h if you need to update this
-	BI = ('B' * 7) + ('I' * 24)
+		# see /usr/include/linux/tcp.h if you need to update this
+		BI = ('B' * 7) + ('I' * 24)
 
-	length = struct.calcsize(BI)
+		length = struct.calcsize(BI)
 
-	# The call to getsockopt from Python takes about 1.106 microseconds on
-	# Ubuntu 9.04 64-bit (server) in VMWare workstation 6.5, with a 2.93ghz Q6600
+		# The call to getsockopt from Python takes about 1.106 microseconds on
+		# Ubuntu 9.04 64-bit (server) in VMWare workstation 6.5, with a 2.93ghz Q6600
 
-	tcp_info = sock.getsockopt(socket.SOL_TCP, socket.TCP_INFO, length)
-	##print len(tcp_info), repr(tcp_info)
-	data = struct.unpack(BI, tcp_info)
-	# tcpi_unacked is the [11]th item
-	##print data, "tcpi_unacked", data[11]
+		tcp_info = sock.getsockopt(socket.SOL_TCP, socket.TCP_INFO, length)
+		##print len(tcp_info), repr(tcp_info)
+		data = struct.unpack(BI, tcp_info)
+		# tcpi_unacked is the [11]th item
+		##print data, "tcpi_unacked", data[11]
+	except AttributeError:
+		# doesn't work on Windows, other platforms
+		data = ()
 	return data
 
 
@@ -362,6 +366,7 @@ class Stream(GenericTimeoutMixin):
 		
 
 	def __repr__(self):
+		# TODO: should this really print the seq num information?
 		return '<Stream %r (%d,%d) with transports %r and %d items in queue>' % (
 			self.streamId, self.queue.seqNumAt0, self._seqC2S, self._transports, len(self.queue))
 

@@ -74,6 +74,8 @@ class UnexpectedS2CNumber(Exception):
 class BaseTwoWayCommunicator(object):
 	"""
 	I am a base class client that makes requests to communicate with a Minerva server.
+
+	TODO: support upload (really make it TwoWay)
 	"""
 
 	transportString = None # override this
