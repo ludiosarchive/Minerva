@@ -300,7 +300,7 @@ class Queue(object):
 
 	def iterItems(self, start):
 		"""
-		Yield (seqNumber, box) for every item in the queue starting
+		Yield (seqNumber, item) for every item in the queue starting
 		at L{start}.
 		"""
 		assert start >= 0, start
@@ -351,13 +351,14 @@ class Incoming(object):
 	numbers arrived.
 	"""
 	# TODO: make Incoming resistant to attacks
-	def __init__(self, handler):
-		self._handler = handler
+	def __init__(self):
 		self._lastAck = -1
 
 		# A dictionary to store items given to us, but not yet deliverable
 		# (because there are gaps)
 		self._cached = {}
+
+		self._deliverable = deque()
 
 
 	def give(self, numAndItemSeq):
@@ -378,7 +379,7 @@ class Incoming(object):
 				continue
 
 			if self._lastAck + 1 == num:
-				self._handler(item)
+				self._deliverable.append(item)
 				self._lastAck += 1
 			elif num <= self._lastAck:
 				alreadyGiven.append(num)
@@ -386,11 +387,26 @@ class Incoming(object):
 				self._cached[num] = item
 
 			while self._lastAck + 1 in self._cached:
-				self._handler(self._cached[self._lastAck + 1])
+				self._deliverable.append(self._cached[self._lastAck + 1])
 				del self._cached[self._lastAck + 1]
 				self._lastAck += 1
 
 		return alreadyGiven
+
+
+	def fetchItems(self):
+		"""
+		Return a sequence of items for every item that can be delivered.
+		After I return these items, I will not know about them any more. They're your
+		responsibility now.
+		"""
+		yourItems = []
+		for item in self._deliverable:
+			yourItems.append(item)
+		for i in xrange(len(yourItems)):
+			self._deliverable.popleft()
+		return yourItems
+
 
 
 	def getSACK(self):

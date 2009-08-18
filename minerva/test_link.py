@@ -437,110 +437,78 @@ class TestIncoming(unittest.TestCase):
 	"""Tests for minerva.link.Incoming"""
 
 	def test_SACKNoItems(self):
-		i = link.Incoming(None)
+		i = link.Incoming()
 
 		self.assertEqual((-1, []), i.getSACK())
 
 
 	def test_threeItems(self):
-		boxes = []
-		def handle(box):
-			boxes.append(box)
-
-		i = link.Incoming(handle)
+		i = link.Incoming()
 		i.give([[0, 'box0'], [1, 'box1'], [2, 'box2']])
 
-		self.assertEqual(boxes, ['box0', 'box1', 'box2'])
+		self.assertEqual(['box0', 'box1', 'box2'], i.fetchItems())
 		self.assertEqual((2, []), i.getSACK())
 
 
 	def test_itemMissing(self):
-		boxes = []
-		def handle(box):
-			boxes.append(box)
-
-		i = link.Incoming(handle)
+		i = link.Incoming()
 		i.give([[0, 'box0'], [1, 'box1'], [3, 'box3']])
 
-		self.assertEqual(boxes, ['box0', 'box1'])
+		self.assertEqual(['box0', 'box1'], i.fetchItems())
 		self.assertEqual((1, [3]), i.getSACK())
 
 
 	def test_twoItemsMissing(self):
-		boxes = []
-		def handle(box):
-			boxes.append(box)
-
-		i = link.Incoming(handle)
+		i = link.Incoming()
 		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4']])
 
-		self.assertEqual(boxes, ['box0', 'box1'])
+		self.assertEqual(['box0', 'box1'], i.fetchItems())
 		self.assertEqual((1, [4]), i.getSACK())
 
 
 	def test_twoRangesMissing(self):
-		boxes = []
-		def handle(box):
-			boxes.append(box)
-
-		i = link.Incoming(handle)
+		i = link.Incoming()
 		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']])
 
-		self.assertEqual(boxes, ['box0', 'box1'])
+		self.assertEqual(['box0', 'box1'], i.fetchItems())
 		self.assertEqual((1, [4, 6]), i.getSACK())
 
 
 	def test_twoRangesMissingThenFill(self):
-		boxes = []
-		def handle(box):
-			boxes.append(box)
-
-		i = link.Incoming(handle)
+		i = link.Incoming()
 		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']])
 
-		self.assertEqual(boxes, ['box0', 'box1'])
+		self.assertEqual(['box0', 'box1'], i.fetchItems())
 		self.assertEqual((1, [4, 6]), i.getSACK())
 
 		i.give([[2, 'box2'], [3, 'box3'], [5, 'box5']])
 
-		self.assertEqual(boxes, ['box0', 'box1', 'box2', 'box3', 'box4', 'box5', 'box6'])
+		self.assertEqual(['box2', 'box3', 'box4', 'box5', 'box6'], i.fetchItems())
 		self.assertEqual((6, []), i.getSACK())
 
 
 	def test_outOfOrder(self):
-		boxes = []
-		def handle(box):
-			boxes.append(box)
-
-		i = link.Incoming(handle)
+		i = link.Incoming()
 		# 0 missing
 		i.give([[1, 'box1'], [2, 'box2']])
-		self.assertEqual(boxes, [])
+		self.assertEqual([], i.fetchItems())
 		self.assertEqual((-1, [1, 2]), i.getSACK())
 		i.give([[0, 'box0']]) # finally deliver it
 		i.give([[3, 'box3']])
-		self.assertEqual(boxes, ['box0', 'box1', 'box2', 'box3'])
+		self.assertEqual(['box0', 'box1', 'box2', 'box3'], i.fetchItems())
 		self.assertEqual((3, []), i.getSACK())
 
 
 	def test_alreadyGiven1Call(self):
-		boxes = []
-		def handle(box):
-			boxes.append(box)
-
-		i = link.Incoming(handle)
+		i = link.Incoming()
 		alreadyGiven = i.give([[0, 'box0'], [1, 'box1'], [1, 'boxNEW']])
 		self.assertEqual((1, []), i.getSACK())
-		self.assertEqual(['box0', 'box1'], boxes)
+		self.assertEqual(['box0', 'box1'], i.fetchItems())
 		self.assertEqual([1], alreadyGiven)
 
 
 	def test_alreadyGivenMultipleCalls(self):
-		boxes = []
-		def handle(box):
-			boxes.append(box)
-
-		i = link.Incoming(handle)
+		i = link.Incoming()
 		alreadyGivenA = i.give([[0, 'box0'], [1, 'box1']])
 		alreadyGivenB = i.give([[0, 'box0NEW']])
 		alreadyGivenC = i.give([[1, 'box1NEW']])
@@ -550,15 +518,11 @@ class TestIncoming(unittest.TestCase):
 		self.assertEqual([1], alreadyGivenC)
 		
 		self.assertEqual((1, []), i.getSACK())
-		self.assertEqual(['box0', 'box1'], boxes)
+		self.assertEqual(['box0', 'box1'], i.fetchItems())
 
 
 	def test_alreadyGivenButUndelivered(self):
-		boxes = []
-		def handle(box):
-			boxes.append(box)
-
-		i = link.Incoming(handle)
+		i = link.Incoming()
 		alreadyGivenA = i.give([[0, 'box0'], [1, 'box1'], [4, 'box4']])
 		alreadyGivenB = i.give([[4, 'box4NEW']])
 		alreadyGivenC = i.give([[1, 'box1NEW'], [4, 'box4NEW']])
@@ -568,11 +532,11 @@ class TestIncoming(unittest.TestCase):
 		self.assertEqual([1, 4], alreadyGivenC)
 
 		self.assertEqual((1, [4]), i.getSACK())
-		self.assertEqual(['box0', 'box1'], boxes)
+		self.assertEqual(['box0', 'box1'], i.fetchItems())
 
 
 	def test_negativeSequenceNum(self):
-		i = link.Incoming(None)
+		i = link.Incoming()
 		self.assertRaises(ValueError, lambda: i.give([[-1, 'box']]))
 		self.assertRaises(ValueError, lambda: i.give([[-2, 'box']]))
 
