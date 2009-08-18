@@ -553,6 +553,24 @@ class TestIncoming(unittest.TestCase):
 		self.assertEqual(['box0', 'box1'], boxes)
 
 
+	def test_alreadyGivenButUndelivered(self):
+		boxes = []
+		def handle(box):
+			boxes.append(box)
+
+		i = link.Incoming(handle)
+		alreadyGivenA = i.give([[0, 'box0'], [1, 'box1'], [4, 'box4']])
+		alreadyGivenB = i.give([[4, 'box4NEW']])
+		alreadyGivenC = i.give([[1, 'box1NEW'], [4, 'box4NEW']])
+
+		self.assertEqual([], alreadyGivenA)
+		self.assertEqual([4], alreadyGivenB)
+		self.assertEqual([1, 4], alreadyGivenC)
+
+		self.assertEqual((1, [4]), i.getSACK())
+		self.assertEqual(['box0', 'box1'], boxes)
+
+
 	def test_negativeSequenceNum(self):
 		i = link.Incoming(None)
 		self.assertRaises(ValueError, lambda: i.give([[-1, 'box']]))
