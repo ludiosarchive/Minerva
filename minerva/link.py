@@ -344,18 +344,21 @@ class Queue(object):
 
 class Incoming(object):
 	"""
-	I'm a processor for incoming boxes to ensure that boxes are delivered
-	to the Stream reliably and in-order.
+	I am a processor for incoming numbered items. I take input through
+	L{give} and provide output via L{fetchItems}.
 
-	I accept only the earliest-delivered item if items with identical sequence
-	numbers arrived.
+	If items with identical sequence numbers are given to me, I accept only
+	the earliest-given item.
+
+	One use case is ensuring that boxes are delivered to the Stream reliably
+	and in-order.
 	"""
 	# TODO: make Incoming resistant to attacks
 	def __init__(self):
 		self._lastAck = -1
 
 		# A dictionary to store items given to us, but not yet deliverable
-		# (because there are gaps)
+		# (because there are gaps). This is also used for temporary storage.
 		self._cached = {}
 
 		self._deliverable = deque()
@@ -403,9 +406,10 @@ class Incoming(object):
 		return yourItems
 
 
-
 	def getSACK(self):
-		# Positive SACK
+		"""
+		Return a tuple of (lastAck, <list of positive-SACKed sequence numbers - all larger than lastAck>)
+		"""
 		sackNumbers = sorted(self._cached.keys())
 
 		return (self._lastAck, sackNumbers)
