@@ -152,61 +152,6 @@ def get_tcp_info(sock):
 
 
 
-class GenericTimeoutMixin(object):
-	"""
-	Mixin for any instance that has a L{_clock} attribute and wants a timeout.
-
-	This is mostly a copy/paste of twisted.protocols.policies.TimeoutMixin
-
-	@cvar timeOut: The number of seconds after which to timeout the connection.
-	"""
-	timeOut = None
-
-	__timeoutCall = None
-
-	def resetTimeout(self):
-		"""
-		Reset the timeout count down.
-		"""
-		if self.__timeoutCall is not None and self.timeOut is not None:
-			self.__timeoutCall.reset(self.timeOut)
-
-
-	def setTimeout(self, period):
-		"""
-		Change the timeout period
-
-		@type period: C{int} or C{NoneType}
-		@param period: The period, in seconds, to change the timeout to, or
-		C{None} to disable the timeout.
-		"""
-		prev = self.timeOut
-		self.timeOut = period
-
-		if self.__timeoutCall is not None:
-			if period is None:
-				self.__timeoutCall.cancel()
-				self.__timeoutCall = None
-			else:
-				self.__timeoutCall.reset(period)
-		elif period is not None:
-			self.__timeoutCall = self._clock.callLater(period, self.__timedOut)
-
-		return prev
-
-
-	def __timedOut(self):
-		self.__timeoutCall = None
-		self.timedOut()
-
-
-	def timedOut(self):
-		"""
-		The timeout has been triggered. Override this.
-		"""
-		raise NotImplementedError("override timedOut")
-
-
 """
 The client failed to establish a [transport that has S2C] in time.
 """
@@ -220,7 +165,7 @@ STREAM_CLIENT_CLOSED = "minerva.link.STREAM_CLIENT_CLOSED"
 
 
 
-class Stream(GenericTimeoutMixin):
+class Stream(abstract.GenericTimeoutMixin):
 	"""
 	I am Stream. Transports attach to me. I can send and receive over
 	a new transport, or a completely different transport, without restarting
