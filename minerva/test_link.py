@@ -353,6 +353,9 @@ class TestUserAgentFactory(unittest.TestCase):
 
 class _DummyMinervaTransport(object):
 	numWrites = 0
+	def __init__(self, connectionNumber):
+		self.connectionNumber = connectionNumber
+
 	def writeFrom(self, queue):
 		self.numWrites += 1
 
@@ -362,7 +365,7 @@ class TestStreamTransportOnlineOffline(unittest.TestCase):
 	"""Tests for minerva.link.Stream's transport online/offline registration"""
 
 	def setUp(self):
-		self.transport = _DummyMinervaTransport()
+		self.transport = _DummyMinervaTransport(0)
 		self.streamEndedReason = None
 		class CustomStream(link.Stream):
 			def streamEnded(self2, reason):
@@ -451,7 +454,7 @@ class TestStream(unittest.TestCase):
 
 
 	def test_sendBox(self):
-		transport = _DummyMinervaTransport()
+		transport = _DummyMinervaTransport(0)
 		assert 0 == transport.numWrites
 
 		self.stream.transportOnline(transport)
@@ -466,13 +469,27 @@ class TestStream(unittest.TestCase):
 
 
 	def test_sendBoxes(self):
-		transport = _DummyMinervaTransport()
+		transport = _DummyMinervaTransport(0)
 		assert 0 == transport.numWrites
 
 		self.stream.transportOnline(transport)
 
 		self.stream.sendBoxes(['boxS2C0', 'boxS2C1', 'boxS2C2'])
 		self.assertEqual(1, transport.numWrites)
+
+
+	def test_selectS2CTransport(self):
+		transport0 = _DummyMinervaTransport(0)
+		transport1 = _DummyMinervaTransport(1)
+		transport2 = _DummyMinervaTransport(2)
+
+		self.stream.transportOnline(transport0)
+		self.stream.transportOnline(transport1)
+		self.stream.transportOnline(transport2)
+
+		# Run it 20 times to make sure the implementation isn't picking at random
+		for i in xrange(20):
+			self.assertIdentical(transport2, self.stream._selectS2CTransport())
 
 
 	def test_repr(self):
