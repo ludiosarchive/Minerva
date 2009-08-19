@@ -359,58 +359,50 @@ class _DummyMinervaTransport(object):
 
 
 
-class TestStream(unittest.TestCase):
-	"""Tests for minerva.link.Stream"""
+class TestStreamTransportOnlineOffline(unittest.TestCase):
+	"""Tests for minerva.link.Stream's transport online/offline registration"""
+
+	def setUp(self):
+		self.transport = _DummyMinervaTransport()
+		self.stream = link.Stream(None, '\x11'*16)
+		clock = task.Clock()
+		self.stream._clock = clock
+		
 
 	def test_transportOnlineOffline(self):
-		transport = _DummyMinervaTransport()
-		stream = link.Stream(None, '\x11'*16)
-		clock = task.Clock()
-		stream._clock = clock
-		stream.transportOnline(transport)
-		stream.transportOffline(transport)
+		self.stream.transportOnline(self.transport)
+		self.stream.transportOffline(self.transport)
 
 
 	def test_transportOnlineTwice(self):
-		transport = _DummyMinervaTransport()
-		stream = link.Stream(None, '\x11'*16)
-		clock = task.Clock()
-		stream._clock = clock
+		self.stream.transportOnline(self.transport)
 
-		stream.transportOnline(transport)
-
-		dictBefore = stream.__dict__.copy()
-		self.assertRaises(link.TransportAlreadyRegisteredError, lambda: stream.transportOnline(transport))
-		self.assertRaises(link.TransportAlreadyRegisteredError, lambda: stream.transportOnline(transport))
+		dictBefore = self.stream.__dict__.copy()
+		self.assertRaises(link.TransportAlreadyRegisteredError, lambda: self.stream.transportOnline(self.transport))
+		self.assertRaises(link.TransportAlreadyRegisteredError, lambda: self.stream.transportOnline(self.transport))
 		# Make sure the object didn't change
-		dictAfter = stream.__dict__.copy()
+		dictAfter = self.stream.__dict__.copy()
 		self.assertEqual(dictBefore, dictAfter)
 
 
 	def test_transportOfflineTwice(self):
-		transport = _DummyMinervaTransport()
-		stream = link.Stream(None, '\x11'*16)
-		clock = task.Clock()
-		stream._clock = clock
+		dictBefore = self.stream.__dict__.copy()
 
-		dictBefore = stream.__dict__.copy()
-
-		# Before any transport is registered, unregistering some transport should raise
-		self.assertRaises(link.TransportNotRegisteredError, lambda: stream.transportOffline(transport))
+		# Before any self.transport is registered, unregistering some self.transport should raise
+		self.assertRaises(link.TransportNotRegisteredError, lambda: self.stream.transportOffline(self.transport))
 
 		# Make sure the object didn't change
-		dictAfter = stream.__dict__.copy()
+		dictAfter = self.stream.__dict__.copy()
 		self.assertEqual(dictBefore, dictAfter)
 
 
-
-		stream.transportOnline(transport)
+		self.stream.transportOnline(self.transport)
 
 		# Unregistering it the first time is okay
-		stream.transportOffline(transport)
+		self.stream.transportOffline(self.transport)
 
 		# But not the second time
-		self.assertRaises(link.TransportNotRegisteredError, lambda: stream.transportOffline(transport))
+		self.assertRaises(link.TransportNotRegisteredError, lambda: self.stream.transportOffline(self.transport))
 
 
 
