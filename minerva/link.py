@@ -193,6 +193,7 @@ class Stream(abstract.GenericTimeoutMixin):
 
 	noisy = True
 	factory = None
+	noContactTimeout = 30
 
 	def __init__(self, reactor, streamId):
 		self._reactor = reactor
@@ -205,6 +206,7 @@ class Stream(abstract.GenericTimeoutMixin):
 		self._notifications = []
 
 		self._seqC2S = 0 # TODO: implement C2S, use it
+		self.setTimeout(self.noContactTimeout)
 		
 
 	def __repr__(self):
@@ -380,7 +382,8 @@ class Stream(abstract.GenericTimeoutMixin):
 		if len(self._transports) == 0:
 			# Start the timer. If no transports come in 30 seconds,
 			# the stream has ended.
-			self.setTimeout(30)
+			# This will call L{self.timedOut} if the timeout triggers. 
+			self.setTimeout(self.noContactTimeout)
 
 
 	def timedOut(self):

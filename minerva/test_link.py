@@ -85,7 +85,8 @@ class DummyIndex(resource.Resource):
 class BaseTestIntegration(object):
 
 	def startServer(self):
-		self._uaf = link.UserAgentFactory(reactor)
+		clock = task.Clock()
+		self._uaf = link.UserAgentFactory(clock)
 		self._ua = self._uaf.buildUA()
 		self._stream = self._ua.buildStream()
 		root = DummyIndex(self._uaf)
@@ -131,8 +132,6 @@ class BaseTestIntegration(object):
 		Builds and returns a Stream filled with boxes L{boxes}.
 		"""
 		stream = self._ua.buildStream()
-		clock = task.Clock()
-		stream._clock = clock
 		stream.sendBoxes(boxes)
 		return stream
 
@@ -364,9 +363,13 @@ class TestStreamTransportOnlineOffline(unittest.TestCase):
 
 	def setUp(self):
 		self.transport = _DummyMinervaTransport()
-		self.stream = link.Stream(None, '\x11'*16)
+		self.streamEndedReason = None
+		class CustomStream(link.Stream):
+			def streamEnded(self2, reason):
+				self.streamEndedReason = reason
+
 		clock = task.Clock()
-		self.stream._clock = clock
+		self.stream = CustomStream(clock, '\x11'*16)
 		
 
 	def test_transportOnlineOffline(self):
@@ -408,6 +411,21 @@ class TestStreamTransportOnlineOffline(unittest.TestCase):
 		self.assertRaises(link.TransportNotRegisteredError, lambda: self.stream.transportOffline(self.transport))
 
 
+	def test_noTranportsEverTriggersTimeout(self):
+		self.assertEqual(None, self.streamEndedReason)
+		self.stream._clock.advance(30)
+		self.assertEqual(link.STREAM_TIMEOUT, self.streamEndedReason)
+
+
+	def test_noMoreTransportsTriggersTimeout(self):
+		self.assertEqual(None, self.streamEndedReason)
+		self.stream.transportOnline(self.transport)
+		self.stream.transportOffline(self.transport)
+		self.assertEqual(None, self.streamEndedReason)
+		self.stream._clock.advance(30)
+		self.assertEqual(link.STREAM_TIMEOUT, self.streamEndedReason)
+
+
 
 class TestStreamDataFlow(unittest.TestCase):
 	"""Tests for minerva.link.Stream's data flow"""
@@ -418,9 +436,8 @@ class TestStreamDataFlow(unittest.TestCase):
 			def boxReceived(self2, box):
 				self.boxes.append(box)
 
-		self.stream = DummyStream(None, '\x11'*16)
 		clock = task.Clock()
-		self.stream._clock = clock
+		self.stream = DummyStream(clock, '\x11'*16)
 
 
 	def test_clientUploadedFrames1(self):
