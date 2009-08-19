@@ -539,7 +539,7 @@ class _BaseHTTPTransport(object):
 				byteCount += len(header)
 
 				# Why even bother writing out the first seqNum when the client
-				# already sent a ackS2C?
+				# already sent the L{startAtSeqNum}?
 				# Well, maybe a proxy or something mixed up requests.
 				# Give the client some redundancy.
 
@@ -758,7 +758,7 @@ class HTTPS2C(BaseHTTPResource):
 			connectionNumber = abstract.strToNonNeg(request.args['n'][0]) # "(n)umber"
 
 			# The sequence number of the first S2C box that the client demands.
-			ackS2C = abstract.strToNonNeg(request.args['s'][0]) # "(s)eq"
+			startAtSeqNum = abstract.strToNonNeg(request.args['s'][0]) # "(s)eq"
 
 			# The type of S2C transport the client demands.
 			transportString = request.args['t'][0] # "(t)ype"
@@ -773,11 +773,12 @@ class HTTPS2C(BaseHTTPResource):
 		# valid transportString, send some kind of HTTP error.
 
 		stream = ua.getStream(streamId)
+		# TODO: stream could be None here; need to write a machine-readable error
 
-		stream.clientReceivedEverythingBefore(ackS2C)
+		stream.clientReceivedEverythingBefore(startAtSeqNum)
 
 		transportMap = dict(s=ScriptTransport, x=XHRTransport) #, o=SSETransport)
-		transport = transportMap[transportString](request, connectionNumber, ackS2C)
+		transport = transportMap[transportString](request, connectionNumber, startAtSeqNum)
 
 		stream.transportOnline(transport)
 
@@ -808,20 +809,49 @@ class HTTPC2S(BaseHTTPResource):
 
 
 	def render_POST(self, request):
-		"""
+		'''
 		Clients will POST some JSON in this format:
 
-		{"[[C2S sequence number]]": [[box]], ..., ..., "a": [[S2C ACK]]}
+		{"[[C2S sequence number]]": [[box]], ..., ..., "a": [[S2C ACK]], "i": "[[hex streamId]]"}
 
 		It looks like this:
 
-		{"0": "box0", "1": "box1", "a": 1782}
-		"""
+		{"0": "box0", "1": "box1", "a": 1782, "i": "ffffffffffffffffffffffffffffffff"}
+		
+		'''
 		uaId = request.getCookie(self.cookieName).decode('base64')
 		ua = self._uaFactory.getOrBuildUAWithId(uaId)
 
 		request.content.seek(0)
-		data = request.content.read()
+		contents = request.content.read()
+
+		data = simplejson.loads(contents)
+
+		ackS2C = data["a"]
+		if not isinstance(ackS2C, (int, long)) or ackS2C < -1:
+			self._fail()
+
+		streamId = data['i'].decode('hex') # "(i)d"
+
+		del data["a"]
+		del data["i"]
+
+		stream = ua.getStream(streamId)
+		# TODO: stream could be None here; need to write a machine-readable error
+
+		stream.clientReceivedEverythingBefore(ackS2C + 1)
+
+		frames = []
+
+		# If there's any junk in the JSON, L{strToNonNeg} will throw a ValueError
+		for seqNumStr, frame in data.iteritems():
+			seqNum = strToNonNeg(seqNumStr)
+			frames.append((seqNum, frame))
+
+		sackInfo = stream.clientUploadedFrames(frames)
+
+		return json.dumps(sackInfo, separators=(',', ':'))
+
 
 
 
