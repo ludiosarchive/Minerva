@@ -152,7 +152,7 @@ class Incoming(object):
 
 	def give(self, numAndItemSeq):
 		"""
-		Handle a sequence of already-sorted (seqNum, box). These may or
+		Handle a sequence of optionally-sorted (seqNum, box). These may or
 		may not be immediately delivered to L{self._handler}.
 
 		Returns a list of sequence numbers that were ignored (because items with

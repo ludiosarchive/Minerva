@@ -185,6 +185,17 @@ class TestIncoming(unittest.TestCase):
 		self.assertEqual((3, []), i.getSACK())
 
 
+	def test_outOfOrderJustOneCall(self):
+		"""
+		L{abstract.Incoming} handles all the boxes even when they're given
+		out-of-order in one L{abstract.Incoming.give} call.
+		"""
+		i = abstract.Incoming()
+		i.give([[1, 'box1'], [0, 'box0']])
+		self.assertEqual((1, []), i.getSACK())
+		self.assertEqual(['box0', 'box1'], i.fetchItems())
+
+
 	def test_alreadyGiven1Call(self):
 		i = abstract.Incoming()
 		alreadyGiven = i.give([[0, 'box0'], [1, 'box1'], [1, 'boxNEW']])

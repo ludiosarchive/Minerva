@@ -289,8 +289,8 @@ class Stream(abstract.GenericTimeoutMixin):
 
 	def clientUploadedFrames(self, frames):
 		"""
-		The client uploaded frames L{frames}. This will give valid in-order boxes
-		to L{boxReceived}.
+		The client uploaded frames L{frames}. L{frames} is a sequence of (seqNum, frame) tuples.
+		This will give valid in-order boxes to L{boxReceived}.
 
 		Returns SACK information.
 		"""

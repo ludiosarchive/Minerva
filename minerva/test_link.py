@@ -409,6 +409,32 @@ class TestStreamTransportOnlineOffline(unittest.TestCase):
 
 
 
+class TestStreamDataFlow(unittest.TestCase):
+	"""Tests for minerva.link.Stream's data flow"""
+
+	def setUp(self):
+		self.boxes = []
+		class DummyStream(link.Stream):
+			def boxReceived(self2, box):
+				self.boxes.append(box)
+
+		self.stream = DummyStream(None, '\x11'*16)
+		clock = task.Clock()
+		self.stream._clock = clock
+
+
+	def test_clientUploadedFrames1(self):
+		self.stream.clientUploadedFrames([[0, 'box0']])
+		self.assertEqual(['box0'], self.boxes)
+
+
+	def test_clientUploadedFrames2(self):
+		self.stream.clientUploadedFrames([[0, 'box0'], [1, 'box1']])
+		self.assertEqual(['box0', 'box1'], self.boxes)
+
+
+
+
 #
 #class TestUAStreamKnower(unittest.TestCase):
 #
