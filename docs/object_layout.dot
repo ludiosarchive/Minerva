@@ -1,0 +1,26 @@
+/*
+
+Black arrow means "I instantiate this class (and possibly keep references to it)
+Red arrow means "I keep references to an object of this class"
+Green arrow means "I call methods on an object of this class but do not keep references to it"
+
+*/
+
+digraph objects {
+  HTTPS2C -> UserAgentFactory [color=red];
+  HTTPS2C -> ScriptTransport;
+  HTTPS2C -> Stream [color=green];
+  HTTPS2C -> XHRTransport;
+  HTTPC2S -> UserAgentFactory [color=red];
+  HTTPC2S -> Stream [color=green];
+  SocketTransport -> UserAgentFactory [color=red];
+  SocketTransport -> Stream [color=red, dir=both];
+  XHRTransport -> "http.Request" [color=red];
+  ScriptTransport -> "http.Request" [color=red];
+  Stream -> ScriptTransport [color=red];
+  Stream -> XHRTransport [color=red];
+  UserAgentFactory -> UserAgent;
+  UserAgent -> Stream;
+  Stream -> Queue;
+  Stream -> Incoming;
+}
