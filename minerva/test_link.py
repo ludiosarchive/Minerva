@@ -19,9 +19,12 @@ from minerva import link, pyclient
 
 # copy/paste from twisted.web.test.test_web, but added a setTcpNoDelay
 class DummyChannel(object):
+	requestIsDone = False
+
 	class TCP(object):
 		port = 80
 		socket = None
+		connectionLostReason = None
 
 		def __init__(self):
 			self.noDelayEnabled = False
@@ -36,7 +39,8 @@ class DummyChannel(object):
 			self.written += bytes
 
 		def writeSequence(self, iovec):
-			map(self.write, iovec)
+			for v in iovec:
+				self.write(v)
 
 		def getHost(self):
 			return address.IPv4Address("TCP", '10.0.0.1', self.port)
@@ -46,6 +50,9 @@ class DummyChannel(object):
 
 		def setTcpNoDelay(self, enabled):
 			self.noDelayEnabled = bool(enabled)
+
+		def connectionLost(self, reason):
+			self.connectionLostReason = reason
 
 
 	class SSL(TCP):
@@ -58,7 +65,7 @@ class DummyChannel(object):
 
 
 	def requestDone(self, request):
-		pass
+		self.requestIsDone = True
 
 
 
@@ -198,7 +205,9 @@ class HelperBaseHTTPTransports(object):
 		self.dummyTcpChannel = DummyChannel()
 		assert self.dummyTcpChannel.transport.noDelayEnabled == False
 
-		self.dummyRequest = server.Request(self.dummyTcpChannel, True)
+		self.dummyRequest = server.Request(self.dummyTcpChannel, queued=False)
+		# Fool t.w.http.Request into creating its self.content attribute
+		self.dummyRequest.gotLength(100) # 100 bytes
 		self.t = self.transportClass(self.dummyRequest, 0, 0)
 
 
@@ -224,6 +233,15 @@ class HelperBaseHTTPTransports(object):
 		self.assert_('no-cache' in headers['Cache-Control'][0])
 		self.assert_('Expires' in headers)
 		self.assert_(' 1997 ' in headers['Expires'][0])
+
+
+	def test_close(self):
+		self.assertEqual(False, self.dummyTcpChannel.requestIsDone)
+		tr = self.dummyTcpChannel.transport
+		self.assert_('999999' not in tr.written, repr(tr.written))
+		self.t.close(999999)
+		self.assertEqual(True, self.dummyTcpChannel.requestIsDone)
+		self.assert_('999999' in tr.written, repr(tr.written))
 
 
 
