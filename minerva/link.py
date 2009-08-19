@@ -192,6 +192,7 @@ class Stream(abstract.GenericTimeoutMixin):
 	"""
 
 	noisy = True
+	factory = None
 
 	def __init__(self, reactor, streamId):
 		self._reactor = reactor
@@ -215,6 +216,8 @@ class Stream(abstract.GenericTimeoutMixin):
 	def streamBegun(self):
 		"""
 		The stream has begun. Override this if necessary.
+
+		This method will be called by the instantiator of the Stream.
 		"""
 
 
