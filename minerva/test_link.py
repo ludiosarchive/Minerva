@@ -352,6 +352,69 @@ class TestUserAgentFactory(unittest.TestCase):
 
 
 
+class _DummyMinervaTransport(object):
+	numWrites = 0
+	def writeFrom(self, queue):
+		self.numWrites += 1
+
+
+
+class TestStream(unittest.TestCase):
+	"""Tests for minerva.link.Stream"""
+
+	def test_transportOnlineOffline(self):
+		transport = _DummyMinervaTransport()
+		stream = link.Stream(None, '\x11'*16)
+		clock = task.Clock()
+		stream._clock = clock
+		stream.transportOnline(transport)
+		stream.transportOffline(transport)
+
+
+	def test_transportOnlineTwice(self):
+		transport = _DummyMinervaTransport()
+		stream = link.Stream(None, '\x11'*16)
+		clock = task.Clock()
+		stream._clock = clock
+
+		stream.transportOnline(transport)
+
+		dictBefore = stream.__dict__.copy()
+		self.assertRaises(link.TransportAlreadyRegisteredError, lambda: stream.transportOnline(transport))
+		self.assertRaises(link.TransportAlreadyRegisteredError, lambda: stream.transportOnline(transport))
+		# Make sure the object didn't change
+		dictAfter = stream.__dict__.copy()
+		self.assertEqual(dictBefore, dictAfter)
+
+
+	def test_transportOfflineTwice(self):
+		transport = _DummyMinervaTransport()
+		stream = link.Stream(None, '\x11'*16)
+		clock = task.Clock()
+		stream._clock = clock
+
+		dictBefore = stream.__dict__.copy()
+
+		# Before any transport is registered, unregistering some transport should raise
+		self.assertRaises(link.TransportNotRegisteredError, lambda: stream.transportOffline(transport))
+
+		# Make sure the object didn't change
+		dictAfter = stream.__dict__.copy()
+		self.assertEqual(dictBefore, dictAfter)
+
+
+
+		stream.transportOnline(transport)
+
+		# Unregistering it the first time is okay
+		stream.transportOffline(transport)
+
+		# But not the second time
+		self.assertRaises(link.TransportNotRegisteredError, lambda: stream.transportOffline(transport))
+
+
+
+
 #
 #class TestUAStreamKnower(unittest.TestCase):
 #

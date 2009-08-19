@@ -12,6 +12,8 @@ from twisted.internet import protocol, defer
 import abstract
 
 """
+See Minerva/docs/object_layout.png for a better class graph.
+
    [[C2STransport]] \
    [[S2CTransport]] -\
    [[S2CTransport]] <-> Stream -\
@@ -162,6 +164,21 @@ STREAM_TIMEOUT = "minerva.link.STREAM_TIMEOUT"
 The client closed the stream explicitly.
 """
 STREAM_CLIENT_CLOSED = "minerva.link.STREAM_CLIENT_CLOSED"
+
+
+
+class TransportRegistrationError(Exception):
+	pass
+
+
+
+class TransportAlreadyRegisteredError(TransportRegistrationError):
+	pass
+
+
+
+class TransportNotRegisteredError(TransportRegistrationError):
+	pass
 
 
 
@@ -338,6 +355,8 @@ class Stream(abstract.GenericTimeoutMixin):
 		"""
 		For internal use.
 		"""
+		if transport in self._transports:
+			raise TransportAlreadyRegisteredError("%r already in %r" % (transport, self._transports))
 		self.setTimeout(None)
 		if self.noisy:
 			log.msg('New transport has come online:', transport)
@@ -349,9 +368,10 @@ class Stream(abstract.GenericTimeoutMixin):
 		"""
 		For internal use.
 		"""
+		if transport not in self._transports:
+			raise TransportNotRegisteredError("%r not in %r" % (transport, self._transports))
 		if self.noisy:
 			log.msg('Transport has gone offline:', transport)
-		# This will raise an exception if it's not there
 		self._transports.remove(transport)
 
 		if len(self._transports) == 0:
