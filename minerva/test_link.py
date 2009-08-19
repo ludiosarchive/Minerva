@@ -371,8 +371,8 @@ class TestStreamTransportOnlineOffline(unittest.TestCase):
 			def streamEnded(self2, reason):
 				self.streamEndedReason = reason
 
-		clock = task.Clock()
-		self.stream = CustomStream(clock, '\x11'*16)
+		self.clock = task.Clock()
+		self.stream = CustomStream(self.clock, '\x11'*16)
 		
 
 	def test_transportOnlineOffline(self):
@@ -416,7 +416,7 @@ class TestStreamTransportOnlineOffline(unittest.TestCase):
 
 	def test_noTranportsEverTriggersTimeout(self):
 		self.assertEqual(None, self.streamEndedReason)
-		self.stream._clock.advance(30)
+		self.clock.advance(30)
 		self.assertEqual(link.STREAM_TIMEOUT, self.streamEndedReason)
 
 
@@ -425,7 +425,7 @@ class TestStreamTransportOnlineOffline(unittest.TestCase):
 		self.stream.transportOnline(self.transport)
 		self.stream.transportOffline(self.transport)
 		self.assertEqual(None, self.streamEndedReason)
-		self.stream._clock.advance(30)
+		self.clock.advance(30)
 		self.assertEqual(link.STREAM_TIMEOUT, self.streamEndedReason)
 
 
@@ -439,8 +439,8 @@ class TestStream(unittest.TestCase):
 			def boxReceived(self2, box):
 				self.boxes.append(box)
 
-		clock = task.Clock()
-		self.stream = DummyStream(clock, '\x11'*16)
+		self.clock = task.Clock()
+		self.stream = DummyStream(self.clock, '\x11'*16)
 
 
 	def test_clientUploadedFrames1(self):
@@ -498,6 +498,21 @@ class TestStream(unittest.TestCase):
 		self.assert_('with transports' in s, s)
 		self.assert_('items in queue' in s, s)
 
+
+	def test_notifyFinishAfterTimeout(self):
+		d0 = self.stream.notifyFinish()
+		d1 = self.stream.notifyFinish()
+
+		called = {}
+		def callback(result, which):
+			called[which] = result
+
+		d0.addCallback(callback, 0)
+		d1.addCallback(callback, 1)
+
+		self.assertEqual({}, called)
+		self.clock.advance(30)
+		self.assertEqual({0: None, 1: None}, called)
 
 
 
