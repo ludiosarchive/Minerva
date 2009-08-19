@@ -427,8 +427,8 @@ class TestStreamTransportOnlineOffline(unittest.TestCase):
 
 
 
-class TestStreamDataFlow(unittest.TestCase):
-	"""Tests for minerva.link.Stream's data flow"""
+class TestStream(unittest.TestCase):
+	"""Tests for everything else about minerva.link.Stream"""
 
 	def setUp(self):
 		self.boxes = []
@@ -448,6 +448,38 @@ class TestStreamDataFlow(unittest.TestCase):
 	def test_clientUploadedFrames2(self):
 		self.stream.clientUploadedFrames([[0, 'box0'], [1, 'box1']])
 		self.assertEqual(['box0', 'box1'], self.boxes)
+
+
+	def test_sendBox(self):
+		transport = _DummyMinervaTransport()
+		assert 0 == transport.numWrites
+
+		self.stream.transportOnline(transport)
+		# Empty queue, so there should be 0 writes so far.
+		self.assertEqual(0, transport.numWrites)
+
+		self.stream.sendBox('boxS2C0')
+		self.assertEqual(1, transport.numWrites)
+
+		self.stream.sendBox('boxS2C1')
+		self.assertEqual(2, transport.numWrites)
+
+
+	def test_sendBoxes(self):
+		transport = _DummyMinervaTransport()
+		assert 0 == transport.numWrites
+
+		self.stream.transportOnline(transport)
+
+		self.stream.sendBoxes(['boxS2C0', 'boxS2C1', 'boxS2C2'])
+		self.assertEqual(1, transport.numWrites)
+
+
+	def test_repr(self):
+		s = repr(self.stream)
+		self.assert_('<Stream' in s, s)
+		self.assert_('with transports' in s, s)
+		self.assert_('items in queue' in s, s)
 
 
 

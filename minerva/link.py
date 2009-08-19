@@ -210,9 +210,8 @@ class Stream(abstract.GenericTimeoutMixin):
 		
 
 	def __repr__(self):
-		# TODO: should this really print the seq num information?
-		return '<Stream %r (%d,%d) with transports %r and %d items in queue>' % (
-			self.streamId, self.queue.seqNumAt0, self._seqC2S, self._transports, len(self.queue))
+		return '<Stream %r with transports %r and %d items in queue>' % (
+			self.streamId, self._transports, len(self.queue))
 
 
 	def streamBegun(self):
@@ -325,6 +324,9 @@ class Stream(abstract.GenericTimeoutMixin):
 		"""
 		Try to send.
 		"""
+		if len(self.queue) == 0:
+			return
+			
 		transport = self._selectS2CTransport()
 		if not transport:
 			if self.noisy:
