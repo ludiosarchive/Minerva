@@ -72,47 +72,47 @@ class TestQueue(unittest.TestCase):
 		self.assertEqual([], list(q.iterItems(start=3)))
 
 
-	def test_removeUpTo(self):
+	def test_removeAllBefore(self):
 		q = abstract.Queue()
 		q.append('zero')
 		q.extend(['one', 'two'])
 
-		q.removeUpTo(1)
+		q.removeAllBefore(1)
 		self.assertRaises(abstract.WantedItemsTooLowError, lambda: list(q.iterItems(start=0)))
 		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems(start=1)))
 
 		# Removing again should be idempotent (even if it generates a log message)
-		q.removeUpTo(1)
+		q.removeAllBefore(1)
 		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems(start=1)))
 
 
-	def test_removeUpToTooHigh0(self):
+	def test_removeAllBeforeTooHigh0(self):
 		q = abstract.Queue()
-		self.assertRaises(abstract.SeqNumTooHighError, lambda: q.removeUpTo(1))
+		self.assertRaises(abstract.SeqNumTooHighError, lambda: q.removeAllBefore(1))
 
 
-	def test_removeUpToTooHigh1(self):
-		q = abstract.Queue()
-		q.append('zero')
-		self.assertRaises(abstract.SeqNumTooHighError, lambda: q.removeUpTo(2))
-
-
-	def test_removeUpToAgain(self):
+	def test_removeAllBeforeTooHigh1(self):
 		q = abstract.Queue()
 		q.append('zero')
-		q.removeUpTo(1)
+		self.assertRaises(abstract.SeqNumTooHighError, lambda: q.removeAllBefore(2))
+
+
+	def test_removeAllBeforeAgain(self):
+		q = abstract.Queue()
+		q.append('zero')
+		q.removeAllBefore(1)
 
 		# This will print a log message
-		q.removeUpTo(1)
+		q.removeAllBefore(1)
 
 		self.assertEqual([], list(q.iterItems(start=1)))
 
 
-	def test_removeUpToToHigherNum(self):
+	def test_removeAllBeforeToHigherNum(self):
 		q = abstract.Queue()
 		q.extend([0,1,2,3,4,5,6,7,8])
-		q.removeUpTo(2)
-		q.removeUpTo(4)
+		q.removeAllBefore(2)
+		q.removeAllBefore(4)
 
 		# There should be 5 items left in the queue
 		self.assertEqual([(4,4), (5,5), (6,6), (7,7), (8,8)], list(q.iterItems(start=4)))

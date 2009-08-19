@@ -279,13 +279,13 @@ class Stream(abstract.GenericTimeoutMixin):
 		self._sendIfPossible()
 
 
-	def clientReceivedUpTo(self, seqNum):
+	def clientReceivedEverythingBefore(self, seqNum):
 		"""
-		The client claims to have received S2C messages up to sequence
+		The client claims to have received all S2C messages preceding message
 		number L{seqNum}, so now it is okay to clear the messages from
 		the queue.
 		"""
-		self.queue.removeUpTo(seqNum)
+		self.queue.removeAllBefore(seqNum)
 
 
 	def clientUploadedFrames(self, frames):
@@ -718,7 +718,8 @@ class InvalidArgumentsError(Exception):
 
 
 
-class HTTPS2C(resource.Resource):
+class BaseHTTPResource(resource.Resource):
+
 	isLeaf = True
 	cookieName = 'm'
 
@@ -726,18 +727,26 @@ class HTTPS2C(resource.Resource):
 		self._uaFactory = uaFactory
 
 
-	def render_GET(self, request):
-		##print request.getCookie('m')
+	def _fail(self):
+		raise InvalidArgumentsError("request.args = " + repr(request.args))
 
+
+	def _getUAFromCookie(self, request):
+		##print request.getCookie('m')
+		uaId = request.getCookie(self.cookieName).decode('base64')
+		ua = self._uaFactory.getOrBuildUAWithId(uaId)
+		return ua
+
+
+
+class HTTPS2C(BaseHTTPResource):
+
+	def render_GET(self, request):
 		# notifyFinish should be called as early as possible; see its docstring
 		# in Twisted.
 		requestFinishedD = request.notifyFinish()
 
-		uaId = request.getCookie(self.cookieName).decode('base64')
-		ua = self._uaFactory.getOrBuildUAWithId(uaId)
-
-		def _fail():
-			raise InvalidArgumentsError("request.args = " + repr(request.args))
+		ua = self._getUAFromCookie(request)
 
 		try:
 			# raises TypeError on non-hex
@@ -754,10 +763,10 @@ class HTTPS2C(resource.Resource):
 			# The type of S2C transport the client demands.
 			transportString = request.args['t'][0] # "(t)ype"
 		except (KeyError, IndexError, ValueError, TypeError):
-			_fail()
+			self._fail()
 
 		if not transportString in ('s', 'x'):#, 'o'):
-			_fail()
+			self._fail()
 
 		# TODO: instead of any _fail() or error-raising, create the transport, DO NOT
 		# register it with any Stream, send an error frame over the transport. If no
@@ -765,7 +774,7 @@ class HTTPS2C(resource.Resource):
 
 		stream = ua.getStream(streamId)
 
-		stream.clientReceivedUpTo(ackS2C)
+		stream.clientReceivedEverythingBefore(ackS2C)
 
 		transportMap = dict(s=ScriptTransport, x=XHRTransport) #, o=SSETransport)
 		transport = transportMap[transportString](request, connectionNumber, ackS2C)
@@ -792,15 +801,27 @@ class HTTPS2C(resource.Resource):
 
 
 
-class HTTPC2S(resource.Resource):
-	isLeaf = True
+class HTTPC2S(BaseHTTPResource):
 
 	def render_GET(self, request):
-		return 'GET C2S'
+		return 'GET C2S TODO IMPLEMENT'
 
 
 	def render_POST(self, request):
-		return 'POST C2S'
+		"""
+		Clients will POST some JSON in this format:
+
+		{"[[C2S sequence number]]": [[box]], ..., ..., "a": [[S2C ACK]]}
+
+		It looks like this:
+
+		{"0": "box0", "1": "box1", "a": 1782}
+		"""
+		uaId = request.getCookie(self.cookieName).decode('base64')
+		ua = self._uaFactory.getOrBuildUAWithId(uaId)
+
+		request.content.seek(0)
+		data = request.content.read()
 
 
 

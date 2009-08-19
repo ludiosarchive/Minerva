@@ -3,7 +3,7 @@ A pure-Python client that can connect to Minerva using any of its transports.
 
 Useful for manual testing (Wireshark, etc), automated testing, and various experiments.
 """
-import simplejson
+import simplejson as json
 import time
 
 from twisted.web import client, server, resource, http_headers, _newclient, iweb
@@ -21,7 +21,7 @@ class _BaseResponse(protocol.Protocol):
 		self.onConnMade = defer.Deferred()
 		class Decoder(self.decoder):
 			def dataCallback(self2, data):
-				self.frameReceived(simplejson.loads(data))
+				self.frameReceived(json.loads(data))
 		self.decoder = Decoder()
 
 

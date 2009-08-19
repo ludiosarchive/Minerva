@@ -101,9 +101,9 @@ class Queue(object):
 				yield (seqNum, item)
 
 
-	def removeUpTo(self, seqNum):
+	def removeAllBefore(self, seqNum):
 		"""
-		Remove items up to sequence number L{seqNum}.
+		Remove all items preceding item with sequence number L{seqNum}.
 
 		This does NOT mean to remove L{seqNum} items.
 		"""
@@ -116,7 +116,7 @@ class Queue(object):
 
 		if seqNum - self._seqNumAt0 <= 0:
 			if self.noisy:
-				# If Stream is using removeUpTo, the client sent a strangely low
+				# If Stream is using removeAllBefore, the client sent a strangely low
 				# S2C ACK; not removing anything from the queue.
 				log.msg("I was asked to remove items up to "
 					"%d but those are long gone. My lowest is %d" % (seqNum, self._seqNumAt0))
