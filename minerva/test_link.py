@@ -404,6 +404,8 @@ class TestStreamTransportOnlineOffline(unittest.TestCase):
 		# But not the second time
 		self.assertRaises(link.TransportNotRegisteredError, lambda: self.stream.transportOffline(self.transport))
 
+		# Or a third
+		self.assertRaises(link.TransportNotRegisteredError, lambda: self.stream.transportOffline(self.transport))
 
 
 
