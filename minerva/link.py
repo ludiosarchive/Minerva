@@ -803,9 +803,12 @@ class UserAgent(object):
 	"""
 	I am a UserAgent. I can make Stream instances and find one
 	of my Streams.
+
+	I know my UserAgentFactory, L{self.factory}
 	"""
 
 	stream = Stream
+	factory = None
 
 	def __init__(self, reactor, uaId):
 		self.uaId = uaId
