@@ -24,8 +24,8 @@ class NetStringDecoder(object):
 	This uses djb's Netstrings protocol to break up the
 	input into strings.
 
-	Each string makes a callback to dataCallback, with a single
-	argument of that string.
+	When one or more strings are parsed, manyDataCallback is called with
+	a list of complete strings.
 
 	Security features:
 		1. Messages are limited in size, useful if you don't want someone
@@ -46,7 +46,7 @@ class NetStringDecoder(object):
 	noisy = False
 
 
-	def dataCallback(self, line):
+	def manyDataCallback(self, strings):
 		"""
 		Override this.
 		"""
@@ -91,7 +91,7 @@ class NetStringDecoder(object):
 			##if self.noisy: print "doData: captured a full fragment; _completeStrings is now %r" % (self._completeStrings)
 			self._offset += len(capturedThisTime)
 			# Note: When we get a full string but no comma, the string is considered complete
-			# and should still be given to L{dataCallback}
+			# and should still be given to L{manyDataCallback}
 			self._readerState = COMMA
 			##if self.noisy: print "doData: going into readerState COMMA with _offset=%r, _data=%r" % (self._offset, self._data)
 		else:
@@ -138,9 +138,8 @@ class NetStringDecoder(object):
 			self._offset = 0
 		
 		# Note this behavior: if there's a parse error anywhere in the L{data} passed to
-		# dataReceived, dataCallback will never be called.
-		for s in self._completeStrings:
-			self.dataCallback(s)
+		# dataReceived, manyDataCallback won't be called.
+		self.manyDataCallback(self._completeStrings)
 		self._completeStrings = []
 
 
@@ -158,6 +157,9 @@ class ScriptDecoder(object):
 	This is not as loose as an SGML parser (which will handle whitespace
 	inside the "<script>" or "</script>", but it's good enough for testing.
 
+	This can easily be forced into exponential time by sending many <script>s
+	at once.
+
 	This might have a re-entrancy bug; write a unit test for it if it matters to you.
 	"""
 
@@ -165,7 +167,7 @@ class ScriptDecoder(object):
 	endText = ')</script>'
 	_buffer = ''
 
-	def dataCallback(self, line):
+	def manyDataCallback(self, strings):
 		"""
 		Override this.
 		"""
@@ -174,12 +176,17 @@ class ScriptDecoder(object):
 
 	def dataReceived(self, data):
 		self._buffer += data
+
+		scripts = []
+		
 		while self.startText in self._buffer and self.endText in self._buffer:
 			start = self._buffer.find(self.startText) + len(self.startText)
 			end = self._buffer.find(self.endText)
 			extracted = self._buffer[start:end]
 			self._buffer = self._buffer[end + len(self.endText):]
-			self.dataCallback(extracted)
+			scripts.append(extracted)
+
+		self.manyDataCallback(scripts)
 
 
 from pypycpyo import optimizer

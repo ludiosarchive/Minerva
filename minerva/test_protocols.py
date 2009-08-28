@@ -9,8 +9,8 @@ class _BaseDummy(object):
 		self.gotStrings = []
 
 
-	def dataCallback(self, line):
-		self.gotStrings.append(line)
+	def manyDataCallback(self, strings):
+		self.gotStrings.extend(strings)
 
 
 

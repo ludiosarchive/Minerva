@@ -20,8 +20,9 @@ class _BaseResponse(protocol.Protocol):
 	def __init__(self):
 		self.onConnMade = defer.Deferred()
 		class Decoder(self.decoder):
-			def dataCallback(self2, data):
-				self.frameReceived(json.loads(data))
+			def manyDataCallback(self2, strings):
+				for data in strings:
+					self.frameReceived(json.loads(data))
 		self.decoder = Decoder()
 
 
