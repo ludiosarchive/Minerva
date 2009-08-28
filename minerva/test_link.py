@@ -155,7 +155,7 @@ class BaseTestIntegration(object):
 		boxes = self._makeBoxes(numBoxes)
 		stream = self._buildStreamWithBoxes(boxes)
 
-		uaId = '\x22' * 16
+		uaId = link.UserAgentId('\x22' * 16)
 
 		comm = self.communicator(
 			reactor, 'http://127.0.0.1:%d/' % port, uaId, self.streamId, cookieName='m')

@@ -83,7 +83,12 @@ class BaseTwoWayCommunicator(object):
 
 	def __init__(self, reactor, rootURL, uaId, streamId, cookieName):
 		"""
+		L{reactor} is a Twisted reactor.
 		L{rootURL} looks like "http://127.0.0.1:1111/"; must have trailing slash.
+		L{uaId} is a L{minerva.link.UserAgentId}
+		L{streamId} is a L{minerva.link.StreamId}
+		L{cookieName} is a string that represents what the cookie name for
+			L{uaId} should be.
 		"""
 
 		self._reactor = reactor
@@ -184,7 +189,7 @@ class BaseTwoWayCommunicator(object):
 			self._streamId.id.encode('hex'), self._connectionNumber, self._ackS2C, self.transportString)
 		headers = http_headers.Headers({
 			'user-agent': ['Minerva pyclient 2009-08-13'],
-			'cookie': [self._cookieName+'='+self._uaId.encode('base64')],
+			'cookie': [self._cookieName + '=' + self._uaId.id.encode('base64')],
 		})
 
 		self._previousConnectionLost = self.connLostD
