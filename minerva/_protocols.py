@@ -14,7 +14,7 @@ class ParseError(Exception):
 
 
 LENGTH, DATA, COMMA = range(3)
-NUMBER = re.compile('(\d*)(:?)')
+NUMBER = re.compile(r'(\d*)(:?)')
 DEBUG = True
 
 
@@ -24,7 +24,8 @@ class NetStringDecoder(object):
 	Modified to remove all notions of Protocol.
 
 	WARNING: This class doesn't protect against [Twisted bug #3803]-style attacks.
-	The 'secure features' below are a joke.
+	The 'security features' below don't prevent slowdowns when receiving
+	a large amount of small messages at once.
 
 
 	This uses djb's Netstrings protocol to break up the
@@ -117,7 +118,8 @@ class BencodeStringDecoder(object):
 	Modified to exclude the trailing comma from the Netstring protocol.
 
 	WARNING: This class doesn't protect against [Twisted bug #3803]-style attacks.
-	The 'security features' below are a joke.
+	The 'security features' below don't prevent slowdowns when receiving
+	a large amount of small messages at once.
 
 
 	This uses djb's Netstrings protocol to break up the
