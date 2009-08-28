@@ -19,7 +19,7 @@ NUMBER = re.compile(r'(\d*)(:?)')
 DEBUG = True
 
 
-class NetStringDecoder(object):
+class O_NetStringDecoder(object):
 	"""
 	This is a copy/paste from twisted.protocols.basic.NetstringReceiver.
 	Modified to remove all notions of Protocol.
@@ -112,7 +112,7 @@ class NetStringDecoder(object):
 
 
 
-class N_NetStringDecoder(object):
+class NetStringDecoder(object):
 	"""
 	This uses djb's Netstrings protocol to break up the
 	input into strings.
@@ -170,7 +170,7 @@ class N_NetStringDecoder(object):
 		assert len(maybeFull) <= self._lengthToRead
 		if len(maybeFull) == self._lengthToRead:
 			self._completeStrings.append(maybeFull)
-			self._offset = self._offset + self._lengthToRead
+			self._offset += self._lengthToRead
 			self._readerState = COMMA
 		else:
 			self._tempData = maybeFull
@@ -190,7 +190,9 @@ class N_NetStringDecoder(object):
 	def dataReceived(self, data):
 		if self._completeStrings is None:
 			self._completeStrings = []
-		self._buffer += data
+		# Nothing ever gets left in _buffer because there are separate temporary buffers
+		# for digits and data.
+		self._buffer = data
 		try:
 			while True:
 				if self._readerState == DATA:
@@ -203,13 +205,11 @@ class N_NetStringDecoder(object):
 					raise RuntimeError("mode is not DATA, COMMA or LENGTH")
 				if ret:
 					break
-			if self._offset > 0:
-				# Even if _buffer is really big, this is still very fast.
-				# Tested with CPython 2.7 and a 100MB string.
-				self._buffer = self._buffer[self._offset:]
 		except ParseError:
 			self.brokenPeer = 1
 			raise
+		finally:
+			self._buffer = ''
 		
 		# Note this behavior: if there's a parse error anywhere in the L{data} passed to
 		# dataReceived, dataCallback will never be called.
