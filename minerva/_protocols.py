@@ -128,7 +128,7 @@ class NetStringDecoder(object):
 		3. Small messages received at once don't cause excessive string copying.
 	"""
 
-	_buffer = ''
+	_data = ''
 	_tempDigits = ''
 	_tempData = ''
 	_offset = 0
@@ -147,19 +147,19 @@ class NetStringDecoder(object):
 
 
 	def doLength(self):
-		colonLocation = self._buffer.find(':', self._offset) # TODO: should there be a search limit here?
+		colonLocation = self._data.find(':', self._offset) # TODO: should there be a search limit here?
 		if colonLocation != -1:
 			try:
-				self._lengthToRead = strToNonNeg(self._tempDigits + self._buffer[self._offset:colonLocation])
+				self._lengthToRead = strToNonNeg(self._tempDigits + self._data[self._offset:colonLocation])
 			except ValueError:
 				raise ParseError("non-digits before the colon while looking for length")
 			if self._lengthToRead > self.MAX_LENGTH:
 				raise ParseError("netstring too long")
 			self._offset = colonLocation + 1
 			self._readerState = DATA
-			if self.noisy: print "doLength: going into readerState DATA with _offset=%r, _buffer=%r" % (self._offset, self._buffer)
+			if self.noisy: print "doLength: going into readerState DATA with _offset=%r, _data=%r" % (self._offset, self._data)
 		else:
-			self._tempDigits += self._buffer[self._offset:]
+			self._tempDigits += self._data[self._offset:]
 			if len(self._tempDigits) > len(str(self.MAX_LENGTH)): # TODO: cache this value?
 				raise ParseError("netstring too long")
 			if self.noisy: print "doLength: not done collecting digits yet with _tempDigits=%r" % (self._tempDigits)
@@ -168,7 +168,7 @@ class NetStringDecoder(object):
 
 	def doData(self):
 		self._tempDigits = ''
-		capturedThisTime = self._buffer[self._offset:self._offset + self._lengthToRead - len(self._tempData)]
+		capturedThisTime = self._data[self._offset:self._offset + self._lengthToRead - len(self._tempData)]
 		maybeFull = self._tempData + capturedThisTime
 		if self.noisy: print "doData: found a maybeFull fragment %r, _lengthToRead %r" % (maybeFull, self._lengthToRead)
 		assert len(maybeFull) <= self._lengthToRead, "maybeFull=%r, _lengthToRead=%r, _offset=%r" % (maybeFull, self._lengthToRead, self._offset)
@@ -179,7 +179,7 @@ class NetStringDecoder(object):
 			# Note: When we get a full string but no comma, the string is considered complete
 			# and should still be given to L{dataCallback}
 			self._readerState = COMMA
-			if self.noisy: print "doData: going into readerState COMMA with _offset=%r, _buffer=%r" % (self._offset, self._buffer)
+			if self.noisy: print "doData: going into readerState COMMA with _offset=%r, _data=%r" % (self._offset, self._data)
 		else:
 			self._tempData = maybeFull
 			return True # There cannot be any more useful data in the buffer.
@@ -187,25 +187,25 @@ class NetStringDecoder(object):
 
 	def doComma(self):
 		self._tempData = ''
-		maybeComma = self._buffer[self._offset:self._offset+1]
+		maybeComma = self._data[self._offset:self._offset+1]
 		if self.noisy: print "doComma: maybeComma=%r" % (maybeComma,)
 		if maybeComma == '':
 			# Hopefully we'll get a comma next time.
 			return True # There cannot be any more useful data in the buffer.
 		elif maybeComma != ',':
-			raise ParseError("I was expecting a comma, found something else in %r" % ((self._buffer, self._offset),))
+			raise ParseError("I was expecting a comma, found something else in %r" % ((self._data, self._offset),))
 		else:
 			self._offset += 1
 			self._readerState = LENGTH
-			if self.noisy: print "doComma: going into readerState DATA with _offset=%r, _buffer=%r" % (self._offset, self._buffer)
+			if self.noisy: print "doComma: going into readerState DATA with _offset=%r, _data=%r" % (self._offset, self._data)
 
 
 	def dataReceived(self, data):
 		if self._completeStrings is None:
 			self._completeStrings = []
-		# Nothing ever gets left in _buffer because there are separate temporary buffers
+		# Nothing ever gets left in _data because there are separate temporary buffers
 		# for digits and data.
-		self._buffer = data
+		self._data = data
 		try:
 			while True:
 				if self._readerState == DATA:
@@ -222,7 +222,7 @@ class NetStringDecoder(object):
 			self.brokenPeer = 1
 			raise
 		finally:
-			self._buffer = ''
+			self._data = ''
 			self._offset = 0
 		
 		# Note this behavior: if there's a parse error anywhere in the L{data} passed to
