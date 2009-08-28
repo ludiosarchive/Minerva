@@ -68,6 +68,12 @@ class NetStringDecoder(object):
 			##if self.noisy: print "doLength: going into readerState DATA with _offset=%r, _data=%r" % (self._offset, self._data)
 		else:
 			self._tempDigits += self._data[self._offset:]
+			# Any non-digits in _tempDigits? bail
+			if self._tempDigits: # Only if it's not ''
+				try:
+					strToNonNeg(self._tempDigits)
+				except ValueError:
+					raise ParseError("non-digits found in %r" % (self._tempDigits,))
 			if len(self._tempDigits) > len(str(self.MAX_LENGTH)): # TODO: cache this value?
 				raise ParseError("netstring too long")
 			##if self.noisy: print "doLength: not done collecting digits yet with _tempDigits=%r" % (self._tempDigits)
@@ -136,6 +142,14 @@ class NetStringDecoder(object):
 		for s in self._completeStrings:
 			self.dataCallback(s)
 		self._completeStrings = []
+
+
+
+class BencodeStringDecoder(NetStringDecoder):
+
+	def doComma(self):
+		# Bencode strings have no trailing comma; just go back to LENGTH
+		self._readerState = LENGTH
 
 
 

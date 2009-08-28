@@ -19,8 +19,8 @@ class DummyNetStringDecoder(_BaseDummy, _protocols.NetStringDecoder):
 
 
 
-#class DummyBencodeStringDecoder(_BaseDummy, _protocols.BencodeStringDecoder):
-#	pass
+class DummyBencodeStringDecoder(_BaseDummy, _protocols.BencodeStringDecoder):
+	pass
 
 
 
@@ -137,16 +137,16 @@ class TestNetStringDecoder(unittest.TestCase):
 
 
 
-#class TestBencodeStringDecoder(TestNetStringDecoder):
-#
-#	# for max length 50
-#	illegalSequences = [
-#		'9999999999999999999999', 'abc', '4:abcde',
-#		'51:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab',]
-#
-#	trailingComma = ''
-#
-#	receiver = receiver = DummyBencodeStringDecoder
+class TestBencodeStringDecoder(TestNetStringDecoder):
+
+	# for max length 50
+	illegalSequences = [
+		'9999999999999999999999', 'abc', '4:abcde',
+		'51:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab',]
+
+	trailingComma = ''
+
+	receiver = DummyBencodeStringDecoder
 
 
 
