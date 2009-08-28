@@ -8,6 +8,7 @@ import struct
 from twisted.python import log, randbytes
 from twisted.web import resource
 from twisted.internet import protocol, defer
+from zope.interface import implements, Interface
 
 import abstract
 
@@ -425,20 +426,44 @@ class Stream(abstract.GenericTimeoutMixin):
 
 
 
+class IMinervaTransport(Interface):
+
+	# connectionNumber attribute
+	#
+
+	def writeFrom(queue):
+		"""
+		Write as many messages from the L{queue} of type
+		L{minerva.abstract.Queue} as possible.
+		"""
+
+
+	def close():
+		"""
+		Close this transport with numeric reason L{code}.
+		"""
+
+
+
 class _BaseHTTPTransport(object):
 	"""
 	frames are any frame, including metadata needed for connection management.
 	boxes are application-level frames that came from a queue.
 	"""
 
+	implements(IMinervaTransport)
+
 	maxBytes = None # override this
 
 	def __init__(self, request, connectionNumber, firstS2CToWrite):
 		"""
-		I need a L{twisted.web.http.Request}.
+		I need a L{twisted.web.http.Request} to write to.
 		
 		L{connectionNumber} is incremented by the client as they
 			open S2C transports.
+
+		L{firstS2CToWrite} is the first S2C box that the client expects
+			me to write.
 
 		The only transport mangling we can handle are dropped
 		requests/TCP connections, and full or partial buffering of
@@ -469,14 +494,14 @@ class _BaseHTTPTransport(object):
 		self._request.setHeader('pragma', 'no-cache')
 		self._request.setHeader('expires', 'Mon, 26 Jul 1997 05:00:00 GMT')
 
-		self.setTcpOptions()
+		self._setTcpOptions()
 
 		# Write out the headers right away to increase the chances of connection staying alive;
 		# hopefully these headers will ride along with the TCP-ACK for the HTTP request.
 		self._request.write('')
 
 
-	def setTcpOptions(self):
+	def _setTcpOptions(self):
 		# TCP nodelay is good and increases server performance, as
 		# long as we don't accidentally send small packets.
 		self._request.channel.transport.setTcpNoDelay(True)
@@ -487,24 +512,24 @@ class _BaseHTTPTransport(object):
 			log.msg(get_tcp_info(sock))
 
 
-	def getHeader(self):
+	def _getHeader(self):
 		return ''
 
 
-	def getFooter(self):
+	def _getFooter(self):
 		return ''
 
 
 	def close(self, code):
 		"""
-		Close this transport with numeric reason L{code}.
+		See L{IMinervaTransport.close}
 		"""
-		self.forceWrite(['`^e', code])
+		self._forceWrite(['`^e', code])
 		self._request.finish()
 		log.msg("Closed transport %s with reason %d." % (self, code))
 
 
-	def forceWrite(self, frame):
+	def _forceWrite(self, frame):
 		"""
 		Write a frame to the connection without any coalescing with
 		other frames. This is useful for notifying clients of Stream resets,
@@ -518,7 +543,7 @@ class _BaseHTTPTransport(object):
 
 	def writeFrom(self, queue):
 		"""
-		Write as many messages from the queue as possible.
+		See L{IMinervaTransport.writeFrom}
 		"""
 		toSend = ''
 		frameCount = 0
@@ -535,7 +560,7 @@ class _BaseHTTPTransport(object):
 				self._preparedSeqMsg = True
 
 				# the header is not a frame, so only increment byteCount
-				header = self.getHeader()
+				header = self._getHeader()
 				byteCount += len(header)
 
 				# Why even bother writing out the first seqNum when the client
@@ -565,7 +590,7 @@ class _BaseHTTPTransport(object):
 				break
 
 		if byteCount > self.maxBytes:
-			footer = self.getFooter()
+			footer = self._getFooter()
 
 			# the footer is not a frame, so only increment byteCount
 			byteCount += len(footer)
@@ -631,14 +656,14 @@ class ScriptTransport(_BaseHTTPTransport):
 
 	# TODO: maybe this header should be written earlier, even before the first attempt
 	# to send to queue?
-	def getHeader(self):
+	def _getHeader(self):
 		# CWNet = CW.Net ; 'fr' = "frame" ; 'o' = object
 		# Don't use nested CW.Something.something because property lookups are
 		# slow in IE.
 		return '''<!doctype html><head><script>var p=parent;function f(o){p.__CWNet_fr(o)}</script></head><body>'''
 
 
-	def getFooter(self):
+	def _getFooter(self):
 		# </body></html> is unnecessary
 		return ''
 		#return '</body></html>'
@@ -675,40 +700,94 @@ class ScriptTransport(_BaseHTTPTransport):
 
 
 
+class ISocketStyleTransport(Interface):
+	"""
+	I am a Twisted Protocol with a TCP transport L{self.transport}.
+	I am also a Minerva transport (which has no base class)
+
+	After the client connects, it will have to send me a streamID
+	and the cookie, because I don't really know anything about
+	the client yet.
+	"""
+
+
+
+
 class WebSocketTransport(protocol.Protocol):
-	# XXX Should this be both a Protocol and a Minerva transport?
-	# That would be kind of strange?
-	pass
-
-
-
-class SocketTransport(protocol.Protocol):
-	# XXX Should this be both a Protocol and a Minerva transport?
-	# That would be kind of strange?
 	"""
-	Right now, this is only used for the Flash socket.
+	I am typically used by a browser's native WebSocket.
 	"""
+	implements(IMinervaTransport, ISocketStyleTransport)
 
 	def connectionMade(self):
 		pass
 
 
 	def dataReceived(self, data):
-		"""
-		Client needs to send server the stream ID, because server
-		doesn't know anything about the client yet.
-		"""
+		pass
 
 
 	def connectionLost(self, reason):
+		# The socket connection has been lost, so notify my Stream.
+		pass
+
+
+	def writeFrom(self, queue):
 		"""
-		The socket connection has been lost, so notify the stream.
+		See L{IMinervaTransport.writeFrom}
 		"""
+		raise NotImplementedError # TODO
+
+
+	def close(self):
+		"""
+		See L{IMinervaTransport.close}
+		"""
+		raise NotImplementedError # TODO
+
+
+
+
+class SocketTransport(protocol.Protocol):
+	"""
+	I am typically used by a browser's Flash socket.
+	"""
+
+	implements(IMinervaTransport, ISocketStyleTransport)
+
+	def connectionMade(self):
+		pass
+
+
+	def dataReceived(self, data):
+		pass
+
+
+	def connectionLost(self, reason):
+		# The socket connection has been lost, so notify my Stream.
+		pass
+
+
+	def writeFrom(self, queue):
+		"""
+		See L{IMinervaTransport.writeFrom}
+		"""
+		raise NotImplementedError # TODO
+
+
+	def close(self):
+		"""
+		See L{IMinervaTransport.close}
+		"""
+		raise NotImplementedError # TODO
+
 
 
 
 class EncryptedSocketTransport(protocol.Protocol):
-	pass
+
+	implements(IMinervaTransport, ISocketStyleTransport)
+	
 	# TODO: need to port Scrypto to non-ctypes
 
 

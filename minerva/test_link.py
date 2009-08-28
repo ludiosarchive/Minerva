@@ -7,6 +7,7 @@ from twisted.python import log
 from twisted.internet import reactor, protocol, defer, address, interfaces, task
 from twisted.test import time_helpers
 #from twisted.web.test.test_web import DummyRequest as TwistedDummyRequest
+from zope.interface import verify
 
 from minerva import link, pyclient
 
@@ -259,8 +260,8 @@ class TestXHRTransport(HelperBaseHTTPTransports, unittest.TestCase):
 		XHR transport has no header or footer.
 		"""
 
-		self.assertEqual('', self.t.getHeader())
-		self.assertEqual('', self.t.getFooter())
+		self.assertEqual('', self.t._getHeader())
+		self.assertEqual('', self.t._getFooter())
 
 
 	def test_stringOne(self):
@@ -295,7 +296,7 @@ class TestScriptTransport(HelperBaseHTTPTransports, unittest.TestCase):
 		that relays messages to the parent window.
 		"""
 
-		header = self.t.getHeader()
+		header = self.t._getHeader()
 		self.assert_('<script>' in header, header)
 		self.assert_('</script>' in header, header)
 		self.assert_('function ' in header, header)
@@ -303,7 +304,7 @@ class TestScriptTransport(HelperBaseHTTPTransports, unittest.TestCase):
 
 
 	def test_emptyFooter(self):
-		self.assertEqual('', self.t.getFooter())
+		self.assertEqual('', self.t._getFooter())
 
 
 	def test_stringOne(self):
