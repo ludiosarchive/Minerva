@@ -44,6 +44,11 @@ class TestNetStringDecoder(unittest.TestCase):
 
 	receiver = DummyNetStringDecoder
 
+
+	def _encode(self, s):
+		return str(len(s)) + ':' + s + self.trailingComma
+
+
 	def test_buffer(self):
 		"""
 		Test that when strings are received in chunks of different lengths,
@@ -51,7 +56,7 @@ class TestNetStringDecoder(unittest.TestCase):
 		"""
 		toSend = ''
 		for s in self.strings:
-			toSend += str(len(s))+':'+s+self.trailingComma
+			toSend += self._encode(s)
 
 		for packet_size in range(1, 20):
 			##print "packet_size", packet_size
@@ -109,6 +114,22 @@ class TestNetStringDecoder(unittest.TestCase):
 					_protocols.ParseError,
 					lambda: sendData(a, sequence, packet_size)
 				)
+
+
+	def test_lotsOfSmallStrings(self):
+		"""
+		Assert that the decoder is fast even when it parses a million
+		tiny strings received at once.
+		"""
+		strings = ['x'] * 1000000
+		encoded = ''.join(self._encode(s) for s in strings)
+		a = self.receiver()
+		a.MAX_LENGTH = 1
+		a.dataReceived(encoded)
+		##Why is this faster?
+		##for s in strings:
+		##	a.dataReceived(self._encode(s))
+		self.assertEqual(strings, a.gotStrings)
 
 
 

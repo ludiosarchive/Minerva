@@ -19,7 +19,7 @@ NUMBER = re.compile(r'(\d*)(:?)')
 DEBUG = True
 
 
-class O_NetStringDecoder(object):
+class SlowNetStringDecoder(object):
 	"""
 	This is a copy/paste from twisted.protocols.basic.NetstringReceiver.
 	Modified to remove all notions of Protocol.
@@ -169,11 +169,11 @@ class NetStringDecoder(object):
 	def doData(self):
 		self._tempDigits = ''
 		capturedThisTime = self._data[self._offset:self._offset + self._lengthToRead - len(self._tempData)]
-		maybeFull = self._tempData + capturedThisTime
-		if self.noisy: print "doData: found a maybeFull fragment %r, _lengthToRead %r" % (maybeFull, self._lengthToRead)
-		assert len(maybeFull) <= self._lengthToRead, "maybeFull=%r, _lengthToRead=%r, _offset=%r" % (maybeFull, self._lengthToRead, self._offset)
-		if self._lengthToRead == len(maybeFull):
-			self._completeStrings.append(maybeFull)
+		# This has to be a string append to be fast; do not user another local variable.
+		self._tempData += capturedThisTime
+		assert len(self._tempData) <= self._lengthToRead, "maybeFull=%r, _lengthToRead=%r, _offset=%r" % (maybeFull, self._lengthToRead, self._offset)
+		if self._lengthToRead == len(self._tempData):
+			self._completeStrings.append(self._tempData)
 			if self.noisy: print "doData: captured a full fragment; _completeStrings is now %r" % (self._completeStrings)
 			self._offset += len(capturedThisTime)
 			# Note: When we get a full string but no comma, the string is considered complete
@@ -181,7 +181,6 @@ class NetStringDecoder(object):
 			self._readerState = COMMA
 			if self.noisy: print "doData: going into readerState COMMA with _offset=%r, _data=%r" % (self._offset, self._data)
 		else:
-			self._tempData = maybeFull
 			return True # There cannot be any more useful data in the buffer.
 
 
