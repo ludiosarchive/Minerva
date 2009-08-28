@@ -1,4 +1,3 @@
-from collections import deque
 import simplejson as json
 
 import pprint
@@ -800,21 +799,21 @@ class InvalidArgumentsError(Exception):
 class BaseHTTPResource(resource.Resource):
 
 	isLeaf = True
-	cookieName = 'm'
+	#cookieName = 'm'
 
-	def __init__(self, uaFactory):
-		self._uaFactory = uaFactory
+	def __init__(self, streamFactory):
+		self._streamFactory = streamFactory
 
 
-	def _fail(self):
+	def _fail(self, request):
 		raise InvalidArgumentsError("request.args = " + repr(request.args))
 
 
-	def _getUAFromCookie(self, request):
-		##print request.getCookie('m')
-		uaId = request.getCookie(self.cookieName).decode('base64')
-		ua = self._uaFactory.getOrBuildUAWithId(uaId)
-		return ua
+#	def _getUAFromCookie(self, request):
+#		##print request.getCookie('m')
+#		uaId = request.getCookie(self.cookieName).decode('base64')
+#		ua = self._uaFactory.getOrBuildUAWithId(uaId)
+#		return ua
 
 
 
@@ -824,8 +823,6 @@ class HTTPS2C(BaseHTTPResource):
 		# notifyFinish should be called as early as possible; see its docstring
 		# in Twisted.
 		requestFinishedD = request.notifyFinish()
-
-		ua = self._getUAFromCookie(request)
 
 		try:
 			# raises TypeError on non-hex
@@ -842,17 +839,17 @@ class HTTPS2C(BaseHTTPResource):
 			# The type of S2C transport the client demands.
 			transportString = request.args['t'][0] # "(t)ype"
 		except (KeyError, IndexError, ValueError, TypeError):
-			self._fail()
+			self._fail(request)
 
 		if not transportString in ('s', 'x'):#, 'o'):
-			self._fail()
+			self._fail(request)
 
 		# TODO: instead of any _fail() or error-raising, create the transport, DO NOT
 		# register it with any Stream, send an error frame over the transport. If no
 		# valid transportString, send some kind of HTTP error.
 
-		stream = ua.getStream(streamId)
-		# TODO: stream could be None here; need to write a machine-readable error
+		stream = self._streamFactory.getOrBuildStream(streamId)
+		# TODO: what if streamId is of the wrong length?
 
 		stream.clientReceivedEverythingBefore(startAtSeqNum)
 
@@ -898,24 +895,26 @@ class HTTPC2S(BaseHTTPResource):
 		{"0": "box0", "1": "box1", "a": 1782, "i": "ffffffffffffffffffffffffffffffff"}
 		
 		'''
-		uaId = request.getCookie(self.cookieName).decode('base64')
-		ua = self._uaFactory.getOrBuildUAWithId(uaId)
+		##uaId = request.getCookie(self.cookieName).decode('base64')
+		##ua = self._uaFactory.getOrBuildUAWithId(uaId)
 
 		request.content.seek(0)
 		contents = request.content.read()
 
-		data = simplejson.loads(contents)
+		data = json.loads(contents)
 
 		ackS2C = data["a"]
 		if not isinstance(ackS2C, (int, long)) or ackS2C < -1:
-			self._fail()
+			self._fail(request)
 
 		streamId = data['i'].decode('hex') # "(i)d"
 
 		del data["a"]
 		del data["i"]
 
-		stream = ua.getStream(streamId)
+		# Do we really want C2S requests to automatically create a new Stream just
+		# like S2C requests? Probably.
+		stream = self._sf.getOrBuildStream(streamId)
 		# TODO: stream could be None here; need to write a machine-readable error
 
 		stream.clientReceivedEverythingBefore(ackS2C + 1)
@@ -924,7 +923,7 @@ class HTTPC2S(BaseHTTPResource):
 
 		# If there's any junk in the JSON, L{strToNonNeg} will throw a ValueError
 		for seqNumStr, frame in data.iteritems():
-			seqNum = strToNonNeg(seqNumStr)
+			seqNum = abstract.strToNonNeg(seqNumStr)
 			frames.append((seqNum, frame))
 
 		sackInfo = stream.clientUploadedFrames(frames)
@@ -933,38 +932,26 @@ class HTTPC2S(BaseHTTPResource):
 
 
 
-
-class UserAgent(object):
+class StreamFactory(object):
 	"""
-	I am a UserAgent. I can make Stream instances and find one
-	of my Streams.
+	I make instances of class L{self.stream}.
 
-	I know my UserAgentFactory, L{self.factory}
+	I can locate a Stream by Stream ID. This is important
+	because we often want to send messages to specific Streams.
 	"""
 
 	stream = Stream
-	factory = None
 
-	def __init__(self, reactor, uaId):
-		self.uaId = uaId
+	def __init__(self, reactor):
 		self._reactor = reactor
 		self._streams = {}
-
-
-	def __repr__(self):
-		return '<UserAgent %r at %r with %d streams>' % (self.uaId, id(self), len(self._streams))
 
 
 	def streamIsDone(self, aStream):
 		del self._streams[aStream.streamId]
 
 
-	def buildStream(self):
-		# TODO: this should be called every time someone hits a webpage
-		# that includes Minerva, to generate a valid Stream that the client
-		# could connect to.
-		streamId = randbytes.secureRandom(16, fallback=True)
-
+	def buildStream(self, streamId):
 		s = self.stream(self._reactor, streamId)
 		s.ua = self
 		d = s.notifyFinish()
@@ -982,58 +969,116 @@ class UserAgent(object):
 		return self._streams.get(streamId)
 
 
-
-class UserAgentFactory(object):
-
-	agent = UserAgent
-
-	def __init__(self, reactor):
-		self._reactor = reactor
-		self.uas = {}
+	def getOrBuildStream(self, streamId):
+		s = self.getStream(streamId)
+		if s is None:
+			s = self.buildStream(streamId)
+		return s
 
 
-	def __repr__(self):
-		return '<UserAgentFactory at %r, knowing %d UAs>' % (id(self), len(self.uas))
 
-
-	def _buildUA(self, uaId):
-		ua = UserAgent(self._reactor, uaId)
-		ua.factory = self
-		self.uas[uaId] = ua
-		return ua
-
-
-	def buildUA(self):
-		"""
-		Build a UA with a uaId of UserAgentFactory's choice.
-		"""
-		# no real chance of collision
-		uaId = randbytes.secureRandom(16, fallback=True)
-		return self._buildUA(uaId)
-
-
-	def buildUAWithId(self, uaId):
-		"""
-		Build a UA with a specific uaId.
-		"""
-		return self._buildUA(uaId)
-
-
-	def getOrBuildUAWithId(self, uaId):
-		ua = self.getUA(uaId)
-		if ua is None:
-			ua = self.buildUAWithId(uaId)
-		return ua
-
-
-	def getUA(self, uaId):
-		return self.uas.get(uaId)
-
-
-	def doesUAExist(self, uaId):
-		"""
-		Sometimes you need to check if a UA ID that the client sent is
-		valid. One use case: if it isn't valid, send them a valid UA ID.
-		"""
-		exists = self.uas.get(uaId) is not None
-		return exists
+#
+#class UserAgent(object):
+#	"""
+#	I am a UserAgent. I can make Stream instances and find one
+#	of my Streams.
+#
+#	I know my UserAgentFactory, L{self.factory}
+#	"""
+#
+#	stream = Stream
+#	factory = None
+#
+#	def __init__(self, reactor, uaId):
+#		self.uaId = uaId
+#		self._reactor = reactor
+#		self._streams = {}
+#
+#
+#	def __repr__(self):
+#		return '<UserAgent %r at %r with %d streams>' % (self.uaId, id(self), len(self._streams))
+#
+#
+#	def streamIsDone(self, aStream):
+#		del self._streams[aStream.streamId]
+#
+#
+#	def buildStream(self):
+#		# WRONG WRONG WRONG TODO: this should be called every time someone hits a webpage
+#		# that includes Minerva, to generate a valid Stream that the client
+#		# could connect to.
+#		# RIGHT: just give the client 16 bytes of context-free random
+#		streamId = randbytes.secureRandom(16, fallback=True)
+#
+#		s = self.stream(self._reactor, streamId)
+#		s.ua = self
+#		d = s.notifyFinish()
+#		d.addCallback(lambda _: self.streamIsDone(s))
+#
+#		self._streams[streamId] = s
+#		s.streamBegun()
+#		return s
+#
+#
+#	def getStream(self, streamId):
+#		"""
+#		Returns the Stream instance for L{streamId}, or L{None} if not found.
+#		"""
+#		return self._streams.get(streamId)
+#
+#
+#
+#class UserAgentFactory(object):
+#
+#	agent = UserAgent
+#
+#	def __init__(self, reactor):
+#		self._reactor = reactor
+#		self.uas = {}
+#
+#
+#	def __repr__(self):
+#		return '<UserAgentFactory at %r, knowing %d UAs>' % (id(self), len(self.uas))
+#
+#
+#	def _buildUA(self, uaId):
+#		ua = UserAgent(self._reactor, uaId)
+#		ua.factory = self
+#		self.uas[uaId] = ua
+#		return ua
+#
+#
+#	def buildUA(self):
+#		"""
+#		Build a UA with a uaId of UserAgentFactory's choice.
+#		"""
+#		# no real chance of collision
+#		uaId = randbytes.secureRandom(16, fallback=True)
+#		return self._buildUA(uaId)
+#
+#
+#	def buildUAWithId(self, uaId):
+#		"""
+#		Build a UA with a specific uaId.
+#		"""
+#		return self._buildUA(uaId)
+#
+#
+#	def getOrBuildUAWithId(self, uaId):
+#		ua = self.getUA(uaId)
+#		if ua is None:
+#			ua = self.buildUAWithId(uaId)
+#		return ua
+#
+#
+#	def getUA(self, uaId):
+#		return self.uas.get(uaId)
+#
+#
+#	def doesUAExist(self, uaId):
+#		"""
+#		Sometimes you need to check if a UA ID that the client sent is
+#		valid. One use case: if it isn't valid, send them a valid UA ID.
+#		"""
+#		exists = self.uas.get(uaId) is not None
+#		return exists

@@ -94,10 +94,10 @@ class BaseTestIntegration(object):
 
 	def startServer(self):
 		clock = task.Clock()
-		self._uaf = link.UserAgentFactory(clock)
-		self._ua = self._uaf.buildUA()
-		self._stream = self._ua.buildStream()
-		root = DummyIndex(self._uaf)
+		self._sf = link.StreamFactory(clock)
+
+		self.streamId = '\x11' * 16
+		root = DummyIndex(self._sf)
 
 		site = server.Site(root)
 		self.p = reactor.listenTCP(0, site, interface='127.0.0.1')
@@ -139,7 +139,7 @@ class BaseTestIntegration(object):
 		"""
 		Builds and returns a Stream filled with boxes L{boxes}.
 		"""
-		stream = self._ua.buildStream()
+		stream = self._sf.buildStream(self.streamId)
 		stream.sendBoxes(boxes)
 		return stream
 
@@ -156,8 +156,10 @@ class BaseTestIntegration(object):
 		boxes = self._makeBoxes(numBoxes)
 		stream = self._buildStreamWithBoxes(boxes)
 
+		uaId = '\x22' * 16
+
 		comm = self.communicator(
-			reactor, 'http://127.0.0.1:%d/' % port, self._ua.uaId, stream.streamId, cookieName='m')
+			reactor, 'http://127.0.0.1:%d/' % port, uaId, stream.streamId, cookieName='m')
 		comm.finishAfterNMoreBoxes(numBoxes)
 		comm.connect()
 
@@ -338,40 +340,40 @@ class TestSocketTransport(unittest.TestCase):
 	pass
 
 
-
-class TestUserAgentFactory(unittest.TestCase):
-	"""Tests for minerva.link.UserAgentFactory"""
-
-	def test_idIsLength16(self):
-		uaf = link.UserAgentFactory(None)
-		ua = uaf.buildUA()
-		self.assertEqual(16, len(ua.uaId))
-
-
-	def test_hasFactoryRef(self):
-		uaf = link.UserAgentFactory(None)
-		ua = uaf.buildUA()
-		self.assertIdentical(uaf, ua.factory)
-
-
-	def test_getUA(self):
-		uaf = link.UserAgentFactory(None)
-		ua = uaf.buildUA()
-		self.assertIdentical(ua, uaf.getUA(ua.uaId))
-
-
-	def test_getOrBuildUAWithId(self):
-		uaf = link.UserAgentFactory(None)
-		ua = uaf.getOrBuildUAWithId('\x11'*16)
-		uaAgain = uaf.getOrBuildUAWithId('\x11'*16)
-		self.assertIdentical(ua, uaAgain)
-
-
-	def test_doesUAExist(self):
-		uaf = link.UserAgentFactory(None)
-		ua = uaf.buildUA()
-		self.assertEqual(False, uaf.doesUAExist('\x00'*16))
-		self.assertEqual(True, uaf.doesUAExist(ua.uaId))
+#
+#class TestUserAgentFactory(unittest.TestCase):
+#	"""Tests for minerva.link.UserAgentFactory"""
+#
+#	def test_idIsLength16(self):
+#		uaf = link.UserAgentFactory(None)
+#		ua = uaf.buildUA()
+#		self.assertEqual(16, len(ua.uaId))
+#
+#
+#	def test_hasFactoryRef(self):
+#		uaf = link.UserAgentFactory(None)
+#		ua = uaf.buildUA()
+#		self.assertIdentical(uaf, ua.factory)
+#
+#
+#	def test_getUA(self):
+#		uaf = link.UserAgentFactory(None)
+#		ua = uaf.buildUA()
+#		self.assertIdentical(ua, uaf.getUA(ua.uaId))
+#
+#
+#	def test_getOrBuildUAWithId(self):
+#		uaf = link.UserAgentFactory(None)
+#		ua = uaf.getOrBuildUAWithId('\x11'*16)
+#		uaAgain = uaf.getOrBuildUAWithId('\x11'*16)
+#		self.assertIdentical(ua, uaAgain)
+#
+#
+#	def test_doesUAExist(self):
+#		uaf = link.UserAgentFactory(None)
+#		ua = uaf.buildUA()
+#		self.assertEqual(False, uaf.doesUAExist('\x00'*16))
+#		self.assertEqual(True, uaf.doesUAExist(ua.uaId))
 
 
 
