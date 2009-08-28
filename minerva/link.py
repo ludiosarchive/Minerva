@@ -1,5 +1,5 @@
 from pypycpyo import mutables
-id = hash = mutables.ReservedForLocals
+id = mutables.ReservedForLocals
 
 import simplejson as json
 

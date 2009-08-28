@@ -1,5 +1,5 @@
 from pypycpyo import mutables
-id = hash = mutables.ReservedForLocals
+id = mutables.ReservedForLocals
 
 
 from collections import deque
@@ -281,7 +281,7 @@ class GenericIdentifier(object):
 
 
 	def __eq__(self, other):
-		if not isinstance(other, StreamId):
+		if type(self) != type(other):
 			return False
 		return (self.id == other.id)
 
