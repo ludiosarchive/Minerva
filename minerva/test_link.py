@@ -335,13 +335,34 @@ class TestScriptTransport(HelperBaseHTTPTransports, unittest.TestCase):
 
 
 
-class TestWebSocketTransport(unittest.TestCase):
-	pass
+class HelperSocketStyleTransport(object):
+	"""
+	This is "mixed in" to socket-style transport test classes.
+	"""
+
+	transportClass = None
+
+	def setUp(self):
+		self.dummyTcpChannel = DummyChannel()
+		assert self.dummyTcpChannel.transport.noDelayEnabled == False
+		self.t = self.transportClass()
+
+
+	def test_implements(self):
+		verify.verifyObject(link.IMinervaTransport, self.t)
+		verify.verifyObject(link.ISocketStyleTransport, self.t)
 
 
 
-class TestSocketTransport(unittest.TestCase):
-	pass
+
+class TestWebSocketTransport(HelperSocketStyleTransport, unittest.TestCase):
+	transportClass = link.WebSocketTransport
+
+
+
+class TestSocketTransport(HelperSocketStyleTransport, unittest.TestCase):
+	transportClass = link.SocketTransport
+
 
 
 #

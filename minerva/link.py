@@ -738,7 +738,7 @@ class WebSocketTransport(protocol.Protocol):
 		raise NotImplementedError # TODO
 
 
-	def close(self):
+	def close(self, code):
 		"""
 		See L{IMinervaTransport.close}
 		"""
@@ -774,7 +774,7 @@ class SocketTransport(protocol.Protocol):
 		raise NotImplementedError # TODO
 
 
-	def close(self):
+	def close(self, code):
 		"""
 		See L{IMinervaTransport.close}
 		"""
