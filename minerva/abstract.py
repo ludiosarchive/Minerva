@@ -1,3 +1,7 @@
+from pypycpyo import mutables
+id = hash = mutables.ReservedForLocals
+
+
 from collections import deque
 
 from twisted.python import log
@@ -255,3 +259,42 @@ class GenericTimeoutMixin(object):
 		The timeout has been triggered. Override this.
 		"""
 		raise NotImplementedError("override timedOut")
+
+
+
+class InvalidIdentifier(Exception):
+	pass
+
+
+
+class GenericIdentifier(object):
+	_expectedLength = -1
+	__slots__ = ['id']
+
+	def __init__(self, id):
+		if not isinstance(id, str):
+			raise InvalidIdentifier("id must be a str, not %r" % (type(id)))
+		length = len(id)
+		if length != self._expectedLength:
+			raise InvalidIdentifier("id must be of length %d; was %d" % (self._expectedLength, length))
+		self.id = id
+
+
+	def __eq__(self, other):
+		if not isinstance(other, StreamId):
+			return False
+		return (self.id == other.id)
+
+
+	def __hash__(self):
+		return hash(self.id)
+
+
+	def __repr__(self):
+		return '<StreamId id=%r>' % (self.id,)
+
+
+
+class StreamId(GenericIdentifier):
+	_expectedLength = 16
+	__slots__ = ['id']

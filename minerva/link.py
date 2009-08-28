@@ -935,42 +935,6 @@ class HTTPC2S(BaseHTTPResource):
 
 
 
-class InvalidIdentifier(Exception):
-	pass
-
-
-
-class StreamId(object):
-	__slots__ = ['id']
-
-	def __init__(self, id):
-		if not isinstance(id, str):
-			raise InvalidIdentifier("id should be a str, not %r" % (type(id)))
-		if len(id) != 16:
-			raise InvalidIdentifier("id should be of length 16; was %d" % (len(id),))
-		self.id = id
-
-
-	def __eq__(self, other):
-		if not isinstance(other, StreamId):
-			return False
-		return (self.id == other.id)
-
-
-	def __hash__(self):
-		return hash(self.id)
-
-
-	def __repr__(self):
-		return '<StreamId id=%r>' % (self.id,)
-
-
-
-	def __repr__(self):
-		return '<StreamId '
-
-
-
 class StreamFactory(object):
 	"""
 	I make instances of class L{self.stream}.
