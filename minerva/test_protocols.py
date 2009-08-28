@@ -86,6 +86,16 @@ class TestNetStringDecoder(unittest.TestCase):
 			self.assertRaises(_protocols.ParseError, lambda s=s: a.dataReceived(s))
 
 
+	def test_illegalPartialLength(self):
+		"""
+		Assert that ParseError is raised when bad digits are received, not
+		after the ":" arrives.
+		"""
+		a = self.receiver()
+		a.dataReceived('5')
+		self.assertRaises(_protocols.ParseError, lambda: a.dataReceived('x'))
+
+
 	def test_illegalWithPacketSizes(self):
 		"""
 		Assert that illegal strings raise a ParseError,
