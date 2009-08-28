@@ -1,0 +1,23 @@
+=== Server-side ideas ===
+
+Make Minerva not know about UserAgent - only Stream.
+Stream would know what the UserAgent likes - for example,
+if HTTP streaming or socket connections can work for this UserAgent.
+
+stream.shouldTryHTTPStreaming()
+
+def shouldTryHTTPStreaming(self):
+	"""
+	Return True if Minerva should try HTTP streaming for this Stream;
+	False otherwise.
+	"""
+
+	if last_streaming_failed and time_now - last_tried_time < 1 week:
+		return False
+	else:
+		return True
+
+
+def getLastWorkingSocketPorts(self):
+	ports = self.ua.getLastWorkingSocketPorts()
+	return ports
