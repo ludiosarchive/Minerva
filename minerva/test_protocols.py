@@ -124,6 +124,7 @@ class TestNetStringDecoder(unittest.TestCase):
 		# TODO: build a real benchmark system that can run the
 		# fast and slow decoders.
 
+		# The fast versions look very linear when it comes to speed:
 		# 20000 ~ 0.124 sec
 		# 2000000 ~ 10.29 sec
 
