@@ -121,9 +121,13 @@ class TestNetStringDecoder(unittest.TestCase):
 		Assert that the decoder is fast even when it parses a million
 		tiny strings received at once.
 		"""
-		# TODO: build a real benchmark system that can run this,
-		# and the SlowNetstringDecoder
-		num = 20000
+		# TODO: build a real benchmark system that can run the
+		# fast and slow decoders.
+
+		# 20000 ~ 0.124 sec
+		# 2000000 ~ 10.29 sec
+
+		num = 2000
 		strings = ['x'] * num
 		encoded = self._encode('x') * num # faster to encode this way
 		#encoded = ''.join(self._encode(s) for s in strings)
