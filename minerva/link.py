@@ -1,3 +1,6 @@
+from pypycpyo import mutables
+id = hash = mutables.ReservedForLocals
+
 import simplejson as json
 
 import pprint
@@ -625,7 +628,7 @@ class XHRTransport(_BaseHTTPTransport):
 
 	def __repr__(self):
 		return '<XHRTransport at %s attached to %r with %d frames sent>' % (
-			hex(id(self)), self._request, self._framesSent)
+			hex(__builtins__['id'](self)), self._request, self._framesSent)
 
 
 	def _stringOne(self, box):
@@ -650,7 +653,7 @@ class ScriptTransport(_BaseHTTPTransport):
 
 	def __repr__(self):
 		return '<ScriptTransport at %s attached to %r with %d frames sent>' % (
-			hex(id(self)), self._request, self._framesSent)
+			hex(__builtins__['id'](self)), self._request, self._framesSent)
 
 
 	# TODO: maybe this header should be written earlier, even before the first attempt
@@ -695,7 +698,7 @@ class ScriptTransport(_BaseHTTPTransport):
 #
 #	def __repr__(self):
 #		return '<SSETransport at %s attached to %r with %d frames sent>' % (
-#			hex(id(self)), self._request, self._framesSent)
+#			hex(__builtins__['id'](self)), self._request, self._framesSent)
 
 
 
@@ -929,6 +932,42 @@ class HTTPC2S(BaseHTTPResource):
 		sackInfo = stream.clientUploadedFrames(frames)
 
 		return json.dumps(sackInfo, separators=(',', ':'))
+
+
+
+class InvalidIdentifier(Exception):
+	pass
+
+
+
+class StreamId(object):
+	__slots__ = ['id']
+
+	def __init__(self, id):
+		if not isinstance(id, str):
+			raise InvalidIdentifier("id should be a str, not %r" % (type(id)))
+		if len(id) != 16:
+			raise InvalidIdentifier("id should be of length 16; was %d" % (len(id),))
+		self.id = id
+
+
+	def __eq__(self, other):
+		if not isinstance(other, StreamId):
+			return False
+		return (self.id == other.id)
+
+
+	def __hash__(self):
+		return hash(self.id)
+
+
+	def __repr__(self):
+		return '<StreamId id=%r>' % (self.id,)
+
+
+
+	def __repr__(self):
+		return '<StreamId '
 
 
 
