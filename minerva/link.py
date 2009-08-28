@@ -935,7 +935,7 @@ class HTTPC2S(BaseHTTPResource):
 
 
 
-class StreamId(GenericIdentifier):
+class StreamId(abstract.GenericIdentifier):
 	_expectedLength = 16
 	__slots__ = ['id']
 
