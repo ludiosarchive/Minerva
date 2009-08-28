@@ -157,12 +157,12 @@ class NetStringDecoder(object):
 				raise ParseError("netstring too long")
 			self._offset = colonLocation + 1
 			self._readerState = DATA
-			if self.noisy: print "doLength: going into readerState DATA with _offset=%r, _data=%r" % (self._offset, self._data)
+			##if self.noisy: print "doLength: going into readerState DATA with _offset=%r, _data=%r" % (self._offset, self._data)
 		else:
 			self._tempDigits += self._data[self._offset:]
 			if len(self._tempDigits) > len(str(self.MAX_LENGTH)): # TODO: cache this value?
 				raise ParseError("netstring too long")
-			if self.noisy: print "doLength: not done collecting digits yet with _tempDigits=%r" % (self._tempDigits)
+			##if self.noisy: print "doLength: not done collecting digits yet with _tempDigits=%r" % (self._tempDigits)
 			return True # There cannot be any more useful data in the buffer.
 
 
@@ -174,12 +174,12 @@ class NetStringDecoder(object):
 		assert len(self._tempData) <= self._lengthToRead, "maybeFull=%r, _lengthToRead=%r, _offset=%r" % (maybeFull, self._lengthToRead, self._offset)
 		if self._lengthToRead == len(self._tempData):
 			self._completeStrings.append(self._tempData)
-			if self.noisy: print "doData: captured a full fragment; _completeStrings is now %r" % (self._completeStrings)
+			##if self.noisy: print "doData: captured a full fragment; _completeStrings is now %r" % (self._completeStrings)
 			self._offset += len(capturedThisTime)
 			# Note: When we get a full string but no comma, the string is considered complete
 			# and should still be given to L{dataCallback}
 			self._readerState = COMMA
-			if self.noisy: print "doData: going into readerState COMMA with _offset=%r, _data=%r" % (self._offset, self._data)
+			##if self.noisy: print "doData: going into readerState COMMA with _offset=%r, _data=%r" % (self._offset, self._data)
 		else:
 			return True # There cannot be any more useful data in the buffer.
 
@@ -187,7 +187,7 @@ class NetStringDecoder(object):
 	def doComma(self):
 		self._tempData = ''
 		maybeComma = self._data[self._offset:self._offset+1]
-		if self.noisy: print "doComma: maybeComma=%r" % (maybeComma,)
+		##if self.noisy: print "doComma: maybeComma=%r" % (maybeComma,)
 		if maybeComma == '':
 			# Hopefully we'll get a comma next time.
 			return True # There cannot be any more useful data in the buffer.
@@ -196,7 +196,7 @@ class NetStringDecoder(object):
 		else:
 			self._offset += 1
 			self._readerState = LENGTH
-			if self.noisy: print "doComma: going into readerState DATA with _offset=%r, _data=%r" % (self._offset, self._data)
+			##if self.noisy: print "doComma: going into readerState DATA with _offset=%r, _data=%r" % (self._offset, self._data)
 
 
 	def dataReceived(self, data):
