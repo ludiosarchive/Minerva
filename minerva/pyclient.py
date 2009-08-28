@@ -181,7 +181,7 @@ class BaseTwoWayCommunicator(object):
 		self._connectionNumber += 1
 
 		url = self._rootURL + 'd/?i=%s&n=%d&s=%d&t=%s' % (
-			self._streamId.encode('hex'), self._connectionNumber, self._ackS2C, self.transportString)
+			self._streamId.id.encode('hex'), self._connectionNumber, self._ackS2C, self.transportString)
 		headers = http_headers.Headers({
 			'user-agent': ['Minerva pyclient 2009-08-13'],
 			'cookie': [self._cookieName+'='+self._uaId.encode('base64')],

@@ -95,8 +95,6 @@ class BaseTestIntegration(object):
 	def startServer(self):
 		clock = task.Clock()
 		self._sf = link.StreamFactory(clock)
-
-		self.streamId = '\x11' * 16
 		root = DummyIndex(self._sf)
 
 		site = server.Site(root)
@@ -139,7 +137,8 @@ class BaseTestIntegration(object):
 		"""
 		Builds and returns a Stream filled with boxes L{boxes}.
 		"""
-		stream = self._sf.buildStream(self.streamId)
+		self.streamId = link.StreamId('\x11' * 16)
+		stream = self._sf.getOrBuildStream(self.streamId)
 		stream.sendBoxes(boxes)
 		return stream
 
@@ -159,7 +158,7 @@ class BaseTestIntegration(object):
 		uaId = '\x22' * 16
 
 		comm = self.communicator(
-			reactor, 'http://127.0.0.1:%d/' % port, uaId, stream.streamId, cookieName='m')
+			reactor, 'http://127.0.0.1:%d/' % port, uaId, self.streamId, cookieName='m')
 		comm.finishAfterNMoreBoxes(numBoxes)
 		comm.connect()
 

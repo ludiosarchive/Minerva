@@ -199,6 +199,11 @@ class Stream(abstract.GenericTimeoutMixin):
 	noContactTimeout = 30
 
 	def __init__(self, reactor, streamId):
+		"""
+		Instantiate an instance of Stream that uses reactor/clock L{reactor}
+		and has a streamId L{streamId}. L{streamId} can be of any type,
+		I do not make decisions based on it.
+		"""
 		self._reactor = reactor
 		self._clock = reactor
 		self.streamId = streamId
@@ -449,32 +454,29 @@ class StreamFactory(object):
 		self._streams = {}
 
 
-	def streamIsDone(self, aStream):
+	def _removeReference(self, aStream):
 		del self._streams[aStream.streamId]
 
 
-	def buildStream(self, streamId):
+	def _buildStream(self, streamId):
 		s = self.stream(self._reactor, streamId)
 		s.ua = self
 		d = s.notifyFinish()
-		d.addCallback(lambda _: self.streamIsDone(s))
+		d.addCallback(lambda _: self._removeReference(s))
 
 		self._streams[streamId] = s
 		s.streamBegun()
 		return s
 
 
-	def getStream(self, streamId):
-		"""
-		Returns the Stream instance for L{streamId}, or L{None} if not found.
-		"""
-		return self._streams.get(streamId)
-
-
 	def getOrBuildStream(self, streamId):
-		s = self.getStream(streamId)
+		"""
+		Return a Stream instance with streamId L{streamId}
+		"""
+		assert type(streamId) == StreamId
+		s = self._streams.get(streamId)
 		if s is None:
-			s = self.buildStream(streamId)
+			s = self._buildStream(streamId)
 		return s
 
 
@@ -880,7 +882,7 @@ class HTTPS2C(BaseHTTPResource):
 
 		try:
 			# raises TypeError on non-hex
-			streamId = request.args['i'][0].decode('hex') # "(i)d"
+			streamId = StreamId(request.args['i'][0].decode('hex')) # "(i)d"
 
 			# Incremented each time the client makes a HTTP request for S2C
 			# TODO: disconnect the old S2C transport if a newer transport has arrived
@@ -961,7 +963,7 @@ class HTTPC2S(BaseHTTPResource):
 		if not isinstance(ackS2C, (int, long)) or ackS2C < -1:
 			self._fail(request)
 
-		streamId = data['i'].decode('hex') # "(i)d"
+		streamId = StreamId(data['i'].decode('hex')) # "(i)d"
 
 		del data["a"]
 		del data["i"]
