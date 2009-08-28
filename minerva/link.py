@@ -428,6 +428,57 @@ class Stream(abstract.GenericTimeoutMixin):
 
 
 
+class StreamId(abstract.GenericIdentifier):
+	_expectedLength = 16
+	__slots__ = ['id']
+
+
+
+class StreamFactory(object):
+	"""
+	I make instances of class L{self.stream}.
+
+	I can locate a Stream by Stream ID. This is important
+	because we often want to send messages to specific Streams.
+	"""
+
+	stream = Stream
+
+	def __init__(self, reactor):
+		self._reactor = reactor
+		self._streams = {}
+
+
+	def streamIsDone(self, aStream):
+		del self._streams[aStream.streamId]
+
+
+	def buildStream(self, streamId):
+		s = self.stream(self._reactor, streamId)
+		s.ua = self
+		d = s.notifyFinish()
+		d.addCallback(lambda _: self.streamIsDone(s))
+
+		self._streams[streamId] = s
+		s.streamBegun()
+		return s
+
+
+	def getStream(self, streamId):
+		"""
+		Returns the Stream instance for L{streamId}, or L{None} if not found.
+		"""
+		return self._streams.get(streamId)
+
+
+	def getOrBuildStream(self, streamId):
+		s = self.getStream(streamId)
+		if s is None:
+			s = self.buildStream(streamId)
+		return s
+
+
+
 class IMinervaTransport(Interface):
 
 	# connectionNumber attribute
@@ -932,54 +983,3 @@ class HTTPC2S(BaseHTTPResource):
 		sackInfo = stream.clientUploadedFrames(frames)
 
 		return json.dumps(sackInfo, separators=(',', ':'))
-
-
-
-class StreamId(abstract.GenericIdentifier):
-	_expectedLength = 16
-	__slots__ = ['id']
-
-
-
-class StreamFactory(object):
-	"""
-	I make instances of class L{self.stream}.
-
-	I can locate a Stream by Stream ID. This is important
-	because we often want to send messages to specific Streams.
-	"""
-
-	stream = Stream
-
-	def __init__(self, reactor):
-		self._reactor = reactor
-		self._streams = {}
-
-
-	def streamIsDone(self, aStream):
-		del self._streams[aStream.streamId]
-
-
-	def buildStream(self, streamId):
-		s = self.stream(self._reactor, streamId)
-		s.ua = self
-		d = s.notifyFinish()
-		d.addCallback(lambda _: self.streamIsDone(s))
-
-		self._streams[streamId] = s
-		s.streamBegun()
-		return s
-
-
-	def getStream(self, streamId):
-		"""
-		Returns the Stream instance for L{streamId}, or L{None} if not found.
-		"""
-		return self._streams.get(streamId)
-
-
-	def getOrBuildStream(self, streamId):
-		s = self.getStream(streamId)
-		if s is None:
-			s = self.buildStream(streamId)
-		return s
