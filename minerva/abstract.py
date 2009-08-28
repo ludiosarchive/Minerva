@@ -292,9 +292,3 @@ class GenericIdentifier(object):
 
 	def __repr__(self):
 		return '<StreamId id=%r>' % (self.id,)
-
-
-
-class StreamId(GenericIdentifier):
-	_expectedLength = 16
-	__slots__ = ['id']

@@ -935,6 +935,12 @@ class HTTPC2S(BaseHTTPResource):
 
 
 
+class StreamId(GenericIdentifier):
+	_expectedLength = 16
+	__slots__ = ['id']
+
+
+
 class StreamFactory(object):
 	"""
 	I make instances of class L{self.stream}.
