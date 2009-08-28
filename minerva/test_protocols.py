@@ -19,8 +19,8 @@ class DummyNetStringDecoder(_BaseDummy, _protocols.NetStringDecoder):
 
 
 
-class DummyBencodeStringDecoder(_BaseDummy, _protocols.BencodeStringDecoder):
-	pass
+#class DummyBencodeStringDecoder(_BaseDummy, _protocols.BencodeStringDecoder):
+#	pass
 
 
 
@@ -121,28 +121,32 @@ class TestNetStringDecoder(unittest.TestCase):
 		Assert that the decoder is fast even when it parses a million
 		tiny strings received at once.
 		"""
-		strings = ['x'] * 1000000
-		encoded = ''.join(self._encode(s) for s in strings)
+		# TODO: build a real benchmark system that can run this,
+		# and the SlowNetstringDecoder
+		num = 20000
+		strings = ['x'] * num
+		encoded = self._encode('x') * num # faster to encode this way
+		#encoded = ''.join(self._encode(s) for s in strings)
 		a = self.receiver()
 		a.MAX_LENGTH = 1
 		a.dataReceived(encoded)
-		##Why is this faster?
+		##For speed comparison:
 		##for s in strings:
 		##	a.dataReceived(self._encode(s))
 		self.assertEqual(strings, a.gotStrings)
 
 
 
-class TestBencodeStringDecoder(TestNetStringDecoder):
-
-	# for max length 50
-	illegalSequences = [
-		'9999999999999999999999', 'abc', '4:abcde',
-		'51:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab',]
-
-	trailingComma = ''
-
-	receiver = receiver = DummyBencodeStringDecoder
+#class TestBencodeStringDecoder(TestNetStringDecoder):
+#
+#	# for max length 50
+#	illegalSequences = [
+#		'9999999999999999999999', 'abc', '4:abcde',
+#		'51:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab',]
+#
+#	trailingComma = ''
+#
+#	receiver = receiver = DummyBencodeStringDecoder
 
 
 
