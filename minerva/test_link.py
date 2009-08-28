@@ -214,6 +214,10 @@ class HelperBaseHTTPTransports(object):
 		self.t = self.transportClass(self.dummyRequest, 0, 0)
 
 
+	def test_implements(self):
+		verify.verifyObject(link.IMinervaTransport, self.t)
+
+
 	def test_initialValues(self):
 		self.assertEqual(0, self.t._framesSent)
 		self.assertEqual(0, self.t._bytesSent)

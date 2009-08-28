@@ -437,7 +437,7 @@ class IMinervaTransport(Interface):
 		"""
 
 
-	def close():
+	def close(code):
 		"""
 		Close this transport with numeric reason L{code}.
 		"""
