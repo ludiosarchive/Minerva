@@ -54,7 +54,7 @@ class TestNetStringDecoder(unittest.TestCase):
 			toSend += str(len(s))+':'+s+self.trailingComma
 
 		for packet_size in range(1, 20):
-			##print "packet_size", packet_size
+			print "packet_size", packet_size
 			a = self.receiver()
 			a.MAX_LENGTH = 699
 
@@ -64,7 +64,7 @@ class TestNetStringDecoder(unittest.TestCase):
 					##print 'sending', repr(s)
 					a.dataReceived(s)
 
-			self.assertEquals(''.join(a.gotStrings), ''.join(self.strings))
+			self.assertEquals(self.strings, a.gotStrings)
 
 
 	def test_illegal(self):
