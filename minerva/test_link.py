@@ -514,6 +514,20 @@ class TestStream(unittest.TestCase):
 			self.assertIdentical(transport2, self.stream._selectS2CTransport())
 
 
+	def test_dataSentOnlyToApprovedTransports(self):
+		transport0 = _DummyMinervaTransport(0)
+		transport1 = _DummyMinervaTransport(1)
+
+		self.stream.transportOnline(transport0)
+		self.stream.transportWantsApproval(transport0)
+		self.stream.transportOnline(transport1) # this one is never approved
+
+		self.stream.sendBoxes(['boxS2C0', 'boxS2C1', 'boxS2C2'])
+		self.assertEqual(1, transport0.numWrites)
+		self.assertEqual(0, transport1.numWrites)
+
+
+
 	def test_repr(self):
 		s = repr(self.stream)
 		self.assert_('<Stream' in s, s)
