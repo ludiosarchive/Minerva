@@ -281,6 +281,10 @@ class Stream(abstract.GenericTimeoutMixin):
 
 		Override this (unless you are okay with the streamId being the only
 		validation).
+
+		Ideas for additional approval (these may stop session hijacking by amateurs):
+			- check that some cookie has the same value as the first transport
+			- check that user agent has the same value as the first transport
 		"""
 
 
@@ -398,7 +402,10 @@ class Stream(abstract.GenericTimeoutMixin):
 
 	def transportOnline(self, transport):
 		"""
-		For internal use.
+		For internal use. Whoever calls this must make sure that the
+		transport's streamId is really our streamId; repeating this check
+		here would be wasteful. Though I can still reject the transport in
+		L{transportWantsApproval}.
 		"""
 		if transport in self._approvedTransports or transport in self._unapprovedTransports:
 			raise TransportAlreadyRegisteredError("%r already in approved or unapproved transports" % (transport,))
@@ -406,7 +413,7 @@ class Stream(abstract.GenericTimeoutMixin):
 		if self.noisy:
 			log.msg('New transport has come online:', transport)
 		self._unapprovedTransports.add(transport)
-		# The transport isn't approved yet, so don't try to send yet.
+		# The transport isn't approved yet, so don't try to send boxes yet.
 
 
 	def transportOffline(self, transport):
@@ -826,6 +833,10 @@ for what they want.
 For socket/websocket, a special frame received from the client will be
 considered the credential frame. This will not be a 'box'. This credential
 frame will be available inside `transportCredentialsReceived'
+
+For now, HTTP requests don't support a custom credential frame, so
+the credential frame for socket/websocket transports will only play
+"catch up" to the information provided by HTTP requests.
 """
 
 

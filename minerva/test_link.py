@@ -520,7 +520,7 @@ class TestStream(unittest.TestCase):
 
 		self.stream.transportOnline(transport0)
 		self.stream.transportWantsApproval(transport0)
-		self.stream.transportOnline(transport1) # this one is never approved
+		self.stream.transportOnline(transport1) # this newer transport is never approved
 
 		self.stream.sendBoxes(['boxS2C0', 'boxS2C1', 'boxS2C2'])
 		self.assertEqual(1, transport0.numWrites)
