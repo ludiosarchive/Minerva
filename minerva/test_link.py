@@ -92,6 +92,8 @@ class DummyIndex(resource.Resource):
 
 class BaseTestIntegration(object):
 
+	timeout = 3
+
 	def startServer(self):
 		clock = task.Clock()
 		self._sf = link.StreamFactory(clock)
@@ -472,6 +474,7 @@ class TestStream(unittest.TestCase):
 		assert 0 == transport.numWrites
 
 		self.stream.transportOnline(transport)
+		self.stream.transportWantsApproval(transport)
 		# Empty queue, so there should be 0 writes so far.
 		self.assertEqual(0, transport.numWrites)
 
@@ -487,6 +490,7 @@ class TestStream(unittest.TestCase):
 		assert 0 == transport.numWrites
 
 		self.stream.transportOnline(transport)
+		self.stream.transportWantsApproval(transport)
 
 		self.stream.sendBoxes(['boxS2C0', 'boxS2C1', 'boxS2C2'])
 		self.assertEqual(1, transport.numWrites)
@@ -501,6 +505,10 @@ class TestStream(unittest.TestCase):
 		self.stream.transportOnline(transport1)
 		self.stream.transportOnline(transport2)
 
+		self.stream.transportWantsApproval(transport0)
+		self.stream.transportWantsApproval(transport1)
+		self.stream.transportWantsApproval(transport2)
+
 		# Run it 20 times to make sure the implementation isn't picking at random
 		for i in xrange(20):
 			self.assertIdentical(transport2, self.stream._selectS2CTransport())
@@ -509,7 +517,8 @@ class TestStream(unittest.TestCase):
 	def test_repr(self):
 		s = repr(self.stream)
 		self.assert_('<Stream' in s, s)
-		self.assert_('with transports' in s, s)
+		self.assert_('with approved transports' in s, s)
+		self.assert_('unapproved' in s, s)
 		self.assert_('items in queue' in s, s)
 
 

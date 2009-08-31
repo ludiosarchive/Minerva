@@ -123,6 +123,9 @@ ERROR_CODES = {
 	# This error can be received at any time in an S2C transport.
 	'S2C_TRANSPORT_OBSOLETE': 802,
 
+	# This transport was not approved by the Stream
+	'NOT_APPROVED': 803,
+
 	# Stream is being reset because server load is too high.
 	'SERVER_LOAD': 810,
 }
@@ -185,6 +188,13 @@ class TransportNotRegisteredError(TransportRegistrationError):
 
 
 
+class InvalidTransportError(Exception):
+	pass
+
+
+
+# TODO: implement network read timeouts for some transports - if we don't
+# get an uploaded frame from the client in X minutes, assume Stream is dead.
 class Stream(abstract.GenericTimeoutMixin):
 	"""
 	I am Stream. Transports attach to me. I can send and receive over
@@ -196,6 +206,7 @@ class Stream(abstract.GenericTimeoutMixin):
 
 	noisy = True
 	factory = None
+	# Haven't seen an approved transport in this long? Then the stream is dead.
 	noContactTimeout = 30
 
 	def __init__(self, reactor, streamId):
@@ -210,7 +221,8 @@ class Stream(abstract.GenericTimeoutMixin):
 
 		self.queue = abstract.Queue()
 		self.incoming = abstract.Incoming()
-		self._transports = set()
+		self._approvedTransports = set()
+		self._unapprovedTransports = set()
 		self._notifications = []
 
 		self._seqC2S = 0 # TODO: implement C2S, use it
@@ -218,8 +230,8 @@ class Stream(abstract.GenericTimeoutMixin):
 		
 
 	def __repr__(self):
-		return '<Stream %r with transports %r and %d items in queue>' % (
-			self.streamId, self._transports, len(self.queue))
+		return '<Stream %r with approved transports %r, unapproved %r, and %d items in queue>' % (
+			self.streamId, self._approvedTransports, self._unapprovedTransports, len(self.queue))
 
 
 	def streamBegun(self):
@@ -252,6 +264,24 @@ class Stream(abstract.GenericTimeoutMixin):
 		Received box L{box}. Override this.
 		"""
 		log.msg('Received box:', box)
+
+
+	def transportCredentialsReceived(self, transport):
+		"""
+		L{transport} has received credentials from the client and is ready to
+		be approved for real use.
+
+		If L{transport} is not an acceptable transport for this Stream (because
+		it is suspicious or missing credentials), this method must raise an
+		exception (or return a Deferred that will errback). A recommended
+		exception is L{InvalidTransportError}, but any will work.
+
+		If L{transport} is acceptable, return any value or return a Deferred that
+		will fire `callback'.
+
+		Override this (unless you are okay with the streamId being the only
+		validation).
+		"""
 
 
 	def sendBoxes(self, boxes):
@@ -312,18 +342,18 @@ class Stream(abstract.GenericTimeoutMixin):
 
 
 	def _selectS2CTransport(self):
-		if len(self._transports) == 0:
+		if len(self._approvedTransports) == 0:
 			return None
 
-		if len(self._transports) > 1:
+		if len(self._approvedTransports) > 1:
 			# Select the transport with the highest connectionNumber.
 			# TODO: should there be any other criteria?
-			transport = sorted(self._transports, key=lambda t: t.connectionNumber, reverse=True)[0]
+			transport = sorted(self._approvedTransports, key=lambda t: t.connectionNumber, reverse=True)[0]
 			if self.noisy:
 				log.msg("Multiple S2C transports: \n%s\n, so I picked the newest: %r" % (
-					pprint.pformat(self._transports), transport,))
+					pprint.pformat(self._approvedTransports), transport,))
 		else:
-			transport = list(self._transports)[0]
+			transport = list(self._approvedTransports)[0]
 
 		return transport
 
@@ -370,33 +400,57 @@ class Stream(abstract.GenericTimeoutMixin):
 		"""
 		For internal use.
 		"""
-		if transport in self._transports:
-			raise TransportAlreadyRegisteredError("%r already in %r" % (transport, self._transports))
+		if transport in self._approvedTransports or transport in self._unapprovedTransports:
+			raise TransportAlreadyRegisteredError("%r already in approved or unapproved transports" % (transport,))
 		self.setTimeout(None)
 		if self.noisy:
 			log.msg('New transport has come online:', transport)
-		self._transports.add(transport)
-		self._sendIfPossible()
+		self._unapprovedTransports.add(transport)
+		# The transport isn't approved yet, so don't try to send yet.
 
 
 	def transportOffline(self, transport):
 		"""
-		For internal use.
+		For internal use. This will forget about a transport, whether or not it has
+		been approved yet.
 		"""
-		if transport not in self._transports:
-			raise TransportNotRegisteredError("%r not in %r" % (transport, self._transports))
+		try:
+			self._approvedTransports.remove(transport)
+		except KeyError:
+			try:
+				self._unapprovedTransports.remove(transport)
+			except KeyError:
+				raise TransportNotRegisteredError("%r not in approved or unapproved transports" % (transport,))
 		if self.noisy:
 			log.msg('Transport has gone offline:', transport)
-		self._transports.remove(transport)
 
-		if len(self._transports) == 0:
+		if len(self._approvedTransports) + len(self._unapprovedTransports) == 0:
 			# Start the timer. If no transports come in 30 seconds,
 			# the stream has ended.
 			# This will call L{self.timedOut} if the timeout triggers. 
 			self.setTimeout(self.noContactTimeout)
 
 
+	def transportWantsApproval(self, transport):
+		"""
+		For internal use. Called by transports. This calls L{transportCredentialsReceived} to decide.
+		"""
+		d = defer.maybeDeferred(self.transportCredentialsReceived, transport)
+		def cbOkay(_ignored):
+			log.msg('Transport was approved:', transport)
+			assert transport not in self._approvedTransports
+			self._unapprovedTransports.remove(transport)
+			self._approvedTransports.add(transport)
+			self._sendIfPossible()
+		def cbFail(_ignored):
+			log.msg('Transport was NOT approved, closing it:', transport)
+			transport.close(ERROR_CODES['NOT_APPROVED'])
+		d.addCallbacks(cbOkay, cbFail)
+		d.addErrback(log.err)
+
+
 	def timedOut(self):
+		# TODO: we might need to change this when we implement network read timeouts
 		# We timed out because there are no transports connected,
 		# so we don't need to notify any transports. If client connects
 		# back with a disappeared streamId, client will get an error.
@@ -429,7 +483,8 @@ class Stream(abstract.GenericTimeoutMixin):
 		# helpful or not.
 		self.factory = None
 		self.queue = None
-		self._transports = None
+		self._approvedTransports = None
+		self._unapprovedTransports = None
 
 
 
@@ -760,6 +815,19 @@ class ScriptTransport(_BaseHTTPTransport):
 #			hex(__builtins__['id'](self)), self._request, self._framesSent)
 
 
+"""
+Shouldn't the user be able to define which credentials must be sent
+for the transport to become approved?
+
+They already can for HTTP - they just set whatever headers they want
+on the client side and override `transportCredentialsReceived' to check
+for what they want.
+
+For socket/websocket, a special frame received from the client will be
+considered the credential frame. This will not be a 'box'. This credential
+frame will be available inside `transportCredentialsReceived'
+"""
+
 
 class ISocketStyleTransport(Interface):
 	"""
@@ -919,6 +987,7 @@ class HTTPS2C(BaseHTTPResource):
 		transport = transportMap[transportString](request, connectionNumber, startAtSeqNum)
 
 		stream.transportOnline(transport)
+		stream.transportWantsApproval(transport)
 
 		##def printDisconnectTime(*args, **kwargs):
 		##	import time
