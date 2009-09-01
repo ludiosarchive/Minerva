@@ -36,34 +36,34 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 
 	/**
 	 * Check for new data in L{xObject} and return an array
-	 * of new frames. Please provide a number L{responseTextBytes} if you know
+	 * of new frames. Please provide a number L{responseTextLength} if you know
 	 * how many bytes are available in L{responseText}. Passing a
 	 * too-low number will not break the decoder. Pass C{null} for
-	 * L{responseTextBytes} if you do not know how many bytes have been received.
+	 * L{responseTextLength} if you do not know how many bytes have been received.
 	 *
-	 * Passing a number for L{responseTextBytes} will help avoid unnecessary
+	 * Passing a number for L{responseTextLength} will help avoid unnecessary
 	 * property lookups of L{responseText}, which increases performance
 	 * in Firefox, and potentially other browsers.
 	 */
-	function receivedToByte(self, responseTextBytes) {
-		// responseTextBytes has to be greater than self._offset;
-		// for example: if _offset is 0, at responseTextBytes must be > 0 for something
+	function receivedToByte(self, responseTextLength) {
+		// responseTextLength has to be greater than self._offset;
+		// for example: if _offset is 0, at responseTextLength must be > 0 for something
 		// to happen.
-		if(!(responseTextBytes === null || responseTextBytes > self._offset)) {
+		if(!(responseTextLength === null || responseTextLength > self._offset)) {
 			// There certainly isn't enough data in L{responseText} yet, so return.
 			return [];
 		}
 
 		var text = self.xObject.responseText;
-		if(responseTextBytes === null) {
-			responseTextBytes = text.length;
+		if(responseTextLength === null) {
+			responseTextLength = text.length;
 		}
 		var strings = [];
 		for(;;) {
 			if(self._mode === 0) { // mode LENGTH
 				var colon = text.indexOf(':', self._offset);
 				if(colon === -1) {
-					if(responseTextBytes - self._offset > self.MAX_LENGTH_LEN) {
+					if(responseTextLength - self._offset > self.MAX_LENGTH_LEN) {
 						throw new CW.Net.ParseError("length too long");
 					}
 					// There's not even a colon yet? Break.
@@ -87,7 +87,7 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 				self._offset += (''+readLength).length + 1; // + 1 to skip over the ":"
 				self._mode = 1;
 			} else { // mode DATA
-				if(self._offset + self._readLength > responseTextBytes) {
+				if(self._offset + self._readLength > responseTextLength) {
 					////console.log('Not enough data bytes yet. Break.');
 					break;
 				}
