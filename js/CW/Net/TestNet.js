@@ -51,31 +51,25 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestResponseTextDecoderNull').met
 
 	function test_completeMessagesInPieces(self) {
 		self._append("2:hi");
-		var strings1 = self._informDecoder();
-		self.assertArraysEqual(['hi'], strings1);
+		self.assertArraysEqual(['hi'], self._informDecoder());
 
 		self._append("3:hey");
-		var strings2 = self._informDecoder();
-		self.assertArraysEqual(['hey'], strings2);
+		self.assertArraysEqual(['hey'], self._informDecoder());
 	},
 
 	function test_incompleteLength(self) {
 		self._append("1");
-		var strings1 = self._informDecoder();
-		self.assertArraysEqual([], strings1);
+		self.assertArraysEqual([], self._informDecoder());
 
 		self._append("0");
-		var strings2 = self._informDecoder();
-		self.assertArraysEqual([], strings2);
+		self.assertArraysEqual([], self._informDecoder());
 
 		self._append(":");
-		var strings3 = self._informDecoder();
-		self.assertArraysEqual([], strings3);
+		self.assertArraysEqual([], self._informDecoder());
 
 		// "GARBAGE" is okay because MAX_LENGTH is 1024*1024*1024 which is a lot of digits
 		self._append("helloworldGARBAGE");
-		var strings4 = self._informDecoder();
-		self.assertArraysEqual(['helloworld'], strings4);
+		self.assertArraysEqual(['helloworld'], self._informDecoder());
 
 		// Now adding a colon should result in a ParseError
 		self._append(":");
@@ -84,18 +78,16 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestResponseTextDecoderNull').met
 
 	function test_incompleteData(self) {
 		self._append("1");
+		self.assertArraysEqual([], self._informDecoder());
 
 		self._append("0:");
-		var strings1 = self._informDecoder();
-		self.assertArraysEqual([], strings1);
+		self.assertArraysEqual([], self._informDecoder());
 
 		self._append("helloworl");
-		var strings2 = self._informDecoder();
-		self.assertArraysEqual([], strings2);
+		self.assertArraysEqual([], self._informDecoder());
 
 		self._append("d");
-		var strings3 = self._informDecoder();
-		self.assertArraysEqual(['helloworld'], strings3);
+		self.assertArraysEqual(['helloworld'], self._informDecoder());
 	},
 
 	function test_lengthTooLongNoColon(self) {
