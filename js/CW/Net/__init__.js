@@ -62,14 +62,14 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 						throw new CW.Net.ParseError("length too long");
 					}
 					// There's not even a colon yet? Break.
-					console.log('No colon yet. Break.')
+					////console.log('No colon yet. Break.')
 					break;
 					// Unlike minerva._protocols, don't eager-fail if there are
 					// non-digits; it's a waste of CPU time.
 				}
 
 				var readLength = parseInt(text.substr(self._offset, colon-self._offset), 10);
-				console.log('Extracted readLength', readLength);
+				////console.log('Extracted readLength', readLength);
 				// This isn't complete error-checking, because
 				// parseInt("123garbage456", 10) == 123, but it's good enough.
 				if(isNaN(readLength)) {
@@ -83,7 +83,7 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 				self._mode = 1;
 			} else { // mode DATA
 				if(self._offset + self._readLength > responseTextBytes) {
-					console.log('Not enough data bytes yet. Break.');
+					////console.log('Not enough data bytes yet. Break.');
 					break;
 				}
 				var s = text.substr(self._offset, self._readLength);
