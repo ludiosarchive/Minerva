@@ -18,6 +18,7 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 	 * or any object with a unicode C{responseText} property.
 	 */
 	function __init__(self, xObject, MAX_LENGTH) {
+		// TODO: as an ugly optimization, mode and readLength could be combined.
 		self._offset = 0;
 		self._mode = 0; // 0 means LENGTH, 1 means DATA
 		self._readLength = null;
@@ -25,6 +26,10 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 		if(!MAX_LENGTH) {
 			MAX_LENGTH = 1024*1024*1024;
 		}
+		self.setMaxLength(MAX_LENGTH);
+	},
+
+	function setMaxLength(self, MAX_LENGTH) {
 		self.MAX_LENGTH = MAX_LENGTH;
 		self.MAX_LENGTH_LEN = (''+MAX_LENGTH).length;
 	},
@@ -88,7 +93,7 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 				}
 				var s = text.substr(self._offset, self._readLength);
 				self._offset += self._readLength;
-				self._readLength = null;
+				//self._readLength = null; // this is optional
 				self._mode = 0;
 				strings.push(s);
 			}
