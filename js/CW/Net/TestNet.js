@@ -121,9 +121,14 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestResponseTextDecoderNull').met
 	function test_nonDigitsInLength(self) {
 		self._append("z:four")
 		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
-	}
+	},
 
-	// TODO: test when passing in number instead of `null'
+	function test_responseTextNotReadIfNotEnoughData(self) {
+		// If it tries to substr a L{null}, it will break.
+		self.dummy.responseText = null;
+		var strings = self.decoder.receivedToByte(0);
+		self.assertArraysEqual([], strings);
+	}
 );
 
 

@@ -46,9 +46,8 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 	 * in Firefox, and potentially other browsers.
 	 */
 	function receivedToByte(self, responseTextLength) {
-		// responseTextLength has to be greater than self._offset;
-		// for example: if _offset is 0, at responseTextLength must be > 0 for something
-		// to happen.
+		// responseTextLength must be null or greater than self._offset
+		// for us to do any work.
 		if(!(responseTextLength === null || responseTextLength > self._offset)) {
 			// There certainly isn't enough data in L{responseText} yet, so return.
 			return [];
