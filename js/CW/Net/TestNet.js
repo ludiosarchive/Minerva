@@ -90,6 +90,40 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestResponseTextDecoderNull').met
 		self.assertArraysEqual(['helloworld'], self._informDecoder());
 	},
 
+	function test_maxLengthEdgeCase2(self) {
+		self.decoder.setMaxLength(2);
+		self._append("2:hi2:hx");
+		self.assertArraysEqual(['hi', 'hx'], self._informDecoder());
+	},
+
+	function test_maxLengthEdgeCase10(self) {
+		self.decoder.setMaxLength(10);
+		self._append("10:helloworld10:hellow0rld");
+		self.assertArraysEqual(['helloworld', 'hellow0rld'], self._informDecoder());
+	},
+
+	/**
+	 * Make sure ParseError stays permanent.
+	 */
+	function test_lengthOverflowByValueCausesPermanentError(self) {
+		self.decoder.setMaxLength(2);
+		self._append("3:hey4:four");
+		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self._append("2:hi");
+		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+	},
+
+	/**
+	 * Make sure ParseError stays permanent.
+	 */
+	function test_lengthOverflowByDigitsCausesPermanentError(self) {
+		self.decoder.setMaxLength(2);
+		self._append("10:helloworld");
+		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self._append("2:hi");
+		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+	},
+
 	function test_lengthTooLongNoColon(self) {
 		self.decoder.setMaxLength(99);
 		self._append("100");
@@ -112,6 +146,16 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestResponseTextDecoderNull').met
 	// it will only catch some problems.
 	function test_nonDigitsInLength(self) {
 		self._append("z:four")
+		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+	},
+
+	/**
+	 * Make sure ParseError stays permanent.
+	 */
+	function test_badDigitsCausePermanentError(self) {
+		self._append("z:four")
+		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self._append("3:hey4:four");
 		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
 	}
 );
