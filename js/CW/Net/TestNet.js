@@ -121,25 +121,29 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestResponseTextDecoderNull').met
 	function test_nonDigitsInLength(self) {
 		self._append("z:four")
 		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
-	},
-
-	function test_responseTextNotReadIfNotEnoughData(self) {
-		// If it tries to substr a L{null}, it will break.
-		self.dummy.responseText = null;
-		var strings = self.decoder.receivedToByte(0);
-		self.assertArraysEqual([], strings);
 	}
 );
 
 
 
-CW.Net.TestNet.TestResponseTextDecoderNull.subclass(CW.Net.TestNet, 'TestResponseTextDecoderNumber').methods(
+CW.Net.TestNet.TestResponseTextDecoderNull.subclass(
+CW.Net.TestNet, 'TestResponseTextDecoderNumber').methods(
 	/**
 	 * Pretend that this is the number you get when you get XHR onprogress events.
 	 * This test class *does* know how many bytes were received.
 	 */
 	function _bytesReceivedFromProgress(self) {
 		return self.dummy.responseText.length;
+	},
+
+
+	// This is kind of out of place. Maybe reorganize the test class hierarchy?
+	function test_responseTextNotReadIfNotEnoughData(self) {
+		// If it tries to substr a L{null}, it will break.
+		self.dummy.responseText = null;
+		// But it (hopefully) didn't.
+		var strings = self.decoder.receivedToByte(0);
+		self.assertArraysEqual([], strings);
 	}
 );
 

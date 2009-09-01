@@ -92,7 +92,7 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 				}
 				var s = text.substr(self._offset, self._readLength);
 				self._offset += self._readLength;
-				//self._readLength = null; // this is optional
+				//self._readLength = null; // reseting this is optional
 				self._mode = 0;
 				strings.push(s);
 			}
