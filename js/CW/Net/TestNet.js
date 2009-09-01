@@ -42,6 +42,47 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestResponseTextDecoder').methods
 		self.assertArraysEqual(['hey'], strings2);
 	},
 
+	function test_incompleteLength(self) {
+		var dummy = {responseText: "1"};
+		var decoder = CW.Net.ResponseTextDecoder(dummy);
+		var strings1 = decoder.receivedToByte(null);
+		self.assertArraysEqual([], strings1);
+
+		dummy.responseText = "10";
+		var strings2 = decoder.receivedToByte(null);
+		self.assertArraysEqual([], strings2);
+
+		dummy.responseText = "10:";
+		var strings3 = decoder.receivedToByte(null);
+		self.assertArraysEqual([], strings3);
+
+		// "GARBAGE" is okay because MAX_LENGTH is 1024*1024*1024 which is a lot of digits
+		dummy.responseText = "10:helloworldGARBAGE";
+		var strings4 = decoder.receivedToByte(null);
+		self.assertArraysEqual(['helloworld'], strings4);
+
+		// Now adding a colon should result in a ParseError
+		dummy.responseText = "10:helloworldGARBAGE:";
+		self.assertThrows(CW.Net.ParseError, function(){decoder.receivedToByte(null)});
+	},
+
+	function test_incompleteData(self) {
+		var dummy = {responseText: "1"};
+		var decoder = CW.Net.ResponseTextDecoder(dummy);
+
+		dummy.responseText = "10:";
+		var strings1 = decoder.receivedToByte(null);
+		self.assertArraysEqual([], strings1);
+
+		dummy.responseText = "10:helloworl";
+		var strings2 = decoder.receivedToByte(null);
+		self.assertArraysEqual([], strings2);
+
+		dummy.responseText = "10:helloworld";
+		var strings3 = decoder.receivedToByte(null);
+		self.assertArraysEqual(['helloworld'], strings3);
+	},
+
 	function test_lengthTooLongNoColon(self) {
 		var dummy = {responseText: "100"};
 		var decoder = CW.Net.ResponseTextDecoder(dummy, 99 /* MAX_LENGTH */);
@@ -67,4 +108,6 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestResponseTextDecoder').methods
 		var decoder = CW.Net.ResponseTextDecoder(dummy, 1000 /* MAX_LENGTH */);
 		self.assertThrows(CW.Net.ParseError, function(){decoder.receivedToByte(null)});
 	}
+
+	// TODO: test when passing in number instead of `null'
 );
