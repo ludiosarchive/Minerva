@@ -33,6 +33,8 @@ class NetStringDecoder(object):
 		   length you wish to accept).
 		2. ParseError is raised if an illegal message is received.
 		3. Small messages received at once don't cause excessive string copying.
+		4. Sending long bogus "lengths" doesn't cause exponential slowdown through
+			excessive .find()  
 	"""
 
 	_data = ''
