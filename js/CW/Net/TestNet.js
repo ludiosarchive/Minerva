@@ -32,5 +32,23 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestResponseTextDecoder').methods
 		dummy.responseText = "2:hi3:hey";
 		var strings2 = decoder.receivedToByte(null);
 		self.assertArraysEqual(['hey'], strings2);
+	},
+
+	function test_lengthTooLongNoColon(self) {
+		var dummy = {responseText: "100"};
+		var decoder = CW.Net.ResponseTextDecoder(dummy, 99 /* MAX_LENGTH */);
+		self.assertThrows(CW.Net.ParseError, function(){decoder.receivedToByte(null)});
+	},
+
+	function test_lengthTooLongColon(self) {
+		var dummy = {responseText: "100:"};
+		var decoder = CW.Net.ResponseTextDecoder(dummy, 99 /* MAX_LENGTH */);
+		self.assertThrows(CW.Net.ParseError, function(){decoder.receivedToByte(null)});
+	},
+
+	function test_lengthTooLongSameAmountOfDigits(self) {
+		var dummy = {responseText: "4:four"};
+		var decoder = CW.Net.ResponseTextDecoder(dummy, 3 /* MAX_LENGTH */);
+		self.assertThrows(CW.Net.ParseError, function(){decoder.receivedToByte(null)});
 	}
 );

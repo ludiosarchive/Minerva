@@ -75,6 +75,9 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 				if(isNaN(readLength)) {
 					throw new CW.Net.ParseError("obviously corrupt length");
 				}
+				if(readLength > self.MAX_LENGTH) {
+					throw new CW.Net.ParseError("length too long");
+				}
 				self._readLength = readLength;
 				self._offset += (''+readLength).length + 1; // + 1 to skip over the ":"
 				self._mode = 1;
