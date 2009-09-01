@@ -9,17 +9,10 @@
 
 CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestResponseTextDecoder').methods(
 
-	function test_decoder(self) {
-		var Eater = CW.Class.subclass('Eater');
-
-		Eater.methods(
-			function __init__(self, foodFactory) {
-				self.food = foodFactory();
-			},
-
-			function doEat(self) {
-				return self.food + 1;
-			}
-		);
+	function test_oneMessage(self) {
+		var dummy = {responseText: "2:hi"};
+		var decoder = CW.Net.ResponseTextDecoder(dummy);
+		var strings = decoder.receivedToByte(null);
+		self.assertArraysEqual(['hi'], strings);
 	}
 );

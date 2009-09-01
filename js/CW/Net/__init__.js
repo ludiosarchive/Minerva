@@ -1,5 +1,9 @@
 // import CW
 
+
+CW.Error.subclass(CW.Net, 'ParseError');
+
+
 /**
  * A decoder that extracts frames from an object with an L{responseText}.
  * The decoder must be "pushed" by using L{receivedToByte}.
@@ -8,34 +12,79 @@
  * No non-ASCII characters are allowed, because of our optimizations,
  * and because of browser bugs.
  */
-CW.Class.subclass(CW.Net.ResponseTextDecoder).methods(
+CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 	/**
 	 * L{xObject} is an L{XMLHttpRequest} or L{XDomainRequest} object
 	 * or any object with a unicode C{responseText} property.
 	 */
-	function __init__(self, xObject) {
-		self.ignoringUntil = 0;
+	function __init__(self, xObject, MAX_LENGTH) {
+		self._offset = 0;
+		self._mode = 0; // 0 means LENGTH, 1 means DATA
+		self._readLength = null;
 		self.xObject = xObject;
-		self.MAX_LENGTH = 1024*1024*1024;
+		if(!MAX_LENGTH) {
+			MAX_LENGTH = 1024*1024*1024;
+		}
+		self.MAX_LENGTH = MAX_LENGTH;
+		self.MAX_LENGTH_LEN = (''+MAX_LENGTH).length;
 	},
 
 	/**
 	 * Check for new data in L{xObject} and return an array
-	 * of new frames. Please provide a number L{byte} if you know
+	 * of new frames. Please provide a number L{responseTextBytes} if you know
 	 * how many bytes are available in L{responseText}. Passing a
 	 * too-low number will not break the decoder. Pass C{null} for
-	 * L{byte} if you do not know how many bytes have been received.
+	 * L{responseTextBytes} if you do not know how many bytes have been received.
 	 *
-	 * Passing a number for L{byte} will help avoid unnecessary
+	 * Passing a number for L{responseTextBytes} will help avoid unnecessary
 	 * property lookups of L{responseText}, which increases performance
 	 * in Firefox, and potentially other browsers.
 	 */
-	function receivedToByte(self, byte) {
-		if(byte === null || byte >= self.ignoringUntil) {
-			var text = self.xObject.responseText;
-			for(;;) {
-				var colon = self.xObject.
+	function receivedToByte(self, responseTextBytes) {
+		// responseTextBytes has to be greater than self._offset;
+		// for example: if _offset is 0, at responseTextBytes must be > 0 for something
+		// to happen.
+		if(!(responseTextBytes === null || responseTextBytes > self._offset)) {
+			// There certainly isn't enough data in L{responseText} yet, so return.
+			return [];
+		}
+
+		var text = self.xObject.responseText;
+		if(responseTextBytes === null) {
+			responseTextBytes = text.length;
+		}
+		var strings = [];
+		for(;;) {
+			if(self._mode === 0) { // mode LENGTH
+				var colon = text.indexOf(':', self._offset);
+				if(colon === -1) {
+					if(responseTextBytes - self._offset > self.MAX_LENGTH_LEN) {
+						throw new CW.Net.ParseError("length too long");
+					}
+					// There's not even a colon yet? Break.
+					break;
+					// Unlike minerva._protocols, don't eager-fail if there are
+					// non-digits; it's a waste of CPU time.
+				}
+
+				var readLength = parseInt(text.substr(self._offset, colon), 10);
+				// This isn't complete error-checking, because
+				// parseInt("123garbage456", 10) == 123, but it's good enough.
+				if(isNaN(readLength)) {
+					throw new CW.Net.ParseError("obviously corrupt length");
+				}
+				self._readLength = readLength;
+				self._offset += (''+readLength).length + 1;
+				self._mode = 1;
+			} else { // mode DATA
+				if(self._offset + self._readLength < responseTextBytes) {
+					break;
+				}
+				var s = text.substr(self._offset, self._readLength);
+				self._mode = 0;
+				strings.push(s);
 			}
 		}
+		return strings;
 	}
 );
