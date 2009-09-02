@@ -19,7 +19,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestResponseTextDecoderNull').met
 	},
 
 	function _informDecoder(self) {
-		return self.decoder.receivedToByte(self._bytesReceivedFromProgress());
+		return self.decoder.getNewFrames(self._bytesReceivedFromProgress());
 	},
 
 	/**
@@ -178,7 +178,7 @@ CW.Net.TestNet, 'TestResponseTextDecoderNumber').methods(
 		// If it tries to substr a L{null}, it will break.
 		self.dummy.responseText = null;
 		// But it (hopefully) didn't.
-		var strings = self.decoder.receivedToByte(0);
+		var strings = self.decoder.getNewFrames(0);
 		self.assertArraysEqual([], strings);
 	}
 );
@@ -198,10 +198,10 @@ CW.Net.TestNet, 'TestResponseTextDecoderNumberMinus1').methods(
 		var numBytes = self._bytesReceivedFromProgress();
 		var tooSmall = numBytes - self.misreportSubtract;
 		if(tooSmall < 0) {
-			return self.decoder.receivedToByte(numBytes);
+			return self.decoder.getNewFrames(numBytes);
 		} else {
-			var strings = self.decoder.receivedToByte(tooSmall);
-			strings = strings.concat(self.decoder.receivedToByte(numBytes));
+			var strings = self.decoder.getNewFrames(tooSmall);
+			strings = strings.concat(self.decoder.getNewFrames(numBytes));
 			return strings;
 		}
 	}

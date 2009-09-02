@@ -1,6 +1,5 @@
 // import CW
 
-
 CW.Error.subclass(CW.Net, 'ParseError');
 
 
@@ -35,17 +34,19 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 	},
 
 	/**
-	 * Check for new data in L{xObject} and return an array
-	 * of new frames. Please provide a number L{responseTextLength} if you know
-	 * how many bytes are available in L{responseText}. Passing a
-	 * too-low number will not break the decoder. Pass C{null} for
-	 * L{responseTextLength} if you do not know how many bytes have been received.
+	 * Check for new data in L{xObject} and return an array of new frames.
+	 * If possible, provide a number L{responseTextLength} if you know
+	 * how many bytes are available in L{responseText} (but do not look at the
+	 * property responseText or responseText.length yourself). Passing a too-low
+	 * L{responseTextLength} will not break the decoder, as long as you call it later
+	 * with a higher number. Pass C{null} for L{responseTextLength} if you do not know
+	 * how many bytes are in L{responseText}.
 	 *
-	 * Passing a number for L{responseTextLength} will help avoid unnecessary
+	 * Passing a number for L{responseTextLength} helps avoid unnecessary
 	 * property lookups of L{responseText}, which increases performance
 	 * in Firefox, and potentially other browsers.
 	 */
-	function receivedToByte(self, responseTextLength) {
+	function getNewFrames(self, responseTextLength) {
 		// responseTextLength must be null or greater than self._offset
 		// for us to do any work.
 		if(!(responseTextLength === null || responseTextLength > self._offset)) {
