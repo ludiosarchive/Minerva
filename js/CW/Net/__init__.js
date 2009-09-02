@@ -19,6 +19,7 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 	function __init__(self, xObject, MAX_LENGTH) {
 		// TODO: as an ugly optimization, mode and readLength could be combined.
 		self._offset = 0;
+		self._ignoreUntil = 1;
 		self._mode = 0; // 0 means LENGTH, 1 means DATA
 		self._readLength = null;
 		self.xObject = xObject;
@@ -47,9 +48,7 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 	 * in Firefox, and potentially other browsers.
 	 */
 	function getNewFrames(self, responseTextLength) {
-		// responseTextLength must be null or greater than self._offset
-		// for us to do any work.
-		if(!(responseTextLength === null || responseTextLength > self._offset)) {
+		if(responseTextLength !== null && responseTextLength < self._ignoreUntil) {
 			// There certainly isn't enough data in L{responseText} yet, so return.
 			return [];
 		}
@@ -98,6 +97,13 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 				strings.push(s);
 			}
 		}
+		if(self._mode === 0) {
+			// Can't ignore anything when still receiving the length
+			self._ignoreUntil = responseTextLength + 1;
+		} else {
+			self._ignoreUntil = self._offset + self._readLength;
+		}
+		////console.log('_ignoreUntil now', self._ignoreUntil);
 		return strings;
 	}
 );

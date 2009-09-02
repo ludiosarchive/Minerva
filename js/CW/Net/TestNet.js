@@ -170,16 +170,6 @@ CW.Net.TestNet, 'TestResponseTextDecoderNumber').methods(
 	 */
 	function _bytesReceivedFromProgress(self) {
 		return self.dummy.responseText.length;
-	},
-
-
-	// This is kind of out of place. Maybe reorganize the test class hierarchy?
-	function test_responseTextNotReadIfNotEnoughData(self) {
-		// If it tries to substr a L{null}, it will break.
-		self.dummy.responseText = null;
-		// But it (hopefully) didn't.
-		var strings = self.decoder.getNewFrames(0);
-		self.assertArraysEqual([], strings);
 	}
 );
 
@@ -218,4 +208,43 @@ CW.Net.TestNet, 'TestResponseTextDecoderNumberMinus2').methods(
 		CW.Net.TestNet.TestResponseTextDecoderNumberMinus1.upcall(self, 'setUp', []);
 		self.misreportSubtract = 2;
 	}
+);
+
+
+
+CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestIgnoreResponseTextOptimization').methods(
+
+	function setUp(self) {
+		self.dummy = {responseText: ''};
+		self.decoder = CW.Net.ResponseTextDecoder(self.dummy);
+	},
+
+	function test_responseTextNotReadIfNoData(self) {
+		// If it tries to substr a L{null}, it will break.
+		self.dummy.responseText = null;
+		// But it (hopefully) didn't.
+		var strings = self.decoder.getNewFrames(0);
+		self.assertArraysEqual([], strings);
+	},
+
+	function test_responseTextNotReadIfNotEnoughData(self) {
+		self.dummy.responseText = "10:h";
+		self.assertArraysEqual([], self.decoder.getNewFrames(4));
+		// Decoder now knows the length. It shouldn't even look at the xObject until it has 13 bytes.
+		self.dummy.responseText = null;
+		self.assertArraysEqual([], self.decoder.getNewFrames(3+10-1)); // 1 byte fewer than needed
+		self.dummy.responseText = "10:helloworld";
+		self.assertArraysEqual(['helloworld'], self.decoder.getNewFrames(3+10));
+	},
+
+	function test_responseTextNotReadIfNotEnoughNumber(self) {
+		self.dummy.responseText = "10";
+		self.assertArraysEqual([], self.decoder.getNewFrames(2));
+		// It shouldn't even look at the xObject until it has 1 more byte.
+		self.dummy.responseText = null;
+		self.assertArraysEqual([], self.decoder.getNewFrames(2));
+		self.dummy.responseText = "10:helloworld";
+		self.assertArraysEqual(['helloworld'], self.decoder.getNewFrames(3+10));
+	}
+
 );
