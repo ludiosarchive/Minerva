@@ -196,6 +196,42 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestResponseTextDecoderNull').met
 );
 
 
+CW.Net.TestNet.TestResponseTextDecoderNull.subclass(
+CW.Net.TestNet, 'TestResponseTextDecoderNullByteAtATime').methods(
+	function setUp(self) {
+		// for some reason upcalling doesn't define self.dummy? TODO
+		//CW.Net.TestNet.TestResponseTextDecoderNull.upcall(self, 'setUp', []);
+		self.dummy = {responseText: ''};
+		self.decoder = CW.Net.ResponseTextDecoder(self.dummy);
+		// The _toSend logic is very tricky because of ParseError exceptions
+		self._toSend = 1;
+	},
+
+	function _append(self, string) {
+		self.dummy.responseText += string;
+	},
+
+	function _informDecoder(self) {
+		var strings = [];
+		var fullText = self.dummy.responseText;
+		if(fullText.length > 1024) {
+			// Skip the byte-at-a-time insanity for the tests that send big strings.
+			strings = self.decoder.getNewFrames(self._bytesReceivedFromProgress());
+			self._toSend = fullText.length + 1;
+		} else {
+			for(;;) {
+				if(self._toSend > fullText.length) {
+					break;
+				}
+				self.dummy.responseText = fullText.substr(0, self._toSend);
+				strings = strings.concat(self.decoder.getNewFrames(self._bytesReceivedFromProgress()));
+				self._toSend += 1;
+			}
+		}
+		return strings;
+	}
+);
+
 
 CW.Net.TestNet.TestResponseTextDecoderNull.subclass(
 CW.Net.TestNet, 'TestResponseTextDecoderNumber').methods(
