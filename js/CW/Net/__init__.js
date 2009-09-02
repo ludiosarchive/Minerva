@@ -67,11 +67,11 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 					if(responseTextLength - self._offset > self.MAX_LENGTH_LEN) {
 						throw new CW.Net.ParseError("length too long");
 					}
-					// There's not even a colon yet? Break.
 					////console.log('No colon yet. Break.')
 					break;
 					// Unlike minerva._protocols, don't eager-fail if there are
-					// non-digits; it's a waste of CPU time.
+					// non-digits; it's a waste of CPU time. We'll only be collecting
+					// possibly-non-digits for MAX_LENGTH_LEN bytes.
 				}
 
 				var extractedLengthStr = text.substr(self._offset, colon-self._offset);
