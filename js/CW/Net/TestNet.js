@@ -199,16 +199,9 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestResponseTextDecoderNull').met
 CW.Net.TestNet.TestResponseTextDecoderNull.subclass(
 CW.Net.TestNet, 'TestResponseTextDecoderNullByteAtATime').methods(
 	function setUp(self) {
-		// for some reason upcalling doesn't define self.dummy? TODO
-		//CW.Net.TestNet.TestResponseTextDecoderNull.upcall(self, 'setUp', []);
-		self.dummy = {responseText: ''};
-		self.decoder = CW.Net.ResponseTextDecoder(self.dummy);
+		CW.Net.TestNet.TestResponseTextDecoderNullByteAtATime.upcall(self, 'setUp', []);
 		// The _toSend logic is very tricky because of ParseError exceptions
 		self._toSend = 1;
-	},
-
-	function _append(self, string) {
-		self.dummy.responseText += string;
 	},
 
 	function _informDecoder(self) {
@@ -251,7 +244,7 @@ CW.Net.TestNet, 'TestResponseTextDecoderNumber').methods(
 CW.Net.TestNet.TestResponseTextDecoderNumber.subclass(
 CW.Net.TestNet, 'TestResponseTextDecoderNumberMinus1').methods(
 	function setUp(self) {
-		CW.Net.TestNet.TestResponseTextDecoderNumber.upcall(self, 'setUp', []);
+		CW.Net.TestNet.TestResponseTextDecoderNumberMinus1.upcall(self, 'setUp', []);
 		self.misreportSubtract = 1;
 	},
 
@@ -276,7 +269,7 @@ CW.Net.TestNet, 'TestResponseTextDecoderNumberMinus1').methods(
 CW.Net.TestNet.TestResponseTextDecoderNumberMinus1.subclass(
 CW.Net.TestNet, 'TestResponseTextDecoderNumberMinus2').methods(
 	function setUp(self) {
-		CW.Net.TestNet.TestResponseTextDecoderNumberMinus1.upcall(self, 'setUp', []);
+		CW.Net.TestNet.TestResponseTextDecoderNumberMinus2.upcall(self, 'setUp', []);
 		self.misreportSubtract = 2;
 	}
 );
