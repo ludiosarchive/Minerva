@@ -23,7 +23,7 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 		// Need to have at least 1 byte before doing any parsing
 		self._ignoreUntil = 1;
 		// Optimization hack: this acts as both a mode and a readLength
-		self._readLengthMode = 0; // 0 means mode LENGTH, >= 1 means mode DATA
+		self._modeOrReadLength = 0; // 0 means mode LENGTH, >= 1 means mode DATA
 		self.xObject = xObject;
 		if(!MAX_LENGTH) {
 			MAX_LENGTH = 1024*1024*1024;
@@ -61,7 +61,7 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 		}
 		var strings = [];
 		for(;;) {
-			if(self._readLengthMode === 0) { // mode LENGTH
+			if(self._modeOrReadLength === 0) { // mode LENGTH
 				var colon = text.indexOf(':', self._offset);
 				if(colon === -1) {
 					if(responseTextLength - self._offset > self.MAX_LENGTH_LEN) {
@@ -85,24 +85,24 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 				if(readLength > self.MAX_LENGTH) {
 					throw new CW.Net.ParseError("length too long: " + readLength);
 				}
-				self._readLengthMode = readLength;
+				self._modeOrReadLength = readLength;
 				self._offset += (''+readLength).length + 1; // + 1 to skip over the ":"
 			} else { // mode DATA
-				if(self._offset + self._readLengthMode > responseTextLength) {
+				if(self._offset + self._modeOrReadLength > responseTextLength) {
 					////console.log('Not enough data bytes yet. Break.');
 					break;
 				}
-				var s = text.substr(self._offset, self._readLengthMode);
-				self._offset += self._readLengthMode;
-				self._readLengthMode = 0;
+				var s = text.substr(self._offset, self._modeOrReadLength);
+				self._offset += self._modeOrReadLength;
+				self._modeOrReadLength = 0;
 				strings.push(s);
 			}
 		}
-		if(self._readLengthMode === 0) {
+		if(self._modeOrReadLength === 0) {
 			// Can't ignore anything when still receiving the length
 			self._ignoreUntil = responseTextLength + 1;
 		} else {
-			self._ignoreUntil = self._offset + self._readLengthMode;
+			self._ignoreUntil = self._offset + self._modeOrReadLength;
 		}
 		////console.log('_ignoreUntil now', self._ignoreUntil);
 		return strings;
