@@ -19,6 +19,7 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 	function __init__(self, xObject, MAX_LENGTH) {
 		// TODO: as an ugly optimization, mode and readLength could be combined.
 		self._offset = 0;
+		// Need to have at least 1 byte before doing any parsing
 		self._ignoreUntil = 1;
 		self._mode = 0; // 0 means LENGTH, 1 means DATA
 		self._readLength = null;
@@ -72,15 +73,16 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 					// non-digits; it's a waste of CPU time.
 				}
 
-				var readLength = parseInt(text.substr(self._offset, colon-self._offset), 10);
-				////console.log('Extracted readLength', readLength);
-				// This isn't complete error-checking, because
-				// parseInt("123garbage456", 10) == 123, but it's good enough.
-				if(isNaN(readLength)) {
-					throw new CW.Net.ParseError("obviously corrupt length");
+				var extractedLengthStr = text.substr(self._offset, colon-self._offset);
+				// Accept only positive integers with no leading zero.
+				// TODO: maybe disable this check for long-time user agents with no problems
+				if(!/^[1-9]\d*$/.test(extractedLengthStr)) {
+					throw new CW.Net.ParseError("corrupt length: " + extractedLengthStr);
 				}
+				// TODO: check if `+extractedLengthStr' is faster; use it if it is.
+				var readLength = parseInt(extractedLengthStr, 10);
 				if(readLength > self.MAX_LENGTH) {
-					throw new CW.Net.ParseError("length too long");
+					throw new CW.Net.ParseError("length too long: " + readLength);
 				}
 				self._readLength = readLength;
 				self._offset += (''+readLength).length + 1; // + 1 to skip over the ":"

@@ -76,6 +76,41 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestResponseTextDecoderNull').met
 		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
 	},
 
+	function test_corruptLength0(self) {
+		self._append("0:");
+		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+	},
+
+	function test_corruptLengthLeading0(self) {
+		self._append("02:");
+		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+	},
+
+	function test_corruptLengthNegative(self) {
+		self._append("-1:");
+		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+	},
+	
+	function test_corruptLengthDot(self) {
+		self._append("1.:");
+		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+	},
+	
+	function test_corruptLengthLettersBefore(self) {
+		self._append("f1:");
+		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+	},
+
+	function test_corruptLengthLettersAfter(self) {
+		self._append("1f:");
+		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+	},
+
+	function test_corruptLengthLettersAfterMore(self) {
+		self._append("123456f:");
+		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+	},
+
 	function test_incompleteData(self) {
 		self._append("1");
 		self.assertArraysEqual([], self._informDecoder());
