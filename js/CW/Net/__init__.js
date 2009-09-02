@@ -15,6 +15,8 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 	/**
 	 * L{xObject} is an L{XMLHttpRequest} or L{XDomainRequest} object
 	 * or any object with a unicode C{responseText} property.
+	 *
+	 * L{MAX_LENGTH} is the maximum length of a string to decode, in bytes.
 	 */
 	function __init__(self, xObject, MAX_LENGTH) {
 		self._offset = 0;
