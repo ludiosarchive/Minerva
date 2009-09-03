@@ -124,3 +124,111 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 		return strings;
 	}
 );
+
+
+// Stream
+CW.Class.subclass(CW.Net, "Stream").methods(
+
+	function __init__(self, window) {
+		self._window = window;
+		self._queue = [];
+		self._eventually = [];
+	},
+
+	/*
+	Enqueue boxes L{boxes} for sending soon.
+
+	Whenever possible, use L{sendBoxes} to send multiple boxes instead
+	of repeated calls to L{sendBox}.
+
+	It is often correct to buffer boxes in a list and give them to
+	L{sendBoxes} all at once. */
+	function sendBoxes(self, boxes) {
+		// XXX
+		self._sendIfPossible()
+	},
+
+	/*
+	Enqueue box L{box} for sending soon. Use L{sendBoxes} instead
+	if you are sending multiple boxes.
+	*/
+	function sendBox(self, box) {
+		// XXX
+		self._sendIfPossible()
+	},
+
+	/*
+	Enqueue box L{box} for sending when most convenient for CW.Net.
+	If using an HTTP transport, this could take about a minute.
+
+	This may be useful for sending non-critical information collected by
+	other JavaScript code.
+	*/
+	function sendBoxEventually(self, box) {
+		// XXX
+		// XXX self._eventually
+	},
+
+
+	/**
+	 * CW.Net is about to initialize a new S2C transport. You can use this
+	 * event to generate boxes to send along with an HTTP request (to avoid
+	 * making a C2S HTTP request), or send along with the TCP/IP packet
+	 * (to possibly avoid sending multiple packets).
+	 *
+	 * From inside this method, you can call either L{sendBox} or
+	 * L{sendBoxEventually} to send boxes. XXX TODO REALLY no difference?
+	 * XXX what about if the box user wants to send is too big to smuggle?
+	 *
+	 * Please note that some S2C transports may stay open for a very long time
+	 * (FSTransport, WSTransport) and therefore L{gotSendingOpportunity}
+	 * might only be called once.
+	 */
+	function gotSendingOpportunity(self) {
+		// XXX
+	},
+
+
+	/**
+	 * Received box L{boxes}. Override this.
+	 */
+	function boxesReceived(self, boxes) {
+		CW.msg('Forgot to override boxesReceived?');
+	}
+)
+
+
+
+// The reason we want a StreamFactory is so that the building of Streams can be
+// controlled; an application may want to pass a reference to another object into
+// a Stream.
+
+// StreamFactory
+	// buildStream
+CW.Class.subclass(CW.Net, "StreamFactory").methods(
+	/**
+	 * This takes L{window} as an argument so that unit tests
+	 * can pass in a dummy window with deterministic timer features.
+	 */
+	function __init__(self, window) {
+		self._window = window;
+	},
+
+	function buildStream(self) {
+		throw new Error("override this");
+	}
+)
+
+
+// Connector
+// maybe this should be reactor?
+// We probably want to be able to build a 'Clock' that can be moved forward
+// but alternatively we could pass in a fake 'window' to classes that are using setTimeout and so on
+
+
+//XHRTransport
+//XDRTransport
+//SSETransport
+//ScriptTransport
+//WSTransport
+//FSTransport

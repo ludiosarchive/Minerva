@@ -24,4 +24,5 @@ digraph objects {
   StreamFactory -> Stream;
   Stream -> Queue;
   Stream -> Incoming;
+  Stream -> "js:Stream" [style=dotted];
 }
