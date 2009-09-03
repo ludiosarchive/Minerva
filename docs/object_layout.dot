@@ -7,22 +7,21 @@ Green arrow means "I call methods on an object of this class but do not keep ref
 */
 
 digraph objects {
-  HTTPS2C -> UserAgentFactory [color=red];
+  HTTPS2C -> StreamFactory [color=red];
   HTTPS2C -> ScriptTransport;
   HTTPS2C -> Stream [color=green];
   HTTPS2C -> XHRTransport;
-  HTTPC2S -> UserAgentFactory [color=red];
+  HTTPC2S -> StreamFactory [color=red];
   HTTPC2S -> Stream [color=green];
-  SocketTransport -> UserAgentFactory [color=red];
+  SocketTransport -> StreamFactory [color=red];
   SocketTransport -> Stream [color=red, dir=both];
-  WebSocketTransport -> UserAgentFactory [color=red];
+  WebSocketTransport -> StreamFactory [color=red];
   WebSocketTransport -> Stream [color=red, dir=both];
   XHRTransport -> "http.Request" [color=red];
   ScriptTransport -> "http.Request" [color=red];
   Stream -> ScriptTransport [color=red];
   Stream -> XHRTransport [color=red];
-  UserAgentFactory -> UserAgent;
-  UserAgent -> Stream;
+  StreamFactory -> Stream;
   Stream -> Queue;
   Stream -> Incoming;
 }
