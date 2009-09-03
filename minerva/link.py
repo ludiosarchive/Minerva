@@ -852,7 +852,7 @@ class ISocketStyleTransport(Interface):
 
 
 
-
+# TODO: run this on port 443, along with the HTTPS server and Socket.
 class WebSocketTransport(protocol.Protocol):
 	"""
 	I am typically used by a browser's native WebSocket.
@@ -887,7 +887,7 @@ class WebSocketTransport(protocol.Protocol):
 
 
 
-
+# TODO: run this on port 443, along with the HTTPS server and WebSocket.
 class SocketTransport(protocol.Protocol):
 	"""
 	I am typically used by a browser's Flash socket.
