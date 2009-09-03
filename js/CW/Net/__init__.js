@@ -6,9 +6,12 @@ CW.Error.subclass(CW.Net, 'ParseError');
 /**
  * This class solves two problems:
  *    - decoding a series of bencode strings from an object with a L{responseText}
- *    - accessing the object's L{responseText} only when necessary to avoid memory-
+ *    - accessing the object's C{responseText} only when necessary to avoid memory-
  *          copying and excessive CPU use in some browsers (Firefox, maybe others).
  *          (This optimization is optional; see L{getNewFrames} docstring)
+ * In Firefox, accessing an XHR object's C{responseText} or C{responseText.length}
+ * repeatedly may cause it to copy all the data in memory, temporarily causing ~50-80MB
+ * memory spikes.
  *
  * This decoder must be manually "pushed" by calling L{getNewFrames}.
  *
