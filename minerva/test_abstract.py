@@ -247,7 +247,7 @@ class TestIncoming(unittest.TestCase):
 
 
 
-class SpecialId(abstract.GenericIdentifier):
+class _DummyId(abstract.GenericIdentifier):
 	_expectedLength = 16
 	__slots__ = ['id']
 
@@ -256,14 +256,14 @@ class SpecialId(abstract.GenericIdentifier):
 class TestGenericIdentifier(unittest.TestCase):
 
 	def test_equal(self):
-		s1 = SpecialId('z' * 16)
-		s2 = SpecialId('z' * 16)
+		s1 = _DummyId('z' * 16)
+		s2 = _DummyId('z' * 16)
 		self.assertEqual(s1, s2)
 
 
 	def test_notEqual(self):
-		s1 = SpecialId('z' * 16)
-		s2 = SpecialId('y' * 16)
+		s1 = _DummyId('z' * 16)
+		s2 = _DummyId('y' * 16)
 		self.assertNotEqual(s1, s2)
 
 		self.assertNotEqual(s1, 0)
@@ -271,23 +271,23 @@ class TestGenericIdentifier(unittest.TestCase):
 
 
 	def test_repr(self):
-		s1 = SpecialId('z' * 16)
+		s1 = _DummyId('z' * 16)
 		self.assert_(repr('z' * 16) in repr(s1))
 
 
 	def test_hash(self):
-		s1 = SpecialId('z' * 16)
-		s2 = SpecialId('z' * 16)
+		s1 = _DummyId('z' * 16)
+		s2 = _DummyId('z' * 16)
 		self.assertEqual(hash(s1), hash(s2))
 
 
 	def test_wrongLength(self):
-		self.assertRaises(abstract.InvalidIdentifier, lambda: SpecialId('z' * 15))
-		self.assertRaises(abstract.InvalidIdentifier, lambda: SpecialId('z' * 17))
-		self.assertRaises(abstract.InvalidIdentifier, lambda: SpecialId(''))
+		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId('z' * 15))
+		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId('z' * 17))
+		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId(''))
 		
 
 	def test_wrongType(self):
-		self.assertRaises(abstract.InvalidIdentifier, lambda: SpecialId(u'z' * 16))
-		self.assertRaises(abstract.InvalidIdentifier, lambda: SpecialId(u'z' * 17))
-		self.assertRaises(abstract.InvalidIdentifier, lambda: SpecialId(u''))
+		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId(u'z' * 16))
+		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId(u'z' * 17))
+		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId(u''))

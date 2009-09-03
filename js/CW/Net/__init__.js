@@ -2,6 +2,7 @@
 
 CW.Error.subclass(CW.Net, 'ParseError');
 
+// TODO: have some obfu-vars
 
 /**
  * This parser solves two problems:

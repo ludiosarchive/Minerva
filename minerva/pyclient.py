@@ -99,7 +99,7 @@ class BaseTwoWayCommunicator(object):
 		self._cookieName = cookieName
 
 		self._connectionNumber = -1
-		self._ackS2C = 0
+		self._startAtSeqNum = 0
 
 		self._S2CConnections = set()
 		self._finished = False
@@ -187,7 +187,7 @@ class BaseTwoWayCommunicator(object):
 		self._connectionNumber += 1
 
 		url = self._rootURL + 'd/?i=%s&n=%d&s=%d&t=%s' % (
-			self._streamId.id.encode('hex'), self._connectionNumber, self._ackS2C, self.transportString)
+			self._streamId.id.encode('hex'), self._connectionNumber, self._startAtSeqNum, self.transportString)
 		headers = http_headers.Headers({
 			'user-agent': ['Minerva pyclient 2009-08-13'],
 			'cookie': [self._cookieName + '=' + self._uaId.id.encode('base64')],
@@ -216,10 +216,10 @@ class BaseTwoWayCommunicator(object):
 
 		# Verify S2C number
 		if isinstance(frame, list) and frame[0] == '`^a':
-			if frame[1] != self._ackS2C:
+			if frame[1] != self._startAtSeqNum:
 				self.abortAll()
 				raise UnexpectedS2CNumber(
-					"I was expecting the stream to start at S2C #%d; received %d" % (self._ackS2C, frame[1]))
+					"I was expecting the stream to start at S2C #%d; received %d" % (self._startAtSeqNum, frame[1]))
 
 		# Stop on errors
 		if isinstance(frame, list) and frame[0] == '`^e':
@@ -232,7 +232,7 @@ class BaseTwoWayCommunicator(object):
 
 		if not self._isControlFrame(frame):
 			self.boxesReceived += 1
-			self._ackS2C += 1
+			self._startAtSeqNum += 1
 			self.boxReceived(frame)
 
 
