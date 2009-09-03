@@ -9,6 +9,10 @@ class TestStrToNonNeg(unittest.TestCase):
 		self.assertEqual(0, abstract.strToNonNeg("0"))
 		self.assertEqual(3, abstract.strToNonNeg("3"))
 		self.assertEqual(12390, abstract.strToNonNeg("12390"))
+		
+		# Unicode is valid, too
+		self.assertEqual(0, abstract.strToNonNeg(u"0"))
+		self.assertEqual(12390, abstract.strToNonNeg(u"12390"))
 
 
 	def test_strToNonNeg_TypeErrors(self):
@@ -34,6 +38,10 @@ class TestStrToNonNeg(unittest.TestCase):
 		self.assertRaises(ValueError, lambda: abstract.strToNonNeg("7.0"))
 		self.assertRaises(ValueError, lambda: abstract.strToNonNeg("7."))
 		self.assertRaises(ValueError, lambda: abstract.strToNonNeg("0.0"))
+
+		# Hex is rejected
+		self.assertRaises(ValueError, lambda: abstract.strToNonNeg("7f"))
+		self.assertRaises(ValueError, lambda: abstract.strToNonNeg("f7"))
 
 
 

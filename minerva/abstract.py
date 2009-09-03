@@ -1,16 +1,17 @@
 from pypycpyo import mutables
 id = mutables.ReservedForLocals
 
-
+import re
 from collections import deque
 
 from twisted.python import log
 
 
-quickConvert_strToPosInt = {}
+_quickConvert_strToPosInt = {}
 for num in xrange(10000):
-	quickConvert_strToPosInt[str(num)] = num
+	_quickConvert_strToPosInt[str(num)] = num
 
+_OKAY_NUMBER = re.compile(r'^[1-9]\d*$')
 def strToNonNeg(value):
 	"""
 	A very strict numeric-string to non-zero integer converter.
@@ -18,29 +19,14 @@ def strToNonNeg(value):
 	that just happen to work with our current server.
 	"""
 
-	# This (probably) makes things faster, but also conveniently avoids
-	# the `value.lstrip('0')` logic for value == "0"
-	quick = quickConvert_strToPosInt.get(value)
+	# TODO: This (probably) makes things faster, but we need to test that it does. 
+	quick = _quickConvert_strToPosInt.get(value)
 	if quick is not None:
 		return quick
+	if _OKAY_NUMBER.match(value):
+		return int(value)
 
-	digits = '012345679'
-
-	if not isinstance(value, str):
-		raise TypeError("%r is not a str" % (value,))
-
-	valueLen = len(value)
-	if valueLen == 0:
-		raise ValueError("str was of length 0")
-	if len(value.lstrip('0')) != valueLen:
-		raise ValueError("%r had leading zeroes" % (value,))
-
-	for c in value:
-		if c not in digits:
-			raise ValueError("%r had non-digits characters" % (value,))
-
-	return int(value)
-
+	raise ValueError("could not decode to non-negative integer: %r" % (value,))
 
 
 
