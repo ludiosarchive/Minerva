@@ -4,25 +4,30 @@ CW.Error.subclass(CW.Net, 'ParseError');
 
 
 /**
- * A decoder that extracts frames from an object with an L{responseText}.
- * The decoder must be "pushed" by using L{receivedToByte}.
+ * This class solves two problems:
+ *    - decoding a series of bencode strings from an object with a L{responseText}
+ *    - accessing the object's L{responseText} only when necessary to avoid memory-
+ *          copying and excessive CPU use in some browsers (Firefox, maybe others).
+ *          (This optimization is optional; see L{getNewFrames} docstring)
  *
- * L{responseText} is assumed to have unicode/byte equivalence.
- * No non-ASCII characters are allowed, because of our optimizations,
- * and because of browser bugs.
+ * This decoder must be manually "pushed" by calling L{getNewFrames}.
+ *
+ * L{xObject.responseText} is assumed to have unicode/byte equivalence.
+ * Non-ASCII characters are forbidden, because of our optimizations,
+ * and because of browser bugs related to XHR readyState 3.
  */
 CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 	/**
 	 * L{xObject} is an L{XMLHttpRequest} or L{XDomainRequest} object
-	 * or any object with a unicode C{responseText} property.
+	 * or any object with a C{responseText} property (a string).
 	 *
-	 * L{MAX_LENGTH} is the maximum length of a string to decode, in bytes.
+	 * L{MAX_LENGTH} is the maximum length of frame to decode.
 	 */
 	function __init__(self, xObject, MAX_LENGTH) {
 		self._offset = 0;
 		// Need to have at least 1 byte before doing any parsing
 		self._ignoreUntil = 1;
-		// Optimization hack: this acts as both a mode and a readLength
+		// Optimization: this acts as both a mode and a readLength
 		self._modeOrReadLength = 0; // 0 means mode LENGTH, >= 1 means mode DATA
 		self.xObject = xObject;
 		if(!MAX_LENGTH) {
@@ -37,17 +42,17 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 	},
 
 	/**
-	 * Check for new data in L{xObject} and return an array of new frames.
-	 * If possible, provide a number L{responseTextLength} if you know
-	 * how many bytes are available in L{responseText} (but do not look at the
-	 * property responseText or responseText.length yourself). Passing a too-low
-	 * L{responseTextLength} will not break the decoder, as long as you call it later
-	 * with a higher number. Pass C{null} for L{responseTextLength} if you do not know
-	 * how many bytes are in L{responseText}.
+	 * Check for new data in L{xObject.responseText} and return an array of new frames.
 	 *
-	 * Passing a number for L{responseTextLength} helps avoid unnecessary
-	 * property lookups of L{responseText}, which increases performance
-	 * in Firefox, and potentially other browsers.
+	 * If you know how many bytes are available in L{responseText} through a side-channel
+	 * like an onprogress event, pass a number L{responseTextLength}. Passing a too-low
+	 * L{responseTextLength} is safe, but will obviously fail to find some data. Pass C{null}
+	 * for L{responseTextLength} if you do not know how many bytes are in L{responseText}.
+	 * See this class' docstring for rationale.
+	 *
+	 * L{CW.Net.ParseError} will be thrown if:
+	 *    - a frame with size greater than L{MAX_LENGTH} is found
+	 *    - if a corrupt length value is found (though the throwing may be delayed for a few bytes).
 	 */
 	function getNewFrames(self, responseTextLength) {
 		if(responseTextLength !== null && responseTextLength < self._ignoreUntil) {
