@@ -4,11 +4,15 @@ CW.Error.subclass(CW.Net, 'ParseError');
 
 
 /**
- * This class solves two problems:
+ * This parser solves two problems:
+ *
  *    - decoding a series of bencode strings from an object with a L{responseText}
+ *          that may grow.
+ *
  *    - accessing the object's C{responseText} only when necessary to avoid memory-
  *          copying and excessive CPU use in some browsers (Firefox, maybe others).
  *          (This optimization is optional; see L{getNewFrames} docstring)
+ *
  * In Firefox, accessing an XHR object's C{responseText} or C{responseText.length}
  * repeatedly may cause it to copy all the data in memory, temporarily causing ~50-80MB
  * memory spikes.
@@ -24,7 +28,7 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 	 * L{xObject} is an L{XMLHttpRequest} or L{XDomainRequest} object
 	 * or any object with a C{responseText} property (a string).
 	 *
-	 * L{MAX_LENGTH} is the maximum length of frame to decode.
+	 * L{MAX_LENGTH} is the maximum length of frame to parse (in characters).
 	 */
 	function __init__(self, xObject, MAX_LENGTH) {
 		self._offset = 0;
@@ -39,6 +43,9 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 		self.setMaxLength(MAX_LENGTH);
 	},
 
+	/**
+	 * Set maximum frame length to L{MAX_LENGTH}.
+	 */
 	function setMaxLength(self, MAX_LENGTH) {
 		self.MAX_LENGTH = MAX_LENGTH;
 		self.MAX_LENGTH_LEN = (''+MAX_LENGTH).length;
