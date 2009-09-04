@@ -205,6 +205,21 @@ CW.Class.subclass(CW.Net, "Stream").methods(
 		return seqNum;
 	},
 
+	function _sendIfPossible(self) {
+		/*
+		This will be pretty complicated.
+		We want to:
+			use a dual S2C-C2S transport if we have one connected, or expect one to connect
+
+			when possible, allow smuggling C2S into an S2C HTTP request
+			(don't create the C2S request immediately?)
+
+			
+
+		 */
+
+	},
+
 	/**
 	 * Given box represented by L{seqNum}, return a Deferred that triggers with
 	 * callback if delivery was successful, or errback if not successful.
@@ -265,7 +280,7 @@ CW.Class.subclass(CW.Net, "Stream").methods(
 			}
 		}
 		self._notifications = [];
-		self.streamLost(); // call user-customizable method
+		self.streamEnded(); // call user-customizable method
 	},
 
 	/**
@@ -313,7 +328,7 @@ CW.Class.subclass(CW.Net, "Stream").methods(
 	/**
 	 * Stream timed out. Override this.
 	 */
-	function streamLost(self) {
+	function streamEnded(self) {
 		// XXX
 	},
 

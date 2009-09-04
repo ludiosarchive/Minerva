@@ -130,6 +130,11 @@ ERROR_CODES = {
 	'SERVER_LOAD': 810,
 }
 
+TYPE_BOX = 0
+TYPE_ACK = 1
+TYPE_ERROR = 2
+
+
 # Make sure no numeric code was used more than once
 assert len(set(ERROR_CODES.values())) == len(ERROR_CODES), ERROR_CODES
 
@@ -321,8 +326,15 @@ class Stream(abstract.GenericTimeoutMixin):
 		self._sendIfPossible()
 
 
+	# TODO: notifyDelivery
+	# TODO: streamQualityChanged
+	# TODO: changeTimeout?
+
+
 	def clientReceivedEverythingBefore(self, seqNum):
 		"""
+		Minerva-internal function.
+
 		The client claims to have received all S2C messages preceding message
 		number L{seqNum}, so now it is okay to clear the messages from
 		the queue.
@@ -332,6 +344,8 @@ class Stream(abstract.GenericTimeoutMixin):
 
 	def clientUploadedFrames(self, frames):
 		"""
+		Minerva-internal function.
+
 		The client uploaded frames L{frames}. L{frames} is a sequence of (seqNum, frame) tuples.
 		This will give valid in-order boxes to L{boxReceived}.
 
@@ -647,7 +661,7 @@ class _BaseHTTPTransport(object):
 		"""
 		See L{IMinervaTransport.close}
 		"""
-		self._forceWrite(['`^e', code])
+		self._forceWrite([TYPE_ERROR, code])
 		self._request.finish()
 		log.msg("Closed transport %s with reason %d." % (self, code))
 
@@ -697,12 +711,12 @@ class _BaseHTTPTransport(object):
 				# 	negotiate less padding with the client.
 				# TODO: don't write the padding when long-polling, it's just
 				# 	a waste
-				seqString = self._stringOne(['`^a', seqNum, (' ' * (1024 * 4))])
+				seqString = self._stringOne([TYPE_ACK, seqNum, (' ' * (1024 * 4))])
 				toSend += seqString
 				frameCount += 1
 				byteCount += len(seqString)
 
-			boxString = self._stringOne(box)
+			boxString = self._stringOne([TYPE_BOX, box])
 			toSend += boxString
 			frameCount += 1
 			byteCount += len(boxString)
@@ -752,14 +766,14 @@ class XHRTransport(_BaseHTTPTransport):
 			hex(__builtins__['id'](self)), self._request, self._framesSent)
 
 
-	def _stringOne(self, box):
+	def _stringOne(self, frame):
 		"""
-		Return a serialized string for one box.
+		Return a serialized string for one frame.
 		"""
 		# TODO: For some browsers (without the native JSON object),
 		# dump more compact "JSON" without the single quotes around properties
 
-		s = json.dumps(box, separators=(',', ':'))
+		s = json.dumps(frame, separators=(',', ':'))
 		return str(len(s)) + ':' + s
 
 
@@ -792,9 +806,9 @@ class ScriptTransport(_BaseHTTPTransport):
 		#return '</body></html>'
 
 
-	def _stringOne(self, box):
+	def _stringOne(self, frame):
 		"""
-		Return a serialized string for one box.
+		Return a serialized string for one frame.
 		"""
 		# TODO: dump more compact "JSON" without the single quotes around properties
 
@@ -805,7 +819,7 @@ class ScriptTransport(_BaseHTTPTransport):
 		# We escape more than just </script> because </ script> acts just like </script>
 		# (there are a lot of combinations)
 		# TODO: build the </script> escaping into simplejson for speed
-		s = json.dumps(box, separators=(',', ':')).replace(r'</', r'<\/')
+		s = json.dumps(frame, separators=(',', ':')).replace(r'</', r'<\/')
 		# TODO: find out if there's a way to close a script tag in IE or FF/Safari
 		# without sending an entire </script>
 		return '<script>f(%s)</script>' % (s,)

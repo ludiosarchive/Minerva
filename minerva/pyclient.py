@@ -10,7 +10,7 @@ from twisted.web import client, server, resource, http_headers, _newclient, iweb
 from twisted.internet import reactor, protocol, defer, address, interfaces, task
 from twisted.python import log
 
-from minerva import _protocols
+from minerva import _protocols, link
 
 
 class _BaseResponse(protocol.Protocol):
@@ -205,7 +205,7 @@ class BaseTwoWayCommunicator(object):
 
 
 	def _isControlFrame(self, frame):
-		return isinstance(frame, list) and frame[0] in ['`^a', '`^e']
+		return frame[0] != link.TYPE_BOX
 
 
 	def _handleFrame(self, frame):
@@ -215,14 +215,14 @@ class BaseTwoWayCommunicator(object):
 		self.framesReceived += 1
 
 		# Verify S2C number
-		if isinstance(frame, list) and frame[0] == '`^a':
+		if frame[0] == link.TYPE_ACK:
 			if frame[1] != self._startAtSeqNum:
 				self.abortAll()
 				raise UnexpectedS2CNumber(
 					"I was expecting the stream to start at S2C #%d; received %d" % (self._startAtSeqNum, frame[1]))
 
 		# Stop on errors
-		if isinstance(frame, list) and frame[0] == '`^e':
+		if frame[0] == link.TYPE_ERROR:
 			log.msg('Got error frame: %r' % (frame,))
 			self.finish()
 			return
@@ -233,7 +233,7 @@ class BaseTwoWayCommunicator(object):
 		if not self._isControlFrame(frame):
 			self.boxesReceived += 1
 			self._startAtSeqNum += 1
-			self.boxReceived(frame)
+			self.boxReceived(frame[1])
 
 
 	def boxReceived(self, box):

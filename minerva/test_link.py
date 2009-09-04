@@ -175,12 +175,12 @@ class BaseTestIntegration(object):
 		log.msg("I used %d connections to get the data." % (
 			comm._connectionNumber + 1,))
 		if self.communicator is pyclient.StopConditionXHRCommunicator:
-			self.assertEqual(6, comm._connectionNumber + 1)
+			self.assertEqual(7, comm._connectionNumber + 1)
 		else:
 			# Less data can fit in a same-maxBytes <script> transport
 			# because "<script>" and "</script>" take up so many bytes.
 			# So, it uses more connections to deliver the same boxes.
-			self.assertEqual(7, comm._connectionNumber + 1)
+			self.assertEqual(8, comm._connectionNumber + 1)
 
 
 
