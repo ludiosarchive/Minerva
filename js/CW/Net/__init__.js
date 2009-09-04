@@ -163,10 +163,7 @@ CW.Class.subclass(CW.Net, "Stream").methods(
 		self._queue = [];
 		self._seqNumAt0 = 0;
 		self._ackS2C = -1;
-		self._notifications = {};
 	},
-
-	// TODO: errback all the notifications when the stream times out
 
 	function _getLastQueueSeq(self) {
 		return self._seqNumAt0 + self._queue.length;
@@ -187,9 +184,7 @@ CW.Class.subclass(CW.Net, "Stream").methods(
 		for(var i=0; i < boxesLen; i++) {
 			self._queue.push(box);
 		}
-		var seqNum = self._getLastQueueSeq();
 		self._sendIfPossible();
-		return seqNum;
 	},
 
 	/**
@@ -200,9 +195,7 @@ CW.Class.subclass(CW.Net, "Stream").methods(
 	 */
 	function sendBox(self, box) {
 		self._queue.push(box);
-		var seqNum = self._getLastQueueSeq();
 		self._sendIfPossible();
-		return seqNum;
 	},
 
 	function _sendIfPossible(self) {
@@ -214,25 +207,9 @@ CW.Class.subclass(CW.Net, "Stream").methods(
 			when possible, allow smuggling C2S into an S2C HTTP request
 			(don't create the C2S request immediately?)
 
-			
-
 		 */
-
 	},
 
-	/**
-	 * Given box represented by L{seqNum}, return a Deferred that triggers with
-	 * callback if delivery was successful, or errback if not successful.
-	 */
-	function notifyDelivery(self, seqNum) {
-		// There's probably a pathological case here
-		if(seqNum > self._getLastQueueSeq()) {
-			throw new Error("seqNum too high, we never even sent this");
-		}
-		self._notifications.push([seqNum, CW.Defer.Deferred()]);
-		self._notifications.sort()
-		//self._notifications.sort(function(a, b){a[0] < b[0] ? -1 : 1}); // not necessary
-	},
 
 	/**
 	 * Server received all frames before L{seqNum}.
@@ -245,41 +222,12 @@ CW.Class.subclass(CW.Net, "Stream").methods(
 		}
 		self._queue.splice(0, seqNum - self._seqNumAt0);
 		self._seqNumAt0 = seqNum;
-
-		// Trigger notifications (callback)
-		var notifs = self._notifications;
-		var notificationsLen = notifs.length;
-		var toRemove = 0;
-		for(var i=0; i < notificationsLen; i++) {
-			var oneNotif = notifs[i];
-			if(oneNotif[0] < seqNum) {
-				try {
-					oneNotif[1].callback(null);
-				} catch(e) {
-					CW.err(e, 'Triggering callback '+oneNotif[1]+' for box #'+oneNotif[0]+' threw error');
-				}
-				toRemove += 1;
-			}
-		}
-		notifs.splice(0, toRemove);
 	},
 
 	/**
 	 * Internal function; called when Stream timeout is triggered.
 	 */
 	function _killStream(self) {
-		// Trigger notifications (errback)
-		var notifs = self._notifications;
-		var notificationsLen = notifs.length;
-		for(var i=0; i < notificationsLen; i++) {
-			var oneNotif = notifs[i];
-			try {
-				oneNotif[1].errback(new CW.Net.StreamTimedOut());
-			} catch(e) {
-				CW.err(e, 'Triggering errback '+oneNotif[1]+' for box #'+oneNotif[0]+' threw error');
-			}
-		}
-		self._notifications = [];
 		self.streamEnded(); // call user-customizable method
 	},
 
