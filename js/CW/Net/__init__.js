@@ -148,6 +148,9 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 // side or client side.) Non-box frames are at the beginning of a stream or inserted
 // safely into the queue.
 
+CW.Error.subclass(CW.Net, 'StreamTimedOut');
+CW.Error.subclass(CW.Net, 'SeqNumTooHighError');
+
 CW.Class.subclass(CW.Net, "Stream").methods(
 	/**
 	 * Initialize Stream with:
@@ -221,13 +224,14 @@ CW.Class.subclass(CW.Net, "Stream").methods(
 	 */
 	function serverReceivedEverythingBefore(self, seqNum) {
 		// Remove old boxes from the queue
-		if(seqNum > self._getLastQueueSeq()) {
-			throw new Error("seqNumTooHighError");
+		var lastSeq = self._getLastQueueSeq();
+		if(seqNum > lastSeq) {
+			throw new CW.Net.SeqNumTooHighError("not true: " + seqNum + " > " + lastSeq);
 		}
 		self._queue.splice(0, seqNum - self._seqNumAt0);
 		self._seqNumAt0 = seqNum;
 
-		// Trigger notifications
+		// Trigger notifications (callback)
 		var notifs = self._notifications;
 		var notificationsLen = notifs.length;
 		var toRemove = 0;
@@ -243,6 +247,25 @@ CW.Class.subclass(CW.Net, "Stream").methods(
 			}
 		}
 		notifs.splice(0, toRemove);
+	},
+
+	/**
+	 * Internal function; called when Stream timeout is triggered.
+	 */
+	function _killStream(self) {
+		// Trigger notifications (errback)
+		var notifs = self._notifications;
+		var notificationsLen = notifs.length;
+		for(var i=0; i < notificationsLen; i++) {
+			var oneNotif = notifs[i];
+			try {
+				oneNotif[1].errback(new CW.Net.StreamTimedOut());
+			} catch(e) {
+				CW.err(e, 'Triggering errback '+oneNotif[1]+' for box #'+oneNotif[0]+' threw error');
+			}
+		}
+		self._notifications = [];
+		self.streamLost(); // call user-customizable method
 	},
 
 	/**
