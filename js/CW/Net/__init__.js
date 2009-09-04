@@ -1,4 +1,5 @@
 // import CW
+// import CW.Defer
 
 CW.Error.subclass(CW.Net, 'ParseError');
 
@@ -126,65 +127,170 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 );
 
 
+// IWindowTime is an object with methods setTimeout, clearTimeout, setInterval, clearInterval
+
+
 // Stream
+
+/**
+ * There's no "sendBoxEventually" here - if you want that, maintain your own
+ * "send eventually" queue and use L{gotSendingOpportunity} to send
+ * the "send eventually" boxes. You might also want to send them on a timer
+ * because some transports will never have a "special sending opportunity"
+ * after they connect.
+ */
+
+// TODO: there might be some crazy way to optimize the queue - maybe just use an object instead of an array?
+
+// We use sequence numbers for both transport-level reliability and for
+// message-level reliability. This isn't a problem because we never need
+// to non-box frames between consequentive boxes in a queue (either server
+// side or client side.) Non-box frames are at the beginning of a stream or inserted
+// safely into the queue.
+
 CW.Class.subclass(CW.Net, "Stream").methods(
-
-	function __init__(self, window) {
+	/**
+	 * Initialize Stream with:
+	 *    L{window}, provides L{IWindowTime}
+	 *    L{timeout}, Stream timeout in milliseconds.
+	 */
+	function __init__(self, window, timeout) {
 		self._window = window;
+		self._timeout = timeout ? timeout : 30000;
 		self._queue = [];
-		self._eventually = [];
+		self._seqNumAt0 = 0;
+		self._ackS2C = -1;
+		self._notifications = {};
 	},
 
-	/*
-	Enqueue boxes L{boxes} for sending soon.
+	// TODO: errback all the notifications when the stream times out
 
-	Whenever possible, use L{sendBoxes} to send multiple boxes instead
-	of repeated calls to L{sendBox}.
+	function _getLastQueueSeq(self) {
+		return self._seqNumAt0 + self._queue.length;
+	},
 
-	It is often correct to buffer boxes in a list and give them to
-	L{sendBoxes} all at once. */
+	/**
+	 * Enqueue boxes L{boxes} for sending soon. Returns the C2S sequence number
+	 * of the _last_ box, in case you need delivery notification later.
+	 *
+	 * Whenever possible, use L{sendBoxes} to send multiple boxes instead
+	 * of repeated calls to L{sendBox}.
+	 *
+	 * It is often correct to buffer boxes in a list and give them to
+	 * L{sendBoxes} all at once.
+	 */
 	function sendBoxes(self, boxes) {
-		// XXX
-		self._sendIfPossible()
+		var boxesLen = boxes.length;
+		for(var i=0; i < boxesLen; i++) {
+			self._queue.push(box);
+		}
+		var seqNum = self._getLastQueueSeq();
+		self._sendIfPossible();
+		return seqNum;
 	},
 
-	/*
-	Enqueue box L{box} for sending soon. Use L{sendBoxes} instead
-	if you are sending multiple boxes.
-	*/
+	/**
+	 * Enqueue box L{box} for sending soon. Returns the C2S sequence number
+	 * of the box, in case you need delivery notification later.
+	 *
+	 * Use L{sendBoxes} instead if you are sending multiple boxes.
+	 */
 	function sendBox(self, box) {
-		// XXX
-		self._sendIfPossible()
+		self._queue.push(box);
+		var seqNum = self._getLastQueueSeq();
+		self._sendIfPossible();
+		return seqNum;
 	},
 
-	/*
-	Enqueue box L{box} for sending when most convenient for CW.Net.
-	If using an HTTP transport, this could take about a minute.
+	/**
+	 * Given box represented by L{seqNum}, return a Deferred that triggers with
+	 * callback if delivery was successful, or errback if not successful.
+	 */
+	function notifyDelivery(self, seqNum) {
+		// There's probably a pathological case here
+		if(seqNum > self._getLastQueueSeq()) {
+			throw new Error("seqNum too high, we never even sent this");
+		}
+		self._notifications.push([seqNum, CW.Defer.Deferred()]);
+		self._notifications.sort()
+		//self._notifications.sort(function(a, b){a[0] < b[0] ? -1 : 1}); // not necessary
+	},
 
-	This may be useful for sending non-critical information collected by
-	other JavaScript code.
-	*/
-	function sendBoxEventually(self, box) {
+	/**
+	 * Server received all frames before L{seqNum}.
+	 */
+	function serverReceivedEverythingBefore(self, seqNum) {
+		// Remove old boxes from the queue
+		if(seqNum > self._getLastQueueSeq()) {
+			throw new Error("seqNumTooHighError");
+		}
+		self._queue.splice(0, seqNum - self._seqNumAt0);
+		self._seqNumAt0 = seqNum;
+
+		// Trigger notifications
+		var notifs = self._notifications;
+		var notificationsLen = notifs.length;
+		var toRemove = 0;
+		for(var i=0; i < notificationsLen; i++) {
+			var oneNotif = notifs[i];
+			if(oneNotif[0] < seqNum) {
+				try {
+					oneNotif[1].callback(null);
+				} catch(e) {
+					CW.err(e, 'Triggering callback '+oneNotif[1]+' for box #'+oneNotif[0]+' threw error');
+				}
+				toRemove += 1;
+			}
+		}
+		notifs.splice(0, toRemove);
+	},
+
+	/**
+	 * Change the timeout to L{timeout} milliseconds.
+	 */
+	function changeTimeout(self, timeout) {
+		self._timeout = timeout;
+		// XXX do we need to do anything else here?
+	},
+
+	/**
+	 * L{gotSendingOpportunity} is called when CW.Net is about to initialize a
+	 * new S2C transport. You can use this event to send just-created or specially-queued
+	 * boxes along with the new S2C transport. If CW.Net is about to initialize an HTTP
+	 * S2C transport, boxes queued right now might avoid a C2S HTTP request.
+	 * For non-HTTP transports, queuing a box right now might avoid having to send
+	 * two separate TCP packets.
+	 *
+	 * You're free to call L{sendBox} or L{sendBoxes} as usual. Note that smuggling
+	 * will not always work, but boxes will still be delivered.
+	 *
+	 * Some S2C transports can stay open for a very long time
+	 * (FSTransport, WSTransport) and therefore L{gotSendingOpportunity}
+	 * might only be called once.
+	 *
+	 * Override this.
+	 */
+	function gotSendingOpportunity(self) {
 		// XXX
-		// XXX self._eventually
 	},
 
 
 	/**
-	 * CW.Net is about to initialize a new S2C transport. You can use this
-	 * event to generate boxes to send along with an HTTP request (to avoid
-	 * making a C2S HTTP request), or send along with the TCP/IP packet
-	 * (to possibly avoid sending multiple packets).
+	 * Something important changed about how frequently we can send/receive
+	 * over the Stream. This is probably because the transport was upgraded
+	 * or downgraded.
 	 *
-	 * From inside this method, you can call either L{sendBox} or
-	 * L{sendBoxEventually} to send boxes. XXX TODO REALLY no difference?
-	 * XXX what about if the box user wants to send is too big to smuggle?
-	 *
-	 * Please note that some S2C transports may stay open for a very long time
-	 * (FSTransport, WSTransport) and therefore L{gotSendingOpportunity}
-	 * might only be called once.
+	 * Override this.
 	 */
-	function gotSendingOpportunity(self) {
+	function streamQualityChanged(self, qualityInfo) {
+
+	},
+
+
+	/**
+	 * Stream timed out. Override this.
+	 */
+	function streamLost(self) {
 		// XXX
 	},
 
