@@ -73,9 +73,15 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 		}
 
 		var text = self.xObject.responseText;
-		if(responseTextLength === null) {
-			responseTextLength = text.length;
+
+		// Users can lie about L{responseTextLength}
+		var reportedLength = responseTextLength;
+		responseTextLength = text.length;
+		if(reportedLength > responseTextLength) {
+			CW.msg('Someone lied and reported a too-large responseTextLength: ' +
+				reportedLength + '; should have been ' + responseTextLength + ' or lower.');
 		}
+
 		var strings = [];
 		for(;;) {
 			if(self._modeOrReadLength === 0) { // mode LENGTH
@@ -125,6 +131,100 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 		return strings;
 	}
 );
+
+
+
+CW.Error.subclass(CW.Net, 'RequestStillActive');
+
+
+/**
+ * XHR, XMLHTTP, XDR
+ */
+CW.Class.subclass(CW.Net, "ReusableXHR").methods(
+	function __init__(self, window, timeout) {
+		self._window = window;
+		var objNameObj = self._findObject();
+		self._objectName = objNameObj[0];
+		self._object = objNameObj[1];
+		self._requestActive = false;
+	},
+
+	function _findObject(self) {
+		// http://blogs.msdn.com/xmlteam/archive/2006/10/23/using-the-right-version-of-msxml-in-internet-explorer.aspx
+		// TODO: later do some experiments to find out if getting Msxml2.XMLHTTP.6.0 may be better
+		var things = [
+			'XDomainRequest', function(){return new XDomainRequest()},
+			'XMLHttpRequest', function(){return new XMLHttpRequest()},
+			'Msxml2.XMLHTTP', function(){return new ActiveXObject("Msxml2.XMLHTTP")},
+			'Microsoft.XMLHTTP', function(){return new ActiveXObject("Microsoft.XMLHTTP")}
+		];
+		for (var n=1; n < things.length; n+=2) {
+			try {
+				var object = things[n]();
+				break;
+			} catch(e) {
+
+			}
+		}
+		var objectName = things[n - 1];
+		return [objectName, object];
+	},
+
+	/**
+	 * Open the URL
+	 *
+	 * L{verb} is "GET" or "POST"
+	 * L{url} is a relative or absolute URL string.
+	 * L{post} is data to POST. Use "" (empty string) if using L{verb} "GET".
+	 * L{progressCallback} (if truthy) is a function which I will call whenever data is received.
+	 *    It is called with two arguments: bytes downloaded (Number), bytes response size (Number)
+	 *    or null if either number could not be determined (this implementation purposely avoids
+	 *    looking into responseText). If falsy, it will not be called.
+	 *
+	 * Returns an L{CW.Defer.Deferred} that fires with callback or errback.
+	 */
+	function open(self, verb, post, progressCallback) {
+		// TODO: convert all relative URLs to absolute URLs so that this works
+		// in iframes for Firefox 2.0 and Safari 3.x
+		if(self._requestActive) {
+			throw new CW.Net.RequestStillActive();
+		}
+		var d = CW.Defer.Deferred();
+		self._progressCallback = progressCallback ? progressCallback : null;
+
+		// To reuse the XMLHTTP object in IE7, the order must be: open, onreadystatechange, send
+
+		var x = self._object;
+
+		self._requestActive = true;
+		x.open(verb, url, true);
+		x.onreadystatechange = self._handler_onreadystatechange;
+		// "" for no content is what GWT does in
+		// google-web-toolkit/user/src/com/google/gwt/user/client/HTTPRequest.java
+		// TODO: find out: is null okay? undefined? ''? no argument? Is this the same for XDomainRequest?
+		x.send(post ? post : "");
+
+		return d;
+	},
+
+	function _handler_onreadystatechange(self) {
+		// In Firefox 3.5 and Chromium 4.0.207.0, onreadystatechange is called
+		// with one argument, a C{readystatechange} event with no useful properties.
+		// TODO: look around in other browsers? maybe they'll have a "bytes received" property?
+		var readyState = self._object.readyState
+		if(readyState == 3 && self._progressCallback) {
+			// TODO: send numbers if available. use onprogress event.
+			self._progressCallback(null, null);
+		} else if(readyState == 4) {
+
+		}
+	}
+);
+
+
+
+// TODO: synchronous XHR / XMLHTTP (not possible for XDR)
+
 
 
 // IWindowTime is an object with methods setTimeout, clearTimeout, setInterval, clearInterval

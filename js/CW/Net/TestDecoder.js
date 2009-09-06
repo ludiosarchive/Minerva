@@ -1,5 +1,5 @@
 /**
- * Tests for the CW.Net
+ * Tests for CW.Net
  */
 
 
@@ -7,7 +7,7 @@
 // import CW.Net
 
 
-CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestResponseTextDecoderNull').methods(
+CW.UnitTest.TestCase.subclass(CW.Net.TestDecoder, 'TestResponseTextDecoderNull').methods(
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
@@ -204,10 +204,10 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestResponseTextDecoderNull').met
  * Because we're passing in null, it doesn't know the length of C{responseText}
  * in advance, so it should actually test something usefully.
  */
-CW.Net.TestNet.TestResponseTextDecoderNull.subclass(
-CW.Net.TestNet, 'TestResponseTextDecoderNullByteAtATime').methods(
+CW.Net.TestDecoder.TestResponseTextDecoderNull.subclass(
+CW.Net.TestDecoder, 'TestResponseTextDecoderNullByteAtATime').methods(
 	function setUp(self) {
-		CW.Net.TestNet.TestResponseTextDecoderNullByteAtATime.upcall(self, 'setUp', []);
+		CW.Net.TestDecoder.TestResponseTextDecoderNullByteAtATime.upcall(self, 'setUp', []);
 		// The _toSend logic is very tricky because of ParseError exceptions
 		self._toSend = 1;
 	},
@@ -234,8 +234,8 @@ CW.Net.TestNet, 'TestResponseTextDecoderNullByteAtATime').methods(
 );
 
 
-CW.Net.TestNet.TestResponseTextDecoderNull.subclass(
-CW.Net.TestNet, 'TestResponseTextDecoderNumber').methods(
+CW.Net.TestDecoder.TestResponseTextDecoderNull.subclass(
+CW.Net.TestDecoder, 'TestResponseTextDecoderNumber').methods(
 	/**
 	 * Pretend that this is the number you get when you get XHR onprogress events.
 	 * This test class *does* know how many bytes were received.
@@ -249,10 +249,10 @@ CW.Net.TestNet, 'TestResponseTextDecoderNumber').methods(
  * This is a test class that makes sure the decoder state isn't corrupted when it reports
  * a smaller number for L{responseTextLength} than L{responseText.length}.
  */
-CW.Net.TestNet.TestResponseTextDecoderNumber.subclass(
-CW.Net.TestNet, 'TestResponseTextDecoderNumberMinus1').methods(
+CW.Net.TestDecoder.TestResponseTextDecoderNumber.subclass(
+CW.Net.TestDecoder, 'TestResponseTextDecoderNumberMinus1').methods(
 	function setUp(self) {
-		CW.Net.TestNet.TestResponseTextDecoderNumberMinus1.upcall(self, 'setUp', []);
+		CW.Net.TestDecoder.TestResponseTextDecoderNumberMinus1.upcall(self, 'setUp', []);
 		self.misreportSubtract = 1;
 	},
 
@@ -274,17 +274,16 @@ CW.Net.TestNet, 'TestResponseTextDecoderNumberMinus1').methods(
  * This is another test class that makes sure the decoder state isn't corrupted when it reports
  * a smaller number for L{responseTextLength} than L{responseText.length}.
  */
-CW.Net.TestNet.TestResponseTextDecoderNumberMinus1.subclass(
-CW.Net.TestNet, 'TestResponseTextDecoderNumberMinus2').methods(
+CW.Net.TestDecoder.TestResponseTextDecoderNumberMinus1.subclass(
+CW.Net.TestDecoder, 'TestResponseTextDecoderNumberMinus2').methods(
 	function setUp(self) {
-		CW.Net.TestNet.TestResponseTextDecoderNumberMinus2.upcall(self, 'setUp', []);
+		CW.Net.TestDecoder.TestResponseTextDecoderNumberMinus2.upcall(self, 'setUp', []);
 		self.misreportSubtract = 2;
 	}
 );
 
 
-
-CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestIgnoreResponseTextOptimization').methods(
+CW.UnitTest.TestCase.subclass(CW.Net.TestDecoder, 'TestIgnoreResponseTextOptimization').methods(
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
@@ -320,3 +319,39 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestIgnoreResponseTextOptimizatio
 	}
 
 );
+
+
+/**
+ * Test that the decoder does not break when it gets a too-large L{responseTextLength}.
+ */
+CW.UnitTest.TestCase.subclass(CW.Net.TestDecoder, 'TestExaggeratedLength').methods(
+
+	function setUp(self) {
+		self.dummy = {responseText: ''};
+		self.decoder = CW.Net.ResponseTextDecoder(self.dummy);
+	},
+
+	/**
+	 * Ensure that a piece is not delivered if the user lied about L{responseTextLength}
+	 */
+	function test_lying1(self) {
+		self.dummy.responseText = "10:helloworl";
+		self.assertArraysEqual([], self.decoder.getNewFrames(3+10));
+	},
+
+	/**
+	 * Ensure that a piece is not delivered if the user lied about L{responseTextLength}
+	 */
+	function test_lying2(self) {
+		self.dummy.responseText = "10:helloworl";
+		self.assertArraysEqual([], self.decoder.getNewFrames(3+10));
+		self.assertArraysEqual([], self.decoder.getNewFrames(3+10));
+
+		self.dummy.responseText = "10:helloworld";
+		self.assertArraysEqual(['helloworld'], self.decoder.getNewFrames(3+10));
+		self.dummy.responseText = "10:helloworld4:x";
+		self.assertArraysEqual([], self.decoder.getNewFrames(3+10+2+4));
+		self.dummy.responseText = "10:helloworld4:xxxx";
+		self.assertArraysEqual(['xxxx'], self.decoder.getNewFrames(3+10+2+4));
+	}
+)
