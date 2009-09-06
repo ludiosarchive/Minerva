@@ -196,6 +196,14 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestResponseTextDecoderNull').met
 );
 
 
+/**
+ * For the non-"pass in null" case, there is no need to test "byte at a time"
+ * behavior, because the decoder wouldn't be running any important logic
+ * until it got a complete frame.
+ *
+ * Because we're passing in null, it doesn't know the length of C{responseText}
+ * in advance, so it should actually test something usefully.
+ */
 CW.Net.TestNet.TestResponseTextDecoderNull.subclass(
 CW.Net.TestNet, 'TestResponseTextDecoderNullByteAtATime').methods(
 	function setUp(self) {

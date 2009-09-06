@@ -157,8 +157,9 @@ CW.Class.subclass(CW.Net, "Stream").methods(
 	 *    L{window}, provides L{IWindowTime}
 	 *    L{timeout}, Stream timeout in milliseconds.
 	 */
-	function __init__(self, window, timeout) {
+	function __init__(self, window, streamId, timeout) {
 		self._window = window;
+		self.streamId = streamId;
 		self._timeout = timeout ? timeout : 30000;
 		self._queue = [];
 		self._seqNumAt0 = 0;
