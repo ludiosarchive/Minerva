@@ -56,6 +56,7 @@ class NetStringDecoder(object):
 
 
 	def doLength(self):
+		# .find in CPython 2.7 searches left-to-right, which is good for us.
 		colonLocation = self._data.find(':', self._offset) # TODO: should there be a search limit here?
 		if colonLocation != -1:
 			try:
