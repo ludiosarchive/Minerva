@@ -211,7 +211,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	/**
 	 * Request some URL.
 	 *
-	 * L{verb} is "GET" or "POST"
+	 * L{verb} is exactly "GET" or exactly "POST"
 	 * L{url} is an absolute URL string. Relative URLs are *forbidden*; they will work in some
 	 *    browsers but fail in older/rare ones.
 	 * L{post} is data to POST. Use "" (empty string) if using L{verb} "GET".
@@ -224,6 +224,10 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	 * another request until this Deferred fires. Do not rely only on L{progressCallback}.
 	 */
 	function open(self, verb, url, /*optional*/ post, /*optional*/ progressCallback) {
+		if(CW._debugMode) {
+			CW.assert(CW.startswith(url, 'http://') || CW.startswith(url, 'https://'));
+			CW.assert(verb == "POST" || verb == "GET");
+		}
 
 		// TODO: send as few headers possible for each browser. This requires custom
 		// per-browser if/elif'ing
