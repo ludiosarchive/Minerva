@@ -135,18 +135,48 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 
 
 CW.Error.subclass(CW.Net, 'RequestStillActive');
+CW.Error.subclass(CW.Net, 'RequestAborted');
+
+
+// Without CORS support for XMLHttpRequest, or XDomainRequest, we have to create
+// an iframe for each domain that we want to make XHR requests to. This is because we
+// can "bridge" subdomain domains with document.domain, but XHR requests must go
+// to the same scheme:host:port
+// Safari 4, Chrome 2, Firefox 3.5 have CORS.
+// IE has XDomainRequest
+
+// We might even able to pull the XHR object out of the iframe and kill the iframe. But this needs to be tested.
+
+
+
+// Per top-level page: We'll have to keep track of which iframes we've created for subdomain
+// access. We might want more than one sometimes, if we're doing diagnostics.
+
+
+// More globally: Somehow we'll have to keep track of which subdomains are "in use"
+// so that a browser like Chrome doesn't open too many connections to the same subdomain
+// TODO: should we even care about Chrome right now? It'll have WebSockets pretty soon, which
+// don't count towards the connection limit.
+
+
+// It's important to remember that XHR/XMLHTTP will often be
+// done in an iframe to achieve cross-subdomain requests.
 
 
 /**
- * XHR, XMLHTTP, XDR
+ * XHR, XMLHTTP, XDR. This should be usable for non-Minerva use;
+ * for example, to run out-of-Stream network diagnostics.
  */
 CW.Class.subclass(CW.Net, "ReusableXHR").methods(
+
 	function __init__(self, window, timeout) {
 		self._window = window;
 		var objNameObj = self._findObject();
 		self._objectName = objNameObj[0];
 		self._object = objNameObj[1];
+		CW.msg(self + ' is using ' + self._objectName + ' ' + self._object + ' for XHR.');
 		self._requestActive = false;
+		self._aborted = false;
 	},
 
 	function _findObject(self) {
@@ -170,22 +200,34 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		return [objectName, object];
 	},
 
+	function getObject(self) {
+		return self._object;
+	},
+
+	function getObjectName(self) {
+		return self._objectName;
+	},
+
 	/**
-	 * Open the URL
+	 * Request some URL.
 	 *
 	 * L{verb} is "GET" or "POST"
-	 * L{url} is a relative or absolute URL string.
+	 * L{url} is an absolute URL string. Relative URLs are *forbidden*; they will work in some
+	 *    browsers but fail in older/rare ones.
 	 * L{post} is data to POST. Use "" (empty string) if using L{verb} "GET".
 	 * L{progressCallback} (if truthy) is a function which I will call whenever data is received.
 	 *    It is called with two arguments: bytes downloaded (Number), bytes response size (Number)
 	 *    or null if either number could not be determined (this implementation purposely avoids
-	 *    looking into responseText). If falsy, it will not be called.
+	 *    looking into responseText). L{progressCallback} will be called when the last chunk is received, too.
 	 *
-	 * Returns an L{CW.Defer.Deferred} that fires with callback or errback.
+	 * Returns an L{CW.Defer.Deferred} that fires with callback or errback. It's not safe to make
+	 * another request until this Deferred fires. Do not rely only on L{progressCallback}.
 	 */
-	function open(self, verb, post, progressCallback) {
-		// TODO: convert all relative URLs to absolute URLs so that this works
-		// in iframes for Firefox 2.0 and Safari 3.x
+	function open(self, verb, url, /*optional*/ post, /*optional*/ progressCallback) {
+
+		// TODO: send as few headers possible for each browser. This requires custom
+		// per-browser if/elif'ing
+
 		if(self._requestActive) {
 			throw new CW.Net.RequestStillActive();
 		}
@@ -207,16 +249,45 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		return d;
 	},
 
+	/**
+	 * Abort the current request. If none is active, this is a no-op.
+	 */
+	function abort(self) {
+		if(self._requestActive) {
+			self._object.abort();
+		}
+	},
+
 	function _handler_onreadystatechange(self) {
 		// In Firefox 3.5 and Chromium 4.0.207.0, onreadystatechange is called
 		// with one argument, a C{readystatechange} event with no useful properties.
 		// TODO: look around in other browsers? maybe they'll have a "bytes received" property?
-		var readyState = self._object.readyState
-		if(readyState == 3 && self._progressCallback) {
+		var readyState = self._object.readyState;
+		if((readyState == 3 || readyState == 4) && self._progressCallback) {
 			// TODO: send numbers if available. use onprogress event.
-			self._progressCallback(null, null);
-		} else if(readyState == 4) {
+			try {
+				self._progressCallback(null, null);
+			} catch(e) {
+				CW.err(e, 'Error in _progressCallback');
+			}
+		}
 
+		// TODO: detect network disconnections (IE error codes, what about other browsers?)
+		// TODO: we can't detect if the response body is complete because responseText is unicode
+		// while content-length is in bytes, but we can at least detect it for the "0 bytes received" case
+		// OR: have the server send an optional "X-UniLen" header
+
+		if(readyState == 4) {
+			// TODO: maybe do this in IE only?
+			self._object.onreadystatechange = CW.emptyFunc;
+
+			self._requestActive = false;
+			if(self._aborted) {
+				self._aborted = false;
+				d.errback(new CW.Net.RequestAborted());
+			} else {
+				d.callback(self._object);
+			}
 		}
 	}
 );
@@ -420,7 +491,7 @@ CW.Class.subclass(CW.Net, "StreamFactory").methods(
 
 
 //XHRTransport
-//XDRTransport
+//no? XDRTransport
 //SSETransport
 //ScriptTransport
 //WSTransport

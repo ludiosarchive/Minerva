@@ -1,5 +1,5 @@
 /**
- * Tests for CW.Net
+ * Tests for CW.Net's ResponseTextDecoder
  */
 
 
