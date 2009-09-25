@@ -182,6 +182,13 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	function _findObject(self) {
 		// http://blogs.msdn.com/xmlteam/archive/2006/10/23/using-the-right-version-of-msxml-in-internet-explorer.aspx
 		// TODO: later do some experiments to find out if getting Msxml2.XMLHTTP.6.0 may be better
+
+		/*
+		Two reasons to prefer XDomainRequest over XHR/XMLHTTP in IE8:
+			- don't need to create an iframe for cross-subdomain requesting
+			- onprogress event, so we don't have to check responseText every 50ms or so
+		 */
+
 		var things = [
 			'XDomainRequest', function(){return new XDomainRequest()},
 			'XMLHttpRequest', function(){return new XMLHttpRequest()},
@@ -224,10 +231,10 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	 * another request until this Deferred fires. Do not rely only on L{progressCallback}.
 	 */
 	function open(self, verb, url, /*optional*/ post, /*optional*/ progressCallback) {
-		if(CW._debugMode) {
-			CW.assert(CW.startswith(url, 'http://') || CW.startswith(url, 'https://'));
-			CW.assert(verb == "POST" || verb == "GET");
-		}
+//] if _debugMode:
+		CW.assert(CW.startswith(url, 'http://') || CW.startswith(url, 'https://'), "`url` must be an absolute URL.");
+		CW.assert(verb == "POST" || verb == "GET", "`verb` must be 'POST' or 'GET'");
+//] endif
 
 		// TODO: send as few headers possible for each browser. This requires custom
 		// per-browser if/elif'ing
@@ -235,7 +242,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		if(self._requestActive) {
 			throw new CW.Net.RequestStillActive();
 		}
-		var d = CW.Defer.Deferred();
+		self._requestDoneD = CW.Defer.Deferred();
 		self._progressCallback = progressCallback ? progressCallback : null;
 
 		// To reuse the XMLHTTP object in IE7, the order must be: open, onreadystatechange, send
@@ -245,12 +252,12 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		self._requestActive = true;
 		x.open(verb, url, true);
 		x.onreadystatechange = self._handler_onreadystatechange;
-		// "" for no content is what GWT does in
+		// .send("") for "no content" is what GWT does in
 		// google-web-toolkit/user/src/com/google/gwt/user/client/HTTPRequest.java
 		// TODO: find out: is null okay? undefined? ''? no argument? Is this the same for XDomainRequest?
 		x.send(post ? post : "");
 
-		return d;
+		return self._requestDoneD;
 	},
 
 	/**
@@ -265,7 +272,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	function _handler_onreadystatechange(self) {
 		// In Firefox 3.5 and Chromium 4.0.207.0, onreadystatechange is called
 		// with one argument, a C{readystatechange} event with no useful properties.
-		// TODO: look around in other browsers? maybe they'll have a "bytes received" property?
+		// TODO: look around in other browsers? maybe (but unlikely) they'll have a "bytes received" property.
 		var readyState = self._object.readyState;
 		if((readyState == 3 || readyState == 4) && self._progressCallback) {
 			// TODO: send numbers if available. use onprogress event.
@@ -285,12 +292,13 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 			// TODO: maybe do this in IE only?
 			self._object.onreadystatechange = CW.emptyFunc;
 
+			// Change the order of these lines at your own peril...
 			self._requestActive = false;
 			if(self._aborted) {
 				self._aborted = false;
-				d.errback(new CW.Net.RequestAborted());
+				self._requestDoneD.errback(new CW.Net.RequestAborted());
 			} else {
-				d.callback(self._object);
+				self._requestDoneD.callback(self._object);
 			}
 		}
 	}
@@ -301,7 +309,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 // TODO: synchronous XHR / XMLHTTP (not possible for XDR)
 
 
-
+// Informal interfaces:
 // IWindowTime is an object with methods setTimeout, clearTimeout, setInterval, clearInterval
 
 
@@ -315,13 +323,8 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
  * after they connect.
  */
 
-// TODO: there might be some crazy way to optimize the queue - maybe just use an object instead of an array?
-
-// We use sequence numbers for both transport-level reliability and for
-// message-level reliability. This isn't a problem because we never need
-// to non-box frames between consequentive boxes in a queue (either server
-// side or client side.) Non-box frames are at the beginning of a stream or inserted
-// safely into the queue.
+// TODO: another data structure for the queue might increase real-world performance;
+// consider trying a deque (linked list).
 
 CW.Error.subclass(CW.Net, 'StreamTimedOut');
 CW.Error.subclass(CW.Net, 'SeqNumTooHighError');
@@ -378,7 +381,7 @@ CW.Class.subclass(CW.Net, "Stream").methods(
 		/*
 		This will be pretty complicated.
 		We want to:
-			use a dual S2C-C2S transport if we have one connected, or expect one to connect
+			use a dual S2C-C2S transport (Flash, WebSocket) if we have one connected, or expect one to connect
 
 			when possible, allow smuggling C2S into an S2C HTTP request
 			(don't create the C2S request immediately?)
@@ -391,10 +394,10 @@ CW.Class.subclass(CW.Net, "Stream").methods(
 	 * Server received all frames before L{seqNum}.
 	 */
 	function serverReceivedEverythingBefore(self, seqNum) {
-		// Remove old boxes from the queue
+		// Remove old boxes from our C2S queue
 		var lastSeq = self._getLastQueueSeq();
 		if(seqNum > lastSeq) {
-			throw new CW.Net.SeqNumTooHighError("not true: " + seqNum + " > " + lastSeq);
+			throw new CW.Net.SeqNumTooHighError("(seqNum) " + seqNum + " > " + lastSeq + " (lastSeq)");
 		}
 		self._queue.splice(0, seqNum - self._seqNumAt0);
 		self._seqNumAt0 = seqNum;

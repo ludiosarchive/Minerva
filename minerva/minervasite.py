@@ -1,11 +1,14 @@
-
 import os
+import cgi
+import simplejson as json
+
 from twisted.python.filepath import FilePath
-from twisted.web import resource, static
+from twisted.web import resource, static, http, server
+
+from zope.interface import implements
 
 from cwtools import testing, jsimp
 from minerva import link
-from zope.interface import implements
 
 
 class DemoPage(resource.Resource):
@@ -33,6 +36,36 @@ class CustomTestPage(testing.TestPage):
 
 
 
+class ConnectionTrackingHTTPChannel(http.HTTPChannel):
+	"""
+	An L{HTTPChannel} that tells the factory about all connection
+	activity. 
+	"""
+
+	def __init__(self, *args, **kwargs):
+		http.HTTPChannel.__init__(self, *args, **kwargs)
+
+
+	def connectionMade(self, *args, **kwargs):
+		http.HTTPChannel.connectionMade(self, *args, **kwargs)
+		self.factory.connections.add(self)
+
+
+	def connectionLost(self, *args, **kwargs):
+		http.HTTPChannel.connectionLost(self, *args, **kwargs)
+		self.factory.connections.remove(self)
+
+
+
+class ConnectionTrackingSite(server.Site):
+	protocol = ConnectionTrackingHTTPChannel
+
+	def __init__(self, *args, **kwargs):
+		server.Site.__init__(self, *args, **kwargs)
+		self.connections = set()
+
+
+
 class ResourcesForTest(resource.Resource):
 	def __init__(self, reactor):
 		resource.Resource.__init__(self)
@@ -40,6 +73,36 @@ class ResourcesForTest(resource.Resource):
 		self._reactor = reactor
 
 		# add test resources as needed
+
+
+
+class DisplayConnections(resource.Resource):
+	"""
+	Display a list of all connections connected to this server.
+	"""
+	isLeaf = True
+	def render_GET(self, request):
+		conns = repr(request.channel.factory.connections)
+		out = """\
+<pre>
+%s
+</pre>
+""" % (cgi.escape(conns))
+		return out
+
+
+
+class SimpleResponse(resource.Resource):
+	"""
+	For testing XHR
+	"""
+	isLeaf = True
+	def render_GET(self, request):
+		return 'Simple GET response.'
+
+
+	def render_POST(self, request):
+		return json.dumps({"you_sent_utf8": request.content.read().decode('utf-8')})
 
 
 
@@ -62,3 +125,17 @@ class Index(resource.Resource):
 
 		testres_Minerva = ResourcesForTest(reactor)
 		self.putChild('@testres_Minerva', testres_Minerva)
+
+		# More stuff needed for Minerva testing
+
+		self.putChild('DisplayConnections', DisplayConnections())
+		self.putChild('SimpleResponse', SimpleResponse())
+
+
+
+def makeSite():
+	from twisted.internet import reactor
+	
+	root = Index(reactor)
+	site = ConnectionTrackingSite(root)
+	return site

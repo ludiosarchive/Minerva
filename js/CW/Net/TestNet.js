@@ -16,5 +16,10 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 		self.assert(xhr.getObject());
 		// Must be a string
 		self.assert(xhr.getObjectName().length > 2);
+	},
+
+	function test_simpleResponseGET(self) {
+		var xhr = CW.Net.ReusableXHR();
+		xhr.open("");
 	}
 );
