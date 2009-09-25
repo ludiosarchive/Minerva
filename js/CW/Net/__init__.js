@@ -207,10 +207,6 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		return [objectName, object];
 	},
 
-	function getObject(self) {
-		return self._object;
-	},
-
 	function getObjectName(self) {
 		return self._objectName;
 	},
