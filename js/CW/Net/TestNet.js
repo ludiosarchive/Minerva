@@ -35,7 +35,16 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 	function setUp(self) {
 		self.target = CW.URI.URL(''+window.location);
 	},
-	
+
+
+	function _setupDummies(self) {
+		self.target.update('path', '/@testres_Minerva/404/');
+		self.mock = CW.Net.TestNet.MockXHR();
+		self.assertIdentical(CW.emptyFunc, self.mock.onreadystatechange);
+		self.xhr = CW.Net.ReusableXHR(window, self.mock);
+		self.requestD = self.xhr.request('POST', self.target, '');
+	},
+
 
 	function test_objectWasFound(self) {
 		var xhr = CW.Net.ReusableXHR();
@@ -142,24 +151,30 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 
 
 	/**
+	 * After aborting, using the same L{ReusableXHR} instance to make
+	 * requests is okay.
+	 */
+	function test_abortDoesntRuinState(self) {
+
+	},
+
+
+
+	/**
 	 * The request Deferred errback fires with error L{CW.Net.RequestAborted}.
 	 *
 	 * We use a dummy because some browsers finish a request so fast
 	 * after .request(), that .abort() becomes a no-op (notably Opera 9/10, Safari 3)
 	 */
 	function test_abortReason(self) {
-		self.target.update('path', '/@testres_Minerva/404/');
-		var mock = CW.Net.TestNet.MockXHR();
-		var xhr = CW.Net.ReusableXHR(window, mock);
+		self._setupDummies();
+		self.assertEqual(self.mock.log, [['open', 'POST', self.target.getString(), true], ['send', '']]);
 
-		var requestD = xhr.request('POST', self.target, '');
-		self.assertEqual(mock.log, [['open', 'POST', self.target.getString(), true], ['send', '']]);
+		var d = self.assertFailure(self.requestD, [CW.Net.RequestAborted]);
 
-		var d = self.assertFailure(requestD, [CW.Net.RequestAborted]);
-
-		xhr.abort();
-		mock.readyState = 4;
-		mock.onreadystatechange(null);
+		self.xhr.abort();
+		self.mock.readyState = 4;
+		self.mock.onreadystatechange(null);
 
 		return d;
 	},
@@ -174,13 +189,10 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 	 * want to prevent it from happening.
 	 */
 	function test_abortCalledOnlyOnce(self) {
-		self.target.update('path', '/@testres_Minerva/404/');
-		var mock = CW.Net.TestNet.MockXHR();
-		var xhr = CW.Net.ReusableXHR(window, mock);
-		var requestD = xhr.request('POST', self.target, '');
-		xhr.abort();
-		xhr.abort();
-		self.assertEqual(mock.log, [['open', 'POST', self.target.getString(), true], ['send', ''], ['abort']]);
+		self._setupDummies();
+		self.xhr.abort();
+		self.xhr.abort();
+		self.assertEqual(self.mock.log, [['open', 'POST', self.target.getString(), true], ['send', ''], ['abort']]);
 	},
 
 
@@ -190,20 +202,17 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 	 * avoid memory leaks in IE.
 	 */
 	function test_onreadystatechangeResetAfterFinish(self) {
-		self.target.update('path', '/@testres_Minerva/404/');
-		var mock = CW.Net.TestNet.MockXHR();
-		self.assertIdentical(CW.emptyFunc, mock.onreadystatechange);
-		var xhr = CW.Net.ReusableXHR(window, mock);
-		var requestD = xhr.request('POST', self.target, '');
+		self._setupDummies();
 
 		// After .request(), onreadystatechange is set to a real handler.
-		self.assertNotIdentical(CW.emptyFunc, mock.onreadystatechange);
+		self.assertNotIdentical(CW.emptyFunc, self.mock.onreadystatechange);
 
-		// Finish the request and verify it was reset to L{CW.emptyFunc}
-		mock.readyState = 4;
-		mock.responseText = 'done';
-		mock.onreadystatechange(null);
-		self.assertIdentical(CW.emptyFunc, mock.onreadystatechange);
+		// Finish the request and verify that onreadystatechange was
+		// reset to L{CW.emptyFunc}
+		self.mock.readyState = 4;
+		self.mock.responseText = 'done';
+		self.mock.onreadystatechange(null);
+		self.assertIdentical(CW.emptyFunc, self.mock.onreadystatechange);
 	},
 
 
@@ -213,20 +222,17 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 	 * avoid memory leaks in IE.
 	 */
 	function test_onreadystatechangeResetAfterAborted(self) {
-		self.target.update('path', '/@testres_Minerva/404/');
-		var mock = CW.Net.TestNet.MockXHR();
-		self.assertIdentical(CW.emptyFunc, mock.onreadystatechange);
-		var xhr = CW.Net.ReusableXHR(window, mock);
-		var requestD = xhr.request('POST', self.target, '');
+		self._setupDummies();
 
 		// After .request(), onreadystatechange is set to a real handler.
-		self.assertNotIdentical(CW.emptyFunc, mock.onreadystatechange);
+		self.assertNotIdentical(CW.emptyFunc, self.mock.onreadystatechange);
 
-		// Abort the request and verify it was reset to L{CW.emptyFunc}
-		xhr.abort();
-		mock.readyState = 4;
-		mock.responseText = 'aborted';
-		mock.onreadystatechange(null);
-		self.assertIdentical(CW.emptyFunc, mock.onreadystatechange);
+		// Abort the request and verify that onreadystatechange was
+		// reset to L{CW.emptyFunc}
+		self.xhr.abort();
+		self.mock.readyState = 4;
+		self.mock.responseText = 'aborted';
+		self.mock.onreadystatechange(null);
+		self.assertIdentical(CW.emptyFunc, self.mock.onreadystatechange);
 	}
 );
