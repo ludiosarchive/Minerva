@@ -169,14 +169,13 @@ CW.Error.subclass(CW.Net, 'RequestAborted');
  */
 CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 
-	function __init__(self, window, timeout) {
+	function __init__(self, window) {
 		self._window = window;
 		var objNameObj = self._findObject();
 		self._objectName = objNameObj[0];
 		self._object = objNameObj[1];
 		CW.msg(self + ' is using ' + self._objectName + ' ' + self._object + ' for XHR.');
 		self._requestActive = false;
-		self._aborted = false;
 	},
 
 	function _findObject(self) {
@@ -243,8 +242,9 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		// per-browser if/elif'ing
 
 		if(self._requestActive) {
-			throw new CW.Net.RequestStillActive();
+			throw new CW.Net.RequestStillActive("Wait for the Deferred to fire before making another request.");
 		}
+		self._aborted = false;
 		self._requestDoneD = CW.Defer.Deferred();
 		self._progressCallback = progressCallback ? progressCallback : null;
 
@@ -272,7 +272,11 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	 * @return: undefined
 	 */
 	function abort(self) {
+		self._aborted = true;
 		if(self._requestActive) {
+			// "Calling abort resets the object; the onreadystatechange event handler
+			// is removed, and readyState is changed to 0 (uninitialized)."
+			// - http://msdn.microsoft.com/en-us/library/ms535920%28VS.85%29.aspx
 			self._object.abort();
 		}
 	},
@@ -315,6 +319,22 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	}
 );
 
+/*
+ * Request some URL. The returned Deferred fires with the response
+ * body, or with an error.
+ *
+ * C{verb} is exactly "GET" or exactly "POST"
+ * C{url} is an instance of L{CW.URI.URL}.
+ * C{post} is data to POST. Use "" (empty string) if using L{verb} "GET".
+ */
+CW.Net.simpleRequest = function simpleRequest(verb, url, post) {
+	var xhr = CW.Net.ReusableXHR(window);
+	var d = xhr.request(verb, url, post);
+	d.addCallback(function(obj){
+		return obj.responseText;
+	});
+	return d;
+}
 
 
 // TODO: synchronous XHR / XMLHTTP (not possible for XDR)
