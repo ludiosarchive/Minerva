@@ -241,4 +241,6 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 		self.mock.onreadystatechange(null);
 		self.assertIdentical(CW.emptyFunc, self.mock.onreadystatechange);
 	}
+
+	// TODO: test progressCallback
 );

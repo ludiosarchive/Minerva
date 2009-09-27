@@ -243,6 +243,10 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	 *    Either Number argument will be C{null} if the browser does not provide
 	 *    progress information. L{ReusableXHR} purposely avoids accessing
 	 *    C{self._object.responseText} to determine progress information.
+	 * 
+	 *    Note that (bytes available in responseText [Number]) may suddenly become
+	 *    C{null} due to a Firefox bug. When this happens, you should check
+	 *    C{responseText} for new data, just as if you always got C{null}.
 	 *
 	 *    The callback will be called when the last chunk is received, too.
 	 *
@@ -259,6 +263,8 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 			throw new CW.Net.RequestStillActive(
 				"Wait for the Deferred to fire before making another request.");
 		}
+		self._position = null;
+		self._totalSize = null;
 		self._aborted = false;
 		self._requestDoneD = CW.Defer.Deferred();
 		self._progressCallback = progressCallback ? progressCallback : null;
@@ -268,7 +274,25 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		var x = self._object;
 
 		self._requestActive = true;
+
+		// "Note: You need to add the event listeners before calling open()
+		// on the request.  Otherwise the progress events will not fire."
+		// - https://developer.mozilla.org/En/Using_XMLHttpRequest
+
+		// Just because we attach this event, doesn't mean it will ever fire.
+		// Even in browsers that support `onprogress', a bug in the browser
+		// or a browser extension may block its firing. This has been observed
+		// in a Firefox 3.5.3 install with a lot of extensions.
+		try {
+			// TODO: only attach this if progressCallback is truthy.
+			x.onprogress = CW.bind(self, self._handler_onprogress);
+		} catch(err) {
+//] if _debugMode:
+			CW.msg(self + ": failed to attach onprogress event: " + err.message);
+//] endif
+		}
 		x.open(verb, url.getString(), true);
+
 		// If we use `x.onreadystatechange = self._handler_onreadystatechange',
 		// `this' will be `window' in _handler_onreadystatechange, which is bad.
 		// Don't use a closure either; closures are too scary in JavaScript.
@@ -298,6 +322,36 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		}
 	},
 
+	function _handler_onprogress(self, e) {
+//] if _debugMode:
+		CW.msg('_handler_onprogress: ' + [e.position, e.totalSize].join(','));
+//] endif
+
+		// Safari 4 and Firefox 3.5.2 provides 4294967295 for e.totalSize when length is unknown.
+		if(e.totalSize !== undefined && e.totalSize < 2147483647 /* 2**31 - 1 */ && e.totalSize >= 0) {
+			self._totalSize = e.totalSize;
+		}
+
+		// In Firefox 3.5.3, Safari 4, and Chrome 3.0.195.21, onprogress fires before
+		// onreadystatechange. Only in Firefox 3.5.3, the responseText is still stale until
+		// onreadystatechange is fired. Only in Firefox 3.5.3, sometimes onprogress
+		// fires with `undefined' for e.position and e.totalSize. When this happens,
+		// we must call progressCallback because the length of responseText is longer
+		// than the last self._position (though we do not know the new position right now).
+		// This strange `undefined' event happens once or twice per request.
+		if(e.position !== undefined) {
+			self._position = e.position;
+		} else {
+			if(self._progressCallback) {
+				try {
+					self._progressCallback(self._object, null, self._totalSize);
+				} catch(e) {
+					CW.err(e, '[_handler_onprogress] Error in _progressCallback');
+				}
+			}
+		}
+	},
+
 	function _handler_onreadystatechange(self) {
 		// In Firefox 3.5 and Chromium 4.0.207.0, onreadystatechange is called
 		// with one argument, a C{readystatechange} event with no useful properties.
@@ -307,11 +361,10 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		CW.msg(self + ': readyState: ' + readyState);
 //] endif
 		if((readyState == 3 || readyState == 4) && self._progressCallback) {
-			// TODO: send numbers if available. use onprogress event.
 			try {
-				self._progressCallback(self._object, null, null);
+				self._progressCallback(self._object, self._position, self._totalSize);
 			} catch(e) {
-				CW.err(e, 'Error in _progressCallback');
+				CW.err(e, '[_handler_onreadystatechange] Error in _progressCallback');
 			}
 		}
 
