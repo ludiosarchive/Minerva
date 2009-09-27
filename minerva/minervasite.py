@@ -88,7 +88,10 @@ class SimpleResponse(resource.Resource):
 	"""
 	isLeaf = True
 	def render_GET(self, request):
-		return 'Simple GET response.'
+		request.setHeader('content-type', 'text/plain')
+		response = {}
+		response['you_sent_args'] = request.args
+		return json.dumps(response)
 
 
 	def render_POST(self, request):
