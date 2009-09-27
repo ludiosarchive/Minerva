@@ -67,26 +67,26 @@ class ConnectionTrackingSite(server.Site):
 
 
 
-class AbortChecker(resource.Resource):
-	"""
-	For testing XHR. See Minerva/js/CW/Net/TestNet.js
-	"""
-	isLeaf = True
-
-	def __init__(self):
-		resource.Resource.__init__(self)
-		self.counters = defaultdict(int)
-
-
-	def render_POST(self, request):
-		"""
-		Keep track of how many times a request has been made with `id'.
-		The client is responsible for doing something smart with the number
-		returned.
-		"""
-		someId = request.args['id'][0]
-		self.counters[someId] += 1
-		return str(self.counters[someId])
+#class AbortChecker(resource.Resource):
+#	"""
+#	For testing XHR. See Minerva/js/CW/Net/TestNet.js
+#	"""
+#	isLeaf = True
+#
+#	def __init__(self):
+#		resource.Resource.__init__(self)
+#		self.counters = defaultdict(int)
+#
+#
+#	def render_POST(self, request):
+#		"""
+#		Keep track of how many times a request has been made with `id'.
+#		The client is responsible for doing something smart with the number
+#		returned.
+#		"""
+#		someId = request.args['id'][0]
+#		self.counters[someId] += 1
+#		return str(self.counters[someId])
 
 
 
@@ -128,7 +128,7 @@ class ResourcesForTest(resource.Resource):
 		resource.Resource.__init__(self)
 		self._reactor = reactor
 
-		self.putChild('AbortChecker', AbortChecker())
+		##self.putChild('AbortChecker', AbortChecker())
 		self.putChild('DisplayConnections', DisplayConnections())
 		self.putChild('SimpleResponse', SimpleResponse())
 

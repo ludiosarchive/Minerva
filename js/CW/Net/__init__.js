@@ -166,6 +166,9 @@ CW.Error.subclass(CW.Net, 'RequestAborted');
 /**
  * XHR, XMLHTTP, XDR. This should be usable for non-Minerva use;
  * for example, to run out-of-Stream network diagnostics.
+ *
+ * TODO: cancel a request onunload in IE. This might be needed to
+ * avoid a memory leak.
  */
 CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 
@@ -199,7 +202,8 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		 */
 
 		var things = [
-			'XDomainRequest', function(){return new XDomainRequest()},
+// XDomainRequest semantics are very different
+//			'XDomainRequest', function(){return new XDomainRequest()},
 			'XMLHttpRequest', function(){return new XMLHttpRequest()},
 			'Msxml2.XMLHTTP', function(){return new ActiveXObject("Msxml2.XMLHTTP")},
 			'Microsoft.XMLHTTP', function(){return new ActiveXObject("Microsoft.XMLHTTP")}
