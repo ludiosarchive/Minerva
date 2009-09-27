@@ -31,6 +31,17 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 	},
 
 
+	function test_simpleResponsePOST(self) {
+		var xhr = CW.Net.ReusableXHR();
+		var target = CW.URI.URL(''+window.location).update('path', '/@testres_Minerva/SimpleResponse/');
+		var d = xhr.request('POST', target, 'hello\u00ff');
+		d.addCallback(function(obj){
+			self.assertEqual('{"you_posted_utf8": "hello\\u00ff"}', obj.responseText);
+		});
+		return d;
+	},
+
+
 	function test_simpleReuse(self) {
 		var responses = [];
 		var xhr = CW.Net.ReusableXHR();
@@ -49,7 +60,13 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 		});
 
 		d.addCallback(function(){
-			self.assertEqual(['{"you_sent_args": {"b": ["0"]}}', '{"you_sent_args": {"b": ["1"]}}'], responses);
+			self.assertEqual(
+				[
+					'{"you_sent_args": {"b": ["0"]}}',
+					'{"you_sent_args": {"b": ["1"]}}'
+				],
+				responses
+			);
 		})
 
 		return d;

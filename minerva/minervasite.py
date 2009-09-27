@@ -95,7 +95,7 @@ class SimpleResponse(resource.Resource):
 
 
 	def render_POST(self, request):
-		return json.dumps({"you_sent_utf8": request.content.read().decode('utf-8')})
+		return json.dumps({"you_posted_utf8": request.content.read().decode('utf-8')})
 
 
 

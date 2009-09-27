@@ -218,13 +218,22 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	/**
 	 * Request some URL.
 	 *
-	 * L{verb} is exactly "GET" or exactly "POST"
-	 * L{url} is an instance of L{CW.URI.URL}.
-	 * L{post} is data to POST. Use "" (empty string) if using L{verb} "GET".
-	 * L{progressCallback} (if truthy) is a function which I will call whenever data is received.
-	 *    It is called with two arguments: bytes downloaded (Number), bytes response size (Number)
-	 *    or null if either number could not be determined (this implementation purposely avoids
-	 *    looking into responseText). L{progressCallback} will be called when the last chunk is received, too.
+	 * C{verb} is exactly "GET" or exactly "POST"
+	 * C{url} is an instance of L{CW.URI.URL}.
+	 * C{post} is data to POST. Use "" (empty string) if using L{verb} "GET".
+	 *
+	 * C{progressCallback}, if truthy, is a callable.
+	 *    The callback will be called with arguments
+	 *          (self._object, bytes available in responseText [Number], total response size in bytes [Number])
+	 *    whenever data is received.
+	 *
+	 *    Either Number argument will be C{null} if the browser does not provide
+	 *    progress information. L{ReusableXHR} purposely avoids accessing
+	 *    C{self._object.responseText} to determine progress information.
+	 *
+	 *    The callback will be called when the last chunk is received, too.
+	 *
+	 * C{progressCallback}, if falsy, will not be called.
 	 *
 	 * Returns an L{CW.Defer.Deferred} that fires with callback or errback. It's not safe to make
 	 * another request until this Deferred fires. Do not rely only on L{progressCallback}.
@@ -246,10 +255,9 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		self._requestActive = true;
 		x.open(verb, url.getString(), true);
 		// If we use `x.onreadystatechange = self._handler_onreadystatechange',
-		// it will pass `this' will be `window' in _handler_onreadystatechange, which is bad.
-		x.onreadystatechange = function(){
-			self._handler_onreadystatechange();
-		};
+		// `this' will be `window' in _handler_onreadystatechange, which is bad.
+		// Don't use a closure either; closures are too scary in JavaScript.
+		x.onreadystatechange = CW.bind(self, self._handler_onreadystatechange);
 		// .send("") for "no content" is what GWT does in
 		// google-web-toolkit/user/src/com/google/gwt/user/client/HTTPRequest.java
 		// TODO: find out: is null okay? undefined? ''? no argument? Is this the same for XDomainRequest?
@@ -260,6 +268,8 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 
 	/**
 	 * Abort the current request. If none is active, this is a no-op.
+	 *
+	 * @return: undefined
 	 */
 	function abort(self) {
 		if(self._requestActive) {
@@ -278,7 +288,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		if((readyState == 3 || readyState == 4) && self._progressCallback) {
 			// TODO: send numbers if available. use onprogress event.
 			try {
-				self._progressCallback(null, null);
+				self._progressCallback(self._object, null, null);
 			} catch(e) {
 				CW.err(e, 'Error in _progressCallback');
 			}
