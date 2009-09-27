@@ -226,7 +226,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	 * Returns an L{CW.Defer.Deferred} that fires with callback or errback. It's not safe to make
 	 * another request until this Deferred fires. Do not rely only on L{progressCallback}.
 	 */
-	function open(self, verb, url, /*optional*/ post, /*optional*/ progressCallback) {
+	function request(self, verb, url, /*optional*/ post, /*optional*/ progressCallback) {
 //] if _debugMode:
 		CW.assert(CW.startswith(url, 'http://') || CW.startswith(url, 'https://'), "`url` must be an absolute URL.");
 		CW.assert(verb == "POST" || verb == "GET", "`verb` must be 'POST' or 'GET'");
