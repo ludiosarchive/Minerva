@@ -66,16 +66,6 @@ class ConnectionTrackingSite(server.Site):
 
 
 
-class ResourcesForTest(resource.Resource):
-	def __init__(self, reactor):
-		resource.Resource.__init__(self)
-
-		self._reactor = reactor
-
-		# add test resources as needed
-
-
-
 class DisplayConnections(resource.Resource):
 	"""
 	Display a list of all connections connected to this server.
@@ -106,6 +96,18 @@ class SimpleResponse(resource.Resource):
 
 
 
+class ResourcesForTest(resource.Resource):
+	def __init__(self, reactor):
+		resource.Resource.__init__(self)
+		self._reactor = reactor
+
+		self.putChild('DisplayConnections', DisplayConnections())
+		self.putChild('SimpleResponse', SimpleResponse())
+
+		# add test resources as needed
+
+
+
 class Index(resource.Resource):
 
 	def __init__(self, reactor):
@@ -125,11 +127,6 @@ class Index(resource.Resource):
 
 		testres_Minerva = ResourcesForTest(reactor)
 		self.putChild('@testres_Minerva', testres_Minerva)
-
-		# More stuff needed for Minerva testing
-
-		self.putChild('DisplayConnections', DisplayConnections())
-		self.putChild('SimpleResponse', SimpleResponse())
 
 
 

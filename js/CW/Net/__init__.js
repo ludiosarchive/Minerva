@@ -207,6 +207,10 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		return [objectName, object];
 	},
 
+	function getObject(self) {
+		return self._object;
+	},
+
 	function getObjectName(self) {
 		return self._objectName;
 	},
@@ -215,8 +219,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	 * Request some URL.
 	 *
 	 * L{verb} is exactly "GET" or exactly "POST"
-	 * L{url} is an absolute URL string. Relative URLs are *forbidden*; they will work in some
-	 *    browsers but fail in older/rare ones.
+	 * L{url} is an instance of L{CW.URI.URL}.
 	 * L{post} is data to POST. Use "" (empty string) if using L{verb} "GET".
 	 * L{progressCallback} (if truthy) is a function which I will call whenever data is received.
 	 *    It is called with two arguments: bytes downloaded (Number), bytes response size (Number)
@@ -227,11 +230,6 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	 * another request until this Deferred fires. Do not rely only on L{progressCallback}.
 	 */
 	function request(self, verb, url, /*optional*/ post, /*optional*/ progressCallback) {
-//] if _debugMode:
-		CW.assert(CW.startswith(url, 'http://') || CW.startswith(url, 'https://'), "`url` must be an absolute URL.");
-		CW.assert(verb == "POST" || verb == "GET", "`verb` must be 'POST' or 'GET'");
-//] endif
-
 		// TODO: send as few headers possible for each browser. This requires custom
 		// per-browser if/elif'ing
 
@@ -246,8 +244,12 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		var x = self._object;
 
 		self._requestActive = true;
-		x.open(verb, url, true);
-		x.onreadystatechange = self._handler_onreadystatechange;
+		x.open(verb, url.getString(), true);
+		// If we use `x.onreadystatechange = self._handler_onreadystatechange',
+		// it will pass `this' will be `window' in _handler_onreadystatechange, which is bad.
+		x.onreadystatechange = function(){
+			self._handler_onreadystatechange();
+		};
 		// .send("") for "no content" is what GWT does in
 		// google-web-toolkit/user/src/com/google/gwt/user/client/HTTPRequest.java
 		// TODO: find out: is null okay? undefined? ''? no argument? Is this the same for XDomainRequest?
@@ -270,6 +272,9 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		// with one argument, a C{readystatechange} event with no useful properties.
 		// TODO: look around in other browsers? maybe (but unlikely) they'll have a "bytes received" property.
 		var readyState = self._object.readyState;
+//] if _debugMode:
+		CW.msg(self + ': readyState: ' + readyState);
+//] endif
 		if((readyState == 3 || readyState == 4) && self._progressCallback) {
 			// TODO: send numbers if available. use onprogress event.
 			try {
