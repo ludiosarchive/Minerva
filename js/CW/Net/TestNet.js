@@ -43,6 +43,8 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 		self.assertIdentical(CW.emptyFunc, self.mock.onreadystatechange);
 		self.xhr = CW.Net.ReusableXHR(window, self.mock);
 		self.requestD = self.xhr.request('POST', self.target, '');
+		// After .request(), onreadystatechange is set to a real handler.
+		self.assertNotIdentical(CW.emptyFunc, self.mock.onreadystatechange);
 	},
 
 
@@ -132,8 +134,6 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 	 * C{.abort()} returns undefined.
 	 * Calling C{.abort()} multiple times is okay.
 	 *
-	 * After aborting, using the same L{ReusableXHR} instance to make requests is okay.
-	 * 
 	 * Note that we can't assert that an aborted request doesn't actually make
 	 * it to the server. This is because some browsers send the XHR requests
 	 * really fast, and are done before you call .abort().
@@ -152,12 +152,24 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 
 	/**
 	 * After aborting, using the same L{ReusableXHR} instance to make
-	 * requests is okay.
+	 * requests still works.
 	 */
 	function test_abortDoesntRuinState(self) {
+		self._setupDummies();
+		self.xhr.abort();
+		self.mock.readyState = 4;
+		self.mock.onreadystatechange(null);
 
+		// Make the second request
+		self.requestD = self.xhr.request('POST', self.target, 'second');
+		self.mock.readyState = 4;
+		self.mock.onreadystatechange(null);
+
+		self.assertEqual(self.mock.log, [
+			['open', 'POST', self.target.getString(), true], ['send', ''], ['abort'],
+			['open', 'POST', self.target.getString(), true], ['send', 'second'],
+		]);
 	},
-
 
 
 	/**
@@ -204,9 +216,6 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 	function test_onreadystatechangeResetAfterFinish(self) {
 		self._setupDummies();
 
-		// After .request(), onreadystatechange is set to a real handler.
-		self.assertNotIdentical(CW.emptyFunc, self.mock.onreadystatechange);
-
 		// Finish the request and verify that onreadystatechange was
 		// reset to L{CW.emptyFunc}
 		self.mock.readyState = 4;
@@ -223,9 +232,6 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 	 */
 	function test_onreadystatechangeResetAfterAborted(self) {
 		self._setupDummies();
-
-		// After .request(), onreadystatechange is set to a real handler.
-		self.assertNotIdentical(CW.emptyFunc, self.mock.onreadystatechange);
 
 		// Abort the request and verify that onreadystatechange was
 		// reset to L{CW.emptyFunc}
