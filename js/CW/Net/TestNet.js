@@ -31,6 +31,10 @@ CW.Class.subclass(CW.Net.TestNet, 'MockXHR').pmethods({
 
 CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 
+	function setUp(self) {
+		self.target = CW.URI.URL(''+window.location);
+	},
+
 	function test_objectWasFound(self) {
 		var xhr = CW.Net.ReusableXHR();
 		// Not falsy
@@ -42,8 +46,8 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 
 	function test_simpleResponseGET(self) {
 		var xhr = CW.Net.ReusableXHR();
-		var target = CW.URI.URL(''+window.location).update('path', '/@testres_Minerva/SimpleResponse/?a=0');
-		var d = xhr.request('GET', target);
+		self.target.update('path', '/@testres_Minerva/SimpleResponse/?a=0');
+		var d = xhr.request('GET', self.target);
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_sent_args": {"a": ["0"]}}', obj.responseText);
 		});
@@ -53,8 +57,8 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 
 	function test_simpleResponsePOST(self) {
 		var xhr = CW.Net.ReusableXHR();
-		var target = CW.URI.URL(''+window.location).update('path', '/@testres_Minerva/SimpleResponse/');
-		var d = xhr.request('POST', target, 'hello\u00ff');
+		self.target.update('path', '/@testres_Minerva/SimpleResponse/');
+		var d = xhr.request('POST', self.target, 'hello\u00ff');
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_posted_utf8": "hello\\u00ff"}', obj.responseText);
 		});
@@ -65,14 +69,14 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 	function test_simpleReuse(self) {
 		var responses = [];
 		var xhr = CW.Net.ReusableXHR();
-		var target = CW.URI.URL(''+window.location).update('path', '/@testres_Minerva/SimpleResponse/?b=0');
+		self.target.update('path', '/@testres_Minerva/SimpleResponse/?b=0');
 
-		var d = xhr.request('GET', target);
+		var d = xhr.request('GET', self.target);
 
 		d.addCallback(function(obj){
 			responses.push(obj.responseText);
 			// This mutation is okay
-			var d2 = xhr.request('GET', target.update('path', '/@testres_Minerva/SimpleResponse/?b=1'));
+			var d2 = xhr.request('GET', self.target.update('path', '/@testres_Minerva/SimpleResponse/?b=1'));
 			d2.addCallback(function(obj2){
 				responses.push(obj2.responseText);
 			});
@@ -99,11 +103,11 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 	 */
 	function test_requestStillActive(self) {
 		var xhr = CW.Net.ReusableXHR();
-		var target = CW.URI.URL(''+window.location).update('path', '/@testres_Minerva/404/');
-		var d1 = xhr.request('GET', target);
+		self.target.update('path', '/@testres_Minerva/404/');
+		var d1 = xhr.request('GET', self.target);
 		self.assertThrows(
 			CW.Net.RequestStillActive,
-			function() { xhr.request('GET', target) },
+			function() { xhr.request('GET', self.target) },
 			"Wait for the Deferred to fire before making another request."
 		);
 	},
@@ -112,7 +116,6 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 	/**
 	 * C{.abort()} returns undefined.
 	 * Calling C{.abort()} multiple times is okay.
-	 * The request Deferred errback fires with error L{CW.Net.RequestAborted}.
 	 *
 	 * After aborting, using the same L{ReusableXHR} instance to make requests is okay.
 	 * 
@@ -122,8 +125,8 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 	function test_abort(self) {
 		var id = CW.random();
 		var xhr = CW.Net.ReusableXHR();
-		var target = CW.URI.URL(''+window.location).update('path', '/@testres_Minerva/AbortChecker/?id=' + id);
-		var requestD = xhr.request('POST', target, '');
+		self.target.update('path', '/@testres_Minerva/AbortChecker/?id=' + id);
+		var requestD = xhr.request('POST', self.target, '');
 
 		self.assertIdentical(undefined, xhr.abort());
 		self.assertIdentical(undefined, xhr.abort());
@@ -135,12 +138,12 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 	 * The request Deferred errback fires with error L{CW.Net.RequestAborted}.
 	 */
 	function test_abortReason(self) {
-		var target = CW.URI.URL(''+window.location).update('path', '/@testres_Minerva/404/');
+		self.target.update('path', '/@testres_Minerva/404/');
 		var mock = CW.Net.TestNet.MockXHR();
 		var xhr = CW.Net.ReusableXHR(window, mock);
 
-		var requestD = xhr.request('POST', target, '');
-		self.assertEqual(mock.log, [['open', 'POST', target.getString(), true], ['send', '']]);
+		var requestD = xhr.request('POST', self.target, '');
+		self.assertEqual(mock.log, [['open', 'POST', self.target.getString(), true], ['send', '']]);
 
 		var d = self.assertFailure(requestD, [CW.Net.RequestAborted]);
 
@@ -156,13 +159,13 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 	 * .abort() is only called once on the real XHR object.
 	 */
 	function test_abortCalledOnlyOnce(self) {
-		var target = CW.URI.URL(''+window.location).update('path', '/@testres_Minerva/404/');
+		self.target.update('path', '/@testres_Minerva/404/');
 		var mock = CW.Net.TestNet.MockXHR();
 		var xhr = CW.Net.ReusableXHR(window, mock);
-		var requestD = xhr.request('POST', target, '');
+		var requestD = xhr.request('POST', self.target, '');
 		xhr.abort();
 		xhr.abort();
-		self.assertEqual(mock.log, [['open', 'POST', target.getString(), true], ['send', ''], ['abort']]);
+		self.assertEqual(mock.log, [['open', 'POST', self.target.getString(), true], ['send', ''], ['abort']]);
 	}
 
 );

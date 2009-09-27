@@ -252,7 +252,8 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		// per-browser if/elif'ing
 
 		if(self._requestActive) {
-			throw new CW.Net.RequestStillActive("Wait for the Deferred to fire before making another request.");
+			throw new CW.Net.RequestStillActive(
+				"Wait for the Deferred to fire before making another request.");
 		}
 		self._aborted = false;
 		self._requestDoneD = CW.Defer.Deferred();
