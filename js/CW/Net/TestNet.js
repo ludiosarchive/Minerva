@@ -136,7 +136,6 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 	 */
 	function test_abortReason(self) {
 		var target = CW.URI.URL(''+window.location).update('path', '/@testres_Minerva/404/');
-
 		var mock = CW.Net.TestNet.MockXHR();
 		var xhr = CW.Net.ReusableXHR(window, mock);
 
@@ -150,6 +149,20 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 		mock.onreadystatechange(null);
 
 		return d;
+	},
+
+
+	/**
+	 * .abort() is only called once on the real XHR object.
+	 */
+	function test_abortCalledOnlyOnce(self) {
+		var target = CW.URI.URL(''+window.location).update('path', '/@testres_Minerva/404/');
+		var mock = CW.Net.TestNet.MockXHR();
+		var xhr = CW.Net.ReusableXHR(window, mock);
+		var requestD = xhr.request('POST', target, '');
+		xhr.abort();
+		xhr.abort();
+		self.assertEqual(mock.log, [['open', 'POST', target.getString(), true], ['send', ''], ['abort']]);
 	}
 
 );

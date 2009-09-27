@@ -169,7 +169,12 @@ CW.Error.subclass(CW.Net, 'RequestAborted');
  */
 CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 
-	function __init__(self, window, object) {
+	/**
+	 * C{window} is a C{window}-like object.
+	 * C{object} (optional) is an XHR-like object. If one is not
+	 *    supplied, C{_findObject} will be used to select one. 
+	 */
+	function __init__(self, window, /*optional*/ object) {
 		self._window = window;
 		if(!object) {
 			var objNameObj = self._findObject();
@@ -272,17 +277,19 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	},
 
 	/**
-	 * Abort the current request. If none is active, this is a no-op.
+	 * Abort the current request. If none is active, or request was already aborted, this is a no-op.
 	 *
 	 * @return: undefined
 	 */
 	function abort(self) {
-		self._aborted = true;
 		if(self._requestActive) {
 			// "Calling abort resets the object; the onreadystatechange event handler
 			// is removed, and readyState is changed to 0 (uninitialized)."
 			// - http://msdn.microsoft.com/en-us/library/ms535920%28VS.85%29.aspx
-			self._object.abort();
+			if(self._aborted === false) {
+				self._object.abort();
+			}
+			self._aborted = true;
 		}
 	},
 
