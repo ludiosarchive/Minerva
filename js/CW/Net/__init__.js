@@ -169,11 +169,16 @@ CW.Error.subclass(CW.Net, 'RequestAborted');
  */
 CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 
-	function __init__(self, window) {
+	function __init__(self, window, object) {
 		self._window = window;
-		var objNameObj = self._findObject();
-		self._objectName = objNameObj[0];
-		self._object = objNameObj[1];
+		if(!object) {
+			var objNameObj = self._findObject();
+			self._objectName = objNameObj[0];
+			self._object = objNameObj[1];
+		} else {
+			self._objectName = 'user-supplied';
+			self._object = object;
+		}
 		CW.msg(self + ' is using ' + self._objectName + ' ' + self._object + ' for XHR.');
 		self._requestActive = false;
 	},

@@ -8,6 +8,26 @@
 // import CW.Net
 
 
+CW.Class.subclass(CW.Net.TestNet, 'MockXHR').pmethods({
+
+	__init__: function() {
+		this.log = [];
+	},
+
+	open: function(verb, url, async) {
+		this.log.push(['open', verb, url, async]);
+	},
+
+	send: function(post) {
+		this.log.push(['send', post]);
+	},
+
+	abort: function() {
+		this.log.push(['abort']);
+	}
+});
+
+
 
 CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 
@@ -93,31 +113,41 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 	 * C{.abort()} returns undefined.
 	 * Calling C{.abort()} multiple times is okay.
 	 * The request Deferred errback fires with error L{CW.Net.RequestAborted}.
-	 * An aborted request doesn't actually make it to the server.
-	 * After aborting, using the same L{ReusableXHR} instance to make requests is okay. 
+	 *
+	 * After aborting, using the same L{ReusableXHR} instance to make requests is okay.
+	 * 
+	 * Note that we can't test that an aborted request doesn't actually make it to the server.
+	 * This is because some browsers send these requests really fast.
 	 */
 	function test_abort(self) {
 		var id = CW.random();
-		// 100 spaces. 10*1024*100 = ~1MB
-		var junk = Array(1+10*1024).join('                                                                                                    ');
 		var xhr = CW.Net.ReusableXHR();
 		var target = CW.URI.URL(''+window.location).update('path', '/@testres_Minerva/AbortChecker/?id=' + id);
-		var requestD = xhr.request('POST', target, junk);
-		var d = self.assertFailure(requestD, [CW.Net.RequestAborted]);
-		
-		self.assertIdentical(undefined, xhr.abort());
-		self.assertIdentical(undefined, xhr.abort());
-		self.assertIdentical(undefined, xhr.abort());
+		var requestD = xhr.request('POST', target, '');
 
-		d.addCallback(function() {
-			var d2 = CW.Net.simpleRequest('POST', target, '');
-			d2.addCallback(function(text) {
-				// Because the first request never made it to the server, this second
-				// request will be first to increment the counter from 0->1 for this `?id='
-				self.assertEqual('1', text);
-			});
-			return d2;
-		});
+		self.assertIdentical(undefined, xhr.abort());
+		self.assertIdentical(undefined, xhr.abort());
+		self.assertIdentical(undefined, xhr.abort());
+	},
+
+
+	/**
+	 * The request Deferred errback fires with error L{CW.Net.RequestAborted}.
+	 */
+	function test_abortReason(self) {
+		var target = CW.URI.URL(''+window.location).update('path', '/@testres_Minerva/404/');
+
+		var mock = CW.Net.TestNet.MockXHR();
+		var xhr = CW.Net.ReusableXHR(window, mock);
+
+		var requestD = xhr.request('POST', target, '');
+		self.assertEqual(mock.log, [['open', 'POST', target.getString(), true], ['send', '']]);
+
+		var d = self.assertFailure(requestD, [CW.Net.RequestAborted]);
+
+		xhr.abort();
+		mock.readyState = 4;
+		mock.onreadystatechange(null);
 
 		return d;
 	}
