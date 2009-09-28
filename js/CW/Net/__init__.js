@@ -330,6 +330,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 			// of the request. The fragment should never be sent to the server.
 			// Only XHR/XMLHTTP are buggy this way; this does not apply to
 			// XDomainRequest
+			// TODO: decouple from CW.URI.URL, use a regex or something
 			if(url.fragment !== null) {
 				url = CW.URI.URL(url); // copy
 				url.update('fragment', null);
@@ -500,6 +501,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		if(e.position !== undefined) {
 			self._position = e.position;
 		} else {
+			// self._position stays the same
 			try {
 				self._progressCallback(self._object, null, self._totalSize);
 			} catch(e) {

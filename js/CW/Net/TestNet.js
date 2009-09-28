@@ -411,7 +411,41 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XDomainRequestTests').methods(
 
 
 
-CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'OperaWorkaroundTests').methods(
+CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ProgressCallbackTests').methods(
+
+	function setUp(self) {
+		self.target = CW.URI.URL(''+window.location);
+		self.target.update('path', '/@testres_Minerva/404/');
+		self.mock = CW.Net.TestNet.MockXHR();
+
+	},
+
+	function test_onreadystatechangeCallsProgress(self) {
+		self.xhr = CW.Net.ReusableXHR(window, self.mock);
+		var calls = [];
+		function progressCallback(obj, position, totalSize) {
+			calls.push(arguments);
+		}
+		self.xhr.request('GET', self.target, '', progressCallback);
+		self.mock.readyState = 3;
+		self.mock.responseText = null; // responseText should not be looked at
+		self.mock.onreadystatechange(null);
+		self.mock.onreadystatechange(null);
+		self.mock.onreadystatechange(null);
+
+		self.assertEqual(
+			[
+				[self.mock, null, null],
+				[self.mock, null, null],
+				[self.mock, null, null]
+			], calls
+		);
+	}
+);
+
+
+
+CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ProgressCallbackOperaWorkaroundTests').methods(
 
 	function setUp(self) {
 		if(!window.opera) {
