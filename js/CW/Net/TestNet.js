@@ -467,6 +467,35 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ProgressCallbackTests').methods(
 				[self.mock, 3, 10]
 			], calls
 		);
+	},
+
+	/**
+	 * Test that when onprogress gets a crappy event with
+	 * e.position === undefined, it calls C{progressCallback}
+	 * with (obj, null, lastKnownTotalSize)
+	 */
+	function test_onprogressFirefoxBugWorkaround(self) {
+		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
+		var calls = [];
+		function progressCallback(obj, position, totalSize) {
+			calls.push(arguments);
+		}
+		self.xhr.request('GET', self.target, '', progressCallback);
+		self.mock.readyState = 3;
+		self.mock.responseText = null; // responseText should not be looked at
+		self.mock.onprogress({position: 1, totalSize: 10});
+		self.mock.onreadystatechange(null);
+		self.mock.onprogress({}); // the crappy event
+		self.mock.onprogress({position: 5, totalSize: 10});
+		self.mock.onreadystatechange(null);
+
+		self.assertEqual(
+			[
+				[self.mock, 1, 10],
+				[self.mock, null, 10],
+				[self.mock, 5, 10],
+			], calls
+		);
 	}
 );
 
