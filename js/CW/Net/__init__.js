@@ -228,15 +228,11 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	/**
 	 * C{window} is a C{window}-like object.
 	 * C{object} is an XHR-like object: either XMLHttpRequest,
-	 *    some XMLHTTP thing, or XDomainRequest. 
-	 * If C{desireStreaming} is truthy, the more-limited but
-	 *    streaming-capable object C{XDomainRequest} will be the
-	 *    first priority in C{_findObject}.
+	 *    some XMLHTTP thing, or XDomainRequest.
 	 */
-	function __init__(self, window, object, desireStreaming) {
+	function __init__(self, window, object) {
 		self._window = window;
 		self._object = object;
-		self._desireStreaming = desireStreaming;
 		CW.msg(self + ' is using ' + self._object + ' for XHR.');
 		self._requestActive = false;
 	},
@@ -328,10 +324,10 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 //] endif
 			}
 			// TODO: maybe attach onerror too, to detect some network errors.
-			x.open(verb, url.getString(), true);
+			x.open(verb, url.getString(), /*async=*/true);
 			x.onreadystatechange = CW.bind(self, self._handler_onreadystatechange);
 			
-			if(window.opera && self._desireStreaming) {
+			if(window.opera && self._progressCallback !== CW.emptyFunc) {
 				self._poller = self._window.setInterval(CW.bind(self, self._handler_poll), 50);
 			}
 
@@ -539,7 +535,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
  * C{post} is data to POST. Use "" (empty string) if using L{verb} "GET".
  */
 CW.Net.simpleRequest = function simpleRequest(verb, url, post) {
-	var xhr = CW.Net.ReusableXHR(window, CW.Net.findObject(), false);
+	var xhr = CW.Net.ReusableXHR(window, CW.Net.findObject(/*desireXDR=*/false));
 	var d = xhr.request(verb, url, post);
 	d.addCallback(function(obj){
 		return obj.responseText;

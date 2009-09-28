@@ -66,7 +66,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRTests').methods(
 
 	function setUp(self) {
 		self.target = CW.URI.URL(''+window.location);
-		self.xhr = CW.Net.ReusableXHR(window, CW.Net.findObject(false), false);
+		self.xhr = CW.Net.ReusableXHR(window, CW.Net.findObject(false));
 	},
 
 
@@ -193,12 +193,7 @@ CW.Net.TestNet.ReusableXHRTests.subclass(CW.Net.TestNet, 'ReusableXHRStreamingTe
 
 	function setUp(self) {
 		self.target = CW.URI.URL(''+window.location);
-		/**
-		 * In Opera, desiresStreaming will set a poller with setInterval to monitor responseText.
-		 */
-		self.xhr = CW.Net.ReusableXHR(
-			window, /*desireXDR=*/CW.Net.findObject(true), /*desiresStreaming=*/true
-		);
+		self.xhr = CW.Net.ReusableXHR(window, CW.Net.findObject(/*desireXDR=*/true));
 	}
 );
 
@@ -212,7 +207,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XDomainRequestTests').methods(
 			throw new CW.UnitTest.SkipTest("XDomainRequest is required for this test.");
 		}
 		self.target = CW.URI.URL(''+window.location);
-		self.xhr = CW.Net.ReusableXHR(window, new XDomainRequest(), /*desiresStreaming=*/true);
+		self.xhr = CW.Net.ReusableXHR(window, new XDomainRequest());
 	},
 
 
@@ -268,11 +263,11 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'OperaWorkaroundTests').methods(
 	},
 
 	/**
-	 * In Opera, if C{desireStreaming} is C{true}, progressCallback is
+	 * In Opera, if C{progressCallback} is truthy, progressCallback is
 	 * called every 50ms, even if no new data has been received.
 	 */
-	function test_desireStreamingCreatesPoller(self) {
-		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock, true);
+	function test_progressCallbackCreatesPoller(self) {
+		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
 		var count = 0;
 		function progressCallback(obj, position, totalSize) {
 			count += 1;
@@ -286,11 +281,11 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'OperaWorkaroundTests').methods(
 
 
 	/**
-	 * In Opera, if C{desireStreaming} is C{true}, but readyState is
+	 * In Opera, if C{progressCallback} is truthy, but readyState is
 	 * not 3, progressCallback is not called.
 	 */
-	function test_desireStreamingButNotReadyState3(self) {
-		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock, true);
+	function test_progressCallbackButNotReadyState3(self) {
+		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
 		var count = 0;
 		function progressCallback(obj, position, totalSize) {
 			count += 1;
@@ -316,20 +311,15 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'OperaWorkaroundTests').methods(
 
 
 	/**
-	 * In Opera, if C{desireStreaming} is C{false}, progressCallback is
-	 * not called every 50ms.
+	 * In Opera, if C{progressCallback} is falsy, no setInterval is set.
 	 */
-	function test_noDesireNoPoller(self) {
-		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock, false);
-		var count = 0;
-		function progressCallback(obj, position, totalSize) {
-			count += 1;
-		}
-		self.xhr.request('GET', self.target, '', progressCallback);
+	function test_noProgressCallbackNoPoller(self) {
+		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
+		self.xhr.request('GET', self.target, '', null);
+		self.assertEqual(0, self.clock._countPendingEvents());
 		self.mock.readyState = 3;
-		self.assertIdentical(0, count);
 		self.clock.advance(100);
-		self.assertIdentical(0, count);
+		self.assertEqual(0, self.clock._countPendingEvents());
 	}
 );
 
@@ -346,7 +336,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRLogicTests').methods(
 		self.target.update('path', '/@testres_Minerva/404/');
 		self.mock = CW.Net.TestNet.MockXHR();
 		self.assertIdentical(CW.emptyFunc, self.mock.onreadystatechange);
-		self.xhr = CW.Net.ReusableXHR(window, self.mock, false);
+		self.xhr = CW.Net.ReusableXHR(window, self.mock);
 		self.requestD = self.xhr.request('POST', self.target, '');
 		// After .request(), onreadystatechange is set to a real handler.
 		self.assertNotIdentical(CW.emptyFunc, self.mock.onreadystatechange);
