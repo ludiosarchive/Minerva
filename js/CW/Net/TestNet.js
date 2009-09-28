@@ -417,11 +417,12 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ProgressCallbackTests').methods(
 		self.target = CW.URI.URL(''+window.location);
 		self.target.update('path', '/@testres_Minerva/404/');
 		self.mock = CW.Net.TestNet.MockXHR();
-
+		// Never advance the clock, to prevent Opera from doing a call at 50ms intervals.
+		self.clock = CW.UnitTest.Clock();
 	},
 
 	function test_onreadystatechangeCallsProgress(self) {
-		self.xhr = CW.Net.ReusableXHR(window, self.mock);
+		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
 			calls.push(arguments);
@@ -465,15 +466,21 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ProgressCallbackOperaWorkaroundTe
 	 */
 	function test_progressCallbackCreatesPoller(self) {
 		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
-		var count = 0;
+		var calls = []
 		function progressCallback(obj, position, totalSize) {
-			count += 1;
+			calls.push(arguments);
 		}
 		self.xhr.request('GET', self.target, '', progressCallback);
 		self.mock.readyState = 3;
-		self.assertIdentical(0, count);
+		self.assertIdentical(0, calls.length);
 		self.clock.advance(100);
-		self.assertIdentical(2, count);
+		// Opera should not know the position
+		self.assertEqual(
+			[
+				[self.mock, null, null],
+				[self.mock, null, null]
+			], calls
+		);
 	},
 
 
@@ -483,27 +490,27 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ProgressCallbackOperaWorkaroundTe
 	 */
 	function test_progressCallbackButNotReadyState3(self) {
 		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
-		var count = 0;
+		var calls = []
 		function progressCallback(obj, position, totalSize) {
-			count += 1;
+			calls.push(arguments);
 		}
 		self.xhr.request('GET', self.target, '', progressCallback);
 
 		self.mock.readyState = 0;
 		self.clock.advance(100);
-		self.assertIdentical(0, count);
+		self.assertIdentical(0, calls.length);
 
 		self.mock.readyState = 1;
 		self.clock.advance(100);
-		self.assertIdentical(0, count);
+		self.assertIdentical(0, calls.length);
 
 		self.mock.readyState = 2;
 		self.clock.advance(100);
-		self.assertIdentical(0, count);
+		self.assertIdentical(0, calls.length);
 		
 		self.mock.readyState = 4;
 		self.clock.advance(100);
-		self.assertIdentical(0, count);
+		self.assertIdentical(0, calls.length);
 	},
 
 
