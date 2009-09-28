@@ -124,13 +124,20 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRTests').methods(
 	 * really fast, and are done before you call .abort().
 	 */
 	function test_abort(self) {
-		var id = CW.random();
-		self.target.update('path', '/@testres_Minerva/404/?id=' + id);
+		self.target.update('path', '/@testres_Minerva/404/');
 		var requestD = self.xhr.request('POST', self.target, '');
 
 		self.assertIdentical(undefined, self.xhr.abort());
 		self.assertIdentical(undefined, self.xhr.abort());
 		self.assertIdentical(undefined, self.xhr.abort());
+
+		// Note that errback won't always get fired. Sometimes it'll be callback
+		// because browser couldn't abort before the request finished.
+		requestD.addErrback(function(){
+			return undefined;
+		});
+
+		return requestD;
 	}
 );
 

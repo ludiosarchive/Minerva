@@ -342,18 +342,28 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 			}
 
 		} else {
-			// IE8 has a lot of problems when reusing an XDomainRequest object.
-			// If you don't .abort() before .open(), you'll see "Error: Unspecified error."
-			// If you do .abort() first, you will see a browser crash very quickly.
-			// So, make a new object every time.
-			
-			// An alternate way to solve the crashing problem is to setTimeout(..., 0)
-			// each on* handler. Although it might not be necessary, we use both methods,
-			// because it is really bad for JavaScript to crash the browser.
+			/**
+			 * IE8 has a lot of problems when reusing an XDomainRequest object.
+			 * If you don't .abort() before .open(), you'll see "Error: Unspecified error."
+			 * If you do .abort() first, you will see a browser crash very quickly.
+			 *
+			 * And calling .abort() like this is forbidden, although strangely an error
+			 * is not thrown:
+			 * "The abort method may be called in the time after the send method has
+			 * been called, and before the onload event is raised. An error is returned if
+			 * it is called outside of this interval."
+			 * - http://msdn.microsoft.com/en-us/library/cc288129%28VS.85%29.aspx
+			 *
+		       * So, we make a new XDomainRequest object every time.
+			 *
+			 * When reusing the object, the crash happens at `self._finishAndReset()'
+			 * in L{_handler_XDR_onload}. It crashes persist, try liberal use of
+			 * C{setTimeout(..., 0)}
+			 */
+
 			self._object = new XDomainRequest();
 			var x = self._object;
 
-			////x.abort(); // Uncomment this if you reuse XDomainRequest
 			x.open(verb, url.getString());
 			x.timeout = 3600*1000; // 1 hour
 
@@ -365,27 +375,9 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 
 		// .send("") for "no content" is what GWT does in
 		// google-web-toolkit/user/src/com/google/gwt/user/client/HTTPRequest.java
-		// TODO: find out: is null okay? undefined? ''? no argument? Is this the same for XDomainRequest?
 		x.send(post ? post : "");
 
 		return self._requestDoneD;
-	},
-
-	/**
-	 * Abort the current request. If none is active, or request was already aborted, this is a no-op.
-	 *
-	 * @return: undefined
-	 */
-	function abort(self) {
-		if(self._requestActive) {
-			// "Calling abort resets the object; the onreadystatechange event handler
-			// is removed, and readyState is changed to 0 (uninitialized)."
-			// - http://msdn.microsoft.com/en-us/library/ms535920%28VS.85%29.aspx
-			if(self._aborted === false) {
-				self._object.abort();
-			}
-			self._aborted = true;
-		}
 	},
 
 	/**
@@ -403,40 +395,56 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		}
 	},
 
+	/**
+	 * Abort the current request. If none is active, or request was already aborted, this is a no-op.
+	 *
+	 * @return: undefined
+	 */
+	function abort(self) {
+		if(self._requestActive) {
+			// "Calling abort resets the object; the onreadystatechange event handler
+			// is removed, and readyState is changed to 0 (uninitialized)."
+			// - http://msdn.microsoft.com/en-us/library/ms535920%28VS.85%29.aspx
+			if(self._aborted === false) {
+				self._object.abort();
+				if(self._isXDR()) {
+					// XDomainRequest is a pile of fail. It doesn't fire any
+					// event after .abort() is called on it.
+					self._finishAndReset();
+				}
+			}
+			self._aborted = true;
+		}
+	},
+
 	function _handler_XDR_onerror(self) {
-		self._window.setTimeout(function(){
 //] if _debugMode:
-			CW.msg('_handler_XDR_onerror');
+		CW.msg('_handler_XDR_onerror');
 //] endif
-			self._networkError = true;
-		}, 0);
+		self._networkError = true;
 	},
 
 	function _handler_XDR_onprogress(self) {
-		self._window.setTimeout(function(){
 //] if _debugMode:
-			CW.msg('_handler_XDR_onprogress');
+		CW.msg('_handler_XDR_onprogress');
 //] endif
-			try {
-				self._progressCallback(self._object, null, null);
-			} catch(e) {
-				CW.err(e, '[_handler_XDR_onprogress] Error in _progressCallback');
-			}
-		}, 0);
+		try {
+			self._progressCallback(self._object, null, null);
+		} catch(e) {
+			CW.err(e, '[_handler_XDR_onprogress] Error in _progressCallback');
+		}
 	},
 
 	function _handler_XDR_onload(self) {
-		self._window.setTimeout(function(){
 //] if _debugMode:
-			CW.msg('_handler_XDR_onload');
+		CW.msg('_handler_XDR_onload');
 //] endif
-			try {
-				self._progressCallback(self._object, null, null);
-			} catch(e) {
-				CW.err(e, '[_handler_XDR_onload] Error in _progressCallback');
-			}
-			self._finishAndReset();
-		}, 0);
+		try {
+			self._progressCallback(self._object, null, null);
+		} catch(e) {
+			CW.err(e, '[_handler_XDR_onload] Error in _progressCallback');
+		}
+		self._finishAndReset();
 	},
 
 	/**
