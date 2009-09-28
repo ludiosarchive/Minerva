@@ -203,24 +203,28 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		// TODO: later do some experiments to find out if getting Msxml2.XMLHTTP.6.0 may be better
 
 		/*
-		Two reasons to prefer XDomainRequest over XHR/XMLHTTP in IE8:
+		Reasons to prefer XDomainRequest over XHR/XMLHTTP in IE8:
 			- don't need to create an iframe for cross-subdomain requesting.
 			- supports streaming; we get onprogress events and can read responseText
 				at any time.
+			- XDomainRequest can't be disabled by turning off ActiveX and
+				unchecking "Enable native XMLHTTP Support."
+
+		Disadvantages:
+			- no header support
+			- no readyState, status, statusText, properties
+			- no support for multi-part responses. (???)
+			- only GET and POST methods supported
 		 */
 
 		var things = [
 			'XMLHttpRequest', function(){return new XMLHttpRequest()},
 			'Msxml2.XMLHTTP', function(){return new ActiveXObject("Msxml2.XMLHTTP")},
-			'Microsoft.XMLHTTP', function(){return new ActiveXObject("Microsoft.XMLHTTP")}
+			'Microsoft.XMLHTTP', function(){return new ActiveXObject("Microsoft.XMLHTTP")},
+			// Still used as a last resort in case someone disabled both ActiveX and native XMLHTTP.
+			'XDomainRequest', function(){return new XDomainRequest()}
 		];
 
-		// Unless the user wants streaming capability, don't bother with XDomainRequest.
-		// XDomainRequest is more limited:
-		//	- no header support,
-		//	- no readyState, status, statusText, properties, and
-		//	- no support for multi-part responses. (???)
-		//    - only GET and POST supported
 		if(self._desiresStreaming) {
 			things.unshift('XDomainRequest', function(){return new XDomainRequest()});
 		}
@@ -423,7 +427,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 			if(self._aborted === false) {
 				self._object.abort();
 				self._aborted = true;
-				// We run the risk that the XHR object can't be reused even after
+				// We run the risk that the XHR object can't be reused immediately after
 				// we call .abort() on it. If this happens in a major browser, we need
 				// to give on up reusing XMLHttpRequest objects.
 				self._finishAndReset();
