@@ -165,10 +165,12 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 		self.mock.readyState = 4;
 		self.mock.onreadystatechange(null);
 
-		self.assertEqual(self.mock.log, [
+		CW.msg('log has length ' + self.mock.log.length);
+		CW.msg(CW.UnitTest.repr(self.mock.log));
+		self.assertEqual([
 			['open', 'POST', self.target.getString(), true], ['send', ''], ['abort'],
-			['open', 'POST', self.target.getString(), true], ['send', 'second'],
-		]);
+			['open', 'POST', self.target.getString(), true], ['send', 'second']
+		], self.mock.log);
 	},
 
 

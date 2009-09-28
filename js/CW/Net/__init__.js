@@ -136,6 +136,7 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 
 CW.Error.subclass(CW.Net, 'RequestStillActive');
 CW.Error.subclass(CW.Net, 'RequestAborted');
+CW.Error.subclass(CW.Net, 'NetworkError');
 
 
 // Without CORS support for XMLHttpRequest, or XDomainRequest, we have to create
@@ -169,15 +170,20 @@ CW.Error.subclass(CW.Net, 'RequestAborted');
  *
  * TODO: cancel a request onunload in IE. This might be needed to
  * avoid a memory leak.
+ *
+ * TODO: implement timeout. Do not use XDR timeout (do not trust MS)
  */
 CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 
 	/**
 	 * C{window} is a C{window}-like object.
-	 * C{object} (optional) is an XHR-like object. If one is not
-	 *    supplied, C{_findObject} will be used to select one. 
+	 * C{object} (optional) is an XHR-like object. If undefined or null,
+	 *    C{_findObject} will be used to select one.
+	 * If C{desiresStreaming} is truthy, the more-limited but
+	 *    streaming-capable object C{XDomainRequest} will be the
+	 *    first priority in C{_findObject}.
 	 */
-	function __init__(self, window, /*optional*/ object) {
+	function __init__(self, window, /*optional*/ object, desiresStreaming) {
 		self._window = window;
 		if(!object) {
 			var objNameObj = self._findObject();
@@ -187,6 +193,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 			self._objectName = 'user-supplied';
 			self._object = object;
 		}
+		self._desiresStreaming = desiresStreaming;
 		CW.msg(self + ' is using ' + self._objectName + ' ' + self._object + ' for XHR.');
 		self._requestActive = false;
 	},
@@ -197,17 +204,27 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 
 		/*
 		Two reasons to prefer XDomainRequest over XHR/XMLHTTP in IE8:
-			- don't need to create an iframe for cross-subdomain requesting
-			- onprogress event, so we don't have to check responseText every 50ms or so
+			- don't need to create an iframe for cross-subdomain requesting.
+			- supports streaming; we get onprogress events and can read responseText
+				at any time.
 		 */
 
 		var things = [
-// XDomainRequest semantics are very different
-//			'XDomainRequest', function(){return new XDomainRequest()},
 			'XMLHttpRequest', function(){return new XMLHttpRequest()},
 			'Msxml2.XMLHTTP', function(){return new ActiveXObject("Msxml2.XMLHTTP")},
 			'Microsoft.XMLHTTP', function(){return new ActiveXObject("Microsoft.XMLHTTP")}
 		];
+
+		// Unless the user wants streaming capability, don't bother with XDomainRequest.
+		// XDomainRequest is more limited:
+		//	- no header support,
+		//	- no readyState, status, statusText, properties, and
+		//	- no support for multi-part responses. (???)
+		//    - only GET and POST supported
+		if(self._desiresStreaming) {
+			things.unshift('XDomainRequest', function(){return new XDomainRequest()});
+		}
+
 		for (var n=1; n < things.length; n+=2) {
 			try {
 				var object = things[n]();
@@ -226,6 +243,25 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 
 	function getObjectName(self) {
 		return self._objectName;
+	},
+
+	function _isXDR(self) {
+		try 	{
+			return self._object instanceof XDomainRequest;
+		} catch(e) {
+			return false;
+		}
+	},
+
+	/**
+	 * @return: C{true} is the selected host object is technically capable of
+	 *    cross-domain requests, C{false} otherwise.
+	 */
+	function canCrossDomains(self) {
+		if(self._isXDR() || typeof self._object.withCredentials === "boolean") {
+			return true;
+		}
+		return false;
 	},
 
 	/**
@@ -266,8 +302,9 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		self._position = null;
 		self._totalSize = null;
 		self._aborted = false;
+		self._networkError = false;
 		self._requestDoneD = CW.Defer.Deferred();
-		self._progressCallback = progressCallback ? progressCallback : null;
+		self._progressCallback = progressCallback ? progressCallback : CW.emptyFunc;
 
 		// To reuse the XMLHTTP object in IE7, the order must be: open, onreadystatechange, send
 
@@ -275,28 +312,41 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 
 		self._requestActive = true;
 
-		// "Note: You need to add the event listeners before calling open()
-		// on the request.  Otherwise the progress events will not fire."
-		// - https://developer.mozilla.org/En/Using_XMLHttpRequest
+		if(!self._isXDR()) {
 
-		// Just because we attach this event, doesn't mean it will ever fire.
-		// Even in browsers that support `onprogress', a bug in the browser
-		// or a browser extension may block its firing. This has been observed
-		// in a Firefox 3.5.3 install with a lot of extensions.
-		try {
-			// TODO: only attach this if progressCallback is truthy.
-			x.onprogress = CW.bind(self, self._handler_onprogress);
-		} catch(err) {
+			// "Note: You need to add the event listeners before calling open()
+			// on the request.  Otherwise the progress events will not fire."
+			// - https://developer.mozilla.org/En/Using_XMLHttpRequest
+
+			// Just because we attach this event, doesn't mean it will ever fire.
+			// Even in browsers that support `onprogress', a bug in the browser
+			// or a browser extension may block its firing. This has been observed
+			// in a Firefox 3.5.3 install with a lot of extensions.
+			try {
+				// TODO: only attach this if progressCallback is truthy.
+				x.onprogress = CW.bind(self, self._handler_onprogress);
+			} catch(err) {
 //] if _debugMode:
-			CW.msg(self + ": failed to attach onprogress event: " + err.message);
+				CW.msg(self + ": failed to attach onprogress event: " + err.message);
 //] endif
-		}
-		x.open(verb, url.getString(), true);
+			}
+			x.open(verb, url.getString(), true);
 
-		// If we use `x.onreadystatechange = self._handler_onreadystatechange',
-		// `this' will be `window' in _handler_onreadystatechange, which is bad.
-		// Don't use a closure either; closures are too scary in JavaScript.
-		x.onreadystatechange = CW.bind(self, self._handler_onreadystatechange);
+			// If we use `x.onreadystatechange = self._handler_onreadystatechange',
+			// `this' will be `window' in _handler_onreadystatechange, which is bad.
+			// Don't use a closure either; closures are too scary in JavaScript.
+			x.onreadystatechange = CW.bind(self, self._handler_onreadystatechange);
+
+		} else {
+			x.open(verb, url.getString(), true);
+			x.timeout = 3600*1000; // 1 hour
+
+			x.onerror = CW.bind(self, self._handler_XDR_onerror);
+			x.onprogress = CW.bind(self, self._handler_XDR_onprogress);
+			x.onload = CW.bind(self, self._handler_XDR_onload);
+			//x.ontimeout
+		}
+
 		// .send("") for "no content" is what GWT does in
 		// google-web-toolkit/user/src/com/google/gwt/user/client/HTTPRequest.java
 		// TODO: find out: is null okay? undefined? ''? no argument? Is this the same for XDomainRequest?
@@ -322,6 +372,36 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		}
 	},
 
+	function _handler_XDR_onerror(self) {
+//] if _debugMode:
+		CW.msg('_handler_XDR_onerror');
+//] endif
+		self._networkError = true;
+	},
+
+	function _handler_XDR_onprogress(self) {
+//] if _debugMode:
+		CW.msg('_handler_XDR_onprogress');
+//] endif
+		try {
+			self._progressCallback(self._object, null, null);
+		} catch(e) {
+			CW.err(e, '[_handler_XDR_onprogress] Error in _progressCallback');
+		}
+	},
+
+	function _handler_XDR_onload(self) {
+//] if _debugMode:
+		CW.msg('_handler_XDR_onload');
+//] endif
+		try {
+			self._progressCallback(self._object, null, null);
+		} catch(e) {
+			CW.err(e, '[_handler_XDR_onload] Error in _progressCallback');
+		}
+		self._finishAndReset();
+	},
+
 	function _handler_onprogress(self, e) {
 //] if _debugMode:
 		CW.msg('_handler_onprogress: ' + [e.position, e.totalSize].join(','));
@@ -342,13 +422,27 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		if(e.position !== undefined) {
 			self._position = e.position;
 		} else {
-			if(self._progressCallback) {
-				try {
-					self._progressCallback(self._object, null, self._totalSize);
-				} catch(e) {
-					CW.err(e, '[_handler_onprogress] Error in _progressCallback');
-				}
+			try {
+				self._progressCallback(self._object, null, self._totalSize);
+			} catch(e) {
+				CW.err(e, '[_handler_onprogress] Error in _progressCallback');
 			}
+		}
+	},
+
+	/**
+	 * This works for both XHR/XMLHTTP and XDR objects.
+	 */
+	function _finishAndReset(self) {
+		// Change the order of these lines at your own peril...
+		self._requestActive = false;
+		if(self._aborted) {
+			self._aborted = false;
+			self._requestDoneD.errback(new CW.Net.RequestAborted());
+		} else if(self._networkError) {
+			self._requestDoneD.errback(new CW.Net.NetworkError());
+		} else {
+			self._requestDoneD.callback(self._object);
 		}
 	},
 
@@ -360,7 +454,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 //] if _debugMode:
 		CW.msg(self + ': readyState: ' + readyState);
 //] endif
-		if((readyState == 3 || readyState == 4) && self._progressCallback) {
+		if(readyState == 3 || readyState == 4) {
 			try {
 				self._progressCallback(self._object, self._position, self._totalSize);
 			} catch(e) {
@@ -376,15 +470,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		if(readyState == 4) {
 			// TODO: maybe do this in IE only?
 			self._object.onreadystatechange = CW.emptyFunc;
-
-			// Change the order of these lines at your own peril...
-			self._requestActive = false;
-			if(self._aborted) {
-				self._aborted = false;
-				self._requestDoneD.errback(new CW.Net.RequestAborted());
-			} else {
-				self._requestDoneD.callback(self._object);
-			}
+			self._finishAndReset();
 		}
 	}
 );
