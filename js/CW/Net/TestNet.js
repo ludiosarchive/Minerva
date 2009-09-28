@@ -203,12 +203,6 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRTests').methods(
 	},
 
 
-	function test_getObject(self) {
-		// Not falsy
-		self.assert(self.xhr.getObject());
-	},
-
-
 	function test_simpleResponseGET(self) {
 		self.target.update('path', '/@testres_Minerva/SimpleResponse/?a=0');
 		var d = self.xhr.request('GET', self.target);
@@ -357,7 +351,7 @@ CW.Net.TestNet.ReusableXHRTests.subclass(CW.Net.TestNet, 'ReusableXHRUsingXDRTes
 			throw new CW.UnitTest.SkipTest("XDomainRequest is required for this test.");
 		}
 		self.target = CW.URI.URL(''+window.location);
-		self.xhr = CW.Net.ReusableXHR(window, CW.Net.findObject(/*desireXDR=*/true));
+		self.xhr = CW.Net.UsableXDR(window, function(){return new XDomainRequest()});
 	}
 );
 
@@ -370,7 +364,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XDomainRequestTests').methods(
 			throw new CW.UnitTest.SkipTest("XDomainRequest is required for this test.");
 		}
 		self.target = CW.URI.URL(''+window.location);
-		self.xhr = CW.Net.ReusableXHR(window, new XDomainRequest());
+		self.xhr = CW.Net.UsableXDR(window, function(){return new XDomainRequest()});
 	},
 
 
@@ -410,7 +404,6 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XDomainRequestTests').methods(
 );
 
 
-
 CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ProgressCallbackTests').methods(
 
 	function setUp(self) {
@@ -421,6 +414,10 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ProgressCallbackTests').methods(
 		self.clock = CW.UnitTest.Clock();
 	},
 
+	/**
+	 * Test that when onreadystatechange happens, C{progressCallback}
+	 * is called.
+	 */
 	function test_onreadystatechangeCallsProgress(self) {
 		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
 		var calls = [];
@@ -439,6 +436,35 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ProgressCallbackTests').methods(
 				[self.mock, null, null],
 				[self.mock, null, null],
 				[self.mock, null, null]
+			], calls
+		);
+	},
+
+	/**
+	 * Test that when onprogress then onreadystatechange happens,
+	 * C{progressCallback} is called with good numbers.
+	 */
+	function test_onprogressFillsNumbers(self) {
+		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
+		var calls = [];
+		function progressCallback(obj, position, totalSize) {
+			calls.push(arguments);
+		}
+		self.xhr.request('GET', self.target, '', progressCallback);
+		self.mock.readyState = 3;
+		self.mock.responseText = null; // responseText should not be looked at
+		self.mock.onprogress({position: 1, totalSize: 10});
+		self.mock.onreadystatechange(null);
+		self.mock.onprogress({position: 2, totalSize: 10});
+		self.mock.onreadystatechange(null);
+		self.mock.onprogress({position: 3, totalSize: 10});
+		self.mock.onreadystatechange(null);
+
+		self.assertEqual(
+			[
+				[self.mock, 1, 10],
+				[self.mock, 2, 10],
+				[self.mock, 3, 10]
 			], calls
 		);
 	}
