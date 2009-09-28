@@ -320,14 +320,12 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 			// Even in browsers that support `onprogress', a bug in the browser
 			// or a browser extension may block its firing. This has been observed
 			// in a Firefox 3.5.3 install with a lot of extensions.
-			if(self._progressCallback !== CW.emptyFunc) {
-				try {
-					x.onprogress = CW.bind(self, self._handler_onprogress);
-				} catch(err) {
+			try {
+				x.onprogress = CW.bind(self, self._handler_onprogress);
+			} catch(err) {
 //] if _debugMode:
-					CW.msg(self + ": failed to attach onprogress event: " + err.message);
+				CW.msg(self + ": failed to attach onprogress event: " + err.message);
 //] endif
-				}
 			}
 			x.open(verb, url.getString(), true);
 			x.onreadystatechange = CW.bind(self, self._handler_onreadystatechange);
