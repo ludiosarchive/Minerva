@@ -229,14 +229,14 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	 * C{window} is a C{window}-like object.
 	 * C{object} is an XHR-like object: either XMLHttpRequest,
 	 *    some XMLHTTP thing, or XDomainRequest. 
-	 * If C{desiresStreaming} is truthy, the more-limited but
+	 * If C{desireStreaming} is truthy, the more-limited but
 	 *    streaming-capable object C{XDomainRequest} will be the
 	 *    first priority in C{_findObject}.
 	 */
-	function __init__(self, window, object, desiresStreaming) {
+	function __init__(self, window, object, desireStreaming) {
 		self._window = window;
 		self._object = object;
-		self._desireStreaming = desiresStreaming;
+		self._desireStreaming = desireStreaming;
 		CW.msg(self + ' is using ' + self._object + ' for XHR.');
 		self._requestActive = false;
 	},
@@ -327,6 +327,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 				CW.msg(self + ": failed to attach onprogress event: " + err.message);
 //] endif
 			}
+			// TODO: maybe attach onerror too, to detect some network errors.
 			x.open(verb, url.getString(), true);
 			x.onreadystatechange = CW.bind(self, self._handler_onreadystatechange);
 			
@@ -727,12 +728,6 @@ CW.Class.subclass(CW.Net, "StreamFactory").methods(
 		throw new Error("override this");
 	}
 )
-
-
-// Connector
-// maybe this should be reactor?
-// We probably want to be able to build a 'Clock' that can be moved forward
-// but alternatively we could pass in a fake 'window' to classes that are using setTimeout and so on
 
 
 //XHRTransport

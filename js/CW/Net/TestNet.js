@@ -253,6 +253,84 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XDomainRequestTests').methods(
 
 
 
+CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'OperaWorkaroundTests').methods(
+
+	function setUp(self) {
+		if(!window.opera) {
+			throw new CW.UnitTest.SkipTest("This workaround only applies to Opera.");
+		}
+		self.clock = CW.UnitTest.Clock();
+
+		self.target = CW.URI.URL(''+window.location);
+		self.target.update('path', '/@testres_Minerva/404/');
+		self.mock = CW.Net.TestNet.MockXHR();
+
+	},
+
+	/**
+	 * In Opera, if C{desireStreaming} is C{true}, progressCallback is
+	 * called every 50ms, even if no new data has been received.
+	 */
+	function test_desireStreamingCreatesPoller(self) {
+		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock, true);
+		var count = 0;
+		function progressCallback(obj, position, totalSize) {
+			count += 1;
+		}
+		self.xhr.request('GET', self.target, '', progressCallback);
+		self.mock.readyState = 3;
+		self.assertIdentical(0, count);
+		self.clock.advance(100);
+		self.assertIdentical(2, count);
+	},
+
+
+	/**
+	 * In Opera, if C{desireStreaming} is C{true}, but readyState is
+	 * not 3, progressCallback is not called.
+	 */
+	function test_desireStreamingButNotReadyState3(self) {
+		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock, true);
+		var count = 0;
+		function progressCallback(obj, position, totalSize) {
+			count += 1;
+		}
+		self.xhr.request('GET', self.target, '', progressCallback);
+
+		self.mock.readyState = 1;
+		self.clock.advance(100);
+		self.assertIdentical(0, count);
+
+		self.mock.readyState = 2;
+		self.clock.advance(100);
+		self.assertIdentical(0, count);
+		
+		self.mock.readyState = 4;
+		self.clock.advance(100);
+		self.assertIdentical(0, count);
+	},
+
+
+	/**
+	 * In Opera, if C{desireStreaming} is C{false}, progressCallback is
+	 * not called every 50ms.
+	 */
+	function test_noDesireNoPoller(self) {
+		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock, false);
+		var count = 0;
+		function progressCallback(obj, position, totalSize) {
+			count += 1;
+		}
+		self.xhr.request('GET', self.target, '', progressCallback);
+		self.mock.readyState = 3;
+		self.assertIdentical(0, count);
+		self.clock.advance(100);
+		self.assertIdentical(0, count);
+	}
+);
+
+
+
 CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRLogicTests').methods(
 
 	function setUp(self) {
