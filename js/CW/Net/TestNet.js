@@ -364,7 +364,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XDomainRequestTests').methods(
 			throw new CW.UnitTest.SkipTest("XDomainRequest is required for this test.");
 		}
 		self.target = CW.URI.URL(''+window.location);
-		self.xhr = CW.Net.ReusableXHR(window, new XDomainRequest());
+		self.xhr = CW.Net.UsableXDR(window, function(){return new XDomainRequest()});
 	},
 
 
