@@ -114,22 +114,6 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRTests').methods(
 
 
 	/**
-	 * We can't make another request over this ReusableXHR
-	 * object until the current request is finished.
-	 */
-	function test_requestStillActive(self) {
-		self.target.update('path', '/@testres_Minerva/SimpleResponse/?z=1');
-		var d1 = self.xhr.request('GET', self.target);
-		self.assertThrows(
-			CW.Net.RequestStillActive,
-			function() { self.xhr.request('GET', self.target) },
-			"Wait for the Deferred to fire before making another request."
-		);
-		return d1;
-	},
-
-
-	/**
 	 * C{.abort()} returns undefined.
 	 * Calling C{.abort()} multiple times is okay.
 	 *
@@ -241,6 +225,21 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRLogicTests').methods(
 		// After .request(), onreadystatechange is set to a real handler.
 		self.assertNotIdentical(CW.emptyFunc, self.mock.onreadystatechange);
 	},
+
+
+	/**
+	 * We can't make another request over this ReusableXHR
+	 * object until the current request is finished.
+	 */
+	function test_requestStillActive(self) {
+		self._setupDummies();
+		self.assertThrows(
+			CW.Net.RequestStillActive,
+			function() { self.xhr.request('GET', self.target) },
+			"Wait for the Deferred to fire before making another request."
+		);
+	},
+
 
 	/**
 	 * After aborting, using the same L{ReusableXHR} instance to make

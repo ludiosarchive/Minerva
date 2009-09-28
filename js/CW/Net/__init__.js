@@ -303,7 +303,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		self._totalSize = null;
 		self._aborted = false;
 		self._networkError = false;
-		self._requestDoneD = CW.Defer.Deferred();
+		self._requestDoneD = new CW.Defer.Deferred();
 		self._progressCallback = progressCallback ? progressCallback : CW.emptyFunc;
 		self._poller = null;
 
