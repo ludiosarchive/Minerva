@@ -20,24 +20,6 @@ CW.Net.TestNet.	hasXDomainRequest = function hasXDomainRequest() {
 }
 
 
-CW.Class.subclass(CW.Net.TestNet, 'FindObjectTests').methods(
-	/**
-	 * If browser has XDomainRequest object, and findObject is called
-	 * with desireXDR=true, findObject should return an XDomainRequest
-	 * object.
-	 */
-	function test_XDomainRequestPriority(self) {
-		if(!CW.Net.TestNet.hasXDomainRequest()) {
-			throw new CW.UnitTest.SkipTest("XDomainRequest is required for this test.");
-		}
-		var object = CW.Net.findObject(/*desireXDR=*/true);
-		self.assert(
-			self.xhr.getObject() instanceof XDomainRequest,
-			"self.xhr.getObject() `not instanceof` XDomainRequest");
-	}
-);
-
-
 
 CW.Class.subclass(CW.Net.TestNet, 'MockXHR').pmethods({
 
@@ -58,6 +40,25 @@ CW.Class.subclass(CW.Net.TestNet, 'MockXHR').pmethods({
 		this.log.push(['abort']);
 	}
 });
+
+
+
+CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'FindObjectTests').methods(
+	/**
+	 * If browser has XDomainRequest object, and findObject is called
+	 * with desireXDR=true, findObject should return an XDomainRequest
+	 * object.
+	 */
+	function test_XDomainRequestPriority(self) {
+		if(!CW.Net.TestNet.hasXDomainRequest()) {
+			throw new CW.UnitTest.SkipTest("XDomainRequest is required for this test.");
+		}
+		var object = CW.Net.findObject(/*desireXDR=*/true);
+		self.assert(
+			object instanceof XDomainRequest,
+			"object `not instanceof` XDomainRequest");
+	}
+);
 
 
 
