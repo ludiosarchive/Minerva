@@ -336,6 +336,8 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 			// `this' will be `window' in _handler_onreadystatechange, which is bad.
 			// Don't use a closure either; closures are too scary in JavaScript.
 			x.onreadystatechange = CW.bind(self, self._handler_onreadystatechange);
+//			x.onabort = function(){alert('onabort')}
+//			x.onerror = function(){alert('onerror')}
 
 			if(window.opera && self._desiresStreaming) {
 				self._poller = self._window.setInterval(CW.bind(self, self._handler_poll), 50);
@@ -384,6 +386,19 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	 * This works for both XHR/XMLHTTP and XDR objects.
 	 */
 	function _finishAndReset(self) {
+		if(!self._requestActive) {
+			// Both ReusableXHR.abort and
+			// _handler_onreadystatechange/_handler_XDR_onload/_handler_XDR_onerror
+			// may call _finishAndReset. Sometimes ReusableXHR.abort will beat the
+			// handlers to the punch.
+			// XDomainRequest.abort() won't fire anything after aborting.
+			// After `onerror' on an XDomainRequest, nothing else will be fired.
+			// Opera 10 won't fire anything after aborting.
+			return;
+		}
+		if(self._poller !== null) {
+			self._window.clearInterval(self._poller);
+		}
 		// Change the order of these lines at your own peril...
 		self._requestActive = false;
 		if(self._aborted) {
@@ -407,13 +422,12 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 			// - http://msdn.microsoft.com/en-us/library/ms535920%28VS.85%29.aspx
 			if(self._aborted === false) {
 				self._object.abort();
-				if(self._isXDR()) {
-					// XDomainRequest is a pile of fail. It doesn't fire any
-					// event after .abort() is called on it.
-					self._finishAndReset();
-				}
+				self._aborted = true;
+				// We run the risk that the XHR object can't be reused even after
+				// we call .abort() on it. If this happens in a major browser, we need
+				// to give on up reusing XMLHttpRequest objects.
+				self._finishAndReset();
 			}
-			self._aborted = true;
 		}
 	},
 
@@ -422,6 +436,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		CW.msg('_handler_XDR_onerror');
 //] endif
 		self._networkError = true;
+		self._finishAndReset();
 	},
 
 	function _handler_XDR_onprogress(self) {
@@ -512,9 +527,6 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		if(readyState == 4) {
 			// TODO: maybe do this in IE only?
 			self._object.onreadystatechange = CW.emptyFunc;
-			if(self._poller !== null) {
-				self._window.clearInterval(self._poller);
-			}
 			self._finishAndReset();
 		}
 	}

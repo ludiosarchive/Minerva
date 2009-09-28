@@ -8,6 +8,19 @@
 // import CW.Net
 
 
+CW.Net.TestNet.	hasXDomainRequest = function hasXDomainRequest() {
+	var has = false;
+	try {
+		XDomainRequest;
+		has = true;
+	} catch(e) {
+
+	}
+	return has;
+}
+
+
+
 CW.Class.subclass(CW.Net.TestNet, 'MockXHR').pmethods({
 
 	__init__: function() {
@@ -105,13 +118,14 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRTests').methods(
 	 * object until the current request is finished.
 	 */
 	function test_requestStillActive(self) {
-		self.target.update('path', '/@testres_Minerva/404/');
+		self.target.update('path', '/@testres_Minerva/SimpleResponse/?z=1');
 		var d1 = self.xhr.request('GET', self.target);
 		self.assertThrows(
 			CW.Net.RequestStillActive,
 			function() { self.xhr.request('GET', self.target) },
 			"Wait for the Deferred to fire before making another request."
 		);
+		return d1;
 	},
 
 
@@ -153,18 +167,59 @@ CW.Net.TestNet.ReusableXHRTests.subclass(CW.Net.TestNet, 'ReusableXHRStreamingTe
 		 * In Opera, desiresStreaming will set a poller with setInterval to monitor responseText.
 		 */
 		self.xhr = CW.Net.ReusableXHR(window, /*object=*/null, /*desiresStreaming=*/true);
-		
-		var hasXDomainRequest = false;
-		try {
-			XDomainRequest;
-			hasXDomainRequest = true;
-		} catch(e) {
 
-		}
-		
-		if(hasXDomainRequest) {
+		if(CW.Net.TestNet.hasXDomainRequest()) {
 			self.assertEqual("XDomainRequest", self.xhr.getObjectName());
 		}
+	}
+);
+
+
+
+
+CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XDomainRequestTests').methods(
+
+	function setUp(self) {
+		if(!CW.Net.TestNet.hasXDomainRequest()) {
+			throw new CW.UnitTest.SkipTest("XDomainRequest is required for this test.");
+		}
+		self.target = CW.URI.URL(''+window.location);
+		self.xhr = CW.Net.ReusableXHR(window, new XDomainRequest(), /*desiresStreaming=*/true);
+	},
+
+
+	/**
+	 * Requesting a page via GET that doesn't send the right Origin headers
+	 * causes a L{NetworkError}.
+	 */
+	function test_networkErrorGET(self) {
+		self.target.update('path', '/@testres_Minerva/NoOriginHeader/');
+		var requestD = self.xhr.request('GET', self.target);
+		var d = self.assertFailure(requestD, [CW.Net.NetworkError]);
+		return d;
+	},
+
+
+	/**
+	 * Requesting a page via GET that doesn't send the right Origin headers
+	 * causes a L{NetworkError}.
+	 */
+	function test_networkErrorPOST(self) {
+		self.target.update('path', '/@testres_Minerva/NoOriginHeader/');
+		var requestD = self.xhr.request('POST', self.target);
+		var d = self.assertFailure(requestD, [CW.Net.NetworkError]);
+		return d;
+	},
+
+
+	/**
+	 * Requesting something on 0.0.0.0 causes a L{NetworkError}.
+	 */
+	function test_networkErrorBadIP(self) {
+		self.target.update('host', '0.0.0.0');
+		var requestD = self.xhr.request('GET', self.target);
+		var d = self.assertFailure(requestD, [CW.Net.NetworkError]);
+		return d;
 	}
 );
 

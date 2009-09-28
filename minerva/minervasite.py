@@ -106,6 +106,22 @@ class DisplayConnections(resource.Resource):
 
 
 
+
+class NoOriginHeader(resource.Resource):
+	"""
+	For testing XDR. See Minerva/js/CW/Net/TestNet.js
+	"""
+	isLeaf = True
+	def render_GET(self, request):
+		return 'GET'
+
+
+	def render_POST(self, request):
+		return 'POST'
+
+
+
+
 class SimpleResponse(resource.Resource):
 	"""
 	For testing XHR. See Minerva/js/CW/Net/TestNet.js
@@ -134,6 +150,7 @@ class ResourcesForTest(resource.Resource):
 		##self.putChild('AbortChecker', AbortChecker())
 		self.putChild('DisplayConnections', DisplayConnections())
 		self.putChild('SimpleResponse', SimpleResponse())
+		self.putChild('NoOriginHeader', NoOriginHeader())
 
 		# add test resources as needed
 
