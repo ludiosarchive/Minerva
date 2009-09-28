@@ -215,50 +215,17 @@ CW.Error.subclass(CW.Net, 'TimeoutError');
 // done in an iframe to achieve cross-subdomain requests.
 
 
-/**
- * XHR, XMLHTTP, XDR. This should be usable for non-Minerva use;
- * for example, to run out-of-Stream network diagnostics.
- *
- * TODO: cancel a request onunload in IE. This might be needed to
- * avoid a memory leak.
- *
- * TODO: implement timeout. Do not use XDR timeout (do not trust MS)
- */
-CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 
+// We don't support Interfaces yet, but we really need to.
+
+//] if _debugMode:
+CW.Class.subclass(CW.Net, "IUsableSomething").methods(
 	/**
-	 * C{window} is a C{window}-like object.
-	 * C{object} is an XHR-like object: either XMLHttpRequest,
-	 *    some XMLHTTP thing, or XDomainRequest.
-	 */
-	function __init__(self, window, object) {
-		self._window = window;
-		self._object = object;
-		CW.msg(self + ' is using ' + self._object + ' for XHR.');
-		self._requestActive = false;
-	},
-
-	function getObject(self) {
-		return self._object;
-	},
-
-	function _isXDR(self) {
-		try 	{
-			return self._object instanceof XDomainRequest;
-		} catch(e) {
-			return false;
-		}
-	},
-
-	/**
-	 * @return: C{true} if C{self._object} is technically capable of
+	 * @return: C{true} if this object is technically capable of
 	 *    cross-domain requests, C{false} otherwise.
 	 */
-	function canCrossDomains(self) {
-		if(self._isXDR() || typeof self._object.withCredentials === "boolean") {
-			return true;
-		}
-		return false;
+	function canCrossDomains() {
+
 	},
 
 	/**
@@ -276,7 +243,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	 *    Either Number argument will be C{null} if the browser does not provide
 	 *    progress information. L{ReusableXHR} purposely avoids accessing
 	 *    C{self._object.responseText} to determine progress information.
-	 * 
+	 *
 	 *    Note that (bytes available in responseText [Number]) may suddenly become
 	 *    C{null} due to a Firefox bug. When this happens, you should check
 	 *    C{responseText} for new data, just as if you always got C{null}.
@@ -288,124 +255,8 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	 * Returns an L{CW.Defer.Deferred} that fires with callback or errback. It's not safe to make
 	 * another request until this Deferred fires. Do not rely only on L{progressCallback}.
 	 */
-	function request(self, verb, url, /*optional*/ post, /*optional*/ progressCallback) {
-		// TODO: send as few headers possible for each browser. This requires custom
-		// per-browser if/elif'ing
+	function request(verb, url, /*optional*/ post, /*optional*/ progressCallback) {
 
-		if(self._requestActive) {
-			throw new CW.Net.RequestStillActive(
-				"Wait for the Deferred to fire before making another request.");
-		}
-		self._position = null;
-		self._totalSize = null;
-		self._requestDoneD = new CW.Defer.Deferred();
-		self._progressCallback = progressCallback ? progressCallback : CW.emptyFunc;
-		self._poller = null;
-
-		// To reuse the XMLHTTP object in IE7, the order must be: open, onreadystatechange, send
-
-		self._requestActive = true;
-
-		if(!self._isXDR()) {
-			var x = self._object;
-
-			// "Note: You need to add the event listeners before calling open()
-			// on the request.  Otherwise the progress events will not fire."
-			// - https://developer.mozilla.org/En/Using_XMLHttpRequest
-
-			// Just because we attach `onprogress', doesn't mean it will ever fire.
-			// Even in browsers that support `onprogress', a bug in the browser
-			// or a browser extension may block its firing. This has been observed
-			// in a Firefox 3.5.3 install with a lot of extensions.
-			try {
-				x.onprogress = CW.bind(self, self._handler_onprogress);
-			} catch(err) {
-//] if _debugMode:
-				CW.msg(self + ": failed to attach onprogress event: " + err.message);
-//] endif
-			}
-			// TODO: maybe attach onerror too, to detect some network errors.
-
-			// IE6-8 and Opera 10 (9? 8?) incorrectly send the fragment as part
-			// of the request. The fragment should never be sent to the server.
-			// Only XHR/XMLHTTP are buggy this way; this does not apply to
-			// XDomainRequest
-			// TODO: decouple from CW.URI.URL, use a regex or something
-			if(url.fragment !== null) {
-				url = CW.URI.URL(url); // copy
-				url.update('fragment', null);
-			}
-
-			x.open(verb, url.getString(), /*async=*/true);
-			x.onreadystatechange = CW.bind(self, self._handler_onreadystatechange);
-			
-			if(window.opera && self._progressCallback !== CW.emptyFunc) {
-				self._poller = self._window.setInterval(CW.bind(self, self._handler_poll), 50);
-			}
-
-		} else {
-			/**
-			 * IE8 has a lot of problems when reusing an XDomainRequest object.
-			 * If you don't .abort() before .open(), you'll see "Error: Unspecified error."
-			 * If you do .abort() first, you will see the browser crash.
-			 *
-			 * And calling .abort() like this is forbidden, although strangely an error
-			 * is not thrown:
-			 * "The abort method may be called in the time after the send method has
-			 * been called, and before the onload event is raised. An error is returned if
-			 * it is called outside of this interval."
-			 * - http://msdn.microsoft.com/en-us/library/cc288129%28VS.85%29.aspx
-			 *
-		       * So, we make a new XDomainRequest object every time.
-			 *
-			 * When reusing the object, the crash happens at `self._finishAndReset()'
-			 * in L{_handler_XDR_onload}. It crashes persist, change code to liberally
-			 * use C{setTimeout(..., 0)}
-			 */
-
-			self._object = new XDomainRequest();
-			var x = self._object;
-
-			x.open(verb, url.getString());
-			x.timeout = 3600*1000; // 1 hour. We'll do our own timeouts.
-
-			x.onerror = CW.bind(self, self._handler_XDR_onerror);
-			x.onprogress = CW.bind(self, self._handler_XDR_onprogress);
-			x.onload = CW.bind(self, self._handler_XDR_onload);
-			x.ontimeout = CW.bind(self, self._handler_XDR_ontimeout);
-		}
-
-		// .send("") for "no content" is what GWT does in
-		// google-web-toolkit/user/src/com/google/gwt/user/client/HTTPRequest.java
-		x.send(post ? post : "");
-
-		return self._requestDoneD;
-	},
-
-	/**
-	 * This works for both XHR/XMLHTTP and XDR objects.
-	 */
-	function _finishAndReset(self, errorOrNull) {
-		if(!self._requestActive) {
-			// Both ReusableXHR.abort and
-			// _handler_onreadystatechange/_handler_XDR_onload/_handler_XDR_onerror
-			// may call _finishAndReset. Sometimes ReusableXHR.abort will beat the
-			// handlers to the punch.
-			// XDomainRequest.abort() won't fire anything after aborting.
-			// After `onerror' on an XDomainRequest, nothing else will be fired.
-			// Opera 10 won't fire anything after aborting.
-			return;
-		}
-		if(self._poller !== null) {
-			self._window.clearInterval(self._poller);
-		}
-		// Change the order of these lines at your own peril...
-		self._requestActive = false;
-		if(errorOrNull === null) {
-			self._requestDoneD.callback(self._object);
-		} else {
-			self._requestDoneD.errback(errorOrNull);
-		}
 	},
 
 	/**
@@ -413,16 +264,50 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	 *
 	 * @return: undefined
 	 */
-	function abort(self) {
-		if(self._requestActive) {
-			// "Calling abort resets the object; the onreadystatechange event handler
-			// is removed, and readyState is changed to 0 (uninitialized)."
-			// - http://msdn.microsoft.com/en-us/library/ms535920%28VS.85%29.aspx
-			self._object.abort();
-			// We run the risk that the XHR object can't be reused immediately after
-			// we call .abort() on it. If this happens in a major browser, we need
-			// to give on up reusing XMLHttpRequest objects.
-			self._finishAndReset(new CW.Net.RequestAborted());
+	function abort() {
+
+	}
+);
+//] endif
+
+
+
+/**
+ * Implements IUsableSomething.
+ *
+ * TODO: implement timeout. Do not use XDR timeout (do not trust MS)
+ */
+CW.Class.subclass(CW.Net, "UsableXDR").methods(
+	/**
+	 * C{window} is a C{window}-like object.
+	 * C{objectFactory} is a function that returns an
+	 *    XDomainRequest-like object.
+	 */
+	function __init__(self, window, objectFactory) {
+		self._window = window;
+		self._objectFactory = objectFactory;
+		self._requestActive = false;
+	},
+
+	function canCrossDomains(self) {
+		return true;
+	},
+
+	function _finishAndReset(self, errorOrNull) {
+		if(!self._requestActive) {
+			// Both UsableXDR.abort and _handler_XDR_onload/_handler_XDR_onerror
+			// may call _finishAndReset. Sometimes ReusableXHR.abort will beat the
+			// handlers to the punch.
+			// XDomainRequest.abort() won't fire anything after aborting.
+			// After `onerror' on an XDomainRequest, nothing else will be fired.
+			return;
+		}
+		// Change the order of these lines at your own peril...
+		self._requestActive = false;
+		if(errorOrNull === null) {
+			self._requestDoneD.callback(self._object);
+		} else {
+			self._requestDoneD.errback(errorOrNull);
 		}
 	},
 
@@ -444,7 +329,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 
 	function _handler_XDR_onprogress(self) {
 //] if _debugMode:
-		CW.msg('_handler_XDR_onprogress');
+		CW.msg('_handler_XDR_onprogress ' + window.event);
 //] endif
 		try {
 			self._progressCallback(self._object, null, null);
@@ -463,6 +348,209 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 			CW.err(e, '[_handler_XDR_onload] Error in _progressCallback');
 		}
 		self._finishAndReset(null);
+	},
+
+	function request(self, verb, url, /*optional*/ post, /*optional*/ progressCallback) {
+		if(self._requestActive) {
+			throw new CW.Net.RequestStillActive(
+				"Wait for the Deferred to fire before making another request.");
+		}
+		// We'll never know the position and totalSize.
+		self._requestDoneD = new CW.Defer.Deferred();
+		self._progressCallback = progressCallback ? progressCallback : CW.emptyFunc;
+		self._requestActive = true;
+
+		/**
+		 * IE8 has a lot of problems when reusing an XDomainRequest object.
+		 * If you don't .abort() before .open(), you'll see "Error: Unspecified error."
+		 * If you do .abort() first, you will see the browser crash.
+		 *
+		 * And calling .abort() like this is forbidden, although strangely an error
+		 * is not thrown:
+		 * "The abort method may be called in the time after the send method has
+		 * been called, and before the onload event is raised. An error is returned if
+		 * it is called outside of this interval."
+		 * - http://msdn.microsoft.com/en-us/library/cc288129%28VS.85%29.aspx
+		 *
+		 * So, we make a new XDomainRequest object every time.
+		 *
+		 * When reusing the object, the crash happens at `self._finishAndReset()'
+		 * in L{_handler_XDR_onload}. It crashes persist, change code to liberally
+		 * use C{setTimeout(..., 0)}
+		 */
+
+		self._object = self._objectFactory();
+		var x = self._object;
+
+		x.open(verb, url.getString());
+		x.timeout = 3600*1000; // 1 hour. We'll do our own timeouts.
+
+		x.onerror = CW.bind(self, self._handler_XDR_onerror);
+		x.onprogress = CW.bind(self, self._handler_XDR_onprogress);
+		x.onload = CW.bind(self, self._handler_XDR_onload);
+		x.ontimeout = CW.bind(self, self._handler_XDR_ontimeout);
+
+		// .send("") for "no content" is what GWT does in
+		// google-web-toolkit/user/src/com/google/gwt/user/client/HTTPRequest.java
+		x.send(post ? post : "");
+
+		return self._requestDoneD;
+	},
+
+	/**
+	 * See CW.Net.IUsableSomething.abort
+	 */
+	function abort(self) {
+		if(self._requestActive) {
+			// We MUST NOT call .abort twice on the XDR object, or call it
+			// after it's done loading.
+			self._object.abort();
+			self._finishAndReset(new CW.Net.RequestAborted());
+		}
+	}
+);
+
+
+
+/**
+ * Implements IUsableSomething.
+ *
+ * XHR, XMLHTTP. This should be usable for non-Minerva use;
+ * for example, to run out-of-Stream network diagnostics.
+ *
+ * TODO: cancel a request onunload in IE. This might be needed to
+ * avoid a memory leak.
+ *
+ * TODO: implement timeout.
+ */
+CW.Class.subclass(CW.Net, "ReusableXHR").methods(
+
+	/**
+	 * C{window} is a C{window}-like object.
+	 * C{object} is an XHR-like object: either XMLHttpRequest,
+	 *    some XMLHTTP thing, or XDomainRequest.
+	 */
+	function __init__(self, window, object) {
+		self._window = window;
+		self._object = object;
+		CW.msg(self + ' is using ' + self._object + ' for XHR.');
+		self._requestActive = false;
+	},
+
+	function getObject(self) {
+		return self._object;
+	},
+
+	/**
+	 * See CW.Net.IUsableSomething.canCrossDomains
+	 */
+	function canCrossDomains(self) {
+		return (typeof self._object.withCredentials === "boolean");
+	},
+
+	/**
+	 * See CW.Net.IUsableSomething.request
+	 */
+	function request(self, verb, url, /*optional*/ post, /*optional*/ progressCallback) {
+		// TODO: send as few headers possible for each browser. This requires custom
+		// per-browser if/elif'ing
+
+		if(self._requestActive) {
+			throw new CW.Net.RequestStillActive(
+				"Wait for the Deferred to fire before making another request.");
+		}
+		self._position = null;
+		self._totalSize = null;
+		self._requestDoneD = new CW.Defer.Deferred();
+		self._progressCallback = progressCallback ? progressCallback : CW.emptyFunc;
+		self._poller = null;
+
+		// To reuse the XMLHTTP object in IE7, the order must be: open, onreadystatechange, send
+
+		self._requestActive = true;
+
+		var x = self._object;
+
+		// "Note: You need to add the event listeners before calling open()
+		// on the request.  Otherwise the progress events will not fire."
+		// - https://developer.mozilla.org/En/Using_XMLHttpRequest
+
+		// Just because we attach `onprogress', doesn't mean it will ever fire.
+		// Even in browsers that support `onprogress', a bug in the browser
+		// or a browser extension may block its firing. This has been observed
+		// in a Firefox 3.5.3 install with a lot of extensions. We do assume that
+		// if it fires once with good numbers, it will keep firing with good numbers
+		// until the request is over.
+		try {
+			x.onprogress = CW.bind(self, self._handler_onprogress);
+		} catch(err) {
+//] if _debugMode:
+			CW.msg(self + ": failed to attach onprogress event: " + err.message);
+//] endif
+		}
+		// TODO: maybe attach onerror too, to detect some network errors.
+
+		// IE6-8 and Opera 10 (9? 8?) incorrectly send the fragment as part
+		// of the request. The fragment should never be sent to the server.
+		// Only XHR/XMLHTTP are buggy this way; this does not apply to
+		// XDomainRequest
+		// TODO: decouple from CW.URI.URL, use a regex or something
+		if(url.fragment !== null) {
+			url = CW.URI.URL(url); // copy
+			url.update('fragment', null);
+		}
+
+		x.open(verb, url.getString(), /*async=*/true);
+		x.onreadystatechange = CW.bind(self, self._handler_onreadystatechange);
+
+		if(window.opera && self._progressCallback !== CW.emptyFunc) {
+			self._poller = self._window.setInterval(CW.bind(self, self._handler_poll), 50);
+		}
+
+		// .send("") for "no content" is what GWT does in
+		// google-web-toolkit/user/src/com/google/gwt/user/client/HTTPRequest.java
+		x.send(post ? post : "");
+
+		return self._requestDoneD;
+	},
+
+	function _finishAndReset(self, errorOrNull) {
+		if(!self._requestActive) {
+			// Both ReusableXHR.abort and _handler_onreadystatechange
+			// may call _finishAndReset. Sometimes ReusableXHR.abort will beat the
+			// handlers to the punch.
+			
+			// Opera 10 won't fire anything after aborting, probably because it
+			// correctly follows http://www.w3.org/TR/XMLHttpRequest2/#the-abort-method
+			// "Note: No readystatechange event is dispatched."
+			return;
+		}
+		if(self._poller !== null) {
+			self._window.clearInterval(self._poller);
+		}
+		// Change the order of these lines at your own peril...
+		self._requestActive = false;
+		if(errorOrNull === null) {
+			self._requestDoneD.callback(self._object);
+		} else {
+			self._requestDoneD.errback(errorOrNull);
+		}
+	},
+
+	/**
+	 * See CW.Net.IUsableSomething.abort
+	 */
+	function abort(self) {
+		if(self._requestActive) {
+			// "Calling abort resets the object; the onreadystatechange event handler
+			// is removed, and readyState is changed to 0 (uninitialized)."
+			// - http://msdn.microsoft.com/en-us/library/ms535920%28VS.85%29.aspx
+			self._object.abort();
+			// We run the risk that the XHR object can't be reused immediately after
+			// we call .abort() on it. If this happens in a major browser, we need
+			// to give on up reusing XMLHttpRequest objects.
+			self._finishAndReset(new CW.Net.RequestAborted());
+		}
 	},
 
 	/**

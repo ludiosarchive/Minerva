@@ -410,7 +410,6 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XDomainRequestTests').methods(
 );
 
 
-
 CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ProgressCallbackTests').methods(
 
 	function setUp(self) {
@@ -421,6 +420,10 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ProgressCallbackTests').methods(
 		self.clock = CW.UnitTest.Clock();
 	},
 
+	/**
+	 * Test that when onreadystatechange happens, C{progressCallback}
+	 * is called. This does not test XDR logic.
+	 */
 	function test_onreadystatechangeCallsProgress(self) {
 		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
 		var calls = [];
@@ -439,6 +442,36 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ProgressCallbackTests').methods(
 				[self.mock, null, null],
 				[self.mock, null, null],
 				[self.mock, null, null]
+			], calls
+		);
+	},
+
+	/**
+	 * Test that when onprogress then onreadystatechange happens,
+	 * C{progressCallback} is called with good numbers. This does
+	 * not test XDR logic.
+	 */
+	function test_onprogressFillsNumbers(self) {
+		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
+		var calls = [];
+		function progressCallback(obj, position, totalSize) {
+			calls.push(arguments);
+		}
+		self.xhr.request('GET', self.target, '', progressCallback);
+		self.mock.readyState = 3;
+		self.mock.responseText = null; // responseText should not be looked at
+		self.mock.onprogress({position: 1, totalSize: 10});
+		self.mock.onreadystatechange(null);
+		self.mock.onprogress({position: 2, totalSize: 10});
+		self.mock.onreadystatechange(null);
+		self.mock.onprogress({position: 3, totalSize: 10});
+		self.mock.onreadystatechange(null);
+
+		self.assertEqual(
+			[
+				[self.mock, 1, 10],
+				[self.mock, 2, 10],
+				[self.mock, 3, 10]
 			], calls
 		);
 	}
