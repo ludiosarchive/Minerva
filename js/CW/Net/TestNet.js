@@ -354,7 +354,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'OperaWorkaroundTests').methods(
 CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRLogicTests').methods(
 
 	function setUp(self) {
-		self.target = CW.URI.URL(''+window.location);
+		self.target = CW.URI.URL(''+window.location).update('fragment', null);
 	},
 
 
