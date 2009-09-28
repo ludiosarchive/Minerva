@@ -253,7 +253,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	},
 
 	/**
-	 * @return: C{true} is the selected host object is technically capable of
+	 * @return: C{true} if C{self._object} is technically capable of
 	 *    cross-domain requests, C{false} otherwise.
 	 */
 	function canCrossDomains(self) {
@@ -317,27 +317,22 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 			// on the request.  Otherwise the progress events will not fire."
 			// - https://developer.mozilla.org/En/Using_XMLHttpRequest
 
-			// Just because we attach this event, doesn't mean it will ever fire.
+			// Just because we attach `onprogress', doesn't mean it will ever fire.
 			// Even in browsers that support `onprogress', a bug in the browser
 			// or a browser extension may block its firing. This has been observed
 			// in a Firefox 3.5.3 install with a lot of extensions.
-			try {
-				// TODO: only attach this if progressCallback is truthy.
-				x.onprogress = CW.bind(self, self._handler_onprogress);
-			} catch(err) {
+			if(self._progressCallback !== CW.emptyFunc) {
+				try {
+					x.onprogress = CW.bind(self, self._handler_onprogress);
+				} catch(err) {
 //] if _debugMode:
-				CW.msg(self + ": failed to attach onprogress event: " + err.message);
+					CW.msg(self + ": failed to attach onprogress event: " + err.message);
 //] endif
+				}
 			}
 			x.open(verb, url.getString(), true);
-
-			// If we use `x.onreadystatechange = self._handler_onreadystatechange',
-			// `this' will be `window' in _handler_onreadystatechange, which is bad.
-			// Don't use a closure either; closures are too scary in JavaScript.
 			x.onreadystatechange = CW.bind(self, self._handler_onreadystatechange);
-//			x.onabort = function(){alert('onabort')}
-//			x.onerror = function(){alert('onerror')}
-
+			
 			if(window.opera && self._desireStreaming) {
 				self._poller = self._window.setInterval(CW.bind(self, self._handler_poll), 50);
 			}
@@ -346,7 +341,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 			/**
 			 * IE8 has a lot of problems when reusing an XDomainRequest object.
 			 * If you don't .abort() before .open(), you'll see "Error: Unspecified error."
-			 * If you do .abort() first, you will see a browser crash very quickly.
+			 * If you do .abort() first, you will see the browser crash.
 			 *
 			 * And calling .abort() like this is forbidden, although strangely an error
 			 * is not thrown:
@@ -358,15 +353,15 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		       * So, we make a new XDomainRequest object every time.
 			 *
 			 * When reusing the object, the crash happens at `self._finishAndReset()'
-			 * in L{_handler_XDR_onload}. It crashes persist, try liberal use of
-			 * C{setTimeout(..., 0)}
+			 * in L{_handler_XDR_onload}. It crashes persist, change code to liberally
+			 * use C{setTimeout(..., 0)}
 			 */
 
 			self._object = new XDomainRequest();
 			var x = self._object;
 
 			x.open(verb, url.getString());
-			x.timeout = 3600*1000; // 1 hour
+			x.timeout = 3600*1000; // 1 hour. We'll do our own timeouts.
 
 			x.onerror = CW.bind(self, self._handler_XDR_onerror);
 			x.onprogress = CW.bind(self, self._handler_XDR_onprogress);
