@@ -309,11 +309,10 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 
 		// To reuse the XMLHTTP object in IE7, the order must be: open, onreadystatechange, send
 
-		var x = self._object;
-
 		self._requestActive = true;
 
 		if(!self._isXDR()) {
+			var x = self._object;
 
 			// "Note: You need to add the event listeners before calling open()
 			// on the request.  Otherwise the progress events will not fire."
@@ -343,10 +342,18 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 			}
 
 		} else {
-			x.onerror = CW.emptyFunc;
-			x.onprogress = CW.emptyFunc;
-			x.onload = CW.emptyFunc;
-			x.abort();
+			// IE8 has a lot of problems when reusing an XDomainRequest object.
+			// If you don't .abort() before .open(), you'll see "Error: Unspecified error."
+			// If you do .abort() first, you will see a browser crash very quickly.
+			// So, make a new object every time.
+			
+			// An alternate way to solve the crashing problem is to setTimeout(..., 0)
+			// each on* handler. Although it might not be necessary, we use both methods,
+			// because it is really bad for JavaScript to crash the browser.
+			self._object = new XDomainRequest();
+			var x = self._object;
+
+			////x.abort(); // Uncomment this if you reuse XDomainRequest
 			x.open(verb, url.getString());
 			x.timeout = 3600*1000; // 1 hour
 
@@ -397,33 +404,39 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	},
 
 	function _handler_XDR_onerror(self) {
+		self._window.setTimeout(function(){
 //] if _debugMode:
-		CW.msg('_handler_XDR_onerror');
+			CW.msg('_handler_XDR_onerror');
 //] endif
-		self._networkError = true;
+			self._networkError = true;
+		}, 0);
 	},
 
 	function _handler_XDR_onprogress(self) {
+		self._window.setTimeout(function(){
 //] if _debugMode:
-		CW.msg('_handler_XDR_onprogress');
+			CW.msg('_handler_XDR_onprogress');
 //] endif
-		try {
-			self._progressCallback(self._object, null, null);
-		} catch(e) {
-			CW.err(e, '[_handler_XDR_onprogress] Error in _progressCallback');
-		}
+			try {
+				self._progressCallback(self._object, null, null);
+			} catch(e) {
+				CW.err(e, '[_handler_XDR_onprogress] Error in _progressCallback');
+			}
+		}, 0);
 	},
 
 	function _handler_XDR_onload(self) {
+		self._window.setTimeout(function(){
 //] if _debugMode:
-		CW.msg('_handler_XDR_onload');
+			CW.msg('_handler_XDR_onload');
 //] endif
-		try {
-			self._progressCallback(self._object, null, null);
-		} catch(e) {
-			CW.err(e, '[_handler_XDR_onload] Error in _progressCallback');
-		}
-		self._finishAndReset();
+			try {
+				self._progressCallback(self._object, null, null);
+			} catch(e) {
+				CW.err(e, '[_handler_XDR_onload] Error in _progressCallback');
+			}
+			self._finishAndReset();
+		}, 0);
 	},
 
 	/**
