@@ -475,7 +475,9 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		CW.msg('_handler_onprogress: ' + [e.position, e.totalSize].join(','));
 //] endif
 
-		// In Safari 4 and Firefox 3.5.2, e.totalSize === 4294967295 when length is unknown.
+		// In Safari 4.0.3 and Firefox 3.5.2/3.0.7, e.totalSize === 4294967295
+		// when length is unknown.
+		// In Chrome 3, e.totalSize === -1 when length is unknown.
 		if(e.totalSize !== undefined && e.totalSize < 2147483647 /* 2**31 - 1 */ && e.totalSize >= 0) {
 			self._totalSize = e.totalSize;
 		}
@@ -487,6 +489,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		// we must call progressCallback because the length of responseText is longer
 		// than the last self._position (though we do not know the new position right now).
 		// This strange `undefined' event happens once or twice per request.
+		// Firefox 3.0.7 does not seem to have the `undefined' event problem.
 		if(e.position !== undefined) {
 			self._position = e.position;
 		} else {
@@ -499,7 +502,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	},
 
 	function _handler_onreadystatechange(self) {
-		// In Firefox 3.5 and Chromium 4.0.207.0, onreadystatechange is called
+		// In at least Firefox 3.5 and Chromium 4.0.207.0, onreadystatechange is called
 		// with one argument, a C{readystatechange} event with no useful properties.
 		// TODO: look around in other browsers? maybe (but unlikely) they'll have a "bytes received" property.
 		var readyState = self._object.readyState;

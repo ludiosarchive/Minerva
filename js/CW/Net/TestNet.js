@@ -297,6 +297,10 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'OperaWorkaroundTests').methods(
 		}
 		self.xhr.request('GET', self.target, '', progressCallback);
 
+		self.mock.readyState = 0;
+		self.clock.advance(100);
+		self.assertIdentical(0, count);
+
 		self.mock.readyState = 1;
 		self.clock.advance(100);
 		self.assertIdentical(0, count);
