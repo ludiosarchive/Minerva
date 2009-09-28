@@ -134,6 +134,55 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 
 
 
+CW.Net.findObject = function findObject(desireXDR/*=false*/) {
+	// http://blogs.msdn.com/xmlteam/archive/2006/10/23/using-the-right-version-of-msxml-in-internet-explorer.aspx
+	// TODO: later do some experiments to find out if getting Msxml2.XMLHTTP.6.0 may be better
+
+	/*
+	Reasons to prefer XDomainRequest over XHR/XMLHTTP in IE8:
+		- don't need to create an iframe for cross-subdomain requesting.
+		- supports streaming; we get onprogress events and can read responseText
+			at any time.
+		- XDomainRequest can't be disabled by turning off ActiveX and
+			unchecking "Enable native XMLHTTP Support."
+
+	Disadvantages:
+		- no header support
+		- no readyState, status, statusText, properties
+		- no support for multi-part responses. (???)
+		- only GET and POST methods supported
+	 */
+
+	var things = [
+		'XMLHttpRequest', function(){return new XMLHttpRequest()},
+		'Msxml2.XMLHTTP', function(){return new ActiveXObject("MSXML2.XMLHTTP.3.0")},
+		'Microsoft.XMLHTTP', function(){return new ActiveXObject("Microsoft.XMLHTTP")},
+		// Still used as a last resort in case someone disabled both ActiveX and native XMLHTTP.
+		'XDomainRequest', function(){return new XDomainRequest()}
+	];
+
+	if(desireXDR) {
+		things.unshift('XDomainRequest', function(){return new XDomainRequest()});
+	}
+
+	for (var n=1; n < things.length; n+=2) {
+		try {
+			var object = things[n]();
+			break;
+		} catch(e) {
+
+		}
+	}
+	var objectName = things[n - 1];
+//] if _debugMode:
+	CW.msg('Found object ' + object + ', name' + objectName);
+//] endif
+	return object;
+},
+
+
+
+
 CW.Error.subclass(CW.Net, 'RequestStillActive');
 CW.Error.subclass(CW.Net, 'RequestAborted');
 CW.Error.subclass(CW.Net, 'NetworkError');
@@ -177,76 +226,22 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 
 	/**
 	 * C{window} is a C{window}-like object.
-	 * C{object} (optional) is an XHR-like object. If undefined or null,
-	 *    C{_findObject} will be used to select one.
+	 * C{object} is an XHR-like object: either XMLHttpRequest,
+	 *    some XMLHTTP thing, or XDomainRequest. 
 	 * If C{desiresStreaming} is truthy, the more-limited but
 	 *    streaming-capable object C{XDomainRequest} will be the
 	 *    first priority in C{_findObject}.
 	 */
-	function __init__(self, window, /*optional*/ object, desiresStreaming) {
+	function __init__(self, window, object, desiresStreaming) {
 		self._window = window;
-		self._desiresStreaming = desiresStreaming;
-		if(!object) {
-			var objNameObj = self._findObject();
-			self._objectName = objNameObj[0];
-			self._object = objNameObj[1];
-		} else {
-			self._objectName = 'user-supplied';
-			self._object = object;
-		}
-		CW.msg(self + ' is using ' + self._objectName + ' ' + self._object + ' for XHR.');
+		self._object = object;
+		self._desireStreaming = desiresStreaming;
+		CW.msg(self + ' is using ' + self._object + ' for XHR.');
 		self._requestActive = false;
-	},
-
-	function _findObject(self) {
-		// http://blogs.msdn.com/xmlteam/archive/2006/10/23/using-the-right-version-of-msxml-in-internet-explorer.aspx
-		// TODO: later do some experiments to find out if getting Msxml2.XMLHTTP.6.0 may be better
-
-		/*
-		Reasons to prefer XDomainRequest over XHR/XMLHTTP in IE8:
-			- don't need to create an iframe for cross-subdomain requesting.
-			- supports streaming; we get onprogress events and can read responseText
-				at any time.
-			- XDomainRequest can't be disabled by turning off ActiveX and
-				unchecking "Enable native XMLHTTP Support."
-
-		Disadvantages:
-			- no header support
-			- no readyState, status, statusText, properties
-			- no support for multi-part responses. (???)
-			- only GET and POST methods supported
-		 */
-
-		var things = [
-			'XMLHttpRequest', function(){return new XMLHttpRequest()},
-			'Msxml2.XMLHTTP', function(){return new ActiveXObject("Msxml2.XMLHTTP")},
-			'Microsoft.XMLHTTP', function(){return new ActiveXObject("Microsoft.XMLHTTP")},
-			// Still used as a last resort in case someone disabled both ActiveX and native XMLHTTP.
-			'XDomainRequest', function(){return new XDomainRequest()}
-		];
-
-		if(self._desiresStreaming) {
-			things.unshift('XDomainRequest', function(){return new XDomainRequest()});
-		}
-
-		for (var n=1; n < things.length; n+=2) {
-			try {
-				var object = things[n]();
-				break;
-			} catch(e) {
-
-			}
-		}
-		var objectName = things[n - 1];
-		return [objectName, object];
 	},
 
 	function getObject(self) {
 		return self._object;
-	},
-
-	function getObjectName(self) {
-		return self._objectName;
 	},
 
 	function _isXDR(self) {
@@ -258,7 +253,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	},
 
 	/**
-	 * @return: C{true} is the selected host object is technically capable of
+	 * @return: C{true} if C{self._object} is technically capable of
 	 *    cross-domain requests, C{false} otherwise.
 	 */
 	function canCrossDomains(self) {
@@ -322,28 +317,23 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 			// on the request.  Otherwise the progress events will not fire."
 			// - https://developer.mozilla.org/En/Using_XMLHttpRequest
 
-			// Just because we attach this event, doesn't mean it will ever fire.
+			// Just because we attach `onprogress', doesn't mean it will ever fire.
 			// Even in browsers that support `onprogress', a bug in the browser
 			// or a browser extension may block its firing. This has been observed
 			// in a Firefox 3.5.3 install with a lot of extensions.
-			try {
-				// TODO: only attach this if progressCallback is truthy.
-				x.onprogress = CW.bind(self, self._handler_onprogress);
-			} catch(err) {
+			if(self._progressCallback !== CW.emptyFunc) {
+				try {
+					x.onprogress = CW.bind(self, self._handler_onprogress);
+				} catch(err) {
 //] if _debugMode:
-				CW.msg(self + ": failed to attach onprogress event: " + err.message);
+					CW.msg(self + ": failed to attach onprogress event: " + err.message);
 //] endif
+				}
 			}
 			x.open(verb, url.getString(), true);
-
-			// If we use `x.onreadystatechange = self._handler_onreadystatechange',
-			// `this' will be `window' in _handler_onreadystatechange, which is bad.
-			// Don't use a closure either; closures are too scary in JavaScript.
 			x.onreadystatechange = CW.bind(self, self._handler_onreadystatechange);
-//			x.onabort = function(){alert('onabort')}
-//			x.onerror = function(){alert('onerror')}
-
-			if(window.opera && self._desiresStreaming) {
+			
+			if(window.opera && self._desireStreaming) {
 				self._poller = self._window.setInterval(CW.bind(self, self._handler_poll), 50);
 			}
 
@@ -351,7 +341,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 			/**
 			 * IE8 has a lot of problems when reusing an XDomainRequest object.
 			 * If you don't .abort() before .open(), you'll see "Error: Unspecified error."
-			 * If you do .abort() first, you will see a browser crash very quickly.
+			 * If you do .abort() first, you will see the browser crash.
 			 *
 			 * And calling .abort() like this is forbidden, although strangely an error
 			 * is not thrown:
@@ -363,15 +353,15 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		       * So, we make a new XDomainRequest object every time.
 			 *
 			 * When reusing the object, the crash happens at `self._finishAndReset()'
-			 * in L{_handler_XDR_onload}. It crashes persist, try liberal use of
-			 * C{setTimeout(..., 0)}
+			 * in L{_handler_XDR_onload}. It crashes persist, change code to liberally
+			 * use C{setTimeout(..., 0)}
 			 */
 
 			self._object = new XDomainRequest();
 			var x = self._object;
 
 			x.open(verb, url.getString());
-			x.timeout = 3600*1000; // 1 hour
+			x.timeout = 3600*1000; // 1 hour. We'll do our own timeouts.
 
 			x.onerror = CW.bind(self, self._handler_XDR_onerror);
 			x.onprogress = CW.bind(self, self._handler_XDR_onprogress);
@@ -545,7 +535,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
  * C{post} is data to POST. Use "" (empty string) if using L{verb} "GET".
  */
 CW.Net.simpleRequest = function simpleRequest(verb, url, post) {
-	var xhr = CW.Net.ReusableXHR(window);
+	var xhr = CW.Net.ReusableXHR(window, CW.Net.findObject(), false);
 	var d = xhr.request(verb, url, post);
 	d.addCallback(function(obj){
 		return obj.responseText;
