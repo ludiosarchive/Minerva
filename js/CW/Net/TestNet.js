@@ -83,7 +83,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRTests').methods(
 	},
 
 
-	function test_simpleReuse(self) {
+	function test_simpleReuseGET(self) {
 		var responses = [];
 		self.target.update('path', '/@testres_Minerva/SimpleResponse/?b=0');
 
@@ -104,6 +104,36 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRTests').methods(
 				[
 					'{"you_sent_args": {"b": ["0"]}}',
 					'{"you_sent_args": {"b": ["1"]}}'
+				],
+				responses
+			);
+		})
+
+		return d;
+	},
+
+
+	function test_simpleReusePOST(self) {
+		var responses = [];
+		self.target.update('path', '/@testres_Minerva/SimpleResponse/');
+
+		var d = self.xhr.request('POST', self.target, 'A');
+
+		d.addCallback(function(obj){
+			responses.push(obj.responseText);
+			// This mutation is okay
+			var d2 = self.xhr.request('POST', self.target.update('path', '/@testres_Minerva/SimpleResponse/'), 'B');
+			d2.addCallback(function(obj2){
+				responses.push(obj2.responseText);
+			});
+			return d2;
+		});
+
+		d.addCallback(function(){
+			self.assertEqual(
+				[
+					'{"you_posted_utf8": "A"}',
+					'{"you_posted_utf8": "B"}'
 				],
 				responses
 			);

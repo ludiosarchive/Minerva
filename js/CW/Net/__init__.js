@@ -480,7 +480,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		CW.msg('_handler_onprogress: ' + [e.position, e.totalSize].join(','));
 //] endif
 
-		// Safari 4 and Firefox 3.5.2 provides 4294967295 for e.totalSize when length is unknown.
+		// In Safari 4 and Firefox 3.5.2, e.totalSize === 4294967295 when length is unknown.
 		if(e.totalSize !== undefined && e.totalSize < 2147483647 /* 2**31 - 1 */ && e.totalSize >= 0) {
 			self._totalSize = e.totalSize;
 		}
