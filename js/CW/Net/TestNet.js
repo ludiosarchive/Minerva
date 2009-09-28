@@ -496,6 +496,63 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ProgressCallbackTests').methods(
 				[self.mock, 5, 10],
 			], calls
 		);
+	},
+
+
+	/**
+	 * Zero is an acceptable totalSize.
+	 */
+	function test_zeroTotalSizeIsOkay(self) {
+		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
+		var calls = [];
+		function progressCallback(obj, position, totalSize) {
+			calls.push(arguments);
+		}
+		self.xhr.request('GET', self.target, '', progressCallback);
+		self.mock.readyState = 3;
+		self.mock.responseText = null; // responseText should not be looked at
+		self.mock.onprogress({position: 0, totalSize: 0});
+		self.mock.onreadystatechange(null);
+
+		self.assertEqual(
+			[
+				[self.mock, 0, 0]
+			], calls
+		);
+	},
+
+
+	/**
+	 * Undefined or negative or large `totalSize's are treated as "unknown totalSize"
+	 */
+	function test_invalidTotalSizes(self) {
+		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
+		var calls = [];
+		function progressCallback(obj, position, totalSize) {
+			calls.push(arguments);
+		}
+		self.xhr.request('GET', self.target, '', progressCallback);
+		self.mock.readyState = 3;
+		self.mock.responseText = null; // responseText should not be looked at
+		self.mock.onreadystatechange(null);
+		self.mock.onprogress({position: 1, totalSize: -1});
+		self.mock.onreadystatechange(null);
+		self.mock.onprogress({position: 2, totalSize: -2});
+		self.mock.onreadystatechange(null);
+		self.mock.onprogress({position: 3, totalSize: undefined});
+		self.mock.onreadystatechange(null);
+		self.mock.onprogress({position: 4, totalSize: 2147483647 + 1}); // 2**31 + 1
+		self.mock.onreadystatechange(null);
+
+		self.assertEqual(
+			[
+				[self.mock, null, null],
+				[self.mock, 1, null],
+				[self.mock, 2, null],
+				[self.mock, 3, null],
+				[self.mock, 4, null]
+			], calls
+		);
 	}
 );
 
