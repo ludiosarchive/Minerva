@@ -227,6 +227,13 @@ CW.Class.subclass(CW.Net, "IUsableSomething").methods(
 	},
 
 	/**
+	 * @return: the currently-used XHR/XMLHTTP/XDR object.
+	 */
+	function getObject(self) {
+		return self._object;
+	},
+
+	/**
 	 * Request some URL.
 	 *
 	 * C{verb} is exactly "GET" or exactly "POST"
@@ -285,6 +292,13 @@ CW.Class.subclass(CW.Net, "UsableXDR").methods(
 		self._window = window;
 		self._objectFactory = objectFactory;
 		self._requestActive = false;
+	},
+
+	/**
+	 * See CW.Net.IUsableSomething.getObject
+	 */
+	function getObject(self) {
+		return self._object;
 	},
 
 	function canCrossDomains(self) {
@@ -435,6 +449,9 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		self._requestActive = false;
 	},
 
+	/**
+	 * See CW.Net.IUsableSomething.getObject
+	 */
 	function getObject(self) {
 		return self._object;
 	},
