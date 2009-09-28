@@ -271,9 +271,13 @@ CW.Class.subclass(CW.Net, "IUsableSomething").methods(
 
 
 /**
+ * An object that can perform XDomainRequest requests.
+ *
  * Implements IUsableSomething.
  *
- * TODO: implement timeout. Do not use XDR timeout (do not trust MS)
+ * TODO: implement timeout? Should we rely on XDR's timeout?
+ * Probably not: it might be buggy or become buggier. We also
+ *    want to be able to test with our own deterministic clock.
  */
 CW.Class.subclass(CW.Net, "UsableXDR").methods(
 	/**
@@ -411,15 +415,15 @@ CW.Class.subclass(CW.Net, "UsableXDR").methods(
 
 
 /**
- * Implements IUsableSomething.
+ * An object that can perform XMLHttpRequests requests. IE's XMLHTTP
+ * objects are also supported.
  *
- * XHR, XMLHTTP. This should be usable for non-Minerva use;
- * for example, to run out-of-Stream network diagnostics.
+ * Implements IUsableSomething.
  *
  * TODO: cancel a request onunload in IE. This might be needed to
  * avoid a memory leak.
  *
- * TODO: implement timeout.
+ * TODO: implement timeout?
  */
 CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 
