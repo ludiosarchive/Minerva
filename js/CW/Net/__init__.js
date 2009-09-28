@@ -185,6 +185,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	 */
 	function __init__(self, window, /*optional*/ object, desiresStreaming) {
 		self._window = window;
+		self._desiresStreaming = desiresStreaming;
 		if(!object) {
 			var objNameObj = self._findObject();
 			self._objectName = objNameObj[0];
@@ -193,7 +194,6 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 			self._objectName = 'user-supplied';
 			self._object = object;
 		}
-		self._desiresStreaming = desiresStreaming;
 		CW.msg(self + ' is using ' + self._objectName + ' ' + self._object + ' for XHR.');
 		self._requestActive = false;
 	},
@@ -305,6 +305,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		self._networkError = false;
 		self._requestDoneD = CW.Defer.Deferred();
 		self._progressCallback = progressCallback ? progressCallback : CW.emptyFunc;
+		self._poller = null;
 
 		// To reuse the XMLHTTP object in IE7, the order must be: open, onreadystatechange, send
 
@@ -337,8 +338,16 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 			// Don't use a closure either; closures are too scary in JavaScript.
 			x.onreadystatechange = CW.bind(self, self._handler_onreadystatechange);
 
+			if(window.opera && self._desiresStreaming) {
+				self._poller = self._window.setInterval(CW.bind(self, self._handler_poll), 50);
+			}
+
 		} else {
-			x.open(verb, url.getString(), true);
+			x.onerror = CW.emptyFunc;
+			x.onprogress = CW.emptyFunc;
+			x.onload = CW.emptyFunc;
+			x.abort();
+			x.open(verb, url.getString());
 			x.timeout = 3600*1000; // 1 hour
 
 			x.onerror = CW.bind(self, self._handler_XDR_onerror);
@@ -372,6 +381,21 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		}
 	},
 
+	/**
+	 * This works for both XHR/XMLHTTP and XDR objects.
+	 */
+	function _finishAndReset(self) {
+		// Change the order of these lines at your own peril...
+		self._requestActive = false;
+		if(self._aborted) {
+			self._requestDoneD.errback(new CW.Net.RequestAborted());
+		} else if(self._networkError) {
+			self._requestDoneD.errback(new CW.Net.NetworkError());
+		} else {
+			self._requestDoneD.callback(self._object);
+		}
+	},
+
 	function _handler_XDR_onerror(self) {
 //] if _debugMode:
 		CW.msg('_handler_XDR_onerror');
@@ -402,6 +426,19 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		self._finishAndReset();
 	},
 
+	/**
+	 * Only used by Opera, to work around its one-shot readyState 3.
+	 */
+	function _handler_poll(self) {
+		if(self._object.readyState === 3) { // Is this really correct? What about header download?
+			try {
+				self._progressCallback(self._object, null, null);
+			} catch(e) {
+				CW.err(e, '[_handler_poll] Error in _progressCallback');
+			}
+		}
+	},
+
 	function _handler_onprogress(self, e) {
 //] if _debugMode:
 		CW.msg('_handler_onprogress: ' + [e.position, e.totalSize].join(','));
@@ -430,22 +467,6 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		}
 	},
 
-	/**
-	 * This works for both XHR/XMLHTTP and XDR objects.
-	 */
-	function _finishAndReset(self) {
-		// Change the order of these lines at your own peril...
-		self._requestActive = false;
-		if(self._aborted) {
-			self._aborted = false;
-			self._requestDoneD.errback(new CW.Net.RequestAborted());
-		} else if(self._networkError) {
-			self._requestDoneD.errback(new CW.Net.NetworkError());
-		} else {
-			self._requestDoneD.callback(self._object);
-		}
-	},
-
 	function _handler_onreadystatechange(self) {
 		// In Firefox 3.5 and Chromium 4.0.207.0, onreadystatechange is called
 		// with one argument, a C{readystatechange} event with no useful properties.
@@ -470,6 +491,9 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		if(readyState == 4) {
 			// TODO: maybe do this in IE only?
 			self._object.onreadystatechange = CW.emptyFunc;
+			if(self._poller !== null) {
+				self._window.clearInterval(self._poller);
+			}
 			self._finishAndReset();
 		}
 	}

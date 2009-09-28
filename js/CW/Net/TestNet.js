@@ -30,37 +30,25 @@ CW.Class.subclass(CW.Net.TestNet, 'MockXHR').pmethods({
 
 
 
-CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
+CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRTests').methods(
 
 	function setUp(self) {
 		self.target = CW.URI.URL(''+window.location);
-	},
-
-
-	function _setupDummies(self) {
-		self.target.update('path', '/@testres_Minerva/404/');
-		self.mock = CW.Net.TestNet.MockXHR();
-		self.assertIdentical(CW.emptyFunc, self.mock.onreadystatechange);
-		self.xhr = CW.Net.ReusableXHR(window, self.mock);
-		self.requestD = self.xhr.request('POST', self.target, '');
-		// After .request(), onreadystatechange is set to a real handler.
-		self.assertNotIdentical(CW.emptyFunc, self.mock.onreadystatechange);
+		self.xhr = CW.Net.ReusableXHR(window);
 	},
 
 
 	function test_objectWasFound(self) {
-		var xhr = CW.Net.ReusableXHR();
 		// Not falsy
-		self.assert(xhr.getObject());
+		self.assert(self.xhr.getObject());
 		// Must be a string
-		self.assert(xhr.getObjectName().length > 2);
+		self.assert(self.xhr.getObjectName().length > 2);
 	},
 
 
 	function test_simpleResponseGET(self) {
-		var xhr = CW.Net.ReusableXHR();
 		self.target.update('path', '/@testres_Minerva/SimpleResponse/?a=0');
-		var d = xhr.request('GET', self.target);
+		var d = self.xhr.request('GET', self.target);
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_sent_args": {"a": ["0"]}}', obj.responseText);
 		});
@@ -73,9 +61,8 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 
 
 	function test_simpleResponsePOST(self) {
-		var xhr = CW.Net.ReusableXHR();
 		self.target.update('path', '/@testres_Minerva/SimpleResponse/');
-		var d = xhr.request('POST', self.target, 'hello\u00ff');
+		var d = self.xhr.request('POST', self.target, 'hello\u00ff');
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_posted_utf8": "hello\\u00ff"}', obj.responseText);
 		});
@@ -85,15 +72,14 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 
 	function test_simpleReuse(self) {
 		var responses = [];
-		var xhr = CW.Net.ReusableXHR();
 		self.target.update('path', '/@testres_Minerva/SimpleResponse/?b=0');
 
-		var d = xhr.request('GET', self.target);
+		var d = self.xhr.request('GET', self.target);
 
 		d.addCallback(function(obj){
 			responses.push(obj.responseText);
 			// This mutation is okay
-			var d2 = xhr.request('GET', self.target.update('path', '/@testres_Minerva/SimpleResponse/?b=1'));
+			var d2 = self.xhr.request('GET', self.target.update('path', '/@testres_Minerva/SimpleResponse/?b=1'));
 			d2.addCallback(function(obj2){
 				responses.push(obj2.responseText);
 			});
@@ -119,12 +105,11 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 	 * object until the current request is finished.
 	 */
 	function test_requestStillActive(self) {
-		var xhr = CW.Net.ReusableXHR();
 		self.target.update('path', '/@testres_Minerva/404/');
-		var d1 = xhr.request('GET', self.target);
+		var d1 = self.xhr.request('GET', self.target);
 		self.assertThrows(
 			CW.Net.RequestStillActive,
-			function() { xhr.request('GET', self.target) },
+			function() { self.xhr.request('GET', self.target) },
 			"Wait for the Deferred to fire before making another request."
 		);
 	},
@@ -140,15 +125,60 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'TestReusableXHR').methods(
 	 */
 	function test_abort(self) {
 		var id = CW.random();
-		var xhr = CW.Net.ReusableXHR();
 		self.target.update('path', '/@testres_Minerva/404/?id=' + id);
-		var requestD = xhr.request('POST', self.target, '');
+		var requestD = self.xhr.request('POST', self.target, '');
 
-		self.assertIdentical(undefined, xhr.abort());
-		self.assertIdentical(undefined, xhr.abort());
-		self.assertIdentical(undefined, xhr.abort());
+		self.assertIdentical(undefined, self.xhr.abort());
+		self.assertIdentical(undefined, self.xhr.abort());
+		self.assertIdentical(undefined, self.xhr.abort());
+	}
+);
+
+
+
+
+CW.Net.TestNet.ReusableXHRTests.subclass(CW.Net.TestNet, 'ReusableXHRStreamingTests').methods(
+
+	function setUp(self) {
+		self.target = CW.URI.URL(''+window.location);
+		/**
+		 * In IE8, desiresStreaming will cause a preference for XDomainRequest.
+		 * In Opera, desiresStreaming will set a poller with setInterval to monitor responseText.
+		 */
+		self.xhr = CW.Net.ReusableXHR(window, /*object=*/null, /*desiresStreaming=*/true);
+		
+		var hasXDomainRequest = false;
+		try {
+			XDomainRequest;
+			hasXDomainRequest = true;
+		} catch(e) {
+
+		}
+		
+		if(hasXDomainRequest) {
+			self.assertEqual("XDomainRequest", self.xhr.getObjectName());
+		}
+	}
+);
+
+
+
+CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRLogicTests').methods(
+
+	function setUp(self) {
+		self.target = CW.URI.URL(''+window.location);
 	},
 
+
+	function _setupDummies(self) {
+		self.target.update('path', '/@testres_Minerva/404/');
+		self.mock = CW.Net.TestNet.MockXHR();
+		self.assertIdentical(CW.emptyFunc, self.mock.onreadystatechange);
+		self.xhr = CW.Net.ReusableXHR(window, self.mock);
+		self.requestD = self.xhr.request('POST', self.target, '');
+		// After .request(), onreadystatechange is set to a real handler.
+		self.assertNotIdentical(CW.emptyFunc, self.mock.onreadystatechange);
+	},
 
 	/**
 	 * After aborting, using the same L{ReusableXHR} instance to make

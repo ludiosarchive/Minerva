@@ -112,6 +112,8 @@ class SimpleResponse(resource.Resource):
 	"""
 	isLeaf = True
 	def render_GET(self, request):
+		# Access-Control-Allow-Origin header must be set for XDR to work at all.
+		request.setHeader('Access-Control-Allow-Origin', '*')
 		request.setHeader('content-type', 'text/plain')
 		response = {}
 		response['you_sent_args'] = request.args
@@ -119,6 +121,7 @@ class SimpleResponse(resource.Resource):
 
 
 	def render_POST(self, request):
+		request.setHeader('Access-Control-Allow-Origin', '*')
 		return json.dumps({"you_posted_utf8": request.content.read().decode('utf-8')})
 
 
