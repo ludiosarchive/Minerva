@@ -82,10 +82,6 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRTests').methods(
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_sent_args": {"a": ["0"]}}', obj.responseText);
 		});
-		d.addErrback(function(err){
-			CW.err(err, 'test_simpleResponseGET (this error really should not happen)');
-			throw err;
-		});
 		return d;
 	},
 
@@ -95,6 +91,36 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRTests').methods(
 		var d = self.xhr.request('POST', self.target, 'hello\u00ff');
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_posted_utf8": "hello\\u00ff"}', obj.responseText);
+		});
+		return d;
+	},
+
+
+	/**
+	 * Make sure the #fragment is never sent as part of an XHR GET request.
+	 * IE6-8 and Opera 10 are buggy. L{ReusableXHR} works around it.
+	 * If it fails to work around it, you'll see {"a": ["0#ignored1"]} instead of {"a": ["0"]}
+	 */
+	function test_fragmentIsIgnoredGET(self) {
+		self.target.update('path', '/@testres_Minerva/SimpleResponse/?a=0').update('fragment', 'ignored1');
+		var d = self.xhr.request('GET', self.target);
+		d.addCallback(function(obj){
+			self.assertEqual('{"you_sent_args": {"a": ["0"]}}', obj.responseText);
+		});
+		return d;
+	},
+
+
+	/**
+	 * Make sure the #fragment is never sent as part of an XHR POST request.
+	 * IE6-8 and Opera 10 are buggy. L{ReusableXHR} works around it.
+	 * If it fails to work around it, you'll see {"a": ["0#ignored2"]} instead of {"a": ["0"]}
+	 */
+	function test_fragmentIsIgnoredPOST(self) {
+		self.target.update('path', '/@testres_Minerva/SimpleResponse/?a=0').update('fragment', 'ignored2');
+		var d = self.xhr.request('GET', self.target);
+		d.addCallback(function(obj){
+			self.assertEqual('{"you_sent_args": {"a": ["0"]}}', obj.responseText);
 		});
 		return d;
 	},

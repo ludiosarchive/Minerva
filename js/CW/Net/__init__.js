@@ -1,4 +1,5 @@
 // import CW
+// import CW.URI
 // import CW.Defer
 
 CW.Error.subclass(CW.Net, 'ParseError');
@@ -324,6 +325,16 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 //] endif
 			}
 			// TODO: maybe attach onerror too, to detect some network errors.
+
+			// IE6-8 and Opera 10 (9? 8?) incorrectly send the fragment as part
+			// of the request. The fragment should never be sent to the server.
+			// Only XHR/XMLHTTP are buggy this way; this does not apply to
+			// XDomainRequest
+			if(url.fragment !== null) {
+				url = CW.URI.URL(url); // copy
+				url.update('fragment', null);
+			}
+
 			x.open(verb, url.getString(), /*async=*/true);
 			x.onreadystatechange = CW.bind(self, self._handler_onreadystatechange);
 			
