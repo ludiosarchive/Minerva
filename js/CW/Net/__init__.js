@@ -186,6 +186,7 @@ CW.Net.findObject = function findObject(desireXDR/*=false*/) {
 CW.Error.subclass(CW.Net, 'RequestStillActive');
 CW.Error.subclass(CW.Net, 'RequestAborted');
 CW.Error.subclass(CW.Net, 'NetworkError');
+CW.Error.subclass(CW.Net, 'TimeoutError');
 
 
 // Without CORS support for XMLHttpRequest, or XDomainRequest, we have to create
@@ -300,8 +301,6 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		}
 		self._position = null;
 		self._totalSize = null;
-		self._aborted = false;
-		self._networkError = false;
 		self._requestDoneD = new CW.Defer.Deferred();
 		self._progressCallback = progressCallback ? progressCallback : CW.emptyFunc;
 		self._poller = null;
@@ -366,7 +365,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 			x.onerror = CW.bind(self, self._handler_XDR_onerror);
 			x.onprogress = CW.bind(self, self._handler_XDR_onprogress);
 			x.onload = CW.bind(self, self._handler_XDR_onload);
-			//x.ontimeout
+			x.ontimeout = CW.bind(self, self._handler_XDR_ontimeout);
 		}
 
 		// .send("") for "no content" is what GWT does in
@@ -379,7 +378,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 	/**
 	 * This works for both XHR/XMLHTTP and XDR objects.
 	 */
-	function _finishAndReset(self) {
+	function _finishAndReset(self, errorOrNull) {
 		if(!self._requestActive) {
 			// Both ReusableXHR.abort and
 			// _handler_onreadystatechange/_handler_XDR_onload/_handler_XDR_onerror
@@ -395,12 +394,10 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		}
 		// Change the order of these lines at your own peril...
 		self._requestActive = false;
-		if(self._aborted) {
-			self._requestDoneD.errback(new CW.Net.RequestAborted());
-		} else if(self._networkError) {
-			self._requestDoneD.errback(new CW.Net.NetworkError());
-		} else {
+		if(errorOrNull === null) {
 			self._requestDoneD.callback(self._object);
+		} else {
+			self._requestDoneD.errback(errorOrNull);
 		}
 	},
 
@@ -414,14 +411,11 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 			// "Calling abort resets the object; the onreadystatechange event handler
 			// is removed, and readyState is changed to 0 (uninitialized)."
 			// - http://msdn.microsoft.com/en-us/library/ms535920%28VS.85%29.aspx
-			if(self._aborted === false) {
-				self._object.abort();
-				self._aborted = true;
-				// We run the risk that the XHR object can't be reused immediately after
-				// we call .abort() on it. If this happens in a major browser, we need
-				// to give on up reusing XMLHttpRequest objects.
-				self._finishAndReset();
-			}
+			self._object.abort();
+			// We run the risk that the XHR object can't be reused immediately after
+			// we call .abort() on it. If this happens in a major browser, we need
+			// to give on up reusing XMLHttpRequest objects.
+			self._finishAndReset(new CW.Net.RequestAborted());
 		}
 	},
 
@@ -429,8 +423,16 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 //] if _debugMode:
 		CW.msg('_handler_XDR_onerror');
 //] endif
-		self._networkError = true;
-		self._finishAndReset();
+		self._finishAndReset(new CW.Net.NetworkError());
+	},
+
+	function _handler_XDR_ontimeout(self) {
+//] if _debugMode:
+		CW.msg('_handler_XDR_ontimeout');
+//] endif
+		// Even though our XDR timeout is very high and should never be
+		// reached, we'll treat it the same as an official timeout.
+		self._finishAndReset(new CW.Net.TimeoutError());
 	},
 
 	function _handler_XDR_onprogress(self) {
@@ -453,7 +455,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		} catch(e) {
 			CW.err(e, '[_handler_XDR_onload] Error in _progressCallback');
 		}
-		self._finishAndReset();
+		self._finishAndReset(null);
 	},
 
 	/**
@@ -521,7 +523,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		if(readyState == 4) {
 			// TODO: maybe do this in IE only?
 			self._object.onreadystatechange = CW.emptyFunc;
-			self._finishAndReset();
+			self._finishAndReset(null);
 		}
 	}
 );
