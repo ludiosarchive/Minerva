@@ -157,9 +157,7 @@ CW.Net.findObject = function findObject(desireXDR/*=false*/) {
 	var things = [
 		'XMLHttpRequest', function(){return new XMLHttpRequest()},
 		'Msxml2.XMLHTTP', function(){return new ActiveXObject("MSXML2.XMLHTTP.3.0")},
-		'Microsoft.XMLHTTP', function(){return new ActiveXObject("Microsoft.XMLHTTP")},
-		// Still used as a last resort in case someone disabled both ActiveX and native XMLHTTP.
-		'XDomainRequest', function(){return new XDomainRequest()}
+		'Microsoft.XMLHTTP', function(){return new ActiveXObject("Microsoft.XMLHTTP")}
 	];
 
 	if(desireXDR) {
