@@ -20,6 +20,24 @@ CW.Net.TestNet.	hasXDomainRequest = function hasXDomainRequest() {
 }
 
 
+CW.Class.subclass(CW.Net.TestNet, 'FindObjectTests').methods(
+	/**
+	 * If browser has XDomainRequest object, and findObject is called
+	 * with desireXDR=true, findObject should return an XDomainRequest
+	 * object.
+	 */
+	function test_XDomainRequestPriority(self) {
+		if(!CW.Net.TestNet.hasXDomainRequest()) {
+			throw new CW.UnitTest.SkipTest("XDomainRequest is required for this test.");
+		}
+		var object = CW.Net.findObject(/*desireXDR=*/true);
+		self.assert(
+			self.xhr.getObject() instanceof XDomainRequest,
+			"self.xhr.getObject() `not instanceof` XDomainRequest");
+	}
+);
+
+
 
 CW.Class.subclass(CW.Net.TestNet, 'MockXHR').pmethods({
 
@@ -47,15 +65,13 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRTests').methods(
 
 	function setUp(self) {
 		self.target = CW.URI.URL(''+window.location);
-		self.xhr = CW.Net.ReusableXHR(window);
+		self.xhr = CW.Net.ReusableXHR(window, CW.Net.findObject(false), false);
 	},
 
 
-	function test_objectWasFound(self) {
+	function test_getObject(self) {
 		// Not falsy
 		self.assert(self.xhr.getObject());
-		// Must be a string
-		self.assert(self.xhr.getObjectName().length > 2);
 	},
 
 
@@ -177,14 +193,11 @@ CW.Net.TestNet.ReusableXHRTests.subclass(CW.Net.TestNet, 'ReusableXHRStreamingTe
 	function setUp(self) {
 		self.target = CW.URI.URL(''+window.location);
 		/**
-		 * In IE8, desiresStreaming will cause a preference for XDomainRequest.
 		 * In Opera, desiresStreaming will set a poller with setInterval to monitor responseText.
 		 */
-		self.xhr = CW.Net.ReusableXHR(window, /*object=*/null, /*desiresStreaming=*/true);
-
-		if(CW.Net.TestNet.hasXDomainRequest()) {
-			self.assertEqual("XDomainRequest", self.xhr.getObjectName());
-		}
+		self.xhr = CW.Net.ReusableXHR(
+			window, /*desireXDR=*/CW.Net.findObject(true), /*desiresStreaming=*/true
+		);
 	}
 );
 
@@ -250,7 +263,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRLogicTests').methods(
 		self.target.update('path', '/@testres_Minerva/404/');
 		self.mock = CW.Net.TestNet.MockXHR();
 		self.assertIdentical(CW.emptyFunc, self.mock.onreadystatechange);
-		self.xhr = CW.Net.ReusableXHR(window, self.mock);
+		self.xhr = CW.Net.ReusableXHR(window, self.mock, false);
 		self.requestD = self.xhr.request('POST', self.target, '');
 		// After .request(), onreadystatechange is set to a real handler.
 		self.assertNotIdentical(CW.emptyFunc, self.mock.onreadystatechange);
