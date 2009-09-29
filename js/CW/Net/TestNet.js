@@ -23,7 +23,13 @@ CW.Class.subclass(CW.Net.TestNet, 'MockXHR').pmethods({
 
 	__init__: function() {
 		this.log = [];
+		this._reset();
+	},
+
+	_reset: function() {
 		this.onreadystatechange = CW.emptyFunc;
+		this.responseText = "";
+		this.readyState = 0;
 	},
 
 	open: function(verb, url, async) {
@@ -36,8 +42,48 @@ CW.Class.subclass(CW.Net.TestNet, 'MockXHR').pmethods({
 
 	abort: function() {
 		this.log.push(['abort']);
+		this._reset();
 	}
 });
+
+
+
+CW.Class.subclass(CW.Net.TestNet, 'MockXDR').pmethods({
+
+	__init__: function() {
+		this.log = [];
+		// Maybe this should be in _reset? Check real XDomainRequest behavior.
+		this.timeout = 10000;
+
+		this._reset();
+	},
+
+	_reset: function() {
+		this.onerror = CW.emptyFunc;
+		this.onprogress = CW.emptyFunc;
+		this.onload = CW.emptyFunc;
+		this.ontimeout = CW.emptyFunc;
+		this.responseText = "";
+		this.readyState = 0;
+	},
+
+	open: function(verb, url) {
+		// XDR is always async. It doesn't have this 3rd `true' argument, but append it anyway
+		// just to make things easier to test. Doing this makes the XDR mock log look
+		// like the XHR mock log.
+		this.log.push(['open', verb, url, true]);
+	},
+
+	send: function(post) {
+		this.log.push(['send', post]);
+	},
+
+	abort: function() {
+		this.log.push(['abort']);
+		this._reset();
+	}
+});
+
 
 
 
@@ -55,52 +101,46 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'GetXHRObjectTests').methods(
 /**
  * These tests do not make any real connections.
  */
-CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'UsableXHRLogicTests').methods(
+CW.UnitTest.TestCase.subclass(CW.Net.TestNet, '_BaseUsableXHDRLogicTests').methods(
 
 	function setUp(self) {
+		throw new CW.UnitTest.SkipTest("This is a base class with test_ methods.");
+	},
+
+
+	function _setUp(self) {
 		self.target = CW.URI.URL(''+window.location).update('fragment', null);
 	},
 
-
-	function _setupDummies(self) {
-		self.target.update('path', '/@testres_Minerva/404/');
-		self.mock = CW.Net.TestNet.MockXHR();
-		self.assertIdentical(CW.emptyFunc, self.mock.onreadystatechange);
-		self.xhr = CW.Net.UsableXHR(window, self.mock);
-		self.requestD = self.xhr.request('POST', self.target, '');
-		// After .request(), onreadystatechange is set to a real handler.
-		self.assertNotIdentical(CW.emptyFunc, self.mock.onreadystatechange);
-	},
-
+	// O	verride setUp, make it call _setUp.
+	// Override _setupDummies
 
 	/**
-	 * We can't make another request over this UsableXHR
+	 * We can't make another request using this C{self.xhdr}
 	 * object until the current request is finished.
 	 */
 	function test_requestStillActive(self) {
 		self._setupDummies();
 		self.assertThrows(
 			CW.Net.RequestStillActive,
-			function() { self.xhr.request('GET', self.target) },
+			function() { self.xhdr.request('GET', self.target) },
 			"Wait for the Deferred to fire before making another request."
 		);
 	},
 
 
 	/**
-	 * After aborting, using the same L{UsableXHR} instance to make
+	 * After aborting, using the same C{self.xhdr} instance to make
 	 * requests still works.
 	 */
 	function test_abortDoesntRuinState(self) {
 		self._setupDummies();
-		self.xhr.abort();
-		self.mock.readyState = 4;
-		self.mock.onreadystatechange(null);
+		self.xhdr.abort();
+		self._finishRequest();
 
 		// Make the second request
-		self.requestD = self.xhr.request('POST', self.target, 'second');
-		self.mock.readyState = 4;
-		self.mock.onreadystatechange(null);
+		self.requestD = self.xhdr.request('POST', self.target, 'second');
+		self._finishRequest();
 
 		CW.msg('log has length ' + self.mock.log.length);
 		CW.msg(CW.UnitTest.repr(self.mock.log));
@@ -123,9 +163,8 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'UsableXHRLogicTests').methods(
 
 		var d = self.assertFailure(self.requestD, [CW.Net.RequestAborted]);
 
-		self.xhr.abort();
-		self.mock.readyState = 4;
-		self.mock.onreadystatechange(null);
+		self.xhdr.abort();
+		self._finishRequest();
 
 		return d;
 	},
@@ -133,7 +172,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'UsableXHRLogicTests').methods(
 
 	/**
 	 * The C{abort} method of the XHR object is only called once, even if
-	 * L{UsableXHR.abort} is called multiple times.
+	 * C{self.xhdr.abort} is called multiple times.
 	 *
 	 * We use a dummy because calling .abort() multiple times on a browser's
 	 * XHR object doesn't raise an exception or do anything important. We still
@@ -141,14 +180,43 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'UsableXHRLogicTests').methods(
 	 */
 	function test_abortCalledOnlyOnce(self) {
 		self._setupDummies();
-		self.xhr.abort();
-		self.xhr.abort();
+		self.xhdr.abort();
+		self.xhdr.abort();
 		self.assertEqual(self.mock.log, [['open', 'POST', self.target.getString(), true], ['send', ''], ['abort']]);
+	}
+
+);
+
+
+
+/**
+ * These tests do not make any real connections.
+ */
+CW.Net.TestNet._BaseUsableXHDRLogicTests.subclass(CW.Net.TestNet, 'UsableXHRLogicTests').methods(
+
+	function setUp(self) {
+		return self._setUp();
 	},
 
 
+	function _setupDummies(self) {
+		self.target.update('path', '/@testres_Minerva/404/');
+		self.mock = CW.Net.TestNet.MockXHR();
+		self.xhdr = CW.Net.UsableXHR(window, self.mock);
+		self.requestD = self.xhdr.request('POST', self.target, '');
+	},
+
+
+	function _finishRequest(self) {
+		self.mock.readyState = 4;
+		self.mock.onreadystatechange(null);
+	},
+
+
+	// XHR-specific tests follow
+
 	/**
-	 * The implementations clears the C{onreadystatechange} property
+	 * The implementation clears the C{onreadystatechange} property
 	 * of the XHR object after the request is _done_. This is necessary to
 	 * avoid memory leaks in IE.
 	 */
@@ -174,29 +242,57 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'UsableXHRLogicTests').methods(
 
 		// Abort the request and verify that onreadystatechange was
 		// reset to L{CW.emptyFunc}
-		self.xhr.abort();
+		self.xhdr.abort();
 		self.mock.readyState = 4;
 		self.mock.responseText = 'aborted';
 		self.mock.onreadystatechange(null);
 		self.assertIdentical(CW.emptyFunc, self.mock.onreadystatechange);
 	}
 
-	// TODO: test progressCallback
 );
 
 
 
-CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'UsableXHRTests').methods(
+/**
+ * Run L{UsableXHRLogicTests} except with the XDR object, even if XDomainRequest
+ * is not available in this browser.
+ */
+CW.Net.TestNet._BaseUsableXHDRLogicTests.subclass(CW.Net.TestNet, 'UsableXDRLogicTests').methods(
+
+	function setUp(self) {
+		return self._setUp();
+	},
+
+
+	function _setupDummies(self) {
+		self.target.update('path', '/@testres_Minerva/404/');
+		self.mock = CW.Net.TestNet.MockXDR();
+		self.xhdr = CW.Net.UsableXDR(window, function(){return self.mock});
+		self.requestD = self.xhdr.request('POST', self.target);
+	},
+
+
+	function _finishRequest(self) {
+		self.mock.readyState = 4;
+		self.mock.onprogress();
+		self.mock.onload();
+	}
+);
+
+
+
+
+CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'UsableXHRRealRequestTests').methods(
 
 	function setUp(self) {
 		self.target = CW.URI.URL(''+window.location);
-		self.xhr = CW.Net.UsableXHR(window, CW.Net.getXHRObject());
+		self.xhdr = CW.Net.UsableXHR(window, CW.Net.getXHRObject());
 	},
 
 
 	function test_simpleResponseGET(self) {
 		self.target.update('path', '/@testres_Minerva/SimpleResponse/?a=0');
-		var d = self.xhr.request('GET', self.target);
+		var d = self.xhdr.request('GET', self.target);
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_sent_args": {"a": ["0"]}}', obj.responseText);
 		});
@@ -206,7 +302,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'UsableXHRTests').methods(
 
 	function test_simpleResponsePOST(self) {
 		self.target.update('path', '/@testres_Minerva/SimpleResponse/');
-		var d = self.xhr.request('POST', self.target, 'hello\u00ff');
+		var d = self.xhdr.request('POST', self.target, 'hello\u00ff');
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_posted_utf8": "hello\\u00ff"}', obj.responseText);
 		});
@@ -221,7 +317,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'UsableXHRTests').methods(
 	 */
 	function test_fragmentIsIgnoredGET(self) {
 		self.target.update('path', '/@testres_Minerva/SimpleResponse/?a=0').update('fragment', 'ignored1');
-		var d = self.xhr.request('GET', self.target);
+		var d = self.xhdr.request('GET', self.target);
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_sent_args": {"a": ["0"]}}', obj.responseText);
 		});
@@ -236,7 +332,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'UsableXHRTests').methods(
 	 */
 	function test_fragmentIsIgnoredPOST(self) {
 		self.target.update('path', '/@testres_Minerva/SimpleResponse/?a=0').update('fragment', 'ignored2');
-		var d = self.xhr.request('GET', self.target);
+		var d = self.xhdr.request('GET', self.target);
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_sent_args": {"a": ["0"]}}', obj.responseText);
 		});
@@ -248,12 +344,12 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'UsableXHRTests').methods(
 		var responses = [];
 		self.target.update('path', '/@testres_Minerva/SimpleResponse/?b=0');
 
-		var d = self.xhr.request('GET', self.target);
+		var d = self.xhdr.request('GET', self.target);
 
 		d.addCallback(function(obj){
 			responses.push(obj.responseText);
 			// This mutation is okay
-			var d2 = self.xhr.request('GET', self.target.update('path', '/@testres_Minerva/SimpleResponse/?b=1'));
+			var d2 = self.xhdr.request('GET', self.target.update('path', '/@testres_Minerva/SimpleResponse/?b=1'));
 			d2.addCallback(function(obj2){
 				responses.push(obj2.responseText);
 			});
@@ -278,12 +374,12 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'UsableXHRTests').methods(
 		var responses = [];
 		self.target.update('path', '/@testres_Minerva/SimpleResponse/');
 
-		var d = self.xhr.request('POST', self.target, 'A');
+		var d = self.xhdr.request('POST', self.target, 'A');
 
 		d.addCallback(function(obj){
 			responses.push(obj.responseText);
 			// This mutation is okay
-			var d2 = self.xhr.request('POST', self.target.update('path', '/@testres_Minerva/SimpleResponse/'), 'B');
+			var d2 = self.xhdr.request('POST', self.target.update('path', '/@testres_Minerva/SimpleResponse/'), 'B');
 			d2.addCallback(function(obj2){
 				responses.push(obj2.responseText);
 			});
@@ -314,11 +410,11 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'UsableXHRTests').methods(
 	 */
 	function test_abort(self) {
 		self.target.update('path', '/@testres_Minerva/404/');
-		var requestD = self.xhr.request('POST', self.target, '');
+		var requestD = self.xhdr.request('POST', self.target, '');
 
-		self.assertIdentical(undefined, self.xhr.abort());
-		self.assertIdentical(undefined, self.xhr.abort());
-		self.assertIdentical(undefined, self.xhr.abort());
+		self.assertIdentical(undefined, self.xhdr.abort());
+		self.assertIdentical(undefined, self.xhdr.abort());
+		self.assertIdentical(undefined, self.xhdr.abort());
 
 		// Note that errback won't always get fired. Sometimes it'll be callback
 		// because browser couldn't abort before the request finished.
@@ -332,17 +428,17 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'UsableXHRTests').methods(
 
 
 /**
- * Run L{UsableXHRTests} except with the XDR object, if it's available in this
+ * Run L{UsableXHRRealRequestTests} except with the XDR object, if it's available in this
  * browser.
  */
-CW.Net.TestNet.UsableXHRTests.subclass(CW.Net.TestNet, 'UsableXHRUsingXDRTests').methods(
+CW.Net.TestNet.UsableXHRRealRequestTests.subclass(CW.Net.TestNet, 'UsableXDRRealRequestTests').methods(
 
 	function setUp(self) {
 		if(!CW.Net.TestNet.hasXDomainRequest()) {
 			throw new CW.UnitTest.SkipTest("XDomainRequest is required for this test.");
 		}
 		self.target = CW.URI.URL(''+window.location);
-		self.xhr = CW.Net.UsableXDR(window, function(){return new XDomainRequest()});
+		self.xhdr = CW.Net.UsableXDR(window, function(){return new XDomainRequest()});
 	}
 );
 
@@ -355,7 +451,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XDRErrorsTests').methods(
 			throw new CW.UnitTest.SkipTest("XDomainRequest is required for this test.");
 		}
 		self.target = CW.URI.URL(''+window.location);
-		self.xhr = CW.Net.UsableXDR(window, function(){return new XDomainRequest()});
+		self.xdr = CW.Net.UsableXDR(window, function(){return new XDomainRequest()});
 	},
 
 
@@ -365,7 +461,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XDRErrorsTests').methods(
 	 */
 	function test_networkProblemGET(self) {
 		self.target.update('path', '/@testres_Minerva/NoOriginHeader/');
-		var requestD = self.xhr.request('GET', self.target);
+		var requestD = self.xdr.request('GET', self.target);
 		var d = self.assertFailure(requestD, [CW.Net.NetworkProblem]);
 		return d;
 	},
@@ -377,7 +473,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XDRErrorsTests').methods(
 	 */
 	function test_networkProblemPOST(self) {
 		self.target.update('path', '/@testres_Minerva/NoOriginHeader/');
-		var requestD = self.xhr.request('POST', self.target);
+		var requestD = self.xdr.request('POST', self.target);
 		var d = self.assertFailure(requestD, [CW.Net.NetworkProblem]);
 		return d;
 	},
@@ -388,7 +484,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XDRErrorsTests').methods(
 	 */
 	function test_networkProblemBadIP(self) {
 		self.target.update('host', '0.0.0.0');
-		var requestD = self.xhr.request('GET', self.target);
+		var requestD = self.xdr.request('GET', self.target);
 		var d = self.assertFailure(requestD, [CW.Net.NetworkProblem]);
 		return d;
 	}
