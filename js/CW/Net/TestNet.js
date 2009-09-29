@@ -105,15 +105,9 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'GetXHRObjectTests').methods(
 CW.UnitTest.TestCase.subclass(CW.Net.TestNet, '_BaseUsableXHDRLogicTests').methods(
 
 	function setUp(self) {
-		throw new CW.UnitTest.SkipTest("This is a base class with test_ methods.");
-	},
-
-
-	function _setUp(self) {
 		self.target = CW.URI.URL(''+window.location).update('fragment', null);
 	},
 
-	// O	verride setUp, make it call _setUp.
 	// Override _setupDummies
 	// Override _finishRequest
 
@@ -196,11 +190,6 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, '_BaseUsableXHDRLogicTests').metho
  */
 CW.Net.TestNet._BaseUsableXHDRLogicTests.subclass(CW.Net.TestNet, 'UsableXHRLogicTests').methods(
 
-	function setUp(self) {
-		return self._setUp();
-	},
-
-
 	function _setupDummies(self) {
 		self.target.update('path', '/@testres_Minerva/404/');
 		self.mock = CW.Net.TestNet.MockXHR();
@@ -260,11 +249,6 @@ CW.Net.TestNet._BaseUsableXHDRLogicTests.subclass(CW.Net.TestNet, 'UsableXHRLogi
  * is not available in this browser.
  */
 CW.Net.TestNet._BaseUsableXHDRLogicTests.subclass(CW.Net.TestNet, 'UsableXDRLogicTests').methods(
-
-	function setUp(self) {
-		return self._setUp();
-	},
-
 
 	function _setupDummies(self) {
 		self.target.update('path', '/@testres_Minerva/404/');
