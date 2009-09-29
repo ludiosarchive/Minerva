@@ -55,7 +55,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'GetXHRObjectTests').methods(
 /**
  * These tests do not make any real connections.
  */
-CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRLogicTests').methods(
+CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'UsableXHRLogicTests').methods(
 
 	function setUp(self) {
 		self.target = CW.URI.URL(''+window.location).update('fragment', null);
@@ -66,7 +66,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRLogicTests').methods(
 		self.target.update('path', '/@testres_Minerva/404/');
 		self.mock = CW.Net.TestNet.MockXHR();
 		self.assertIdentical(CW.emptyFunc, self.mock.onreadystatechange);
-		self.xhr = CW.Net.ReusableXHR(window, self.mock);
+		self.xhr = CW.Net.UsableXHR(window, self.mock);
 		self.requestD = self.xhr.request('POST', self.target, '');
 		// After .request(), onreadystatechange is set to a real handler.
 		self.assertNotIdentical(CW.emptyFunc, self.mock.onreadystatechange);
@@ -74,7 +74,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRLogicTests').methods(
 
 
 	/**
-	 * We can't make another request over this ReusableXHR
+	 * We can't make another request over this UsableXHR
 	 * object until the current request is finished.
 	 */
 	function test_requestStillActive(self) {
@@ -88,7 +88,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRLogicTests').methods(
 
 
 	/**
-	 * After aborting, using the same L{ReusableXHR} instance to make
+	 * After aborting, using the same L{UsableXHR} instance to make
 	 * requests still works.
 	 */
 	function test_abortDoesntRuinState(self) {
@@ -133,7 +133,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRLogicTests').methods(
 
 	/**
 	 * The C{abort} method of the XHR object is only called once, even if
-	 * L{ReusableXHR.abort} is called multiple times.
+	 * L{UsableXHR.abort} is called multiple times.
 	 *
 	 * We use a dummy because calling .abort() multiple times on a browser's
 	 * XHR object doesn't raise an exception or do anything important. We still
@@ -186,11 +186,11 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRLogicTests').methods(
 
 
 
-CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRTests').methods(
+CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'UsableXHRTests').methods(
 
 	function setUp(self) {
 		self.target = CW.URI.URL(''+window.location);
-		self.xhr = CW.Net.ReusableXHR(window, CW.Net.getXHRObject());
+		self.xhr = CW.Net.UsableXHR(window, CW.Net.getXHRObject());
 	},
 
 
@@ -216,7 +216,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRTests').methods(
 
 	/**
 	 * Make sure the #fragment is never sent as part of an XHR GET request.
-	 * IE6-8 and Opera 10 are buggy. L{ReusableXHR} works around it.
+	 * IE6-8 and Opera 10 are buggy. L{UsableXHR} works around it.
 	 * If it fails to work around it, you'll see {"a": ["0#ignored1"]} instead of {"a": ["0"]}
 	 */
 	function test_fragmentIsIgnoredGET(self) {
@@ -231,7 +231,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRTests').methods(
 
 	/**
 	 * Make sure the #fragment is never sent as part of an XHR POST request.
-	 * IE6-8 and Opera 10 are buggy. L{ReusableXHR} works around it.
+	 * IE6-8 and Opera 10 are buggy. L{UsableXHR} works around it.
 	 * If it fails to work around it, you'll see {"a": ["0#ignored2"]} instead of {"a": ["0"]}
 	 */
 	function test_fragmentIsIgnoredPOST(self) {
@@ -332,10 +332,10 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRTests').methods(
 
 
 /**
- * Run L{ReusableXHRTests} except with the XDR object, if it's available in this
+ * Run L{UsableXHRTests} except with the XDR object, if it's available in this
  * browser.
  */
-CW.Net.TestNet.ReusableXHRTests.subclass(CW.Net.TestNet, 'ReusableXHRUsingXDRTests').methods(
+CW.Net.TestNet.UsableXHRTests.subclass(CW.Net.TestNet, 'UsableXHRUsingXDRTests').methods(
 
 	function setUp(self) {
 		if(!CW.Net.TestNet.hasXDomainRequest()) {
@@ -478,7 +478,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XHRProgressCallbackTests').method
 	 * is called.
 	 */
 	function test_onreadystatechangeCallsProgress(self) {
-		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
+		self.xhr = CW.Net.UsableXHR(self.clock, self.mock);
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
 			calls.push(arguments);
@@ -504,7 +504,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XHRProgressCallbackTests').method
 	 * C{progressCallback} is called with good numbers.
 	 */
 	function test_onprogressFillsNumbers(self) {
-		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
+		self.xhr = CW.Net.UsableXHR(self.clock, self.mock);
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
 			calls.push(arguments);
@@ -534,7 +534,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XHRProgressCallbackTests').method
 	 * with (obj, null, lastKnownTotalSize)
 	 */
 	function test_onprogressFirefoxBugWorkaround(self) {
-		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
+		self.xhr = CW.Net.UsableXHR(self.clock, self.mock);
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
 			calls.push(arguments);
@@ -562,7 +562,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XHRProgressCallbackTests').method
 	 * Zero is an acceptable totalSize.
 	 */
 	function test_zeroTotalSizeIsOkay(self) {
-		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
+		self.xhr = CW.Net.UsableXHR(self.clock, self.mock);
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
 			calls.push(arguments);
@@ -585,7 +585,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XHRProgressCallbackTests').method
 	 * Undefined or negative or large `totalSize's are treated as "unknown totalSize"
 	 */
 	function test_invalidTotalSizes(self) {
-		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
+		self.xhr = CW.Net.UsableXHR(self.clock, self.mock);
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
 			calls.push(arguments);
@@ -636,7 +636,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XHRProgressCallbackOperaWorkaroun
 	 * called every 50ms, even if no new data has been received.
 	 */
 	function test_progressCallbackCreatesPoller(self) {
-		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
+		self.xhr = CW.Net.UsableXHR(self.clock, self.mock);
 		var calls = []
 		function progressCallback(obj, position, totalSize) {
 			calls.push(arguments);
@@ -660,7 +660,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XHRProgressCallbackOperaWorkaroun
 	 * not 3, progressCallback is not called.
 	 */
 	function test_progressCallbackButNotReadyState3(self) {
-		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
+		self.xhr = CW.Net.UsableXHR(self.clock, self.mock);
 		var calls = []
 		function progressCallback(obj, position, totalSize) {
 			calls.push(arguments);
@@ -689,7 +689,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XHRProgressCallbackOperaWorkaroun
 	 * In Opera, if C{progressCallback} is falsy, no setInterval is set.
 	 */
 	function test_noProgressCallbackNoPoller(self) {
-		self.xhr = CW.Net.ReusableXHR(self.clock, self.mock);
+		self.xhr = CW.Net.UsableXHR(self.clock, self.mock);
 		self.xhr.request('GET', self.target, '', null);
 		self.assertEqual(0, self.clock._countPendingEvents());
 		self.mock.readyState = 3;

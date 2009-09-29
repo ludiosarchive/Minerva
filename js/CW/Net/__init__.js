@@ -220,7 +220,7 @@ CW.Class.subclass(CW.Net, "IUsableSomething").methods(
 	 *    whenever data is received.
 	 *
 	 *    Either Number argument will be C{null} if the browser does not provide
-	 *    progress information. L{ReusableXHR} purposely avoids accessing
+	 *    progress information. L{UsableXHR} purposely avoids accessing
 	 *    C{self._object.responseText} to determine progress information.
 	 *
 	 *    Note that (bytes available in responseText [Number]) may suddenly become
@@ -294,7 +294,7 @@ CW.Class.subclass(CW.Net, "UsableXDR").methods(
 	function _finishAndReset(self, errorOrNull) {
 		if(!self._requestActive) {
 			// Both UsableXDR.abort and _handler_XDR_onload/_handler_XDR_onerror
-			// may call _finishAndReset. Sometimes ReusableXHR.abort will beat the
+			// may call _finishAndReset. Sometimes UsableXHR.abort will beat the
 			// handlers to the punch.
 			// XDomainRequest.abort() won't fire anything after aborting.
 			// After `onerror' on an XDomainRequest, nothing else will be fired.
@@ -421,7 +421,7 @@ CW.Class.subclass(CW.Net, "UsableXDR").methods(
  *
  * TODO: implement timeout?
  */
-CW.Class.subclass(CW.Net, "ReusableXHR").methods(
+CW.Class.subclass(CW.Net, "UsableXHR").methods(
 
 	/**
 	 * C{window} is a C{window}-like object.
@@ -510,8 +510,8 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 
 	function _finishAndReset(self, errorOrNull) {
 		if(!self._requestActive) {
-			// Both ReusableXHR.abort and _handler_onreadystatechange
-			// may call _finishAndReset. Sometimes ReusableXHR.abort will beat the
+			// Both UsableXHR.abort and _handler_onreadystatechange
+			// may call _finishAndReset. Sometimes UsableXHR.abort will beat the
 			// handlers to the punch.
 			
 			// Opera 10 won't fire anything after aborting, probably because it
@@ -630,7 +630,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
  * C{post} is data to POST. Use "" (empty string) if using L{verb} "GET".
  */
 CW.Net.simpleRequest = function simpleRequest(verb, url, post) {
-	var xhr = CW.Net.ReusableXHR(window, CW.Net.getXHRObject());
+	var xhr = CW.Net.UsableXHR(window, CW.Net.getXHRObject());
 	var d = xhr.request(verb, url, post);
 	d.addCallback(function(obj){
 		return obj.responseText;
