@@ -138,7 +138,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, '_BaseUsableXHDRLogicTests').metho
 		self.requestD = self.xhdr.request('POST', self.target, 'second');
 		self._finishRequest();
 
-		CW.msg(CW.UnitTest.repr(self.mock.log));
+		//CW.msg(CW.UnitTest.repr(self.mock.log));
 		self.assertEqual([
 			['open', 'POST', self.target.getString(), true], ['send', ''], ['abort'],
 			['open', 'POST', self.target.getString(), true], ['send', 'second']

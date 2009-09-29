@@ -431,7 +431,6 @@ CW.Class.subclass(CW.Net, "UsableXHR").methods(
 	function __init__(self, window, object) {
 		self._window = window;
 		self._object = object;
-		CW.msg(self + ' is using ' + self._object + ' for XHR.');
 		self._requestActive = false;
 	},
 
