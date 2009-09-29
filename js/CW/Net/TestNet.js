@@ -99,6 +99,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'GetXHRObjectTests').methods(
 
 
 /**
+ * Base class for testing the general logic of L{UsableXHR} xor L{UsableXDR}.
  * These tests do not make any real connections.
  */
 CW.UnitTest.TestCase.subclass(CW.Net.TestNet, '_BaseUsableXHDRLogicTests').methods(
@@ -114,6 +115,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, '_BaseUsableXHDRLogicTests').metho
 
 	// O	verride setUp, make it call _setUp.
 	// Override _setupDummies
+	// Override _finishRequest
 
 	/**
 	 * We can't make another request using this C{self.xhdr}
@@ -278,7 +280,6 @@ CW.Net.TestNet._BaseUsableXHDRLogicTests.subclass(CW.Net.TestNet, 'UsableXDRLogi
 		self.mock.onload();
 	}
 );
-
 
 
 
@@ -487,73 +488,6 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XDRErrorsTests').methods(
 		var requestD = self.xdr.request('GET', self.target);
 		var d = self.assertFailure(requestD, [CW.Net.NetworkProblem]);
 		return d;
-	}
-);
-
-
-
-CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XDRProgressCallbackTests').methods(
-
-	function setUp(self) {
-		if(!CW.Net.TestNet.hasXDomainRequest()) {
-			throw new CW.UnitTest.SkipTest("XDomainRequest is required for this test.");
-		}
-		self.target = CW.URI.URL(''+window.location);
-		self.target.update('path', '/@testres_Minerva/404/');
-		self.mock = CW.Net.TestNet.MockXHR();
-		self.clock = CW.UnitTest.Clock();
-	},
-
-	/**
-	 * Test that when onprogress happens, C{progressCallback}
-	 * is called.
-	 */
-	function test_onprogressCallsProgress(self) {
-		self.xhr = CW.Net.UsableXDR(self.clock, function(){return self.mock});
-		var calls = [];
-		function progressCallback(obj, position, totalSize) {
-			calls.push(arguments);
-		}
-		self.xhr.request('GET', self.target, '', progressCallback);
-		// note: no usage of readyState, despite its existence
-		self.mock.responseText = null; // responseText should not be looked at
-		self.mock.onprogress();
-		self.mock.onprogress();
-		self.mock.onprogress();
-
-		self.assertEqual(
-			[
-				[self.mock, null, null],
-				[self.mock, null, null],
-				[self.mock, null, null]
-			], calls
-		);
-	},
-
-	/**
-	 * Test that when onload happens, C{progressCallback}
-	 * is called.
-	 */
-	function test_onloadCallsProgress(self) {
-		self.xhr = CW.Net.UsableXDR(self.clock, function(){return self.mock});
-		var calls = [];
-		function progressCallback(obj, position, totalSize) {
-			calls.push(arguments);
-		}
-		self.xhr.request('GET', self.target, '', progressCallback);
-		// note: no usage of readyState, despite its existence
-		self.mock.responseText = null; // responseText should not be looked at
-		self.mock.onprogress();
-		self.mock.onprogress();
-		self.mock.onload();
-
-		self.assertEqual(
-			[
-				[self.mock, null, null],
-				[self.mock, null, null],
-				[self.mock, null, null]
-			], calls
-		);
 	}
 );
 
@@ -774,7 +708,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XHRProgressCallbackOperaWorkaroun
 		self.mock.readyState = 2;
 		self.clock.advance(100);
 		self.assertIdentical(0, calls.length);
-		
+
 		self.mock.readyState = 4;
 		self.clock.advance(100);
 		self.assertIdentical(0, calls.length);
@@ -795,3 +729,69 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XHRProgressCallbackOperaWorkaroun
 );
 
 
+
+
+CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XDRProgressCallbackTests').methods(
+
+	function setUp(self) {
+		if(!CW.Net.TestNet.hasXDomainRequest()) {
+			throw new CW.UnitTest.SkipTest("XDomainRequest is required for this test.");
+		}
+		self.target = CW.URI.URL(''+window.location);
+		self.target.update('path', '/@testres_Minerva/404/');
+		self.mock = CW.Net.TestNet.MockXHR();
+		self.clock = CW.UnitTest.Clock();
+	},
+
+	/**
+	 * Test that when onprogress happens, C{progressCallback}
+	 * is called.
+	 */
+	function test_onprogressCallsProgress(self) {
+		self.xhr = CW.Net.UsableXDR(self.clock, function(){return self.mock});
+		var calls = [];
+		function progressCallback(obj, position, totalSize) {
+			calls.push(arguments);
+		}
+		self.xhr.request('GET', self.target, '', progressCallback);
+		// note: no usage of readyState, despite its existence
+		self.mock.responseText = null; // responseText should not be looked at
+		self.mock.onprogress();
+		self.mock.onprogress();
+		self.mock.onprogress();
+
+		self.assertEqual(
+			[
+				[self.mock, null, null],
+				[self.mock, null, null],
+				[self.mock, null, null]
+			], calls
+		);
+	},
+
+	/**
+	 * Test that when onload happens, C{progressCallback}
+	 * is called.
+	 */
+	function test_onloadCallsProgress(self) {
+		self.xhr = CW.Net.UsableXDR(self.clock, function(){return self.mock});
+		var calls = [];
+		function progressCallback(obj, position, totalSize) {
+			calls.push(arguments);
+		}
+		self.xhr.request('GET', self.target, '', progressCallback);
+		// note: no usage of readyState, despite its existence
+		self.mock.responseText = null; // responseText should not be looked at
+		self.mock.onprogress();
+		self.mock.onprogress();
+		self.mock.onload();
+
+		self.assertEqual(
+			[
+				[self.mock, null, null],
+				[self.mock, null, null],
+				[self.mock, null, null]
+			], calls
+		);
+	}
+);
