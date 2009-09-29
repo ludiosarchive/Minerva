@@ -561,7 +561,7 @@ CW.Class.subclass(CW.Net, "UsableXHR").methods(
 
 	function _handler_onprogress(self, e) {
 //] if _debugMode:
-		CW.msg('_handler_onprogress: ' + [e.position, e.totalSize].join(','));
+		CW.msg('_handler_onprogress: ' + CW.JSON.stringify(e));
 //] endif
 
 		// In Safari 4.0.3 and Firefox 3.5.2/3.0.7, e.totalSize === 4294967295
