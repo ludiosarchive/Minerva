@@ -77,10 +77,10 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRLogicTests').methods(
 	 * We can't make another request over this ReusableXHR
 	 * object until the current request is finished.
 	 */
-	function test_requestStillActive(self) {
+	function test_requestStillActiveError(self) {
 		self._setupDummies();
 		self.assertThrows(
-			CW.Net.RequestStillActive,
+			CW.Net.RequestStillActiveError,
 			function() { self.xhr.request('GET', self.target) },
 			"Wait for the Deferred to fire before making another request."
 		);
@@ -361,35 +361,35 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XDRErrorsTests').methods(
 
 	/**
 	 * Requesting a page via GET that doesn't send the right Origin headers
-	 * causes a L{NetworkError}.
+	 * causes a L{NetworkProblemError}.
 	 */
-	function test_networkErrorGET(self) {
+	function test_networkProblemErrorGET(self) {
 		self.target.update('path', '/@testres_Minerva/NoOriginHeader/');
 		var requestD = self.xhr.request('GET', self.target);
-		var d = self.assertFailure(requestD, [CW.Net.NetworkError]);
+		var d = self.assertFailure(requestD, [CW.Net.NetworkProblemError]);
 		return d;
 	},
 
 
 	/**
 	 * Requesting a page via GET that doesn't send the right Origin headers
-	 * causes a L{NetworkError}.
+	 * causes a L{NetworkProblemError}.
 	 */
-	function test_networkErrorPOST(self) {
+	function test_networkProblemErrorPOST(self) {
 		self.target.update('path', '/@testres_Minerva/NoOriginHeader/');
 		var requestD = self.xhr.request('POST', self.target);
-		var d = self.assertFailure(requestD, [CW.Net.NetworkError]);
+		var d = self.assertFailure(requestD, [CW.Net.NetworkProblemError]);
 		return d;
 	},
 
 
 	/**
-	 * Requesting something on 0.0.0.0 causes a L{NetworkError}.
+	 * Requesting something on 0.0.0.0 causes a L{NetworkProblemError}.
 	 */
-	function test_networkErrorBadIP(self) {
+	function test_networkProblemErrorBadIP(self) {
 		self.target.update('host', '0.0.0.0');
 		var requestD = self.xhr.request('GET', self.target);
-		var d = self.assertFailure(requestD, [CW.Net.NetworkError]);
+		var d = self.assertFailure(requestD, [CW.Net.NetworkProblemError]);
 		return d;
 	}
 );

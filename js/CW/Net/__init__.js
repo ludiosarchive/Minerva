@@ -163,9 +163,9 @@ CW.Net.getXHRObject = function getXHRObject() {
 
 
 
-CW.Error.subclass(CW.Net, 'RequestStillActive');
+CW.Error.subclass(CW.Net, 'RequestStillActiveError');
 CW.Error.subclass(CW.Net, 'RequestAborted');
-CW.Error.subclass(CW.Net, 'NetworkError');
+CW.Error.subclass(CW.Net, 'NetworkProblemError');
 CW.Error.subclass(CW.Net, 'TimeoutError');
 
 
@@ -313,7 +313,7 @@ CW.Class.subclass(CW.Net, "UsableXDR").methods(
 //] if _debugMode:
 		CW.msg('_handler_XDR_onerror');
 //] endif
-		self._finishAndReset(new CW.Net.NetworkError());
+		self._finishAndReset(new CW.Net.NetworkProblemError());
 	},
 
 	function _handler_XDR_ontimeout(self) {
@@ -350,7 +350,7 @@ CW.Class.subclass(CW.Net, "UsableXDR").methods(
 
 	function request(self, verb, url, /*optional*/ post, /*optional*/ progressCallback) {
 		if(self._requestActive) {
-			throw new CW.Net.RequestStillActive(
+			throw new CW.Net.RequestStillActiveError(
 				"Wait for the Deferred to fire before making another request.");
 		}
 		// We'll never know the position and totalSize.
@@ -450,7 +450,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
 		// per-browser if/elif'ing
 
 		if(self._requestActive) {
-			throw new CW.Net.RequestStillActive(
+			throw new CW.Net.RequestStillActiveError(
 				"Wait for the Deferred to fire before making another request.");
 		}
 		self._position = null;
