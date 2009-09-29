@@ -165,8 +165,8 @@ CW.Net.getXHRObject = function getXHRObject() {
 
 CW.Error.subclass(CW.Net, 'RequestStillActive');
 CW.Error.subclass(CW.Net, 'RequestAborted');
-CW.Error.subclass(CW.Net, 'NetworkError');
-CW.Error.subclass(CW.Net, 'TimeoutError');
+CW.Error.subclass(CW.Net, 'NetworkProblem');
+CW.Error.subclass(CW.Net, 'Timeout');
 
 
 // Without CORS support for XMLHttpRequest, or XDomainRequest, we have to create
@@ -313,7 +313,7 @@ CW.Class.subclass(CW.Net, "UsableXDR").methods(
 //] if _debugMode:
 		CW.msg('_handler_XDR_onerror');
 //] endif
-		self._finishAndReset(new CW.Net.NetworkError());
+		self._finishAndReset(new CW.Net.NetworkProblem());
 	},
 
 	function _handler_XDR_ontimeout(self) {
@@ -322,7 +322,7 @@ CW.Class.subclass(CW.Net, "UsableXDR").methods(
 //] endif
 		// Even though our XDR timeout is very high and should never be
 		// reached, we'll treat it the same as an official timeout.
-		self._finishAndReset(new CW.Net.TimeoutError());
+		self._finishAndReset(new CW.Net.Timeout());
 	},
 
 	function _handler_XDR_onprogress(self) {

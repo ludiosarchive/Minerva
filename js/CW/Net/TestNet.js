@@ -361,35 +361,35 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XDRErrorsTests').methods(
 
 	/**
 	 * Requesting a page via GET that doesn't send the right Origin headers
-	 * causes a L{NetworkError}.
+	 * causes a L{NetworkProblem}.
 	 */
-	function test_networkErrorGET(self) {
+	function test_networkProblemGET(self) {
 		self.target.update('path', '/@testres_Minerva/NoOriginHeader/');
 		var requestD = self.xhr.request('GET', self.target);
-		var d = self.assertFailure(requestD, [CW.Net.NetworkError]);
+		var d = self.assertFailure(requestD, [CW.Net.NetworkProblem]);
 		return d;
 	},
 
 
 	/**
 	 * Requesting a page via GET that doesn't send the right Origin headers
-	 * causes a L{NetworkError}.
+	 * causes a L{NetworkProblem}.
 	 */
-	function test_networkErrorPOST(self) {
+	function test_networkProblemPOST(self) {
 		self.target.update('path', '/@testres_Minerva/NoOriginHeader/');
 		var requestD = self.xhr.request('POST', self.target);
-		var d = self.assertFailure(requestD, [CW.Net.NetworkError]);
+		var d = self.assertFailure(requestD, [CW.Net.NetworkProblem]);
 		return d;
 	},
 
 
 	/**
-	 * Requesting something on 0.0.0.0 causes a L{NetworkError}.
+	 * Requesting something on 0.0.0.0 causes a L{NetworkProblem}.
 	 */
-	function test_networkErrorBadIP(self) {
+	function test_networkProblemBadIP(self) {
 		self.target.update('host', '0.0.0.0');
 		var requestD = self.xhr.request('GET', self.target);
-		var d = self.assertFailure(requestD, [CW.Net.NetworkError]);
+		var d = self.assertFailure(requestD, [CW.Net.NetworkProblem]);
 		return d;
 	}
 );
