@@ -9,14 +9,12 @@
 
 
 CW.Net.TestNet.	hasXDomainRequest = function hasXDomainRequest() {
-	var has = false;
 	try {
 		XDomainRequest;
-		has = true;
+		return true;
 	} catch(e) {
-
+		return false;
 	}
-	return has;
 }
 
 
@@ -43,20 +41,13 @@ CW.Class.subclass(CW.Net.TestNet, 'MockXHR').pmethods({
 
 
 
-CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'FindObjectTests').methods(
+CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'GetXHRObjectTests').methods(
 	/**
-	 * If browser has XDomainRequest object, and findObject is called
-	 * with desireXDR=true, findObject should return an XDomainRequest
-	 * object.
+	 * L{CW.Net.getXHRObject} works in general.
 	 */
-	function test_XDomainRequestPriority(self) {
-		if(!CW.Net.TestNet.hasXDomainRequest()) {
-			throw new CW.UnitTest.SkipTest("XDomainRequest is required for this test.");
-		}
-		var object = CW.Net.findObject(/*desireXDR=*/true);
-		self.assert(
-			object instanceof XDomainRequest,
-			"object `not instanceof` XDomainRequest");
+	function test_findXHRObject(self) {
+		var object = CW.Net.getXHRObject();
+		self.assert(object, 'object must be truthy');
 	}
 );
 
@@ -199,7 +190,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRTests').methods(
 
 	function setUp(self) {
 		self.target = CW.URI.URL(''+window.location);
-		self.xhr = CW.Net.ReusableXHR(window, CW.Net.findObject(false));
+		self.xhr = CW.Net.ReusableXHR(window, CW.Net.getXHRObject());
 	},
 
 

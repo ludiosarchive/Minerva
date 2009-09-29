@@ -135,34 +135,15 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 
 
 
-CW.Net.findObject = function findObject(desireXDR/*=false*/) {
+CW.Net.getXHRObject = function getXHRObject() {
 	// http://blogs.msdn.com/xmlteam/archive/2006/10/23/using-the-right-version-of-msxml-in-internet-explorer.aspx
 	// TODO: later do some experiments to find out if getting Msxml2.XMLHTTP.6.0 may be better
-
-	/*
-	Reasons to prefer XDomainRequest over XHR/XMLHTTP in IE8:
-		- don't need to create an iframe for cross-subdomain requesting.
-		- supports streaming; we get onprogress events and can read responseText
-			at any time.
-		- XDomainRequest can't be disabled by turning off ActiveX and
-			unchecking "Enable native XMLHTTP Support."
-
-	Disadvantages:
-		- no header support
-		- no readyState, status, statusText, properties
-		- no support for multi-part responses. (???)
-		- only GET and POST methods supported
-	 */
 
 	var things = [
 		'XMLHttpRequest', function(){return new XMLHttpRequest()},
 		'Msxml2.XMLHTTP', function(){return new ActiveXObject("MSXML2.XMLHTTP.3.0")},
 		'Microsoft.XMLHTTP', function(){return new ActiveXObject("Microsoft.XMLHTTP")}
 	];
-
-	if(desireXDR) {
-		things.unshift('XDomainRequest', function(){return new XDomainRequest()});
-	}
 
 	for (var n=1; n < things.length; n+=2) {
 		try {
@@ -269,6 +250,21 @@ CW.Class.subclass(CW.Net, "IUsableSomething").methods(
 //] endif
 
 
+
+/*
+Reasons to prefer XDomainRequest over XHR/XMLHTTP in IE8:
+	- don't need to create an iframe for cross-subdomain requesting.
+	- supports streaming; we get onprogress events and can read responseText
+		at any time.
+	- XDomainRequest can't be disabled by turning off ActiveX and
+		unchecking "Enable native XMLHTTP Support."
+
+Disadvantages:
+	- no header support
+	- no readyState, status, statusText, properties
+	- no support for multi-part responses. (???)
+	- only GET and POST methods supported
+ */
 
 /**
  * An object that can perform XDomainRequest requests.
@@ -634,7 +630,7 @@ CW.Class.subclass(CW.Net, "ReusableXHR").methods(
  * C{post} is data to POST. Use "" (empty string) if using L{verb} "GET".
  */
 CW.Net.simpleRequest = function simpleRequest(verb, url, post) {
-	var xhr = CW.Net.ReusableXHR(window, CW.Net.findObject(/*desireXDR=*/false));
+	var xhr = CW.Net.ReusableXHR(window, CW.Net.getXHRObject());
 	var d = xhr.request(verb, url, post);
 	d.addCallback(function(obj){
 		return obj.responseText;
