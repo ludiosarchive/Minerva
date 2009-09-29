@@ -45,7 +45,7 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'GetXHRObjectTests').methods(
 	/**
 	 * L{CW.Net.getXHRObject} works in general.
 	 */
-	function test_findXHRObject(self) {
+	function test_getXHRObject(self) {
 		var object = CW.Net.getXHRObject();
 		self.assert(object, 'object must be truthy');
 	}
@@ -77,10 +77,10 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'ReusableXHRLogicTests').methods(
 	 * We can't make another request over this ReusableXHR
 	 * object until the current request is finished.
 	 */
-	function test_requestStillActiveError(self) {
+	function test_requestStillActive(self) {
 		self._setupDummies();
 		self.assertThrows(
-			CW.Net.RequestStillActiveError,
+			CW.Net.RequestStillActive,
 			function() { self.xhr.request('GET', self.target) },
 			"Wait for the Deferred to fire before making another request."
 		);
@@ -361,35 +361,35 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestNet, 'XDRErrorsTests').methods(
 
 	/**
 	 * Requesting a page via GET that doesn't send the right Origin headers
-	 * causes a L{NetworkProblemError}.
+	 * causes a L{NetworkError}.
 	 */
-	function test_networkProblemErrorGET(self) {
+	function test_networkErrorGET(self) {
 		self.target.update('path', '/@testres_Minerva/NoOriginHeader/');
 		var requestD = self.xhr.request('GET', self.target);
-		var d = self.assertFailure(requestD, [CW.Net.NetworkProblemError]);
+		var d = self.assertFailure(requestD, [CW.Net.NetworkError]);
 		return d;
 	},
 
 
 	/**
 	 * Requesting a page via GET that doesn't send the right Origin headers
-	 * causes a L{NetworkProblemError}.
+	 * causes a L{NetworkError}.
 	 */
-	function test_networkProblemErrorPOST(self) {
+	function test_networkErrorPOST(self) {
 		self.target.update('path', '/@testres_Minerva/NoOriginHeader/');
 		var requestD = self.xhr.request('POST', self.target);
-		var d = self.assertFailure(requestD, [CW.Net.NetworkProblemError]);
+		var d = self.assertFailure(requestD, [CW.Net.NetworkError]);
 		return d;
 	},
 
 
 	/**
-	 * Requesting something on 0.0.0.0 causes a L{NetworkProblemError}.
+	 * Requesting something on 0.0.0.0 causes a L{NetworkError}.
 	 */
-	function test_networkProblemErrorBadIP(self) {
+	function test_networkErrorBadIP(self) {
 		self.target.update('host', '0.0.0.0');
 		var requestD = self.xhr.request('GET', self.target);
-		var d = self.assertFailure(requestD, [CW.Net.NetworkProblemError]);
+		var d = self.assertFailure(requestD, [CW.Net.NetworkError]);
 		return d;
 	}
 );
