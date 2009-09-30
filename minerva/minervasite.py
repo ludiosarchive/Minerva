@@ -25,18 +25,6 @@ class CustomTestPage(testing.TestPage):
 
 
 
-#class TalkStream(link.Stream):
-#
-#	def boxReceived(self, box):
-#		print "Got a box!", box
-#
-#
-#
-#class TalkStreamFactory(link.StreamFactory):
-#	stream = TalkStream
-
-
-
 class ConnectionTrackingHTTPChannel(http.HTTPChannel):
 	"""
 	An L{HTTPChannel} that tells the factory about all connection
@@ -67,29 +55,6 @@ class ConnectionTrackingSite(server.Site):
 
 
 
-#class AbortChecker(resource.Resource):
-#	"""
-#	For testing XHR. See Minerva/js/CW/Net/TestNet.js
-#	"""
-#	isLeaf = True
-#
-#	def __init__(self):
-#		resource.Resource.__init__(self)
-#		self.counters = defaultdict(int)
-#
-#
-#	def render_POST(self, request):
-#		"""
-#		Keep track of how many times a request has been made with `id'.
-#		The client is responsible for doing something smart with the number
-#		returned.
-#		"""
-#		someId = request.args['id'][0]
-#		self.counters[someId] += 1
-#		return str(self.counters[someId])
-
-
-
 class DisplayConnections(resource.Resource):
 	"""
 	Display a list of all connections connected to this server.
@@ -106,7 +71,6 @@ class DisplayConnections(resource.Resource):
 
 
 
-
 class NoOriginHeader(resource.Resource):
 	"""
 	For testing XDR. See Minerva/js/CW/Net/TestNet.js
@@ -118,7 +82,6 @@ class NoOriginHeader(resource.Resource):
 
 	def render_POST(self, request):
 		return 'POST'
-
 
 
 
@@ -147,7 +110,6 @@ class ResourcesForTest(resource.Resource):
 		resource.Resource.__init__(self)
 		self._reactor = reactor
 
-		##self.putChild('AbortChecker', AbortChecker())
 		self.putChild('DisplayConnections', DisplayConnections())
 		self.putChild('SimpleResponse', SimpleResponse())
 		self.putChild('NoOriginHeader', NoOriginHeader())
