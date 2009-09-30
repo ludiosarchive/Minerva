@@ -168,7 +168,7 @@ class Incoming(object):
 		return alreadyGiven
 
 
-	def fetchItems(self):
+	def getDeliverableItems(self):
 		"""
 		Return a sequence of items for every item that can be delivered.
 		After I return these items, I will not know about them any more. They're your

@@ -375,7 +375,7 @@ class Stream(abstract.GenericTimeoutMixin):
 		# TODO: are all C2S frames boxes? not in the future. there might be some
 		# kind of special metadata.
 		self.incoming.give(frames)
-		for f in self.incoming.fetchItems():
+		for f in self.incoming.getDeliverableItems():
 			self.boxReceived(f)
 		return self.incoming.getSACK()
 
