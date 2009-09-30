@@ -184,7 +184,8 @@ class Incoming(object):
 
 	def getSACK(self):
 		"""
-		Return a tuple of (lastAck, <list of positive-SACKed sequence numbers - all larger than lastAck>)
+		@rtype: tuple
+		@return: (lastAck, list of not-yet-deliverable sequence numbers; all are > lastAck)
 		"""
 		sackNumbers = sorted(self._cached.keys())
 
