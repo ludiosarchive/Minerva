@@ -221,7 +221,7 @@ class InvalidTransportError(Exception):
 
 # TODO: implement network read timeouts for some transports - if we don't
 # get an uploaded frame from the client in X minutes, assume Stream is dead.
-class Stream(abstract.GenericTimeoutMixin):
+class Stream(object):
 	"""
 	I am Stream. Transports attach to me. I can send and receive over
 	a new transport, or a completely different transport, without restarting
@@ -252,7 +252,7 @@ class Stream(abstract.GenericTimeoutMixin):
 		self._notifications = []
 
 		self._seqC2S = 0 # TODO: implement C2S, use it
-		self.setTimeout(self.noContactTimeout)
+		self._noContactTimer = self._clock.callLater(self.noContactTimeout, self.timedOut)
 		
 
 	def __repr__(self):
@@ -444,7 +444,7 @@ class Stream(abstract.GenericTimeoutMixin):
 		"""
 		if transport in self._approvedTransports or transport in self._unapprovedTransports:
 			raise TransportAlreadyRegisteredError("%r already in approved or unapproved transports" % (transport,))
-		self.setTimeout(None)
+		self._noContactTimer.reset(self.noContactTimeout)
 		if self.noisy:
 			log.msg('New transport has come online:', transport)
 		self._unapprovedTransports.add(transport)
@@ -469,8 +469,7 @@ class Stream(abstract.GenericTimeoutMixin):
 		if len(self._approvedTransports) + len(self._unapprovedTransports) == 0:
 			# Start the timer. If no transports come in 30 seconds,
 			# the stream has ended.
-			# This will call L{self.timedOut} if the timeout triggers. 
-			self.setTimeout(self.noContactTimeout)
+			self._noContactTimer.reset(self.noContactTimeout)
 
 
 	def transportWantsApproval(self, transport):
