@@ -227,7 +227,7 @@ class Stream(object):
 	a new transport, or a completely different transport, without restarting
 	the Stream.
 
-	I know my UserAgent, L{self.factory}
+	I know my StreamFactory if I have one, L{self.factory}
 	"""
 
 	noisy = True
@@ -469,7 +469,8 @@ class Stream(object):
 		if len(self._approvedTransports) + len(self._unapprovedTransports) == 0:
 			# Start the timer. If no transports come in 30 seconds,
 			# the stream has ended.
-			self._noContactTimer.reset(self.noContactTimeout)
+			pass ## XXX TODO test needed for below
+			##self._noContactTimer.reset(self.noContactTimeout)
 
 
 	def transportWantsApproval(self, transport):

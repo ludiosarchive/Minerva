@@ -139,8 +139,8 @@ class BaseTestIntegration(object):
 		"""
 		Builds and returns a Stream filled with boxes L{boxes}.
 		"""
-		self.streamId = link.StreamId('\x11' * 16)
-		stream = self._sf.getOrBuildStream(self.streamId)
+		streamId = link.StreamId('\x11' * 16)
+		stream = self._sf.getOrBuildStream(streamId)
 		stream.sendBoxes(boxes)
 		return stream
 
@@ -160,7 +160,7 @@ class BaseTestIntegration(object):
 		uaId = link.UserAgentId('\x22' * 16)
 
 		comm = self.communicator(
-			reactor, 'http://127.0.0.1:%d/' % port, uaId, self.streamId, cookieName='m')
+			reactor, 'http://127.0.0.1:%d/' % port, uaId, stream.streamId, cookieName='m')
 		comm.finishAfterNMoreBoxes(numBoxes)
 		comm.connect()
 
@@ -366,7 +366,6 @@ class TestSocketTransport(HelperSocketStyleTransport, unittest.TestCase):
 
 
 
-
 class _DummyMinervaTransport(object):
 	numWrites = 0
 	def __init__(self, connectionNumber):
@@ -451,12 +450,12 @@ class TestStream(unittest.TestCase):
 
 	def setUp(self):
 		self.boxes = []
-		class DummyStream(link.Stream):
+		class BoxSavingStream(link.Stream):
 			def boxReceived(self2, box):
 				self.boxes.append(box)
 
 		self.clock = task.Clock()
-		self.stream = DummyStream(self.clock, '\x11'*16)
+		self.stream = BoxSavingStream(self.clock, '\x11'*16)
 
 
 	def test_clientUploadedFrames1(self):
@@ -525,7 +524,6 @@ class TestStream(unittest.TestCase):
 		self.stream.sendBoxes(['boxS2C0', 'boxS2C1', 'boxS2C2'])
 		self.assertEqual(1, transport0.numWrites)
 		self.assertEqual(0, transport1.numWrites)
-
 
 
 	def test_repr(self):
