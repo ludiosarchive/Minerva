@@ -126,13 +126,17 @@ ERROR_CODES = {
 	# This transport was not approved by the Stream
 	'NOT_APPROVED': 803,
 
+	# The S2C ACK sent by the client was too high
+	'ACKED_UNSENT_S2C_FRAMES': 804,
+
 	# Stream is being reset because server load is too high.
 	'SERVER_LOAD': 810,
 }
 
 TYPE_BOX = 0
-TYPE_ACK = 1
+TYPE_SEQNUM = 1
 TYPE_ERROR = 2
+TYPE_C2S_SACK = 3
 
 
 # Make sure no numeric code was used more than once
@@ -740,7 +744,7 @@ class _BaseHTTPTransport(object):
 				# 	negotiate less padding with the client.
 				# TODO: don't write the padding when long-polling, it's just
 				# 	a waste
-				seqString = self._stringOne([TYPE_ACK, seqNum, (' ' * (1024 * 4))])
+				seqString = self._stringOne([TYPE_SEQNUM, seqNum, (' ' * (1024 * 4))])
 				toSend += seqString
 				frameCount += 1
 				byteCount += len(seqString)
@@ -1113,7 +1117,14 @@ class HTTPC2S(BaseHTTPResource):
 		# like S2C requests? Probably.
 		stream = self._streamFactory.getOrBuildStream(streamId)
 
-		stream.clientReceivedEverythingBefore(ackS2C + 1)
+		try:
+			stream.clientReceivedEverythingBefore(ackS2C + 1)
+		except abstract.SeqNumTooHighError:
+			# If client sent a too-high ACK, don't deliver any of client's frames
+			# to Stream. Send client an error.
+			# TODO: maybe send the highest-acceptable ACK number as third param
+			return dumpToJson7Bit(
+				[TYPE_ERROR, ERROR_CODES['ACKED_UNSENT_S2C_FRAMES']])
 
 		frames = []
 
@@ -1127,4 +1138,4 @@ class HTTPC2S(BaseHTTPResource):
 
 		sackInfo = stream.getSACK()
 
-		return dumpToJson7Bit(sackInfo)
+		return dumpToJson7Bit([TYPE_C2S_SACK, sackInfo])

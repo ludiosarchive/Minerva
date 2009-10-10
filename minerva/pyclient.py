@@ -215,7 +215,7 @@ class BaseTwoWayCommunicator(object):
 		self.framesReceived += 1
 
 		# Verify S2C number
-		if frame[0] == link.TYPE_ACK:
+		if frame[0] == link.TYPE_SEQNUM:
 			if frame[1] != self._startAtSeqNum:
 				self.abortAll()
 				raise UnexpectedS2CNumber(

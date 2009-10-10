@@ -647,6 +647,21 @@ class TestHTTPC2S(unittest.TestCase):
 		self.assertEqual([['hello', 'there'], ['more', 'data'], ['frame', '2'], ['frame', '3']], self.expectedStream.savedBoxes)
 
 
+	def test_uploadOutOfOrderBoxes(self):
+		self.baseUpload['1'] = ['more', 'data']
+		req = DummyRequest(['some-fake-path'])
+		req.content = self._makeUploadBuffer()
+		response = self.resource.render_POST(req)
+
+		self._resetBaseUpload()
+		self.baseUpload['0'] = ['hello', 'there']
+		req = DummyRequest(['some-fake-path'])
+		req.content = self._makeUploadBuffer()
+		response = self.resource.render_POST(req)
+
+		self.assertEqual([['hello', 'there'], ['more', 'data']], self.expectedStream.savedBoxes)
+
+
 	def test_respondedWithCorrectSACK1(self):
 		self.baseUpload['0'] = ['hello', 'there']
 
@@ -654,7 +669,8 @@ class TestHTTPC2S(unittest.TestCase):
 		req.content = self._makeUploadBuffer()
 
 		response = self.resource.render_POST(req)
-		sackInfo = json.loads(response)
+		msgType, sackInfo = json.loads(response)
+		self.assertEqual(link.TYPE_C2S_SACK, msgType)
 		self.assertEqual([0, []], sackInfo)
 
 
@@ -667,7 +683,8 @@ class TestHTTPC2S(unittest.TestCase):
 		req.content = self._makeUploadBuffer()
 
 		response = self.resource.render_POST(req)
-		sackInfo = json.loads(response)
+		msgType, sackInfo = json.loads(response)
+		self.assertEqual(link.TYPE_C2S_SACK, msgType)
 		self.assertEqual([1, [3]], sackInfo)
 
 
@@ -680,12 +697,26 @@ class TestHTTPC2S(unittest.TestCase):
 		self.assertEqual([0], self.expectedStream.calls_clientReceivedEverythingBefore)
 
 
+	def test_invalidAckTooHigh(self):
+		self.baseUpload['a'] = 9
+
+		req = DummyRequest(['some-fake-path'])
+		req.content = self._makeUploadBuffer()
+
+		response = self.resource.render_POST(req)
+
+		msgType, rest = json.loads(response)
+
+		self.assertEqual(link.TYPE_ERROR, msgType)
+		self.assertEqual(link.ERROR_CODES['ACKED_UNSENT_S2C_FRAMES'], rest)
+
+
 	def _makeRequest(self):
 		self.req = DummyRequest(['some-fake-path'])
 		self.req.content = self._makeUploadBuffer()
 
 
-	def test_invalidAckRange(self):
+	def test_invalidAckTooLow(self):
 		self.baseUpload['a'] = -2
 		self._makeRequest()
 		self.assertRaises(link.InvalidArgumentsError, lambda: self.resource.render_POST(self.req))
