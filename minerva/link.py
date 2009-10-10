@@ -256,7 +256,6 @@ class Stream(object):
 		self._unapprovedTransports = set()
 		self._notifications = []
 
-		self._seqC2S = 0 # TODO: implement C2S, use it
 		self._noContactTimer = self._clock.callLater(self.noContactTimeout, self.timedOut)
 		
 
@@ -990,8 +989,10 @@ class BaseHTTPResource(resource.Resource):
 		self._streamFactory = streamFactory
 
 
-	def _fail(self, request):
-		raise InvalidArgumentsError("request.args = " + repr(request.args))
+	def _fail(self, request, message=None):
+		if not message:
+			message = "request.args = " + repr(request.args)
+		raise InvalidArgumentsError(message)
 
 
 #	def _getUAFromCookie(self, request):
@@ -1089,11 +1090,21 @@ class HTTPC2S(BaseHTTPResource):
 
 		data = json.loads(contents)
 
+		if not 'a' in data:
+			self._fail(request, "No S2C ACK in request")
+		if not 'i' in data:
+			self._fail(request, "No streamId in request")
+
 		ackS2C = data["a"]
 		if not isinstance(ackS2C, (int, long)) or ackS2C < -1:
 			self._fail(request)
 
-		streamId = StreamId(data['i'].decode('hex')) # "(i)d"
+		try:
+			streamId = StreamId(data['i'].decode('hex'))
+		except TypeError:
+			self._fail(request, "Could not decode hex to streamId: %r" % (data['i'],))
+		except abstract.InvalidIdentifier:
+			self._fail(request, "Invalid streamId length")
 
 		del data["a"]
 		del data["i"]

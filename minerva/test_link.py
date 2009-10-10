@@ -562,6 +562,14 @@ class BoxRecordingStream(link.Stream):
 	def __init__(self, *args, **kwargs):
 		link.Stream.__init__(self, *args, **kwargs)
 		self.savedBoxes = []
+		self.calls_clientReceivedEverythingBefore = []
+
+
+	# Override a Minerva-internal function to make sure it's being called
+	def clientReceivedEverythingBefore(self, seqNum):
+		link.Stream.clientReceivedEverythingBefore(self, seqNum)
+		self.calls_clientReceivedEverythingBefore.append(seqNum)
+
 
 	def boxReceived(self, box):
 		self.savedBoxes.append(box)
@@ -574,11 +582,14 @@ class BoxRecordingStreamFactory(link.StreamFactory):
 
 
 class TestHTTPC2S(unittest.TestCase):
-	"""Tests for L{link.HTTPC2S}"""
-
+	"""
+	Tests for L{link.HTTPC2S}. We use the 'public interface' of L{StreamFactory}
+	and L{Stream} to verify that it works, instead of a lot of mock objects.
+	"""
 	def setUp(self):
 		self.streamId = link.StreamId('\x11' * 16)
 		self._resetBaseUpload()
+
 		clock = task.Clock()
 		sf = BoxRecordingStreamFactory(clock)
 		self.expectedStream = sf.getOrBuildStream(self.streamId)
@@ -658,3 +669,65 @@ class TestHTTPC2S(unittest.TestCase):
 		response = self.resource.render_POST(req)
 		sackInfo = json.loads(response)
 		self.assertEqual([1, [3]], sackInfo)
+
+
+	def test_clientReceivedEverythingBefore_isCalled_0(self):
+		req = DummyRequest(['some-fake-path'])
+		req.content = self._makeUploadBuffer()
+
+		response = self.resource.render_POST(req)
+
+		self.assertEqual([0], self.expectedStream.calls_clientReceivedEverythingBefore)
+
+
+	def _makeRequest(self):
+		self.req = DummyRequest(['some-fake-path'])
+		self.req.content = self._makeUploadBuffer()
+
+
+	def test_invalidAckRange(self):
+		self.baseUpload['a'] = -2
+		self._makeRequest()
+		self.assertRaises(link.InvalidArgumentsError, lambda: self.resource.render_POST(self.req))
+
+
+	def test_invalidAckType1(self):
+		self.baseUpload['a'] = "blah"
+		self._makeRequest()
+		self.assertRaises(link.InvalidArgumentsError, lambda: self.resource.render_POST(self.req))
+
+
+	def test_invalidAckType2(self):
+		self.baseUpload['a'] = []
+		self._makeRequest()
+		self.assertRaises(link.InvalidArgumentsError, lambda: self.resource.render_POST(self.req))
+
+
+	def test_invalidAckMissing(self):
+		del self.baseUpload['a']
+		self._makeRequest()
+		self.assertRaises(link.InvalidArgumentsError, lambda: self.resource.render_POST(self.req))
+
+
+	def test_invalidStreamIdMissing(self):
+		del self.baseUpload['i']
+		self._makeRequest()
+		self.assertRaises(link.InvalidArgumentsError, lambda: self.resource.render_POST(self.req))
+
+
+	def test_invalidStreamIdWrongLength0(self):
+		self.baseUpload['i'] = ''
+		self._makeRequest()
+		self.assertRaises(link.InvalidArgumentsError, lambda: self.resource.render_POST(self.req))
+
+
+	def test_invalidStreamIdWrongLength100(self):
+		self.baseUpload['i'] = 'a'*100
+		self._makeRequest()
+		self.assertRaises(link.InvalidArgumentsError, lambda: self.resource.render_POST(self.req))
+
+
+	def test_invalidStreamIdNotHex(self):
+		self.baseUpload['i'] = 'x'*(2*16)
+		self._makeRequest()
+		self.assertRaises(link.InvalidArgumentsError, lambda: self.resource.render_POST(self.req))
