@@ -455,7 +455,8 @@ class Stream(object):
 		L{transportWantsApproval}.
 		"""
 		if transport in self._approvedTransports or transport in self._unapprovedTransports:
-			raise TransportAlreadyRegisteredError("%r already in approved or unapproved transports" % (transport,))
+			raise TransportAlreadyRegisteredError(
+				"%r already in approved or unapproved transports" % (transport,))
 		self._noContactTimer.reset(self.noContactTimeout)
 		if self.noisy:
 			log.msg('New transport has come online:', transport)
@@ -474,7 +475,8 @@ class Stream(object):
 			try:
 				self._unapprovedTransports.remove(transport)
 			except KeyError:
-				raise TransportNotRegisteredError("%r not in approved or unapproved transports" % (transport,))
+				raise TransportNotRegisteredError(
+					"%r not in approved or unapproved transports" % (transport,))
 		if self.noisy:
 			log.msg('Transport has gone offline:', transport)
 
@@ -482,7 +484,7 @@ class Stream(object):
 			# Start the timer. If no transports come in 30 seconds,
 			# the stream has ended.
 			pass ## XXX TODO test needed for below
-			##self._noContactTimer.reset(self.noContactTimeout)
+			self._noContactTimer.reset(self.noContactTimeout)
 
 
 	def transportWantsApproval(self, transport):
