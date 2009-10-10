@@ -6,16 +6,23 @@ from twisted.web import client, server, resource, http_headers
 from twisted.python import log
 from twisted.internet import reactor, protocol, defer, address, interfaces, task
 from twisted.test import time_helpers
-#from twisted.web.test.test_web import DummyRequest as TwistedDummyRequest
+from twisted.web.test.test_web import DummyRequest as _TwistedDummyRequest
 from zope.interface import verify
+import simplejson as json
 
 from minerva import link, pyclient
 
-#
-#
-#class DummyRequest(TwistedDummyRequest):
-#	def setHeader(self, name, value):
-#		self.responseHeaders.setRawHeaders(name, [value])
+
+
+class DummyRequest(_TwistedDummyRequest):
+	def setHeader(self, name, value):
+		"""
+		L{twisted.web.test.test_web.DummyRequest} does strange stuff in
+		C{setHeader} -- it modifies self.outgoingHeaders, which is not close
+		enough to reality.
+		"""
+		self.responseHeaders.setRawHeaders(name, [value])
+
 
 
 # copy/paste from twisted.web.test.test_web, but added a setTcpNoDelay
@@ -446,7 +453,7 @@ class TestStreamTransportOnlineOffline(unittest.TestCase):
 
 
 class TestStream(unittest.TestCase):
-	"""Tests for everything else about minerva.link.Stream"""
+	"""Tests for everything else about L{link.Stream}"""
 
 	def setUp(self):
 		self.boxes = []
@@ -549,4 +556,50 @@ class TestStream(unittest.TestCase):
 		self.clock.advance(30)
 		self.assertEqual({0: None, 1: None}, called)
 
+
+
+class BoxRecordingStream(link.Stream):
+	def __init__(self, *args, **kwargs):
+		link.Stream.__init__(self, *args, **kwargs)
+		self.savedBoxes = []
+
+	def boxReceived(self, box):
+		self.savedBoxes.append(box)
+
+
+
+class BoxRecordingStreamFactory(link.StreamFactory):
+	stream = BoxRecordingStream
+
+
+
+class TestHTTPC2S(unittest.TestCase):
+	"""Tests for L{link.HTTPC2S}"""
+
+	def setUp(self):
+		self.streamId = link.StreamId('\x11' * 16)
+		self.baseUpload = dict(
+			a=-1,
+			i=self.streamId.id.encode('hex')
+		)
+		clock = task.Clock()
+		sf = BoxRecordingStreamFactory(clock)
+		self.expectedStream = sf.getOrBuildStream(self.streamId)
+		self.resource = link.HTTPC2S(sf)
+
+
+	def test_uploadOneBox(self):
+		req = DummyRequest(['some-fake-path'])
+		self.baseUpload['0'] = ['hello', 'there']
+		req.content = StringIO()
+		req.content.write(
+			json.dumps(self.baseUpload)
+		)
+
+		assert req.content.tell() > 0
+		# We don't seek to 0 because HTTPC2S might have to handle that case.
+
+		self.resource.render_POST(req)
+
+		self.assertEqual([['hello', 'there']], self.expectedStream.savedBoxes)
 

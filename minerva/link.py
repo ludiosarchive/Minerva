@@ -1091,7 +1091,7 @@ class HTTPC2S(BaseHTTPResource):
 
 		# Do we really want C2S requests to automatically create a new Stream just
 		# like S2C requests? Probably.
-		stream = self._sf.getOrBuildStream(streamId)
+		stream = self._streamFactory.getOrBuildStream(streamId)
 
 		stream.clientReceivedEverythingBefore(ackS2C + 1)
 
