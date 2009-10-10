@@ -1086,9 +1086,6 @@ class HTTPC2S(BaseHTTPResource):
 		{"0": "box0", "1": "box1", "a": 1782, "i": "ffffffffffffffffffffffffffffffff"}
 		
 		'''
-		##uaId = request.getCookie(self.cookieName).decode('base64')
-		##ua = self._uaFactory.getOrBuildUAWithId(uaId)
-
 		request.content.seek(0)
 		contents = request.content.read()
 
