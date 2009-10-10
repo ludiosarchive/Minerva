@@ -578,14 +578,18 @@ class TestHTTPC2S(unittest.TestCase):
 
 	def setUp(self):
 		self.streamId = link.StreamId('\x11' * 16)
-		self.baseUpload = dict(
-			a=-1,
-			i=self.streamId.id.encode('hex')
-		)
+		self._resetBaseUpload()
 		clock = task.Clock()
 		sf = BoxRecordingStreamFactory(clock)
 		self.expectedStream = sf.getOrBuildStream(self.streamId)
 		self.resource = link.HTTPC2S(sf)
+
+
+	def _resetBaseUpload(self):
+		self.baseUpload = dict(
+			a=-1,
+			i=self.streamId.id.encode('hex')
+		)
 
 
 	def _makeUploadBuffer(self):
@@ -601,11 +605,56 @@ class TestHTTPC2S(unittest.TestCase):
 
 
 	def test_uploadOneBox(self):
-		req = DummyRequest(['some-fake-path'])
 		self.baseUpload['0'] = ['hello', 'there']
+		req = DummyRequest(['some-fake-path'])
 		req.content = self._makeUploadBuffer()
 
 		response = self.resource.render_POST(req)
 
 		self.assertEqual([['hello', 'there']], self.expectedStream.savedBoxes)
 
+
+	def test_uploadManyBoxes(self):
+		self.baseUpload['0'] = ['hello', 'there']
+		req = DummyRequest(['some-fake-path'])
+		req.content = self._makeUploadBuffer()
+		response = self.resource.render_POST(req)
+
+		self._resetBaseUpload()
+		self.baseUpload['1'] = ['more', 'data']
+		req = DummyRequest(['some-fake-path'])
+		req.content = self._makeUploadBuffer()
+		response = self.resource.render_POST(req)
+
+		self._resetBaseUpload()
+		self.baseUpload['2'] = ['frame', '2']
+		self.baseUpload['3'] = ['frame', '3']
+		req = DummyRequest(['some-fake-path'])
+		req.content = self._makeUploadBuffer()
+		response = self.resource.render_POST(req)
+
+		self.assertEqual([['hello', 'there'], ['more', 'data'], ['frame', '2'], ['frame', '3']], self.expectedStream.savedBoxes)
+
+
+	def test_respondedWithCorrectSACK1(self):
+		self.baseUpload['0'] = ['hello', 'there']
+
+		req = DummyRequest(['some-fake-path'])
+		req.content = self._makeUploadBuffer()
+
+		response = self.resource.render_POST(req)
+		sackInfo = json.loads(response)
+		self.assertEqual([0, []], sackInfo)
+
+
+	def test_respondedWithCorrectSACK2(self):
+		self.baseUpload['0'] = ['hello', 'there']
+		self.baseUpload['1'] = {'more': 'data'}
+		self.baseUpload['3'] = {'cannot': 'deliver yet'}
+
+		req = DummyRequest(['some-fake-path'])
+		req.content = self._makeUploadBuffer()
+
+		response = self.resource.render_POST(req)
+		sackInfo = json.loads(response)
+		self.assertEqual([1, [3]], sackInfo)

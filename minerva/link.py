@@ -186,6 +186,11 @@ def neverEverCache(request):
 
 
 
+def dumpToJson7Bit(data):
+	return json.dumps(data, separators=(',', ':'))
+
+
+
 """
 The client failed to establish a [transport that has S2C] in time.
 """
@@ -369,14 +374,18 @@ class Stream(object):
 
 		The client uploaded frames L{frames}. L{frames} is a sequence of (seqNum, frame) tuples.
 		This will give valid in-order boxes to L{boxReceived}.
-
-		Returns SACK information.
 		"""
 		# TODO: are all C2S frames boxes? not in the future. there might be some
 		# kind of special metadata.
 		self.incoming.give(frames)
 		for f in self.incoming.getDeliverableItems():
 			self.boxReceived(f)
+
+
+	def getSACK(self):
+		"""
+		@return: SACK information.
+		"""
 		return self.incoming.getSACK()
 
 
@@ -794,7 +803,7 @@ class XHRTransport(_BaseHTTPTransport):
 		# TODO: For some browsers (without the native JSON object),
 		# dump more compact "JSON" without the single quotes around properties
 
-		s = json.dumps(frame, separators=(',', ':'))
+		s = dumpToJson7Bit(frame)
 		return str(len(s)) + ':' + s
 
 
@@ -840,7 +849,7 @@ class ScriptTransport(_BaseHTTPTransport):
 		# We escape more than just </script> because </ script> acts just like </script>
 		# (there are a lot of combinations)
 		# TODO: build the </script> escaping into simplejson for speed
-		s = json.dumps(frame, separators=(',', ':')).replace(r'</', r'<\/')
+		s = dumpToJson7Bit(frame).replace(r'</', r'<\/')
 		# TODO: find out if there's a way to close a script tag in IE or FF/Safari
 		# without sending an entire </script>
 		return '<script>f(%s)</script>' % (s,)
@@ -1102,6 +1111,9 @@ class HTTPC2S(BaseHTTPResource):
 			seqNum = abstract.strToNonNeg(seqNumStr)
 			frames.append((seqNum, frame))
 
-		sackInfo = stream.clientUploadedFrames(frames)
+		if frames:
+			stream.clientUploadedFrames(frames)
 
-		return json.dumps(sackInfo, separators=(',', ':'))
+		sackInfo = stream.getSACK()
+
+		return dumpToJson7Bit(sackInfo)
