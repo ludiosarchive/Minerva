@@ -588,18 +588,24 @@ class TestHTTPC2S(unittest.TestCase):
 		self.resource = link.HTTPC2S(sf)
 
 
-	def test_uploadOneBox(self):
-		req = DummyRequest(['some-fake-path'])
-		self.baseUpload['0'] = ['hello', 'there']
-		req.content = StringIO()
-		req.content.write(
+	def _makeUploadBuffer(self):
+		upload = StringIO()
+		upload.write(
 			json.dumps(self.baseUpload)
 		)
 
-		assert req.content.tell() > 0
+		assert upload.tell() > 0
 		# We don't seek to 0 because HTTPC2S might have to handle that case.
 
-		self.resource.render_POST(req)
+		return upload
+
+
+	def test_uploadOneBox(self):
+		req = DummyRequest(['some-fake-path'])
+		self.baseUpload['0'] = ['hello', 'there']
+		req.content = self._makeUploadBuffer()
+
+		response = self.resource.render_POST(req)
 
 		self.assertEqual([['hello', 'there']], self.expectedStream.savedBoxes)
 
