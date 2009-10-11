@@ -1112,7 +1112,6 @@ class HTTPC2S(BaseHTTPResource):
 		It looks like this:
 
 		{"0": "box0", "1": "box1", "a": 1782, "i": "ffffffffffffffffffffffffffffffff"}
-		
 		'''
 		request.content.seek(0)
 		contents = request.content.read()
@@ -1150,10 +1149,8 @@ class HTTPC2S(BaseHTTPResource):
 				# If client sent a too-high ACK, don't deliver any of client's frames
 				# to Stream. Send client an error.
 				# TODO: maybe send the highest-acceptable ACK number as third param
-				request.write(dumpToJson7Bit(
-					[TYPE_ERROR, ERROR_CODES['ACKED_UNSENT_S2C_FRAMES']]))
-				request.finish()
-				return
+				return dumpToJson7Bit(
+					[TYPE_ERROR, ERROR_CODES['ACKED_UNSENT_S2C_FRAMES']])
 
 			frames = []
 
@@ -1166,11 +1163,14 @@ class HTTPC2S(BaseHTTPResource):
 				stream.clientUploadedFrames(frames)
 
 			sackInfo = stream.getSACK()
+			return dumpToJson7Bit([TYPE_C2S_SACK, sackInfo])
 
-			request.write(dumpToJson7Bit([TYPE_C2S_SACK, sackInfo]))
+		def finishRequest(octets):
+			request.write(octets)
 			request.finish()
 
 		d.addCallback(gotStream)
+		d.addCallback(finishRequest)
 		d.addErrback(log.err)
 
 		return NOT_DONE_YET
