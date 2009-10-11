@@ -241,7 +241,7 @@ class Stream(object):
 
 	noisy = True
 	factory = None
-	# Haven't seen an approved transport in this long? Then the stream is dead.
+	# Haven't seen a transport in this long? Then the stream is dead.
 	noContactTimeout = 30
 
 	def __init__(self, reactor, streamId):
@@ -297,29 +297,6 @@ class Stream(object):
 		Received box L{box}. Override this.
 		"""
 		log.msg('Received box:', box)
-
-
-	def transportCredentialsReceived(self, transport):
-		"""
-		L{transport} has received credentials from the client and is ready to
-		be approved for real use.
-
-		If L{transport} is not an acceptable transport for this Stream (because
-		it is suspicious or missing credentials), this method must raise an
-		exception (or return a Deferred that will errback). A recommended
-		exception is L{InvalidTransportError}, but any will work.
-
-		If L{transport} is acceptable, return any value or return a Deferred that
-		will fire `callback'.
-
-		Override this (unless you are okay with the streamId being the only
-		validation).
-
-		Ideas for additional approval (these may stop session hijacking by amateurs):
-			- check that some cookie has the same value as the first transport
-			- check that user agent has the same value as the first transport
-			- check that header order is the same as it first was
-		"""
 
 
 	def sendBoxes(self, boxes):
@@ -449,10 +426,9 @@ class Stream(object):
 
 	def transportOnline(self, transport):
 		"""
-		For internal use. Whoever calls this must make sure that the
-		transport's streamId is really our streamId; repeating this check
-		here would be wasteful. Though I can still reject the transport in
-		L{transportWantsApproval}.
+		For internal use. Whoever calls this must make sure that
+		C{transport} really is safe to attach to this Stream, using
+		L{StreamFinder} or a stricter variant of it.
 		"""
 		if transport in self._approvedTransports:
 			raise TransportAlreadyRegisteredError(
@@ -466,8 +442,7 @@ class Stream(object):
 
 	def transportOffline(self, transport):
 		"""
-		For internal use. This will forget about a transport, whether or not it has
-		been approved yet.
+		For internal use. This will forget about a transport.
 		"""
 		try:
 			self._approvedTransports.remove(transport)
@@ -599,7 +574,7 @@ class StreamFinder(object):
 
 	def addToStream(self, transport):
 		"""
-		I might reach into C{transport} to look at C{.request} or C{.credentialFrame}
+		I might reach into C{transport} to look at C{.request} or C{.credentialsFrame}
 
 		You could do additional checking here, and close the transport
 		with ERROR_CODE COULD_NOT_ATTACH if the transport should not
@@ -609,9 +584,15 @@ class StreamFinder(object):
 		lifetime of a Stream, which is why it doesn't make much sense to let
 		the Stream do the authentication.
 
-		@return: A L{Stream} if C{transport} was attached to a stream, else C{None}
+		Ideas for additional approval (these may stop session hijacking by amateurs):
+			- check that some cookie has the same value as the first transport
+			- check that user agent has the same value as the first transport
+			- check that header order is the same as it first was
+
+		@return: A L{Stream} if C{transport} should be attached to this stream,
+			else C{None}
 		"""
-		# Right now, it's always attached to a stream.
+		# This base implementation does no checking other than not mixing up streamId's.
 		stream = self._streamFactory.getOrBuildStream(transport.streamId)
 		return defer.succeed(stream)
 
@@ -892,19 +873,11 @@ class ScriptTransport(_BaseHTTPTransport):
 
 
 """
-Shouldn't the user be able to define which credentials must be sent
-for the transport to become approved?
+TODO: let user define a credentialsFrame for HTTP transports,
+not just Socket/WebSocket transports.
 
-They already can for HTTP - they just set whatever headers they want
-on the client side and override `transportCredentialsReceived' to check
-for what they want.
-
-For socket/websocket, a special frame received from the client will be
-considered the credential frame. This will not be a 'box'. This credential
-frame will be available inside `transportCredentialsReceived'
-
-For now, HTTP requests don't support a custom credential frame, so
-the credential frame for socket/websocket transports will only play
+Right now, HTTP requests don't support a custom credentials frame, so
+the credentials frame for socket/websocket transports will only play
 "catch up" to the information provided by HTTP requests.
 """
 
@@ -927,8 +900,6 @@ class WebSocketTransport(protocol.Protocol):
 	I am typically used by a browser's native WebSocket.
 	"""
 	implements(IMinervaTransport, ISocketStyleTransport)
-
-	# wasApproved, wasRejected
 
 	def connectionMade(self):
 		pass
@@ -965,8 +936,6 @@ class SocketTransport(protocol.Protocol):
 	"""
 
 	implements(IMinervaTransport, ISocketStyleTransport)
-
-	# wasApproved, wasRejected
 
 	def connectionMade(self):
 		pass
@@ -1053,8 +1022,8 @@ class HTTPS2C(BaseHTTPResource):
 			# The sequence number of the first S2C box that the client demands.
 			startAtSeqNum = abstract.strToNonNeg(request.args['s'][0]) # "(s)eq"
 
-			# The S2C ACK. This is separate from startAtSeqNum to support a
-			# "waiting transport" in the future.
+			# The S2C ACK. This is separate from startAtSeqNum to support in the future
+			# overlapping requests to mask (request establishment latency).
 			ackS2C = int(request.args['a'][0]) # "(a)ck"
 
 			# The type of S2C transport the client demands.
