@@ -610,7 +610,6 @@ class StreamFinder(object):
 			to attach C{transport}, or a L{Deferred} that errbacks if no such stream
 			exists.
 		"""
-		# This base implementation does no checking other than not mixing up streamId's.
 		stream = self._streamFactory.getOrBuildStream(transport.streamId)
 
 		d = defer.maybeDeferred(self.checkTransport, transport, stream)
