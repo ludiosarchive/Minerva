@@ -601,8 +601,16 @@ class StreamFinder(object):
 
 class IMinervaTransport(Interface):
 
-	# connectionNumber attribute
-	#
+	def close(code):
+		"""
+		Close this transport with numeric reason L{code}.
+		"""
+
+
+
+class IMinervaS2CTransport(IMinervaTransport):
+
+	# attributes: connectionNumber, streamId, credentialsFrame
 
 	def writeFrom(queue):
 		"""
@@ -611,20 +619,68 @@ class IMinervaTransport(Interface):
 		"""
 
 
-	def close(code):
+
+class IMinervaC2STransport(IMinervaTransport):
+
+	# attributes: connectionNumber, streamId, credentialsFrame
+
+	def sendSACK(sackInfo):
 		"""
-		Close this transport with numeric reason L{code}.
+		Send sack C{sackInfo} and close the transport.
 		"""
 
 
 
 class _BaseHTTPTransport(object):
+
+	def __init__(self, request, streamId):
+		self.request = request
+		self.streamId = streamId
+
+		self._framesSent = 0
+		self._bytesSent = 0
+
+
+	def _setTcpOptions(self):
+		# TCP nodelay is good and increases server performance, as
+		# long as we don't accidentally send small packets.
+		self.request.channel.transport.setTcpNoDelay(True)
+
+		# TODO: remove this
+		sock = self.request.channel.transport.socket
+		if sock is not None: # it'll be None when run from test_link.py
+			log.msg(get_tcp_info(sock))
+
+
+	def close(self, code):
+		"""
+		See L{IMinervaTransport.close}
+		"""
+		self._forceWrite([TYPE_ERROR, code])
+		self.request.finish()
+		log.msg("Closed transport %s with reason %d." % (self, code))
+
+
+	def _forceWrite(self, frame):
+		"""
+		Write a frame to the connection without any coalescing with
+		other frames. This is useful for notifying clients of Stream resets,
+		and possibly sending keep-alive frames.
+		"""
+		serialized = self._stringOne(frame)
+		self.request.write(serialized)
+		self._bytesSent += len(serialized)
+		self._framesSent += 1
+
+
+
+class _BaseHTTPS2CTransport(_BaseHTTPTransport):
 	"""
 	frames are any frame, including metadata needed for connection management.
 	boxes are application-level frames that came from a queue.
 	"""
 
-	implements(IMinervaTransport)
+	implements(IMinervaS2CTransport)
 
 	maxBytes = None # override this
 
@@ -642,14 +698,11 @@ class _BaseHTTPTransport(object):
 		requests/TCP connections, and full or partial buffering of
 		requests/TCP connections.
 		"""
-		self.request = request
+		_BaseHTTPTransport.__init__(self, request, streamId)
 		self.connectionNumber = connectionNumber
-		self.streamId = streamId
 		self._firstS2CToWrite = firstS2CToWrite
 
 		self._preparedSeqMsg = False
-		self._framesSent = 0
-		self._bytesSent = 0
 
 		# We never want to write a box we already wrote to the
 		# S2C channel, because the transport is assumed to be not
@@ -675,44 +728,12 @@ class _BaseHTTPTransport(object):
 		self.request.write('')
 
 
-	def _setTcpOptions(self):
-		# TCP nodelay is good and increases server performance, as
-		# long as we don't accidentally send small packets.
-		self.request.channel.transport.setTcpNoDelay(True)
-
-		# TODO: remove this
-		sock = self.request.channel.transport.socket
-		if sock is not None: # it'll be None when run from test_link.py
-			log.msg(get_tcp_info(sock))
-
-
 	def _getHeader(self):
 		return ''
 
 
 	def _getFooter(self):
 		return ''
-
-
-	def close(self, code):
-		"""
-		See L{IMinervaTransport.close}
-		"""
-		self._forceWrite([TYPE_ERROR, code])
-		self.request.finish()
-		log.msg("Closed transport %s with reason %d." % (self, code))
-
-
-	def _forceWrite(self, frame):
-		"""
-		Write a frame to the connection without any coalescing with
-		other frames. This is useful for notifying clients of Stream resets,
-		and possibly sending keep-alive frames.
-		"""
-		serialized = self._stringOne(frame)
-		self.request.write(serialized)
-		self._bytesSent += len(serialized)
-		self._framesSent += 1
 
 
 	def writeFrom(self, queue):
@@ -794,7 +815,7 @@ class _BaseHTTPTransport(object):
 """
 
 
-class XHRTransport(_BaseHTTPTransport):
+class XHRTransport(_BaseHTTPS2CTransport):
 
 	maxBytes = 300*1024
 
@@ -815,7 +836,7 @@ class XHRTransport(_BaseHTTPTransport):
 
 
 
-class ScriptTransport(_BaseHTTPTransport):
+class ScriptTransport(_BaseHTTPS2CTransport):
 	"""
 	I'm a transport that writes <script> tags to a forever-frame
 	(both the IE htmlfile and the Firefox iframe variants)
@@ -864,7 +885,7 @@ class ScriptTransport(_BaseHTTPTransport):
 
 #
 ## TODO
-#class SSETransport(_BaseHTTPTransport):
+#class SSETransport(_BaseHTTPS2CTransport):
 #
 #	maxBytes = 1024*1024 # Does this even need a limit?
 #
@@ -900,7 +921,7 @@ class WebSocketTransport(protocol.Protocol):
 	"""
 	I am typically used by a browser's native WebSocket.
 	"""
-	implements(IMinervaTransport, ISocketStyleTransport)
+	implements(IMinervaS2CTransport, IMinervaC2STransport, ISocketStyleTransport)
 
 	def connectionMade(self):
 		pass
@@ -936,7 +957,7 @@ class SocketTransport(protocol.Protocol):
 	I am typically used by a browser's Flash socket.
 	"""
 
-	implements(IMinervaTransport, ISocketStyleTransport)
+	implements(IMinervaS2CTransport, IMinervaC2STransport, ISocketStyleTransport)
 
 	def connectionMade(self):
 		pass
@@ -1073,7 +1094,7 @@ class HTTPS2C(BaseHTTPResource):
 
 
 
-class OneShotHTTPUploadTransport(object):
+class OneShotHTTPUploadTransport(_BaseHTTPTransport):
 	"""
 	We need a transport even for one-shot uploads because L{StreamFinder}
 	makes decisions based on transports. 
@@ -1091,9 +1112,29 @@ class OneShotHTTPUploadTransport(object):
 		L{connectionNumber} is incremented by the client as they
 			open S2C transports.
 		"""
-		self.request = request
+		_BaseHTTPTransport.__init__(self, request, streamId)
 		self.connectionNumber = None
-		self.streamId = streamId
+
+
+	# Copy/paste from XHRTransport
+	def _stringOne(self, frame):
+		"""
+		Return a serialized string for one frame.
+		"""
+		# TODO: For some browsers (without the native JSON object),
+		# dump more compact "JSON" without the single quotes around properties
+
+		s = dumpToJson7Bit(frame)
+		return str(len(s)) + ':' + s
+
+
+	def sendSACK(self, sackInfo):
+		"""
+		See L{IMinervaC2STransport.close}
+		"""
+		self.request.write(dumpToJson7Bit([TYPE_C2S_SACK, sackInfo]))
+		self.request.finish()
+
 
 
 
@@ -1142,35 +1183,33 @@ class HTTPC2S(BaseHTTPResource):
 		transport = OneShotHTTPUploadTransport(request, streamId)
 		d = self._streamFinder.addToStream(transport)
 
-		def gotStream(stream):
-			try:
-				stream.clientReceivedEverythingBefore(ackS2C + 1)
-			except abstract.SeqNumTooHighError:
-				# If client sent a too-high ACK, don't deliver any of client's frames
-				# to Stream. Send client an error.
-				# TODO: maybe send the highest-acceptable ACK number as third param
-				return dumpToJson7Bit(
-					[TYPE_ERROR, ERROR_CODES['ACKED_UNSENT_S2C_FRAMES']])
+		def gotStreamOrNone(stream):
+			if stream:
+				try:
+					stream.clientReceivedEverythingBefore(ackS2C + 1)
+				except abstract.SeqNumTooHighError:
+					# If client sent a too-high ACK, don't deliver any of client's frames
+					# to Stream. Send client an error.
+					# TODO: maybe send the highest-acceptable ACK number as third param
+					transport.close(ERROR_CODES['ACKED_UNSENT_S2C_FRAMES'])
+					return
 
-			frames = []
+				frames = []
 
-			# If there's any junk in the JSON, L{strToNonNeg} will throw a ValueError
-			for seqNumStr, frame in data.iteritems():
-				seqNum = abstract.strToNonNeg(seqNumStr)
-				frames.append((seqNum, frame))
+				# If there's any junk in the JSON, L{strToNonNeg} will throw a ValueError
+				for seqNumStr, frame in data.iteritems():
+					seqNum = abstract.strToNonNeg(seqNumStr)
+					frames.append((seqNum, frame))
 
-			if frames:
-				stream.clientUploadedFrames(frames)
+				if frames:
+					stream.clientUploadedFrames(frames)
 
-			sackInfo = stream.getSACK()
-			return dumpToJson7Bit([TYPE_C2S_SACK, sackInfo])
+				sackInfo = stream.getSACK()
+				transport.sendSACK(sackInfo)
+			else:
+				transport.close(ERROR_CODES['COULD_NOT_ATTACH'])
 
-		def finishRequest(octets):
-			request.write(octets)
-			request.finish()
-
-		d.addCallback(gotStream)
-		d.addCallback(finishRequest)
+		d.addCallback(gotStreamOrNone)
 		d.addErrback(log.err)
 
 		return NOT_DONE_YET

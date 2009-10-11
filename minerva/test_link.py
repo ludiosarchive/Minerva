@@ -225,7 +225,7 @@ class HelperBaseHTTPTransports(object):
 
 
 	def test_implements(self):
-		verify.verifyObject(link.IMinervaTransport, self.t)
+		verify.verifyObject(link.IMinervaS2CTransport, self.t)
 
 
 	def test_initialValues(self):
@@ -359,7 +359,7 @@ class HelperSocketStyleTransport(object):
 
 
 	def test_implements(self):
-		verify.verifyObject(link.IMinervaTransport, self.t)
+		verify.verifyObject(link.IMinervaS2CTransport, self.t)
 		verify.verifyObject(link.ISocketStyleTransport, self.t)
 
 
@@ -720,8 +720,11 @@ class TestHTTPC2S(unittest.TestCase):
 
 		yield _render(self.resource, req)
 		response = ''.join(req.written)
-		print 'res', response
-		msgType, rest = json.loads(response)
+		##print 'res', response
+
+		# "decode" the response like L{BencodeStringDecoder}
+		responseLengthStr, responseBody = response.split(':', 1)
+		msgType, rest = json.loads(responseBody)
 
 		self.assertEqual(link.TYPE_ERROR, msgType)
 		self.assertEqual(link.ERROR_CODES['ACKED_UNSENT_S2C_FRAMES'], rest)
