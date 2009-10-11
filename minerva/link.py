@@ -78,11 +78,6 @@ ERROR_CODES = {
 	#     queue because it mistakenly assumed the client had received them.
 	'LOST_S2C_BOXES': 801,
 
-	# This S2C transport is obsoleted by a newer transport that client
-	# has connected (and possibly already disconnected).
-	# This error can be received at any time in an S2C transport.
-	'S2C_TRANSPORT_OBSOLETE': 802,
-
 	# This transport could not be attached to a Stream
 	'COULD_NOT_ATTACH': 803,
 
