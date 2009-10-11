@@ -622,12 +622,9 @@ class StreamFinder(object):
 		d = defer.maybeDeferred(self.additionalChecks, transport, stream)
 		def cbOkay(_):
 			return stream
-		def cbFail(_ignored):
-			transport.close(ERROR_CODES['NOT_APPROVED'])
-		d.addCallbacks(cbOkay, cbFail)
-		d.addErrback(log.err)
+		d.addCallback(cbOkay)
 
-		return defer.succeed(stream)
+		return d
 
 
 
@@ -1101,17 +1098,17 @@ class HTTPS2C(BaseHTTPResource):
 			import time
 			print 'Server connection %r lost at %.09f' % (self, time.time())
 
-		def gotStreamOrNone(stream):
-			if stream:
-				stream.transportOnline(transport)
-				stream.clientReceivedEverythingBefore(ackS2C + 1)
-				##requestFinishedD.addBoth(printDisconnectTime)
-				requestFinishedD.addBoth(lambda *args: stream.transportOffline(transport))
-				requestFinishedD.addErrback(log.err)
-			else:
-				transport.close(ERROR_CODES['COULD_NOT_ATTACH'])
+		def gotStream(stream):
+			stream.transportOnline(transport)
+			stream.clientReceivedEverythingBefore(ackS2C + 1)
+			##requestFinishedD.addBoth(printDisconnectTime)
+			requestFinishedD.addBoth(lambda *args: stream.transportOffline(transport))
+			requestFinishedD.addErrback(log.err)
 
-		d.addCallback(gotStreamOrNone)
+		def noStream(_):
+			transport.close(ERROR_CODES['COULD_NOT_ATTACH'])
+
+		d.addCallbacks(gotStream, noStream)
 		d.addErrback(log.err)
 
 		# Just because we're returning NOT_DONE_YET, doesn't mean the request
@@ -1215,33 +1212,33 @@ class HTTPC2S(BaseHTTPResource):
 		transport = OneShotHTTPUploadTransport(request, streamId)
 		d = self._streamFinder.addToStream(transport)
 
-		def gotStreamOrNone(stream):
-			if stream:
-				try:
-					stream.clientReceivedEverythingBefore(ackS2C + 1)
-				except abstract.SeqNumTooHighError:
-					# If client sent a too-high ACK, don't deliver any of client's frames
-					# to Stream. Send client an error.
-					# TODO: maybe send the highest-acceptable ACK number as third param
-					transport.close(ERROR_CODES['ACKED_UNSENT_S2C_FRAMES'])
-					return
+		def gotStream(stream):
+			try:
+				stream.clientReceivedEverythingBefore(ackS2C + 1)
+			except abstract.SeqNumTooHighError:
+				# If client sent a too-high ACK, don't deliver any of client's frames
+				# to Stream. Send client an error.
+				# TODO: maybe send the highest-acceptable ACK number as third param
+				transport.close(ERROR_CODES['ACKED_UNSENT_S2C_FRAMES'])
+				return
 
-				frames = []
+			frames = []
 
-				# If there's any junk in the JSON, L{strToNonNeg} will throw a ValueError
-				for seqNumStr, frame in data.iteritems():
-					seqNum = abstract.strToNonNeg(seqNumStr)
-					frames.append((seqNum, frame))
+			# If there's any junk in the JSON, L{strToNonNeg} will throw a ValueError
+			for seqNumStr, frame in data.iteritems():
+				seqNum = abstract.strToNonNeg(seqNumStr)
+				frames.append((seqNum, frame))
 
-				if frames:
-					stream.clientUploadedFrames(frames)
+			if frames:
+				stream.clientUploadedFrames(frames)
 
-				sackInfo = stream.getSACK()
-				transport.sendSACK(sackInfo)
-			else:
-				transport.close(ERROR_CODES['COULD_NOT_ATTACH'])
+			sackInfo = stream.getSACK()
+			transport.sendSACK(sackInfo)
 
-		d.addCallback(gotStreamOrNone)
+		def noStream(_):
+			transport.close(ERROR_CODES['COULD_NOT_ATTACH'])
+
+		d.addCallbacks(gotStream, noStream)
 		d.addErrback(log.err)
 
 		return NOT_DONE_YET
