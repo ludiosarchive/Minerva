@@ -8,7 +8,7 @@ from twisted.web import resource, static, http, server
 
 from zope.interface import implements
 
-from cwtools import testing, jsimp
+from cwtools import testing
 from minerva import link
 
 
@@ -121,7 +121,7 @@ class ResourcesForTest(resource.Resource):
 class Index(resource.Resource):
 
 	def __init__(self, reactor):
-		import cwtools, minerva
+		import cwtools
 
 		resource.Resource.__init__(self)
 
