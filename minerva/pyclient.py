@@ -186,8 +186,13 @@ class BaseTwoWayCommunicator(object):
 
 		self._connectionNumber += 1
 
-		url = self._rootURL + 'd/?i=%s&n=%d&s=%d&t=%s' % (
-			self._streamId.id.encode('hex'), self._connectionNumber, self._startAtSeqNum, self.transportString)
+		url = self._rootURL + 'd/?i=%s&n=%d&s=%d&a=%s&t=%s' % (
+			self._streamId.id.encode('hex'),
+			self._connectionNumber,
+			self._startAtSeqNum,
+			self._startAtSeqNum - 1,
+			self.transportString)
+
 		headers = http_headers.Headers({
 			'user-agent': ['Minerva pyclient 2009-08-13'],
 			'cookie': [self._cookieName + '=' + self._uaId.id.encode('base64')],
@@ -219,7 +224,8 @@ class BaseTwoWayCommunicator(object):
 			if frame[1] != self._startAtSeqNum:
 				self.abortAll()
 				raise UnexpectedS2CNumber(
-					"I was expecting the stream to start at S2C #%d; received %d" % (self._startAtSeqNum, frame[1]))
+					"I was expecting the stream to start at S2C #%d; received %d" % (
+						self._startAtSeqNum, frame[1]))
 
 		# Stop on errors
 		if frame[0] == link.TYPE_ERROR:

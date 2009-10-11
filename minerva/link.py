@@ -1053,6 +1053,10 @@ class HTTPS2C(BaseHTTPResource):
 			# The sequence number of the first S2C box that the client demands.
 			startAtSeqNum = abstract.strToNonNeg(request.args['s'][0]) # "(s)eq"
 
+			# The S2C ACK. This is separate from startAtSeqNum to support a
+			# "waiting transport" in the future.
+			ackS2C = int(request.args['a'][0]) # "(a)ck"
+
 			# The type of S2C transport the client demands.
 			transportString = request.args['t'][0] # "(t)ype"
 		except (KeyError, IndexError, ValueError, TypeError, abstract.InvalidIdentifier):
@@ -1077,7 +1081,7 @@ class HTTPS2C(BaseHTTPResource):
 		def gotStreamOrNone(stream):
 			if stream:
 				stream.transportOnline(transport)
-				stream.clientReceivedEverythingBefore(startAtSeqNum)
+				stream.clientReceivedEverythingBefore(ackS2C + 1)
 				##requestFinishedD.addBoth(printDisconnectTime)
 				requestFinishedD.addBoth(lambda *args: stream.transportOffline(transport))
 				requestFinishedD.addErrback(log.err)
