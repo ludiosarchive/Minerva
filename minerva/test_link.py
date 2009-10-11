@@ -7,6 +7,7 @@ from twisted.python import log
 from twisted.internet import reactor, protocol, defer, address, interfaces, task
 from twisted.test import time_helpers
 from twisted.web.test.test_web import DummyRequest as _TwistedDummyRequest
+from twisted.web.test._util import _render
 from zope.interface import verify
 import simplejson as json
 
@@ -79,9 +80,9 @@ class DummyChannel(object):
 
 class DummyIndex(resource.Resource):
 
-	def __init__(self, uaf):
+	def __init__(self, streamFactory, streamFinder):
 		resource.Resource.__init__(self)
-		self.putChild('d', link.HTTPS2C(uaf))
+		self.putChild('d', link.HTTPS2C(streamFactory, streamFinder))
 
 
 
@@ -103,8 +104,9 @@ class BaseTestIntegration(object):
 
 	def startServer(self):
 		clock = task.Clock()
-		self._sf = link.StreamFactory(clock)
-		root = DummyIndex(self._sf)
+		self._streamFactory = link.StreamFactory(clock)
+		self._streamFinder = link.StreamFinder(self._streamFactory)
+		root = DummyIndex(self._streamFactory, self._streamFinder)
 
 		site = server.Site(root)
 		self.p = reactor.listenTCP(0, site, interface='127.0.0.1')
@@ -147,7 +149,7 @@ class BaseTestIntegration(object):
 		Builds and returns a Stream filled with boxes L{boxes}.
 		"""
 		streamId = link.StreamId('\x11' * 16)
-		stream = self._sf.getOrBuildStream(streamId)
+		stream = self._streamFactory.getOrBuildStream(streamId)
 		stream.sendBoxes(boxes)
 		return stream
 
@@ -219,11 +221,11 @@ class HelperBaseHTTPTransports(object):
 		self.dummyRequest = server.Request(self.dummyTcpChannel, queued=False)
 		# Fool t.w.http.Request into creating its self.content attribute
 		self.dummyRequest.gotLength(100) # 100 bytes
-		self.t = self.transportClass(self.dummyRequest, 0, 0)
+		self.t = self.transportClass(self.dummyRequest, None, 0, 0)
 
 
 	def test_implements(self):
-		verify.verifyObject(link.IMinervaTransport, self.t)
+		verify.verifyObject(link.IMinervaS2CTransport, self.t)
 
 
 	def test_initialValues(self):
@@ -242,7 +244,7 @@ class HelperBaseHTTPTransports(object):
 
 
 	def test_noCacheHeaders(self):
-		headers = dict(self.t._request.responseHeaders.getAllRawHeaders())
+		headers = dict(self.t.request.responseHeaders.getAllRawHeaders())
 		self.assert_('Pragma' in headers, headers)
 		self.assertEqual('no-cache', headers['Pragma'][0])
 		self.assert_('no-cache' in headers['Cache-Control'][0])
@@ -357,7 +359,7 @@ class HelperSocketStyleTransport(object):
 
 
 	def test_implements(self):
-		verify.verifyObject(link.IMinervaTransport, self.t)
+		verify.verifyObject(link.IMinervaS2CTransport, self.t)
 		verify.verifyObject(link.ISocketStyleTransport, self.t)
 
 
@@ -480,7 +482,6 @@ class TestStream(unittest.TestCase):
 		assert 0 == transport.numWrites
 
 		self.stream.transportOnline(transport)
-		self.stream.transportWantsApproval(transport)
 		# Empty queue, so there should be 0 writes so far.
 		self.assertEqual(0, transport.numWrites)
 
@@ -496,7 +497,6 @@ class TestStream(unittest.TestCase):
 		assert 0 == transport.numWrites
 
 		self.stream.transportOnline(transport)
-		self.stream.transportWantsApproval(transport)
 
 		self.stream.sendBoxes(['boxS2C0', 'boxS2C1', 'boxS2C2'])
 		self.assertEqual(1, transport.numWrites)
@@ -511,33 +511,28 @@ class TestStream(unittest.TestCase):
 		self.stream.transportOnline(transport1)
 		self.stream.transportOnline(transport2)
 
-		self.stream.transportWantsApproval(transport0)
-		self.stream.transportWantsApproval(transport1)
-		self.stream.transportWantsApproval(transport2)
-
 		# Run it 20 times to make sure the implementation isn't picking at random
 		for i in xrange(20):
 			self.assertIdentical(transport2, self.stream._selectS2CTransport())
 
 
-	def test_dataSentOnlyToApprovedTransports(self):
-		transport0 = _DummyMinervaTransport(0)
-		transport1 = _DummyMinervaTransport(1)
-
-		self.stream.transportOnline(transport0)
-		self.stream.transportWantsApproval(transport0)
-		self.stream.transportOnline(transport1) # this newer transport is never approved
-
-		self.stream.sendBoxes(['boxS2C0', 'boxS2C1', 'boxS2C2'])
-		self.assertEqual(1, transport0.numWrites)
-		self.assertEqual(0, transport1.numWrites)
+#	def test_dataSentOnlyToApprovedTransports(self):
+#		transport0 = _DummyMinervaTransport(0)
+#		transport1 = _DummyMinervaTransport(1)
+#
+#		self.stream.transportOnline(transport0)
+#		self.stream.transportWantsApproval(transport0)
+#		self.stream.transportOnline(transport1) # this newer transport is never approved
+#
+#		self.stream.sendBoxes(['boxS2C0', 'boxS2C1', 'boxS2C2'])
+#		self.assertEqual(1, transport0.numWrites)
+#		self.assertEqual(0, transport1.numWrites)
 
 
 	def test_repr(self):
 		s = repr(self.stream)
 		self.assert_('<Stream' in s, s)
-		self.assert_('with approved transports' in s, s)
-		self.assert_('unapproved' in s, s)
+		self.assert_('with transports' in s, s)
 		self.assert_('items in queue' in s, s)
 
 
@@ -591,9 +586,10 @@ class TestHTTPC2S(unittest.TestCase):
 		self._resetBaseUpload()
 
 		clock = task.Clock()
-		sf = BoxRecordingStreamFactory(clock)
-		self.expectedStream = sf.getOrBuildStream(self.streamId)
-		self.resource = link.HTTPC2S(sf)
+		streamFactory = BoxRecordingStreamFactory(clock)
+		streamFinder = link.StreamFinder(streamFactory)
+		self.expectedStream = streamFactory.getOrBuildStream(self.streamId)
+		self.resource = link.HTTPC2S(streamFactory, streamFinder)
 
 
 	def _resetBaseUpload(self):
@@ -617,103 +613,127 @@ class TestHTTPC2S(unittest.TestCase):
 
 	def test_uploadOneBox(self):
 		self.baseUpload['0'] = ['hello', 'there']
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
+		req.method = "POST"
 
-		response = self.resource.render_POST(req)
+		d = _render(self.resource, req)
+		d.addCallback(lambda _: self.assertEqual([['hello', 'there']], self.expectedStream.savedBoxes))
+		return d
 
-		self.assertEqual([['hello', 'there']], self.expectedStream.savedBoxes)
 
-
+	@defer.inlineCallbacks
 	def test_uploadManyBoxes(self):
 		self.baseUpload['0'] = ['hello', 'there']
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
-		response = self.resource.render_POST(req)
+		req.method = "POST"
+		yield _render(self.resource, req)
 
 		self._resetBaseUpload()
 		self.baseUpload['1'] = ['more', 'data']
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
-		response = self.resource.render_POST(req)
+		req.method = "POST"
+		yield _render(self.resource, req)
 
 		self._resetBaseUpload()
 		self.baseUpload['2'] = ['frame', '2']
 		self.baseUpload['3'] = ['frame', '3']
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
-		response = self.resource.render_POST(req)
+		req.method = "POST"
+		yield _render(self.resource, req)
 
-		self.assertEqual([['hello', 'there'], ['more', 'data'], ['frame', '2'], ['frame', '3']], self.expectedStream.savedBoxes)
+		self.assertEqual(
+			[['hello', 'there'], ['more', 'data'], ['frame', '2'], ['frame', '3']],
+			self.expectedStream.savedBoxes)
 
 
+	@defer.inlineCallbacks
 	def test_uploadOutOfOrderBoxes(self):
 		self.baseUpload['1'] = ['more', 'data']
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
-		response = self.resource.render_POST(req)
+		req.method = "POST"
+		yield _render(self.resource, req)
 
 		self._resetBaseUpload()
 		self.baseUpload['0'] = ['hello', 'there']
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
-		response = self.resource.render_POST(req)
+		req.method = "POST"
+		yield _render(self.resource, req)
 
 		self.assertEqual([['hello', 'there'], ['more', 'data']], self.expectedStream.savedBoxes)
 
 
+	@defer.inlineCallbacks
 	def test_respondedWithCorrectSACK1(self):
 		self.baseUpload['0'] = ['hello', 'there']
 
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
+		req.method = "POST"
 
-		response = self.resource.render_POST(req)
+		yield _render(self.resource, req)
+		response = ''.join(req.written)
 		msgType, sackInfo = json.loads(response)
 		self.assertEqual(link.TYPE_C2S_SACK, msgType)
 		self.assertEqual([0, []], sackInfo)
 
 
+	@defer.inlineCallbacks
 	def test_respondedWithCorrectSACK2(self):
 		self.baseUpload['0'] = ['hello', 'there']
 		self.baseUpload['1'] = {'more': 'data'}
 		self.baseUpload['3'] = {'cannot': 'deliver yet'}
 
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
+		req.method = "POST"
 
-		response = self.resource.render_POST(req)
+		yield _render(self.resource, req)
+		response = ''.join(req.written)
 		msgType, sackInfo = json.loads(response)
 		self.assertEqual(link.TYPE_C2S_SACK, msgType)
 		self.assertEqual([1, [3]], sackInfo)
 
 
+	@defer.inlineCallbacks
 	def test_clientReceivedEverythingBefore_isCalled_0(self):
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
+		req.method = "POST"
 
-		response = self.resource.render_POST(req)
-
+		yield _render(self.resource, req)
 		self.assertEqual([0], self.expectedStream.calls_clientReceivedEverythingBefore)
 
 
+	@defer.inlineCallbacks
 	def test_invalidAckTooHigh(self):
 		self.baseUpload['a'] = 9
 
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
+		req.method = "POST"
 
-		response = self.resource.render_POST(req)
+		yield _render(self.resource, req)
+		response = ''.join(req.written)
+		##print 'res', response
 
-		msgType, rest = json.loads(response)
+		# "decode" the response like L{BencodeStringDecoder}
+		responseLengthStr, responseBody = response.split(':', 1)
+		msgType, rest = json.loads(responseBody)
 
 		self.assertEqual(link.TYPE_ERROR, msgType)
 		self.assertEqual(link.ERROR_CODES['ACKED_UNSENT_S2C_FRAMES'], rest)
 
 
 	def _makeRequest(self):
-		self.req = DummyRequest(['some-fake-path'])
+		self.req = DummyRequest([])
 		self.req.content = self._makeUploadBuffer()
+		self.req.method = "POST"
 
 
 	def test_invalidAckTooLow(self):
