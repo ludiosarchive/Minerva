@@ -1234,4 +1234,5 @@ class HTTPC2S(BaseHTTPResource):
 		d.addCallbacks(gotStream, noStream)
 		d.addErrback(log.err)
 
+		# See comment about NOT_DONE_YET in L{HTTPS2C}.
 		return NOT_DONE_YET
