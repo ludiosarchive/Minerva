@@ -427,9 +427,12 @@ class Stream(object):
 
 	def transportOnline(self, transport):
 		"""
-		For internal use. Whoever calls this must make sure that
-		C{transport} really is safe to attach to this Stream, using
-		L{StreamFinder} or a stricter variant of it.
+		For internal use. Called when downstream-capable transport
+		C{transport} has attached to this Stream.
+
+		Whoever calls this must make sure that C{transport} really is
+		safe to attach to this Stream, using L{StreamFinder} or a stricter
+		variant of it.
 		"""
 		if transport in self._approvedTransports:
 			raise TransportAlreadyRegisteredError(
@@ -557,6 +560,19 @@ class IStreamFinder(Interface):
 	def __init__(streamFactory):
 		pass
 
+
+	def additionalChecks(transport, stream):
+		"""
+		Override this.
+
+		If C{transport} should be attached to C{stream}:
+			return any value, or a Deferred that `callback's
+		If C{transport} should not be attached to C{stream}:
+			raise any exception, or a Deferred that `errback's
+		"""
+		pass
+
+
 	def addToStream(transport):
 		pass
 
@@ -571,6 +587,13 @@ class StreamFinder(object):
 
 	def __init__(self, streamFactory):
 		self._streamFactory = streamFactory
+
+
+	def additionalChecks(self, transport, stream):
+		"""
+		See L{IStreamFinder.additionalChecks}
+		"""
+		pass
 
 
 	def addToStream(self, transport):
@@ -595,6 +618,15 @@ class StreamFinder(object):
 		"""
 		# This base implementation does no checking other than not mixing up streamId's.
 		stream = self._streamFactory.getOrBuildStream(transport.streamId)
+
+		d = defer.maybeDeferred(self.additionalChecks, transport, stream)
+		def cbOkay(_):
+			return stream
+		def cbFail(_ignored):
+			transport.close(ERROR_CODES['NOT_APPROVED'])
+		d.addCallbacks(cbOkay, cbFail)
+		d.addErrback(log.err)
+
 		return defer.succeed(stream)
 
 
