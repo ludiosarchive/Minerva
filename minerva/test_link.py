@@ -7,6 +7,7 @@ from twisted.python import log
 from twisted.internet import reactor, protocol, defer, address, interfaces, task
 from twisted.test import time_helpers
 from twisted.web.test.test_web import DummyRequest as _TwistedDummyRequest
+from twisted.web.test._util import _render
 from zope.interface import verify
 import simplejson as json
 
@@ -612,94 +613,114 @@ class TestHTTPC2S(unittest.TestCase):
 
 	def test_uploadOneBox(self):
 		self.baseUpload['0'] = ['hello', 'there']
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
+		req.method = "POST"
 
-		response = self.resource.render_POST(req)
+		d = _render(self.resource, req)
+		d.addCallback(lambda _: self.assertEqual([['hello', 'there']], self.expectedStream.savedBoxes))
+		return d
 
-		self.assertEqual([['hello', 'there']], self.expectedStream.savedBoxes)
 
-
+	@defer.inlineCallbacks
 	def test_uploadManyBoxes(self):
 		self.baseUpload['0'] = ['hello', 'there']
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
-		response = self.resource.render_POST(req)
+		req.method = "POST"
+		yield _render(self.resource, req)
 
 		self._resetBaseUpload()
 		self.baseUpload['1'] = ['more', 'data']
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
-		response = self.resource.render_POST(req)
+		req.method = "POST"
+		yield _render(self.resource, req)
 
 		self._resetBaseUpload()
 		self.baseUpload['2'] = ['frame', '2']
 		self.baseUpload['3'] = ['frame', '3']
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
-		response = self.resource.render_POST(req)
+		req.method = "POST"
+		yield _render(self.resource, req)
 
-		self.assertEqual([['hello', 'there'], ['more', 'data'], ['frame', '2'], ['frame', '3']], self.expectedStream.savedBoxes)
+		self.assertEqual(
+			[['hello', 'there'], ['more', 'data'], ['frame', '2'], ['frame', '3']],
+			self.expectedStream.savedBoxes)
 
 
+	@defer.inlineCallbacks
 	def test_uploadOutOfOrderBoxes(self):
 		self.baseUpload['1'] = ['more', 'data']
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
-		response = self.resource.render_POST(req)
+		req.method = "POST"
+		yield _render(self.resource, req)
 
 		self._resetBaseUpload()
 		self.baseUpload['0'] = ['hello', 'there']
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
-		response = self.resource.render_POST(req)
+		req.method = "POST"
+		yield _render(self.resource, req)
 
 		self.assertEqual([['hello', 'there'], ['more', 'data']], self.expectedStream.savedBoxes)
 
 
+	@defer.inlineCallbacks
 	def test_respondedWithCorrectSACK1(self):
 		self.baseUpload['0'] = ['hello', 'there']
 
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
+		req.method = "POST"
 
-		response = self.resource.render_POST(req)
+		yield _render(self.resource, req)
+		response = ''.join(req.written)
 		msgType, sackInfo = json.loads(response)
 		self.assertEqual(link.TYPE_C2S_SACK, msgType)
 		self.assertEqual([0, []], sackInfo)
 
 
+	@defer.inlineCallbacks
 	def test_respondedWithCorrectSACK2(self):
 		self.baseUpload['0'] = ['hello', 'there']
 		self.baseUpload['1'] = {'more': 'data'}
 		self.baseUpload['3'] = {'cannot': 'deliver yet'}
 
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
+		req.method = "POST"
 
-		response = self.resource.render_POST(req)
+		yield _render(self.resource, req)
+		response = ''.join(req.written)
 		msgType, sackInfo = json.loads(response)
 		self.assertEqual(link.TYPE_C2S_SACK, msgType)
 		self.assertEqual([1, [3]], sackInfo)
 
 
+	@defer.inlineCallbacks
 	def test_clientReceivedEverythingBefore_isCalled_0(self):
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
+		req.method = "POST"
 
-		response = self.resource.render_POST(req)
-
+		yield _render(self.resource, req)
 		self.assertEqual([0], self.expectedStream.calls_clientReceivedEverythingBefore)
 
 
+	@defer.inlineCallbacks
 	def test_invalidAckTooHigh(self):
 		self.baseUpload['a'] = 9
 
-		req = DummyRequest(['some-fake-path'])
+		req = DummyRequest([])
 		req.content = self._makeUploadBuffer()
+		req.method = "POST"
 
-		response = self.resource.render_POST(req)
-
+		yield _render(self.resource, req)
+		response = ''.join(req.written)
+		print 'res', response
 		msgType, rest = json.loads(response)
 
 		self.assertEqual(link.TYPE_ERROR, msgType)
@@ -707,8 +728,9 @@ class TestHTTPC2S(unittest.TestCase):
 
 
 	def _makeRequest(self):
-		self.req = DummyRequest(['some-fake-path'])
+		self.req = DummyRequest([])
 		self.req.content = self._makeUploadBuffer()
+		self.req.method = "POST"
 
 
 	def test_invalidAckTooLow(self):

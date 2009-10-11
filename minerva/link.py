@@ -9,6 +9,7 @@ import struct
 
 from twisted.python import log, randbytes
 from twisted.web import resource
+from twisted.web.server import NOT_DONE_YET
 from twisted.internet import protocol, defer
 from zope.interface import implements, Interface
 
@@ -1064,11 +1065,35 @@ class HTTPS2C(BaseHTTPResource):
 		# is unfinished. It might already be finished, and the NOT_DONE_YET return
 		# is superflous (it does not harm anything).
 
-		return 1 # NOT_DONE_YET
+		return NOT_DONE_YET
 
 
 	def render_POST(self, request):
 		return 'POST S2C TODO IMPLEMENT'
+
+
+
+class OneShotHTTPUploadTransport(object):
+	"""
+	We need a transport even for one-shot uploads because L{StreamFinder}
+	makes decisions based on transports. 
+
+	This could be used by XHR, XDR, img tags, or other one-shot upload
+	methods (from a browser or other HTTP clients).
+	"""
+
+	implements(IMinervaTransport)
+
+	def __init__(self, request, streamId):
+		"""
+		I need a L{twisted.web.http.Request} to write to.
+
+		L{connectionNumber} is incremented by the client as they
+			open S2C transports.
+		"""
+		self.request = request
+		self.connectionNumber = None
+		self.streamId = streamId
 
 
 
@@ -1115,27 +1140,37 @@ class HTTPC2S(BaseHTTPResource):
 
 		# Do we really want C2S requests to automatically create a new Stream just
 		# like S2C requests? Probably.
-		stream = self._streamFactory.getOrBuildStream(streamId)
+		transport = OneShotHTTPUploadTransport(request, streamId)
+		d = self._streamFinder.addToStream(transport)
 
-		try:
-			stream.clientReceivedEverythingBefore(ackS2C + 1)
-		except abstract.SeqNumTooHighError:
-			# If client sent a too-high ACK, don't deliver any of client's frames
-			# to Stream. Send client an error.
-			# TODO: maybe send the highest-acceptable ACK number as third param
-			return dumpToJson7Bit(
-				[TYPE_ERROR, ERROR_CODES['ACKED_UNSENT_S2C_FRAMES']])
+		def gotStream(stream):
+			try:
+				stream.clientReceivedEverythingBefore(ackS2C + 1)
+			except abstract.SeqNumTooHighError:
+				# If client sent a too-high ACK, don't deliver any of client's frames
+				# to Stream. Send client an error.
+				# TODO: maybe send the highest-acceptable ACK number as third param
+				request.write(dumpToJson7Bit(
+					[TYPE_ERROR, ERROR_CODES['ACKED_UNSENT_S2C_FRAMES']]))
+				request.finish()
+				return
 
-		frames = []
+			frames = []
 
-		# If there's any junk in the JSON, L{strToNonNeg} will throw a ValueError
-		for seqNumStr, frame in data.iteritems():
-			seqNum = abstract.strToNonNeg(seqNumStr)
-			frames.append((seqNum, frame))
+			# If there's any junk in the JSON, L{strToNonNeg} will throw a ValueError
+			for seqNumStr, frame in data.iteritems():
+				seqNum = abstract.strToNonNeg(seqNumStr)
+				frames.append((seqNum, frame))
 
-		if frames:
-			stream.clientUploadedFrames(frames)
+			if frames:
+				stream.clientUploadedFrames(frames)
 
-		sackInfo = stream.getSACK()
+			sackInfo = stream.getSACK()
 
-		return dumpToJson7Bit([TYPE_C2S_SACK, sackInfo])
+			request.write(dumpToJson7Bit([TYPE_C2S_SACK, sackInfo]))
+			request.finish()
+
+		d.addCallback(gotStream)
+		d.addErrback(log.err)
+
+		return NOT_DONE_YET
