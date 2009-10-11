@@ -123,8 +123,8 @@ ERROR_CODES = {
 	# This error can be received at any time in an S2C transport.
 	'S2C_TRANSPORT_OBSOLETE': 802,
 
-	# This transport was not approved by the Stream
-	'NOT_APPROVED': 803,
+	# This transport could not be attached to a Stream
+	'COULD_NOT_ATTACH': 803,
 
 	# The S2C ACK sent by the client was too high
 	'ACKED_UNSENT_S2C_FRAMES': 804,
@@ -257,15 +257,14 @@ class Stream(object):
 		self.queue = abstract.Queue()
 		self.incoming = abstract.Incoming()
 		self._approvedTransports = set()
-		self._unapprovedTransports = set()
 		self._notifications = []
 
 		self._noContactTimer = self._clock.callLater(self.noContactTimeout, self.timedOut)
 		
 
 	def __repr__(self):
-		return '<Stream %r with approved transports %r, unapproved %r, and %d items in queue>' % (
-			self.streamId, self._approvedTransports, self._unapprovedTransports, len(self.queue))
+		return '<Stream %r with transports %r, and %d items in queue>' % (
+			self.streamId, self._approvedTransports, len(self.queue))
 
 
 	def streamBegun(self):
@@ -319,6 +318,7 @@ class Stream(object):
 		Ideas for additional approval (these may stop session hijacking by amateurs):
 			- check that some cookie has the same value as the first transport
 			- check that user agent has the same value as the first transport
+			- check that header order is the same as it first was
 		"""
 
 
@@ -454,14 +454,14 @@ class Stream(object):
 		here would be wasteful. Though I can still reject the transport in
 		L{transportWantsApproval}.
 		"""
-		if transport in self._approvedTransports or transport in self._unapprovedTransports:
+		if transport in self._approvedTransports:
 			raise TransportAlreadyRegisteredError(
-				"%r already in approved or unapproved transports" % (transport,))
+				"%r already in transports" % (transport,))
 		self._noContactTimer.reset(self.noContactTimeout)
 		if self.noisy:
 			log.msg('New transport has come online:', transport)
-		self._unapprovedTransports.add(transport)
-		# The transport isn't approved yet, so don't try to send boxes yet.
+		self._approvedTransports.add(transport)
+		self._sendIfPossible()
 
 
 	def transportOffline(self, transport):
@@ -472,37 +472,16 @@ class Stream(object):
 		try:
 			self._approvedTransports.remove(transport)
 		except KeyError:
-			try:
-				self._unapprovedTransports.remove(transport)
-			except KeyError:
-				raise TransportNotRegisteredError(
-					"%r not in approved or unapproved transports" % (transport,))
+			raise TransportNotRegisteredError(
+				"%r not in transports" % (transport,))
 		if self.noisy:
 			log.msg('Transport has gone offline:', transport)
 
-		if len(self._approvedTransports) + len(self._unapprovedTransports) == 0:
+		if len(self._approvedTransports) == 0:
 			# Start the timer. If no transports come in 30 seconds,
 			# the stream has ended.
 			pass ## XXX TODO test needed for below
 			self._noContactTimer.reset(self.noContactTimeout)
-
-
-	def transportWantsApproval(self, transport):
-		"""
-		For internal use. Called by transports. This calls L{transportCredentialsReceived} to decide.
-		"""
-		d = defer.maybeDeferred(self.transportCredentialsReceived, transport)
-		def cbOkay(_ignored):
-			log.msg('Transport was approved:', transport)
-			assert transport not in self._approvedTransports
-			self._unapprovedTransports.remove(transport)
-			self._approvedTransports.add(transport)
-			self._sendIfPossible()
-		def cbFail(_ignored):
-			log.msg('Transport was NOT approved, closing it:', transport)
-			transport.close(ERROR_CODES['NOT_APPROVED'])
-		d.addCallbacks(cbOkay, cbFail)
-		d.addErrback(log.err)
 
 
 	def timedOut(self):
@@ -540,7 +519,6 @@ class Stream(object):
 		self.factory = None
 		self.queue = None
 		self._approvedTransports = None
-		self._unapprovedTransports = None
 
 
 
@@ -598,6 +576,47 @@ class StreamFactory(object):
 
 
 
+class IStreamFinder(Interface):
+
+	def __init__(streamFactory):
+		pass
+
+	def addToStream(transport):
+		pass
+
+
+
+class StreamFinder(object):
+	"""
+	You can really override any of this and make it do whatever you want.
+	Attaching the wrong transport to a Stream is not recommended, though.
+	"""
+	implements(IStreamFinder)
+
+	def __init__(self, streamFactory):
+		self._streamFactory = streamFactory
+
+
+	def addToStream(self, transport):
+		"""
+		I might reach into C{transport} to look at C{.request} or C{.credentialFrame}
+
+		You could do additional checking here, and close the transport
+		with ERROR_CODE COULD_NOT_ATTACH if the transport should not
+		be attached to any Stream.
+
+		Remember that we might want to do cookie/header checking beyond the
+		lifetime of a Stream, which is why it doesn't make much sense to let
+		the Stream do the authentication.
+
+		@return: A L{Stream} if C{transport} was attached to a stream, else C{None}
+		"""
+		# Right now, it's always attached to a stream.
+		stream = self._streamFactory.getOrBuildStream(transport.streamId)
+		return defer.succeed(stream)
+
+
+
 class IMinervaTransport(Interface):
 
 	# connectionNumber attribute
@@ -627,7 +646,7 @@ class _BaseHTTPTransport(object):
 
 	maxBytes = None # override this
 
-	def __init__(self, request, connectionNumber, firstS2CToWrite):
+	def __init__(self, request, streamId, connectionNumber, firstS2CToWrite):
 		"""
 		I need a L{twisted.web.http.Request} to write to.
 		
@@ -641,8 +660,9 @@ class _BaseHTTPTransport(object):
 		requests/TCP connections, and full or partial buffering of
 		requests/TCP connections.
 		"""
-		self._request = request
+		self.request = request
 		self.connectionNumber = connectionNumber
+		self.streamId = streamId
 		self._firstS2CToWrite = firstS2CToWrite
 
 		self._preparedSeqMsg = False
@@ -662,24 +682,24 @@ class _BaseHTTPTransport(object):
 
 		# Headers copied from facebook.com chat HTTP responses
 		# TODO: send fewer headers when possible
-		self._request.setHeader('cache-control', 'private, no-store, no-cache, must-revalidate, post-check=0, pre-check=0')
-		self._request.setHeader('pragma', 'no-cache')
-		self._request.setHeader('expires', 'Mon, 26 Jul 1997 05:00:00 GMT')
+		self.request.setHeader('cache-control', 'private, no-store, no-cache, must-revalidate, post-check=0, pre-check=0')
+		self.request.setHeader('pragma', 'no-cache')
+		self.request.setHeader('expires', 'Mon, 26 Jul 1997 05:00:00 GMT')
 
 		self._setTcpOptions()
 
 		# Write out the headers right away to increase the chances of connection staying alive;
 		# hopefully these headers will ride along with the TCP-ACK for the HTTP request.
-		self._request.write('')
+		self.request.write('')
 
 
 	def _setTcpOptions(self):
 		# TCP nodelay is good and increases server performance, as
 		# long as we don't accidentally send small packets.
-		self._request.channel.transport.setTcpNoDelay(True)
+		self.request.channel.transport.setTcpNoDelay(True)
 
 		# TODO: remove this
-		sock = self._request.channel.transport.socket
+		sock = self.request.channel.transport.socket
 		if sock is not None: # it'll be None when run from test_link.py
 			log.msg(get_tcp_info(sock))
 
@@ -697,7 +717,7 @@ class _BaseHTTPTransport(object):
 		See L{IMinervaTransport.close}
 		"""
 		self._forceWrite([TYPE_ERROR, code])
-		self._request.finish()
+		self.request.finish()
 		log.msg("Closed transport %s with reason %d." % (self, code))
 
 
@@ -708,7 +728,7 @@ class _BaseHTTPTransport(object):
 		and possibly sending keep-alive frames.
 		"""
 		serialized = self._stringOne(frame)
-		self._request.write(serialized)
+		self.request.write(serialized)
 		self._bytesSent += len(serialized)
 		self._framesSent += 1
 
@@ -769,11 +789,11 @@ class _BaseHTTPTransport(object):
 			needRequestFinish = True
 
 		if toSend:
-			self._request.write(toSend)
+			self.request.write(toSend)
 		if seqNum:
 			self._lastS2CWritten = seqNum
 		if needRequestFinish:
-			self._request.finish()
+			self.request.finish()
 		self._bytesSent += byteCount
 		self._framesSent += frameCount
 
@@ -798,7 +818,7 @@ class XHRTransport(_BaseHTTPTransport):
 
 	def __repr__(self):
 		return '<XHRTransport at %s attached to %r with %d frames sent>' % (
-			hex(__builtins__['id'](self)), self._request, self._framesSent)
+			hex(__builtins__['id'](self)), self.request, self._framesSent)
 
 
 	def _stringOne(self, frame):
@@ -823,7 +843,7 @@ class ScriptTransport(_BaseHTTPTransport):
 
 	def __repr__(self):
 		return '<ScriptTransport at %s attached to %r with %d frames sent>' % (
-			hex(__builtins__['id'](self)), self._request, self._framesSent)
+			hex(__builtins__['id'](self)), self.request, self._framesSent)
 
 
 	# TODO: maybe this header should be written earlier, even before the first attempt
@@ -868,7 +888,7 @@ class ScriptTransport(_BaseHTTPTransport):
 #
 #	def __repr__(self):
 #		return '<SSETransport at %s attached to %r with %d frames sent>' % (
-#			hex(__builtins__['id'](self)), self._request, self._framesSent)
+#			hex(__builtins__['id'](self)), self.request, self._framesSent)
 
 
 """
@@ -908,6 +928,8 @@ class WebSocketTransport(protocol.Protocol):
 	"""
 	implements(IMinervaTransport, ISocketStyleTransport)
 
+	# wasApproved, wasRejected
+
 	def connectionMade(self):
 		pass
 
@@ -943,6 +965,8 @@ class SocketTransport(protocol.Protocol):
 	"""
 
 	implements(IMinervaTransport, ISocketStyleTransport)
+
+	# wasApproved, wasRejected
 
 	def connectionMade(self):
 		pass
@@ -991,8 +1015,9 @@ class BaseHTTPResource(resource.Resource):
 	isLeaf = True
 	#cookieName = 'm'
 
-	def __init__(self, streamFactory):
+	def __init__(self, streamFactory, streamFinder):
 		self._streamFactory = streamFactory
+		self._streamFinder = streamFinder
 
 
 	def _fail(self, request, message=None):
@@ -1017,7 +1042,7 @@ class HTTPS2C(BaseHTTPResource):
 		requestFinishedD = request.notifyFinish()
 
 		try:
-			# raises TypeError on non-hex
+			# raises TypeError on non-hex, InvalidIdentifier on wrong length
 			streamId = StreamId(request.args['i'][0].decode('hex')) # "(i)d"
 
 			# Incremented each time the client makes a HTTP request for S2C
@@ -1030,7 +1055,7 @@ class HTTPS2C(BaseHTTPResource):
 
 			# The type of S2C transport the client demands.
 			transportString = request.args['t'][0] # "(t)ype"
-		except (KeyError, IndexError, ValueError, TypeError):
+		except (KeyError, IndexError, ValueError, TypeError, abstract.InvalidIdentifier):
 			self._fail(request)
 
 		if not transportString in ('s', 'x'):#, 'o'):
@@ -1040,24 +1065,27 @@ class HTTPS2C(BaseHTTPResource):
 		# register it with any Stream, send an error frame over the transport. If no
 		# valid transportString, send some kind of HTTP error.
 
-		stream = self._streamFactory.getOrBuildStream(streamId)
-		# TODO: what if streamId is of the wrong length?
-
-		stream.clientReceivedEverythingBefore(startAtSeqNum)
-
 		transportMap = dict(s=ScriptTransport, x=XHRTransport) #, o=SSETransport)
-		transport = transportMap[transportString](request, connectionNumber, startAtSeqNum)
+		transport = transportMap[transportString](request, streamId, connectionNumber, startAtSeqNum)
 
-		stream.transportOnline(transport)
-		stream.transportWantsApproval(transport)
+		d = self._streamFinder.addToStream(transport)
 
-		##def printDisconnectTime(*args, **kwargs):
-		##	import time
-		##	print 'Server connection %r lost at %.09f' % (self, time.time())
+		def printDisconnectTime(*args, **kwargs):
+			import time
+			print 'Server connection %r lost at %.09f' % (self, time.time())
 
-		##requestFinishedD.addBoth(printDisconnectTime)
-		requestFinishedD.addBoth(lambda *args: stream.transportOffline(transport))
-		requestFinishedD.addErrback(log.err)
+		def gotStreamOrNone(stream):
+			if stream:
+				stream.transportOnline(transport)
+				stream.clientReceivedEverythingBefore(startAtSeqNum)
+				##requestFinishedD.addBoth(printDisconnectTime)
+				requestFinishedD.addBoth(lambda *args: stream.transportOffline(transport))
+				requestFinishedD.addErrback(log.err)
+			else:
+				transport.close(ERROR_CODES['COULD_NOT_ATTACH'])
+
+		d.addCallback(gotStreamOrNone)
+		d.addErrback(log.err)
 
 		# Just because we're returning NOT_DONE_YET, doesn't mean the request
 		# is unfinished. It might already be finished, and the NOT_DONE_YET return

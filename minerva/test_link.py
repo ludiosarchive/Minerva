@@ -79,9 +79,9 @@ class DummyChannel(object):
 
 class DummyIndex(resource.Resource):
 
-	def __init__(self, uaf):
+	def __init__(self, streamFactory, streamFinder):
 		resource.Resource.__init__(self)
-		self.putChild('d', link.HTTPS2C(uaf))
+		self.putChild('d', link.HTTPS2C(streamFactory, streamFinder))
 
 
 
@@ -103,8 +103,9 @@ class BaseTestIntegration(object):
 
 	def startServer(self):
 		clock = task.Clock()
-		self._sf = link.StreamFactory(clock)
-		root = DummyIndex(self._sf)
+		self._streamFactory = link.StreamFactory(clock)
+		self._streamFinder = link.StreamFinder(self._streamFactory)
+		root = DummyIndex(self._streamFactory, self._streamFinder)
 
 		site = server.Site(root)
 		self.p = reactor.listenTCP(0, site, interface='127.0.0.1')
@@ -147,7 +148,7 @@ class BaseTestIntegration(object):
 		Builds and returns a Stream filled with boxes L{boxes}.
 		"""
 		streamId = link.StreamId('\x11' * 16)
-		stream = self._sf.getOrBuildStream(streamId)
+		stream = self._streamFactory.getOrBuildStream(streamId)
 		stream.sendBoxes(boxes)
 		return stream
 
@@ -219,7 +220,7 @@ class HelperBaseHTTPTransports(object):
 		self.dummyRequest = server.Request(self.dummyTcpChannel, queued=False)
 		# Fool t.w.http.Request into creating its self.content attribute
 		self.dummyRequest.gotLength(100) # 100 bytes
-		self.t = self.transportClass(self.dummyRequest, 0, 0)
+		self.t = self.transportClass(self.dummyRequest, None, 0, 0)
 
 
 	def test_implements(self):
@@ -242,7 +243,7 @@ class HelperBaseHTTPTransports(object):
 
 
 	def test_noCacheHeaders(self):
-		headers = dict(self.t._request.responseHeaders.getAllRawHeaders())
+		headers = dict(self.t.request.responseHeaders.getAllRawHeaders())
 		self.assert_('Pragma' in headers, headers)
 		self.assertEqual('no-cache', headers['Pragma'][0])
 		self.assert_('no-cache' in headers['Cache-Control'][0])
@@ -480,7 +481,6 @@ class TestStream(unittest.TestCase):
 		assert 0 == transport.numWrites
 
 		self.stream.transportOnline(transport)
-		self.stream.transportWantsApproval(transport)
 		# Empty queue, so there should be 0 writes so far.
 		self.assertEqual(0, transport.numWrites)
 
@@ -496,7 +496,6 @@ class TestStream(unittest.TestCase):
 		assert 0 == transport.numWrites
 
 		self.stream.transportOnline(transport)
-		self.stream.transportWantsApproval(transport)
 
 		self.stream.sendBoxes(['boxS2C0', 'boxS2C1', 'boxS2C2'])
 		self.assertEqual(1, transport.numWrites)
@@ -511,33 +510,28 @@ class TestStream(unittest.TestCase):
 		self.stream.transportOnline(transport1)
 		self.stream.transportOnline(transport2)
 
-		self.stream.transportWantsApproval(transport0)
-		self.stream.transportWantsApproval(transport1)
-		self.stream.transportWantsApproval(transport2)
-
 		# Run it 20 times to make sure the implementation isn't picking at random
 		for i in xrange(20):
 			self.assertIdentical(transport2, self.stream._selectS2CTransport())
 
 
-	def test_dataSentOnlyToApprovedTransports(self):
-		transport0 = _DummyMinervaTransport(0)
-		transport1 = _DummyMinervaTransport(1)
-
-		self.stream.transportOnline(transport0)
-		self.stream.transportWantsApproval(transport0)
-		self.stream.transportOnline(transport1) # this newer transport is never approved
-
-		self.stream.sendBoxes(['boxS2C0', 'boxS2C1', 'boxS2C2'])
-		self.assertEqual(1, transport0.numWrites)
-		self.assertEqual(0, transport1.numWrites)
+#	def test_dataSentOnlyToApprovedTransports(self):
+#		transport0 = _DummyMinervaTransport(0)
+#		transport1 = _DummyMinervaTransport(1)
+#
+#		self.stream.transportOnline(transport0)
+#		self.stream.transportWantsApproval(transport0)
+#		self.stream.transportOnline(transport1) # this newer transport is never approved
+#
+#		self.stream.sendBoxes(['boxS2C0', 'boxS2C1', 'boxS2C2'])
+#		self.assertEqual(1, transport0.numWrites)
+#		self.assertEqual(0, transport1.numWrites)
 
 
 	def test_repr(self):
 		s = repr(self.stream)
 		self.assert_('<Stream' in s, s)
-		self.assert_('with approved transports' in s, s)
-		self.assert_('unapproved' in s, s)
+		self.assert_('with transports' in s, s)
 		self.assert_('items in queue' in s, s)
 
 
@@ -591,9 +585,10 @@ class TestHTTPC2S(unittest.TestCase):
 		self._resetBaseUpload()
 
 		clock = task.Clock()
-		sf = BoxRecordingStreamFactory(clock)
-		self.expectedStream = sf.getOrBuildStream(self.streamId)
-		self.resource = link.HTTPC2S(sf)
+		streamFactory = BoxRecordingStreamFactory(clock)
+		streamFinder = link.StreamFinder(streamFactory)
+		self.expectedStream = streamFactory.getOrBuildStream(self.streamId)
+		self.resource = link.HTTPC2S(streamFactory, streamFinder)
 
 
 	def _resetBaseUpload(self):
