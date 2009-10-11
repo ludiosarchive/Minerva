@@ -2,10 +2,9 @@ from cStringIO import StringIO
 from zope.interface import implements
 
 from twisted.trial import unittest
-from twisted.web import client, server, resource, http_headers
+from twisted.web import server, resource, http_headers
 from twisted.python import log
 from twisted.internet import reactor, protocol, defer, address, interfaces, task
-from twisted.test import time_helpers
 from twisted.web.test.test_web import DummyRequest as _TwistedDummyRequest
 from twisted.web.test._util import _render
 from zope.interface import verify
