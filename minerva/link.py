@@ -561,19 +561,27 @@ class IStreamFinder(Interface):
 		pass
 
 
-	def additionalChecks(transport, stream):
+	def checkTransport(transport, stream):
 		"""
-		Override this.
+		Override this. The base implementation does no additional checking.
 
 		If C{transport} should be attached to C{stream}:
 			return any value, or a Deferred that `callback's
+	
 		If C{transport} should not be attached to C{stream}:
 			raise any exception, or a Deferred that `errback's
+
+		I might reach into C{transport} to look at C{.request} or C{.credentialsFrame}
+
+		Ideas for additional checking (these may stop amateurs from hijacking a Stream):
+			- check that some cookie has the same value as the first transport
+			- check that user agent has the same value as the first transport
+			- check that header order is the same as it first was
 		"""
 		pass
 
 
-	def addToStream(transport):
+	def getStreamForTransport(transport):
 		pass
 
 
@@ -589,37 +597,23 @@ class StreamFinder(object):
 		self._streamFactory = streamFactory
 
 
-	def additionalChecks(self, transport, stream):
+	def checkTransport(self, transport, stream):
 		"""
-		See L{IStreamFinder.additionalChecks}
+		See L{IStreamFinder.checkTransport}
 		"""
 		pass
 
 
-	def addToStream(self, transport):
+	def getStreamForTransport(self, transport):
 		"""
-		I might reach into C{transport} to look at C{.request} or C{.credentialsFrame}
-
-		You could do additional checking here, and close the transport
-		with ERROR_CODE COULD_NOT_ATTACH if the transport should not
-		be attached to any Stream.
-
-		Remember that we might want to do cookie/header checking beyond the
-		lifetime of a Stream, which is why it doesn't make much sense to let
-		the Stream do the authentication.
-
-		Ideas for additional approval (these may stop session hijacking by amateurs):
-			- check that some cookie has the same value as the first transport
-			- check that user agent has the same value as the first transport
-			- check that header order is the same as it first was
-
-		@return: A L{Stream} if C{transport} should be attached to this stream,
-			else C{None}
+		@return: A L{Deferred} that callbacks with a L{Stream} on which it is safe
+			to attach C{transport}, or a L{Deferred} that errbacks if no such stream
+			exists.
 		"""
 		# This base implementation does no checking other than not mixing up streamId's.
 		stream = self._streamFactory.getOrBuildStream(transport.streamId)
 
-		d = defer.maybeDeferred(self.additionalChecks, transport, stream)
+		d = defer.maybeDeferred(self.checkTransport, transport, stream)
 		def cbOkay(_):
 			return stream
 		d.addCallback(cbOkay)
@@ -1092,7 +1086,7 @@ class HTTPS2C(BaseHTTPResource):
 		transportMap = dict(s=ScriptTransport, x=XHRTransport) #, o=SSETransport)
 		transport = transportMap[transportString](request, streamId, connectionNumber, startAtSeqNum)
 
-		d = self._streamFinder.addToStream(transport)
+		d = self._streamFinder.getStreamForTransport(transport)
 
 		def printDisconnectTime(*args, **kwargs):
 			import time
@@ -1210,7 +1204,7 @@ class HTTPC2S(BaseHTTPResource):
 		# Do we really want C2S requests to automatically create a new Stream just
 		# like S2C requests? Probably.
 		transport = OneShotHTTPUploadTransport(request, streamId)
-		d = self._streamFinder.addToStream(transport)
+		d = self._streamFinder.getStreamForTransport(transport)
 
 		def gotStream(stream):
 			try:
