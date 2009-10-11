@@ -529,14 +529,25 @@ class IStreamFinder(Interface):
 
 		Ideas for additional checking (these may stop amateurs from hijacking a Stream):
 			- check that some cookie has the same value as the first transport
+			- block some transport types completely
 			- check that user agent has the same value as the first transport
+			- check that IP address is the same as it was at first
+				(limited use, because people make requests from many IPs)
+			- check that request/websocket/socket is secure (not unencrypted)
 			- check that header order is the same as it first was
+				(limited use, could block a legitimate user with a strange proxy)
+
+		But keep in mind that this is a very low-level feature, and you will not
+		be able to send an application-handalable exception to the client.
 		"""
-		pass
 
 
 	def getStreamForTransport(transport):
-		pass
+		"""
+		@return: A L{Deferred} that callbacks with a L{Stream} on which it is safe
+			to attach C{transport}, or a L{Deferred} that errbacks if no such stream
+			exists.
+		"""
 
 
 
@@ -555,14 +566,11 @@ class StreamFinder(object):
 		"""
 		See L{IStreamFinder.checkTransport}
 		"""
-		pass
 
 
 	def getStreamForTransport(self, transport):
 		"""
-		@return: A L{Deferred} that callbacks with a L{Stream} on which it is safe
-			to attach C{transport}, or a L{Deferred} that errbacks if no such stream
-			exists.
+		See L{IStreamFinder.getStreamForTransport}
 		"""
 		stream = self._streamFactory.getOrBuildStream(transport.streamId)
 
