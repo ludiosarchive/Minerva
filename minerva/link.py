@@ -16,29 +16,12 @@ from zope.interface import implements, Interface
 import abstract
 
 """
-See Minerva/docs/object_layout.png for a better class graph.
+See Minerva/docs/object_layout.png for a better (slightly outdated) class graph.
 
    [[C2STransport]] \
    [[S2CTransport]] -\
    [[S2CTransport]] <-> Stream -\
-[[(both)Transport]] <-> Stream <-> UserAgent (UA) <-> User
-[[(both)Transport]] <-> Stream <-> UserAgent (UA) -/
-
-`UserAgent' is implemented in Minerva because Minerva receives cookies
-and wants to make it slightly harder to hijack a Stream (you need to
-steal the cookie as well, not just the streamID which will be flying
-over GET all the time.) Minerva might also have to make decisions based
-on the user agent - some browsers will have more problems that we need
-to work around. In the Minerva world, `UserAgent' really means "user
-agent and nearby configuration, such as annoying proxies".
-
-`User' is not implemented in Minerva; Minerva does not care that one
-person/user/account/robot can be logged in at multiple places.
-
-A User does not "have" UserAgents. A UserAgent should be re-used if
-UserAgent logs into another User. Implement `User' in your application
-code and allow UserAgents to temporarily associate themselves with a
-User.
+[[(both)Transport]] <-> Stream <-> StreamFactory
 
 C2S means client to server, S2C means server to client. S2C doesn't mean
 that the server establishes the connection (although it is maybe
@@ -55,7 +38,7 @@ A Stream can have more than one S2CTransport:
 	S2CTransport is "done", to reduce the small time gap caused by
 	request/connection re-establishment.
 
-A UA (held together by a cookie) can have more than Stream:
+A user agent (held together by a cookie) can have more than Stream:
 
 	With Chrome, we might have the same cookie,
 	yet not be able to share data between tabs.
@@ -64,7 +47,7 @@ A UA (held together by a cookie) can have more than Stream:
 	to share a stream across tabs/windows, yet still have the same
 	session cookie.
 
-User can have more than one UA:
+A human/robot user can have more than one UA:
 
 	User might be connecting from multiple browsers.
 
@@ -73,27 +56,9 @@ User can have more than one UA:
 	Many browsers provide an "incognito" mode where cookies are not shared
 	with the non-incognito mode. This is sort of like having a second browser.
 
-Clients will spend most of their time dealing with a Stream by receiving
-and sending boxes over it. Clients upload boxes to the Stream, not the
-UA.
 
-A FlashSocketTransport would just give the box to the Stream.  The
-other C2S transport (XHR calls) is not represented by an instance of
-some kind of Transport The twisted.web Resource just gives the box to
-the Stream.
-
-Ideas for Transport types:
-	XHRTransport (s2c)
-		both "stream" and 1-shot mode.
-	ScriptTransport (s2c)
-		both htmlfile and Firefox/Safari mode.
-	SSETransport (s2c)
-		Server-sent events (Opera)
-	FlashSocketTransport (s2c,c2s)
-
-
-Just for fun, this is the full path from the User to a socket (when using some HTTP transport):
- [[user]].[[ua]].[[stream]].[[transport]]._request.channel.transport.socket
+Just for fun, this is the full path from the Stream to a socket (when using some HTTP transport):
+[[stream]].[[transport]]._request.channel.transport.socket
 
 
 Client-side notes:
@@ -101,22 +66,16 @@ Client-side notes:
 Client should know how to get establish a downstream and upstream transport
 in one step (using just the information on the generated HTML page). There
 should be no additional negotiation, unless absolutely necessary.
-
-The server will generate a "base Stream ID" (128 bits), and the client will
-add a "-<number>" suffix where <number> is incremented for each stream
-created with the same "base Stream ID". Client will always upload the Stream ID
-for both S2C and C2S (both HTTP), and for Flash socket.
-
-We actually don't need the client to send the session ID (though they'll do it
-anyway over HTTP), because server already knows which stream IDs belong to
-a session ID.
 """
 
 # Error codes for closing a transport
 ERROR_CODES = {
 	# This transport cannot send the boxes the client asked for,
 	# probably because they are longer in the queue.
-	# This error can only be received at the start of an S2C transport.
+	# This error if often received at the start of an S2C transport
+	#     (if the Stream somehow "disappeared" on the server side),
+	#     but it can also happen if the server dropped boxes from the
+	#     queue because it mistakenly assumed the client had received them.
 	'LOST_S2C_BOXES': 801,
 
 	# This S2C transport is obsoleted by a newer transport that client
