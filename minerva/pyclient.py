@@ -210,7 +210,7 @@ class BaseTwoWayCommunicator(object):
 
 
 	def _isControlFrame(self, frame):
-		return frame[0] != link.TYPE_BOX
+		return frame[0] != link.FrameTypes.BOX
 
 
 	def _handleFrame(self, frame):
@@ -220,7 +220,7 @@ class BaseTwoWayCommunicator(object):
 		self.framesReceived += 1
 
 		# Verify S2C number
-		if frame[0] == link.TYPE_SEQNUM:
+		if frame[0] == link.FrameTypes.SEQNUM:
 			if frame[1] != self._startAtSeqNum:
 				self.abortAll()
 				raise UnexpectedS2CNumber(
@@ -228,7 +228,7 @@ class BaseTwoWayCommunicator(object):
 						self._startAtSeqNum, frame[1]))
 
 		# Stop on errors
-		if frame[0] == link.TYPE_ERROR:
+		if frame[0] == link.FrameTypes.ERROR:
 			log.msg('Got error frame: %r' % (frame,))
 			self.finish()
 			return

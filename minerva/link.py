@@ -91,10 +91,11 @@ class Errors(object):
 	SERVER_LOAD = 810
 
 
-TYPE_BOX = 0
-TYPE_SEQNUM = 1
-TYPE_ERROR = 2
-TYPE_C2S_SACK = 3
+class FrameTypes(object):
+	BOX = 0
+	SEQNUM = 1
+	ERROR = 2
+	C2S_SACK = 3
 
 
 ## Make sure no numeric code was used more than once
@@ -615,7 +616,7 @@ class _BaseHTTPTransport(object):
 		"""
 		See L{IMinervaTransport.close}
 		"""
-		self._forceWrite([TYPE_ERROR, code])
+		self._forceWrite([FrameTypes.ERROR, code])
 		self.request.finish()
 		log.msg("Closed transport %s with reason %d." % (self, code))
 
@@ -624,7 +625,7 @@ class _BaseHTTPTransport(object):
 		"""
 		See L{IMinervaTransport.close}
 		"""
-		self._forceWrite([TYPE_C2S_SACK, sackInfo])
+		self._forceWrite([FrameTypes.C2S_SACK, sackInfo])
 		self.request.finish()
 
 
@@ -736,12 +737,12 @@ class _BaseHTTPS2CTransport(_BaseHTTPTransport):
 				# 	negotiate less padding with the client.
 				# TODO: don't write the padding when long-polling, it's just
 				# 	a waste
-				seqString = self._stringOne([TYPE_SEQNUM, seqNum, (' ' * (1024 * 4))])
+				seqString = self._stringOne([FrameTypes.SEQNUM, seqNum, (' ' * (1024 * 4))])
 				toSend += seqString
 				frameCount += 1
 				byteCount += len(seqString)
 
-			boxString = self._stringOne([TYPE_BOX, box])
+			boxString = self._stringOne([FrameTypes.BOX, box])
 			toSend += boxString
 			frameCount += 1
 			byteCount += len(boxString)

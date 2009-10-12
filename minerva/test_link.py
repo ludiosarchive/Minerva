@@ -681,7 +681,7 @@ class TestHTTPFace(unittest.TestCase):
 		yield _render(self.resource, self.req)
 		responseBody = self._extractResponseFrame()
 		msgType, sackInfo = json.loads(responseBody)
-		self.assertEqual(link.TYPE_C2S_SACK, msgType)
+		self.assertEqual(link.FrameTypes.C2S_SACK, msgType)
 		self.assertEqual([0, []], sackInfo)
 
 
@@ -696,7 +696,7 @@ class TestHTTPFace(unittest.TestCase):
 		yield _render(self.resource, self.req)
 		responseBody = self._extractResponseFrame()
 		msgType, sackInfo = json.loads(responseBody)
-		self.assertEqual(link.TYPE_C2S_SACK, msgType)
+		self.assertEqual(link.FrameTypes.C2S_SACK, msgType)
 		self.assertEqual([1, [3]], sackInfo)
 
 
@@ -718,7 +718,7 @@ class TestHTTPFace(unittest.TestCase):
 		responseBody = self._extractResponseFrame()
 		msgType, rest = json.loads(responseBody)
 
-		self.assertEqual(link.TYPE_ERROR, msgType)
+		self.assertEqual(link.FrameTypes.ERROR, msgType)
 		self.assertEqual(link.Errors.ACKED_UNSENT_S2C_FRAMES, rest)
 
 
@@ -726,7 +726,7 @@ class TestHTTPFace(unittest.TestCase):
 		responseBody = self._extractResponseFrame()
 		msgType, rest = json.loads(responseBody)
 
-		self.assertEqual(link.TYPE_ERROR, msgType)
+		self.assertEqual(link.FrameTypes.ERROR, msgType)
 		self.assertEqual(link.Errors.INVALID_ARGUMENTS, rest)
 
 
