@@ -69,6 +69,9 @@ class DummyRequest(_TwistedDummyRequest):
 
 	def __init__(self, *args, **kwargs):
 		_TwistedDummyRequest.__init__(self, *args, **kwargs)
+
+		# This is needed because _BaseHTTPTransport does
+		#     self.request.channel.transport.setTcpNoDelay(True)
 		self.channel = DummyChannel()
 
 
@@ -82,7 +85,7 @@ class DummyRequest(_TwistedDummyRequest):
 
 
 
-class DummyIndex(resource.Resource):
+class IntegrationIndex(resource.Resource):
 
 	def __init__(self, streamFactory, transportFirewall):
 		resource.Resource.__init__(self)
@@ -98,7 +101,7 @@ class BaseTestIntegration(object):
 		clock = task.Clock()
 		self._streamFactory = link.StreamFactory(clock)
 		self._transportFirewall = link.TransportFirewall()
-		root = DummyIndex(self._streamFactory, self._transportFirewall)
+		root = IntegrationIndex(self._streamFactory, self._transportFirewall)
 
 		site = server.Site(root)
 		self.p = reactor.listenTCP(0, site, interface='127.0.0.1')
@@ -789,3 +792,6 @@ class TestHTTPFace(unittest.TestCase):
 		self._makeRequest()
 		yield _render(self.resource, self.req)
 		self._assertInvalidArguments()
+
+
+	# TODO: test responseCode 400 when transport type is unknowable

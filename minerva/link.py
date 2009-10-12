@@ -993,7 +993,7 @@ class BaseHTTPResource(resource.Resource):
 
 	def _fail(self, request, message=None):
 		if not message:
-			message = "request.args = %r, contents = %r" % (request.args,)
+			message = "request.args = %r" % (request.args,)
 		raise InvalidArgumentsError(message)
 
 
@@ -1124,7 +1124,7 @@ class HTTPFace(BaseHTTPResource):
 			# overlapping requests to mask (request establishment latency).
 			opts['ackS2C'] = int(args['a'][0])
 			if opts['ackS2C'] < -1:
-				self._fail(request)
+				raise ValueError()
 		except (KeyError, IndexError, ValueError, TypeError, abstract.InvalidIdentifier):
 			##log.err()
 			transport = opts['transportClass'](request, None, None, None)
@@ -1169,7 +1169,7 @@ class HTTPFace(BaseHTTPResource):
 
 			opts['ackS2C'] = abstract.ensureInt(data['a'])
 			if opts['ackS2C'] < -1:
-				self._fail(request)
+				raise ValueError()
 
 			opts['frames'] = self._extractFramesFromDict(data)
 		except (KeyError, ValueError, TypeError, abstract.InvalidIdentifier):
