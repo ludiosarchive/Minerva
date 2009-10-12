@@ -571,7 +571,7 @@ class BoxRecordingStreamFactory(link.StreamFactory):
 
 
 
-class TestHTTPFace(unittest.TestCase):
+class _TestHTTPFace(object):
 	"""
 	Tests for L{link.HTTPFace}. We use the 'public interface' of L{StreamFactory}
 	and L{Stream} to verify that it works, instead of a lot of mock objects.
@@ -588,12 +588,6 @@ class TestHTTPFace(unittest.TestCase):
 		self.resource = link.HTTPFace(streamFactory, transportFirewall)
 
 
-	def _makeRequest(self):
-		self.req = DummyRequest([])
-		self.req.content = self._makeUploadBuffer()
-		self.req.method = "POST"
-
-
 	def _resetBaseUpload(self):
 		self.baseUpload = dict(
 			a=-1,
@@ -603,18 +597,6 @@ class TestHTTPFace(unittest.TestCase):
 			i=self.streamId.id.encode('hex')
 		)
 		self.connectionCount += 1
-
-
-	def _makeUploadBuffer(self):
-		upload = StringIO()
-		upload.write(
-			json.dumps(self.baseUpload)
-		)
-
-		assert upload.tell() > 0
-		# We don't seek to 0 because HTTPFace might have to handle that case.
-
-		return upload
 
 
 	def _extractResponseFrame(self):
@@ -858,3 +840,25 @@ class TestHTTPFace(unittest.TestCase):
 		self.baseUpload['t'] = 'zz'
 		self._makeRequest()
 		self.assertRaises(link.BadTransportType, lambda: _render(self.resource, self.req))
+
+
+
+
+class TestHTTPFacePOST(_TestHTTPFace, unittest.TestCase):
+
+	def _makeRequest(self):
+		self.req = DummyRequest([])
+		self.req.content = self._makeUploadBuffer()
+		self.req.method = "POST"
+
+
+	def _makeUploadBuffer(self):
+		upload = StringIO()
+		upload.write(
+			json.dumps(self.baseUpload)
+		)
+
+		assert upload.tell() > 0
+		# We don't seek to 0 because HTTPFace might have to handle that case.
+
+		return upload
