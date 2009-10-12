@@ -1196,10 +1196,11 @@ class HTTPFace(BaseHTTPResource):
 			opts['streamId'] = StreamId(data['i'].decode('hex'))
 			opts['connectionNumber'] = abstract.ensureNonNegInt(data['n'])
 			# Note that this will accept -1.0, unlike the stricter code in render_GET
-			if data['n'] == -1:
+			s_value = data['s']
+			if s_value == -1:
 				opts['uploadOnly'] = True
 			else:
-				opts['startAtSeqNum'] = abstract.ensureNonNegInt(data['s'])
+				opts['startAtSeqNum'] = abstract.ensureNonNegInt(s_value)
 
 			opts['ackS2C'] = abstract.ensureInt(data['a'])
 			if opts['ackS2C'] < -1:
@@ -1207,7 +1208,7 @@ class HTTPFace(BaseHTTPResource):
 
 			opts['frames'] = self._extractFramesFromDict(data)
 		except (KeyError, ValueError, TypeError, abstract.InvalidIdentifier):
-			raise
+			#raise
 			self._fail(request, contents=contents)
 
 		#print 'opts', opts

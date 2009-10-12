@@ -626,6 +626,16 @@ class TestHTTPFace(unittest.TestCase):
 		return upload
 
 
+	def _extractResponseFrame(self):
+		response = ''.join(self.req.written)
+		##print 'res', response
+
+		# "decode" the response like L{BencodeStringDecoder}
+		responseLengthStr, responseBody = response.split(':', 1)
+
+		return responseBody
+
+
 	def test_uploadOneBox(self):
 		self.baseUpload['0'] = ['hello', 'there']
 		self._makeRequest()
@@ -678,8 +688,8 @@ class TestHTTPFace(unittest.TestCase):
 		self._makeRequest()
 
 		yield _render(self.resource, self.req)
-		response = ''.join(self.req.written)
-		msgType, sackInfo = json.loads(response)
+		responseBody = self._extractResponseFrame()
+		msgType, sackInfo = json.loads(responseBody)
 		self.assertEqual(link.TYPE_C2S_SACK, msgType)
 		self.assertEqual([0, []], sackInfo)
 
@@ -693,8 +703,8 @@ class TestHTTPFace(unittest.TestCase):
 		self._makeRequest()
 
 		yield _render(self.resource, self.req)
-		response = ''.join(self.req.written)
-		msgType, sackInfo = json.loads(response)
+		responseBody = self._extractResponseFrame()
+		msgType, sackInfo = json.loads(responseBody)
 		self.assertEqual(link.TYPE_C2S_SACK, msgType)
 		self.assertEqual([1, [3]], sackInfo)
 
@@ -714,11 +724,7 @@ class TestHTTPFace(unittest.TestCase):
 		self._makeRequest()
 
 		yield _render(self.resource, self.req)
-		response = ''.join(self.req.written)
-		##print 'res', response
-
-		# "decode" the response like L{BencodeStringDecoder}
-		responseLengthStr, responseBody = response.split(':', 1)
+		responseBody = self._extractResponseFrame()
 		msgType, rest = json.loads(responseBody)
 
 		self.assertEqual(link.TYPE_ERROR, msgType)
