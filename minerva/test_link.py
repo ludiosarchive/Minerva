@@ -818,6 +818,30 @@ class TestHTTPFace(unittest.TestCase):
 		self._assertInvalidArguments()
 
 
+	@defer.inlineCallbacks
+	def test_invalidStartAtSeqNumMissing(self):
+		del self.baseUpload['s']
+		self._makeRequest()
+		yield _render(self.resource, self.req)
+		self._assertInvalidArguments()
+
+
+	@defer.inlineCallbacks
+	def test_invalidStartAtSeqNumTooLow(self):
+		self.baseUpload['s'] = -2
+		self._makeRequest()
+		yield _render(self.resource, self.req)
+		self._assertInvalidArguments()
+
+
+	@defer.inlineCallbacks
+	def test_invalidStartAtSeqNumWrongType(self):
+		self.baseUpload['n'] = -0.9
+		self._makeRequest()
+		yield _render(self.resource, self.req)
+		self._assertInvalidArguments()
+
+
 	def test_invalidTransportTypeMissing(self):
 		del self.baseUpload['t']
 		self._makeRequest()
