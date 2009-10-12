@@ -312,6 +312,8 @@ class Stream(object):
 		"""
 		# TODO: are all C2S frames boxes? not in the future. there might be some
 		# kind of special metadata.
+		# TODO XXX needs a test for timer
+		self._noContactTimer.reset(self.noContactTimeout)
 		self.incoming.give(frames)
 		for f in self.incoming.getDeliverableItems():
 			self.boxReceived(f)
@@ -330,7 +332,7 @@ class Stream(object):
 
 		if len(self._approvedTransports) > 1:
 			# Select the transport with the highest connectionNumber.
-			# TODO: should there be any other criteria?
+			# TODO: make this work when an S2C request is "waiting" on another to end
 			transport = sorted(self._approvedTransports, key=lambda t: t.connectionNumber, reverse=True)[0]
 			if self.noisy:
 				log.msg("Multiple S2C transports: \n%s\n, so I picked the newest: %r" % (
@@ -385,7 +387,7 @@ class Stream(object):
 		C{transport} has attached to this Stream.
 
 		Whoever calls this must make sure that C{transport} really is
-		safe to attach to this Stream, using L{StreamFinder} or a stricter
+		safe to attach to this Stream, using L{TransportFirewall} or a stricter
 		variant of it.
 		"""
 		if transport in self._approvedTransports:
@@ -509,13 +511,9 @@ class StreamFactory(object):
 
 
 
-class IStreamFinder(Interface):
+class ITransportFirewall(Interface):
 
-	def __init__(streamFactory):
-		pass
-
-
-	def checkTransport(transport, stream):
+	def checkTransport(transport):
 		"""
 		Override this. The base implementation does no additional checking.
 
@@ -525,7 +523,13 @@ class IStreamFinder(Interface):
 		If C{transport} should not be attached to C{stream}:
 			raise any exception, or a Deferred that `errback's
 
+		This should not be used for application-level user login or similar
+		authentication. Here, you cannot send an application-handalable exception
+		to the client. This is only for rejecting transports that have the right
+		streamId but are still too suspicious to attach to the stream.
+
 		I might reach into C{transport} to look at C{.request} or C{.credentialsFrame}
+			or C{.streamId}
 
 		Ideas for additional checking (these may stop amateurs from hijacking a Stream):
 			- check that some cookie has the same value as the first transport
@@ -536,50 +540,21 @@ class IStreamFinder(Interface):
 			- check that request/websocket/socket is secure (not unencrypted)
 			- check that header order is the same as it first was
 				(limited use, could block a legitimate user with a strange proxy)
-
-		But keep in mind that this is a very low-level feature, and you will not
-		be able to send an application-handalable exception to the client.
-		"""
-
-
-	def getStreamForTransport(transport):
-		"""
-		@return: A L{Deferred} that callbacks with a L{Stream} on which it is safe
-			to attach C{transport}, or a L{Deferred} that errbacks if no such stream
-			exists.
 		"""
 
 
 
-class StreamFinder(object):
+class TransportFirewall(object):
 	"""
-	You can really override any of this and make it do whatever you want.
-	Attaching the wrong transport to a Stream is not recommended, though.
+	Think of this as the "firewall" that can reject any HTTP or *Socket transport
+	before it is attached to a Stream.
 	"""
-	implements(IStreamFinder)
+	implements(ITransportFirewall)
 
-	def __init__(self, streamFactory):
-		self._streamFactory = streamFactory
-
-
-	def checkTransport(self, transport, stream):
+	def checkTransport(self, transport):
 		"""
-		See L{IStreamFinder.checkTransport}
+		See L{ITransportFirewall.checkTransport}
 		"""
-
-
-	def getStreamForTransport(self, transport):
-		"""
-		See L{IStreamFinder.getStreamForTransport}
-		"""
-		stream = self._streamFactory.getOrBuildStream(transport.streamId)
-
-		d = defer.maybeDeferred(self.checkTransport, transport, stream)
-		def cbOkay(_):
-			return stream
-		d.addCallback(cbOkay)
-
-		return d
 
 
 
@@ -990,9 +965,9 @@ class BaseHTTPResource(resource.Resource):
 	isLeaf = True
 	#cookieName = 'm'
 
-	def __init__(self, streamFactory, streamFinder):
+	def __init__(self, streamFactory, transportFirewall):
 		self._streamFactory = streamFactory
-		self._streamFinder = streamFinder
+		self._transportFirewall = transportFirewall
 
 
 	def _fail(self, request, message=None):
@@ -1047,23 +1022,24 @@ class HTTPS2C(BaseHTTPResource):
 		transportMap = dict(s=ScriptTransport, x=XHRTransport) #, o=SSETransport)
 		transport = transportMap[transportString](request, streamId, connectionNumber, startAtSeqNum)
 
-		d = self._streamFinder.getStreamForTransport(transport)
+		d = defer.maybeDeferred(self._transportFirewall.checkTransport, transport)
 
 		def printDisconnectTime(*args, **kwargs):
 			import time
 			print 'Server connection %r lost at %.09f' % (self, time.time())
 
-		def gotStream(stream):
+		def okayToAttach(_):
+			stream = self._streamFactory.getOrBuildStream(streamId)
 			stream.transportOnline(transport)
 			stream.clientReceivedEverythingBefore(ackS2C + 1)
 			##requestFinishedD.addBoth(printDisconnectTime)
 			requestFinishedD.addBoth(lambda *args: stream.transportOffline(transport))
 			requestFinishedD.addErrback(log.err)
 
-		def noStream(_):
+		def notOkay(_):
 			transport.close(ERROR_CODES['COULD_NOT_ATTACH'])
 
-		d.addCallbacks(gotStream, noStream)
+		d.addCallbacks(okayToAttach, notOkay)
 		d.addErrback(log.err)
 
 		# Just because we're returning NOT_DONE_YET, doesn't mean the request
@@ -1080,7 +1056,7 @@ class HTTPS2C(BaseHTTPResource):
 
 class OneShotHTTPUploadTransport(_BaseHTTPTransport):
 	"""
-	We need a transport even for one-shot uploads because L{StreamFinder}
+	We need a transport even for one-shot uploads because L{TransportFirewall}
 	makes decisions based on transports. 
 
 	This could be used by XHR, XDR, img tags, or other one-shot upload
@@ -1165,9 +1141,11 @@ class HTTPC2S(BaseHTTPResource):
 		# Do we really want C2S requests to automatically create a new Stream just
 		# like S2C requests? Probably.
 		transport = OneShotHTTPUploadTransport(request, streamId)
-		d = self._streamFinder.getStreamForTransport(transport)
+		d = defer.maybeDeferred(self._transportFirewall.checkTransport, transport)
 
-		def gotStream(stream):
+		def okayToAttach(_):
+			stream = self._streamFactory.getOrBuildStream(streamId)
+
 			try:
 				stream.clientReceivedEverythingBefore(ackS2C + 1)
 			except abstract.SeqNumTooHighError:
@@ -1190,10 +1168,10 @@ class HTTPC2S(BaseHTTPResource):
 			sackInfo = stream.getSACK()
 			transport.sendSACK(sackInfo)
 
-		def noStream(_):
+		def notOkay(_):
 			transport.close(ERROR_CODES['COULD_NOT_ATTACH'])
 
-		d.addCallbacks(gotStream, noStream)
+		d.addCallbacks(okayToAttach, notOkay)
 		d.addErrback(log.err)
 
 		# See comment about NOT_DONE_YET in L{HTTPS2C}.
