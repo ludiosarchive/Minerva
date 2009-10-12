@@ -1088,17 +1088,13 @@ class HTTPFace(BaseHTTPResource):
 		return frames
 
 
-	def _makeTransport(self, typeString):
-		return dict(s=ScriptTransport, x=XHRTransport)[typeString]
-
-
 	def render_GET(self, request):
 		args = request.args
 		opts = {}
 
 		try:
-			# The type of S2C transport the client demands. #, o=SSETransport)
-			opts['transportClass'] = self._makeTransport(args['t'][0])
+			# The type of S2C transport the client demands. # TODO: , o=SSETransport)
+			opts['transportClass'] = TRANSPORT_STRING_TO_TYPE[args['t'][0]]
 		except (KeyError, IndexError):
 			self._fail(request)
 
@@ -1156,8 +1152,13 @@ class HTTPFace(BaseHTTPResource):
 		opts = {}
 
 		try:
+			# The type of S2C transport the client demands. # TODO: , o=SSETransport)
+			opts['transportClass'] = TRANSPORT_STRING_TO_TYPE[data['t']]
+		except KeyError:
+			self._fail(request)
+
+		try:
 			opts['uploadOnly'] = False
-			opts['transportClass'] = self._makeTransport(data['t'])
 			opts['streamId'] = StreamId(data['i'].decode('hex'))
 			opts['connectionNumber'] = abstract.ensureNonNegInt(data['n'])
 			# Note that this will accept -1.0, unlike the stricter code in render_GET
@@ -1181,3 +1182,6 @@ class HTTPFace(BaseHTTPResource):
 		#print 'opts', opts
 
 		return self.renderWithOptions(request, **opts)
+
+
+TRANSPORT_STRING_TO_TYPE = dict(s=ScriptTransport, x=XHRTransport)

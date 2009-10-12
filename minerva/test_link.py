@@ -794,4 +794,34 @@ class TestHTTPFace(unittest.TestCase):
 		self._assertInvalidArguments()
 
 
+	@defer.inlineCallbacks
+	def test_invalidConnectionNumberMissing(self):
+		del self.baseUpload['n']
+		self._makeRequest()
+		yield _render(self.resource, self.req)
+		self._assertInvalidArguments()
+
+
+	@defer.inlineCallbacks
+	def test_invalidConnectionNumberTooLow(self):
+		self.baseUpload['n'] = -1
+		self._makeRequest()
+		yield _render(self.resource, self.req)
+		self._assertInvalidArguments()
+
+
+	@defer.inlineCallbacks
+	def test_invalidConnectionNumberWrongType(self):
+		self.baseUpload['n'] = -0.9
+		self._makeRequest()
+		yield _render(self.resource, self.req)
+		self._assertInvalidArguments()
+
+
+	def test_invalidTransportTypeMissing(self):
+		del self.baseUpload['t']
+		self._makeRequest()
+		self.assertRaises(link.InvalidArgumentsError, lambda: _render(self.resource, self.req))
+
+
 	# TODO: test responseCode 400 when transport type is unknowable
