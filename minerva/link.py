@@ -977,7 +977,6 @@ class InvalidArgumentsError(Exception):
 class BaseHTTPResource(resource.Resource):
 
 	isLeaf = True
-	#cookieName = 'm'
 
 	def __init__(self, streamFactory, transportFirewall):
 		self._streamFactory = streamFactory
@@ -988,51 +987,6 @@ class BaseHTTPResource(resource.Resource):
 		if not message:
 			message = "request.args = %r, contents = %r" % (request.args, contents)
 		raise InvalidArgumentsError(message)
-
-
-#	def _getUAFromCookie(self, request):
-#		##print request.getCookie('m')
-#		uaId = request.getCookie(self.cookieName).decode('base64')
-#		ua = self._uaFactory.getOrBuildUAWithId(uaId)
-#		return ua
-
-
-
-
-
-#class OneShotHTTPUploadTransport(_BaseHTTPTransport):
-#	"""
-#	We need a transport even for one-shot uploads because L{TransportFirewall}
-#	makes decisions based on transports.
-#
-#	This could be used by XHR, XDR, img tags, or other one-shot upload
-#	methods (from a browser or other HTTP clients).
-#	"""
-#
-#	implements(IMinervaTransport)
-#
-#	def __init__(self, request, streamId):
-#		"""
-#		I need a L{twisted.web.http.Request} to write to.
-#
-#		L{connectionNumber} is incremented by the client as they
-#			open S2C transports.
-#		"""
-#		_BaseHTTPTransport.__init__(self, request, streamId)
-#		self.connectionNumber = None
-#
-#
-#	# Copy/paste from XHRTransport
-#	def _stringOne(self, frame):
-#		"""
-#		Return a serialized string for one frame.
-#		"""
-#		# TODO: For some browsers (without the native JSON object),
-#		# dump more compact "JSON" without the single quotes around properties
-#
-#		s = dumpToJson7Bit(frame)
-#		return str(len(s)) + ':' + s
-#
 
 
 
@@ -1214,84 +1168,3 @@ class HTTPFace(BaseHTTPResource):
 		#print 'opts', opts
 
 		return self.renderWithOptions(request, **opts)
-
-
-
-class HTTPFace___removeme(BaseHTTPResource):
-
-	def render_GET(self, request):
-		return 'TODO IMPLEMENT'
-
-
-	def render_POST(self, request):
-		'''
-		Clients will POST some JSON in this format:
-
-		{"[[C2S sequence number]]": [[box]], ..., ..., "a": [[S2C ACK]], "i": "[[hex streamId]]"}
-
-		It looks like this:
-
-		{"0": "box0", "1": "box1", "a": 1782, "i": "ffffffffffffffffffffffffffffffff"}
-		'''
-		request.content.seek(0)
-		contents = request.content.read()
-
-		data = json.loads(contents)
-
-		if not 'a' in data:
-			self._fail(request, "No S2C ACK in request")
-		if not 'i' in data:
-			self._fail(request, "No streamId in request")
-
-		ackS2C = data["a"]
-		if not isinstance(ackS2C, (int, long)) or ackS2C < -1:
-			self._fail(request)
-
-		try:
-			streamId = StreamId(data['i'].decode('hex'))
-		except TypeError:
-			self._fail(request, "Could not decode hex to streamId: %r" % (data['i'],))
-		except abstract.InvalidIdentifier:
-			self._fail(request, "Invalid streamId length")
-
-		del data["a"]
-		del data["i"]
-
-		# Do we really want C2S requests to automatically create a new Stream just
-		# like S2C requests? Probably.
-		transport = OneShotHTTPUploadTransport(request, streamId)
-		d = defer.maybeDeferred(self._transportFirewall.checkTransport, transport)
-
-		def okayToAttach(_):
-			stream = self._streamFactory.getOrBuildStream(streamId)
-
-			try:
-				stream.clientReceivedEverythingBefore(ackS2C + 1)
-			except abstract.SeqNumTooHighError:
-				# If client sent a too-high ACK, don't deliver any of client's frames
-				# to Stream. Send client an error.
-				# TODO: maybe send the highest-acceptable ACK number as third param
-				transport.close(ERROR_CODES['ACKED_UNSENT_S2C_FRAMES'])
-				return
-
-			frames = []
-
-			# If there's any junk in the JSON, L{strToNonNeg} will throw a ValueError
-			for seqNumStr, frame in data.iteritems():
-				seqNum = abstract.strToNonNeg(seqNumStr)
-				frames.append((seqNum, frame))
-
-			if frames:
-				stream.clientUploadedFrames(frames)
-
-			sackInfo = stream.getSACK()
-			transport.closeWithSACK(sackInfo)
-
-		def notOkay(_):
-			transport.close(ERROR_CODES['COULD_NOT_ATTACH'])
-
-		d.addCallbacks(okayToAttach, notOkay)
-		d.addErrback(log.err)
-
-		# See comment about NOT_DONE_YET in L{HTTPS2C}.
-		return NOT_DONE_YET

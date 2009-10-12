@@ -90,18 +90,6 @@ class DummyIndex(resource.Resource):
 
 
 
-#class DummyStream(link.Stream):
-#
-#	def __init__(self):
-#		link.Stream.__init__(self)
-#		self._gotBoxes = []
-#
-#
-#	def boxReceived(self, box):
-#		self._gotBoxes.append(box)
-#
-
-
 class BaseTestIntegration(object):
 
 	timeout = 3
