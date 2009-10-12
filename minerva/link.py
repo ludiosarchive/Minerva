@@ -518,6 +518,9 @@ class ITransportFirewall(Interface):
 
 	Think of this as the "firewall" that can reject any HTTP or *Socket transport
 	to prevent Minerva from attaching it to a Stream.
+
+	If you need to do checking that relies on other objects, you'll want to override
+	C{__init__}.
 	"""
 	def checkTransport(transport):
 		"""

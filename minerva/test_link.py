@@ -591,6 +591,12 @@ class TestHTTPC2S(unittest.TestCase):
 		self.resource = link.HTTPC2S(streamFactory, transportFirewall)
 
 
+	def _makeRequest(self):
+		self.req = DummyRequest([])
+		self.req.content = self._makeUploadBuffer()
+		self.req.method = "POST"
+
+
 	def _resetBaseUpload(self):
 		self.baseUpload = dict(
 			a=-1,
@@ -612,11 +618,9 @@ class TestHTTPC2S(unittest.TestCase):
 
 	def test_uploadOneBox(self):
 		self.baseUpload['0'] = ['hello', 'there']
-		req = DummyRequest([])
-		req.content = self._makeUploadBuffer()
-		req.method = "POST"
+		self._makeRequest()
 
-		d = _render(self.resource, req)
+		d = _render(self.resource, self.req)
 		d.addCallback(lambda _: self.assertEqual([['hello', 'there']], self.expectedStream.savedBoxes))
 		return d
 
@@ -624,25 +628,19 @@ class TestHTTPC2S(unittest.TestCase):
 	@defer.inlineCallbacks
 	def test_uploadManyBoxes(self):
 		self.baseUpload['0'] = ['hello', 'there']
-		req = DummyRequest([])
-		req.content = self._makeUploadBuffer()
-		req.method = "POST"
-		yield _render(self.resource, req)
+		self._makeRequest()
+		yield _render(self.resource, self.req)
 
 		self._resetBaseUpload()
 		self.baseUpload['1'] = ['more', 'data']
-		req = DummyRequest([])
-		req.content = self._makeUploadBuffer()
-		req.method = "POST"
-		yield _render(self.resource, req)
+		self._makeRequest()
+		yield _render(self.resource, self.req)
 
 		self._resetBaseUpload()
 		self.baseUpload['2'] = ['frame', '2']
 		self.baseUpload['3'] = ['frame', '3']
-		req = DummyRequest([])
-		req.content = self._makeUploadBuffer()
-		req.method = "POST"
-		yield _render(self.resource, req)
+		self._makeRequest()
+		yield _render(self.resource, self.req)
 
 		self.assertEqual(
 			[['hello', 'there'], ['more', 'data'], ['frame', '2'], ['frame', '3']],
@@ -652,17 +650,13 @@ class TestHTTPC2S(unittest.TestCase):
 	@defer.inlineCallbacks
 	def test_uploadOutOfOrderBoxes(self):
 		self.baseUpload['1'] = ['more', 'data']
-		req = DummyRequest([])
-		req.content = self._makeUploadBuffer()
-		req.method = "POST"
-		yield _render(self.resource, req)
+		self._makeRequest()
+		yield _render(self.resource, self.req)
 
 		self._resetBaseUpload()
 		self.baseUpload['0'] = ['hello', 'there']
-		req = DummyRequest([])
-		req.content = self._makeUploadBuffer()
-		req.method = "POST"
-		yield _render(self.resource, req)
+		self._makeRequest()
+		yield _render(self.resource, self.req)
 
 		self.assertEqual([['hello', 'there'], ['more', 'data']], self.expectedStream.savedBoxes)
 
@@ -671,12 +665,10 @@ class TestHTTPC2S(unittest.TestCase):
 	def test_respondedWithCorrectSACK1(self):
 		self.baseUpload['0'] = ['hello', 'there']
 
-		req = DummyRequest([])
-		req.content = self._makeUploadBuffer()
-		req.method = "POST"
+		self._makeRequest()
 
-		yield _render(self.resource, req)
-		response = ''.join(req.written)
+		yield _render(self.resource, self.req)
+		response = ''.join(self.req.written)
 		msgType, sackInfo = json.loads(response)
 		self.assertEqual(link.TYPE_C2S_SACK, msgType)
 		self.assertEqual([0, []], sackInfo)
@@ -688,12 +680,10 @@ class TestHTTPC2S(unittest.TestCase):
 		self.baseUpload['1'] = {'more': 'data'}
 		self.baseUpload['3'] = {'cannot': 'deliver yet'}
 
-		req = DummyRequest([])
-		req.content = self._makeUploadBuffer()
-		req.method = "POST"
+		self._makeRequest()
 
-		yield _render(self.resource, req)
-		response = ''.join(req.written)
+		yield _render(self.resource, self.req)
+		response = ''.join(self.req.written)
 		msgType, sackInfo = json.loads(response)
 		self.assertEqual(link.TYPE_C2S_SACK, msgType)
 		self.assertEqual([1, [3]], sackInfo)
@@ -701,11 +691,9 @@ class TestHTTPC2S(unittest.TestCase):
 
 	@defer.inlineCallbacks
 	def test_clientReceivedEverythingBefore_isCalled_0(self):
-		req = DummyRequest([])
-		req.content = self._makeUploadBuffer()
-		req.method = "POST"
+		self._makeRequest()
 
-		yield _render(self.resource, req)
+		yield _render(self.resource, self.req)
 		self.assertEqual([0], self.expectedStream.calls_clientReceivedEverythingBefore)
 
 
@@ -713,12 +701,10 @@ class TestHTTPC2S(unittest.TestCase):
 	def test_invalidAckTooHigh(self):
 		self.baseUpload['a'] = 9
 
-		req = DummyRequest([])
-		req.content = self._makeUploadBuffer()
-		req.method = "POST"
+		self._makeRequest()
 
-		yield _render(self.resource, req)
-		response = ''.join(req.written)
+		yield _render(self.resource, self.req)
+		response = ''.join(self.req.written)
 		##print 'res', response
 
 		# "decode" the response like L{BencodeStringDecoder}
@@ -727,12 +713,6 @@ class TestHTTPC2S(unittest.TestCase):
 
 		self.assertEqual(link.TYPE_ERROR, msgType)
 		self.assertEqual(link.ERROR_CODES['ACKED_UNSENT_S2C_FRAMES'], rest)
-
-
-	def _makeRequest(self):
-		self.req = DummyRequest([])
-		self.req.content = self._makeUploadBuffer()
-		self.req.method = "POST"
 
 
 	def test_invalidAckTooLow(self):
