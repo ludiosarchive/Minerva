@@ -512,7 +512,13 @@ class StreamFactory(object):
 
 
 class ITransportFirewall(Interface):
+	"""
+	All internet-facing L{Factory}ies used for "Comet" will use this interface to
+	determine if the transport they have created should be attached to a Stream.
 
+	Think of this as the "firewall" that can reject any HTTP or *Socket transport
+	to prevent Minerva from attaching it to a Stream.
+	"""
 	def checkTransport(transport):
 		"""
 		Override this. The base implementation does no additional checking.
@@ -545,10 +551,7 @@ class ITransportFirewall(Interface):
 
 
 class TransportFirewall(object):
-	"""
-	Think of this as the "firewall" that can reject any HTTP or *Socket transport
-	before it is attached to a Stream.
-	"""
+
 	implements(ITransportFirewall)
 
 	def checkTransport(self, transport):
