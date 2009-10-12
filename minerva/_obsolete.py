@@ -1,3 +1,4 @@
+from minerva import link
 
 
 class UserAgent(object):
