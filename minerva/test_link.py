@@ -13,18 +13,6 @@ import simplejson as json
 from minerva import link, pyclient
 
 
-
-class DummyRequest(_TwistedDummyRequest):
-	def setHeader(self, name, value):
-		"""
-		L{twisted.web.test.test_web.DummyRequest} does strange stuff in
-		C{setHeader} -- it modifies self.outgoingHeaders, which is not close
-		enough to reality.
-		"""
-		self.responseHeaders.setRawHeaders(name, [value])
-
-
-
 # copy/paste from twisted.web.test.test_web, but added a setTcpNoDelay
 class DummyChannel(object):
 	requestIsDone = False
@@ -74,6 +62,23 @@ class DummyChannel(object):
 
 	def requestDone(self, request):
 		self.requestIsDone = True
+
+
+
+class DummyRequest(_TwistedDummyRequest):
+
+	def __init__(self, *args, **kwargs):
+		_TwistedDummyRequest.__init__(self, *args, **kwargs)
+		self.channel = DummyChannel()
+
+
+	def setHeader(self, name, value):
+		"""
+		L{twisted.web.test.test_web.DummyRequest} does strange stuff in
+		C{setHeader} -- it modifies self.outgoingHeaders, which is not close
+		enough to reality.
+		"""
+		self.responseHeaders.setRawHeaders(name, [value])
 
 
 

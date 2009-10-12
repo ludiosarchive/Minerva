@@ -45,6 +45,49 @@ class TestStrToNonNeg(unittest.TestCase):
 
 
 
+class TestEnsureInt(unittest.TestCase):
+
+	def test_ensureInt(self):
+		self.assertEqual(0, abstract.ensureInt(0))
+		self.assertEqual(-1, abstract.ensureInt(-1))
+		self.assertEqual(-1, abstract.ensureInt(-1.0))
+		self.assertEqual(0, abstract.ensureInt(-0.0))
+		self.assertEqual(2, abstract.ensureInt(2.0))
+		self.assertEqual(200000000000000000000000000, abstract.ensureInt(200000000000000000000000000))
+
+
+	def test_ensureIntExceptions(self):
+		self.assertRaises(ValueError, lambda: abstract.ensureInt("0"))
+		self.assertRaises(ValueError, lambda: abstract.ensureInt("-0"))
+		self.assertRaises(TypeError, lambda: abstract.ensureInt({}))
+		self.assertRaises(TypeError, lambda: abstract.ensureInt([]))
+
+
+
+class TestEnsureNonNegInt(unittest.TestCase):
+
+	def test_ensureNonNegInt(self):
+		self.assertEqual(0, abstract.ensureNonNegInt(0))
+		self.assertEqual(0, abstract.ensureNonNegInt(-0))
+		self.assertEqual(0, abstract.ensureNonNegInt(-0.0))
+		self.assertEqual(2, abstract.ensureNonNegInt(2.0))
+
+
+	def test_ensureNonNegIntExceptions(self):
+		self.assertRaises(ValueError, lambda: abstract.ensureNonNegInt(0.001))
+		self.assertRaises(ValueError, lambda: abstract.ensureNonNegInt(-1))
+		self.assertRaises(ValueError, lambda: abstract.ensureNonNegInt(-100000000000000000000000000000))
+
+		self.assertRaises(TypeError, lambda: abstract.ensureNonNegInt("0"))
+		self.assertRaises(TypeError, lambda: abstract.ensureNonNegInt("-0"))
+		self.assertRaises(TypeError, lambda: abstract.ensureNonNegInt("0.001"))
+
+		self.assertRaises(TypeError, lambda: abstract.ensureNonNegInt({}))
+		self.assertRaises(TypeError, lambda: abstract.ensureNonNegInt([]))
+
+
+
+
 class TestQueue(unittest.TestCase):
 	"""Tests for minerva.abstract.Queue"""
 

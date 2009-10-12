@@ -984,9 +984,9 @@ class BaseHTTPResource(resource.Resource):
 		self._transportFirewall = transportFirewall
 
 
-	def _fail(self, request, message=None):
+	def _fail(self, request, message=None, contents=None):
 		if not message:
-			message = "request.args = " + repr(request.args)
+			message = "request.args = %r, contents = %r" % (request.args, contents)
 		raise InvalidArgumentsError(message)
 
 
@@ -1087,6 +1087,8 @@ class HTTPFace(BaseHTTPResource):
 			# TODO: hopefully Stream will send a SACK frame to the client
 			# even when it's not an C{uploadOnly}
 
+			##print 'uploadOnly?', uploadOnly
+
 			if uploadOnly:
 				sackInfo = stream.getSACK()
 				transport.closeWithSACK(sackInfo)
@@ -1124,13 +1126,17 @@ class HTTPFace(BaseHTTPResource):
 		return frames
 
 
+	def _makeTransport(self, typeString):
+		return dict(s=ScriptTransport, x=XHRTransport)[typeString]
+
+
 	def render_GET(self, request):
 		args = request.args
 		opts = {}
 
 		try:
 			# The type of S2C transport the client demands. #, o=SSETransport)
-			opts['transportClass'] = dict(s=ScriptTransport, x=XHRTransport)[args['t'][0]]
+			opts['transportClass'] = self._makeTransport(args['t'][0])
 		except (KeyError, IndexError):
 			self._fail(request)
 
@@ -1162,6 +1168,8 @@ class HTTPFace(BaseHTTPResource):
 
 		opts['frames'] = self._extractFramesFromDict(args)
 
+		#print '!!!! opts', opts
+
 		return self.renderWithOptions(request, **opts)
 
 
@@ -1179,24 +1187,30 @@ class HTTPFace(BaseHTTPResource):
 		contents = request.content.read()
 
 		data = json.loads(contents)
+		##print data
 		opts = {}
 
-		opts['uploadOnly'] = False
-		opts['streamId'] = StreamId(data['i'].decode('hex'))
-		opts['connectionNumber'] = abstract.ensureNonNegInt(data['n'])
-		# Note that this will accept -1.0, unlike the stricter code in render_GET
-		if data['n'] == -1:
-			opts['uploadOnly'] = True
-		else:
-			opts['startAtSeqNum'] = abstract.ensureNonNegInt(data['n'])
+		try:
+			opts['uploadOnly'] = False
+			opts['transportClass'] = self._makeTransport(data['t'])
+			opts['streamId'] = StreamId(data['i'].decode('hex'))
+			opts['connectionNumber'] = abstract.ensureNonNegInt(data['n'])
+			# Note that this will accept -1.0, unlike the stricter code in render_GET
+			if data['n'] == -1:
+				opts['uploadOnly'] = True
+			else:
+				opts['startAtSeqNum'] = abstract.ensureNonNegInt(data['s'])
 
-		opts['ackS2C'] = abstract.ensureInt(data['a'])
-		if opts['ackS2C'] < -1:
-			self._fail(request)
+			opts['ackS2C'] = abstract.ensureInt(data['a'])
+			if opts['ackS2C'] < -1:
+				self._fail(request)
 
-		opts['frames'] = self._extractFramesFromDict(data)
+			opts['frames'] = self._extractFramesFromDict(data)
+		except (KeyError, ValueError, TypeError, abstract.InvalidIdentifier):
+			raise
+			self._fail(request, contents=contents)
 
-		print 'opts', opts
+		#print 'opts', opts
 
 		return self.renderWithOptions(request, **opts)
 

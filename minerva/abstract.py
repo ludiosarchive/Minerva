@@ -31,8 +31,11 @@ def strToNonNeg(value):
 
 
 def ensureInt(value):
+	"""
+	float -> int/long
+	"""
 	if int(value) != value:
-		raise ValueError("%r is a float but cannot be converted to identical integer" % (value,))
+		raise ValueError("%r cannot be converted to identical integer" % (value,))
 	return int(value)
 
 
@@ -43,11 +46,13 @@ def ensureNonNegInt(value):
 	"""
 	if isinstance(value, float):
 		return ensureInt(value)
+	elif isinstance(value, (int, long)):
+		if value < 0:
+			raise ValueError("%r is < 0" % (value,))
+		else:
+			return value
 	else:
-		if not isinstance(value, (int, long)) or value < 0:
-			raise ValueError("%r is < 0 or non-int/long/float" % (value,))
-
-		return value
+		raise TypeError("%r is not an int/long/float" % (value,))
 
 
 
