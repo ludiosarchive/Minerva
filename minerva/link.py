@@ -84,6 +84,9 @@ ERROR_CODES = {
 	# The S2C ACK sent by the client was too high
 	'ACKED_UNSENT_S2C_FRAMES': 804,
 
+	# Client sent bad arguments during transport initialization
+	'INVALID_ARGUMENTS': 805,
+
 	# Stream is being reset because server load is too high.
 	'SERVER_LOAD': 810,
 }
@@ -988,9 +991,9 @@ class BaseHTTPResource(resource.Resource):
 		self._transportFirewall = transportFirewall
 
 
-	def _fail(self, request, message=None, contents=None):
+	def _fail(self, request, message=None):
 		if not message:
-			message = "request.args = %r, contents = %r" % (request.args, contents)
+			message = "request.args = %r, contents = %r" % (request.args,)
 		raise InvalidArgumentsError(message)
 
 
@@ -1123,7 +1126,10 @@ class HTTPFace(BaseHTTPResource):
 			if opts['ackS2C'] < -1:
 				self._fail(request)
 		except (KeyError, IndexError, ValueError, TypeError, abstract.InvalidIdentifier):
-			self._fail(request)
+			##log.err()
+			transport = opts['transportClass'](request, None, None, None)
+			transport.close(ERROR_CODES['INVALID_ARGUMENTS'])
+			return NOT_DONE_YET
 
 		opts['frames'] = self._extractFramesFromDict(args)
 
@@ -1167,8 +1173,10 @@ class HTTPFace(BaseHTTPResource):
 
 			opts['frames'] = self._extractFramesFromDict(data)
 		except (KeyError, ValueError, TypeError, abstract.InvalidIdentifier):
-			#raise
-			self._fail(request, contents=contents)
+			##log.err()
+			transport = opts['transportClass'](request, None, None, None)
+			transport.close(ERROR_CODES['INVALID_ARGUMENTS'])
+			return NOT_DONE_YET
 
 		#print 'opts', opts
 

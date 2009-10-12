@@ -719,49 +719,73 @@ class TestHTTPFace(unittest.TestCase):
 		self.assertEqual(link.ERROR_CODES['ACKED_UNSENT_S2C_FRAMES'], rest)
 
 
+	def _assertInvalidArguments(self):
+		responseBody = self._extractResponseFrame()
+		msgType, rest = json.loads(responseBody)
+
+		self.assertEqual(link.TYPE_ERROR, msgType)
+		self.assertEqual(link.ERROR_CODES['INVALID_ARGUMENTS'], rest)
+
+
+	@defer.inlineCallbacks
 	def test_invalidAckTooLow(self):
 		self.baseUpload['a'] = -2
 		self._makeRequest()
-		self.assertRaises(link.InvalidArgumentsError, lambda: self.resource.render_POST(self.req))
+		yield _render(self.resource, self.req)
+		self._assertInvalidArguments()
 
 
+	@defer.inlineCallbacks
 	def test_invalidAckType1(self):
 		self.baseUpload['a'] = "blah"
 		self._makeRequest()
-		self.assertRaises(link.InvalidArgumentsError, lambda: self.resource.render_POST(self.req))
+		yield _render(self.resource, self.req)
+		self._assertInvalidArguments()
 
 
+	@defer.inlineCallbacks
 	def test_invalidAckType2(self):
 		self.baseUpload['a'] = []
 		self._makeRequest()
-		self.assertRaises(link.InvalidArgumentsError, lambda: self.resource.render_POST(self.req))
+		yield _render(self.resource, self.req)
+		self._assertInvalidArguments()
 
 
+	@defer.inlineCallbacks
 	def test_invalidAckMissing(self):
 		del self.baseUpload['a']
 		self._makeRequest()
-		self.assertRaises(link.InvalidArgumentsError, lambda: self.resource.render_POST(self.req))
+		yield _render(self.resource, self.req)
+		self._assertInvalidArguments()
 
 
+	@defer.inlineCallbacks
 	def test_invalidStreamIdMissing(self):
 		del self.baseUpload['i']
 		self._makeRequest()
-		self.assertRaises(link.InvalidArgumentsError, lambda: self.resource.render_POST(self.req))
+		yield _render(self.resource, self.req)
+		self._assertInvalidArguments()
 
 
+	@defer.inlineCallbacks
 	def test_invalidStreamIdWrongLength0(self):
 		self.baseUpload['i'] = ''
 		self._makeRequest()
-		self.assertRaises(link.InvalidArgumentsError, lambda: self.resource.render_POST(self.req))
+		yield _render(self.resource, self.req)
+		self._assertInvalidArguments()
 
 
+	@defer.inlineCallbacks
 	def test_invalidStreamIdWrongLength100(self):
 		self.baseUpload['i'] = 'a'*100
 		self._makeRequest()
-		self.assertRaises(link.InvalidArgumentsError, lambda: self.resource.render_POST(self.req))
+		yield _render(self.resource, self.req)
+		self._assertInvalidArguments()
 
 
+	@defer.inlineCallbacks
 	def test_invalidStreamIdNotHex(self):
 		self.baseUpload['i'] = 'x'*(2*16)
 		self._makeRequest()
-		self.assertRaises(link.InvalidArgumentsError, lambda: self.resource.render_POST(self.req))
+		yield _render(self.resource, self.req)
+		self._assertInvalidArguments()
