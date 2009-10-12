@@ -79,9 +79,9 @@ class DummyChannel(object):
 
 class DummyIndex(resource.Resource):
 
-	def __init__(self, streamFactory, streamFinder):
+	def __init__(self, streamFactory, transportFirewall):
 		resource.Resource.__init__(self)
-		self.putChild('d', link.HTTPS2C(streamFactory, streamFinder))
+		self.putChild('d', link.HTTPS2C(streamFactory, transportFirewall))
 
 
 
@@ -104,8 +104,8 @@ class BaseTestIntegration(object):
 	def startServer(self):
 		clock = task.Clock()
 		self._streamFactory = link.StreamFactory(clock)
-		self._streamFinder = link.StreamFinder(self._streamFactory)
-		root = DummyIndex(self._streamFactory, self._streamFinder)
+		self._transportFirewall = link.TransportFirewall()
+		root = DummyIndex(self._streamFactory, self._transportFirewall)
 
 		site = server.Site(root)
 		self.p = reactor.listenTCP(0, site, interface='127.0.0.1')
@@ -586,9 +586,9 @@ class TestHTTPC2S(unittest.TestCase):
 
 		clock = task.Clock()
 		streamFactory = BoxRecordingStreamFactory(clock)
-		streamFinder = link.StreamFinder(streamFactory)
+		transportFirewall = link.TransportFirewall()
 		self.expectedStream = streamFactory.getOrBuildStream(self.streamId)
-		self.resource = link.HTTPC2S(streamFactory, streamFinder)
+		self.resource = link.HTTPC2S(streamFactory, transportFirewall)
 
 
 	def _resetBaseUpload(self):
