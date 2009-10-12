@@ -610,7 +610,7 @@ class _TestHTTPFace(object):
 
 
 	def test_uploadOneBox(self):
-		self.baseUpload['0'] = ['hello', 'there']
+		self.baseUpload['f'] = {'0': ['hello', 'there']}
 		self._makeRequest()
 
 		d = _render(self.resource, self.req)
@@ -620,18 +620,17 @@ class _TestHTTPFace(object):
 
 	@defer.inlineCallbacks
 	def test_uploadManyBoxes(self):
-		self.baseUpload['0'] = ['hello', 'there']
+		self.baseUpload['f'] = {'0': ['hello', 'there']}
 		self._makeRequest()
 		yield _render(self.resource, self.req)
 
 		self._resetBaseUpload()
-		self.baseUpload['1'] = ['more', 'data']
+		self.baseUpload['f'] = {'1': ['more', 'data']}
 		self._makeRequest()
 		yield _render(self.resource, self.req)
 
 		self._resetBaseUpload()
-		self.baseUpload['2'] = ['frame', '2']
-		self.baseUpload['3'] = ['frame', '3']
+		self.baseUpload['f'] = {'2': ['frame', '2'], '3': ['frame', '3']}
 		self._makeRequest()
 		yield _render(self.resource, self.req)
 
@@ -642,12 +641,12 @@ class _TestHTTPFace(object):
 
 	@defer.inlineCallbacks
 	def test_uploadOutOfOrderBoxes(self):
-		self.baseUpload['1'] = ['more', 'data']
+		self.baseUpload['f'] = {'1': ['more', 'data']}
 		self._makeRequest()
 		yield _render(self.resource, self.req)
 
 		self._resetBaseUpload()
-		self.baseUpload['0'] = ['hello', 'there']
+		self.baseUpload['f'] = {'0': ['hello', 'there']}
 		self._makeRequest()
 		yield _render(self.resource, self.req)
 
@@ -656,7 +655,7 @@ class _TestHTTPFace(object):
 
 	@defer.inlineCallbacks
 	def test_respondedWithCorrectSACK1(self):
-		self.baseUpload['0'] = ['hello', 'there']
+		self.baseUpload['f'] = {'0': ['hello', 'there']}
 
 		self._makeRequest()
 
@@ -669,9 +668,11 @@ class _TestHTTPFace(object):
 
 	@defer.inlineCallbacks
 	def test_respondedWithCorrectSACK2(self):
-		self.baseUpload['0'] = ['hello', 'there']
-		self.baseUpload['1'] = {'more': 'data'}
-		self.baseUpload['3'] = {'cannot': 'deliver yet'}
+		self.baseUpload['f'] = {
+			'0': ['hello', 'there'],
+			'1': {'more': 'data'},
+			'3': {'cannot': 'deliver yet'}
+		}
 
 		self._makeRequest()
 
@@ -862,3 +863,27 @@ class TestHTTPFacePOST(_TestHTTPFace, unittest.TestCase):
 		# We don't seek to 0 because HTTPFace might have to handle that case.
 
 		return upload
+
+
+
+class TestHTTPFaceGET(_TestHTTPFace, unittest.TestCase):
+
+	def _makeRequest(self):
+		self.req = DummyRequest([])
+		self.req.args = self._makeArgs()
+		self.req.method = "GET"
+
+
+	def _makeArgs(self):
+		mapping = {}
+
+		for k, v in self.baseUpload.iteritems():
+			if k == 'f':
+				# JSON-encode the 'f' key only (frames)
+				mapping[k] = [json.dumps(v)]
+			else:
+				# Because URLs only contain string fragments, not numbers.
+				# Note: this also str's the one-byte transport type string
+				mapping[k] = [str(v)]
+
+		return mapping

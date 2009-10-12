@@ -87,6 +87,9 @@ class Errors(object):
 	# Client sent bad arguments during transport initialization
 	INVALID_ARGUMENTS = 805
 
+	# Client sent one or more corrupt frames (probably in a GET request)
+	CORRUPT_FRAME = 806
+
 	# Stream is being reset because server load is too high.
 	SERVER_LOAD = 810
 
@@ -1067,31 +1070,21 @@ class HTTPFace(resource.Resource):
 		return NOT_DONE_YET
 
 
-	def _extractFramesFromDict(self, args):
-		frames = []
-
-		# non-(number string keys) in C{args} will be skipped over
-		for seqNumStr, frame in args.iteritems():
-			try:
-				seqNum = abstract.strToNonNeg(seqNumStr)
-			except ValueError:
-				continue
-			frames.append((seqNum, frame))
-
-		return frames
+	def _fToFrames(self, f):
+		return list((int(x), y) for x, y in f.iteritems())
 
 
 	def render_GET(self, request):
 		args = request.args
 		opts = {}
+		opts['uploadOnly'] = False
+		opts['frames'] = None
 
 		try:
 			# The type of S2C transport the client demands. # TODO: , o=SSETransport)
 			opts['transportClass'] = self._transportStringToType[args['t'][0]]
 		except (KeyError, IndexError):
 			raise BadTransportType('request.args = %r' % (request.args,))
-
-		opts['uploadOnly'] = False
 
 		try:
 			# raises TypeError on non-hex, InvalidIdentifier on wrong length
@@ -1120,9 +1113,14 @@ class HTTPFace(resource.Resource):
 			transport.closeWithError(Errors.INVALID_ARGUMENTS)
 			return NOT_DONE_YET
 
-		opts['frames'] = self._extractFramesFromDict(args)
-
-		#print '!!!! opts', opts
+		if 'f' in args: # now args['f'] is assumed to have length > 0
+			try:
+				opts['frames'] = self._fToFrames(json.loads(args['f'][0]))
+			except json.decoder.JSONDecodeError:
+				##log.err()
+				transport = opts['transportClass'](request, None, None, None)
+				transport.closeWithError(Errors.CORRUPT_FRAME)
+				return NOT_DONE_YET
 
 		return self.renderWithOptions(request, **opts)
 
@@ -1135,7 +1133,7 @@ class HTTPFace(resource.Resource):
 
 		It looks like this:
 
-		{"0": "box0", "1": "box1", "a": 1782, "i": "ffffffffffffffffffffffffffffffff", "u": 1}
+		{"f": {"0": "box0", "1": "box1"}, "a": 1782, "i": "ffffffffffffffffffffffffffffffff", "u": 1}
 		'''
 		request.content.seek(0)
 		contents = request.content.read()
@@ -1143,6 +1141,8 @@ class HTTPFace(resource.Resource):
 		data = json.loads(contents)
 		##print data
 		opts = {}
+		opts['uploadOnly'] = False
+		opts['frames'] = None
 
 		try:
 			# The type of S2C transport the client demands. # TODO: , o=SSETransport)
@@ -1151,7 +1151,6 @@ class HTTPFace(resource.Resource):
 			raise BadTransportType('data = %r' % (data,))
 
 		try:
-			opts['uploadOnly'] = False
 			opts['streamId'] = StreamId(data['i'].decode('hex'))
 			opts['connectionNumber'] = abstract.ensureNonNegInt(data['n'])
 			# Note that this will accept -1.0, unlike the stricter code in render_GET
@@ -1165,7 +1164,8 @@ class HTTPFace(resource.Resource):
 			if opts['ackS2C'] < -1:
 				raise ValueError()
 
-			opts['frames'] = self._extractFramesFromDict(data)
+			if 'f' in data:
+				opts['frames'] = self._fToFrames(data['f'])
 		except (KeyError, ValueError, TypeError, abstract.InvalidIdentifier):
 			##log.err()
 			transport = opts['transportClass'](request, None, None, None)
