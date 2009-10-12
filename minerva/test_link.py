@@ -719,7 +719,7 @@ class TestHTTPFace(unittest.TestCase):
 		msgType, rest = json.loads(responseBody)
 
 		self.assertEqual(link.TYPE_ERROR, msgType)
-		self.assertEqual(link.ERROR_CODES['ACKED_UNSENT_S2C_FRAMES'], rest)
+		self.assertEqual(link.Errors.ACKED_UNSENT_S2C_FRAMES, rest)
 
 
 	def _assertInvalidArguments(self):
@@ -727,7 +727,7 @@ class TestHTTPFace(unittest.TestCase):
 		msgType, rest = json.loads(responseBody)
 
 		self.assertEqual(link.TYPE_ERROR, msgType)
-		self.assertEqual(link.ERROR_CODES['INVALID_ARGUMENTS'], rest)
+		self.assertEqual(link.Errors.INVALID_ARGUMENTS, rest)
 
 
 	@defer.inlineCallbacks
@@ -834,7 +834,3 @@ class TestHTTPFace(unittest.TestCase):
 		self.baseUpload['t'] = 'zz'
 		self._makeRequest()
 		self.assertRaises(link.BadTransportType, lambda: _render(self.resource, self.req))
-
-
-
-	# TODO: test responseCode 400 when transport type is unknowable

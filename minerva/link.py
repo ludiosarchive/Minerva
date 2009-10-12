@@ -69,27 +69,27 @@ should be no additional negotiation, unless absolutely necessary.
 """
 
 # Error codes for closing a transport
-ERROR_CODES = {
+class Errors(object):
 	# This transport cannot send the boxes the client asked for,
 	# probably because they are longer in the queue.
 	# This error if often received at the start of an S2C transport
 	#     (if the Stream somehow "disappeared" on the server side),
 	#     but it can also happen if the server dropped boxes from the
 	#     queue because it mistakenly assumed the client had received them.
-	'LOST_S2C_BOXES': 801,
+	LOST_S2C_BOXES = 801
 
 	# This transport could not be attached to a Stream
-	'COULD_NOT_ATTACH': 803,
+	COULD_NOT_ATTACH = 803
 
 	# The S2C ACK sent by the client was too high
-	'ACKED_UNSENT_S2C_FRAMES': 804,
+	ACKED_UNSENT_S2C_FRAMES = 804
 
 	# Client sent bad arguments during transport initialization
-	'INVALID_ARGUMENTS': 805,
+	INVALID_ARGUMENTS = 805
 
 	# Stream is being reset because server load is too high.
-	'SERVER_LOAD': 810,
-}
+	SERVER_LOAD = 810
+
 
 TYPE_BOX = 0
 TYPE_SEQNUM = 1
@@ -97,9 +97,9 @@ TYPE_ERROR = 2
 TYPE_C2S_SACK = 3
 
 
-# Make sure no numeric code was used more than once
-assert len(set(ERROR_CODES.values())) == len(ERROR_CODES), ERROR_CODES
-
+## Make sure no numeric code was used more than once
+#assert len(set(ERROR_CODES.values())) == len(ERROR_CODES), ERROR_CODES
+#
 
 def get_tcp_info(sock):
 	try:
@@ -369,7 +369,7 @@ class Stream(object):
 			# reset message.
 			# TODO: define Stream reset message
 			log.err()
-			transport.close(ERROR_CODES['LOST_S2C_BOXES'])
+			transport.close(Errors.LOST_S2C_BOXES)
 
 
 #	def reset(self):
@@ -381,7 +381,7 @@ class Stream(object):
 #			log.msg("Tried to notify transports connected to "
 #				"%s of a Stream reset, but there were no transports." % (self,))
 #		for t in self._transports:
-#			t.reset(ERROR_CODES['LOST_S2C_BOXES'])
+#			t.reset(Errors.LOST_S2C_BOXES)
 
 
 	def transportOnline(self, transport):
@@ -996,6 +996,7 @@ class HTTPFace(resource.Resource):
 	"""
 
 	isLeaf = True
+	_transportStringToType = dict(s=ScriptTransport, x=XHRTransport)
 
 	def __init__(self, streamFactory, transportFirewall):
 		self._streamFactory = streamFactory
@@ -1031,7 +1032,7 @@ class HTTPFace(resource.Resource):
 				# If client sent a too-high ACK, don't deliver any of client's frames
 				# to Stream. Send client an error.
 				# TODO: maybe send the highest-acceptable ACK number as third param
-				transport.close(ERROR_CODES['ACKED_UNSENT_S2C_FRAMES'])
+				transport.close(Errors.ACKED_UNSENT_S2C_FRAMES)
 				return
 
 			if frames:
@@ -1053,7 +1054,7 @@ class HTTPFace(resource.Resource):
 				requestFinishedD.addErrback(log.err)
 
 		def notOkay(_):
-			transport.close(ERROR_CODES['COULD_NOT_ATTACH'])
+			transport.close(Errors.COULD_NOT_ATTACH)
 
 		d.addCallbacks(okayToAttach, notOkay)
 		d.addErrback(log.err)
@@ -1085,7 +1086,7 @@ class HTTPFace(resource.Resource):
 
 		try:
 			# The type of S2C transport the client demands. # TODO: , o=SSETransport)
-			opts['transportClass'] = TRANSPORT_STRING_TO_TYPE[args['t'][0]]
+			opts['transportClass'] = self._transportStringToType[args['t'][0]]
 		except (KeyError, IndexError):
 			raise BadTransportType('request.args = %r' % (request.args,))
 
@@ -1115,7 +1116,7 @@ class HTTPFace(resource.Resource):
 		except (KeyError, IndexError, ValueError, TypeError, abstract.InvalidIdentifier):
 			##log.err()
 			transport = opts['transportClass'](request, None, None, None)
-			transport.close(ERROR_CODES['INVALID_ARGUMENTS'])
+			transport.close(Errors.INVALID_ARGUMENTS)
 			return NOT_DONE_YET
 
 		opts['frames'] = self._extractFramesFromDict(args)
@@ -1144,7 +1145,7 @@ class HTTPFace(resource.Resource):
 
 		try:
 			# The type of S2C transport the client demands. # TODO: , o=SSETransport)
-			opts['transportClass'] = TRANSPORT_STRING_TO_TYPE[data['t']]
+			opts['transportClass'] = self._transportStringToType[data['t']]
 		except KeyError:
 			raise BadTransportType('data = %r' % (data,))
 
@@ -1167,12 +1168,9 @@ class HTTPFace(resource.Resource):
 		except (KeyError, ValueError, TypeError, abstract.InvalidIdentifier):
 			##log.err()
 			transport = opts['transportClass'](request, None, None, None)
-			transport.close(ERROR_CODES['INVALID_ARGUMENTS'])
+			transport.close(Errors.INVALID_ARGUMENTS)
 			return NOT_DONE_YET
 
 		#print 'opts', opts
 
 		return self.renderWithOptions(request, **opts)
-
-
-TRANSPORT_STRING_TO_TYPE = dict(s=ScriptTransport, x=XHRTransport)
