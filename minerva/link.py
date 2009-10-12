@@ -977,28 +977,12 @@ class EncryptedSocketTransport(protocol.Protocol):
 
 
 
-class InvalidArgumentsError(Exception):
+class BadTransportType(Exception):
 	pass
 
 
 
-class BaseHTTPResource(resource.Resource):
-
-	isLeaf = True
-
-	def __init__(self, streamFactory, transportFirewall):
-		self._streamFactory = streamFactory
-		self._transportFirewall = transportFirewall
-
-
-	def _fail(self, request, message=None):
-		if not message:
-			message = "request.args = %r" % (request.args,)
-		raise InvalidArgumentsError(message)
-
-
-
-class HTTPFace(BaseHTTPResource):
+class HTTPFace(resource.Resource):
 	"""
 	You definitely want to serve this resource for your Comet server,
 	unless you really hate HTTP.
@@ -1010,6 +994,13 @@ class HTTPFace(BaseHTTPResource):
 		a - ackS2C
 		t - transportClass
 	"""
+
+	isLeaf = True
+
+	def __init__(self, streamFactory, transportFirewall):
+		self._streamFactory = streamFactory
+		self._transportFirewall = transportFirewall
+
 
 	def renderWithOptions(self,
 	request, transportClass, streamId, connectionNumber,
@@ -1096,7 +1087,7 @@ class HTTPFace(BaseHTTPResource):
 			# The type of S2C transport the client demands. # TODO: , o=SSETransport)
 			opts['transportClass'] = TRANSPORT_STRING_TO_TYPE[args['t'][0]]
 		except (KeyError, IndexError):
-			self._fail(request)
+			raise BadTransportType('request.args = %r' % (request.args,))
 
 		opts['uploadOnly'] = False
 
@@ -1155,7 +1146,7 @@ class HTTPFace(BaseHTTPResource):
 			# The type of S2C transport the client demands. # TODO: , o=SSETransport)
 			opts['transportClass'] = TRANSPORT_STRING_TO_TYPE[data['t']]
 		except KeyError:
-			self._fail(request)
+			raise BadTransportType('data = %r' % (data,))
 
 		try:
 			opts['uploadOnly'] = False

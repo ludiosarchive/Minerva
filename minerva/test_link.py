@@ -821,7 +821,20 @@ class TestHTTPFace(unittest.TestCase):
 	def test_invalidTransportTypeMissing(self):
 		del self.baseUpload['t']
 		self._makeRequest()
-		self.assertRaises(link.InvalidArgumentsError, lambda: _render(self.resource, self.req))
+		self.assertRaises(link.BadTransportType, lambda: _render(self.resource, self.req))
+
+
+	def test_invalidTransportTypeBad1(self):
+		self.baseUpload['t'] = 'z'
+		self._makeRequest()
+		self.assertRaises(link.BadTransportType, lambda: _render(self.resource, self.req))
+
+
+	def test_invalidTransportTypeBad2(self):
+		self.baseUpload['t'] = 'zz'
+		self._makeRequest()
+		self.assertRaises(link.BadTransportType, lambda: _render(self.resource, self.req))
+
 
 
 	# TODO: test responseCode 400 when transport type is unknowable
