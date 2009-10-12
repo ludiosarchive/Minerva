@@ -81,7 +81,7 @@ class DummyIndex(resource.Resource):
 
 	def __init__(self, streamFactory, transportFirewall):
 		resource.Resource.__init__(self)
-		self.putChild('d', link.HTTPS2C(streamFactory, transportFirewall))
+		self.putChild('d', link.HTTPFace(streamFactory, transportFirewall))
 
 
 
@@ -575,20 +575,21 @@ class BoxRecordingStreamFactory(link.StreamFactory):
 
 
 
-class TestHTTPC2S(unittest.TestCase):
+class TestHTTPFace(unittest.TestCase):
 	"""
-	Tests for L{link.HTTPC2S}. We use the 'public interface' of L{StreamFactory}
+	Tests for L{link.HTTPFace}. We use the 'public interface' of L{StreamFactory}
 	and L{Stream} to verify that it works, instead of a lot of mock objects.
 	"""
 	def setUp(self):
 		self.streamId = link.StreamId('\x11' * 16)
+		self.connectionCount = 0
 		self._resetBaseUpload()
 
 		clock = task.Clock()
 		streamFactory = BoxRecordingStreamFactory(clock)
 		transportFirewall = link.TransportFirewall()
 		self.expectedStream = streamFactory.getOrBuildStream(self.streamId)
-		self.resource = link.HTTPC2S(streamFactory, transportFirewall)
+		self.resource = link.HTTPFace(streamFactory, transportFirewall)
 
 
 	def _makeRequest(self):
@@ -600,8 +601,12 @@ class TestHTTPC2S(unittest.TestCase):
 	def _resetBaseUpload(self):
 		self.baseUpload = dict(
 			a=-1,
+			s=-1, # uploadOnly
+			n=self.connectionCount,
+			t="x", # XHR
 			i=self.streamId.id.encode('hex')
 		)
+		self.connectionCount += 1
 
 
 	def _makeUploadBuffer(self):
@@ -611,7 +616,7 @@ class TestHTTPC2S(unittest.TestCase):
 		)
 
 		assert upload.tell() > 0
-		# We don't seek to 0 because HTTPC2S might have to handle that case.
+		# We don't seek to 0 because HTTPFace might have to handle that case.
 
 		return upload
 

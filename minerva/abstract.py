@@ -30,6 +30,27 @@ def strToNonNeg(value):
 
 
 
+def ensureInt(value):
+	if int(value) != value:
+		raise ValueError("%r is a float but cannot be converted to identical integer" % (value,))
+	return int(value)
+
+
+
+def ensureNonNegInt(value):
+	"""
+	Useful after getting some deserialized JSON with random stuff in it.
+	"""
+	if isinstance(value, float):
+		return ensureInt(value)
+	else:
+		if not isinstance(value, (int, long)) or value < 0:
+			raise ValueError("%r is < 0 or non-int/long/float" % (value,))
+
+		return value
+
+
+
 class SeqNumTooHighError(Exception):
 	"""
 	Could not delete up to a certain seqNum, because that seqNum

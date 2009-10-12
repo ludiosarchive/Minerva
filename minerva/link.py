@@ -589,7 +589,7 @@ class IMinervaC2STransport(IMinervaTransport):
 
 	# attributes: connectionNumber, streamId, credentialsFrame
 
-	def sendSACK(sackInfo):
+	def closeWithSACK(sackInfo):
 		"""
 		Send sack C{sackInfo} and close the transport.
 		"""
@@ -624,6 +624,14 @@ class _BaseHTTPTransport(object):
 		self._forceWrite([TYPE_ERROR, code])
 		self.request.finish()
 		log.msg("Closed transport %s with reason %d." % (self, code))
+
+
+	def closeWithSACK(self, sackInfo):
+		"""
+		See L{IMinervaC2STransport.close}
+		"""
+		self._forceWrite([TYPE_C2S_SACK, sackInfo])
+		self.request.finish()
 
 
 	def _forceWrite(self, frame):
@@ -990,43 +998,69 @@ class BaseHTTPResource(resource.Resource):
 
 
 
-class HTTPS2C(BaseHTTPResource):
 
-	def render_GET(self, request):
+
+#class OneShotHTTPUploadTransport(_BaseHTTPTransport):
+#	"""
+#	We need a transport even for one-shot uploads because L{TransportFirewall}
+#	makes decisions based on transports.
+#
+#	This could be used by XHR, XDR, img tags, or other one-shot upload
+#	methods (from a browser or other HTTP clients).
+#	"""
+#
+#	implements(IMinervaTransport)
+#
+#	def __init__(self, request, streamId):
+#		"""
+#		I need a L{twisted.web.http.Request} to write to.
+#
+#		L{connectionNumber} is incremented by the client as they
+#			open S2C transports.
+#		"""
+#		_BaseHTTPTransport.__init__(self, request, streamId)
+#		self.connectionNumber = None
+#
+#
+#	# Copy/paste from XHRTransport
+#	def _stringOne(self, frame):
+#		"""
+#		Return a serialized string for one frame.
+#		"""
+#		# TODO: For some browsers (without the native JSON object),
+#		# dump more compact "JSON" without the single quotes around properties
+#
+#		s = dumpToJson7Bit(frame)
+#		return str(len(s)) + ':' + s
+#
+
+
+
+class HTTPFace(BaseHTTPResource):
+	"""
+	You definitely want to serve this resource for your Comet server,
+	unless you really hate HTTP.
+
+	Key:
+		i - streamId
+		n - connectionNumber
+		s  - startAtSeqNum (-1 if uploadOnly)
+		a - ackS2C
+		t - transportClass
+	"""
+
+	def renderWithOptions(self,
+	request, transportClass, streamId, connectionNumber,
+	ackS2C, uploadOnly, frames, startAtSeqNum=None):
+
 		# notifyFinish should be called as early as possible; see its docstring
 		# in Twisted.
 		requestFinishedD = request.notifyFinish()
 
-		try:
-			# raises TypeError on non-hex, InvalidIdentifier on wrong length
-			streamId = StreamId(request.args['i'][0].decode('hex')) # "(i)d"
-
-			# Incremented each time the client makes a HTTP request for S2C
-			# TODO: disconnect the old S2C transport if a newer transport has arrived
-			# (with higher connectionNumber)
-			connectionNumber = abstract.strToNonNeg(request.args['n'][0]) # "(n)umber"
-
-			# The sequence number of the first S2C box that the client demands.
-			startAtSeqNum = abstract.strToNonNeg(request.args['s'][0]) # "(s)eq"
-
-			# The S2C ACK. This is separate from startAtSeqNum to support in the future
-			# overlapping requests to mask (request establishment latency).
-			ackS2C = int(request.args['a'][0]) # "(a)ck"
-
-			# The type of S2C transport the client demands.
-			transportString = request.args['t'][0] # "(t)ype"
-		except (KeyError, IndexError, ValueError, TypeError, abstract.InvalidIdentifier):
-			self._fail(request)
-
-		if not transportString in ('s', 'x'):#, 'o'):
-			self._fail(request)
-
-		# TODO: instead of any _fail() or error-raising, create the transport, DO NOT
-		# register it with any Stream, send an error frame over the transport. If no
-		# valid transportString, send some kind of HTTP error.
-
-		transportMap = dict(s=ScriptTransport, x=XHRTransport) #, o=SSETransport)
-		transport = transportMap[transportString](request, streamId, connectionNumber, startAtSeqNum)
+		# If startAtSeqNum is None, transport.writeFrom will raise some ugly exception
+		# But this is only the case for upload-only transports, which won't even be attached
+		# to a stream.
+		transport = transportClass(request, streamId, connectionNumber, startAtSeqNum)
 
 		d = defer.maybeDeferred(self._transportFirewall.checkTransport, transport)
 
@@ -1036,11 +1070,32 @@ class HTTPS2C(BaseHTTPResource):
 
 		def okayToAttach(_):
 			stream = self._streamFactory.getOrBuildStream(streamId)
-			stream.transportOnline(transport)
-			stream.clientReceivedEverythingBefore(ackS2C + 1)
-			##requestFinishedD.addBoth(printDisconnectTime)
-			requestFinishedD.addBoth(lambda *args: stream.transportOffline(transport))
-			requestFinishedD.addErrback(log.err)
+
+			# Do this first
+			try:
+				stream.clientReceivedEverythingBefore(ackS2C + 1)
+			except abstract.SeqNumTooHighError:
+				# If client sent a too-high ACK, don't deliver any of client's frames
+				# to Stream. Send client an error.
+				# TODO: maybe send the highest-acceptable ACK number as third param
+				transport.close(ERROR_CODES['ACKED_UNSENT_S2C_FRAMES'])
+				return
+
+			if frames:
+				stream.clientUploadedFrames(frames)
+
+			# TODO: hopefully Stream will send a SACK frame to the client
+			# even when it's not an C{uploadOnly}
+
+			if uploadOnly:
+				sackInfo = stream.getSACK()
+				transport.closeWithSACK(sackInfo)
+			else:
+				stream.transportOnline(transport)
+
+				##requestFinishedD.addBoth(printDisconnectTime)
+				requestFinishedD.addBoth(lambda *args: stream.transportOffline(transport))
+				requestFinishedD.addErrback(log.err)
 
 		def notOkay(_):
 			transport.close(ERROR_CODES['COULD_NOT_ATTACH'])
@@ -1055,59 +1110,102 @@ class HTTPS2C(BaseHTTPResource):
 		return NOT_DONE_YET
 
 
-	def render_POST(self, request):
-		return 'POST S2C TODO IMPLEMENT'
+	def _extractFramesFromDict(self, args):
+		frames = []
 
+		# non-(number string keys) in C{args} will be skipped over
+		for seqNumStr, frame in args.iteritems():
+			try:
+				seqNum = abstract.strToNonNeg(seqNumStr)
+			except ValueError:
+				continue
+			frames.append((seqNum, frame))
 
+		return frames
 
-class OneShotHTTPUploadTransport(_BaseHTTPTransport):
-	"""
-	We need a transport even for one-shot uploads because L{TransportFirewall}
-	makes decisions based on transports. 
-
-	This could be used by XHR, XDR, img tags, or other one-shot upload
-	methods (from a browser or other HTTP clients).
-	"""
-
-	implements(IMinervaTransport)
-
-	def __init__(self, request, streamId):
-		"""
-		I need a L{twisted.web.http.Request} to write to.
-
-		L{connectionNumber} is incremented by the client as they
-			open S2C transports.
-		"""
-		_BaseHTTPTransport.__init__(self, request, streamId)
-		self.connectionNumber = None
-
-
-	# Copy/paste from XHRTransport
-	def _stringOne(self, frame):
-		"""
-		Return a serialized string for one frame.
-		"""
-		# TODO: For some browsers (without the native JSON object),
-		# dump more compact "JSON" without the single quotes around properties
-
-		s = dumpToJson7Bit(frame)
-		return str(len(s)) + ':' + s
-
-
-	def sendSACK(self, sackInfo):
-		"""
-		See L{IMinervaC2STransport.close}
-		"""
-		self.request.write(dumpToJson7Bit([TYPE_C2S_SACK, sackInfo]))
-		self.request.finish()
-
-
-
-
-class HTTPC2S(BaseHTTPResource):
 
 	def render_GET(self, request):
-		return 'GET C2S TODO IMPLEMENT'
+		args = request.args
+		opts = {}
+
+		try:
+			# The type of S2C transport the client demands. #, o=SSETransport)
+			opts['transportClass'] = dict(s=ScriptTransport, x=XHRTransport)[args['t'][0]]
+		except (KeyError, IndexError):
+			self._fail(request)
+
+		opts['uploadOnly'] = False
+
+		try:
+			# raises TypeError on non-hex, InvalidIdentifier on wrong length
+			opts['streamId'] = StreamId(args['i'][0].decode('hex'))
+
+			# Incremented each time the client makes a HTTP request for S2C
+			# TODO: disconnect the old S2C transport if a newer transport has arrived
+			# (with higher connectionNumber)
+			opts['connectionNumber'] = abstract.strToNonNeg(args['n'][0])
+
+			s_str = args['s'][0]
+			if s_str == '-1':
+				opts['uploadOnly'] = True
+			else:
+				# The sequence number of the first S2C box that the client demands.
+				opts['startAtSeqNum'] = abstract.strToNonNeg(s_str)
+
+			# The S2C ACK. This is separate from startAtSeqNum to support in the future
+			# overlapping requests to mask (request establishment latency).
+			opts['ackS2C'] = int(args['a'][0])
+			if opts['ackS2C'] < -1:
+				self._fail(request)
+		except (KeyError, IndexError, ValueError, TypeError, abstract.InvalidIdentifier):
+			self._fail(request)
+
+		opts['frames'] = self._extractFramesFromDict(args)
+
+		return self.renderWithOptions(request, **opts)
+
+
+	def render_POST(self, request):
+		'''
+		Clients will POST some JSON in this format:
+
+		{"[[C2S sequence number]]": [[box]], ..., ..., "a": [[S2C ACK]], "i": "[[hex streamId]]", "u": uploadOnly}
+
+		It looks like this:
+
+		{"0": "box0", "1": "box1", "a": 1782, "i": "ffffffffffffffffffffffffffffffff", "u": 1}
+		'''
+		request.content.seek(0)
+		contents = request.content.read()
+
+		data = json.loads(contents)
+		opts = {}
+
+		opts['uploadOnly'] = False
+		opts['streamId'] = StreamId(data['i'].decode('hex'))
+		opts['connectionNumber'] = abstract.ensureNonNegInt(data['n'])
+		# Note that this will accept -1.0, unlike the stricter code in render_GET
+		if data['n'] == -1:
+			opts['uploadOnly'] = True
+		else:
+			opts['startAtSeqNum'] = abstract.ensureNonNegInt(data['n'])
+
+		opts['ackS2C'] = abstract.ensureInt(data['a'])
+		if opts['ackS2C'] < -1:
+			self._fail(request)
+
+		opts['frames'] = self._extractFramesFromDict(data)
+
+		print 'opts', opts
+
+		return self.renderWithOptions(request, **opts)
+
+
+
+class HTTPFace___removeme(BaseHTTPResource):
+
+	def render_GET(self, request):
+		return 'TODO IMPLEMENT'
 
 
 	def render_POST(self, request):
@@ -1172,7 +1270,7 @@ class HTTPC2S(BaseHTTPResource):
 				stream.clientUploadedFrames(frames)
 
 			sackInfo = stream.getSACK()
-			transport.sendSACK(sackInfo)
+			transport.closeWithSACK(sackInfo)
 
 		def notOkay(_):
 			transport.close(ERROR_CODES['COULD_NOT_ATTACH'])
