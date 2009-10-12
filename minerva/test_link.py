@@ -217,7 +217,7 @@ class HelperBaseHTTPTransports(object):
 
 
 	def test_implements(self):
-		verify.verifyObject(link.IMinervaS2CTransport, self.t)
+		verify.verifyObject(link.IMinervaTransport, self.t)
 
 
 	def test_initialValues(self):
@@ -351,7 +351,7 @@ class HelperSocketStyleTransport(object):
 
 
 	def test_implements(self):
-		verify.verifyObject(link.IMinervaS2CTransport, self.t)
+		verify.verifyObject(link.IMinervaTransport, self.t)
 		verify.verifyObject(link.ISocketStyleTransport, self.t)
 
 

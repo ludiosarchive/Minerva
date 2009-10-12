@@ -572,26 +572,16 @@ class IMinervaTransport(Interface):
 		"""
 
 
+	def closeWithSACK(sackInfo):
+		"""
+		Send sack C{sackInfo} and close the transport.
+		"""
 
-class IMinervaS2CTransport(IMinervaTransport):
-
-	# attributes: connectionNumber, streamId, credentialsFrame
 
 	def writeFrom(queue):
 		"""
 		Write as many messages from the L{queue} of type
 		L{minerva.abstract.Queue} as possible.
-		"""
-
-
-
-class IMinervaC2STransport(IMinervaTransport):
-
-	# attributes: connectionNumber, streamId, credentialsFrame
-
-	def closeWithSACK(sackInfo):
-		"""
-		Send sack C{sackInfo} and close the transport.
 		"""
 
 
@@ -628,7 +618,7 @@ class _BaseHTTPTransport(object):
 
 	def closeWithSACK(self, sackInfo):
 		"""
-		See L{IMinervaC2STransport.close}
+		See L{IMinervaTransport.close}
 		"""
 		self._forceWrite([TYPE_C2S_SACK, sackInfo])
 		self.request.finish()
@@ -653,7 +643,7 @@ class _BaseHTTPS2CTransport(_BaseHTTPTransport):
 	boxes are application-level frames that came from a queue.
 	"""
 
-	implements(IMinervaS2CTransport)
+	implements(IMinervaTransport)
 
 	maxBytes = None # override this
 
@@ -894,7 +884,7 @@ class WebSocketTransport(protocol.Protocol):
 	"""
 	I am typically used by a browser's native WebSocket.
 	"""
-	implements(IMinervaS2CTransport, IMinervaC2STransport, ISocketStyleTransport)
+	implements(IMinervaTransport, ISocketStyleTransport)
 
 	def connectionMade(self):
 		pass
@@ -923,6 +913,13 @@ class WebSocketTransport(protocol.Protocol):
 		raise NotImplementedError # TODO
 
 
+	def closeWithSACK(self, sackInfo):
+		"""
+		See L{IMinervaTransport.close}
+		"""
+		raise NotImplementedError # TODO
+
+
 
 # TODO: run this on port 443, along with the HTTPS server and WebSocket.
 class SocketTransport(protocol.Protocol):
@@ -930,7 +927,7 @@ class SocketTransport(protocol.Protocol):
 	I am typically used by a browser's Flash socket.
 	"""
 
-	implements(IMinervaS2CTransport, IMinervaC2STransport, ISocketStyleTransport)
+	implements(IMinervaTransport, ISocketStyleTransport)
 
 	def connectionMade(self):
 		pass
@@ -953,6 +950,13 @@ class SocketTransport(protocol.Protocol):
 
 
 	def close(self, code):
+		"""
+		See L{IMinervaTransport.close}
+		"""
+		raise NotImplementedError # TODO
+
+
+	def closeWithSACK(self, sackInfo):
 		"""
 		See L{IMinervaTransport.close}
 		"""
