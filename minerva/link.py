@@ -588,12 +588,13 @@ class IMinervaTransport(Interface):
 
 class _BaseHTTPTransport(object):
 
+	credentialsFrame = None
+	_framesSent = 0
+	_bytesSent = 0
+
 	def __init__(self, request, streamId):
 		self.request = request
 		self.streamId = streamId
-
-		self._framesSent = 0
-		self._bytesSent = 0
 
 
 	def _setTcpOptions(self):
