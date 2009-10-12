@@ -247,13 +247,13 @@ class HelperBaseHTTPTransports(object):
 		self.assert_(' 1997 ' in headers['Expires'][0])
 
 
-	def test_close(self):
+	def test_closeWithError(self):
 		self.assertEqual(False, self.dummyTcpChannel.requestIsDone)
 		tr = self.dummyTcpChannel.transport
 		
 		# Make sure this has error code has not yet been written to the Minerva transport
 		self.assert_('999999' not in tr.written, repr(tr.written))
-		self.t.close(999999)
+		self.t.closeWithError(999999)
 
 		# Make sure that the request is finished and that the error code was
 		# written to the Minerva transport

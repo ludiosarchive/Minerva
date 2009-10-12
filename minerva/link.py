@@ -98,7 +98,7 @@ class FrameTypes(object):
 	C2S_SACK = 3
 
 
-## Make sure no numeric code was used more than once
+## TODO: Make sure no numeric code was used more than once
 #assert len(set(ERROR_CODES.values())) == len(ERROR_CODES), ERROR_CODES
 #
 
@@ -570,9 +570,9 @@ class TransportFirewall(object):
 
 class IMinervaTransport(Interface):
 
-	def close(code):
+	def closeWithError(code):
 		"""
-		Close this transport with numeric reason L{code}.
+		Close this transport with numeric error code L{code}.
 		"""
 
 
@@ -612,7 +612,7 @@ class _BaseHTTPTransport(object):
 			log.msg(get_tcp_info(sock))
 
 
-	def close(self, code):
+	def closeWithError(self, code):
 		"""
 		See L{IMinervaTransport.close}
 		"""
@@ -911,7 +911,7 @@ class WebSocketTransport(protocol.Protocol):
 		raise NotImplementedError # TODO
 
 
-	def close(self, code):
+	def closeWithError(self, code):
 		"""
 		See L{IMinervaTransport.close}
 		"""
@@ -954,7 +954,7 @@ class SocketTransport(protocol.Protocol):
 		raise NotImplementedError # TODO
 
 
-	def close(self, code):
+	def closeWithError(self, code):
 		"""
 		See L{IMinervaTransport.close}
 		"""
@@ -1033,7 +1033,7 @@ class HTTPFace(resource.Resource):
 				# If client sent a too-high ACK, don't deliver any of client's frames
 				# to Stream. Send client an error.
 				# TODO: maybe send the highest-acceptable ACK number as third param
-				transport.close(Errors.ACKED_UNSENT_S2C_FRAMES)
+				transport.closeWithError(Errors.ACKED_UNSENT_S2C_FRAMES)
 				return
 
 			if frames:
@@ -1055,7 +1055,7 @@ class HTTPFace(resource.Resource):
 				requestFinishedD.addErrback(log.err)
 
 		def notOkay(_):
-			transport.close(Errors.COULD_NOT_ATTACH)
+			transport.closeWithError(Errors.COULD_NOT_ATTACH)
 
 		d.addCallbacks(okayToAttach, notOkay)
 		d.addErrback(log.err)
@@ -1117,7 +1117,7 @@ class HTTPFace(resource.Resource):
 		except (KeyError, IndexError, ValueError, TypeError, abstract.InvalidIdentifier):
 			##log.err()
 			transport = opts['transportClass'](request, None, None, None)
-			transport.close(Errors.INVALID_ARGUMENTS)
+			transport.closeWithError(Errors.INVALID_ARGUMENTS)
 			return NOT_DONE_YET
 
 		opts['frames'] = self._extractFramesFromDict(args)
@@ -1169,7 +1169,7 @@ class HTTPFace(resource.Resource):
 		except (KeyError, ValueError, TypeError, abstract.InvalidIdentifier):
 			##log.err()
 			transport = opts['transportClass'](request, None, None, None)
-			transport.close(Errors.INVALID_ARGUMENTS)
+			transport.closeWithError(Errors.INVALID_ARGUMENTS)
 			return NOT_DONE_YET
 
 		#print 'opts', opts
