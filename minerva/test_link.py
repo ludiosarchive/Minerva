@@ -624,9 +624,9 @@ class _TestHTTPFace(object):
 		self.connectionCount = 0
 		self._resetBaseUpload()
 
-		clock = task.Clock()
-		streamFactory = BoxRecordingStreamFactory(clock)
-		transportFirewall = CustomTransportFirewall(clock)
+		self.clock = task.Clock()
+		streamFactory = BoxRecordingStreamFactory(self.clock)
+		transportFirewall = CustomTransportFirewall(self.clock)
 		self.expectedStream = streamFactory.getOrBuildStream(self.streamId)
 		self.resource = link.HTTPFace(streamFactory, transportFirewall)
 
@@ -650,6 +650,9 @@ class _TestHTTPFace(object):
 		responseLengthStr, responseBody = response.split(':', 1)
 
 		return responseBody
+
+
+	## Normal usage tests
 
 
 	def test_uploadOneBox(self):
@@ -746,6 +749,52 @@ class _TestHTTPFace(object):
 
 		self.assertEqual(link.FrameTypes.ERROR, msgType)
 		self.assertEqual(link.Errors.ACKED_UNSENT_S2C_FRAMES, rest)
+
+
+	## Transport accept/reject tests
+
+
+	@defer.inlineCallbacks
+	def _acceptRejectTest(self, action, expectedMsgType, expectedRest):
+		self._makeRequest()
+		self.req.setHeader('transport-firewall-action', action)
+
+		d = _render(self.resource, self.req)
+		if 'trigger_later' in action:
+			self.clock.advance(1)
+		yield d
+		responseBody = self._extractResponseFrame()
+		msgType, rest = json.loads(responseBody)
+
+		self.assertEqual(expectedMsgType, msgType)
+		self.assertEqual(expectedRest, rest)
+
+
+	def test_transportAcceptSync(self):
+		return self._acceptRejectTest('accept|sync', link.FrameTypes.C2S_SACK, [-1, []])
+
+
+	def test_transportAcceptDeferred(self):
+		return self._acceptRejectTest('accept|deferred', link.FrameTypes.C2S_SACK, [-1, []])
+
+
+	def test_transportAcceptDeferredTriggerLater(self):
+		return self._acceptRejectTest('accept|deferred_trigger_later', link.FrameTypes.C2S_SACK, [-1, []])
+
+
+	def test_transportRejectSync(self):
+		return self._acceptRejectTest('reject|sync', link.FrameTypes.ERROR, link.Errors.COULD_NOT_ATTACH)
+
+
+	def test_transportRejectDeferred(self):
+		return self._acceptRejectTest('reject|deferred', link.FrameTypes.ERROR, link.Errors.COULD_NOT_ATTACH)
+
+
+	def test_transportRejectDeferredTriggerLater(self):
+		return self._acceptRejectTest('reject|deferred_trigger_later', link.FrameTypes.ERROR, link.Errors.COULD_NOT_ATTACH)
+
+
+	## Begin tests for error conditions that "never" happen
 
 
 	def _assertInvalidArguments(self):
