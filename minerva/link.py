@@ -105,6 +105,15 @@ class FrameTypes(object):
 #assert len(set(ERROR_CODES.values())) == len(ERROR_CODES), ERROR_CODES
 #
 
+
+"""
+The reason for extracting TCP 'unacked' info from socket? Sometimes we'll be
+streaming a lot of data down an HTTP S2C transport, and it is too expensive
+for the client to send an application-level ack (they would have to make an HTTP
+request). But we still want to reduce the memory used by Queue in this server.
+So we guess if the client has received a box by looking at the TCP ACKs.
+"""
+
 def get_tcp_info(sock):
 	try:
 		# The idea comes from
@@ -537,7 +546,7 @@ class ITransportFirewall(Interface):
 			return any value, or a Deferred that `callback's
 	
 		If C{transport} should not be attached to C{stream}:
-			raise any exception, or a Deferred that `errback's
+			raise L{RejectTransport}, or a Deferred that `errback's with L{RejectTransport}
 
 		This should not be used for application-level user login or similar
 		authentication. Here, you cannot send an application-handalable exception
@@ -557,6 +566,11 @@ class ITransportFirewall(Interface):
 			- check that header order is the same as it first was
 				(limited use, could block a legitimate user with a strange proxy)
 		"""
+
+
+
+class RejectTransport(Exception):
+	pass
 
 
 
@@ -1057,7 +1071,8 @@ class HTTPFace(resource.Resource):
 				requestFinishedD.addBoth(lambda *args: stream.transportOffline(transport))
 				requestFinishedD.addErrback(log.err)
 
-		def notOkay(_):
+		def notOkay(fail):
+			fail.trap(RejectTransport)
 			transport.closeWithError(Errors.COULD_NOT_ATTACH)
 
 		d.addCallbacks(okayToAttach, notOkay)

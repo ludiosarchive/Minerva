@@ -571,6 +571,49 @@ class BoxRecordingStreamFactory(link.StreamFactory):
 
 
 
+class CustomTransportFirewall(link.TransportFirewall):
+
+	def __init__(self, clock):
+		self._clock = clock
+
+
+	def checkTransport(self, transport):
+		"""
+		In the real world, you would be checking the cookie or something. But not here.
+		"""
+		headers = transport.request.responseHeaders.getRawHeaders('transport-firewall-action')
+		if not headers:
+			# by default, accept|sync
+			return
+
+		action, how = headers[0].split('|')
+		assert action in ('accept', 'reject')
+		assert how in ('sync', 'deferred', 'deferred_trigger_later')
+
+		if action == 'accept':
+			if how == 'sync':
+				return
+			elif how == 'deferred':
+				d = defer.Deferred()
+				return d.callback(None)
+			elif how == 'deferred_trigger_later':
+				d = defer.Deferred()
+				self._clock.callLater(0, lambda: d.callback(None))
+				return d
+		elif action == 'reject':
+			if how == 'sync':
+				raise link.RejectTransport("rejecting this transport")
+			elif how == 'deferred':
+				d = defer.Deferred()
+				d.errback(link.RejectTransport("rejecting this transport"))
+				return d
+			elif how == 'deferred_trigger_later':
+				d = defer.Deferred()
+				self._clock.callLater(0, lambda: d.errback(link.RejectTransport("rejecting this transport")))
+				return d
+
+
+
 class _TestHTTPFace(object):
 	"""
 	Tests for L{link.HTTPFace}. We use the 'public interface' of L{StreamFactory}
@@ -583,7 +626,7 @@ class _TestHTTPFace(object):
 
 		clock = task.Clock()
 		streamFactory = BoxRecordingStreamFactory(clock)
-		transportFirewall = link.TransportFirewall()
+		transportFirewall = CustomTransportFirewall(clock)
 		self.expectedStream = streamFactory.getOrBuildStream(self.streamId)
 		self.resource = link.HTTPFace(streamFactory, transportFirewall)
 
