@@ -44,11 +44,12 @@ def ensureNonNegInt(value):
 	"""
 	Useful after getting some deserialized JSON with random stuff in it.
 	"""
-	if isinstance(value, float):
-		return ensureInt(value)
-	elif isinstance(value, (int, long)):
+
+	if isinstance(value, (int, long, float)):
 		if value < 0:
 			raise ValueError("%r is < 0" % (value,))
+		elif isinstance(value, float):
+			return ensureInt(value)
 		else:
 			return value
 	else:

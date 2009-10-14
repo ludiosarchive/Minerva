@@ -619,6 +619,8 @@ class _TestHTTPFace(object):
 	Tests for L{link.HTTPFace}. We use the 'public interface' of L{StreamFactory}
 	and L{Stream} to verify that it works, instead of a lot of mock objects.
 	"""
+	timeout = 2
+
 	def setUp(self):
 		self.streamId = link.StreamId('\x11' * 16)
 		self.connectionCount = 0
@@ -979,3 +981,34 @@ class TestHTTPFaceGET(_TestHTTPFace, unittest.TestCase):
 				mapping[k] = [str(v)]
 
 		return mapping
+
+
+
+class TestHTTPFacePOSTWithBrokenJSONEncoder(TestHTTPFacePOST):
+	"""
+	Just like L{TestHTTPFacePOST}, except with a broken JSON encoder that sends
+	integral numbers like 3 as 3.0
+	
+	Note: this hasn't been observed in the wild, but it sounds likely to happen.
+	"""
+
+	def _makeUploadBuffer(self):
+		upload = StringIO()
+		_new = {}
+		for k, v in self.baseUpload.iteritems():
+			if isinstance(v, (int, long)):
+				_new[k] = float(v)
+			else:
+				_new[k] = v
+
+		##print _new
+
+		upload.write(
+			json.dumps(_new)
+		)
+
+		assert upload.tell() > 0
+		# We don't seek to 0 because HTTPFace might have to handle that case.
+
+		return upload
+

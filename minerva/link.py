@@ -1187,6 +1187,6 @@ class HTTPFace(resource.Resource):
 			transport.closeWithError(Errors.INVALID_ARGUMENTS)
 			return NOT_DONE_YET
 
-		#print 'opts', opts
+		##print 'opts', opts
 
 		return self.renderWithOptions(request, **opts)
