@@ -1147,7 +1147,7 @@ class HTTPFace(resource.Resource):
 	def render_POST(self, request):
 		'''
 		Clients will POST some JSON in a poorly-defined format. It looks like this:
-			{"f": {"0": "box0", "1": "box1"}, "a": 1782, "i": "ffffffffffffffffffffffffffffffff", "u": 1, "s": -1, "t": "x"}
+			{"b": {"0": "box0", "1": "box1"}, "a": 1782, "i": "ffffffffffffffffffffffffffffffff", "u": 1, "s": -1, "t": "x"}
 		'''
 		request.content.seek(0)
 		contents = request.content.read()
