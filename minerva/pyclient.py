@@ -254,13 +254,13 @@ class BaseTwoWayCommunicator(object):
 
 
 class TwoWayXHRCommunicator(BaseTwoWayCommunicator):
-	transportString = 'x'
+	transportString = 'xhr'
 	decoder = XHRResponse
 
 
 
 class TwoWayScriptCommunicator(BaseTwoWayCommunicator):
-	transportString = 's'
+	transportString = 'script'
 	decoder = ScriptResponse
 
 
@@ -298,12 +298,12 @@ class BaseStopConditionCommunicator(BaseTwoWayCommunicator):
 
 
 class StopConditionXHRCommunicator(BaseStopConditionCommunicator):
-	transportString = 'x'
+	transportString = 'xhr'
 	decoder = XHRResponse
 
 
 
 class StopConditionScriptCommunicator(BaseStopConditionCommunicator):
-	transportString = 's'
+	transportString = 'script'
 	decoder = ScriptResponse
 

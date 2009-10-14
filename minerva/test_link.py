@@ -638,7 +638,7 @@ class _TestHTTPFace(object):
 			a=-1,
 			s=-1, # uploadOnly
 			n=self.connectionCount,
-			t="x", # XHR
+			t='xhr', # XHR
 			i=self.streamId.id.encode('hex')
 		)
 		self.connectionCount += 1

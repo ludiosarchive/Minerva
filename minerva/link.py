@@ -556,7 +556,7 @@ class ITransportFirewall(Interface):
 		to the client. This is only for rejecting transports that have the right
 		streamId but are still too suspicious to attach to the stream.
 
-		I might reach into C{transport} to look at C{.request} or C{.credentialsFrame}
+		I might reach into C{transport} to look at C{.request} or C{.credentialsData}
 			or C{.streamId}
 
 		Ideas for additional checking (these may stop amateurs from hijacking a Stream):
@@ -612,7 +612,7 @@ class IMinervaTransport(Interface):
 
 class _BaseHTTPTransport(object):
 
-	credentialsFrame = None
+	credentialsData = None
 	_framesSent = 0
 	_bytesSent = 0
 
@@ -883,7 +883,7 @@ class ScriptTransport(_BaseHTTPS2CTransport):
 
 
 """
-TODO: let user define a credentialsFrame for HTTP transports,
+TODO: let user define a credentialsData for HTTP transports,
 not just Socket/WebSocket transports.
 
 Right now, HTTP requests don't support a custom credentials frame, so
@@ -1017,7 +1017,7 @@ class HTTPFace(resource.Resource):
 	"""
 
 	isLeaf = True
-	_transportStringToType = dict(s=ScriptTransport, x=XHRTransport)
+	_transportStringToType = dict(script=ScriptTransport, xhr=XHRTransport)
 
 	def __init__(self, streamFactory, transportFirewall):
 		self._streamFactory = streamFactory
@@ -1148,6 +1148,11 @@ class HTTPFace(resource.Resource):
 		'''
 		Clients will POST some JSON in a poorly-defined format. It looks like this:
 			{"b": {"0": "box0", "1": "box1"}, "a": 1782, "i": "ffffffffffffffffffffffffffffffff", "u": 1, "s": -1, "t": "x"}
+			
+		TODO: make it like (L = frame length; no newlines in reality)
+			L:[hello, {"t": "xhr", "u": 0, "i": "ffffffffffffffffffffffffffffffff", "c": {}}] // transportType, uploadOnly, streamId, credentialsData
+			L:[sack, [1782, []]]
+			L:[boxes, {}]
 		'''
 		request.content.seek(0)
 		contents = request.content.read()
