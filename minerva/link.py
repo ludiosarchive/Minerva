@@ -316,6 +316,9 @@ class Stream(object):
 		number L{seqNum}, so now it is okay to clear the messages from
 		the queue.
 		"""
+		# TODO: maybe define an C2S ACK frame, instead of relying on per-transport C2S ACK mechanism? 
+		# TODO XXX needs a test for timer
+		self._noContactTimer.reset(self.noContactTimeout)
 		self.queue.removeAllBefore(seqNum)
 
 
@@ -1089,6 +1092,13 @@ class HTTPFace(resource.Resource):
 		return list((int(x), y) for x, y in f.iteritems())
 
 
+	def _closeWithError(self, request, opts, code):
+		##log.err()
+		transport = opts['transportClass'](request, None, None, None)
+		transport.closeWithError(code)
+		return NOT_DONE_YET
+
+
 	def render_GET(self, request):
 		args = request.args
 		opts = {}
@@ -1123,19 +1133,13 @@ class HTTPFace(resource.Resource):
 			if opts['ackS2C'] < -1:
 				raise ValueError()
 		except (KeyError, IndexError, ValueError, TypeError, abstract.InvalidIdentifier):
-			##log.err()
-			transport = opts['transportClass'](request, None, None, None)
-			transport.closeWithError(Errors.INVALID_ARGUMENTS)
-			return NOT_DONE_YET
+			return self._closeWithError(request, opts, Errors.INVALID_ARGUMENTS)
 
 		if 'f' in args: # now args['f'] is assumed to have length > 0
 			try:
 				opts['frames'] = self._fToFrames(json.loads(args['f'][0]))
 			except json.decoder.JSONDecodeError:
-				##log.err()
-				transport = opts['transportClass'](request, None, None, None)
-				transport.closeWithError(Errors.CORRUPT_FRAME)
-				return NOT_DONE_YET
+				return self._closeWithError(request, opts, Errors.CORRUPT_FRAME)
 
 		return self.renderWithOptions(request, **opts)
 
@@ -1153,6 +1157,7 @@ class HTTPFace(resource.Resource):
 		request.content.seek(0)
 		contents = request.content.read()
 
+		# TODO: try/except around this, add test for corrupt JSON
 		data = json.loads(contents)
 		##print data
 		opts = {}
@@ -1182,10 +1187,7 @@ class HTTPFace(resource.Resource):
 			if 'f' in data:
 				opts['frames'] = self._fToFrames(data['f'])
 		except (KeyError, ValueError, TypeError, abstract.InvalidIdentifier):
-			##log.err()
-			transport = opts['transportClass'](request, None, None, None)
-			transport.closeWithError(Errors.INVALID_ARGUMENTS)
-			return NOT_DONE_YET
+			return self._closeWithError(request, opts, Errors.INVALID_ARGUMENTS)
 
 		##print 'opts', opts
 
