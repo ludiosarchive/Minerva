@@ -462,13 +462,13 @@ class TestStream(unittest.TestCase):
 		self.stream = BoxSavingStream(self.clock, '\x11'*16)
 
 
-	def test_clientUploadedFrames1(self):
-		self.stream.clientUploadedFrames([[0, 'box0']])
+	def test_clientUploadedBoxes1(self):
+		self.stream.clientUploadedBoxes([[0, 'box0']])
 		self.assertEqual(['box0'], self.boxes)
 
 
-	def test_clientUploadedFrames2(self):
-		self.stream.clientUploadedFrames([[0, 'box0'], [1, 'box1']])
+	def test_clientUploadedBoxes2(self):
+		self.stream.clientUploadedBoxes([[0, 'box0'], [1, 'box1']])
 		self.assertEqual(['box0', 'box1'], self.boxes)
 
 
@@ -658,7 +658,7 @@ class _TestHTTPFace(object):
 
 
 	def test_uploadOneBox(self):
-		self.baseUpload['f'] = {'0': ['hello', 'there']}
+		self.baseUpload['b'] = {'0': ['hello', 'there']}
 		self._makeRequest()
 
 		d = _render(self.resource, self.req)
@@ -668,17 +668,17 @@ class _TestHTTPFace(object):
 
 	@defer.inlineCallbacks
 	def test_uploadManyBoxes(self):
-		self.baseUpload['f'] = {'0': ['hello', 'there']}
+		self.baseUpload['b'] = {'0': ['hello', 'there']}
 		self._makeRequest()
 		yield _render(self.resource, self.req)
 
 		self._resetBaseUpload()
-		self.baseUpload['f'] = {'1': ['more', 'data']}
+		self.baseUpload['b'] = {'1': ['more', 'data']}
 		self._makeRequest()
 		yield _render(self.resource, self.req)
 
 		self._resetBaseUpload()
-		self.baseUpload['f'] = {'2': ['frame', '2'], '3': ['frame', '3']}
+		self.baseUpload['b'] = {'2': ['frame', '2'], '3': ['frame', '3']}
 		self._makeRequest()
 		yield _render(self.resource, self.req)
 
@@ -689,12 +689,12 @@ class _TestHTTPFace(object):
 
 	@defer.inlineCallbacks
 	def test_uploadOutOfOrderBoxes(self):
-		self.baseUpload['f'] = {'1': ['more', 'data']}
+		self.baseUpload['b'] = {'1': ['more', 'data']}
 		self._makeRequest()
 		yield _render(self.resource, self.req)
 
 		self._resetBaseUpload()
-		self.baseUpload['f'] = {'0': ['hello', 'there']}
+		self.baseUpload['b'] = {'0': ['hello', 'there']}
 		self._makeRequest()
 		yield _render(self.resource, self.req)
 
@@ -703,7 +703,7 @@ class _TestHTTPFace(object):
 
 	@defer.inlineCallbacks
 	def test_respondedWithCorrectSACK1(self):
-		self.baseUpload['f'] = {'0': ['hello', 'there']}
+		self.baseUpload['b'] = {'0': ['hello', 'there']}
 
 		self._makeRequest()
 
@@ -716,7 +716,7 @@ class _TestHTTPFace(object):
 
 	@defer.inlineCallbacks
 	def test_respondedWithCorrectSACK2(self):
-		self.baseUpload['f'] = {
+		self.baseUpload['b'] = {
 			'0': ['hello', 'there'],
 			'1': {'more': 'data'},
 			'3': {'cannot': 'deliver yet'}
@@ -750,7 +750,7 @@ class _TestHTTPFace(object):
 		msgType, rest = json.loads(responseBody)
 
 		self.assertEqual(link.FrameTypes.ERROR, msgType)
-		self.assertEqual(link.Errors.ACKED_UNSENT_S2C_FRAMES, rest)
+		self.assertEqual(link.Errors.ACKED_UNSENT_S2C_BOXES, rest)
 
 
 	## Transport accept/reject tests
@@ -972,8 +972,8 @@ class TestHTTPFaceGET(_TestHTTPFace, unittest.TestCase):
 		mapping = {}
 
 		for k, v in self.baseUpload.iteritems():
-			if k == 'f':
-				# JSON-encode the 'f' key only (frames)
+			if k == 'b':
+				# JSON-encode the 'b' key only (frames)
 				mapping[k] = [json.dumps(v)]
 			else:
 				# Because URLs only contain string fragments, not numbers.

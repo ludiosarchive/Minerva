@@ -82,7 +82,7 @@ class Errors(object):
 	COULD_NOT_ATTACH = 803
 
 	# The S2C ACK sent by the client was too high
-	ACKED_UNSENT_S2C_FRAMES = 804
+	ACKED_UNSENT_S2C_BOXES = 804
 
 	# Client sent bad arguments during transport initialization
 	INVALID_ARGUMENTS = 805
@@ -322,18 +322,18 @@ class Stream(object):
 		self.queue.removeAllBefore(seqNum)
 
 
-	def clientUploadedFrames(self, frames):
+	def clientUploadedBoxes(self, boxes):
 		"""
 		Minerva-internal function.
 
-		The client uploaded frames L{frames}. L{frames} is a sequence of (seqNum, frame) tuples.
+		The client uploaded boxes L{frames}. L{boxes} is a sequence of (seqNum, box) tuples.
 		This will give valid in-order boxes to L{boxReceived}.
 		"""
 		# TODO: are all C2S frames boxes? not in the future. there might be some
 		# kind of special metadata.
 		# TODO XXX needs a test for timer
 		self._noContactTimer.reset(self.noContactTimeout)
-		self.incoming.give(frames)
+		self.incoming.give(boxes)
 		for f in self.incoming.getDeliverableItems():
 			self.boxReceived(f)
 
@@ -1026,7 +1026,7 @@ class HTTPFace(resource.Resource):
 
 	def renderWithOptions(self,
 	request, transportClass, streamId, connectionNumber,
-	ackS2C, uploadOnly, frames, startAtSeqNum=None):
+	ackS2C, uploadOnly, boxes, startAtSeqNum=None):
 
 		# notifyFinish should be called as early as possible; see its docstring
 		# in Twisted.
@@ -1050,14 +1050,14 @@ class HTTPFace(resource.Resource):
 			try:
 				stream.clientReceivedEverythingBefore(ackS2C + 1)
 			except abstract.SeqNumTooHighError:
-				# If client sent a too-high ACK, don't deliver any of client's frames
+				# If client sent a too-high ACK, don't deliver any of client's boxes
 				# to Stream. Send client an error.
 				# TODO: maybe send the highest-acceptable ACK number as third param
-				transport.closeWithError(Errors.ACKED_UNSENT_S2C_FRAMES)
+				transport.closeWithError(Errors.ACKED_UNSENT_S2C_BOXES)
 				return
 
-			if frames:
-				stream.clientUploadedFrames(frames)
+			if boxes:
+				stream.clientUploadedBoxes(boxes)
 
 			# TODO: hopefully Stream will send a SACK frame to the client
 			# even when it's not an C{uploadOnly}
@@ -1088,7 +1088,7 @@ class HTTPFace(resource.Resource):
 		return NOT_DONE_YET
 
 
-	def _fToFrames(self, f):
+	def _bToBoxes(self, f):
 		return list((int(x), y) for x, y in f.iteritems())
 
 
@@ -1103,7 +1103,7 @@ class HTTPFace(resource.Resource):
 		args = request.args
 		opts = {}
 		opts['uploadOnly'] = False
-		opts['frames'] = None
+		opts['boxes'] = None
 
 		try:
 			# The type of S2C transport the client demands. # TODO: , o=SSETransport)
@@ -1135,9 +1135,9 @@ class HTTPFace(resource.Resource):
 		except (KeyError, IndexError, ValueError, TypeError, abstract.InvalidIdentifier):
 			return self._closeWithError(request, opts, Errors.INVALID_ARGUMENTS)
 
-		if 'f' in args: # now args['f'] is assumed to have length > 0
+		if 'b' in args: # now args['b'] is assumed to have length > 0
 			try:
-				opts['frames'] = self._fToFrames(json.loads(args['f'][0]))
+				opts['boxes'] = self._bToBoxes(json.loads(args['b'][0]))
 			except json.decoder.JSONDecodeError:
 				return self._closeWithError(request, opts, Errors.CORRUPT_FRAME)
 
@@ -1157,7 +1157,7 @@ class HTTPFace(resource.Resource):
 		##print data
 		opts = {}
 		opts['uploadOnly'] = False
-		opts['frames'] = None
+		opts['boxes'] = None
 
 		try:
 			# The type of S2C transport the client demands. # TODO: , o=SSETransport)
@@ -1179,8 +1179,8 @@ class HTTPFace(resource.Resource):
 			if opts['ackS2C'] < -1:
 				raise ValueError()
 
-			if 'f' in data:
-				opts['frames'] = self._fToFrames(data['f'])
+			if 'b' in data:
+				opts['boxes'] = self._bToBoxes(data['b'])
 		except (KeyError, ValueError, TypeError, abstract.InvalidIdentifier):
 			return self._closeWithError(request, opts, Errors.INVALID_ARGUMENTS)
 
