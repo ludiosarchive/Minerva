@@ -1153,6 +1153,7 @@ class HTTPFace(resource.Resource):
 			L:[hello, {"t": "xhr", "u": 0, "i": "ffffffffffffffffffffffffffffffff", "c": {}}] // transportType, uploadOnly, streamId, credentialsData
 			L:[sack, [1782, []]]
 			L:[boxes, {}]
+			L:[gimme, -1] // -1 = whatever I haven't SACKed
 		'''
 		request.content.seek(0)
 		contents = request.content.read()
