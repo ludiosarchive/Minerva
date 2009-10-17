@@ -13,7 +13,7 @@ from twisted.web.server import NOT_DONE_YET
 from twisted.internet import protocol, defer
 from zope.interface import implements, Interface
 
-import abstract
+from minerva import abstract
 
 """
 See Minerva/docs/object_layout.png for a better (slightly outdated) class graph.
