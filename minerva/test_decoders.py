@@ -1,6 +1,6 @@
 from twisted.trial import unittest
 
-import _protocols
+from minerva import decoders
 
 
 class _BaseDummy(object):
@@ -14,22 +14,22 @@ class _BaseDummy(object):
 
 
 
-class DummyNetStringDecoder(_BaseDummy, _protocols.NetStringDecoder):
+class DummyNetStringDecoder(_BaseDummy, decoders.NetStringDecoder):
 	pass
 
 
 
-class DummyBencodeStringDecoder(_BaseDummy, _protocols.BencodeStringDecoder):
+class DummyBencodeStringDecoder(_BaseDummy, decoders.BencodeStringDecoder):
 	pass
 
 
 
-class DummyScriptDecoder(_BaseDummy, _protocols.ScriptDecoder):
+class DummyScriptDecoder(_BaseDummy, decoders.ScriptDecoder):
 	pass
 	
 
 
-# modified copy/paste from twisted.test.test_protocols
+# modified copy/paste from twisted.test.testdecoders
 class TestNetStringDecoder(unittest.TestCase):
 
 	# for max length 699
@@ -85,7 +85,7 @@ class TestNetStringDecoder(unittest.TestCase):
 			a = self.receiver()
 			a.MAX_LENGTH = 50
 			##print 'Sending', repr(s)
-			self.assertRaises(_protocols.ParseError, lambda s=s: a.dataReceived(s))
+			self.assertRaises(decoders.ParseError, lambda s=s: a.dataReceived(s))
 
 
 	def test_illegalPartialLength(self):
@@ -95,7 +95,7 @@ class TestNetStringDecoder(unittest.TestCase):
 		"""
 		a = self.receiver()
 		a.dataReceived('5')
-		self.assertRaises(_protocols.ParseError, lambda: a.dataReceived('x'))
+		self.assertRaises(decoders.ParseError, lambda: a.dataReceived('x'))
 
 
 	def test_illegalWithPacketSizes(self):
@@ -123,7 +123,7 @@ class TestNetStringDecoder(unittest.TestCase):
 				##print 'Sending in pieces', repr(sequence)
 
 				self.assertRaises(
-					_protocols.ParseError,
+					decoders.ParseError,
 					lambda: sendData(a, sequence, packet_size)
 				)
 
@@ -205,7 +205,7 @@ class TestScriptDecoder(unittest.TestCase):
 	def test_endScriptNotLikeBrowser(self):
 		"""
 		Show that </script> in quoted string is _not_ handled like a browser would,
-		because _protocols.ScriptDecoder is looking for ")</script>"
+		because decoders.ScriptDecoder is looking for ")</script>"
 
 		If you make it work like a browser, replace this test.
 		"""
