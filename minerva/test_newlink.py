@@ -8,15 +8,15 @@ class FrameTests(unittest.TestCase):
 
 	def test_ok(self):
 		f = Frame([1])
-		
 
 	def test_notOkay(self):
-		self.assertRaises(IndexError, Frame([]))
+		self.assertRaises(IndexError, lambda: Frame([]))
 
 
 	def test_repr(self):
 		f = Frame([0, u"hello"])
 		self.assertEqual("<Frame of type 'boxes' contents [0, u'hello']>", repr(f))
+
 
 
 class DemoStreamProtocol(object):
