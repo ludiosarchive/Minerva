@@ -32,7 +32,11 @@ def strToNonNeg(value):
 
 def ensureInt(value):
 	"""
-	float -> int/long
+	Convert C{value} from a L{float} to an equivalent L{int}/L{long} if
+	possible, else raise L{ValueError}. C{int}s and C{long}s pass through.
+
+	@rtype: L{int} or L{long}
+	@return: non-float equivalent of C{value} 
 	"""
 	if int(value) != value:
 		raise ValueError("%r cannot be converted to identical integer" % (value,))
@@ -42,6 +46,12 @@ def ensureInt(value):
 
 def ensureNonNegInt(value):
 	"""
+	Check that C{value} is non-negative and convert it to it an equivalent
+	non-L{float} if necessary, else raise L{ValueError}.
+
+	@rtype: L{int} or L{long}
+	@return: non-float equivalent of C{value}
+
 	Useful after getting some deserialized JSON with random stuff in it.
 	"""
 
