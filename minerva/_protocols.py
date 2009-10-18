@@ -48,6 +48,11 @@ class NetStringDecoder(object):
 	noisy = False
 
 
+	@classmethod
+	def encode(cls, s):
+		return str(len(s)) + ':' + s + ','
+
+
 	def manyDataCallback(self, strings):
 		"""
 		Override this.
@@ -149,6 +154,11 @@ class NetStringDecoder(object):
 
 class BencodeStringDecoder(NetStringDecoder):
 
+	@classmethod
+	def encode(cls, s):
+		return str(len(s)) + ':' + s
+
+
 	def doComma(self):
 		# Bencode strings have no trailing comma; just go back to LENGTH
 		self._readerState = LENGTH
@@ -166,9 +176,16 @@ class ScriptDecoder(object):
 	This might have a re-entrancy bug; write a unit test for it if it matters to you.
 	"""
 
+	# TODO XXX: change 'f' to 'q' or 'x' or 'y' to reduce chance of collision
+
 	startText = '<script>f('
 	endText = ')</script>'
 	_buffer = ''
+
+	@classmethod
+	def encode(cls, s):
+		return cls.startText + s + cls.endText
+
 
 	def manyDataCallback(self, strings):
 		"""

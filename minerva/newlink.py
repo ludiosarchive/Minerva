@@ -45,8 +45,9 @@ Glossary:
 
 from minerva import abstract
 
+from collections import deque
 from zope.interface import Interface, Attribute, implements
-
+from twisted.internet import protocol
 from twisted.internet.interfaces import IConsumer
 
 
@@ -90,6 +91,7 @@ class Stream(object):
 		self.activeS2CTransport = None
 		self.producer = None
 		self.disconnected = False
+		self.queue = deque()
 
 
 	def sendBoxes(self, boxes):
@@ -212,3 +214,22 @@ class IStreamProtocol(Interface):
 		@type boxes: list
 		@param boxes: a list of boxes
 		"""
+
+
+
+class SocketTransport(protocol.Protocol):
+
+	def dataReceived(data):
+		pass
+
+
+	def connectionLost(reason):
+		pass
+
+
+	def makeConnection(transport):
+		pass
+
+
+	def connectionMade():
+		pass

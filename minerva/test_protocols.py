@@ -40,13 +40,15 @@ class TestNetStringDecoder(unittest.TestCase):
 		'9999999999999999999999', 'abc', '4:abcde',
 		'51:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab,',]
 
-	trailingComma = ','
-
 	receiver = DummyNetStringDecoder
 
+	trailingComma = ','
 
-	def _encode(self, s):
-		return str(len(s)) + ':' + s + self.trailingComma
+	def test_encode(self):
+		big = 'x' * 100
+		self.assertEqual("100:%s%s" % (big, self.trailingComma), self.receiver.encode(big))
+		self.assertEqual("5:hello" + self.trailingComma, self.receiver.encode("hello"))
+		self.assertEqual("0:" + self.trailingComma, self.receiver.encode(""))
 
 
 	def test_buffer(self):
@@ -56,7 +58,7 @@ class TestNetStringDecoder(unittest.TestCase):
 		"""
 		toSend = ''
 		for s in self.strings:
-			toSend += self._encode(s)
+			toSend += self.receiver.encode(s)
 
 		for packet_size in range(1, 20):
 			##print "packet_size", packet_size
@@ -140,14 +142,14 @@ class TestNetStringDecoder(unittest.TestCase):
 
 		num = 2000
 		strings = ['x'] * num
-		encoded = self._encode('x') * num # faster to encode this way
-		#encoded = ''.join(self._encode(s) for s in strings)
+		encoded = self.receiver.encode('x') * num # faster to encode this way
+		#encoded = ''.join(self.receiver.encode(s) for s in strings)
 		a = self.receiver()
 		a.MAX_LENGTH = 1
 		a.dataReceived(encoded)
 		##For speed comparison:
 		##for s in strings:
-		##	a.dataReceived(self._encode(s))
+		##	a.dataReceived(receiver.encode(s))
 		self.assertEqual(strings, a.gotStrings)
 
 
@@ -159,15 +161,22 @@ class TestBencodeStringDecoder(TestNetStringDecoder):
 		'9999999999999999999999', 'abc', '4:abcde',
 		'51:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab',]
 
-	trailingComma = ''
-
 	receiver = DummyBencodeStringDecoder
+
+	trailingComma = ''
 
 
 
 class TestScriptDecoder(unittest.TestCase):
 
 	receiver = DummyScriptDecoder
+
+	def test_encode(self):
+		big = 'x' * 100
+		self.assertEqual('<script>f(%s)</script>' % (big,), self.receiver.encode(big))
+		self.assertEqual('<script>f(hello)</script>', self.receiver.encode("hello"))
+		self.assertEqual('<script>f()</script>', self.receiver.encode(""))
+
 
 	def _sendAndAssert(self, toSend, expected):
 		for packet_size in range(1, 20):
