@@ -51,6 +51,46 @@ from twisted.internet import protocol
 from twisted.internet.interfaces import IConsumer
 
 
+
+class BadFrameType(Exception):
+	pass
+
+
+
+class Frame(object):
+	"""
+	Represents a frame. I do not have a `toBytes' method or similar because
+	different transports require different serializations. For example, Flash socket
+	might require doubling up backslashes.
+	"""
+	knownTypes = {
+		0: 'boxes',
+		1: 'box', # not used yet
+		2: 'seqnum', # not used yet
+		3: 'my_last_frame',
+		4: 'sack',
+		5: 'hello',
+		6: 'gimme_boxes',
+		7: 'gimme_sack_and_close',
+		8: 'timestamp',
+	}
+
+	__slots__ = ['contents', 'type']
+
+	def __repr__(self):
+		return '<%s of type %r contents %r>' % (
+			self.__class__.__name__, self.knownTypes[self.type], self.contents)
+
+
+	def __init__(self, contents):
+		self.type = contents[0]
+		if not self.type in self.knownTypes:
+			raise BadFrameType("Frame(%r) but %r is not a known frame type" % (contents, self.type))
+
+		self.contents = contents
+
+
+
 class StreamId(abstract.GenericIdentifier):
 	_expectedLength = 16
 	__slots__ = ['id']
