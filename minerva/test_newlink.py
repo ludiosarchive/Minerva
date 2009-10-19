@@ -1,7 +1,7 @@
 from zope.interface import implements, verify
 from twisted.trial import unittest
 
-from minerva.newlink import Frame, BadFrame, IStreamProtocol
+from minerva.newlink import Frame, BadFrame, IMinervaProtocol, IMinervaFactory
 from minerva.newlink import ICSRFStopper, CSRFStopper, RejectToken
 from minerva.newlink import ITransportFirewall, CSRFTransportFirewall, NoopTransportFirewall
 from minerva.website import AntiHijackTransportFirewall # TODO XXX
@@ -120,8 +120,8 @@ class TransportFirewallTests(unittest.TestCase):
 
 
 
-class DemoStreamProtocol(object):
-	implements(IStreamProtocol)
+class DemoProtocol(object):
+	implements(IMinervaProtocol)
 	
 	def streamStarted(self):
 		pass
@@ -138,3 +138,7 @@ class DemoStreamProtocol(object):
 	def boxesReceived(self, boxes):
 		pass
 
+
+
+class DemoFactory(object):
+	implements(IMinervaFactory)

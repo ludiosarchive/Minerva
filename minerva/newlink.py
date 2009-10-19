@@ -235,7 +235,6 @@ class ITransportFirewall(Interface):
 		"""
 
 
-
 class NoopTransportFirewall(object):
 	"""
 	Accepts all transports.
@@ -246,6 +245,9 @@ class NoopTransportFirewall(object):
 		pass
 
 
+
+# The object composition pattern used by L{CSRFTransportFirewall} is inspired by
+# http://twistedmatrix.com/trac/browser/branches/expressive-http-client-886/high-level-http-client.py?rev=25721
 
 class CSRFTransportFirewall(object):
 	"""
@@ -425,9 +427,12 @@ class Stream(object):
 
 
 
-class IStreamProtocol(Interface):
+class IMinervaProtocol(Interface):
 	"""
-	A StreamProtocol will be given a C{stream} attribute pointing
+	An interface for frame-based communication that abstracts
+	away the Comet logic and transports.
+
+	A MinervaProtocol will be given a C{stream} attribute pointing
 	to its L{Stream} after it is constructed.
 
 	I'm analogous to L{twisted.internet.interfaces.IProtocol}
@@ -468,6 +473,28 @@ class IStreamProtocol(Interface):
 		@type boxes: list
 		@param boxes: a list of boxes
 		"""
+
+
+
+class IMinervaFactory(Interface):
+	"""
+	Interface for L{MinervaProtocol} factories.
+	"""
+
+	def buildProtocol():
+		"""
+		Called when a Stream has been established.
+
+		Unlike the Twisted variant L{twisted.internet.interfaces.IFactory},
+		you cannot refuse a connection here.
+
+		An implementation should construct an object providing
+		I{MinervaProtocol}, do C{obj.factory = self}, and return C{obj},
+		with possibly more steps in between.
+
+		@return: an object providing L{IMinervaProtocol}.
+		"""
+
 
 
 
