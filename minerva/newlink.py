@@ -15,7 +15,7 @@ Glossary:
 		TODO: document or fix IE6 65535 array limit
 
 	face - Internet-facing Twisted L{Protocol}s or L{t.web.r.Resource}s that
-		shovel data between Minerva transports <-> other side
+		shovel data between Minerva transports <-> client
 
 	server - us. (Minerva)
 
@@ -37,14 +37,14 @@ Glossary:
 
 	active S2C transport - the transport that is actually sending boxes to the client.
 
-	"other side" - the counterparty for the Stream.
-
 
 
 """
 
 from minerva import abstract
 
+import hashlib
+import base64
 from collections import deque
 from zope.interface import Interface, Attribute, implements
 from twisted.internet import protocol
@@ -52,17 +52,24 @@ from twisted.internet.interfaces import IConsumer
 
 
 
-class BadFrameType(Exception):
+class BadFrame(Exception):
 	pass
 
 
 
 class Frame(object):
 	"""
-	Represents a frame. I do not have a `toBytes' method or similar because
+	I represent a frame.
+
+	This class is mostly to make debugging and testing not
+	require the memorization of dozens of frame codes.
+
+	I do not have a `toBytes' method or similar because
 	different transports require different serializations. For example, Flash socket
 	might require doubling up backslashes.
 	"""
+
+	# Most-frequently-used types should be non-negative and single-digit.
 	knownTypes = {
 		0: 'boxes',
 		1: 'box', # not used yet
@@ -73,21 +80,103 @@ class Frame(object):
 		6: 'gimme_boxes',
 		7: 'gimme_sack_and_close',
 		8: 'timestamp',
+		10:' reset',
 	}
 
 	__slots__ = ['contents', 'type']
 
+	def __init__(self, contents):
+		"""
+		Convert C{list} C{contents} to a L{Frame}.
+
+		@throws: L{BadFrame} if cannot convert
+		"""
+		try:
+			self.type = contents[0]
+		except IndexError:
+			raise BadFrame("Frame did not have a [0]th item")
+		if not self.type in self.knownTypes:
+			raise BadFrame("Frame(%r) but %r is not a known frame type" % (contents, self.type))
+
+		self.contents = contents
+
+
 	def __repr__(self):
-		return '<%s of type %r contents %r>' % (
+		return '<%s type %r, contents %r>' % (
 			self.__class__.__name__, self.knownTypes[self.type], self.contents)
 
 
-	def __init__(self, contents):
-		self.type = contents[0]
-		if not self.type in self.knownTypes:
-			raise BadFrameType("Frame(%r) but %r is not a known frame type" % (contents, self.type))
+	def getType(self):
+		return self.knownTypes[self.type]
 
-		self.contents = contents
+
+
+
+class ICSRFStopper(Interface):
+
+	def makeToken(uuid):
+		"""
+		C{uuid} is an instance of a subclass of L{abstract.GenericIdentifier}
+
+		@rtype: C{str}
+		@return: a bytestring of URL-safe base64 ('-' instead of '+' and '_' instead of '/'),
+			or a subset of this alphabet.
+		"""
+
+
+	def checkToken(uuid, token):
+		"""
+		@type uuid: an instance of a subclass of L{abstract.GenericIdentifier}
+		@param uuid: the uuid of the client that claims its CSRF token is C{token}
+
+		@type token: C{str}
+		@param token: the CSRF token from the client
+
+		@raise: L{RejectToken} if token is invalid.
+
+		@return: L{None}
+		"""
+
+
+
+class RejectToken(Exception):
+	pass
+
+
+
+class CSRFStopper(object):
+
+	implements(ICSRFStopper)
+
+	def __init__(self, secretString):
+		self._secretString = secretString
+
+
+	def _hash(self, what):
+		return hashlib.sha1(self._secretString + what).digest()
+
+
+	def makeToken(self, uuid):
+		"""
+		See L{ICSRFStopper.makeToken}
+		TODO: make this Deferred-capable?
+		"""
+		digest = self._hash(uuid.id)
+		return base64.urlsafe_b64encode(digest)
+
+
+	def checkToken(self, uuid, token):
+		"""
+		See L{ICSRFStopper.isTokenValid}
+		TODO: make this Deferred-capable?
+		"""
+		try:
+			expected = base64.urlsafe_b64decode(token)
+		except TypeError:
+			raise RejectToken()
+
+		if expected != self._hash(uuid.id):
+			raise RejectToken()
 
 
 
@@ -128,15 +217,15 @@ class Stream(object):
 	implements(IConsumer)
 
 	def __init__(self):
-		self.activeS2CTransport = None
-		self.producer = None
+		self._activeS2CTransport = None
+		self._producer = None
 		self.disconnected = False
 		self.queue = deque()
 
 
 	def sendBoxes(self, boxes):
 		"""
-		Send C{boxes} boxes to the other side.
+		Send C{boxes} boxes to the peer.
 
 		@type boxes: list
 		@param boxes: a list of boxes
@@ -161,7 +250,8 @@ class Stream(object):
 	def transportOnline(self, transport):
 		"""
 		Called by faces to tell me that new transport C{transport} has connected.
-		This is called even for very-short-term C2S HTTP transports.
+		This is called even for very-short-term C2S HTTP transports. Caller is responsible
+		for only calling this once.
 		"""
 		1/0
 
@@ -190,14 +280,14 @@ class Stream(object):
 		to pauseProducing(), but it has to be careful to write() data only
 		when its resumeProducing() method is called.
 		"""
-		if self.producer is not None:
+		if self._producer is not None:
 			raise RuntimeError("Cannot register producer %s, "
-				"because producer %s was never unregistered." % (producer, self.producer))
+				"because producer %s was never unregistered." % (producer, self._producer))
 		if self.disconnected:
 			producer.stopProducing()
 		else:
-			self.producer = producer
-			self.streamingProducer = streaming
+			self._producer = producer
+			self._streamingProducer = streaming
 			if not streaming:
 				producer.resumeProducing()
 
@@ -259,17 +349,17 @@ class IStreamProtocol(Interface):
 
 class SocketTransport(protocol.Protocol):
 
-	def dataReceived(data):
-		pass
+	def __init__(self):
+		1/0
 
 
-	def connectionLost(reason):
-		pass
+	def dataReceived(self, data):
+		1/0
 
 
-	def makeConnection(transport):
-		pass
+	def connectionLost(self, reason):
+		1/0
 
 
-	def connectionMade():
-		pass
+	def connectionMade(self):
+		1/0
