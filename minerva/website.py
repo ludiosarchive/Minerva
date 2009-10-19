@@ -1,3 +1,8 @@
+"""
+Classes for things that are closer to website-specific behavior,
+and not necessary for the use of Minerva faces.  
+"""
+
 from zope.interface import implements
 
 from newlink import CsrfTransportFirewall, ITransportFirewall

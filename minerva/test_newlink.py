@@ -1,9 +1,11 @@
 from zope.interface import implements, verify
 from twisted.trial import unittest
 
-from minerva.newlink import Frame, BadFrame, IMinervaProtocol, IMinervaFactory
-from minerva.newlink import ICsrfStopper, CsrfStopper, RejectToken
-from minerva.newlink import ITransportFirewall, CsrfTransportFirewall, NoopTransportFirewall
+from minerva.newlink import (
+	Frame, BadFrame, IMinervaProtocol, IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
+	ICsrfStopper, CsrfStopper, RejectToken,
+	ITransportFirewall, CsrfTransportFirewall, NoopTransportFirewall
+)
 from minerva.website import AntiHijackTransportFirewall # TODO XXX
 
 
@@ -117,6 +119,22 @@ class TransportFirewallTests(unittest.TestCase):
 	def test_implements(self):
 		verify.verifyObject(ITransportFirewall, NoopTransportFirewall())
 		verify.verifyObject(ITransportFirewall, CsrfTransportFirewall(NoopTransportFirewall(), None))
+		# TODO: AntiHijackTransportFirewall
+
+
+
+class BasicMinervaProtocolTests(unittest.TestCase):
+
+	def test_implements(self):
+		verify.verifyObject(IMinervaProtocol, BasicMinervaProtocol())
+
+
+
+class BasicMinervaFactoryTests(unittest.TestCase):
+
+	def test_implements(self):
+		verify.verifyObject(IMinervaFactory, BasicMinervaFactory())
+
 
 
 
