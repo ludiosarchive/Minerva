@@ -140,9 +140,7 @@ class Index(resource.Resource):
 
 
 
-def makeSite():
-	from twisted.internet import reactor
-	
+def makeSite(reactor):
 	root = Index(reactor)
-	site = ConnectionTrackingSite(root)
+	site = ConnectionTrackingSite(root, clock=reactor)
 	return site

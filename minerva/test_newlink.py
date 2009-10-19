@@ -2,8 +2,8 @@ from zope.interface import implements, verify
 from twisted.trial import unittest
 
 from minerva.newlink import Frame, BadFrame, IMinervaProtocol, IMinervaFactory
-from minerva.newlink import ICSRFStopper, CSRFStopper, RejectToken
-from minerva.newlink import ITransportFirewall, CSRFTransportFirewall, NoopTransportFirewall
+from minerva.newlink import ICsrfStopper, CsrfStopper, RejectToken
+from minerva.newlink import ITransportFirewall, CsrfTransportFirewall, NoopTransportFirewall
 from minerva.website import AntiHijackTransportFirewall # TODO XXX
 
 
@@ -31,33 +31,33 @@ class _DummyId(object):
 
 
 
-class CSRFStopperTests(unittest.TestCase):
+class CsrfStopperTests(unittest.TestCase):
 
 	def test_implements(self):
-		verify.verifyObject(ICSRFStopper, CSRFStopper("secret string"))
+		verify.verifyObject(ICsrfStopper, CsrfStopper("secret string"))
 
 
 	def test_makeTokenType(self):
-		c = CSRFStopper("secret string")
+		c = CsrfStopper("secret string")
 		i = _DummyId("id")
 		self.assertIdentical(str, type(c.makeToken(i)))
 
 
 	def test_makeTokenDifferentForDifferentSecret(self):
-		c1 = CSRFStopper("secret string")
+		c1 = CsrfStopper("secret string")
 		i1 = _DummyId("id")
 
-		c2 = CSRFStopper("secret string 2")
+		c2 = CsrfStopper("secret string 2")
 		i2 = _DummyId("id")
 
 		self.assertNotEqual(i1, i2)
 
 
 	def test_makeTokenDifferentForDifferentId(self):
-		c1 = CSRFStopper("secret string")
+		c1 = CsrfStopper("secret string")
 		i1 = _DummyId("id")
 
-		c2 = CSRFStopper("secret string")
+		c2 = CsrfStopper("secret string")
 		i2 = _DummyId("id 2")
 
 		self.assertNotEqual(i1, i2)
@@ -65,7 +65,7 @@ class CSRFStopperTests(unittest.TestCase):
 
 	def test_makeTokenMakesSafeBase64(self):
 		import base64
-		c = CSRFStopper("secret string")
+		c = CsrfStopper("secret string")
 		i = _DummyId("id")
 		token = c.makeToken(i)
 		decoded = base64.urlsafe_b64decode(token)
@@ -73,7 +73,7 @@ class CSRFStopperTests(unittest.TestCase):
 
 	def test_makeTokenMakes160Bits(self):
 		import base64
-		c = CSRFStopper("secret string")
+		c = CsrfStopper("secret string")
 		i = _DummyId("id")
 		token = c.makeToken(i)
 		decoded = base64.urlsafe_b64decode(token)
@@ -81,7 +81,7 @@ class CSRFStopperTests(unittest.TestCase):
 
 
 	def test_checkTokenWorks(self):
-		c = CSRFStopper("secret string")
+		c = CsrfStopper("secret string")
 		i = _DummyId("id")
 
 		token = c.makeToken(i)
@@ -97,7 +97,7 @@ class CSRFStopperTests(unittest.TestCase):
 
 
 	def test_checkTokenCorruptBase64(self):
-		c = CSRFStopper("secret string")
+		c = CsrfStopper("secret string")
 		i = _DummyId("id")
 		token = c.makeToken(i)
 
@@ -116,7 +116,7 @@ class TransportFirewallTests(unittest.TestCase):
 
 	def test_implements(self):
 		verify.verifyObject(ITransportFirewall, NoopTransportFirewall())
-		verify.verifyObject(ITransportFirewall, CSRFTransportFirewall(NoopTransportFirewall(), None))
+		verify.verifyObject(ITransportFirewall, CsrfTransportFirewall(NoopTransportFirewall(), None))
 
 
 

@@ -32,9 +32,11 @@ This starts a Minerva test server."""
 
 
 def makeService(config):
+	from twisted.internet import reactor
+
 	s = service.MultiService()
 
-	site = minervasite.makeSite()
+	site = minervasite.makeSite(reactor)
 	site.displayTracebacks = not config["notracebacks"]
 
 	if not config['servera']:

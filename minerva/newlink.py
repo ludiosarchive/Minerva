@@ -54,10 +54,16 @@ Other glossary:
 High-level interface for using Minerva
 ===
 
+# XXX this is missing the MinervaProtocol and MinervaFactory
+# XXX this is missing a transportFirewall
+
+# XXX use makeLayeredFirewall / layered firewall
+
 from twisted.internet import reactor
 from twisted.web import resource
 
-from minerva.newlink import StreamTracker, HttpFace, SocketFace, WebSocketFace
+from minerva.newlink import StreamTracker, CsrfStopper, CsrfTransportFirewall
+from minerva.newlink import HttpFace, SocketFace, WebSocketFace
 
 clock = reactor
 
@@ -71,9 +77,11 @@ class Root(resource.Resource):
 
 root = Root(st)
 
+csrf = CsrfStopper("my secret for csrf")
+firewall = CsrfTransportFirewall(csrf)
 st = StreamTracker(reactor, clock)
 
-site = server.Site(root)
+site = server.Site(root, clock=clock)
 so = SocketFace(reactor, clock, st)
 wso = WebSocketFace(reactor, clock, st)
 
@@ -88,7 +96,7 @@ import base64
 from collections import deque
 from zope.interface import Interface, Attribute, implements
 from twisted.internet import protocol
-from twisted.internet.interfaces import IConsumer
+from twisted.internet.interfaces import IConsumer, IProtocol, IProtocolFactory
 
 
 
@@ -156,7 +164,7 @@ class Frame(object):
 # we need to generate CSRF tokens, output them to webpages, and verify
 # CSRF tokens.
 
-class ICSRFStopper(Interface):
+class ICsrfStopper(Interface):
 
 	def makeToken(uuid):
 		"""
@@ -191,9 +199,9 @@ class RejectToken(Exception):
 
 
 
-class CSRFStopper(object):
+class CsrfStopper(object):
 
-	implements(ICSRFStopper)
+	implements(ICsrfStopper)
 
 	def __init__(self, secretString):
 		self._secretString = secretString
@@ -205,7 +213,7 @@ class CSRFStopper(object):
 
 	def makeToken(self, uuid):
 		"""
-		See L{ICSRFStopper.makeToken}
+		See L{ICsrfStopper.makeToken}
 		"""
 		digest = self._hash(uuid.id)
 		return base64.urlsafe_b64encode(digest)
@@ -213,7 +221,7 @@ class CSRFStopper(object):
 
 	def checkToken(self, uuid, token):
 		"""
-		See L{ICSRFStopper.isTokenValid}
+		See L{ICsrfStopper.isTokenValid}
 		"""
 		try:
 			expected = base64.urlsafe_b64decode(token)
@@ -281,10 +289,10 @@ class NoopTransportFirewall(object):
 
 
 
-# The object composition pattern used by L{CSRFTransportFirewall} is inspired by
+# The object composition pattern used by L{CsrfTransportFirewall} is inspired by
 # http://twistedmatrix.com/trac/browser/branches/expressive-http-client-886/high-level-http-client.py?rev=25721
 
-class CSRFTransportFirewall(object):
+class CsrfTransportFirewall(object):
 	"""
 	This is an implementation of L{ITransportFirewall} that protects
 	against CSRF attacks for both HTTP and Socket-style faces.
@@ -641,7 +649,7 @@ class IMinervaFactory(Interface):
 
 class SocketTransport(protocol.Protocol):
 
-	implements(interfaces.IProtocol) # , MinervaTransport
+	implements(IProtocol) # , MinervaTransport
 
 	request = None # no associated HTTP request
 
@@ -666,7 +674,7 @@ class SocketTransport(protocol.Protocol):
 
 
 class SocketFace(protocol.ServerFactory):
-	implements(interfaces.IProtocolFactory)
+	implements(IProtocolFactory)
 
 	protocol	 = SocketTransport
 

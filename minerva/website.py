@@ -1,6 +1,6 @@
 from zope.interface import implements
 
-from newlink import CSRFTransportFirewall, ITransportFirewall
+from newlink import CsrfTransportFirewall, ITransportFirewall
 
 
 class UAToStream(object):
