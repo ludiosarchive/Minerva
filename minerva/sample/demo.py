@@ -9,7 +9,10 @@ from minerva.newlink import BasicMinervaProtocol
 from minerva.newlink import StreamTracker, CsrfStopper, CsrfTransportFirewall
 from minerva.newlink import HttpFace, SocketFace, WebSocketFace
 
+from minerva.sample import secrets
+
 clock = reactor
+
 
 class EchoProtocol(BasicMinervaProtocol):
 	def boxesReceived(self, boxes):
@@ -46,7 +49,7 @@ class Root(resource.Resource):
 
 
 
-csrfStopper = CsrfStopper("my secret for csrf")
+csrfStopper = CsrfStopper(secrets.CSRF_SECRET)
 
 firewall = CsrfTransportFirewall(csrfStopper)
 tracker = StreamTracker(reactor, clock, EchoFactory(), firewall)
