@@ -1,6 +1,6 @@
 """
 
-Glossary:
+Minerva glossary:
 
 	box -
 		Anything that can be encoded/decoded by JSON and represented
@@ -37,6 +37,11 @@ Glossary:
 
 	active S2C transport - the transport that is actually sending boxes to the client.
 
+Other glossary:
+
+	"Callers wrap with maybeDeferred." - callers wrap this method with
+		L{twisted.internet.defer.maybeDeferred}, so you can return a
+		Deferred that follows this method's raise/return specification.
 
 
 """
@@ -111,6 +116,10 @@ class Frame(object):
 
 
 
+# Web browsers are annoying and send the user's cookie to the website
+# even when a page on another domain initiates the request. So, this is why
+# we need to generate CSRF tokens, output them to webpages, and verify
+# CSRF tokens.
 
 class ICSRFStopper(Interface):
 
@@ -121,6 +130,8 @@ class ICSRFStopper(Interface):
 		@rtype: C{str}
 		@return: a bytestring of URL-safe base64 ('-' instead of '+' and '_' instead of '/'),
 			or a subset of this alphabet.
+
+		Callers wrap with maybeDeferred.
 		"""
 
 
@@ -133,8 +144,9 @@ class ICSRFStopper(Interface):
 		@param token: the CSRF token from the client
 
 		@raise: L{RejectToken} if token is invalid.
-
 		@return: L{None}
+
+		Callers wrap with maybeDeferred.
 		"""
 
 
@@ -159,7 +171,6 @@ class CSRFStopper(object):
 	def makeToken(self, uuid):
 		"""
 		See L{ICSRFStopper.makeToken}
-		TODO: make this Deferred-capable?
 		"""
 		digest = self._hash(uuid.id)
 		return base64.urlsafe_b64encode(digest)
@@ -168,7 +179,6 @@ class CSRFStopper(object):
 	def checkToken(self, uuid, token):
 		"""
 		See L{ICSRFStopper.isTokenValid}
-		TODO: make this Deferred-capable?
 		"""
 		try:
 			expected = base64.urlsafe_b64decode(token)
@@ -226,11 +236,71 @@ class ITransportFirewall(Interface):
 
 
 
+class NoopTransportFirewall(object):
+	"""
+	Accepts all transports.
+	"""
+	implements(ITransportFirewall)
 
-class TransportFirewall(object):
+	def checkTransport(self, transport, isFirstTransport):
+		pass
+
+
+
+class CSRFTransportFirewall(object):
+	"""
+	This is an implementation of L{ITransportFirewall} that protects
+	against CSRF attacks for both HTTP and Socket-style faces.
+
+	It checks the CSRF token only on the first transport, because only
+	the first transport can lead to the creation of a Stream (and this
+	Stream can have "any" streamId chosen by the client). Because the
+	streamId is unguessable, the CSRF token is not needed for subsequent
+	transports. But, this does mean that a web application has to protect
+	the CSRF token *and* all the streamId's.
+
+	It also provides some weak protection against hijackers who try
+	to use someone else's Stream without cloning their cookie.
+	"""
 
 	implements(ITransportFirewall)
 
+	uaCookieName = '__'
+	uaKeyInCred = 'uaId'
+	csrfKeyInCred = 'csrf'
+
+	def __init__(self, parentFirewall, csrfStopper):
+		self._parentFirewall = parentFirewall
+		self._csrfStopper = csrfStopper
+
+
+	def _getUserAgentFromRequest(self, request):
+		return base64.b64decode(request.getCookie(self.uaCookieName))
+
+
+	def _getUserAgentId(self, transport):
+		# side note: nginx userid module uses non-url-safe base64 alphabet
+		if transport.request is not None:
+			return self._getUserAgentFromRequest(transport.request)
+		else:
+			return base64.b64decode(transport.credentialsData[self.uaKeyInCred])
+
+
+	def checkTransport(self, transport, isFirstTransport):
+		"""
+		See L{ITransportFirewall.checkTransport}
+		"""
+		def cbChecked(_):
+			if isFirstTransport:
+				uuid = self._getUserAgentId(transport)
+
+				if not self.csrfKeyInCred in transport.credentialsData:
+					raise RejectTransport("no csrf token in credentialsData")
+
+				token = transport.credentialsData[self.csrfKeyInCred]
+				return defer.maybeDeferred(self._csrfStopper.checkToken, uuid, token)
+
+		return self._parentFirewall.checkTransport(transport, isFirstTransport).addCallback(cbChecked)
 
 
 
@@ -403,6 +473,8 @@ class IStreamProtocol(Interface):
 
 class SocketTransport(protocol.Protocol):
 
+	request = None # no associated HTTP request
+
 	def __init__(self):
 		1/0
 
@@ -411,6 +483,7 @@ class SocketTransport(protocol.Protocol):
 		1/0
 		# set connectionNumber at some point
 		# set credentialsData at some point
+		# set streamId at some point
 
 
 	def connectionLost(self, reason):

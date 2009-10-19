@@ -3,6 +3,8 @@ from twisted.trial import unittest
 
 from minerva.newlink import Frame, BadFrame, IStreamProtocol
 from minerva.newlink import ICSRFStopper, CSRFStopper, RejectToken
+from minerva.newlink import ITransportFirewall, CSRFTransportFirewall, NoopTransportFirewall
+from minerva.website import AntiHijackTransportFirewall # TODO XXX
 
 
 class FrameTests(unittest.TestCase):
@@ -111,7 +113,10 @@ class CSRFStopperTests(unittest.TestCase):
 
 
 class TransportFirewallTests(unittest.TestCase):
-	pass
+
+	def test_implements(self):
+		verify.verifyObject(ITransportFirewall, NoopTransportFirewall())
+		verify.verifyObject(ITransportFirewall, CSRFTransportFirewall(NoopTransportFirewall(), None))
 
 
 
