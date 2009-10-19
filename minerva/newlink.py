@@ -180,6 +180,60 @@ class CSRFStopper(object):
 
 
 
+class ITransportFirewall(Interface):
+	"""
+	All faces use an object that implements this interface to determine if
+	the transport they have created should be attached to a Stream.
+
+	This is used for:
+		- stopping CSRF attacks (very important)
+		- blocking suspicious transports that might indicate hijacking (somewhat important)
+
+	Think of this as the "firewall" that can reject any HTTP or *Socket transport
+	to prevent Minerva from attaching it to a Stream.
+	"""
+	def checkTransport(transport, isFirstTransport):
+		"""
+		You must implement this correctly. At minimum, you must reject
+		transports with an invalid/missing CSRF token.
+
+		@param transport: the Minerva transport to be attached to a Stream
+		@param isFirstTransport: C{True} if this is the first transport for a Stream, else C{False}
+
+		@raise: L{RejectTransport} if the transport should not be attached.
+		@return: None
+
+		Callers wrap this with L{twisted.internet.defer.maybeDeferred}, so you can
+		return a Deferred that follows the above raise/return specification.
+
+		This should not be used for application-level user login or similar
+		authentication. Here, you cannot send an application-handalable exception
+		to the client.
+
+		An implementation might reach into C{transport} to look at C{.request}
+			or C{.credentialsData} or C{.streamId}
+
+		Ideas for additional checking (these may stop amateurs from hijacking a Stream):
+			- check that some cookie has the same value as the first transport
+			- block some transport types completely
+			- check that user agent has the same value as the first transport
+			- check that IP address is the same as it was at first
+				(limited use, because people make requests from many IPs)
+			- check that request/websocket/socket is secure (not unencrypted)
+			- check that header order is the same as it first was
+				(limited use, could block a legitimate user with a strange proxy)
+		"""
+
+
+
+
+class TransportFirewall(object):
+
+	implements(ITransportFirewall)
+
+
+
+
 class StreamId(abstract.GenericIdentifier):
 	_expectedLength = 16
 	__slots__ = ['id']
@@ -355,6 +409,8 @@ class SocketTransport(protocol.Protocol):
 
 	def dataReceived(self, data):
 		1/0
+		# set connectionNumber at some point
+		# set credentialsData at some point
 
 
 	def connectionLost(self, reason):

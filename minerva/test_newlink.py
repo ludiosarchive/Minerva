@@ -110,6 +110,11 @@ class CSRFStopperTests(unittest.TestCase):
 
 
 
+class TransportFirewallTests(unittest.TestCase):
+	pass
+
+
+
 class DemoStreamProtocol(object):
 	implements(IStreamProtocol)
 	
