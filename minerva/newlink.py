@@ -1,4 +1,7 @@
 """
+"""
+
+"""
 
 Minerva glossary:
 
@@ -42,6 +45,17 @@ Other glossary:
 	"Callers wrap with maybeDeferred." - callers wrap this method with
 		L{twisted.internet.defer.maybeDeferred}, so you can return a
 		Deferred that follows this method's raise/return specification.
+
+
+"""
+
+
+"""
+High-level interface for using Minerva:
+
+	st = StreamTracker(reactor, clock)
+	http = HttpFace(sb)
+	so = SocketFace(sb)
 
 
 """
@@ -330,6 +344,8 @@ class StreamQuality(object):
 
 
 
+# There is no factory for customizing the construction of L{Stream}s, just like
+# there is no factory for customizing the construction of L{twisted.internet.tcp.Server}s in Twisted.
 class Stream(object):
 	"""
 	I'm sort-of analogous to L{twisted.internet.tcp.Connection}
@@ -342,9 +358,13 @@ class Stream(object):
 
 	implements(IConsumer)
 
-	def __init__(self):
+	def __init__(self, streamId, clock):
+		self.streamId = streamId
+		self._clock = clock
+
 		self._activeS2CTransport = None
 		self._producer = None
+		self._notifications = []
 		self.disconnected = False
 		self.queue = deque()
 
@@ -389,6 +409,32 @@ class Stream(object):
 		1/0
 
 
+	def serverShuttingDown(self):
+		"""
+		Called by L{StreamTracker} to tell me that the server is shutting down.
+
+		@return: a L{Deferred} that fires when it's okay to shut down,
+			or a L{int}/L{float} that says in how many seconds it is okay to shut down.
+
+		TODO: decide if serverShuttingDown should be both an application level
+			and Minerva-level event? Should applications have to use their own
+			serverShuttingDown?
+		"""
+		1/0
+
+
+	# This API resembles L{twisted.web.server.Request.notifyFinish}
+	def notifyFinish(self):
+		"""
+		Notify when finishing the request
+
+		@return: A deferred. The deferred will be triggered when the
+		stream is finished -- always with a C{None} value.
+		"""
+		self._notifications.append(defer.Deferred())
+		return self._notifications[-1]
+
+
 	# This is a copy/paste from twisted.internet.interfaces.IConsumer with changes
 	def registerProducer(self, producer, streaming):
 		"""
@@ -425,6 +471,66 @@ class Stream(object):
 		self.producer = None
 
 
+	def _die(self):
+		for d in self._notifications:
+			d.callback(None)
+		self._notifications = None
+
+
+
+class NoSuchStream(Exception):
+	pass
+
+
+
+class StreamTracker(object):
+	"""
+	I'm responsible for constructing and keeping track of L{Stream}s.
+	
+	You do not want to subclass this.
+	"""
+	def __init__(self, reactor, clock):
+		self._reactor = reactor
+		self._clock = clock
+		# We have to keep a map of streamId->Stream, otherwise there is no
+		# way for a face to locate a Stream.
+		self._streams = {}
+		self._reactor.addSystemEventTrigger('before', 'shutdown', self._disconnectAll)
+
+
+	def getStream(self, streamId):
+		try:
+			self._streams[streamId]
+		except KeyError:
+			raise NoSuchStream("I don't know about %r" % (streamId,))
+
+
+	def buildStream(self, streamId):
+		s = Stream(streamId, self._clock)
+		self._streams[streamId] = s
+		d = s.notifyFinish()
+		d.addBoth(self._forgetStream, streamId)
+		return s
+
+
+	def _forgetStream(self, _ignored, streamId):
+		del self._streams[streamId]
+
+	# def buildStream
+
+
+	def _disconnectAll(self):
+		# TODO: block new connections - stop listening on the faces? reject their requests quickly?
+		1/0
+
+#		while True:
+#			try:
+#				s = self._streams.pop()
+#			except KeyError:
+#				break
+#
+#			numOrD = s.serverShuttingDown()
+
 
 
 class IMinervaProtocol(Interface):
@@ -438,13 +544,18 @@ class IMinervaProtocol(Interface):
 	I'm analogous to L{twisted.internet.interfaces.IProtocol}
 	"""
 
-	def streamStarted(self):
+	def streamStarted(stream):
 		"""
 		Called when this stream has just started.
+
+		You'll want to keep the stream around with C{self.stream = stream}. 
+
+		@param stream: the L{Stream} that was started.
+		@type stream: L{Stream}
 		"""
 
 
-	def streamEnded(self, reason):
+	def streamEnded(reason):
 		"""
 		Called when this stream has ended.
 
@@ -453,7 +564,7 @@ class IMinervaProtocol(Interface):
 		"""
 
 
-	def streamQualityChanged(self, quality):
+	def streamQualityChanged(quality):
 		"""
 		The quality of the stream has changed significantly due to
 		a change in transports. Perhaps a larger (or smaller) number
@@ -466,7 +577,7 @@ class IMinervaProtocol(Interface):
 		"""
 
 
-	def boxesReceived(self, boxes):
+	def boxesReceived(boxes):
 		"""
 		Called whenever box(es) are received.
 
@@ -481,24 +592,35 @@ class IMinervaFactory(Interface):
 	Interface for L{MinervaProtocol} factories.
 	"""
 
-	def buildProtocol():
+	def buildProtocol(stream):
 		"""
 		Called when a Stream has been established.
 
-		Unlike the Twisted variant L{twisted.internet.interfaces.IFactory},
+		@param stream: the L{Stream} that was established.
+		@type stream: L{Stream}
+
+		Unlike the analogous Twisted L{twisted.internet.interfaces.IFactory},
 		you cannot refuse a connection here.
 
-		An implementation should construct an object providing
-		I{MinervaProtocol}, do C{obj.factory = self}, and return C{obj},
-		with possibly more steps in between.
+		Unlike in Twisted, you already know a lot about the client by the time
+		C{buildProtocol} is called: their C{streamId} and C{credentialsData},
+		for example.
+
+		An implementation should
+			construct an object providing I{MinervaProtocol},
+			do C{obj.factory = self},
+			do C{obj.streamStarted(stream)},
+			and return C{obj},
+		with optionally more steps in between.
 
 		@return: an object providing L{IMinervaProtocol}.
 		"""
 
 
 
-
 class SocketTransport(protocol.Protocol):
+
+	implements(interfaces.IProtocol) # , MinervaTransport
 
 	request = None # no associated HTTP request
 
@@ -519,3 +641,26 @@ class SocketTransport(protocol.Protocol):
 
 	def connectionMade(self):
 		1/0
+
+
+
+class SocketFace(protocol.ServerFactory):
+	implements(interfaces.IProtocolFactory)
+
+	protocol	 = SocketTransport
+
+	def __init__(self, reactor, clock, streamTracker):
+		self._reactor = reactor
+		self._clock = clock
+		self._streamTracker = streamTracker
+
+
+	def buildProtocol(self):
+		p = self.protocol(self._reactor, self._clock)
+		p.factory = self
+		return p
+
+
+
+# class WebSocketTransport
+# class WebSocketFace

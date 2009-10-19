@@ -123,8 +123,8 @@ class TransportFirewallTests(unittest.TestCase):
 class DemoProtocol(object):
 	implements(IMinervaProtocol)
 	
-	def streamStarted(self):
-		pass
+	def streamStarted(self, stream):
+		self.stream = stream
 
 
 	def streamEnded(self, reason):
@@ -142,3 +142,9 @@ class DemoProtocol(object):
 
 class DemoFactory(object):
 	implements(IMinervaFactory)
+
+	def buildProtocol(self, stream):
+		obj = DemoProtocol()
+		obj.factory = self
+		obj.streamStarted(stream)
+		return obj
