@@ -1,7 +1,4 @@
 """
-"""
-
-"""
 
 Minerva glossary:
 
@@ -47,46 +44,7 @@ Other glossary:
 		Deferred that follows this method's raise/return specification.
 
 
-"""
-
-
-"""
-High-level interface for using Minerva
-===
-
-# XXX this is missing the MinervaProtocol and MinervaFactory
-# XXX this is missing a transportFirewall
-
-# XXX use makeLayeredFirewall / layered firewall
-
-from twisted.internet import reactor
-from twisted.web import resource
-
-from minerva.newlink import StreamTracker, CsrfStopper, CsrfTransportFirewall
-from minerva.newlink import HttpFace, SocketFace, WebSocketFace
-
-clock = reactor
-
-class Root(resource.Resource):
-
-	def __init__(self, st):
-		resource.Resource.__init__(self)
-
-		self.putChild('', IndexPage())
-		self.putChild('m', HttpFace(st))
-
-root = Root(st)
-
-csrf = CsrfStopper("my secret for csrf")
-firewall = CsrfTransportFirewall(csrf)
-st = StreamTracker(reactor, clock)
-
-site = server.Site(root, clock=clock)
-so = SocketFace(reactor, clock, st)
-wso = WebSocketFace(reactor, clock, st)
-
-# Use L{twisted.application.service.MultiService} and L{strports}
-# (all inside a twistd plugin) to expose site, so, wso.
+See minerva/sample/demo.py for an idea of how to use the classes below.
 """
 
 from minerva import abstract
@@ -616,6 +574,30 @@ class IMinervaProtocol(Interface):
 
 
 
+class BasicMinervaProtocol(object):
+	"""
+	A "base" implementation of L{IMinervaProtocol} that you don't
+	have to subclass, but can.
+	"""
+	implements(IMinervaProtocol)
+
+	def streamStarted(self, stream):
+		self.stream = stream
+
+
+	def streamEnded(self, reason):
+		pass
+
+
+	def streamQualityChanged(self, quality):
+		pass
+
+
+	def boxesReceived(self, boxes):
+		pass
+
+
+
 class IMinervaFactory(Interface):
 	"""
 	Interface for L{MinervaProtocol} factories.
@@ -644,6 +626,25 @@ class IMinervaFactory(Interface):
 
 		@return: an object providing L{IMinervaProtocol}.
 		"""
+
+
+
+class BasicMinervaFactory(object):
+	"""
+	A "base" implementation of L{IMinervaFactory} that you don't
+	have to subclass, but can.
+
+	Override the C{protocol} attribute.
+	"""
+	implements(IMinervaFactory)
+
+	protocol = None
+
+	def buildProtocol(self, stream):
+		obj = self.protocol()
+		obj.factory = self
+		obj.streamStarted(stream)
+		return obj
 
 
 
