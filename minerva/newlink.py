@@ -51,13 +51,34 @@ Other glossary:
 
 
 """
-High-level interface for using Minerva:
+High-level interface for using Minerva
+===
 
-	st = StreamTracker(reactor, clock)
-	http = HttpFace(sb)
-	so = SocketFace(sb)
+from twisted.internet import reactor
+from twisted.web import resource
 
+from minerva.newlink import StreamTracker, HttpFace, SocketFace, WebSocketFace
 
+clock = reactor
+
+class Root(resource.Resource):
+
+	def __init__(self, st):
+		resource.Resource.__init__(self)
+
+		self.putChild('', IndexPage())
+		self.putChild('m', HttpFace(st))
+
+root = Root(st)
+
+st = StreamTracker(reactor, clock)
+
+site = server.Site(root)
+so = SocketFace(reactor, clock, st)
+wso = WebSocketFace(reactor, clock, st)
+
+# Use L{twisted.application.service.MultiService} and L{strports}
+# (all inside a twistd plugin) to expose site, so, wso.
 """
 
 from minerva import abstract
@@ -358,9 +379,9 @@ class Stream(object):
 
 	implements(IConsumer)
 
-	def __init__(self, streamId, clock):
-		self.streamId = streamId
+	def __init__(self, clock, streamId):
 		self._clock = clock
+		self.streamId = streamId
 
 		self._activeS2CTransport = None
 		self._producer = None
@@ -506,7 +527,7 @@ class StreamTracker(object):
 
 
 	def buildStream(self, streamId):
-		s = Stream(streamId, self._clock)
+		s = Stream(self._clock, streamId)
 		self._streams[streamId] = s
 		d = s.notifyFinish()
 		d.addBoth(self._forgetStream, streamId)
