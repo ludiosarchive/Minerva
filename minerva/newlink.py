@@ -122,6 +122,9 @@ class Frame(object):
 # we need to generate CSRF tokens, output them to webpages, and verify
 # CSRF tokens.
 
+# Perhaps this should have a more generic name, like IGenericCorrelator,
+# With ICsrfStopper defining the more specific "base64 only" requirement.
+
 class ICsrfStopper(Interface):
 
 	def makeToken(uuid):
@@ -158,7 +161,11 @@ class RejectToken(Exception):
 
 
 class CsrfStopper(object):
-
+	"""
+	An implementation of L{ICsrfStopper} that uses a secret prefix and sha1
+	to make and check tokens. Keeping the secret secret is of paramount
+	importance. If the secret is leaked, anyone can CSRF someone else's session.
+	"""
 	implements(ICsrfStopper)
 
 	def __init__(self, secretString):
@@ -193,15 +200,15 @@ class CsrfStopper(object):
 
 class ITransportFirewall(Interface):
 	"""
-	All faces use an object that implements this interface to determine if
-	the transport they have created should be attached to a Stream.
+	L{StreamTracker} uses an object that implements this interface to
+	determine if a new transport object should be attached to a Stream.
+
+	The point of this is to centralize the logic that checks if a transport
+	is okay to attach, rather than have per-transport logic.
 
 	This is used for:
 		- stopping CSRF attacks (very important)
 		- blocking suspicious transports that might indicate hijacking (somewhat important)
-
-	Think of this as the "firewall" that can reject any HTTP or *Socket transport
-	to prevent Minerva from attaching it to a Stream.
 	"""
 	def checkTransport(transport, isFirstTransport):
 		"""

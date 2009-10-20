@@ -33,6 +33,39 @@ class _DummyId(object):
 
 
 
+class MockStream(object):
+	streamId = _DummyId("a stream id of unusual length")
+
+	def __init__(self):
+		self.log = []
+
+
+	def sendBoxes(self, boxes):
+		self.log.append(['sendBoxes', boxes])
+
+
+	def reset(self, reasonString=u''):
+		self.log.append(['reset', reasonString])
+
+
+	def framesReceived(self, transport, frames):
+		self.log.append(['framesReceived', transport, frames])
+
+
+	def transportOnline(self, transport):
+		self.log.append(['transportOnline', transport])
+
+
+	def transportOffline(self, transport):
+		self.log.append(['transportOffline', transport])
+
+
+	def serverShuttingDown(self, transport):
+		self.log.append(['serverShuttingDown', transport])
+
+
+
+
 class CsrfStopperTests(unittest.TestCase):
 
 	def test_implements(self):
@@ -134,6 +167,11 @@ class BasicMinervaFactoryTests(unittest.TestCase):
 
 	def test_implements(self):
 		verify.verifyObject(IMinervaFactory, BasicMinervaFactory())
+
+
+	def test_unmodifiedFactoryIsNotCallable(self):
+		f = BasicMinervaFactory()
+		self.aR(TypeError, lambda: f.buildProtocol(MockStream()))
 
 
 
