@@ -225,6 +225,14 @@ class ITransportFirewall(Interface):
 		- stopping CSRF attacks (very important)
 		- blocking suspicious transports that might indicate hijacking (somewhat important)
 	"""
+	# rargh 	zope.interface says implementations have too many arguments
+#	def __init__(parentFirewall, *args):
+#		"""
+#		@param parentFirewall: the parent firewall to consult before running
+#			our own checks.
+#		"""
+
+
 	def checkTransport(transport, isFirstTransport):
 		"""
 		You must implement this correctly. At minimum, you must reject
@@ -233,11 +241,8 @@ class ITransportFirewall(Interface):
 		@param transport: the Minerva transport to be attached to a Stream
 		@param isFirstTransport: C{True} if this is the first transport for a Stream, else C{False}
 
-		@raise: L{RejectTransport} if the transport should not be attached.
-		@return: None
-
-		Callers wrap this with L{twisted.internet.defer.maybeDeferred}, so you can
-		return a Deferred that follows the above raise/return specification.
+		@return: Deferred that errbacks with L{RejectTransport} if the transport should not be attached.
+		@return: Deferred that callbacks with L{None} if the transport should be attached.
 
 		This should not be used for application-level user login or similar
 		authentication. Here, you cannot send an application-handalable exception
