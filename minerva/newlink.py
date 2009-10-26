@@ -270,7 +270,7 @@ class NoopTransportFirewall(object):
 	implements(ITransportFirewall)
 
 	def checkTransport(self, transport, isFirstTransport):
-		return defer.Deferred()
+		return defer.succeed(None)
 
 
 
@@ -305,7 +305,18 @@ class CsrfTransportFirewall(object):
 
 
 	def _getUserAgentFromRequest(self, request):
-		return base64.b64decode(request.getCookie(self.uaCookieName))
+		cookie = request.getCookie(self.uaCookieName)
+		try:
+			return base64.b64decode(cookie)
+		except TypeError:
+			raise RejectTransport("no cookie %r or corrupt base64" % (self.uaCookieName,))
+
+
+	def _getUserAgentFromCredentialsData(self, credentialsData):
+		try:
+			return base64.b64decode(transport.credentialsData.get(self.uaKeyInCred))
+		except TypeError:
+			raise RejectTransport("missing credentialsData[%r] or corrupt base64" % (self.uaKeyInCred,))
 
 
 	def _getUserAgentId(self, transport):
@@ -313,7 +324,7 @@ class CsrfTransportFirewall(object):
 		if transport.request is not None:
 			return self._getUserAgentFromRequest(transport.request)
 		else:
-			return base64.b64decode(transport.credentialsData[self.uaKeyInCred])
+			return self._getUserAgentFromCredentialsData(transport.credentialsData)
 
 
 	def checkTransport(self, transport, isFirstTransport):

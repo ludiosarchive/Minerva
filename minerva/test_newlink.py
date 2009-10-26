@@ -191,7 +191,8 @@ class CsrfStopperTests(unittest.TestCase):
 		c = CsrfStopper("secret string")
 		i = _DummyId("id")
 		token = c.makeToken(i)
-		decoded = base64.urlsafe_b64decode(token)
+		# no error
+		base64.urlsafe_b64decode(token)
 
 
 	def test_makeTokenMakes160Bits(self):
@@ -244,17 +245,19 @@ class NoopTransportFirewallTests(unittest.TestCase):
 
 class CsrfTransportFirewallTests(unittest.TestCase):
 
+	timeout = 3
+
 	def test_implements(self):
 		verify.verifyObject(ITransportFirewall, CsrfTransportFirewall(NoopTransportFirewall(), None))
 
 
-	def test_stopsBadCsrfInHttpRequest(self):
+	def test_stopsBadHttpMissingCsrfAndUaId(self):
 		stopper = CsrfStopper("secret string")
 		firewall = CsrfTransportFirewall(NoopTransportFirewall(), stopper)
 		request = DummyRequest([])
 		transport = DummyHttpTransport(request)
 		act = lambda: firewall.checkTransport(transport, isFirstTransport=True)
-		self.assertFailure(act(), RejectTransport)
+		return self.assertFailure(act(), RejectTransport)
 
 
 
