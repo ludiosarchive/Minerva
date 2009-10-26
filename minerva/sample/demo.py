@@ -39,7 +39,7 @@ class IndexPage(resource.Resource):
 
 class Root(resource.Resource):
 
-	def __init__(self, tracker):
+	def __init__(self, tracker, firewall):
 		resource.Resource.__init__(self)
 
 		self.putChild('m', HttpFace(tracker))
@@ -52,16 +52,16 @@ class Root(resource.Resource):
 csrfStopper = CsrfStopper(secrets.CSRF_SECRET)
 
 firewall = CsrfTransportFirewall(csrfStopper)
-tracker = StreamTracker(reactor, clock, EchoFactory(), firewall)
+tracker = StreamTracker(reactor, clock, EchoFactory())
 
-root = Root(tracker)
+root = Root(tracker, firewall)
 
 	# THINK: maybe StreamTracker should have .makeHttpResource .makeSocketFace .makeWebSocketFace methods?
 	# THINK: maybe it should not be called 'tracker'?
 
 site = server.Site(root, clock=clock)
-so = SocketFace(reactor, clock, tracker)
-wso = WebSocketFace(reactor, clock, tracker)
+so = SocketFace(reactor, clock, tracker, firewall)
+wso = WebSocketFace(reactor, clock, tracker, firewall)
 
 # Use L{twisted.application.service.MultiService} and L{strports}
 # (all inside a twistd plugin) to expose site, so, and wso.

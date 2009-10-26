@@ -74,6 +74,8 @@ class DummyRequest(_TwistedDummyRequest):
 		#     self.request.channel.transport.setTcpNoDelay(True)
 		self.channel = DummyChannel()
 
+		self.received_cookies = {}
+
 
 	def setHeader(self, name, value):
 		"""
@@ -82,6 +84,10 @@ class DummyRequest(_TwistedDummyRequest):
 		enough to reality.
 		"""
 		self.responseHeaders.setRawHeaders(name, [value])
+
+
+	def getCookie(self, name):
+		return self.received_cookies.get(name)
 
 
 

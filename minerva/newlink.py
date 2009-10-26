@@ -53,7 +53,7 @@ import hashlib
 import base64
 from collections import deque
 from zope.interface import Interface, Attribute, implements
-from twisted.internet import protocol
+from twisted.internet import protocol, defer
 from twisted.internet.interfaces import IConsumer, IProtocol, IProtocolFactory
 
 
@@ -86,7 +86,17 @@ class Frame(object):
 		6: 'gimme_boxes',
 		7: 'gimme_sack_and_close',
 		8: 'timestamp',
-		10:' reset',
+		10: 'reset',
+		11: 'you_close_it',
+		12: 'start_timestamps',
+		13: 'stop_timestamps',
+
+		601: 'tk_stream_attach_failure', # Either because no such Stream, or bad credentialsData
+		602: 'tk_acked_unsent_boxes',
+		603: 'tk_invalid_arguments',
+		610: 'tk_frame_corruption',
+		611: 'tk_intraframe_corruption',
+		650: 'tk_brb', # Server is overloaded or shutting down, tells client to come back soon
 	}
 
 	__slots__ = ['contents', 'type']
@@ -198,6 +208,11 @@ class CsrfStopper(object):
 
 
 
+class RejectTransport(Exception):
+	pass
+
+
+
 class ITransportFirewall(Interface):
 	"""
 	L{StreamTracker} uses an object that implements this interface to
@@ -245,12 +260,12 @@ class ITransportFirewall(Interface):
 
 class NoopTransportFirewall(object):
 	"""
-	Accepts all transports.
+	Accepts all transports. Doesn't check anything.
 	"""
 	implements(ITransportFirewall)
 
 	def checkTransport(self, transport, isFirstTransport):
-		pass
+		return defer.Deferred()
 
 
 
@@ -276,7 +291,7 @@ class CsrfTransportFirewall(object):
 	implements(ITransportFirewall)
 
 	uaCookieName = '__'
-	uaKeyInCred = 'uaId'
+	uaKeyInCred = 'uaId' # only for non-http transport
 	csrfKeyInCred = 'csrf'
 
 	def __init__(self, parentFirewall, csrfStopper):
@@ -321,7 +336,8 @@ class StreamId(abstract.GenericIdentifier):
 
 
 class IStreamQuality(Interface):
-	socketLike = Attribute("""True if the Stream has a socket-like transport in both directions.""")
+	socketLike = Attribute(
+		"""True if the Stream has a socket-like transport in both directions, else False.""")
 
 
 
@@ -483,9 +499,10 @@ class StreamTracker(object):
 	
 	You do not want to subclass this.
 	"""
-	def __init__(self, reactor, clock):
+	def __init__(self, reactor, clock, streamProtocolFactory):
 		self._reactor = reactor
 		self._clock = clock
+		self._streamProtocolFactory = streamProtocolFactory
 		# We have to keep a map of streamId->Stream, otherwise there is no
 		# way for a face to locate a Stream.
 		self._streams = {}
@@ -509,8 +526,6 @@ class StreamTracker(object):
 
 	def _forgetStream(self, _ignored, streamId):
 		del self._streams[streamId]
-
-	# def buildStream
 
 
 	def _disconnectAll(self):
