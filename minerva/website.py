@@ -40,12 +40,12 @@ class ICsrfStopper(Interface):
 		"""
 
 
-	def checkToken(uuid, token):
+	def checkToken(uuidStr, token):
 		"""
-		@type uuid: an instance of a subclass of L{abstract.GenericIdentifier}
-		@param uuid: the uuid of the client that claims its CSRF token is C{token}
+		@type uuidStr: L{str}
+		@param uuidStr: the uuid of the client that claims its CSRF token is C{token}
 
-		@type token: C{str}
+		@type token: L{str}
 		@param token: the CSRF token from the client
 
 		@raise: L{RejectToken} if token is invalid.
@@ -85,16 +85,17 @@ class CsrfStopper(object):
 		return base64.urlsafe_b64encode(digest)
 
 
-	def checkToken(self, uuid, token):
+	def checkToken(self, uuidStr, token):
 		"""
 		See L{ICsrfStopper.isTokenValid}
 		"""
+		assert isinstance(uuidStr, str)
 		try:
 			expected = base64.urlsafe_b64decode(token)
 		except TypeError:
 			raise RejectToken()
 
-		if expected != self._hash(uuid.id):
+		if expected != self._hash(uuidStr):
 			raise RejectToken()
 
 

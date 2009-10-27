@@ -138,6 +138,13 @@ class DummyHttpTransport(object):
 
 
 
+class DummySocketLikeTransport(object):
+	request = None
+	def __init__(self):
+		self.credentialsData = {}
+
+
+
 class FrameTests(unittest.TestCase):
 
 	def test_ok(self):

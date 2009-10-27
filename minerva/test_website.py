@@ -1,7 +1,9 @@
+import base64
+
 from zope.interface import implements, verify
 from twisted.trial import unittest
 
-from minerva.test_newlink import DummyRequest, DummyHttpTransport, _DummyId
+from minerva.test_newlink import DummyRequest, DummyHttpTransport, DummySocketLikeTransport, _DummyId
 
 from minerva.website import (
 	RejectTransport, ITransportFirewall, CsrfTransportFirewall,
@@ -67,14 +69,14 @@ class CsrfStopperTests(unittest.TestCase):
 
 		token = c.makeToken(i)
 		# no exception
-		c.checkToken(i, token)
+		c.checkToken(i.id, token)
 
 		# wrong uuid
 		differentI = _DummyId("id 2")
-		self.assertRaises(RejectToken, lambda: c.checkToken(differentI, token))
+		self.assertRaises(RejectToken, lambda: c.checkToken(differentI.id, token))
 
 		badToken = 'AAA' + token # still valid base64
-		self.assertRaises(RejectToken, lambda: c.checkToken(i, badToken))
+		self.assertRaises(RejectToken, lambda: c.checkToken(i.id, badToken))
 
 
 	def test_checkTokenCorruptBase64(self):
@@ -82,8 +84,8 @@ class CsrfStopperTests(unittest.TestCase):
 		i = _DummyId("id")
 		token = c.makeToken(i)
 
-		self.assertRaises(RejectToken, lambda: c.checkToken(i, 'x' + token))
-		self.assertRaises(RejectToken, lambda: c.checkToken(i, 'xx' + token))
+		self.assertRaises(RejectToken, lambda: c.checkToken(i.id, 'x' + token))
+		self.assertRaises(RejectToken, lambda: c.checkToken(i.id, 'xx' + token))
 
 		# Surprise, all of these are still "valid" according to Python
 		##self.assertRaises(RejectToken, lambda: c.checkToken(i, token + 'x'))
@@ -100,7 +102,7 @@ class NoopTransportFirewallTests(unittest.TestCase):
 
 
 
-class CsrfTransportFirewallTests(unittest.TestCase):
+class CsrfTransportFirewallTestsHttpTransport(unittest.TestCase):
 
 	timeout = 3
 
@@ -108,49 +110,88 @@ class CsrfTransportFirewallTests(unittest.TestCase):
 		verify.verifyObject(ITransportFirewall, CsrfTransportFirewall(NoopTransportFirewall(), None))
 
 
+	def _makeThings(self, stopper, uaId, csrfTokenStr):
+		firewall = CsrfTransportFirewall(NoopTransportFirewall(), stopper)
+		self._request = DummyRequest([])
+		transport = DummyHttpTransport(self._request)
+		if uaId is not None:
+			self._request.received_cookies['__'] = base64.b64encode(uaId.id)
+		if csrfTokenStr is not None:
+			transport.credentialsData['csrf'] = csrfTokenStr
+		return firewall, transport
+
+
+	def _setUaIdString(self, transport, string):
+		transport.request.received_cookies['__'] = string
+
+
 	# Tests below are for "first transport" only
 
 	def test_stopsBadHttpMissingCsrfAndUaId(self):
 		stopper = CsrfStopper("secret string")
-		firewall = CsrfTransportFirewall(NoopTransportFirewall(), stopper)
-		request = DummyRequest([])
-		transport = DummyHttpTransport(request)
+		firewall, transport = self._makeThings(stopper, None, None)
 		act = lambda: firewall.checkTransport(transport, isFirstTransport=True)
 		return self.assertFailure(act(), RejectTransport)
 
 
 	def test_stopsBadHttpMissingCsrf(self):
 		stopper = CsrfStopper("secret string")
-		firewall = CsrfTransportFirewall(NoopTransportFirewall(), stopper)
-		request = DummyRequest([])
-		request.received_cookies = {'__': 'some fake uaId'}
-		transport = DummyHttpTransport(request)
+		firewall, transport = self._makeThings(stopper, _DummyId('some fake uaId'), None)
 		act = lambda: firewall.checkTransport(transport, isFirstTransport=True)
 		return self.assertFailure(act(), RejectTransport)
 
 
 	def test_stopsBadHttpMissingUaId(self):
 		stopper = CsrfStopper("secret string")
-		firewall = CsrfTransportFirewall(NoopTransportFirewall(), stopper)
-		request = DummyRequest([])
-		transport = DummyHttpTransport(request)
-		transport.credentialsFrame = {'csrf': 'some fake csrf key'}
+		firewall, transport = self._makeThings(stopper, None, 'some fake csrf key')
 		act = lambda: firewall.checkTransport(transport, isFirstTransport=True)
 		return self.assertFailure(act(), RejectTransport)
-
 
 	#
 
 	def test_firstTransportEqualsNoChecking(self):
 		stopper = CsrfStopper("secret string")
-		firewall = CsrfTransportFirewall(NoopTransportFirewall(), stopper)
-		request = DummyRequest([])
-		transport = DummyHttpTransport(request)
+		firewall, transport = self._makeThings(stopper, None, None)
 		act = lambda: firewall.checkTransport(transport, isFirstTransport=False)
 		def cb(v):
 			self.assertIdentical(None, v)
 		return act().addCallback(cb)
-		
+
+
+	def test_validCsrf(self):
+		stopper = CsrfStopper("secret string")
+		uaId = _DummyId("id of funny length probably")
+		token = stopper.makeToken(uaId)
+		firewall, transport = self._makeThings(stopper, uaId, token)
+		act = lambda: firewall.checkTransport(transport, isFirstTransport=True)
+		def cb(v):
+			self.assertIdentical(None, v)
+		return act().addCallback(cb)
+
+
+	def test_invalidCsrf(self):
+		stopper = CsrfStopper("secret string")
+		uaId = _DummyId("id of funny length probably")
+		token = stopper.makeToken(uaId)
+		firewall, transport = self._makeThings(stopper, uaId, token)
+		self._setUaIdString(transport, 'xxx' + base64.b64encode(uaId.id))
+		act = lambda: firewall.checkTransport(transport, isFirstTransport=True)
+		return self.assertFailure(act(), RejectTransport)
 
 
 	# TODO: consider checking uaId length in the future?
+
+
+class CsrfTransportFirewallTestsSocketLikeTransport(CsrfTransportFirewallTestsHttpTransport):
+	def _makeThings(self, stopper, uaId, csrfTokenStr):
+		firewall = CsrfTransportFirewall(NoopTransportFirewall(), stopper)
+		transport = DummySocketLikeTransport()
+		if uaId is not None:
+			transport.credentialsData['uaId'] = base64.b64encode(uaId.id)
+		if csrfTokenStr is not None:
+			transport.credentialsData['csrf'] = csrfTokenStr
+		return firewall, transport
+
+
+	def _setUaIdString(self, transport, string):
+		transport.credentialsData['uaId'] = string
