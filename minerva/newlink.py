@@ -133,6 +133,23 @@ class StreamId(abstract.GenericIdentifier):
 
 
 
+class IStreamNotificationReceiver(Interface):
+	"""
+	Objects that implement this can get notified about new and dying Streams.
+	"""
+	def streamUp(stream):
+		"""
+		@type stream: L{Stream}
+		"""
+
+
+	def streamDown(stream):
+		"""
+		@type stream: L{Stream}
+		"""
+
+
+
 class IStreamQuality(Interface):
 	socketLike = Attribute(
 		"""True if the Stream has a socket-like transport in both directions, else False.""")

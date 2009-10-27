@@ -8,13 +8,14 @@ import hashlib
 from twisted.internet import defer
 from zope.interface import implements, Interface
 
+from minerva.newlink import IStreamNotificationReceiver
 
-#
-#class UAToStream(object):
-#	"""
-#	This is really only implemented here because it's necessary
-#	for L{ProtectingTransportFirewall}
-#	"""
+
+class UAToStreamsCorrelator(dict):
+	"""
+	This is really only implemented here because it's necessary
+	for L{ProtectingTransportFirewall}
+	"""
 
 
 
@@ -166,10 +167,36 @@ class NoopTransportFirewall(object):
 
 
 
+class _UAExtractorMixin(object):
+	def _getUserAgentFromRequest(self, request):
+		raw = request.getCookie(self.uaCookieName)
+		try:
+			return base64.b64decode(raw)
+		except TypeError:
+			raise RejectTransport("missing cookie %r or corrupt base64" % (self.uaCookieName,))
+
+
+	def _getUserAgentFromCredentialsData(self, credentialsData):
+		raw = credentialsData.get(self.uaKeyInCred)
+		try:
+			return base64.b64decode(raw)
+		except TypeError:
+			raise RejectTransport("missing credentialsData[%r] or corrupt base64" % (self.uaKeyInCred,))
+
+
+	def _getUserAgentId(self, transport):
+		# side note: nginx userid module uses non-url-safe base64 alphabet
+		if transport.request is not None:
+			return self._getUserAgentFromRequest(transport.request)
+		else:
+			return self._getUserAgentFromCredentialsData(transport.credentialsData)
+
+
+
 # The object composition pattern used by L{CsrfTransportFirewall} is inspired by
 # http://twistedmatrix.com/trac/browser/branches/expressive-http-client-886/high-level-http-client.py?rev=25721
 
-class CsrfTransportFirewall(object):
+class CsrfTransportFirewall(_UAExtractorMixin):
 	"""
 	This is an implementation of L{ITransportFirewall} that protects
 	against CSRF attacks for both HTTP and Socket-style faces.
@@ -196,30 +223,6 @@ class CsrfTransportFirewall(object):
 		self._csrfStopper = csrfStopper
 
 
-	def _getUserAgentFromRequest(self, request):
-		raw = request.getCookie(self.uaCookieName)
-		try:
-			return base64.b64decode(raw)
-		except TypeError:
-			raise RejectTransport("missing cookie %r or corrupt base64" % (self.uaCookieName,))
-
-
-	def _getUserAgentFromCredentialsData(self, credentialsData):
-		raw = credentialsData.get(self.uaKeyInCred)
-		try:
-			return base64.b64decode(raw)
-		except TypeError:
-			raise RejectTransport("missing credentialsData[%r] or corrupt base64" % (self.uaKeyInCred,))
-
-
-	def _getUserAgentId(self, transport):
-		# side note: nginx userid module uses non-url-safe base64 alphabet
-		if transport.request is not None:
-			return self._getUserAgentFromRequest(transport.request)
-		else:
-			return self._getUserAgentFromCredentialsData(transport.credentialsData)
-
-
 	def checkTransport(self, transport, isFirstTransport):
 		"""
 		See L{ITransportFirewall.checkTransport}
@@ -240,17 +243,17 @@ class CsrfTransportFirewall(object):
 
 
 
-class AntiHijackTransportFirewall(object):
+class AntiHijackTransportFirewall(_UAExtractorMixin):
 	"""
 	This firewall provides weak protection against hijackers who try
 	to use someone else's Stream without cloning their cookie.
 	"""
 
-	implements(ITransportFirewall)
+	implements(ITransportFirewall, IStreamNotificationReceiver)
 
-	def __init__(self, parentFirewall, uaToStream):
+	def __init__(self, parentFirewall, uaToStreams):
 		self._parentFirewall = parentFirewall
-		self._uaToStream = uaToStream
+		self._uaToStreams = uaToStreams
 
 
 	def checkTransport(self, transport, isFirstTransport):
@@ -259,18 +262,19 @@ class AntiHijackTransportFirewall(object):
 				uuid = self._getUserAgentId(transport)
 
 				# This is a weak HTTP hijacking-prevention check
-				if not transport.streamId in self._uaToStream.getStreams(uuid):
+				streams = self._uaToStreams.get(uuid)
+				if not streams or not transport.streamId in streams:
 					raise RejectTransport("uaId changed between transports for the same stream")
 
 		return self._parentFirewall.checkTransport(transport, isFirstTransport).addCallback(cbChecked)
 
 
 
-def makeLayeredFirewall(csrfStopper, uaToStream):
+def makeLayeredFirewall(csrfStopper, uaToStreams):
 	layeredTransportFirewall = \
 		AntiHijackTransportFirewall(
 			CsrfTransportFirewall(NoopTransportFirewall(), csrfStopper),
-			uaToStream
+			uaToStreams
 		)
 
 	return layeredTransportFirewall

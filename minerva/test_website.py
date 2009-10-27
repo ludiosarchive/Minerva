@@ -8,7 +8,8 @@ from minerva.test_newlink import DummyRequest, DummyHttpTransport, DummySocketLi
 from minerva.website import (
 	RejectTransport, ITransportFirewall, CsrfTransportFirewall,
 	NoopTransportFirewall, AntiHijackTransportFirewall,
-	ICsrfStopper, CsrfStopper, RejectToken
+	ICsrfStopper, CsrfStopper, RejectToken,
+	makeLayeredFirewall, UAToStreamsCorrelator
 )
 
 
@@ -183,6 +184,7 @@ class CsrfTransportFirewallTestsHttpTransport(unittest.TestCase):
 
 
 class CsrfTransportFirewallTestsSocketLikeTransport(CsrfTransportFirewallTestsHttpTransport):
+
 	def _makeThings(self, stopper, uaId, csrfTokenStr):
 		firewall = CsrfTransportFirewall(NoopTransportFirewall(), stopper)
 		transport = DummySocketLikeTransport()
@@ -195,3 +197,21 @@ class CsrfTransportFirewallTestsSocketLikeTransport(CsrfTransportFirewallTestsHt
 
 	def _setUaIdString(self, transport, string):
 		transport.credentialsData['uaId'] = string
+
+
+
+class AntiHijackFirewallTests(unittest.TestCase):
+
+	def test_implements(self):
+		# IRL, nobody will be using this antihijack firewall without the CSRF firewall
+		verify.verifyObject(ITransportFirewall, AntiHijackTransportFirewall(NoopTransportFirewall(), uaToStreams=None))
+
+
+
+class LayeredFirewallTests(unittest.TestCase):
+
+	def test_make(self):
+		uaToStreams = UAToStreamsCorrelator()
+		stopper = CsrfStopper("secret string")
+		firewall = makeLayeredFirewall(stopper, uaToStreams)
+		verify.verifyObject(ITransportFirewall, firewall)
