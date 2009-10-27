@@ -256,6 +256,14 @@ class AntiHijackTransportFirewall(_UAExtractorMixin):
 		self._uaToStreams = uaToStreams
 
 
+	def streamUp(self, stream):
+		1/0
+
+
+	def streamDown(self, stream):
+		1/0
+
+
 	def checkTransport(self, transport, isFirstTransport):
 		def cbChecked(_):
 			if not isFirstTransport:

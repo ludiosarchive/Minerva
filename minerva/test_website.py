@@ -9,7 +9,7 @@ from minerva.website import (
 	RejectTransport, ITransportFirewall, CsrfTransportFirewall,
 	NoopTransportFirewall, AntiHijackTransportFirewall,
 	ICsrfStopper, CsrfStopper, RejectToken,
-	makeLayeredFirewall, UAToStreamsCorrelator
+	IStreamNotificationReceiver, makeLayeredFirewall, UAToStreamsCorrelator
 )
 
 
@@ -204,7 +204,9 @@ class AntiHijackFirewallTests(unittest.TestCase):
 
 	def test_implements(self):
 		# IRL, nobody will be using this antihijack firewall without the CSRF firewall
-		verify.verifyObject(ITransportFirewall, AntiHijackTransportFirewall(NoopTransportFirewall(), uaToStreams=None))
+		firewall = AntiHijackTransportFirewall(NoopTransportFirewall(), uaToStreams=None)
+		verify.verifyObject(ITransportFirewall, firewall)
+		verify.verifyObject(IStreamNotificationReceiver, firewall)
 
 
 
