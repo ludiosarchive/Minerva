@@ -7,11 +7,13 @@ from twisted.web.test.test_web import DummyRequest as _TwistedDummyRequest
 
 from minerva.newlink import (
 	Frame, BadFrame, IMinervaProtocol, IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
-	ICsrfStopper, CsrfStopper, RejectToken, RejectTransport,
-	ITransportFirewall, CsrfTransportFirewall, NoopTransportFirewall
+	ICsrfStopper, CsrfStopper, RejectToken
 )
-from minerva.website import AntiHijackTransportFirewall # TODO XXX
 
+from minerva.website import (
+	RejectTransport, ITransportFirewall, CsrfTransportFirewall,
+	NoopTransportFirewall, AntiHijackTransportFirewall
+)
 
 
 # copy/paste from twisted.web.test.test_web, but added a setTcpNoDelay
@@ -133,6 +135,7 @@ class MockStream(object):
 class DummyHttpTransport(object):
 	def __init__(self, request):
 		self.request = request
+		self.credentialsData = {}
 
 
 
@@ -233,32 +236,6 @@ class CsrfStopperTests(unittest.TestCase):
 		##self.assertRaises(RejectToken, lambda: c.checkToken(i, token + '='))
 		##self.assertRaises(RejectToken, lambda: c.checkToken(i, token + '=='))
 		##self.assertRaises(RejectToken, lambda: c.checkToken(i, token + '==='))
-
-
-
-class NoopTransportFirewallTests(unittest.TestCase):
-
-	def test_implements(self):
-		verify.verifyObject(ITransportFirewall, NoopTransportFirewall())
-
-
-
-class CsrfTransportFirewallTests(unittest.TestCase):
-
-	timeout = 3
-
-	def test_implements(self):
-		verify.verifyObject(ITransportFirewall, CsrfTransportFirewall(NoopTransportFirewall(), None))
-
-
-	def test_stopsBadHttpMissingCsrfAndUaId(self):
-		stopper = CsrfStopper("secret string")
-		firewall = CsrfTransportFirewall(NoopTransportFirewall(), stopper)
-		request = DummyRequest([])
-		transport = DummyHttpTransport(request)
-		act = lambda: firewall.checkTransport(transport, isFirstTransport=True)
-		return self.assertFailure(act(), RejectTransport)
-
 
 
 
