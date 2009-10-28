@@ -7,11 +7,12 @@ import base64
 import hashlib
 from twisted.internet import defer
 from zope.interface import implements, Interface
+from collections import defaultdict
 
 from minerva.newlink import IStreamNotificationReceiver
 
 
-class UAToStreamsCorrelator(dict):
+class UAToStreamsCorrelator(defaultdict):
 	"""
 	This is really only implemented here because it's necessary
 	for L{ProtectingTransportFirewall}

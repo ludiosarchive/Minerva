@@ -55,6 +55,7 @@ from collections import deque
 from zope.interface import Interface, Attribute, implements
 from twisted.internet import protocol, defer
 from twisted.internet.interfaces import IConsumer, IProtocol, IProtocolFactory
+from twisted.web import resource
 
 
 
@@ -516,10 +517,11 @@ class SocketFace(protocol.ServerFactory):
 
 	protocol	 = SocketTransport
 
-	def __init__(self, reactor, clock, streamTracker):
+	def __init__(self, reactor, clock, streamTracker, firewall):
 		self._reactor = reactor
 		self._clock = clock
 		self._streamTracker = streamTracker
+		self._firewall = firewall
 
 
 	def buildProtocol(self):
@@ -529,5 +531,25 @@ class SocketFace(protocol.ServerFactory):
 
 
 
-# class WebSocketTransport
-# class WebSocketFace
+class HttpFace(resource.Resource):
+	isLeaf = True
+
+	def __init__(self, clock, streamTracker, firewall):
+		resource.Resource.__init__(self)
+		self._clock = clock
+		self._streamTracker = streamTracker
+		self._firewall = firewall
+
+
+	def render_GET(self, request):
+		1/0
+
+
+	def render_POST(self, request):
+		1/0
+
+
+
+# FUTURE:
+## class WebSocketTransport
+## class WebSocketFace
