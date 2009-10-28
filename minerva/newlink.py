@@ -322,10 +322,13 @@ class StreamTracker(object):
 		# We have to keep a map of streamId->Stream, otherwise there is no
 		# way for a face to locate a Stream.
 		self._streams = {}
+		self._observers = set()
 		self._reactor.addSystemEventTrigger('before', 'shutdown', self._disconnectAll)
 
 
 	def getStream(self, streamId):
+		assert isinstance(streamId, StreamId)
+
 		try:
 			self._streams[streamId]
 		except KeyError:
@@ -333,6 +336,8 @@ class StreamTracker(object):
 
 
 	def buildStream(self, streamId):
+		assert isinstance(streamId, StreamId)
+
 		s = Stream(self._clock, streamId)
 		self._streams[streamId] = s
 		d = s.notifyFinish()
@@ -341,6 +346,8 @@ class StreamTracker(object):
 
 
 	def _forgetStream(self, _ignored, streamId):
+		assert isinstance(streamId, StreamId)
+		
 		del self._streams[streamId]
 
 
@@ -355,6 +362,37 @@ class StreamTracker(object):
 #				break
 #
 #			numOrD = s.serverShuttingDown()
+
+
+	def observeStreams(self, obj):
+		"""
+		Notify L{obj} when any stream goes up or down. L{obj} continues
+		receiving calls unless L{unobserveStreams} is called.
+
+		@param obj: any object that implements L{IStreamNotificationReceiver}.
+
+		@return: L{None}
+		"""
+		# poor man's zope.interface checker
+		assert obj.streamUp, "obj needs a streamUp method"
+		assert obj.streamDown, "obj needs a streamDown method"
+		
+		self._observers.add(obj)
+
+
+	def unobserveStreams(self, obj):
+		"""
+		Stop notifying L{obj} when any stream goes up or down.
+
+		@param obj: any object previously registered with L{observeStreams}.
+
+		@raises: L{RuntimeError} if L{obj} was not registered.
+		@return: L{None}
+		"""
+		try:
+			self._observers.remove(obj)
+		except KeyError:
+			raise RuntimeError("%r was not observing" % (obj,))
 
 
 
@@ -492,7 +530,7 @@ class SocketTransport(protocol.Protocol):
 
 	request = None # no associated HTTP request
 
-	def __init__(self):
+	def __init__(self, reactor, clock): # XXX TODO more
 		1/0
 
 
