@@ -329,6 +329,8 @@ class StreamTracker(object):
 	
 	You do not want to subclass this.
 	"""
+	stream = Stream
+
 	def __init__(self, reactor, clock, streamProtocolFactory):
 		self._reactor = reactor
 		self._clock = clock
@@ -341,7 +343,7 @@ class StreamTracker(object):
 
 
 	def getStream(self, streamId):
-		assert isinstance(streamId, StreamId)
+		##assert isinstance(streamId, StreamId)
 
 		try:
 			self._streams[streamId]
@@ -352,16 +354,17 @@ class StreamTracker(object):
 	def buildStream(self, streamId):
 		##assert isinstance(streamId, StreamId)
 
-		s = Stream(self._clock, streamId)
+		s = self.stream(self._clock, streamId)
 		# Do this first, in case an observer stupidly wants to use L{StreamTracker.getStream}.
 		self._streams[streamId] = s
 
 		try:
 			for o in self._observers.copy(): # copy() to avoid reentrant `unobserveStreams' disaster
 				o.streamUp(s)
-		finally:
+		except:
 			# If an exception happened, at least we can clean up our part of the mess.
 			del self._streams[streamId]
+			raise
 		# If an exception happened in an observer, it bubbles up.
 		# If an exception happened, we don't call streamDown(s) because we don't know which
 		# observers really think the stream is "up" (the exception might have occurred "early")
@@ -372,7 +375,7 @@ class StreamTracker(object):
 
 
 	def _forgetStream(self, _ignoredNone, streamId):
-		assert isinstance(streamId, StreamId)
+		##assert isinstance(streamId, StreamId)
 
 		stream = self._streams[streamId]
 		del self._streams[streamId]

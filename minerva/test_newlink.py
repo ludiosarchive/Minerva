@@ -116,7 +116,9 @@ class _DummyId(object):
 class MockStream(object):
 	streamId = _DummyId("a stream id of unusual length")
 
-	def __init__(self):
+	def __init__(self, clock, streamId):
+		self._notifications = []
+		self.streamId = streamId
 		self.log = []
 
 
@@ -142,6 +144,23 @@ class MockStream(object):
 
 	def serverShuttingDown(self, transport):
 		self.log.append(['serverShuttingDown', transport])
+
+
+	def notifyFinish(self):
+		"""
+		Notify when finishing the request
+
+		@return: A deferred. The deferred will be triggered when the
+		stream is finished -- always with a C{None} value.
+		"""
+		self._notifications.append(defer.Deferred())
+		return self._notifications[-1]
+
+
+	def _pretendFinish(self):
+		for d in self._notifications:
+			d.callback(None)
+		self._notifications = None
 
 
 
@@ -188,7 +207,7 @@ class MockObserver(object):
 
 
 	def streamDown(self, stream):
-		self.log.append(['streamUp', stream])
+		self.log.append(['streamDown', stream])
 
 
 
@@ -280,7 +299,8 @@ class StreamTrackerTests(unittest.TestCase):
 
 	def test_unobserveRemovesCorrectObserver(self):
 		"""
-		calling unobserveStreams actually removes the correct observer
+		calling unobserveStreams actually removes the correct observer,
+		which no longer gets notified
 		"""
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, None, None)
@@ -312,6 +332,23 @@ class StreamTrackerTests(unittest.TestCase):
 
 		# the one that was removed did not
 		self.aE([], toRemove.log)
+
+
+	def test_streamDown_calledWhenStreamDone(self):
+		"""
+		streamDown method on observer is called when Stream is done
+		"""
+		reactor = FakeReactor()
+		st = StreamTracker(reactor, None, None)
+		st.stream = MockStream
+		o = MockObserver()
+		st.observeStreams(o)
+		stream = st.buildStream(_DummyId('some fake id'))
+		self.aE([['streamUp', stream]], o.log)
+
+		stream._pretendFinish()
+		self.aE([['streamUp', stream], ['streamDown', stream]], o.log)
+
 
 
 
