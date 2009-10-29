@@ -55,13 +55,13 @@ class CsrfStopperTests(unittest.TestCase):
 		base64.urlsafe_b64decode(token)
 
 
-	def test_makeTokenMakes160Bits(self):
+	def test_makeTokenMakes128Bits(self):
 		import base64
 		c = CsrfStopper("secret string")
 		i = _DummyId("id")
 		token = c.makeToken(i)
 		decoded = base64.urlsafe_b64decode(token)
-		self.assertEqual(160, len(decoded) * 8)
+		self.assertEqual(128, len(decoded) * 8)
 
 
 	def test_checkTokenWorks(self):

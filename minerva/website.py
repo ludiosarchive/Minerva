@@ -5,6 +5,7 @@ and not necessary for the use of Minerva faces.
 
 import base64
 import hashlib
+import hmac
 from twisted.internet import defer
 from zope.interface import implements, Interface
 from collections import defaultdict
@@ -65,7 +66,7 @@ class RejectToken(Exception):
 
 class CsrfStopper(object):
 	"""
-	An implementation of L{ICsrfStopper} that uses a secret prefix and sha1
+	An implementation of L{ICsrfStopper} that uses a secret and hmac-sha256
 	to make and check tokens. Keeping the secret secret is of paramount
 	importance. If the secret is leaked, anyone can CSRF someone else's session.
 	"""
@@ -76,7 +77,7 @@ class CsrfStopper(object):
 
 
 	def _hash(self, what):
-		return hashlib.sha1(self._secretString + what).digest()
+		return hmac.new(self._secretString, what, hashlib.sha256).digest()[:16] # pull first 128 bits out of 256 bits
 
 
 	def makeToken(self, uuid):

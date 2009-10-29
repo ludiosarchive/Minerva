@@ -367,7 +367,7 @@ class BasicMinervaFactoryTests(unittest.TestCase):
 
 	def test_unmodifiedFactoryIsNotCallable(self):
 		f = BasicMinervaFactory()
-		self.aR(TypeError, lambda: f.buildProtocol(MockStream()))
+		self.aR(TypeError, lambda: f.buildProtocol(MockStream(None, None)))
 
 
 
