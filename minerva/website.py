@@ -71,6 +71,8 @@ class CsrfStopper(object):
 	importance. If the secret is leaked, anyone can CSRF someone else's session.
 	"""
 	implements(ICsrfStopper)
+	
+	version = '\x00\x00' # constant for now
 
 	def __init__(self, secretString):
 		self._secretString = secretString
@@ -84,7 +86,7 @@ class CsrfStopper(object):
 		"""
 		See L{ICsrfStopper.makeToken}
 		"""
-		digest = self._hash(uuid.id)
+		digest = self.version + self._hash(uuid.id)
 		return base64.urlsafe_b64encode(digest)
 
 
@@ -98,7 +100,7 @@ class CsrfStopper(object):
 		except TypeError:
 			raise RejectToken()
 
-		if expected != self._hash(uuidStr):
+		if expected != self.version + self._hash(uuidStr):
 			raise RejectToken()
 
 

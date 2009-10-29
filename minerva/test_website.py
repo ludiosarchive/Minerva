@@ -55,13 +55,16 @@ class CsrfStopperTests(unittest.TestCase):
 		base64.urlsafe_b64decode(token)
 
 
-	def test_makeTokenMakes128Bits(self):
+	def test_makeTokenMakes144Bits(self):
+		"""
+		16 bits (version) + 128 bits (hash)
+		"""
 		import base64
 		c = CsrfStopper("secret string")
 		i = _DummyId("id")
 		token = c.makeToken(i)
 		decoded = base64.urlsafe_b64decode(token)
-		self.assertEqual(128, len(decoded) * 8)
+		self.assertEqual(144, len(decoded) * 8)
 
 
 	def test_checkTokenWorks(self):
@@ -78,6 +81,19 @@ class CsrfStopperTests(unittest.TestCase):
 
 		badToken = 'AAA' + token # still valid base64
 		self.assertRaises(RejectToken, lambda: c.checkToken(i.id, badToken))
+
+
+	def test_checkTokenWrongVersionIsRejected(self):
+		c = CsrfStopper("secret string")
+		i = _DummyId("id")
+		token = c.makeToken(i)
+
+		bad = base64.urlsafe_b64decode(token)
+		bad = '\x00\x01' + bad[2:]
+		badToken2 = base64.urlsafe_b64encode(bad)
+		assert len(badToken2) == len(token)
+
+		self.assertRaises(RejectToken, lambda: c.checkToken(i.id, badToken2))
 
 
 	def test_checkTokenCorruptBase64(self):
