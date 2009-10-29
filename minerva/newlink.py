@@ -140,13 +140,27 @@ class IStreamNotificationReceiver(Interface):
 	"""
 	def streamUp(stream):
 		"""
+		Stream L{stream} has appeared.
+
 		@type stream: L{Stream}
+
+		Do not raise exceptions in your implementation.
+		Doing so will break the building of the stream (the problem will bubble all the
+		way back to the peer). If any observer raises an exception, `streamDown' will
+		never be called for L{stream}. Also, an arbitrary number of other observers will not
+		receive the `streamUp' call in the first place.
 		"""
 
 
 	def streamDown(stream):
 		"""
+		Stream L{stream} is gone.
+
 		@type stream: L{Stream}
+
+		Do not raise exceptions in your implementation.
+		Doing so will prevent an arbitrary number of other observers from receiving
+		the notification.
 		"""
 
 
@@ -339,20 +353,40 @@ class StreamTracker(object):
 		assert isinstance(streamId, StreamId)
 
 		s = Stream(self._clock, streamId)
+		# Do this first, in case an observer stupidly wants to use L{StreamTracker.getStream}.
 		self._streams[streamId] = s
+
+		try:
+			for o in self._observers.copy(): # copy() to avoid reentrant `unobserveStreams' disaster
+				o.streamUp(s)
+		finally:
+			# If an exception happened, at least we can clean up our part of the mess.
+			del self._streams[streamId]
+		# If an exception happened in an observer, it bubbles up.
+		# If an exception happened, we don't call streamDown(s) because we don't know which
+		# observers really think the stream is "up" (the exception might have occurred "early")
+
 		d = s.notifyFinish()
 		d.addBoth(self._forgetStream, streamId)
 		return s
 
 
-	def _forgetStream(self, _ignored, streamId):
+	def _forgetStream(self, _ignoredNone, streamId):
 		assert isinstance(streamId, StreamId)
-		
+
+		stream = self._streams[streamId]
 		del self._streams[streamId]
+
+		# Do this after the `del' above in case some buggy observer raises an exception.
+		for o in self._observers.copy(): # copy() to avoid reentrant `unobserveStreams' disaster
+			o.streamDown(stream)
+
+		# Last reference to the stream should be gone soon.
 
 
 	def _disconnectAll(self):
 		# TODO: block new connections - stop listening on the faces? reject their requests quickly?
+		#pass
 		1/0
 
 #		while True:
@@ -374,8 +408,8 @@ class StreamTracker(object):
 		@return: L{None}
 		"""
 		# poor man's zope.interface checker
-		assert obj.streamUp, "obj needs a streamUp method"
-		assert obj.streamDown, "obj needs a streamDown method"
+		assert obj.streamUp.__call__, "obj needs a streamUp method"
+		assert obj.streamDown.__call__, "obj needs a streamDown method"
 		
 		self._observers.add(obj)
 

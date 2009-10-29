@@ -54,6 +54,7 @@ csrfStopper = CsrfStopper(secrets.CSRF_SECRET)
 uaToStreams = UAToStreamsCorrelator()
 firewall = makeLayeredFirewall(csrfStopper, uaToStreams)
 tracker = StreamTracker(reactor, clock, EchoFactory())
+tracker.observeStreams(firewall)
 
 root = Root(clock, tracker, firewall)
 

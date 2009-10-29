@@ -2,17 +2,31 @@ from zope.interface import implements, verify
 from twisted.trial import unittest
 
 from twisted.web import server, resource
-from twisted.internet import reactor, protocol, defer, address, interfaces, task
+from twisted.internet import protocol, defer, address, interfaces, task
 from twisted.web.test.test_web import DummyRequest as _TwistedDummyRequest
+#from twisted.internet.test.test_base import FakeReactor as _TwistedFakeReactor
 
 from minerva.newlink import (
-	Frame, BadFrame, IMinervaProtocol, IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory
+	Frame, StreamTracker, BadFrame, IMinervaProtocol, IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory
 )
 
 from minerva.website import (
 	RejectTransport, ITransportFirewall, CsrfTransportFirewall,
 	NoopTransportFirewall, AntiHijackTransportFirewall
 )
+
+
+
+class FakeReactor(object):
+	# TODO	: implements() IReactorCore interface? or whatever addSystemEventTrigger is part of?
+
+	def __init__(self, *args, **kargs):
+		self.log = []
+
+
+	def addSystemEventTrigger(self, *args):
+		self.log.append(['addSystemEventTrigger'] + list(args))
+
 
 
 # copy/paste from twisted.web.test.test_web, but added a setTcpNoDelay
@@ -160,6 +174,32 @@ class FrameTests(unittest.TestCase):
 	def test_repr(self):
 		f = Frame([0, u"hello"])
 		self.assertEqual("<Frame type 'boxes', contents [0, u'hello']>", repr(f))
+
+
+
+class MockObserver(object):
+
+	def __init__(self):
+		self.log = []
+
+
+	def streamUp(self, stream):
+		self.log.append(stream)
+
+
+	def streamDown(self, stream):
+		self.log.append(stream)
+
+
+
+class StreamTrackerTests(unittest.TestCase):
+
+	def test_observeStreams(self):
+		reactor = FakeReactor()
+		st = StreamTracker(reactor, None, None)
+		o = MockObserver()
+		st.observeStreams(o)
+		self.aE([], o.log)
 
 
 
