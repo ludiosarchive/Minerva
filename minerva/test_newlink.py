@@ -184,22 +184,134 @@ class MockObserver(object):
 
 
 	def streamUp(self, stream):
-		self.log.append(stream)
+		self.log.append(['streamUp', stream])
 
 
 	def streamDown(self, stream):
-		self.log.append(stream)
+		self.log.append(['streamUp', stream])
 
 
 
 class StreamTrackerTests(unittest.TestCase):
 
 	def test_observeStreams(self):
+		"""
+		observeStreams works and doesn't actually call anything on the observer yet.
+		"""
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, None, None)
 		o = MockObserver()
 		st.observeStreams(o)
 		self.aE([], o.log)
+
+
+	def test_observeStreamsTwiceOkay(self):
+		"""
+		observeStreams works even when called multiple times, and observer is
+		only registered once.
+		"""
+		reactor = FakeReactor()
+		st = StreamTracker(reactor, None, None)
+		o = MockObserver()
+		st.observeStreams(o)
+		st.observeStreams(o)
+		stream = st.buildStream(_DummyId('some fake id'))
+		self.aE([['streamUp', stream]], o.log)
+
+
+	def test_observeAndUnobserve(self):
+		"""
+		unobserveStreams removes the observer properly
+		"""
+		reactor = FakeReactor()
+		st = StreamTracker(reactor, None, None)
+		o = MockObserver()
+		st.observeStreams(o)
+		stream = st.buildStream(_DummyId('some fake id'))
+		self.aE([['streamUp', stream]], o.log)
+
+		st.unobserveStreams(o)
+		stream2 = st.buildStream(_DummyId('another fake id'))
+		self.aE([['streamUp', stream]], o.log) # still the same
+
+
+	def test_unobserveUnknownRaisesError(self):
+		"""
+		unobserveStreams raises L{RuntimeError} if unobserving an unknown observer
+		"""
+		reactor = FakeReactor()
+		st = StreamTracker(reactor, None, None)
+		o = MockObserver()
+		self.aR(RuntimeError, lambda: st.unobserveStreams(o))
+
+
+	def test_unobserveTwiceRaisesError(self):
+		"""
+		calling unobserveStreams for same observer raises L{RuntimeError}
+		"""
+		reactor = FakeReactor()
+		st = StreamTracker(reactor, None, None)
+		o = MockObserver()
+		st.observeStreams(o)
+		st.unobserveStreams(o)
+		self.aR(RuntimeError, lambda: st.unobserveStreams(o))
+
+
+	def test_manyObservers(self):
+		"""
+		still works when there are many observers
+		"""
+		reactor = FakeReactor()
+		st = StreamTracker(reactor, None, None)
+
+		observers = []
+
+		for i in xrange(1000):
+			o = MockObserver()
+			observers.append(o)
+			st.observeStreams(o)
+		del o
+
+		stream = st.buildStream(_DummyId('some fake id'))
+
+		for o in observers:
+			self.aE([['streamUp', stream]], o.log)
+
+
+	def test_unobserveRemovesCorrectObserver(self):
+		"""
+		calling unobserveStreams actually removes the correct observer
+		"""
+		reactor = FakeReactor()
+		st = StreamTracker(reactor, None, None)
+
+		irrelevantObservers = []
+
+		for i in xrange(1000):
+			o = MockObserver()
+			irrelevantObservers.append(o)
+			st.observeStreams(o)
+		del o
+
+		toRemove = MockObserver()
+		st.observeStreams(toRemove)
+
+		for i in xrange(1000):
+			o = MockObserver()
+			irrelevantObservers.append(o)
+			st.observeStreams(o)
+		del o
+
+		st.unobserveStreams(toRemove)
+
+		stream = st.buildStream(_DummyId('some fake id'))
+
+		# 2000 observers got the message
+		for o in irrelevantObservers:
+			self.aE([['streamUp', stream]], o.log)
+
+		# the one that was removed did not
+		self.aE([], toRemove.log)
 
 
 

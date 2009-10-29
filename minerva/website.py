@@ -248,6 +248,10 @@ class AntiHijackTransportFirewall(_UAExtractorMixin):
 	"""
 	This firewall provides weak protection against hijackers who try
 	to use someone else's Stream without cloning their cookie.
+
+	After instantiating me, you must tell the L{StreamTracker} to call
+	my L{streamUp} and L{streamDown} methods when streams go up
+	or down. See L{StreamTracker.observeStreams}
 	"""
 
 	implements(ITransportFirewall, IStreamNotificationReceiver)
@@ -271,8 +275,7 @@ class AntiHijackTransportFirewall(_UAExtractorMixin):
 				uuid = self._getUserAgentId(transport)
 
 				# This is a weak HTTP hijacking-prevention check
-				streams = self._uaToStreams.get(uuid)
-				if not streams or not transport.streamId in streams:
+				if not transport.streamId in self._uaToStreams[uuid]:
 					raise RejectTransport("uaId changed between transports for the same stream")
 
 		return self._parentFirewall.checkTransport(transport, isFirstTransport).addCallback(cbChecked)

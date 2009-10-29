@@ -350,7 +350,7 @@ class StreamTracker(object):
 
 
 	def buildStream(self, streamId):
-		assert isinstance(streamId, StreamId)
+		##assert isinstance(streamId, StreamId)
 
 		s = Stream(self._clock, streamId)
 		# Do this first, in case an observer stupidly wants to use L{StreamTracker.getStream}.
