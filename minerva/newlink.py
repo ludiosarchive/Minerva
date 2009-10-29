@@ -343,7 +343,7 @@ class StreamTracker(object):
 
 
 	def getStream(self, streamId):
-		##assert isinstance(streamId, StreamId)
+		assert not isinstance(streamId, (str, unicode))
 
 		try:
 			self._streams[streamId]
@@ -352,7 +352,7 @@ class StreamTracker(object):
 
 
 	def buildStream(self, streamId):
-		##assert isinstance(streamId, StreamId)
+		assert not isinstance(streamId, (str, unicode))
 
 		s = self.stream(self._clock, streamId)
 		# Do this first, in case an observer stupidly wants to use L{StreamTracker.getStream}.
@@ -375,7 +375,7 @@ class StreamTracker(object):
 
 
 	def _forgetStream(self, _ignoredNone, streamId):
-		##assert isinstance(streamId, StreamId)
+		assert not isinstance(streamId, (str, unicode))
 
 		stream = self._streams[streamId]
 		del self._streams[streamId]

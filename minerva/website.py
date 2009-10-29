@@ -72,7 +72,7 @@ class CsrfStopper(object):
 	"""
 	implements(ICsrfStopper)
 	
-	version = '\x00\x00' # constant for now
+	version = '\x00\x00' # one constant for now
 
 	def __init__(self, secretString):
 		self._secretString = secretString
