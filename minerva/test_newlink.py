@@ -12,7 +12,7 @@ from twisted.test.proto_helpers import StringTransport
 from minerva.decoders import BencodeStringDecoder
 
 from minerva.newlink import (
-	Frame, StreamTracker, NoSuchStream, BadFrame, IMinervaProtocol,
+	Frame, Stream, StreamTracker, NoSuchStream, BadFrame, IMinervaProtocol,
 	IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
 	SocketTransport
 )
@@ -231,6 +231,18 @@ class BrokenMockObserver(object):
 
 	def streamDown(self, stream):
 		raise BrokenOnPurposeError("raising inside streamDown in evil test")
+
+
+
+class StreamTests(unittest.TestCase):
+
+	def test_repr(self):
+		s = Stream(None, _DummyId('some fake id'))
+		r = repr(s)
+		self.assert_('<Stream' in r, r)
+		self.assert_('streamId=' in r, r)
+		self.assert_('disconnected=False' in r, r)
+		self.assert_('len(queue)=0' in r, r)
 
 
 

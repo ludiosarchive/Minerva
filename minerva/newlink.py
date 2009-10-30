@@ -215,6 +215,11 @@ class Stream(object):
 		self.queue = deque()
 
 
+	def __repr__(self):
+		return ('<%s streamId=%r, len(queue)=%r, disconnected=%r>'
+			% (self.__class__.__name__, self.streamId, len(self.queue), self.disconnected))
+
+
 	def sendBoxes(self, boxes):
 		"""
 		Send C{boxes} boxes to the peer.
@@ -359,6 +364,10 @@ class StreamTracker(object):
 
 	def buildStream(self, streamId):
 		assert not isinstance(streamId, (str, unicode))
+
+		if streamId in self._streams:
+			raise StreamAlreadyExists(
+				"cannot make stream with id %r because %r exists" % (streamId, self._streams[streamId]))
 
 		s = self.stream(self._clock, streamId)
 		# Do this first, in case an observer stupidly wants to use L{StreamTracker.getStream}.
