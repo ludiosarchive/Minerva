@@ -585,7 +585,7 @@ def dumpToJson7Bit(data):
 	return simplejson.dumps(data, separators=(',', ':'))
 
 
-WAITING_FOR_AUTH, AUTHING, DYING, AUTH_OK = range(4)
+##WAITING_FOR_AUTH, AUTHING, DYING, AUTH_OK = range(4)
 _2_64 = 2**64
 
 
@@ -603,7 +603,6 @@ class SocketTransport(protocol.Protocol):
 		self._streamTracker = streamTracker
 		self._firewall = firewall
 
-		self.credentialsData = {}
 		self._gotHello = False
 		self._authed = False
 		self._stream = None
@@ -626,7 +625,7 @@ class SocketTransport(protocol.Protocol):
 		try:
 			credentialsData = helloData['c']
 		except KeyError:
-			pass
+			credentialsData = {}
 		else:
 			if not isinstance(credentialsData, dict):
 				return self._closeWith('tk_invalid_frame_type_or_arguments')
@@ -639,7 +638,10 @@ class SocketTransport(protocol.Protocol):
 			connectionNumber = abstract.ensureNonNegIntLimit(helloData['n'], _2_64)
 			protocolVersion = helloData['v']
 			# -- no transportType
-			streamId = StreamId(helloData['i']) # e: abstract.InvalidIdentifier
+			i = helloData['i']
+			if not isinstance(i, str):
+				return self._closeWith('tk_invalid_frame_type_or_arguments')
+			streamId = StreamId(base64.b64decode(i)) # e: abstract.InvalidIdentifier, TypeError (if base64 problem)
 			# -- no numPaddingBytes
 			maxReceiveBytes = abstract.ensureNonNegIntLimit(helloData['r'], _2_64) # e: ValueError, TypeError
 			maxOpenTime = abstract.ensureNonNegIntLimit(helloData['m'], _2_64) # e: ValueError, TypeError
@@ -663,6 +665,7 @@ class SocketTransport(protocol.Protocol):
 
 		def cbAuthOkay(_):
 			if isFirstTransport:
+				# TODO XXX handle StreamAlreadyExists
 				self._stream = self._streamTracker.buildStream(streamId)
 			else:
 				try:

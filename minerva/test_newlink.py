@@ -1,4 +1,5 @@
 import simplejson
+import base64
 
 from zope.interface import implements, verify
 from twisted.trial import unittest
@@ -499,7 +500,8 @@ class DummyStreamTracker(object):
 
 	stream = MockStream
 
-	def __init__(self, _streams):
+	def __init__(self, clock, _streams):
+		self._clock = clock
 		self._streams = _streams
 
 
@@ -532,8 +534,10 @@ class DummyStreamTracker(object):
 
 class DummyFirewall(object):
 	
-	def checkTransport(self, transport):
-		return
+	def checkTransport(self, transport, isFirstTransport):
+		d = defer.Deferred()
+		d.callback(None)
+		return d
 
 
 
@@ -553,8 +557,9 @@ class SocketTransportErrorTests(unittest.TestCase):
 		self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
 
 		reactor = FakeReactor()
+		clock = task.Clock()
 		self.t = StringTransport()
-		self.protocol = SocketTransport(reactor, None, DummyStreamTracker({}), DummyFirewall())
+		self.protocol = SocketTransport(reactor, None, DummyStreamTracker(clock, {}), DummyFirewall())
 		self.protocol.makeConnection(self.t)
 
 
@@ -582,6 +587,12 @@ class SocketTransportErrorTests(unittest.TestCase):
 		self.parser.dataReceived(self.t.value())
 		self.aE([[611], [11], [3]], self.gotFrames)
 
+
+	def test_validHello(self):
+		helloData = dict(n=0, v=1, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+		frame0 = [Frame.nameToNumber['hello'], helloData]
+		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		self.aE([], self.gotFrames)
 
 
 
