@@ -552,15 +552,18 @@ class SocketTransportErrorTests(unittest.TestCase):
 
 
 	def setUp(self):
-		self.gotFrames = []
-		self.parser = BencodeStringDecoder()
-		self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
-
+		self._resetParser()
 		reactor = FakeReactor()
 		clock = task.Clock()
 		self.t = StringTransport()
 		self.protocol = SocketTransport(reactor, None, DummyStreamTracker(clock, {}), DummyFirewall())
 		self.protocol.makeConnection(self.t)
+
+
+	def _resetParser(self):
+		self.gotFrames = []
+		self.parser = BencodeStringDecoder()
+		self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
 
 
 	def test_invalidFrameType(self):
@@ -628,10 +631,12 @@ class SocketTransportErrorTests(unittest.TestCase):
 			for value in mutateValues:
 				badHello = goodHello.copy()
 				badHello[mutateProperty] = value
+				print badHello
 
 				frame0 = [Frame.nameToNumber['hello'], badHello]
 				self.protocol.dataReceived(self.serializeFrames([frame0]))
-				self.aE([], self.gotFrames)
+				self.aE([[611], [11], [3]], self.gotFrames)
+				self._resetParser()
 
 				ran += 1
 

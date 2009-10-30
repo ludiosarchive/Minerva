@@ -626,9 +626,9 @@ class SocketTransport(protocol.Protocol):
 			credentialsData = helloData['c']
 		except KeyError:
 			credentialsData = {}
-		else:
-			if not isinstance(credentialsData, dict):
-				return self._closeWith('tk_invalid_frame_type_or_arguments')
+
+		if not isinstance(credentialsData, dict):
+			return self._closeWith('tk_invalid_frame_type_or_arguments')
 
 		try:
 			# any line below can raise KeyError; additional exceptions marked with 'e:'
