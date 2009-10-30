@@ -613,7 +613,9 @@ class SocketTransportErrorTests(unittest.TestCase):
 		"""
 		goodHello = dict(n=0, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
 
-		genericBad = [-2**65, -1, -0.5, 0.5, 2**65, "", [], {}, True, False]
+		DeleteProperty = object()
+
+		genericBad = [-2**65, -1, -0.5, 0.5, 2**65, "", [], {}, True, False, DeleteProperty]
 		genericBadButDictOk = genericBad[:]
 		genericBadButDictOk.remove({})
 
@@ -631,7 +633,13 @@ class SocketTransportErrorTests(unittest.TestCase):
 		for mutateProperty, mutateValues in badMutations.iteritems():
 			for value in mutateValues:
 				badHello = goodHello.copy()
-				badHello[mutateProperty] = value
+				if value is not DeleteProperty:
+					badHello[mutateProperty] = value
+				else:
+					try:
+						del badHello[mutateProperty]
+					except KeyError:
+						continue # If it wasn't there in the first place, deleting it can't create an error
 				##print badHello
 
 				frame0 = [Frame.nameToNumber['hello'], badHello]
