@@ -7,7 +7,8 @@ from twisted.web.test.test_web import DummyRequest as _TwistedDummyRequest
 #from twisted.internet.test.test_base import FakeReactor as _TwistedFakeReactor
 
 from minerva.newlink import (
-	Frame, StreamTracker, BadFrame, IMinervaProtocol, IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory
+	Frame, StreamTracker, NoSuchStream, BadFrame, IMinervaProtocol,
+	IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory
 )
 
 from minerva.website import (
@@ -211,6 +212,22 @@ class MockObserver(object):
 
 
 
+class BrokenOnPurposeError(Exception):
+	pass
+
+
+
+class BrokenMockObserver(object):
+
+	def streamUp(self, stream):
+		raise BrokenOnPurposeError("raising inside streamUp in evil test")
+
+
+	def streamDown(self, stream):
+		raise BrokenOnPurposeError("raising inside streamDown in evil test")
+
+
+
 class StreamTrackerTests(unittest.TestCase):
 
 	def test_observeStreams(self):
@@ -348,6 +365,33 @@ class StreamTrackerTests(unittest.TestCase):
 
 		stream._pretendFinish()
 		self.aE([['streamUp', stream], ['streamDown', stream]], o.log)
+
+
+	def test_brokenObserverExceptionBubblesUp(self):
+		"""
+		An exception raised by an observer makes buildStream fail
+		"""
+		reactor = FakeReactor()
+		st = StreamTracker(reactor, None, None)
+		st.stream = MockStream
+		o = BrokenMockObserver()
+		st.observeStreams(o)
+		self.aR(BrokenOnPurposeError, lambda: st.buildStream(_DummyId('some fake id')))
+
+
+	def test_brokenObserverExceptionRemovesStreamReference(self):
+		"""
+		In exception is raised by an observer, StreamTracker loses the reference to
+		the Stream it just created (it cannot be retrieved using getStream)
+		"""
+		reactor = FakeReactor()
+		st = StreamTracker(reactor, None, None)
+		st.stream = MockStream
+		o = BrokenMockObserver()
+		st.observeStreams(o)
+		id = _DummyId('some fake id')
+		self.aR(BrokenOnPurposeError, lambda: st.buildStream(id))
+		self.aR(NoSuchStream, lambda: st.getStream(id))
 
 
 
