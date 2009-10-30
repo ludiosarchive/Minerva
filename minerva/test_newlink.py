@@ -245,6 +245,25 @@ class StreamTests(unittest.TestCase):
 		self.assert_('len(queue)=0' in r, r)
 
 
+	def test_notifyFinishReturnsDeferred(self):
+		s = Stream(None, _DummyId('some fake id'))
+		d = s.notifyFinish()
+		self.assertEqual(defer.Deferred, type(d))
+
+
+	def test_notifyFinishActuallyCalled(self):
+		s = Stream(None, _DummyId('some fake id'))
+		d = s.notifyFinish()
+		called = [False]
+		def cb(val):
+			self.aI(None, val)
+			called[0] = True
+		d.addCallback(cb)
+		s._die() # TODO XXX replace with some public test
+
+		assert called[0]
+
+
 
 class StreamTrackerTests(unittest.TestCase):
 
