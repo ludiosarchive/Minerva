@@ -130,13 +130,13 @@ class ITransportFirewall(Interface):
 #		"""
 
 
-	def checkTransport(transport, isFirstTransport):
+	def checkTransport(transport, requestNewStream):
 		"""
 		You must implement this correctly. At minimum, you must reject
 		transports with an invalid/missing CSRF token.
 
 		@param transport: the Minerva transport to be attached to a Stream
-		@param isFirstTransport: C{True} if this is the first transport for a Stream, else C{False}
+		@param requestNewStream: C{True} if this is the first transport for a Stream, else C{False}
 
 		@return: Deferred that errbacks with L{RejectTransport} if the transport should not be attached.
 		@return: Deferred that callbacks with L{None} if the transport should be attached.
@@ -166,7 +166,7 @@ class NoopTransportFirewall(object):
 	"""
 	implements(ITransportFirewall)
 
-	def checkTransport(self, transport, isFirstTransport):
+	def checkTransport(self, transport, requestNewStream):
 		return defer.succeed(None)
 
 
@@ -227,12 +227,12 @@ class CsrfTransportFirewall(_UAExtractorMixin):
 		self._csrfStopper = csrfStopper
 
 
-	def checkTransport(self, transport, isFirstTransport):
+	def checkTransport(self, transport, requestNewStream):
 		"""
 		See L{ITransportFirewall.checkTransport}
 		"""
 		def cbChecked(_):
-			if isFirstTransport:
+			if requestNewStream:
 				uuid = self._getUserAgentId(transport)
 
 				if not self.csrfKeyInCred in transport.credentialsData:
@@ -243,7 +243,7 @@ class CsrfTransportFirewall(_UAExtractorMixin):
 			else:
 				return defer.succeed(None)
 
-		return self._parentFirewall.checkTransport(transport, isFirstTransport).addCallback(cbChecked)
+		return self._parentFirewall.checkTransport(transport, requestNewStream).addCallback(cbChecked)
 
 
 
@@ -273,16 +273,16 @@ class AntiHijackTransportFirewall(_UAExtractorMixin):
 		1/0
 
 
-	def checkTransport(self, transport, isFirstTransport):
+	def checkTransport(self, transport, requestNewStream):
 		def cbChecked(_):
-			if not isFirstTransport:
+			if not requestNewStream:
 				uuid = self._getUserAgentId(transport)
 
 				# This is a weak HTTP hijacking-prevention check
 				if not transport.streamId in self._uaToStreams[uuid]:
 					raise RejectTransport("uaId changed between transports for the same stream")
 
-		return self._parentFirewall.checkTransport(transport, isFirstTransport).addCallback(cbChecked)
+		return self._parentFirewall.checkTransport(transport, requestNewStream).addCallback(cbChecked)
 
 
 

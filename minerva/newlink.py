@@ -631,6 +631,15 @@ class SocketTransport(protocol.Protocol):
 		if not isinstance(credentialsData, dict):
 			return self._closeWith('tk_invalid_frame_type_or_arguments')
 
+		# requestNewStream is always optional
+		try:
+			requestNewStream = helloData['w']
+		except KeyError:
+			requestNewStream = False
+
+		if not isinstance(requestNewStream, bool):
+			return self._closeWith('tk_invalid_frame_type_or_arguments')
+
 		try:
 			# any line below can raise KeyError; additional exceptions marked with 'e:'
 
@@ -654,8 +663,6 @@ class SocketTransport(protocol.Protocol):
 		if protocolVersion != 2:
 			return self._closeWith('tk_invalid_frame_type_or_arguments')
 
-		isFirstTransport = (transportNumber == 0)
-
 		self._protocolVersion = protocolVersion
 		self.streamId = streamId
 		self.credentialsData = credentialsData
@@ -663,10 +670,10 @@ class SocketTransport(protocol.Protocol):
 		self._maxReceiveBytes = maxReceiveBytes
 		self._maxOpenTime = maxOpenTime
 
-		d = self._firewall.checkTransport(self, isFirstTransport)
+		d = self._firewall.checkTransport(self, requestNewStream)
 
 		def cbAuthOkay(_):
-			if isFirstTransport:
+			if requestNewStream:
 				# TODO XXX handle StreamAlreadyExists
 				self._stream = self._streamTracker.buildStream(streamId)
 			else:

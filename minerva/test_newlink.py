@@ -543,7 +543,7 @@ class DummyStreamTracker(object):
 
 class DummyFirewall(object):
 	
-	def checkTransport(self, transport, isFirstTransport):
+	def checkTransport(self, transport, requestNewStream):
 		d = defer.Deferred()
 		d.callback(None)
 		return d
@@ -616,14 +616,14 @@ class SocketTransportErrorTests(unittest.TestCase):
 
 
 	def test_validHello(self):
-		helloData = dict(n=0, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
 		frame0 = [Frame.nameToNumber['hello'], helloData]
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
 		self.aE([], self.gotFrames)
 
 
 	def test_validHelloWithCredentials(self):
-		helloData = dict(n=0, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30, c={'not_looked_at': True})
+		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30, c={'not_looked_at': True})
 		frame0 = [Frame.nameToNumber['hello'], helloData]
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
 		self.aE([], self.gotFrames)
@@ -634,7 +634,7 @@ class SocketTransportErrorTests(unittest.TestCase):
 		Test that all any problem with the hello frame results in a
 		'tk_invalid_frame_type_or_arguments' error frame
 		"""
-		goodHello = dict(n=0, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+		goodHello = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
 
 		DeleteProperty = object()
 
