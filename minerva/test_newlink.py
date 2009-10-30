@@ -467,6 +467,13 @@ class SocketTransportErrorTests(unittest.TestCase):
 		self.aE([[603], [11], [3]], self.gotFrames)
 
 
+	def test_firstFrameWasNotHelloFrame(self):
+		frame0 = [Frame.nameToNumber['reset']]
+		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		self.parser.dataReceived(self.t.value())
+		self.aE([[603], [11], [3]], self.gotFrames)
+
+
 	def test_frameCorruption(self):
 		self.protocol.dataReceived('1:xxxxxxxx')
 		self.parser.dataReceived(self.t.value())
