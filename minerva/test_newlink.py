@@ -196,6 +196,14 @@ class FrameTests(unittest.TestCase):
 	def test_notOkay(self):
 		self.assertRaises(BadFrame, lambda: Frame([]))
 		self.assertRaises(BadFrame, lambda: Frame([9999]))
+		self.assertRaises(BadFrame, lambda: Frame({}))
+		self.assertRaises(BadFrame, lambda: Frame({0: 'x'}))
+		self.assertRaises(BadFrame, lambda: Frame({'0': 'x'}))
+		self.assertRaises(BadFrame, lambda: Frame(1))
+		self.assertRaises(BadFrame, lambda: Frame(1.5))
+		self.assertRaises(BadFrame, lambda: Frame(True))
+		self.assertRaises(BadFrame, lambda: Frame(False))
+		self.assertRaises(BadFrame, lambda: Frame(None))
 
 
 	def test_repr(self):
@@ -593,7 +601,15 @@ class SocketTransportErrorTests(unittest.TestCase):
 
 
 	def test_intraFrameCorruption(self):
-		self.protocol.dataReceived('1:{')
+		self.protocol.dataReceived('1:{') # incomplete JSON
+		self.parser.dataReceived(self.t.value())
+		self.aE([[611], [11], [3]], self.gotFrames)
+
+
+	def test_intraFrameCorruptionTrailingGarbage(self):
+		self.protocol.dataReceived('3:{}x') # complete JSON but with trailing garbage
+		# Note that simplejson allows trailing whitespace, which we should add a test for; TODO XXX
+		
 		self.parser.dataReceived(self.t.value())
 		self.aE([[611], [11], [3]], self.gotFrames)
 

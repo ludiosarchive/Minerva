@@ -116,7 +116,7 @@ class Frame(object):
 		"""
 		try:
 			self.type = contents[0]
-		except IndexError:
+		except (IndexError, KeyError, TypeError):
 			raise BadFrame("Frame did not have a [0]th item")
 		if not self.type in self.knownTypes:
 			raise BadFrame("Frame(%r) but %r is not a known frame type" % (contents, self.type))
