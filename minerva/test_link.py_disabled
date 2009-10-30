@@ -183,14 +183,14 @@ class BaseTestIntegration(object):
 		self.assertEqual(comm.gotBoxes, boxes)
 
 		log.msg("I used %d connections to get the data." % (
-			comm._connectionNumber + 1,))
+			comm._transportNumber + 1,))
 		if self.communicator is pyclient.StopConditionXHRCommunicator:
-			self.assertEqual(7, comm._connectionNumber + 1)
+			self.assertEqual(7, comm._transportNumber + 1)
 		else:
 			# Less data can fit in a same-maxBytes <script> transport
 			# because "<script>" and "</script>" take up so many bytes.
 			# So, it uses more connections to deliver the same boxes.
-			self.assertEqual(8, comm._connectionNumber + 1)
+			self.assertEqual(8, comm._transportNumber + 1)
 
 
 
@@ -378,8 +378,8 @@ class TestSocketTransport(HelperSocketStyleTransport, unittest.TestCase):
 
 class _DummyMinervaTransport(object):
 	numWrites = 0
-	def __init__(self, connectionNumber):
-		self.connectionNumber = connectionNumber
+	def __init__(self, transportNumber):
+		self.transportNumber = transportNumber
 
 	def writeFrom(self, queue):
 		self.numWrites += 1

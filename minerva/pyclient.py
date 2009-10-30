@@ -98,7 +98,7 @@ class BaseTwoWayCommunicator(object):
 		self._streamId = streamId
 		self._cookieName = cookieName
 
-		self._connectionNumber = -1
+		self._transportNumber = -1
 		self._startAtSeqNum = 0
 
 		self._S2CConnections = set()
@@ -184,11 +184,11 @@ class BaseTwoWayCommunicator(object):
 				self._handleFrame(frame)
 		bodyProto = BodyDecoder()
 
-		self._connectionNumber += 1
+		self._transportNumber += 1
 
 		url = self._rootURL + 'd/?i=%s&n=%d&s=%d&a=%s&t=%s' % (
 			self._streamId.id.encode('hex'),
-			self._connectionNumber,
+			self._transportNumber,
 			self._startAtSeqNum,
 			self._startAtSeqNum - 1,
 			self.transportString)

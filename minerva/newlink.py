@@ -636,7 +636,7 @@ class SocketTransport(protocol.Protocol):
 
 			# 2**31-1 limit is okay, even with a connection every second,
 			# it'll be (2 ** 31 - 1) seconds = 68.0511039 years
-			connectionNumber = abstract.ensureNonNegIntLimit(helloData['n'], _2_64)
+			transportNumber = abstract.ensureNonNegIntLimit(helloData['n'], _2_64)
 			protocolVersion = helloData['v']
 			# -- no transportType
 			i = helloData['i']
@@ -650,16 +650,16 @@ class SocketTransport(protocol.Protocol):
 		except (KeyError, TypeError, ValueError, abstract.InvalidIdentifier):
 			return self._closeWith('tk_invalid_frame_type_or_arguments')
 
-		# We keep protocolVersion > 1 because Python is very stupid about bool/int equivalence
+		# Do not use protocolVersion < 2 ever because Python is very stupid about bool/int equivalence
 		if protocolVersion != 2:
 			return self._closeWith('tk_invalid_frame_type_or_arguments')
 
-		isFirstTransport = (connectionNumber == 0)
+		isFirstTransport = (transportNumber == 0)
 
 		self._protocolVersion = protocolVersion
 		self.streamId = streamId
 		self.credentialsData = credentialsData
-		self._connectionNumber = connectionNumber
+		self._transportNumber = transportNumber
 		self._maxReceiveBytes = maxReceiveBytes
 		self._maxOpenTime = maxOpenTime
 

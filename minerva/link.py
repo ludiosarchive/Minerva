@@ -350,9 +350,9 @@ class Stream(object):
 			return None
 
 		if len(self._approvedTransports) > 1:
-			# Select the transport with the highest connectionNumber.
+			# Select the transport with the highest transportNumber.
 			# TODO: make this work when an S2C request is "waiting" on another to end
-			transport = sorted(self._approvedTransports, key=lambda t: t.connectionNumber, reverse=True)[0]
+			transport = sorted(self._approvedTransports, key=lambda t: t.transportNumber, reverse=True)[0]
 			if self.noisy:
 				log.msg("Multiple S2C transports: \n%s\n, so I picked the newest: %r" % (
 					pprint.pformat(self._approvedTransports), transport,))
@@ -672,11 +672,11 @@ class _BaseHTTPS2CTransport(_BaseHTTPTransport):
 
 	maxBytes = None # override this
 
-	def __init__(self, request, streamId, connectionNumber, firstS2CToWrite):
+	def __init__(self, request, streamId, transportNumber, firstS2CToWrite):
 		"""
 		I need a L{twisted.web.http.Request} to write to.
 		
-		L{connectionNumber} is incremented by the client as they
+		L{transportNumber} is incremented by the client as they
 			open S2C transports.
 
 		L{firstS2CToWrite} is the first S2C box that the client expects
@@ -687,7 +687,7 @@ class _BaseHTTPS2CTransport(_BaseHTTPTransport):
 		requests/TCP connections.
 		"""
 		_BaseHTTPTransport.__init__(self, request, streamId)
-		self.connectionNumber = connectionNumber
+		self.transportNumber = transportNumber
 		self._firstS2CToWrite = firstS2CToWrite
 
 		self._preparedSeqMsg = False
@@ -1010,7 +1010,7 @@ class HTTPFace(resource.Resource):
 
 	Key:
 		i - streamId
-		n - connectionNumber
+		n - transportNumber
 		s  - startAtSeqNum (-1 if uploadOnly)
 		a - ackS2C
 		t - transportClass
@@ -1025,7 +1025,7 @@ class HTTPFace(resource.Resource):
 
 
 	def renderWithOptions(self,
-	request, transportClass, streamId, connectionNumber,
+	request, transportClass, streamId, transportNumber,
 	ackS2C, uploadOnly, boxes, startAtSeqNum=None):
 
 		# notifyFinish should be called as early as possible; see its docstring
@@ -1035,7 +1035,7 @@ class HTTPFace(resource.Resource):
 		# If startAtSeqNum is None, transport.writeFrom will raise some ugly exception
 		# But this is only the case for upload-only transports, which won't even be attached
 		# to a stream.
-		transport = transportClass(request, streamId, connectionNumber, startAtSeqNum)
+		transport = transportClass(request, streamId, transportNumber, startAtSeqNum)
 
 		d = defer.maybeDeferred(self._transportFirewall.checkTransport, transport)
 
@@ -1117,8 +1117,8 @@ class HTTPFace(resource.Resource):
 
 			# Incremented each time the client makes a HTTP request for S2C
 			# TODO: disconnect the old S2C transport if a newer transport has arrived
-			# (with higher connectionNumber)
-			opts['connectionNumber'] = abstract.strToNonNeg(args['n'][0])
+			# (with higher transportNumber)
+			opts['transportNumber'] = abstract.strToNonNeg(args['n'][0])
 
 			s_str = args['s'][0]
 			if s_str == '-1':
@@ -1173,7 +1173,7 @@ class HTTPFace(resource.Resource):
 
 		try:
 			opts['streamId'] = StreamId(data['i'].decode('hex'))
-			opts['connectionNumber'] = abstract.ensureNonNegInt(data['n'])
+			opts['transportNumber'] = abstract.ensureNonNegInt(data['n'])
 			# Note that this will accept -1.0, unlike the stricter code in render_GET
 			s_value = data['s']
 			if s_value == -1:
