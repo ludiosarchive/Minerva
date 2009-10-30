@@ -467,6 +467,19 @@ class SocketTransportErrorTests(unittest.TestCase):
 		self.aE([[603], [11], [3]], self.gotFrames)
 
 
+	def test_frameCorruption(self):
+		self.protocol.dataReceived('1:xxxxxxxx')
+		self.parser.dataReceived(self.t.value())
+		self.aE([[610], [11], [3]], self.gotFrames)
+
+
+	def test_intraFrameCorruption(self):
+		self.protocol.dataReceived('1:{')
+		self.parser.dataReceived(self.t.value())
+		self.aE([[611], [11], [3]], self.gotFrames)
+
+
+
 
 class BasicMinervaProtocolTests(unittest.TestCase):
 
