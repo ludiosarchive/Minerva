@@ -67,9 +67,9 @@ def ensureNonNegInt(value):
 
 
 
-def ensureNonNegInt32(value):
+def ensureNonNegIntLimit(value, limit):
 	"""
-	Check that C{value} is non-negative and C{<= 2**31 - 1} and
+	Check that C{value} is non-negative and C{<= limit} and
 	convert it to it an equivalent non-L{float} if necessary, else raise L{ValueError}.
 
 	@rtype: L{int} or L{long}
@@ -78,8 +78,8 @@ def ensureNonNegInt32(value):
 	Useful after getting some deserialized JSON with random stuff in it.
 	"""
 	v = ensureNonNegInt(value)
-	if not v <= 2**31 - 1:
-		raise ValueError("%r is too high" % (value,))
+	if v > limit:
+		raise ValueError("%r is > limit %r" % (value, limit))
 	return v
 
 

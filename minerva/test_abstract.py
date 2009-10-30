@@ -91,15 +91,15 @@ class TestEnsureNonNegInt(unittest.TestCase):
 
 
 
-class TestEnsureNonNegInt32(unittest.TestCase):
+class TestEnsureNonNegIntLimit(unittest.TestCase):
 
-	function = lambda _ignoredSelf, x: abstract.ensureNonNegInt32(x)
+	function = lambda _ignoredSelf, x: abstract.ensureNonNegIntLimit(x, 2**31-1)
 
-	def test_ensureNonNegInt32EdgeCase(self):
+	def test_ensureNonNegIntLimitEdgeCase(self):
 		self.assertEqual(2**31 - 1, self.function(2**31 - 1))
 
 
-	def test_ensureNonNegIntExceptionsTooHigh(self):
+	def test_ensureNonNegIntLimitExceptionsTooHigh(self):
 		self.assertRaises(ValueError, lambda: self.function(2**31))
 		self.assertRaises(ValueError, lambda: self.function(2**32))
 

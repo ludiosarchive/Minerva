@@ -587,6 +587,7 @@ class SocketTransport(protocol.Protocol):
 		self._streamTracker = streamTracker
 		self._firewall = firewall
 
+		self.credentialsData = {}
 		self._state = WAITING_FOR_AUTH
 		self._parser = decoders.BencodeStringDecoder()
 		self._parser.manyDataCallback = self.framesReceived
@@ -598,21 +599,29 @@ class SocketTransport(protocol.Protocol):
 		except IndexError:
 			return self._closeWith(invalidArgsFrameObj)
 
+		# credentialsData is always optional
+		try:
+			credentialsData = helloData['c']
+		except KeyError:
+			pass
+		else:
+			if not isinstance(credentialsData, dict):
+				return self._closeWith(invalidArgsFrameObj)
+
 		try:
 			# any line below can raise KeyError; additional exceptions marked with 'e:'
 
-			protocolVersion = abstract.ensureNonNegInt(helloData['v']) # e: ValueError, TypeError
+			# 2**31-1 limit is okay, even with a connection every second,
+			# it'll be (2 ** 31 - 1) seconds = 68.0511039 years
+			connectionNumber = abstract.ensureNonNegInt32(helloData['n'])
+			protocolVersion = abstract.ensureNonNegInt32(helloData['v']) # e: ValueError, TypeError
 			# -- no transportType
 			streamId = helloData['i'] # e: abstract.InvalidIdentifier
-			credentialsData = helloData['c']
 			# -- no numPaddingBytes
-			maxReceiveBytes = abstract.ensureNonNegInt(helloData['r']) # e: ValueError, TypeError
-			maxOpenTime = abstract.ensureNonNegInt(helloData['m']) # e: ValueError, TypeError
+			maxReceiveBytes = abstract.ensureNonNegInt32(helloData['r']) # e: ValueError, TypeError
+			maxOpenTime = abstract.ensureNonNegInt32(helloData['m']) # e: ValueError, TypeError
 			# -- no readOnlyOnce
 		except (KeyError, TypeError, ValueError, abstract.InvalidIdentifier):
-			return self._closeWith(invalidArgsFrameObj)
-
-		if not isinstance(credentialsData, dict):
 			return self._closeWith(invalidArgsFrameObj)
 
 		self._protocolVersion = protocolVersion
@@ -620,6 +629,14 @@ class SocketTransport(protocol.Protocol):
 		self.credentialsData = credentialsData
 		self._maxReceiveBytes = maxReceiveBytes
 		self._maxOpenTime = maxOpenTime
+
+		self._state = AUTHING
+		d = self._firewall.checkTransport(self)
+		def cbAuthOkay(_):
+			self._stream
+			self._state = AUTH_OK
+
+		d.addCallback(self._authOkay)
 
 
 
