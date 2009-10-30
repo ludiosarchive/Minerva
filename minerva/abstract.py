@@ -38,9 +38,12 @@ def ensureInt(value):
 	@rtype: L{int} or L{long}
 	@return: non-float equivalent of C{value} 
 	"""
-	if int(value) != value:
+	if value is True or value is False:
+		raise TypeError("Even though int(False) and int(True) work, we disallow it.")
+	inted = int(value)
+	if inted != value:
 		raise ValueError("%r cannot be converted to identical integer" % (value,))
-	return int(value)
+	return inted
 
 
 
@@ -55,7 +58,7 @@ def ensureNonNegInt(value):
 	Useful after getting some deserialized JSON with random stuff in it.
 	"""
 
-	if isinstance(value, (int, long, float)):
+	if isinstance(value, (int, long, float)) and value is not True and value is not False:
 		if value < 0:
 			raise ValueError("%r is < 0" % (value,))
 		elif isinstance(value, float):

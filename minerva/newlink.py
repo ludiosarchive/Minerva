@@ -649,7 +649,8 @@ class SocketTransport(protocol.Protocol):
 		except (KeyError, TypeError, ValueError, abstract.InvalidIdentifier):
 			return self._closeWith('tk_invalid_frame_type_or_arguments')
 
-		if protocolVersion != 1:
+		# We keep protocolVersion > 1 because Python is very stupid about bool/int equivalence
+		if protocolVersion != 2:
 			return self._closeWith('tk_invalid_frame_type_or_arguments')
 
 		isFirstTransport = (connectionNumber == 0)
@@ -719,8 +720,9 @@ class SocketTransport(protocol.Protocol):
 
 
 	def dataReceived(self, data):
+		# TODO: drop data if corruption happened earlier?
 		try:
-			frames = self._parser.dataReceived(data)
+			self._parser.dataReceived(data)
 		except decoders.ParseError:
 			self._closeWith('tk_frame_corruption')
 

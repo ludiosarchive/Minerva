@@ -552,18 +552,19 @@ class SocketTransportErrorTests(unittest.TestCase):
 
 
 	def setUp(self):
-		self._resetParser()
+		self._reset()
+
+
+	def _reset(self):
+		self.gotFrames = []
+		self.parser = BencodeStringDecoder()
+		self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
+
 		reactor = FakeReactor()
 		clock = task.Clock()
 		self.t = StringTransport()
 		self.protocol = SocketTransport(reactor, None, DummyStreamTracker(clock, {}), DummyFirewall())
 		self.protocol.makeConnection(self.t)
-
-
-	def _resetParser(self):
-		self.gotFrames = []
-		self.parser = BencodeStringDecoder()
-		self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
 
 
 	def test_invalidFrameType(self):
@@ -592,14 +593,14 @@ class SocketTransportErrorTests(unittest.TestCase):
 
 
 	def test_validHello(self):
-		helloData = dict(n=0, v=1, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+		helloData = dict(n=0, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
 		frame0 = [Frame.nameToNumber['hello'], helloData]
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
 		self.aE([], self.gotFrames)
 
 
 	def test_validHelloWithCredentials(self):
-		helloData = dict(n=0, v=1, i=base64.b64encode('\x00'*16), r=2**30, m=2**30, c={'not_looked_at': True})
+		helloData = dict(n=0, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30, c={'not_looked_at': True})
 		frame0 = [Frame.nameToNumber['hello'], helloData]
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
 		self.aE([], self.gotFrames)
@@ -610,7 +611,7 @@ class SocketTransportErrorTests(unittest.TestCase):
 		Test that all any problem with the hello frame results in a
 		'tk_invalid_frame_type_or_arguments' error frame
 		"""
-		goodHello = dict(n=0, v=1, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+		goodHello = dict(n=0, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
 
 		genericBad = [-2**65, -1, -0.5, 0.5, 2**65, "", [], {}, True, False]
 		genericBadButDictOk = genericBad[:]
@@ -618,7 +619,7 @@ class SocketTransportErrorTests(unittest.TestCase):
 
 		badMutations = dict(
 			n=genericBad,
-			v=[0, 2, "1", 1.001] + genericBad,
+			v=[0, 1, "1", 1.001] + genericBad,
 			i=[base64.b64encode('\x00'*15), base64.b64encode('\x00'*17), 'x', '===='] + genericBad,
 			r=genericBad,
 			m=genericBad,
@@ -631,12 +632,14 @@ class SocketTransportErrorTests(unittest.TestCase):
 			for value in mutateValues:
 				badHello = goodHello.copy()
 				badHello[mutateProperty] = value
-				print badHello
+				##print badHello
 
 				frame0 = [Frame.nameToNumber['hello'], badHello]
 				self.protocol.dataReceived(self.serializeFrames([frame0]))
-				self.aE([[611], [11], [3]], self.gotFrames)
-				self._resetParser()
+				self.parser.dataReceived(self.t.value())
+				self.aE([[603], [11], [3]], self.gotFrames)
+				##print self.gotFrames
+				self._reset()
 
 				ran += 1
 

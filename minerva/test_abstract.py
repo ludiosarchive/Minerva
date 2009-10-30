@@ -61,6 +61,8 @@ class TestEnsureInt(unittest.TestCase):
 		self.assertRaises(ValueError, lambda: abstract.ensureInt("-0"))
 		self.assertRaises(TypeError, lambda: abstract.ensureInt({}))
 		self.assertRaises(TypeError, lambda: abstract.ensureInt([]))
+		self.assertRaises(TypeError, lambda: abstract.ensureInt(True))
+		self.assertRaises(TypeError, lambda: abstract.ensureInt(False))
 
 
 
@@ -85,6 +87,9 @@ class TestEnsureNonNegInt(unittest.TestCase):
 		self.assertRaises(TypeError, lambda: self.function("0"))
 		self.assertRaises(TypeError, lambda: self.function("-0"))
 		self.assertRaises(TypeError, lambda: self.function("0.001"))
+
+		self.assertRaises(TypeError, lambda: self.function(True))
+		self.assertRaises(TypeError, lambda: self.function(False))
 
 		self.assertRaises(TypeError, lambda: self.function({}))
 		self.assertRaises(TypeError, lambda: self.function([]))
