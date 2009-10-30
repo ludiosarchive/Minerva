@@ -587,7 +587,7 @@ class SocketTransportErrorTests(unittest.TestCase):
 
 
 	def test_frameTooLong(self):
-		self.protocol.dataReceived('2000000:')
+		self.protocol.dataReceived('%d:' % (1024*1024 + 1))
 		self.parser.dataReceived(self.t.value())
 		self.aE([[610], [11], [3]], self.gotFrames)
 
