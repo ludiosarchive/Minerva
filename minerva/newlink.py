@@ -54,6 +54,7 @@ import hashlib
 import base64
 from collections import deque
 from zope.interface import Interface, Attribute, implements
+from twisted.python import log
 from twisted.internet import protocol, defer
 from twisted.internet.interfaces import IConsumer, IProtocol, IProtocolFactory
 from twisted.web import resource
@@ -570,7 +571,7 @@ def dumpToJson7Bit(data):
 	return json.dumps(data, separators=(',', ':'))
 
 
-WAITING_FOR_AUTH, AUTHING, AUTH_FAILED, AUTH_OK = range(4)
+WAITING_FOR_AUTH, AUTHING, DYING, AUTH_OK = range(4)
 
 
 class SocketTransport(protocol.Protocol):
@@ -589,6 +590,7 @@ class SocketTransport(protocol.Protocol):
 
 		self.credentialsData = {}
 		self._state = WAITING_FOR_AUTH
+		self._stream = None
 		self._parser = decoders.BencodeStringDecoder()
 		self._parser.manyDataCallback = self.framesReceived
 
@@ -597,7 +599,7 @@ class SocketTransport(protocol.Protocol):
 		try:
 			helloData = frame.contents[1]
 		except IndexError:
-			return self._closeWith(invalidArgsFrameObj)
+			return self._closeWith('tk_invalid_frame_type_or_arguments')
 
 		# credentialsData is always optional
 		try:
@@ -606,54 +608,74 @@ class SocketTransport(protocol.Protocol):
 			pass
 		else:
 			if not isinstance(credentialsData, dict):
-				return self._closeWith(invalidArgsFrameObj)
+				return self._closeWith('tk_invalid_frame_type_or_arguments')
 
 		try:
 			# any line below can raise KeyError; additional exceptions marked with 'e:'
 
 			# 2**31-1 limit is okay, even with a connection every second,
 			# it'll be (2 ** 31 - 1) seconds = 68.0511039 years
-			connectionNumber = abstract.ensureNonNegInt32(helloData['n'])
-			protocolVersion = abstract.ensureNonNegInt32(helloData['v']) # e: ValueError, TypeError
+			connectionNumber = abstract.ensureNonNegIntLimit(helloData['n'], 2**64)
+			protocolVersion = helloData['v']
 			# -- no transportType
-			streamId = helloData['i'] # e: abstract.InvalidIdentifier
+			streamId = StreamId(helloData['i']) # e: abstract.InvalidIdentifier
 			# -- no numPaddingBytes
-			maxReceiveBytes = abstract.ensureNonNegInt32(helloData['r']) # e: ValueError, TypeError
-			maxOpenTime = abstract.ensureNonNegInt32(helloData['m']) # e: ValueError, TypeError
+			maxReceiveBytes = abstract.ensureNonNegIntLimit(helloData['r'], 2**64) # e: ValueError, TypeError
+			maxOpenTime = abstract.ensureNonNegIntLimit(helloData['m'], 2**64) # e: ValueError, TypeError
 			# -- no readOnlyOnce
 		except (KeyError, TypeError, ValueError, abstract.InvalidIdentifier):
-			return self._closeWith(invalidArgsFrameObj)
+			return self._closeWith('tk_invalid_frame_type_or_arguments')
+
+		if protocolVersion != 1:
+			return self._closeWith('tk_invalid_frame_type_or_arguments')
+
+		isFirstTransport = (connectionNumber == 0)
 
 		self._protocolVersion = protocolVersion
 		self.streamId = streamId
 		self.credentialsData = credentialsData
+		self._connectionNumber = connectionNumber
 		self._maxReceiveBytes = maxReceiveBytes
 		self._maxOpenTime = maxOpenTime
 
 		self._state = AUTHING
-		d = self._firewall.checkTransport(self)
+		d = self._firewall.checkTransport(self, isFirstTransport)
+
 		def cbAuthOkay(_):
-			self._stream
+			if isFirstTransport:
+				self._stream = self._streamTracker.buildStream(streamId)
+			else:
+				try:
+					self._stream = self._streamTracker.getStream(streamId)
+				except NoSuchStream:
+					self._state = DYING
+					return self._closeWith('tk_stream_attach_failure')
+
+			self._stream.transportOnline(self)
+
 			self._state = AUTH_OK
 
-		d.addCallback(self._authOkay)
+		def cbAuthFailed(_):
+			self._state = DYING
+			return self._closeWith('tk_stream_attach_failure')
+
+		d.addCallbacks(cbAuthOkay, cbAuthFailed)
+		d.addErrback(log.err)
 
 
 
 	def framesReceived(self, frames):
-		invalidArgsFrameObj = [Frame.nameToNumber['tk_invalid_frame_type_or_arguments']]
-		
 		for frameString in frames:
 			assert isinstance(frameString, str)
 			try:
 				frameObj = simplejson.loads(frameString)
 			except simplejson.decoder.JSONDecodeError:
-				return self._closeWith([Frame.nameToNumber['tk_intraframe_corruption']])
+				return self._closeWith('tk_intraframe_corruption')
 
 			try:
 				frame = Frame(frameObj)
 			except BadFrame:
-				return self._closeWith(invalidArgsFrameObj)
+				return self._closeWith('tk_invalid_frame_type_or_arguments')
 
 			frameType = frame.getType()
 			if frameType == 'hello':
@@ -683,15 +705,18 @@ class SocketTransport(protocol.Protocol):
 			self._closeWith([Frame.nameToNumber['tk_frame_corruption']])
 
 
-	def _closeWith(self, frame):
+	def _closeWith(self, errorTypeString, *args):
 		# TODO: sack before closing
-		self.transport.write(dumpToJson7Bit(frame))
+		invalidArgsFrameObj = [Frame.nameToNumber[errorTypeString]] + args
+		self.transport.write(dumpToJson7Bit(invalidArgsFrameObj))
 		self.transport.loseConnection()
 
 
 	def connectionLost(self, reason):
 		if noisy:
 			log.msg('Connection lost for %r reason %r' % (self, reason))
+		if self._stream is not None:
+			self._stream.transportOffline(self)
 
 
 	def connectionMade(self):
