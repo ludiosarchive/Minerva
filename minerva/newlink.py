@@ -334,6 +334,11 @@ class NoSuchStream(Exception):
 
 
 
+class StreamAlreadyExists(Exception):
+	pass
+
+
+
 class StreamTracker(object):
 	"""
 	I'm responsible for constructing and keeping track of L{Stream}s.

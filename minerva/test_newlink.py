@@ -12,8 +12,8 @@ from twisted.test.proto_helpers import StringTransport
 from minerva.decoders import BencodeStringDecoder
 
 from minerva.newlink import (
-	Frame, Stream, StreamTracker, NoSuchStream, BadFrame, IMinervaProtocol,
-	IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
+	Frame, Stream, StreamTracker, NoSuchStream, StreamAlreadyExists,
+	BadFrame, IMinervaProtocol, IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
 	SocketTransport
 )
 
@@ -234,6 +234,12 @@ class BrokenMockObserver(object):
 
 
 
+def todo(method):
+	method.todo = 'todo'
+	return method
+
+
+
 class StreamTests(unittest.TestCase):
 
 	def test_repr(self):
@@ -264,8 +270,40 @@ class StreamTests(unittest.TestCase):
 		assert called[0]
 
 
+	@todo
+	def test_transportOnline(self):
+		clock = task.Clock()
+		s = Stream(clock, _DummyId('some fake id'))
+		t = DummySocketLikeTransport()
+		s.transportOnline(t)
 
-class StreamTrackerTests(unittest.TestCase):
+
+	@todo
+	def test_transportOnlineOffline(self):
+		clock = task.Clock()
+		s = Stream(clock, _DummyId('some fake id'))
+		t = DummySocketLikeTransport()
+		s.transportOnline(t)
+		s.transportOffline(t)
+
+
+	@todo
+	def test_transportOfflineUnknownTransport(self):
+		"""
+		transportOffline(some transport that was never registered) raises RuntimeError
+		"""
+		clock = task.Clock()
+		s = Stream(clock, _DummyId('some fake id'))
+		t = DummySocketLikeTransport()
+		self.aR(RuntimeError, lambda: s.transportOffline(t))
+
+
+	# probably have better tests that test more for online/offline
+
+
+
+
+class StreamTrackerObserverTests(unittest.TestCase):
 
 	def test_observeStreams(self):
 		"""
@@ -432,6 +470,31 @@ class StreamTrackerTests(unittest.TestCase):
 
 
 
+class StreamTrackerTests(unittest.TestCase):
+
+	def test_buildStream(self):
+		"""
+		buildStream returns an instance of L{Stream}
+		"""
+		reactor = FakeReactor()
+		st = StreamTracker(reactor, None, None)
+		stream = st.buildStream(_DummyId('some fake id'))
+		self.aI(Stream, type(stream))
+
+
+	def test_buildStreamCannotBuildWithSameId(self):
+		"""
+		buildStream raises an error when trying to build a stream with an already-existing id
+		"""
+		reactor = FakeReactor()
+		st = StreamTracker(reactor, None, None)
+		id = _DummyId('some fake id')
+		act = lambda: st.buildStream(id)
+		act()
+		self.aR(StreamAlreadyExists, act)
+
+
+
 class DummyStreamTracker(object):
 
 	stream = MockStream
@@ -451,6 +514,9 @@ class DummyStreamTracker(object):
 		"""
 		This is missing a lot of features that are in the real L{StreamTracker}.
 		"""
+		if streamId in self._streams:
+			raise StreamAlreadyExists()
+
 		s = self.stream(self._clock, streamId)
 		self._streams[streamId] = s
 
