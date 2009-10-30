@@ -595,6 +595,49 @@ class SocketTransportErrorTests(unittest.TestCase):
 		self.aE([], self.gotFrames)
 
 
+	def test_validHelloWithCredentials(self):
+		helloData = dict(n=0, v=1, i=base64.b64encode('\x00'*16), r=2**30, m=2**30, c={'not_looked_at': True})
+		frame0 = [Frame.nameToNumber['hello'], helloData]
+		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		self.aE([], self.gotFrames)
+
+
+	def test_invalidHellos(self):
+		"""
+		Test that all any problem with the hello frame results in a
+		'tk_invalid_frame_type_or_arguments' error frame
+		"""
+		goodHello = dict(n=0, v=1, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+
+		genericBad = [-2**65, -1, -0.5, 0.5, 2**65, "", [], {}, True, False]
+		genericBadButDictOk = genericBad[:]
+		genericBadButDictOk.remove({})
+
+		badMutations = dict(
+			n=genericBad,
+			v=[0, 2, "1", 1.001] + genericBad,
+			i=[base64.b64encode('\x00'*15), base64.b64encode('\x00'*17), 'x', '===='] + genericBad,
+			r=genericBad,
+			m=genericBad,
+			c=genericBadButDictOk,
+		)
+
+		ran = 0
+
+		for mutateProperty, mutateValues in badMutations.iteritems():
+			for value in mutateValues:
+				badHello = goodHello.copy()
+				badHello[mutateProperty] = value
+
+				frame0 = [Frame.nameToNumber['hello'], badHello]
+				self.protocol.dataReceived(self.serializeFrames([frame0]))
+				self.aE([], self.gotFrames)
+
+				ran += 1
+
+		assert ran > 60, ran
+
+
 
 class BasicMinervaProtocolTests(unittest.TestCase):
 
