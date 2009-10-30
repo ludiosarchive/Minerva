@@ -201,6 +201,7 @@ class FrameTests(unittest.TestCase):
 		self.assertRaises(BadFrame, lambda: Frame({'0': 'x'}))
 		self.assertRaises(BadFrame, lambda: Frame(1))
 		self.assertRaises(BadFrame, lambda: Frame(1.5))
+		self.assertRaises(BadFrame, lambda: Frame(simplejson.loads('NaN')))
 		self.assertRaises(BadFrame, lambda: Frame(True))
 		self.assertRaises(BadFrame, lambda: Frame(False))
 		self.assertRaises(BadFrame, lambda: Frame(None))
@@ -637,7 +638,8 @@ class SocketTransportErrorTests(unittest.TestCase):
 
 		DeleteProperty = object()
 
-		genericBad = [-2**65, -1, -0.5, 0.5, 2**65, "", [], {}, True, False, DeleteProperty]
+		nan = simplejson.loads('NaN')
+		genericBad = [-2**65, -1, -0.5, 0.5, nan, 2**65, "", [], {}, True, False, DeleteProperty]
 		genericBadButDictOk = genericBad[:]
 		genericBadButDictOk.remove({})
 
@@ -661,7 +663,9 @@ class SocketTransportErrorTests(unittest.TestCase):
 					try:
 						del badHello[mutateProperty]
 					except KeyError:
-						continue # If it wasn't there in the first place, deleting it can't create an error
+						 # If it wasn't there in the first place, deleting it from badHello can't cause an error later
+						continue
+
 				##print badHello
 
 				frame0 = [Frame.nameToNumber['hello'], badHello]
@@ -673,7 +677,7 @@ class SocketTransportErrorTests(unittest.TestCase):
 
 				ran += 1
 
-		assert ran > 60, ran
+		assert ran == 78
 
 
 
