@@ -66,27 +66,42 @@ class TestEnsureInt(unittest.TestCase):
 
 class TestEnsureNonNegInt(unittest.TestCase):
 
+	function = lambda _ignoredSelf, x: abstract.ensureNonNegInt(x)
+
 	def test_ensureNonNegInt(self):
-		self.assertIdentical(0, abstract.ensureNonNegInt(0))
-		self.assertIdentical(0, abstract.ensureNonNegInt(-0))
-		self.assertIdentical(0, abstract.ensureNonNegInt(-0.0))
-		self.assertIdentical(2, abstract.ensureNonNegInt(2.0))
+		self.assertIdentical(0, self.function(0))
+		self.assertIdentical(0, self.function(-0))
+		self.assertIdentical(0, self.function(-0.0))
+		self.assertIdentical(2, self.function(2.0))
 
 
 	def test_ensureNonNegIntExceptions(self):
-		self.assertRaises(ValueError, lambda: abstract.ensureNonNegInt(0.001))
-		self.assertRaises(ValueError, lambda: abstract.ensureNonNegInt(-1))
-		self.assertRaises(ValueError, lambda: abstract.ensureNonNegInt(-1.0))
-		self.assertRaises(ValueError, lambda: abstract.ensureNonNegInt(-2.0))
-		self.assertRaises(ValueError, lambda: abstract.ensureNonNegInt(-100000000000000000000000000000))
+		self.assertRaises(ValueError, lambda: self.function(0.001))
+		self.assertRaises(ValueError, lambda: self.function(-1))
+		self.assertRaises(ValueError, lambda: self.function(-1.0))
+		self.assertRaises(ValueError, lambda: self.function(-2.0))
+		self.assertRaises(ValueError, lambda: self.function(-100000000000000000000000000000))
 
-		self.assertRaises(TypeError, lambda: abstract.ensureNonNegInt("0"))
-		self.assertRaises(TypeError, lambda: abstract.ensureNonNegInt("-0"))
-		self.assertRaises(TypeError, lambda: abstract.ensureNonNegInt("0.001"))
+		self.assertRaises(TypeError, lambda: self.function("0"))
+		self.assertRaises(TypeError, lambda: self.function("-0"))
+		self.assertRaises(TypeError, lambda: self.function("0.001"))
 
-		self.assertRaises(TypeError, lambda: abstract.ensureNonNegInt({}))
-		self.assertRaises(TypeError, lambda: abstract.ensureNonNegInt([]))
+		self.assertRaises(TypeError, lambda: self.function({}))
+		self.assertRaises(TypeError, lambda: self.function([]))
 
+
+
+class TestEnsureNonNegInt32(unittest.TestCase):
+
+	function = lambda _ignoredSelf, x: abstract.ensureNonNegInt32(x)
+
+	def test_ensureNonNegInt32EdgeCase(self):
+		self.assertEqual(2**31 - 1, self.function(2**31 - 1))
+
+
+	def test_ensureNonNegIntExceptionsTooHigh(self):
+		self.assertRaises(ValueError, lambda: self.function(2**31))
+		self.assertRaises(ValueError, lambda: self.function(2**32))
 
 
 
@@ -336,3 +351,11 @@ class TestGenericIdentifier(unittest.TestCase):
 		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId(u'z' * 16))
 		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId(u'z' * 17))
 		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId(u''))
+		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId(3))
+		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId(3.0))
+		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId(300000000000000000000000))
+		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId([]))
+		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId({}))
+		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId(None))
+		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId(True))
+		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId(False))

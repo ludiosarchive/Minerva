@@ -47,8 +47,9 @@ Other glossary:
 See minerva/sample/demo.py for an idea of how to use the classes below.
 """
 
-from minerva import abstract
+from minerva import abstract, decoders
 
+import simplejson
 import hashlib
 import base64
 from collections import deque
@@ -94,11 +95,15 @@ class Frame(object):
 
 		601: 'tk_stream_attach_failure', # Either because no such Stream, or bad credentialsData
 		602: 'tk_acked_unsent_boxes',
-		603: 'tk_invalid_arguments',
+		603: 'tk_invalid_frame_type_or_arguments',
 		610: 'tk_frame_corruption',
 		611: 'tk_intraframe_corruption',
 		650: 'tk_brb', # Server is overloaded or shutting down, tells client to come back soon
 	}
+
+	nameToNumber = {}
+	for num, name in knownTypes.iteritems():
+		nameToNumber[name] = num
 
 	__slots__ = ['contents', 'type']
 
@@ -326,7 +331,7 @@ class NoSuchStream(Exception):
 class StreamTracker(object):
 	"""
 	I'm responsible for constructing and keeping track of L{Stream}s.
-	
+
 	You do not want to subclass this.
 	"""
 	stream = Stream
@@ -413,7 +418,7 @@ class StreamTracker(object):
 		# poor man's zope.interface checker
 		assert obj.streamUp.__call__, "obj needs a streamUp method"
 		assert obj.streamDown.__call__, "obj needs a streamDown method"
-		
+
 		self._observers.add(obj)
 
 
@@ -448,7 +453,7 @@ class IMinervaProtocol(Interface):
 		"""
 		Called when this stream has just started.
 
-		You'll want to keep the stream around with C{self.stream = stream}. 
+		You'll want to keep the stream around with C{self.stream = stream}.
 
 		@param stream: the L{Stream} that was started.
 		@type stream: L{Stream}
@@ -470,7 +475,7 @@ class IMinervaProtocol(Interface):
 		a change in transports. Perhaps a larger (or smaller) number
 		of discrete C2S or S2C frames can now be sent per second,
 		or the same number of frames with lower (or higher) resource
-		usage. 
+		usage.
 
 		@type quality: L{StreamQuality}
 		@param quality: an object describing the new quality of the Stream.
@@ -561,29 +566,120 @@ class BasicMinervaFactory(object):
 
 
 
+def dumpToJson7Bit(data):
+	return json.dumps(data, separators=(',', ':'))
+
+
+WAITING_FOR_AUTH, AUTHING, AUTH_FAILED, AUTH_OK = range(4)
+
+
 class SocketTransport(protocol.Protocol):
 
 	implements(IProtocol) # , MinervaTransport
 
 	request = None # no associated HTTP request
 
-	def __init__(self, reactor, clock): # XXX TODO more
-		1/0
+	noisy = True
+
+	def __init__(self, reactor, clock, streamTracker, firewall):
+		self._reactor = reactor
+		self._clock = clock
+		self._streamTracker = streamTracker
+		self._firewall = firewall
+
+		self._state = WAITING_FOR_AUTH
+		self._parser = decoders.BencodeStringDecoder()
+		self._parser.manyDataCallback = self.framesReceived
 
 
-	def dataReceived(self, data):
-		1/0
+	def _gotHelloFrame(self, frame):
+		try:
+			helloData = frame.contents[1]
+		except IndexError:
+			return self._closeWith(invalidArgsFrameObj)
+
+		try:
+			# any line below can raise KeyError; additional exceptions marked with 'e:'
+
+			protocolVersion = abstract.ensureNonNegInt(helloData['v']) # e: ValueError, TypeError
+			# -- no transportType
+			streamId = helloData['i'] # e: abstract.InvalidIdentifier
+			credentialsData = helloData['c']
+			# -- no numPaddingBytes
+			maxReceiveBytes = abstract.ensureNonNegInt(helloData['r']) # e: ValueError, TypeError
+			maxOpenTime = abstract.ensureNonNegInt(helloData['m']) # e: ValueError, TypeError
+			# -- no readOnlyOnce
+		except (KeyError, TypeError, ValueError, abstract.InvalidIdentifier):
+			return self._closeWith(invalidArgsFrameObj)
+
+		if not isinstance(credentialsData, dict):
+			return self._closeWith(invalidArgsFrameObj)
+
+		self._protocolVersion = protocolVersion
+		self.streamId = streamId
+		self.credentialsData = credentialsData
+		self._maxReceiveBytes = maxReceiveBytes
+		self._maxOpenTime = maxOpenTime
+
+
+
+	def framesReceived(self, frames):
+		invalidArgsFrameObj = [Frame.nameToNumber['tk_invalid_frame_type_or_arguments']]
+		
+		for frameString in frames:
+			assert isinstance(frameString, str)
+			try:
+				frameObj = simplejson.loads(frameString)
+			except simplejson.decoder.JSONDecodeError:
+				return self._closeWith([Frame.nameToNumber['tk_intraframe_corruption']])
+
+			try:
+				frame = Frame(frameObj)
+			except BadFrame:
+				return self._closeWith(invalidArgsFrameObj)
+
+			frameType = frame.getType()
+			if frameType == 'hello':
+				return self._gotHelloFrame(frame)
+			elif frameType == 'gimme_boxes':
+				1/0
+			elif frameType == 'gimme_sack_and_close':
+				1/0
+			elif frameType == 'boxes':
+				1/0
+			elif frameType == 'my_last_frame':
+				1/0
+			elif frameType == 'reset':
+				1/0
+			elif frameType == 'sack':
+				1/0
+
 		# set connectionNumber at some point
 		# set credentialsData at some point
 		# set streamId at some point
 
 
+	def dataReceived(self, data):
+		try:
+			frames = self._parser.dataReceived(data)
+		except decoders.ParseError:
+			self._closeWith([Frame.nameToNumber['tk_frame_corruption']])
+
+
+	def _closeWith(self, frame):
+		# TODO: sack before closing
+		self.transport.write(dumpToJson7Bit(frame))
+		self.transport.loseConnection()
+
+
 	def connectionLost(self, reason):
-		1/0
+		if noisy:
+			log.msg('Connection lost for %r reason %r' % (self, reason))
 
 
 	def connectionMade(self):
-		1/0
+		if noisy:
+			log.msg('Connection made for %r reason %r' % (self, reason))
 
 
 
@@ -600,7 +696,7 @@ class SocketFace(protocol.ServerFactory):
 
 
 	def buildProtocol(self):
-		p = self.protocol(self._reactor, self._clock)
+		p = self.protocol(self._reactor, self._clock, self._streamTracker, self._firewall)
 		p.factory = self
 		return p
 

@@ -67,6 +67,23 @@ def ensureNonNegInt(value):
 
 
 
+def ensureNonNegInt32(value):
+	"""
+	Check that C{value} is non-negative and C{<= 2**31 - 1} and
+	convert it to it an equivalent non-L{float} if necessary, else raise L{ValueError}.
+
+	@rtype: L{int} or L{long}
+	@return: non-float equivalent of C{value}
+
+	Useful after getting some deserialized JSON with random stuff in it.
+	"""
+	v = ensureNonNegInt(value)
+	if not v <= 2**31 - 1:
+		raise ValueError("%r is too high" % (value,))
+	return v
+
+
+
 class SeqNumTooHighError(Exception):
 	"""
 	Could not delete up to a certain seqNum, because that seqNum

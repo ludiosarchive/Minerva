@@ -265,6 +265,7 @@ class AntiHijackTransportFirewall(_UAExtractorMixin):
 
 
 	def streamUp(self, stream):
+		# Need the uaId on a transport, but stream doesn't have any transport yet.
 		1/0
 
 
