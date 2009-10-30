@@ -572,6 +572,7 @@ def dumpToJson7Bit(data):
 
 
 WAITING_FOR_AUTH, AUTHING, DYING, AUTH_OK = range(4)
+_2_64 = 2**64
 
 
 class SocketTransport(protocol.Protocol):
@@ -589,13 +590,19 @@ class SocketTransport(protocol.Protocol):
 		self._firewall = firewall
 
 		self.credentialsData = {}
-		self._state = WAITING_FOR_AUTH
+		self._gotHello = False
+		self._authed = False
 		self._stream = None
 		self._parser = decoders.BencodeStringDecoder()
 		self._parser.manyDataCallback = self.framesReceived
 
 
 	def _gotHelloFrame(self, frame):
+		# We only allow one 'hello' per connection
+		if self._gotHello is True:
+			return self._closeWith('tk_invalid_frame_type_or_arguments')
+		self._gotHello = True
+
 		try:
 			helloData = frame.contents[1]
 		except IndexError:
@@ -615,13 +622,13 @@ class SocketTransport(protocol.Protocol):
 
 			# 2**31-1 limit is okay, even with a connection every second,
 			# it'll be (2 ** 31 - 1) seconds = 68.0511039 years
-			connectionNumber = abstract.ensureNonNegIntLimit(helloData['n'], 2**64)
+			connectionNumber = abstract.ensureNonNegIntLimit(helloData['n'], _2_64)
 			protocolVersion = helloData['v']
 			# -- no transportType
 			streamId = StreamId(helloData['i']) # e: abstract.InvalidIdentifier
 			# -- no numPaddingBytes
-			maxReceiveBytes = abstract.ensureNonNegIntLimit(helloData['r'], 2**64) # e: ValueError, TypeError
-			maxOpenTime = abstract.ensureNonNegIntLimit(helloData['m'], 2**64) # e: ValueError, TypeError
+			maxReceiveBytes = abstract.ensureNonNegIntLimit(helloData['r'], _2_64) # e: ValueError, TypeError
+			maxOpenTime = abstract.ensureNonNegIntLimit(helloData['m'], _2_64) # e: ValueError, TypeError
 			# -- no readOnlyOnce
 		except (KeyError, TypeError, ValueError, abstract.InvalidIdentifier):
 			return self._closeWith('tk_invalid_frame_type_or_arguments')
@@ -638,7 +645,6 @@ class SocketTransport(protocol.Protocol):
 		self._maxReceiveBytes = maxReceiveBytes
 		self._maxOpenTime = maxOpenTime
 
-		self._state = AUTHING
 		d = self._firewall.checkTransport(self, isFirstTransport)
 
 		def cbAuthOkay(_):
@@ -648,20 +654,16 @@ class SocketTransport(protocol.Protocol):
 				try:
 					self._stream = self._streamTracker.getStream(streamId)
 				except NoSuchStream:
-					self._state = DYING
 					return self._closeWith('tk_stream_attach_failure')
 
+			self._authed = True
 			self._stream.transportOnline(self)
 
-			self._state = AUTH_OK
-
 		def cbAuthFailed(_):
-			self._state = DYING
 			return self._closeWith('tk_stream_attach_failure')
 
 		d.addCallbacks(cbAuthOkay, cbAuthFailed)
 		d.addErrback(log.err)
-
 
 
 	def framesReceived(self, frames):
@@ -678,6 +680,11 @@ class SocketTransport(protocol.Protocol):
 				return self._closeWith('tk_invalid_frame_type_or_arguments')
 
 			frameType = frame.getType()
+
+			# We demand a 'hello' frame before any other type of frame
+			if self._gotHello is False and frameType != 'hello':
+				return self._closeWith('tk_invalid_frame_type_or_arguments')
+				
 			if frameType == 'hello':
 				return self._gotHelloFrame(frame)
 			elif frameType == 'gimme_boxes':
@@ -692,10 +699,6 @@ class SocketTransport(protocol.Protocol):
 				1/0
 			elif frameType == 'sack':
 				1/0
-
-		# set connectionNumber at some point
-		# set credentialsData at some point
-		# set streamId at some point
 
 
 	def dataReceived(self, data):
