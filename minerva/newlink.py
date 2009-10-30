@@ -607,6 +607,7 @@ class SocketTransport(protocol.Protocol):
 		self._authed = False
 		self._stream = None
 		self._parser = decoders.BencodeStringDecoder()
+		self._parser.MAX_LENGTH = 1024*1024
 		self._parser.manyDataCallback = self.framesReceived
 
 

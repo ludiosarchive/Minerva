@@ -586,6 +586,12 @@ class SocketTransportErrorTests(unittest.TestCase):
 		self.aE([[610], [11], [3]], self.gotFrames)
 
 
+	def test_frameTooLong(self):
+		self.protocol.dataReceived('2000000:')
+		self.parser.dataReceived(self.t.value())
+		self.aE([[610], [11], [3]], self.gotFrames)
+
+
 	def test_intraFrameCorruption(self):
 		self.protocol.dataReceived('1:{')
 		self.parser.dataReceived(self.t.value())
