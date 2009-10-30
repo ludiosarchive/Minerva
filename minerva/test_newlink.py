@@ -1,3 +1,5 @@
+import simplejson
+
 from zope.interface import implements, verify
 from twisted.trial import unittest
 
@@ -5,10 +7,14 @@ from twisted.web import server, resource
 from twisted.internet import protocol, defer, address, interfaces, task
 from twisted.web.test.test_web import DummyRequest as _TwistedDummyRequest
 #from twisted.internet.test.test_base import FakeReactor as _TwistedFakeReactor
+from twisted.test.proto_helpers import StringTransport
+
+from minerva.decoders import BencodeStringDecoder
 
 from minerva.newlink import (
 	Frame, StreamTracker, NoSuchStream, BadFrame, IMinervaProtocol,
-	IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory
+	IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
+	SocketTransport
 )
 
 from minerva.website import (
@@ -393,6 +399,72 @@ class StreamTrackerTests(unittest.TestCase):
 		self.aR(BrokenOnPurposeError, lambda: st.buildStream(id))
 		self.aR(NoSuchStream, lambda: st.getStream(id))
 
+
+
+class DummyStreamTracker(object):
+
+	stream = MockStream
+
+	def __init__(self, _streams):
+		self._streams = _streams
+
+
+	def getStream(self, streamId):
+		try:
+			return self._streams[streamId]
+		except KeyError:
+			raise NoSuchStream("I don't know about %r" % (streamId,))
+
+
+	def buildStream(self, streamId):
+		"""
+		This is missing a lot of features that are in the real L{StreamTracker}.
+		"""
+		s = self.stream(self._clock, streamId)
+		self._streams[streamId] = s
+
+		d = s.notifyFinish()
+		d.addBoth(self._forgetStream, streamId)
+		return s
+
+
+	def _forgetStream(self, _ignoredNone, streamId):
+		del self._streams[streamId]
+
+
+
+class DummyFirewall(object):
+	
+	def checkTransport(self, transport):
+		return
+
+
+
+class SocketTransportErrorTests(unittest.TestCase):
+
+	def serializeFrames(self, frames):
+		toSend = ''
+		for frame in frames:
+			bytes = simplejson.dumps(frame)
+			toSend += BencodeStringDecoder.encode(bytes)
+		return toSend
+
+
+	def setUp(self):
+		self.gotFrames = []
+		self.parser = BencodeStringDecoder()
+		self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
+
+		reactor = FakeReactor()
+		self.t = StringTransport()
+		self.protocol = SocketTransport(reactor, None, DummyStreamTracker({}), DummyFirewall())
+		self.protocol.makeConnection(self.t)
+
+
+	def test_invalidFrameType(self):
+		self.protocol.dataReceived(self.serializeFrames([[9999]]))
+		self.parser.dataReceived(self.t.value())
+		self.aE([[603], [11], [3]], self.gotFrames)
 
 
 

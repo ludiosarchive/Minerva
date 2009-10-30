@@ -352,7 +352,7 @@ class StreamTracker(object):
 		assert not isinstance(streamId, (str, unicode))
 
 		try:
-			self._streams[streamId]
+			return self._streams[streamId]
 		except KeyError:
 			raise NoSuchStream("I don't know about %r" % (streamId,))
 
@@ -568,7 +568,7 @@ class BasicMinervaFactory(object):
 
 
 def dumpToJson7Bit(data):
-	return json.dumps(data, separators=(',', ':'))
+	return simplejson.dumps(data, separators=(',', ':'))
 
 
 WAITING_FOR_AUTH, AUTHING, DYING, AUTH_OK = range(4)
@@ -705,26 +705,37 @@ class SocketTransport(protocol.Protocol):
 		try:
 			frames = self._parser.dataReceived(data)
 		except decoders.ParseError:
-			self._closeWith([Frame.nameToNumber['tk_frame_corruption']])
+			self._closeWith('tk_frame_corruption')
+
+
+	def _encodeFrame(self, frameData):
+		return decoders.BencodeStringDecoder.encode(dumpToJson7Bit(frameData))
 
 
 	def _closeWith(self, errorTypeString, *args):
 		# TODO: sack before closing
-		invalidArgsFrameObj = [Frame.nameToNumber[errorTypeString]] + args
-		self.transport.write(dumpToJson7Bit(invalidArgsFrameObj))
-		self.transport.loseConnection()
+		invalidArgsFrameObj = [Frame.nameToNumber[errorTypeString]]
+		invalidArgsFrameObj.extend(args)
+		toSend = ''
+		toSend += self._encodeFrame(invalidArgsFrameObj)
+		toSend += self._encodeFrame([Frame.nameToNumber['you_close_it']])
+		toSend += self._encodeFrame([Frame.nameToNumber['my_last_frame']])
+		self.transport.write(toSend)
+
+		# TODO: set timer and close the connection ourselves in 5 seconds
+		##self.transport.loseConnection()
 
 
 	def connectionLost(self, reason):
-		if noisy:
+		if self.noisy:
 			log.msg('Connection lost for %r reason %r' % (self, reason))
 		if self._stream is not None:
 			self._stream.transportOffline(self)
 
 
 	def connectionMade(self):
-		if noisy:
-			log.msg('Connection made for %r reason %r' % (self, reason))
+		if self.noisy:
+			log.msg('Connection made for %r' % (self,))
 
 
 
