@@ -551,6 +551,8 @@ class DummyFirewall(object):
 
 
 
+# TODO: generalize many of these tests and test them for the WebSocket and HTTP faces as well.
+
 class SocketTransportTests(unittest.TestCase):
 
 	def serializeFrames(self, frames):
@@ -633,25 +635,39 @@ class SocketTransportTests(unittest.TestCase):
 		self.aE([], self.gotFrames)
 
 
+	def test_connectionNumberDoesntMatter(self):
+		"""
+		Connection number can be anywhere between 0 <= n <= 2**64
+		"""
+		for n in [1, 1000, 10000, 12378912, 1283718237]:
+			helloData = dict(n=n, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+			frame0 = [Fn.hello, helloData]
+			self.protocol.dataReceived(self.serializeFrames([frame0]))
+			self.parser.dataReceived(self.t.value())
+			self.aE([], self.gotFrames)
+			self._reset()
+
+
 	def test_validHelloButNoSuchStream(self):
 		"""
 		test that we get error 'tk_stream_attach_failure' if no such stream
 		"""
-		helloData = dict(n=0, w=False, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+		helloData = dict(n=0, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
 		frame0 = [Fn.hello, helloData]
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
 		self.parser.dataReceived(self.t.value())
 		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
-#	def test_validHelloButNoSuchStreamVerboseW(self):
-#		"""
-#		same as test_validHelloButNoSuchStream, but with explicit w=False
-#		"""
-#		helloData = dict(n=0, w=False, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
-#		frame0 = [Fn.hello, helloData]
-#		self.protocol.dataReceived(self.serializeFrames([frame0]))
-#		self.aE([], self.gotFrames)
+	def test_validHelloButNoSuchStreamExplicitW(self):
+		"""
+		Same test as test_validHelloButNoSuchStream but with explicit w=False
+		"""
+		helloData = dict(n=0, w=False, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+		frame0 = [Fn.hello, helloData]
+		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		self.parser.dataReceived(self.t.value())
+		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
 	def test_invalidHellos(self):
@@ -704,7 +720,8 @@ class SocketTransportTests(unittest.TestCase):
 
 				ran += 1
 
-		assert ran == 78
+		# sanity check; make sure we actually tested things
+		assert ran == 78, "Ran %d times; change this assert as needed" % (ran,)
 
 
 
