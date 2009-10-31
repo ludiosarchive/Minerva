@@ -550,7 +550,7 @@ class DummyFirewall(object):
 
 
 
-class SocketTransportErrorTests(unittest.TestCase):
+class SocketTransportTests(unittest.TestCase):
 
 	def serializeFrames(self, frames):
 		toSend = ''
@@ -572,7 +572,8 @@ class SocketTransportErrorTests(unittest.TestCase):
 		reactor = FakeReactor()
 		clock = task.Clock()
 		self.t = StringTransport()
-		self.protocol = SocketTransport(reactor, None, DummyStreamTracker(clock, {}), DummyFirewall())
+		self.streamTracker = DummyStreamTracker(clock, {})
+		self.protocol = SocketTransport(reactor, None, self.streamTracker, DummyFirewall())
 		self.protocol.makeConnection(self.t)
 
 
@@ -583,7 +584,7 @@ class SocketTransportErrorTests(unittest.TestCase):
 
 
 	def test_firstFrameWasNotHelloFrame(self):
-		frame0 = [Frame.nameToNumber['reset']]
+		frame0 = [Frame.names.reset]
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
 		self.parser.dataReceived(self.t.value())
 		self.aE([[603], [11], [3]], self.gotFrames)
@@ -617,16 +618,36 @@ class SocketTransportErrorTests(unittest.TestCase):
 
 	def test_validHello(self):
 		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
-		frame0 = [Frame.nameToNumber['hello'], helloData]
+		frame0 = [Frame.names.hello, helloData]
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
 		self.aE([], self.gotFrames)
 
 
 	def test_validHelloWithCredentials(self):
 		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30, c={'not_looked_at': True})
-		frame0 = [Frame.nameToNumber['hello'], helloData]
+		frame0 = [Frame.names.hello, helloData]
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
 		self.aE([], self.gotFrames)
+
+
+#	def test_validHelloButNoSuchStream(self):
+#		"""
+#		test that we get error 'tk_stream_attach_failure' if no such stream
+#		"""
+#		helloData = dict(n=0, w=False, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+#		frame0 = [Frame.names.hello, helloData]
+#		self.protocol.dataReceived(self.serializeFrames([frame0]))
+#		self.aE([], self.gotFrames)
+#
+#
+#	def test_validHelloButNoSuchStreamVerboseW(self):
+#		"""
+#		same as test_validHelloButNoSuchStream, but with explicit w=False
+#		"""
+#		helloData = dict(n=0, w=False, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+#		frame0 = [Frame.names.hello, helloData]
+#		self.protocol.dataReceived(self.serializeFrames([frame0]))
+#		self.aE([], self.gotFrames)
 
 
 	def test_invalidHellos(self):
@@ -668,7 +689,7 @@ class SocketTransportErrorTests(unittest.TestCase):
 
 				##print badHello
 
-				frame0 = [Frame.nameToNumber['hello'], badHello]
+				frame0 = [Frame.names.hello, badHello]
 				self.protocol.dataReceived(self.serializeFrames([frame0]))
 				self.parser.dataReceived(self.t.value())
 				self.aE([[603], [11], [3]], self.gotFrames)

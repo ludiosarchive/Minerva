@@ -102,9 +102,11 @@ class Frame(object):
 		650: 'tk_brb', # Server is overloaded or shutting down, tells client to come back soon
 	}
 
-	nameToNumber = {}
+	class names:
+		pass
+	names = names()
 	for num, name in knownTypes.iteritems():
-		nameToNumber[name] = num
+		setattr(names, name, num)
 
 	__slots__ = ['contents', 'type']
 
@@ -739,12 +741,12 @@ class SocketTransport(protocol.Protocol):
 
 	def _closeWith(self, errorTypeString, *args):
 		# TODO: sack before closing
-		invalidArgsFrameObj = [Frame.nameToNumber[errorTypeString]]
+		invalidArgsFrameObj = [getattr(Frame.names, errorTypeString)]
 		invalidArgsFrameObj.extend(args)
 		toSend = ''
 		toSend += self._encodeFrame(invalidArgsFrameObj)
-		toSend += self._encodeFrame([Frame.nameToNumber['you_close_it']])
-		toSend += self._encodeFrame([Frame.nameToNumber['my_last_frame']])
+		toSend += self._encodeFrame([Frame.names.you_close_it])
+		toSend += self._encodeFrame([Frame.names.my_last_frame])
 		self.transport.write(toSend)
 
 		# TODO: set timer and close the connection ourselves in 5 seconds
