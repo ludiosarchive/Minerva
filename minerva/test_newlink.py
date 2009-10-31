@@ -285,6 +285,28 @@ class StreamTests(unittest.TestCase):
 
 
 	@todo
+	def test_noLongerVirgin(self):
+		"""
+		Stream is no longer a virgin after a transport is attached to it
+		"""
+		s = Stream(None, _DummyId('some fake id'))
+
+		self.aI(True, s. virgin)
+
+		t = DummySocketLikeTransport()
+		s.transportOnline(t)
+		self.aI(False, s.virgin)
+
+		# no longer a virgin ever
+		s.transportOffline(t)
+		self.aI(False, s.virgin)
+
+		t2 = DummySocketLikeTransport()
+		s.transportOnline(t2)
+		self.aI(False, s.virgin)
+
+
+	@todo
 	def test_transportOnline(self):
 		clock = task.Clock()
 		s = Stream(clock, _DummyId('some fake id'))
