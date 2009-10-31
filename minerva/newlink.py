@@ -211,6 +211,7 @@ class Stream(object):
 		self._clock = clock
 		self.streamId = streamId
 
+		self.virgin = True # no transports have ever attached to it
 		self._activeS2CTransport = None
 		self._producer = None
 		self._notifications = []
@@ -253,6 +254,7 @@ class Stream(object):
 		This is called even for very-short-term C2S HTTP transports. Caller is responsible
 		for only calling this once.
 		"""
+		self.virgin = False
 		1/0
 
 
@@ -671,18 +673,26 @@ class SocketTransport(protocol.Protocol):
 		self._maxReceiveBytes = maxReceiveBytes
 		self._maxOpenTime = maxOpenTime
 
-		d = self._firewall.checkTransport(self, requestNewStream)
+		# We get/build a Stream instance before the firewall checkTransport
+		# because the firewall needs to know if we're working with a virgin
+		# Stream or not. And there's no way to reliably know this before doing the buildStream/getStream stuff,
+		# because 'requestNewStream=True' doesn't imply that a new stream will
+		# actually be created.
+
+		if requestNewStream:
+			try:
+				self._stream = self._streamTracker.buildStream(streamId)
+			except StreamAlreadyExists:
+				self._stream = self._streamTracker.getStream(streamId)
+		else:
+			try:
+				self._stream = self._streamTracker.getStream(streamId)
+			except NoSuchStream:
+				return self._closeWith(Fn.tk_stream_attach_failure)
+
+		d = self._firewall.checkTransport(self, self._stream)
 
 		def cbAuthOkay(_):
-			if requestNewStream:
-				# TODO XXX handle StreamAlreadyExists
-				self._stream = self._streamTracker.buildStream(streamId)
-			else:
-				try:
-					self._stream = self._streamTracker.getStream(streamId)
-				except NoSuchStream:
-					return self._closeWith(Fn.tk_stream_attach_failure)
-
 			self._authed = True
 			self._stream.transportOnline(self)
 

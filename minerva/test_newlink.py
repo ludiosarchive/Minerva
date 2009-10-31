@@ -125,7 +125,9 @@ class _DummyId(object):
 class MockStream(object):
 	streamId = _DummyId("a stream id of unusual length")
 
-	def __init__(self, clock, streamId):
+	def __init__(self, clock=None, streamId=None):
+		## if streamId is None: # make a random one?
+		self.virgin = True
 		self._notifications = []
 		self.streamId = streamId
 		self.log = []
@@ -144,6 +146,7 @@ class MockStream(object):
 
 
 	def transportOnline(self, transport):
+		self.virgin = False
 		self.log.append(['transportOnline', transport])
 
 
@@ -668,6 +671,20 @@ class SocketTransportTests(unittest.TestCase):
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
 		self.parser.dataReceived(self.t.value())
 		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+
+
+	def test_newStreamMoreThanOnceOk(self):
+		"""
+		Because the response to a request with w=True might get lost in transit,
+		we silently ignore the w=True if the Stream is already created.
+		"""
+		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+		frame0 = [Fn.hello, helloData]
+		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		self.parser.dataReceived(self.t.value())
+		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+
+
 
 
 	def test_invalidHellos(self):

@@ -3,7 +3,9 @@ import base64
 from zope.interface import implements, verify
 from twisted.trial import unittest
 
-from minerva.test_newlink import DummyRequest, DummyHttpTransport, DummySocketLikeTransport, _DummyId
+from minerva.test_newlink import (
+	DummyRequest, DummyHttpTransport, DummySocketLikeTransport, _DummyId, MockStream
+)
 
 from minerva.website import (
 	RejectTransport, ITransportFirewall, CsrfTransportFirewall,
@@ -147,21 +149,24 @@ class CsrfTransportFirewallTestsHttpTransport(unittest.TestCase):
 	def test_stopsBadHttpMissingCsrfAndUaId(self):
 		stopper = CsrfStopper("secret string")
 		firewall, transport = self._makeThings(stopper, None, None)
-		act = lambda: firewall.checkTransport(transport, requestNewStream=True)
+		ms = MockStream()
+		act = lambda: firewall.checkTransport(transport, ms)
 		return self.assertFailure(act(), RejectTransport)
 
 
 	def test_stopsBadHttpMissingCsrf(self):
 		stopper = CsrfStopper("secret string")
 		firewall, transport = self._makeThings(stopper, _DummyId('some fake uaId'), None)
-		act = lambda: firewall.checkTransport(transport, requestNewStream=True)
+		ms = MockStream()
+		act = lambda: firewall.checkTransport(transport, ms)
 		return self.assertFailure(act(), RejectTransport)
 
 
 	def test_stopsBadHttpMissingUaId(self):
 		stopper = CsrfStopper("secret string")
 		firewall, transport = self._makeThings(stopper, None, 'some fake csrf key')
-		act = lambda: firewall.checkTransport(transport, requestNewStream=True)
+		ms = MockStream()
+		act = lambda: firewall.checkTransport(transport, ms)
 		return self.assertFailure(act(), RejectTransport)
 
 	#
@@ -169,7 +174,9 @@ class CsrfTransportFirewallTestsHttpTransport(unittest.TestCase):
 	def test_firstTransportEqualsNoChecking(self):
 		stopper = CsrfStopper("secret string")
 		firewall, transport = self._makeThings(stopper, None, None)
-		act = lambda: firewall.checkTransport(transport, requestNewStream=False)
+		ms = MockStream()
+		ms.virgin = False
+		act = lambda: firewall.checkTransport(transport, ms)
 		def cb(v):
 			self.assertIdentical(None, v)
 		return act().addCallback(cb)
@@ -180,7 +187,8 @@ class CsrfTransportFirewallTestsHttpTransport(unittest.TestCase):
 		uaId = _DummyId("id of funny length probably")
 		token = stopper.makeToken(uaId)
 		firewall, transport = self._makeThings(stopper, uaId, token)
-		act = lambda: firewall.checkTransport(transport, requestNewStream=True)
+		ms = MockStream()
+		act = lambda: firewall.checkTransport(transport, ms)
 		def cb(v):
 			self.assertIdentical(None, v)
 		return act().addCallback(cb)
@@ -192,7 +200,8 @@ class CsrfTransportFirewallTestsHttpTransport(unittest.TestCase):
 		token = stopper.makeToken(uaId)
 		firewall, transport = self._makeThings(stopper, uaId, token)
 		self._setUaIdString(transport, 'xxx' + base64.b64encode(uaId.id))
-		act = lambda: firewall.checkTransport(transport, requestNewStream=True)
+		ms = MockStream()
+		act = lambda: firewall.checkTransport(transport, ms)
 		return self.assertFailure(act(), RejectTransport)
 
 
