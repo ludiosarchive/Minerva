@@ -621,6 +621,7 @@ class SocketTransportTests(unittest.TestCase):
 		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
 		frame0 = [Fn.hello, helloData]
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		self.parser.dataReceived(self.t.value())
 		self.aE([], self.gotFrames)
 
 
@@ -628,6 +629,7 @@ class SocketTransportTests(unittest.TestCase):
 		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30, c={'not_looked_at': True})
 		frame0 = [Fn.hello, helloData]
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		self.parser.dataReceived(self.t.value())
 		self.aE([], self.gotFrames)
 
 
@@ -638,6 +640,7 @@ class SocketTransportTests(unittest.TestCase):
 		helloData = dict(n=0, w=False, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
 		frame0 = [Fn.hello, helloData]
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		self.parser.dataReceived(self.t.value())
 		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
