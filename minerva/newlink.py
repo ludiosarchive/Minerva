@@ -643,8 +643,6 @@ class SocketTransport(protocol.Protocol):
 		try:
 			# any line below can raise KeyError; additional exceptions marked with 'e:'
 
-			# 2**31-1 limit is okay, even with a connection every second,
-			# it'll be (2 ** 31 - 1) seconds = 68.0511039 years
 			transportNumber = abstract.ensureNonNegIntLimit(helloData['n'], _2_64)
 			protocolVersion = helloData['v']
 			# -- no transportType
