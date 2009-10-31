@@ -544,6 +544,10 @@ class DummyStreamTracker(object):
 		del self._streams[streamId]
 
 
+	def countStreams(self):
+		return len(self._streams)
+
+
 
 class DummyFirewall(object):
 	
@@ -567,6 +571,8 @@ class SocketTransportTests(unittest.TestCase):
 
 
 	def setUp(self):
+		clock = task.Clock()
+		self.streamTracker = DummyStreamTracker(clock, {})
 		self._reset()
 
 
@@ -576,9 +582,7 @@ class SocketTransportTests(unittest.TestCase):
 		self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
 
 		reactor = FakeReactor()
-		clock = task.Clock()
 		self.t = StringTransport()
-		self.streamTracker = DummyStreamTracker(clock, {})
 		self.protocol = SocketTransport(reactor, None, self.streamTracker, DummyFirewall())
 		self.protocol.makeConnection(self.t)
 
@@ -678,13 +682,19 @@ class SocketTransportTests(unittest.TestCase):
 		Because the response to a request with w=True might get lost in transit,
 		we silently ignore the w=True if the Stream is already created.
 		"""
-		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
-		frame0 = [Fn.hello, helloData]
-		self.protocol.dataReceived(self.serializeFrames([frame0]))
-		self.parser.dataReceived(self.t.value())
-		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+		def act():
+			helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+			frame0 = [Fn.hello, helloData]
+			self.protocol.dataReceived(self.serializeFrames([frame0]))
+			self.parser.dataReceived(self.t.value())
+			self.aE([], self.gotFrames)
+		act()
 
+		self._reset()
+		# sanity check, make sure streamTracker still knows about stream '\x00'*16
+		assert self.streamTracker.countStreams() == 1
 
+		act()
 
 
 	def test_invalidHellos(self):
