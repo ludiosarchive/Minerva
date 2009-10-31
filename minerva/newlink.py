@@ -134,6 +134,7 @@ class Frame(object):
 	def getType(self):
 		return self.knownTypes[self.type]
 
+Fn = Frame.names
 
 
 class StreamId(abstract.GenericIdentifier):
@@ -741,12 +742,12 @@ class SocketTransport(protocol.Protocol):
 
 	def _closeWith(self, errorTypeString, *args):
 		# TODO: sack before closing
-		invalidArgsFrameObj = [getattr(Frame.names, errorTypeString)]
+		invalidArgsFrameObj = [getattr(Fn, errorTypeString)]
 		invalidArgsFrameObj.extend(args)
 		toSend = ''
 		toSend += self._encodeFrame(invalidArgsFrameObj)
-		toSend += self._encodeFrame([Frame.names.you_close_it])
-		toSend += self._encodeFrame([Frame.names.my_last_frame])
+		toSend += self._encodeFrame([Fn.you_close_it])
+		toSend += self._encodeFrame([Fn.my_last_frame])
 		self.transport.write(toSend)
 
 		# TODO: set timer and close the connection ourselves in 5 seconds

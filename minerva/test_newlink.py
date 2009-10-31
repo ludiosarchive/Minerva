@@ -23,6 +23,7 @@ from minerva.website import (
 	NoopTransportFirewall, AntiHijackTransportFirewall
 )
 
+Fn = Frame.names
 
 
 class FakeReactor(object):
@@ -580,32 +581,32 @@ class SocketTransportTests(unittest.TestCase):
 	def test_invalidFrameType(self):
 		self.protocol.dataReceived(self.serializeFrames([[9999]]))
 		self.parser.dataReceived(self.t.value())
-		self.aE([[603], [11], [3]], self.gotFrames)
+		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
 	def test_firstFrameWasNotHelloFrame(self):
-		frame0 = [Frame.names.reset]
+		frame0 = [Fn.reset]
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
 		self.parser.dataReceived(self.t.value())
-		self.aE([[603], [11], [3]], self.gotFrames)
+		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
 	def test_frameCorruption(self):
 		self.protocol.dataReceived('1:xxxxxxxx')
 		self.parser.dataReceived(self.t.value())
-		self.aE([[610], [11], [3]], self.gotFrames)
+		self.aE([[Fn.tk_frame_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
 	def test_frameTooLong(self):
 		self.protocol.dataReceived('%d:' % (1024*1024 + 1))
 		self.parser.dataReceived(self.t.value())
-		self.aE([[610], [11], [3]], self.gotFrames)
+		self.aE([[Fn.tk_frame_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
 	def test_intraFrameCorruption(self):
 		self.protocol.dataReceived('1:{') # incomplete JSON
 		self.parser.dataReceived(self.t.value())
-		self.aE([[611], [11], [3]], self.gotFrames)
+		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
 	def test_intraFrameCorruptionTrailingGarbage(self):
@@ -613,39 +614,39 @@ class SocketTransportTests(unittest.TestCase):
 		# Note that simplejson allows trailing whitespace, which we should add a test for; TODO XXX
 		
 		self.parser.dataReceived(self.t.value())
-		self.aE([[611], [11], [3]], self.gotFrames)
+		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
 	def test_validHello(self):
 		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
-		frame0 = [Frame.names.hello, helloData]
+		frame0 = [Fn.hello, helloData]
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
 		self.aE([], self.gotFrames)
 
 
 	def test_validHelloWithCredentials(self):
 		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30, c={'not_looked_at': True})
-		frame0 = [Frame.names.hello, helloData]
+		frame0 = [Fn.hello, helloData]
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
 		self.aE([], self.gotFrames)
 
 
-#	def test_validHelloButNoSuchStream(self):
-#		"""
-#		test that we get error 'tk_stream_attach_failure' if no such stream
-#		"""
-#		helloData = dict(n=0, w=False, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
-#		frame0 = [Frame.names.hello, helloData]
-#		self.protocol.dataReceived(self.serializeFrames([frame0]))
-#		self.aE([], self.gotFrames)
-#
-#
+	def test_validHelloButNoSuchStream(self):
+		"""
+		test that we get error 'tk_stream_attach_failure' if no such stream
+		"""
+		helloData = dict(n=0, w=False, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+		frame0 = [Fn.hello, helloData]
+		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		self.aE([], self.gotFrames)
+
+
 #	def test_validHelloButNoSuchStreamVerboseW(self):
 #		"""
 #		same as test_validHelloButNoSuchStream, but with explicit w=False
 #		"""
 #		helloData = dict(n=0, w=False, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
-#		frame0 = [Frame.names.hello, helloData]
+#		frame0 = [Fn.hello, helloData]
 #		self.protocol.dataReceived(self.serializeFrames([frame0]))
 #		self.aE([], self.gotFrames)
 
@@ -689,10 +690,12 @@ class SocketTransportTests(unittest.TestCase):
 
 				##print badHello
 
-				frame0 = [Frame.names.hello, badHello]
+				frame0 = [Fn.hello, badHello]
 				self.protocol.dataReceived(self.serializeFrames([frame0]))
 				self.parser.dataReceived(self.t.value())
-				self.aE([[603], [11], [3]], self.gotFrames)
+				self.aE(
+					[[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it], [Fn.my_last_frame]],
+					self.gotFrames)
 				##print self.gotFrames
 				self._reset()
 
