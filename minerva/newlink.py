@@ -617,13 +617,13 @@ class SocketTransport(protocol.Protocol):
 	def _gotHelloFrame(self, frame):
 		# We only allow one 'hello' per connection
 		if self._gotHello is True:
-			return self._closeWith('tk_invalid_frame_type_or_arguments')
+			return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 		self._gotHello = True
 
 		try:
 			helloData = frame.contents[1]
 		except IndexError:
-			return self._closeWith('tk_invalid_frame_type_or_arguments')
+			return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
 		# credentialsData is always optional
 		try:
@@ -632,7 +632,7 @@ class SocketTransport(protocol.Protocol):
 			credentialsData = {}
 
 		if not isinstance(credentialsData, dict):
-			return self._closeWith('tk_invalid_frame_type_or_arguments')
+			return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
 		# requestNewStream is always optional
 		try:
@@ -641,7 +641,7 @@ class SocketTransport(protocol.Protocol):
 			requestNewStream = False
 
 		if not isinstance(requestNewStream, bool):
-			return self._closeWith('tk_invalid_frame_type_or_arguments')
+			return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
 		try:
 			# any line below can raise KeyError; additional exceptions marked with 'e:'
@@ -651,18 +651,18 @@ class SocketTransport(protocol.Protocol):
 			# -- no transportType
 			i = helloData['i']
 			if not isinstance(i, str):
-				return self._closeWith('tk_invalid_frame_type_or_arguments')
+				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 			streamId = StreamId(base64.b64decode(i)) # e: abstract.InvalidIdentifier, TypeError (if base64 problem)
 			# -- no numPaddingBytes
 			maxReceiveBytes = abstract.ensureNonNegIntLimit(helloData['r'], _2_64) # e: ValueError, TypeError
 			maxOpenTime = abstract.ensureNonNegIntLimit(helloData['m'], _2_64) # e: ValueError, TypeError
 			# -- no readOnlyOnce
 		except (KeyError, TypeError, ValueError, abstract.InvalidIdentifier):
-			return self._closeWith('tk_invalid_frame_type_or_arguments')
+			return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
 		# Do not use protocolVersion < 2 ever because Python is very stupid about bool/int equivalence
 		if protocolVersion != 2:
-			return self._closeWith('tk_invalid_frame_type_or_arguments')
+			return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
 		self._protocolVersion = protocolVersion
 		self.streamId = streamId
@@ -681,13 +681,13 @@ class SocketTransport(protocol.Protocol):
 				try:
 					self._stream = self._streamTracker.getStream(streamId)
 				except NoSuchStream:
-					return self._closeWith('tk_stream_attach_failure')
+					return self._closeWith(Fn.tk_stream_attach_failure)
 
 			self._authed = True
 			self._stream.transportOnline(self)
 
 		def cbAuthFailed(_):
-			return self._closeWith('tk_stream_attach_failure')
+			return self._closeWith(Fn.tk_stream_attach_failure)
 
 		d.addCallbacks(cbAuthOkay, cbAuthFailed)
 		d.addErrback(log.err)
@@ -699,18 +699,18 @@ class SocketTransport(protocol.Protocol):
 			try:
 				frameObj = simplejson.loads(frameString)
 			except simplejson.decoder.JSONDecodeError:
-				return self._closeWith('tk_intraframe_corruption')
+				return self._closeWith(Fn.tk_intraframe_corruption)
 
 			try:
 				frame = Frame(frameObj)
 			except BadFrame:
-				return self._closeWith('tk_invalid_frame_type_or_arguments')
+				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
 			frameType = frame.getType()
 
 			# We demand a 'hello' frame before any other type of frame
 			if self._gotHello is False and frameType != 'hello':
-				return self._closeWith('tk_invalid_frame_type_or_arguments')
+				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 				
 			if frameType == 'hello':
 				return self._gotHelloFrame(frame)
@@ -733,16 +733,16 @@ class SocketTransport(protocol.Protocol):
 		try:
 			self._parser.dataReceived(data)
 		except decoders.ParseError:
-			self._closeWith('tk_frame_corruption')
+			self._closeWith(Fn.tk_frame_corruption)
 
 
 	def _encodeFrame(self, frameData):
 		return decoders.BencodeStringDecoder.encode(dumpToJson7Bit(frameData))
 
 
-	def _closeWith(self, errorTypeString, *args):
+	def _closeWith(self, errorType, *args):
 		# TODO: sack before closing
-		invalidArgsFrameObj = [getattr(Fn, errorTypeString)]
+		invalidArgsFrameObj = [errorType]
 		invalidArgsFrameObj.extend(args)
 		toSend = ''
 		toSend += self._encodeFrame(invalidArgsFrameObj)
