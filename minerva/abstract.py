@@ -178,15 +178,17 @@ class Queue(object):
 class Incoming(object):
 	"""
 	I am a processor for incoming numbered items. I take input through
-	L{give} and provide output via L{fetchItems}.
+	L{give} and provide serialized items via L{getDeliverableItems}.
 
 	If items with identical sequence numbers are given to me, I accept only
 	the earliest-given item.
 
 	One use case is ensuring that boxes are delivered to the Stream reliably
-	and in-order.
+	and in-order. Caller is responsible for protecting against resource
+	exhaustion attacks by providing reasonably correct C{howMuch} numbers to
+	L{give}, and destroying the Incoming instance (and Stream) if the numbers
+	returned by L{getUndeliveredCount} or L{getMaxConsumption} are too high.
 	"""
-	# TODO: make Incoming resistant to attacks
 	def __init__(self):
 		self._lastAck = -1
 
@@ -279,12 +281,13 @@ class Incoming(object):
 		@rtype: tuple
 		@return: (lastAck, list of not-yet-deliverable sequence numbers; all are > lastAck)
 		"""
-		sackNumbers = sorted(self._cached.keys())
+		sackNumbers = self._cached.keys()
+		sackNumbers.sort()
 
 		return (self._lastAck, sackNumbers)
 
 
-	def getUndeliveredLength(self):
+	def getUndeliveredCount(self):
 		"""
 		@rtype: L{int}
 		@return: number of items that cannot be delivered yet

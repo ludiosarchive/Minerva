@@ -311,15 +311,15 @@ class TestIncoming(unittest.TestCase):
 		self.assertRaises(ValueError, lambda: i.give([[-2, 'box']], 0))
 
 
-	def test_getUndeliveredLength(self):
+	def test_getUndeliveredCount(self):
 		i = abstract.Incoming()
-		self.aE(0, i.getUndeliveredLength())
+		self.aE(0, i.getUndeliveredCount())
 		i.give([[1, 'box']], 3)
-		self.aE(1, i.getUndeliveredLength())
+		self.aE(1, i.getUndeliveredCount())
 		i.give([[2, 'box']], 3)
-		self.aE(2, i.getUndeliveredLength())
+		self.aE(2, i.getUndeliveredCount())
 		i.give([[0, 'box']], 3)
-		self.aE(0, i.getUndeliveredLength())
+		self.aE(0, i.getUndeliveredCount())
 
 
 
