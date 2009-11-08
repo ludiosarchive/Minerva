@@ -320,16 +320,6 @@ class TestIncomingConsumption(unittest.TestCase):
 		self.aE(0, i.getMaxConsumption())
 
 
-#	def test_cannotTeachAboutUnknownSeqNums(self):
-#		"""
-#		Teaching it about unknown seqnums raises an error.
-#		Raising an error is important because loading the information
-#		into Incoming._consumption is very bad, as it will never get removed.
-#		"""
-#		i = abstract.Incoming()
-#		self.aR(RuntimeError, lambda: i.updateConsumptionInformation(100, [1]))
-
-
 	def test_simple(self):
 		i = abstract.Incoming()
 		_ = i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']], 100)
