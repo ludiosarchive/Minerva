@@ -284,6 +284,14 @@ class Incoming(object):
 		return (self._lastAck, sackNumbers)
 
 
+	def getUndeliveredLength(self):
+		"""
+		@rtype: L{int}
+		@return: number of items that cannot be delivered yet
+		"""
+		return len(self._cached)
+
+
 	def getMaxConsumption(self):
 		"""
 		@rtype: L{int}

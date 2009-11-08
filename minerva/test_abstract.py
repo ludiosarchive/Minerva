@@ -311,6 +311,17 @@ class TestIncoming(unittest.TestCase):
 		self.assertRaises(ValueError, lambda: i.give([[-2, 'box']], 0))
 
 
+	def test_getUndeliveredLength(self):
+		i = abstract.Incoming()
+		self.aE(0, i.getUndeliveredLength())
+		i.give([[1, 'box']], 3)
+		self.aE(1, i.getUndeliveredLength())
+		i.give([[2, 'box']], 3)
+		self.aE(2, i.getUndeliveredLength())
+		i.give([[0, 'box']], 3)
+		self.aE(0, i.getUndeliveredLength())
+
+
 
 class TestIncomingConsumption(unittest.TestCase):
 	"""Tests for L{minerva.abstract.Incoming}'s memory-consumption-prevention"""
