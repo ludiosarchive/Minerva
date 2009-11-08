@@ -193,9 +193,8 @@ class Incoming(object):
 		# A dictionary to store items given to us, but not yet deliverable
 		# (because there are gaps). This is also used for temporary storage.
 		self._cached = {}
-
+		
 		self._deliverable = deque()
-
 		self._consumption = {}
 
 
@@ -222,6 +221,9 @@ class Incoming(object):
 		alreadyGiven = []
 		seqNums = []
 		for num, item in numAndItemSeq:
+			seqNums.append(num)
+
+			# Step 1: check numbers, skip over already-given seqNums
 			if num < 0:
 				raise ValueError("Sequence num must be 0 or above, was %r" % (num,))
 
@@ -229,7 +231,11 @@ class Incoming(object):
 				alreadyGiven.append(num)
 				continue
 
+			# Step 2: add to _cached unconditionally
 			self._cached[num] = item
+
+			# Step 3: for everything that can be delivered, move from _cached to _deliverable.
+			# Remove keys from _consumption at the same time.
 
 			# TODO	: need to handle MemoryErrors? Probably not.
 			while self._lastAck + 1 in self._cached:
@@ -240,8 +246,7 @@ class Incoming(object):
 					del self._consumption[_lastAckP1]
 				except KeyError:
 					pass
-				self._lastAck += 1
-			seqNums.append(num)
+				self._lastAck = _lastAckP1
 
 		# Do this after the above, to avoid writing to _consumption in the
 		# most common case (where all given boxes are moved to _deliverable immediately)
@@ -250,6 +255,7 @@ class Incoming(object):
 		_sameTuple = (howMuch, seqNums)
 		for n in seqNums:
 			if n in self._cached:
+				# Note that this may be overriding an existing key
 				self._consumption[n] = _sameTuple
 
 		return alreadyGiven

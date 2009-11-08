@@ -325,6 +325,49 @@ class TestIncomingConsumption(unittest.TestCase):
 		_ = i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']], 100)
 		self.aE(100, i.getMaxConsumption())
 
+		_ = i.give([[4, 'box4'], [5, 'box5'], [6, 'box6']], 200)
+		self.aE(300, i.getMaxConsumption())
+
+
+	def test_simpleOverlapping(self):
+		"""
+		Overlapping consumption information is okay, but the
+		result isn't always well-defined. In this test, it is well-defined.
+
+		The implementation iterates over dictionary keys, and
+		the order for this iteration could change.
+		"""
+		i = abstract.Incoming()
+		_ = i.give([[1, 'box1'], [2, 'box2'], [4, 'box4']], 100)
+		self.aE(100, i.getMaxConsumption())
+
+		_ = i.give([[4, 'box4'], [5, 'box5'], [6, 'box6']], 300)
+		print i._consumption
+		self.aE(400, i.getMaxConsumption())
+
+
+	def test_simpleOverlappingNotWellDefined(self):
+		"""
+		Overlapping consumption information is okay, but the
+		result isn't always well-defined. In this test, it is NOT well-defined.
+
+		The implementation iterates over dictionary keys, and
+		the order for this iteration could change.
+		"""
+		i = abstract.Incoming()
+		_ = i.give([[2, 'box'], [3, 'box'], [4, 'box']], 100)
+		self.aE(100, i.getMaxConsumption())
+
+		_ = i.give([[2, 'box']], 50)
+
+		# If implementation scans key 2 first, it will be 50 + 100
+		# If implementation scans key 3 or 4 first, it will be 100
+
+		try:
+			self.aE(100, i.getMaxConsumption())
+		except AssertionError:
+			self.aE(50 + 100, i.getMaxConsumption())
+
 
 	def test_simpleOneBoxDelivered(self):
 		i = abstract.Incoming()
