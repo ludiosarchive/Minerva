@@ -317,14 +317,14 @@ class TestIncomingConsumption(unittest.TestCase):
 
 	def test_noBoxesEverGiven(self):
 		i = abstract.Incoming()
-		self.aE((0, 0), i.getMinMaxConsumption())
+		self.aE(0, i.getMaxConsumption())
 
 
 	def test_simple(self):
 		i = abstract.Incoming()
 		_ = i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
 		i.updateConsumptionInformation(100, [1, 2, 3])
-		self.aE((100, 100), i.getMinMaxConsumption())
+		self.aE(100, i.getMaxConsumption())
 
 
 	def test_simpleOneBoxDelivered(self):
@@ -332,7 +332,7 @@ class TestIncomingConsumption(unittest.TestCase):
 		_ = i.give([[0, 'box0'], [2, 'box2'], [3, 'box3']])
 		i.updateConsumptionInformation(100, [0, 2, 3])
 		_items = i.getDeliverableItems()
-		self.aE((0, 100), i.getMinMaxConsumption()) # 0? really? maybe use 8 + length(box) bytes
+		self.aE(100, i.getMaxConsumption()) # 0? really? maybe use 8 + length(box) bytes
 
 
 	def test_zeroAfterDelivered(self):
@@ -343,7 +343,7 @@ class TestIncomingConsumption(unittest.TestCase):
 		_ = i.give([[0, 'box0'], [1, 'box1'], [2, 'box2']])
 		i.updateConsumptionInformation(100, [0, 1, 2])
 		_items = i.getDeliverableItems()
-		self.aE((0, 0), i.getMinMaxConsumption())
+		self.aE(0, i.getMaxConsumption())
 
 
 

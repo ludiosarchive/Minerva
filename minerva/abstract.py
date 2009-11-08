@@ -267,16 +267,19 @@ class Incoming(object):
 		"""
 		Teaches me how much memory total the boxes for C{seqNums} use. 
 		"""
+		# Same some memory by not creating many tuple objects
+		_sameTuple = (howMuch, seqNums)
 		for n in seqNums:
-			self._consumption[n] = (howMuch, seqNums)
+			self._consumption[n] = _sameTuple
 
 
-	def getMinMaxConsumption(self):
+	def getMaxConsumption(self):
 		"""
-		Returns C{tuple} (minimum possible consumption, maximum possible consumption)
-		of the undelivered boxes.
+		@rtype: L{int}
+		@return: maximum possible consumption of the undelivered boxes.
 
-		This excludes items that are in L{self._deliverable}.
+		This excludes items that are already deliverable, but not yet
+		retrieved with L{getDeliverableItems}
 		"""
 		consumed = 0
 		alreadyIncluded = set()
@@ -286,7 +289,7 @@ class Incoming(object):
 				consumed += howMuch
 				alreadyIncluded.update(seqNums)
 
-		return (consumed, consumed) 
+		return consumed
 
 
 
