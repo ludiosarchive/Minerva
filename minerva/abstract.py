@@ -175,6 +175,11 @@ class Queue(object):
 
 
 
+class UnknownConsumption(Exception):
+	pass
+
+
+
 class Incoming(object):
 	"""
 	I am a processor for incoming numbered items. I take input through
@@ -270,7 +275,8 @@ class Incoming(object):
 		# Same some memory by not creating many tuple objects
 		_sameTuple = (howMuch, seqNums)
 		for n in seqNums:
-			self._consumption[n] = _sameTuple
+			if n in self._cached:
+				self._consumption[n] = _sameTuple
 
 
 	def getMaxConsumption(self):
@@ -285,7 +291,10 @@ class Incoming(object):
 		alreadyIncluded = set()
 		for n in self._cached:
 			if n not in alreadyIncluded:
-				howMuch, seqNums = self._consumption[n]
+				try:
+					howMuch, seqNums = self._consumption[n]
+				except KeyError:
+					raise UnknownConsumption("%r not in consumption map with keys %r" % (n, self._consumption.keys()))
 				consumed += howMuch
 				alreadyIncluded.update(seqNums)
 

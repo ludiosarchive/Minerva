@@ -320,6 +320,16 @@ class TestIncomingConsumption(unittest.TestCase):
 		self.aE(0, i.getMaxConsumption())
 
 
+#	def test_cannotTeachAboutUnknownSeqNums(self):
+#		"""
+#		Teaching it about unknown seqnums raises an error.
+#		Raising an error is important because loading the information
+#		into Incoming._consumption is very bad, as it will never get removed.
+#		"""
+#		i = abstract.Incoming()
+#		self.aR(RuntimeError, lambda: i.updateConsumptionInformation(100, [1]))
+
+
 	def test_simple(self):
 		i = abstract.Incoming()
 		_ = i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
@@ -337,13 +347,52 @@ class TestIncomingConsumption(unittest.TestCase):
 
 	def test_zeroAfterDelivered(self):
 		"""
-		After the boxes are delivered, they don't consume any memory.
+		After the boxes are in the delivered stage, they don't "consume" any memory.
 		"""
 		i = abstract.Incoming()
-		_ = i.give([[0, 'box0'], [1, 'box1'], [2, 'box2']])
-		i.updateConsumptionInformation(100, [0, 1, 2])
-		_items = i.getDeliverableItems()
+		i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
+		i.updateConsumptionInformation(100, [1, 2, 3])
+
+		i.give([[0, 'box0']])
 		self.aE(0, i.getMaxConsumption())
+
+
+	def test_errorIfIncompleteInfo(self):
+		"""
+		L{Incoming} raises an error if it doesn't know the max consumption information.
+		"""
+		i = abstract.Incoming()
+		i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
+
+		self.aR(abstract.UnknownConsumption, lambda: i.getMaxConsumption())
+
+
+	def test_consumptionMapDoesNotLeak(self):
+		"""
+		Test an implementation detail: the consumption map does not
+		keep around unneeded entries
+		"""
+		i = abstract.Incoming()
+		
+		i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
+		i.updateConsumptionInformation(100, [1, 2, 3])
+		self.aE(3, len(i._consumption))
+
+		i.give([[0, 'box0']])
+		self.aE(0, len(i._consumption))
+
+
+	def test_consumptionInformationIgnored(self):
+		"""
+		Test an implementation detail: the consumption map
+		does not store information for boxes that are not in the
+		C{_cached} stage.
+		"""
+		i = abstract.Incoming()
+
+		i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
+		i.updateConsumptionInformation(100, [0, 1, 2, 3])
+		self.aE(3, len(i._consumption))
 
 
 
