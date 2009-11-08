@@ -189,6 +189,7 @@ class MockStreamProtocol(object):
 	implements(IMinervaProtocol)
 
 	def streamStarted(self, stream):
+		self.factory.instances.add(self)
 		self.log = []
 		self.log.append(['streamStarted', stream])
 		self.stream = stream
@@ -209,6 +210,10 @@ class MockStreamProtocol(object):
 
 class MockStreamProtocolFactory(object):
 	implements(IMinervaFactory)
+
+	def __init__(self):
+		self.instances = set()
+
 
 	def buildProtocol(self, stream):
 		obj = MockStreamProtocol()
@@ -324,6 +329,35 @@ class StreamTests(unittest.TestCase):
 		s._die() # TODO XXX replace with some public test
 
 		assert called[0]
+
+
+	def test_boxesReceived(self):
+		"""
+		Test that when Stream.boxesReceived is called,
+		the StreamProtocol instance actually gets the boxes.
+		"""
+		factory = MockStreamProtocolFactory()
+		s = Stream(None, _DummyId('some fake id'), factory)
+		t = DummySocketLikeTransport()
+		s.transportOnline(t)
+
+		s.boxesReceived(t, [(1, ['box1'])], 3)
+		i = list(factory.instances)[0]
+		self.aE([
+			['streamStarted', s],
+		], i.log)
+
+		s.boxesReceived(t, [(0, ['box0'])], 3)
+		self.aE([
+			['streamStarted', s],
+			['boxesReceived', [['box0'], ['box1']]],
+		], i.log)
+
+
+
+	@todo
+	def test_boxesReceivedExhaustion(self):
+		1/0
 
 
 	def test_getSACK(self):
