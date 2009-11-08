@@ -203,7 +203,7 @@ class TestIncoming(unittest.TestCase):
 
 	def test_threeItems(self):
 		i = abstract.Incoming()
-		i.give([[0, 'box0'], [1, 'box1'], [2, 'box2']])
+		i.give([[0, 'box0'], [1, 'box1'], [2, 'box2']], 0)
 
 		self.assertEqual(['box0', 'box1', 'box2'], i.getDeliverableItems())
 		self.assertEqual((2, []), i.getSACK())
@@ -211,7 +211,7 @@ class TestIncoming(unittest.TestCase):
 
 	def test_itemMissing(self):
 		i = abstract.Incoming()
-		i.give([[0, 'box0'], [1, 'box1'], [3, 'box3']])
+		i.give([[0, 'box0'], [1, 'box1'], [3, 'box3']], 0)
 
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
 		self.assertEqual((1, [3]), i.getSACK())
@@ -219,7 +219,7 @@ class TestIncoming(unittest.TestCase):
 
 	def test_twoItemsMissing(self):
 		i = abstract.Incoming()
-		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4']])
+		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4']], 0)
 
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
 		self.assertEqual((1, [4]), i.getSACK())
@@ -227,7 +227,7 @@ class TestIncoming(unittest.TestCase):
 
 	def test_twoRangesMissing(self):
 		i = abstract.Incoming()
-		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']])
+		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']], 0)
 
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
 		self.assertEqual((1, [4, 6]), i.getSACK())
@@ -235,12 +235,12 @@ class TestIncoming(unittest.TestCase):
 
 	def test_twoRangesMissingThenFill(self):
 		i = abstract.Incoming()
-		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']])
+		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']], 0)
 
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
 		self.assertEqual((1, [4, 6]), i.getSACK())
 
-		i.give([[2, 'box2'], [3, 'box3'], [5, 'box5']])
+		i.give([[2, 'box2'], [3, 'box3'], [5, 'box5']], 0)
 
 		self.assertEqual(['box2', 'box3', 'box4', 'box5', 'box6'], i.getDeliverableItems())
 		self.assertEqual((6, []), i.getSACK())
@@ -249,11 +249,11 @@ class TestIncoming(unittest.TestCase):
 	def test_outOfOrder(self):
 		i = abstract.Incoming()
 		# 0 missing
-		i.give([[1, 'box1'], [2, 'box2']])
+		i.give([[1, 'box1'], [2, 'box2']], 0)
 		self.assertEqual([], i.getDeliverableItems())
 		self.assertEqual((-1, [1, 2]), i.getSACK())
-		i.give([[0, 'box0']]) # finally deliver it
-		i.give([[3, 'box3']])
+		i.give([[0, 'box0']], 0) # finally deliver it
+		i.give([[3, 'box3']], 0)
 		self.assertEqual(['box0', 'box1', 'box2', 'box3'], i.getDeliverableItems())
 		self.assertEqual((3, []), i.getSACK())
 
@@ -264,14 +264,14 @@ class TestIncoming(unittest.TestCase):
 		out-of-order in one L{abstract.Incoming.give} call.
 		"""
 		i = abstract.Incoming()
-		i.give([[1, 'box1'], [0, 'box0']])
+		i.give([[1, 'box1'], [0, 'box0']], 0)
 		self.assertEqual((1, []), i.getSACK())
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
 
 
 	def test_alreadyGiven1Call(self):
 		i = abstract.Incoming()
-		alreadyGiven = i.give([[0, 'box0'], [1, 'box1'], [1, 'boxNEW']])
+		alreadyGiven = i.give([[0, 'box0'], [1, 'box1'], [1, 'boxNEW']], 0)
 		self.assertEqual((1, []), i.getSACK())
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
 		self.assertEqual([1], alreadyGiven)
@@ -279,9 +279,9 @@ class TestIncoming(unittest.TestCase):
 
 	def test_alreadyGivenMultipleCalls(self):
 		i = abstract.Incoming()
-		alreadyGivenA = i.give([[0, 'box0'], [1, 'box1']])
-		alreadyGivenB = i.give([[0, 'box0NEW']])
-		alreadyGivenC = i.give([[1, 'box1NEW']])
+		alreadyGivenA = i.give([[0, 'box0'], [1, 'box1']], 0)
+		alreadyGivenB = i.give([[0, 'box0NEW']], 0)
+		alreadyGivenC = i.give([[1, 'box1NEW']], 0)
 
 		self.assertEqual([], alreadyGivenA)
 		self.assertEqual([0], alreadyGivenB)
@@ -293,9 +293,9 @@ class TestIncoming(unittest.TestCase):
 
 	def test_alreadyGivenButUndelivered(self):
 		i = abstract.Incoming()
-		alreadyGivenA = i.give([[0, 'box0'], [1, 'box1'], [4, 'box4']])
-		alreadyGivenB = i.give([[4, 'box4NEW']])
-		alreadyGivenC = i.give([[1, 'box1NEW'], [4, 'box4NEW']])
+		alreadyGivenA = i.give([[0, 'box0'], [1, 'box1'], [4, 'box4']], 0)
+		alreadyGivenB = i.give([[4, 'box4NEW']], 0)
+		alreadyGivenC = i.give([[1, 'box1NEW'], [4, 'box4NEW']], 0)
 
 		self.assertEqual([], alreadyGivenA)
 		self.assertEqual([4], alreadyGivenB)
@@ -307,8 +307,8 @@ class TestIncoming(unittest.TestCase):
 
 	def test_negativeSequenceNum(self):
 		i = abstract.Incoming()
-		self.assertRaises(ValueError, lambda: i.give([[-1, 'box']]))
-		self.assertRaises(ValueError, lambda: i.give([[-2, 'box']]))
+		self.assertRaises(ValueError, lambda: i.give([[-1, 'box']], 0))
+		self.assertRaises(ValueError, lambda: i.give([[-2, 'box']], 0))
 
 
 
@@ -332,15 +332,13 @@ class TestIncomingConsumption(unittest.TestCase):
 
 	def test_simple(self):
 		i = abstract.Incoming()
-		_ = i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
-		i.updateConsumptionInformation(100, [1, 2, 3])
+		_ = i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']], 100)
 		self.aE(100, i.getMaxConsumption())
 
 
 	def test_simpleOneBoxDelivered(self):
 		i = abstract.Incoming()
-		_ = i.give([[0, 'box0'], [2, 'box2'], [3, 'box3']])
-		i.updateConsumptionInformation(100, [0, 2, 3])
+		_ = i.give([[0, 'box0'], [2, 'box2'], [3, 'box3']], 100)
 		_items = i.getDeliverableItems()
 		self.aE(100, i.getMaxConsumption()) # 0? really? maybe use 8 + length(box) bytes
 
@@ -350,21 +348,9 @@ class TestIncomingConsumption(unittest.TestCase):
 		After the boxes are in the delivered stage, they don't "consume" any memory.
 		"""
 		i = abstract.Incoming()
-		i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
-		i.updateConsumptionInformation(100, [1, 2, 3])
-
-		i.give([[0, 'box0']])
+		i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']], 100)
+		i.give([[0, 'box0']], 50)
 		self.aE(0, i.getMaxConsumption())
-
-
-	def test_errorIfIncompleteInfo(self):
-		"""
-		L{Incoming} raises an error if it doesn't know the max consumption information.
-		"""
-		i = abstract.Incoming()
-		i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
-
-		self.aR(abstract.UnknownConsumption, lambda: i.getMaxConsumption())
 
 
 	def test_consumptionMapDoesNotLeak(self):
@@ -374,25 +360,11 @@ class TestIncomingConsumption(unittest.TestCase):
 		"""
 		i = abstract.Incoming()
 		
-		i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
-		i.updateConsumptionInformation(100, [1, 2, 3])
+		i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']], 100)
 		self.aE(3, len(i._consumption))
 
-		i.give([[0, 'box0']])
+		i.give([[0, 'box0']], 50)
 		self.aE(0, len(i._consumption))
-
-
-	def test_consumptionInformationIgnored(self):
-		"""
-		Test an implementation detail: the consumption map
-		does not store information for boxes that are not in the
-		C{_cached} stage.
-		"""
-		i = abstract.Incoming()
-
-		i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
-		i.updateConsumptionInformation(100, [0, 1, 2, 3])
-		self.aE(3, len(i._consumption))
 
 
 

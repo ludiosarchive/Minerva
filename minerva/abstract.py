@@ -175,11 +175,6 @@ class Queue(object):
 
 
 
-class UnknownConsumption(Exception):
-	pass
-
-
-
 class Incoming(object):
 	"""
 	I am a processor for incoming numbered items. I take input through
@@ -204,14 +199,28 @@ class Incoming(object):
 		self._consumption = {}
 
 
-	def give(self, numAndItemSeq):
+	# Because our Minerva protocol can receive many boxes in one frame,
+	# we don't really know how much memory each box takes up (unless
+	# we do a deep traversal of every object in each box).
+
+	# But we do know approximately how many bytes (box1, box2, box3, ...)
+	# will take in memory, because we know the byte length of the frame
+	# the boxes came in.
+
+	# So, we have the last argument here to "teach" Incoming.
+	def give(self, numAndItemSeq, howMuch):
 		"""
-		Handle a sequence of optionally-sorted (seqNum, box).
+		@param numAndItemSeq: a sequence of optionally-sorted (seqNum, box).
+
+		@param howMuch: how much memory the boxes in
+			C{numAndItemSeq} use.
+		@type howMuch: int
 
 		Returns a list of sequence numbers that were ignored (because items with
 		such sequence numbers were already received - not necessarily delivered)
 		"""
 		alreadyGiven = []
+		seqNums = []
 		for num, item in numAndItemSeq:
 			if num < 0:
 				raise ValueError("Sequence num must be 0 or above, was %r" % (num,))
@@ -232,6 +241,16 @@ class Incoming(object):
 				except KeyError:
 					pass
 				self._lastAck += 1
+			seqNums.append(num)
+
+		# Do this after the above, to avoid writing to _consumption in the
+		# most common case (where all given boxes are moved to _deliverable immediately)
+		
+		# Same some memory by not creating many tuple objects
+		_sameTuple = (howMuch, seqNums)
+		for n in seqNums:
+			if n in self._cached:
+				self._consumption[n] = _sameTuple
 
 		return alreadyGiven
 
@@ -259,26 +278,6 @@ class Incoming(object):
 		return (self._lastAck, sackNumbers)
 
 
-	# Because our Minerva protocol can receive many boxes in one frame,
-	# we don't really know how much memory each box takes up (unless
-	# we do a deep traversal of every object in each box).
-
-	# But we do know approximately how many bytes (box1, box2, box3, ...)
-	# will take in memory, because we know the byte length of the frame
-	# the boxes came in.
-
-	# So, we have this feature to "teach" Incoming.
-	def updateConsumptionInformation(self, howMuch, seqNums):
-		"""
-		Teaches me how much memory total the boxes for C{seqNums} use. 
-		"""
-		# Same some memory by not creating many tuple objects
-		_sameTuple = (howMuch, seqNums)
-		for n in seqNums:
-			if n in self._cached:
-				self._consumption[n] = _sameTuple
-
-
 	def getMaxConsumption(self):
 		"""
 		@rtype: L{int}
@@ -291,10 +290,7 @@ class Incoming(object):
 		alreadyIncluded = set()
 		for n in self._cached:
 			if n not in alreadyIncluded:
-				try:
-					howMuch, seqNums = self._consumption[n]
-				except KeyError:
-					raise UnknownConsumption("%r not in consumption map with keys %r" % (n, self._consumption.keys()))
+				howMuch, seqNums = self._consumption[n]
 				consumed += howMuch
 				alreadyIncluded.update(seqNums)
 

@@ -333,7 +333,7 @@ class Stream(object):
 		# kind of special metadata.
 		# TODO XXX needs a test for timer
 		self._noContactTimer.reset(self.noContactTimeout)
-		self.incoming.give(boxes)
+		self.incoming.give(boxes, 0)
 		for f in self.incoming.getDeliverableItems():
 			self.boxReceived(f)
 
