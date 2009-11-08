@@ -49,7 +49,6 @@ class CsrfStopperTests(unittest.TestCase):
 
 
 	def test_makeTokenMakesSafeBase64(self):
-		import base64
 		c = CsrfStopper("secret string")
 		i = _DummyId("id")
 		token = c.makeToken(i)
@@ -61,7 +60,6 @@ class CsrfStopperTests(unittest.TestCase):
 		"""
 		16 bits (version) + 128 bits (hash)
 		"""
-		import base64
 		c = CsrfStopper("secret string")
 		i = _DummyId("id")
 		token = c.makeToken(i)
@@ -228,7 +226,7 @@ class CsrfTransportFirewallTestsSocketLikeTransport(CsrfTransportFirewallTestsHt
 class AntiHijackFirewallTests(unittest.TestCase):
 
 	def test_implements(self):
-		# IRL, nobody will be using this antihijack firewall without the CSRF firewall
+		# but IRL, nobody will be using this antihijack firewall without the CSRF firewall
 		firewall = AntiHijackTransportFirewall(NoopTransportFirewall(), uaToStreams=None)
 		verify.verifyObject(ITransportFirewall, firewall)
 		verify.verifyObject(IStreamNotificationReceiver, firewall)
@@ -237,7 +235,7 @@ class AntiHijackFirewallTests(unittest.TestCase):
 
 class LayeredFirewallTests(unittest.TestCase):
 
-	def test_make(self):
+	def test_makeLayeredFirewall(self):
 		uaToStreams = UAToStreamsCorrelator()
 		stopper = CsrfStopper("secret string")
 		firewall = makeLayeredFirewall(stopper, uaToStreams)

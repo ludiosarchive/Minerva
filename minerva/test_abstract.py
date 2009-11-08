@@ -312,6 +312,41 @@ class TestIncoming(unittest.TestCase):
 
 
 
+class TestIncomingConsumption(unittest.TestCase):
+	"""Tests for L{minerva.abstract.Incoming}'s memory-consumption-prevention"""
+
+	def test_noBoxesEverGiven(self):
+		i = abstract.Incoming()
+		self.aE((0, 0), i.getMinMaxConsumption())
+
+
+	def test_simple(self):
+		i = abstract.Incoming()
+		_ = i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
+		i.updateConsumptionInformation(100, [1, 2, 3])
+		self.aE((100, 100), i.getMinMaxConsumption())
+
+
+	def test_simpleOneBoxDelivered(self):
+		i = abstract.Incoming()
+		_ = i.give([[0, 'box0'], [2, 'box2'], [3, 'box3']])
+		i.updateConsumptionInformation(100, [0, 2, 3])
+		_items = i.getDeliverableItems()
+		self.aE((0, 100), i.getMinMaxConsumption()) # 0? really? maybe use 8 + length(box) bytes
+
+
+	def test_zeroAfterDelivered(self):
+		"""
+		After the boxes are delivered, they don't consume any memory.
+		"""
+		i = abstract.Incoming()
+		_ = i.give([[0, 'box0'], [1, 'box1'], [2, 'box2']])
+		i.updateConsumptionInformation(100, [0, 1, 2])
+		_items = i.getDeliverableItems()
+		self.aE((0, 0), i.getMinMaxConsumption())
+
+
+
 class _DummyId(abstract.GenericIdentifier):
 	_expectedLength = 16
 	__slots__ = ['id']

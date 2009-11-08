@@ -196,11 +196,12 @@ class Incoming(object):
 
 		self._deliverable = deque()
 
+		self._consumption = {}
+
 
 	def give(self, numAndItemSeq):
 		"""
-		Handle a sequence of optionally-sorted (seqNum, box). These may or
-		may not be immediately delivered to L{self._handler}.
+		Handle a sequence of optionally-sorted (seqNum, box).
 
 		Returns a list of sequence numbers that were ignored (because items with
 		such sequence numbers were already received - not necessarily delivered)
@@ -218,8 +219,13 @@ class Incoming(object):
 
 			# TODO	: need to handle MemoryErrors? Probably not.
 			while self._lastAck + 1 in self._cached:
-				self._deliverable.append(self._cached[self._lastAck + 1])
-				del self._cached[self._lastAck + 1]
+				_lastAckP1 = self._lastAck + 1
+				self._deliverable.append(self._cached[_lastAckP1])
+				del self._cached[_lastAckP1]
+				try:
+					del self._consumption[_lastAckP1]
+				except KeyError:
+					pass
 				self._lastAck += 1
 
 		return alreadyGiven
@@ -231,11 +237,10 @@ class Incoming(object):
 		After I return these items, I will not know about them any more. They're your
 		responsibility now.
 		"""
-		yourItems = []
-		for item in self._deliverable:
-			yourItems.append(item)
+		yourItems = list(self._deliverable)
 		for i in xrange(len(yourItems)):
 			self._deliverable.popleft()
+
 		return yourItems
 
 
@@ -247,6 +252,41 @@ class Incoming(object):
 		sackNumbers = sorted(self._cached.keys())
 
 		return (self._lastAck, sackNumbers)
+
+
+	# Because our Minerva protocol can receive many boxes in one frame,
+	# we don't really know how much memory each box takes up (unless
+	# we do a deep traversal of every object in each box).
+
+	# But we do know approximately how many bytes (box1, box2, box3, ...)
+	# will take in memory, because we know the byte length of the frame
+	# the boxes came in.
+
+	# So, we have this feature to "teach" Incoming.
+	def updateConsumptionInformation(self, howMuch, seqNums):
+		"""
+		Teaches me how much memory total the boxes for C{seqNums} use. 
+		"""
+		for n in seqNums:
+			self._consumption[n] = (howMuch, seqNums)
+
+
+	def getMinMaxConsumption(self):
+		"""
+		Returns C{tuple} (minimum possible consumption, maximum possible consumption)
+		of the undelivered boxes.
+
+		This excludes items that are in L{self._deliverable}.
+		"""
+		consumed = 0
+		alreadyIncluded = set()
+		for n in self._cached:
+			if n not in alreadyIncluded:
+				howMuch, seqNums = self._consumption[n]
+				consumed += howMuch
+				alreadyIncluded.update(seqNums)
+
+		return (consumed, consumed) 
 
 
 

@@ -265,6 +265,19 @@ class Stream(object):
 		1/0
 
 
+	def startGettingBoxes(self, transport, waitOnTransport):
+		"""
+		Transport C{transport} says it wants to receive boxes after transport
+		C{waitOnTransport} closes. If there is no need to wait on a transport,
+		C{waitOnTransport} is C{None}.
+		"""
+		1/0
+
+
+	def getSACK(self):
+		return 1/0
+
+
 	def serverShuttingDown(self):
 		"""
 		Called by L{StreamTracker} to tell me that the server is shutting down.
@@ -725,7 +738,24 @@ class SocketTransport(protocol.Protocol):
 			if frameType == 'hello':
 				return self._gotHelloFrame(frame)
 			elif frameType == 'gimme_boxes':
-				1/0
+				_secondArg = frame.contents[1]
+				if _secondArg == -1:
+					waitOnTransport = None
+				else:
+					waitOnTransport = abstract.ensureNonNegIntLimit(frame.contents[1], _2_64)
+				# Option 1:
+				# grab the reference to the other transport, notifyFinish(), add callback to tell Stream to start giving me boxes
+				# sometimes, other transport will already be gone, so we'll call Stream right now
+
+				# Option 2:
+				# Let Stream do all the thinking about which transports are ready to receive boxes
+
+				# Option 2 seems reasonable, because Stream already knows about this transport due to
+				# transportOnline, and it might want to do some complicated decision-making in the future.
+
+				# TODO: remember to properly hook up this transport's consumer with Stream's producer
+
+				self._stream.startGettingBoxes(self, waitOnTransport)
 			elif frameType == 'gimme_sack_and_close':
 				1/0
 			elif frameType == 'boxes':
