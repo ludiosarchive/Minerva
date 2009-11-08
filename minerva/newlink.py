@@ -207,16 +207,20 @@ class Stream(object):
 
 	implements(IConsumer)
 
-	def __init__(self, clock, streamId):
+	def __init__(self, clock, streamId, streamProtocolFactory):
 		self._clock = clock
 		self.streamId = streamId
+		self._streamProtocolFactory = streamProtocolFactory
+		self._protocol = None
 
 		self.virgin = True # no transports have ever attached to it
 		self._activeS2CTransport = None
 		self._producer = None
 		self._notifications = []
+		self._transports = set()
 		self.disconnected = False
 		self.queue = deque()
+		self._incoming = abstract.Incoming()
 
 
 	def __repr__(self):
@@ -241,11 +245,16 @@ class Stream(object):
 		1/0
 
 
-	def framesReceived(self, transport, frames):
+	def boxesReceived(self, transport, boxes, memorySizeOfBoxes):
 		"""
-		Called by transports to tell me that it has received frames L{frames}.
+		Called by transports to tell me that it has received boxes L{boxes}.
 		"""
-		1/0
+		self._incoming.give(boxes, memorySizeOfBoxes)
+		items = self._incoming.getDeliverableItems()
+		if items:
+			self._protocol.boxesReceived(items)
+		if self._incoming.getUndeliveredCount() > 5000 or self._incoming.getMaxConsumption() > 4 * 1024 * 1024:
+			self.reset('resources exhausted')
 
 
 	def transportOnline(self, transport):
@@ -254,14 +263,18 @@ class Stream(object):
 		This is called even for very-short-term C2S HTTP transports. Caller is responsible
 		for only calling this once.
 		"""
+		self._transports.add(transport)
 		self.virgin = False
-		1/0
+
+		if self._protocol is None:
+			self._protocol = self._streamProtocolFactory.buildProtocol(self)
 
 
 	def transportOffline(self, transport):
 		"""
 		Called by faces to tell me that new transport C{transport} has disconnected.
 		"""
+		self._transports.remove(transport)
 		1/0
 
 
@@ -275,7 +288,7 @@ class Stream(object):
 
 
 	def getSACK(self):
-		return 1/0
+		return self._incoming.getSACK()
 
 
 	def serverShuttingDown(self):
@@ -392,7 +405,7 @@ class StreamTracker(object):
 			raise StreamAlreadyExists(
 				"cannot make stream with id %r because %r exists" % (streamId, self._streams[streamId]))
 
-		s = self.stream(self._clock, streamId)
+		s = self.stream(self._clock, streamId, self._streamProtocolFactory)
 		# Do this first, in case an observer stupidly wants to use L{StreamTracker.getStream}.
 		self._streams[streamId] = s
 
@@ -757,11 +770,27 @@ class SocketTransport(protocol.Protocol):
 
 				self._stream.startGettingBoxes(self, waitOnTransport)
 			elif frameType == 'gimme_sack_and_close':
-				1/0
+				sackFrame = self._stream.getSACK()
+				sackFrame.insert(0, Fn.sack)
+				toSend = ''
+				toSend += self._encodeFrame(sackFrame)
+				toSend += self._encodeFrame([Fn.you_close_it])
+				toSend += self._encodeFrame([Fn.my_last_frame])
+				self.transport.write(toSend)
 			elif frameType == 'boxes':
-				1/0
+				seqNumStrToBoxDict = frame.contents[1]
+				memorySizeOfBoxes = len(frameString)
+				boxes = []
+				for seqNumStr, box in seqNumStrToBoxDict.iteritems():
+					try:
+						seqNum = abstract.strToNonNeg(seqNumStr)
+					except ValueError:
+						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+					boxes.append(seqNum, box)
+				self._stream.boxesReceived(self, boxes, memorySizeOfBoxes)
 			elif frameType == 'my_last_frame':
-				1/0
+				# For now, it doesn't help us make any decision.
+				pass
 			elif frameType == 'reset':
 				1/0
 			elif frameType == 'sack':

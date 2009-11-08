@@ -186,8 +186,8 @@ class Incoming(object):
 	One use case is ensuring that boxes are delivered to the Stream reliably
 	and in-order. Caller is responsible for protecting against resource
 	exhaustion attacks by providing reasonably correct C{howMuch} numbers to
-	L{give}, and destroying the Incoming instance (and Stream) if the numbers
-	returned by L{getUndeliveredCount} or L{getMaxConsumption} are too high.
+	L{give}, calling L{getUndeliveredCount} or L{getMaxConsumption}, and
+	destroying the Stream if the numbers are too high.
 	"""
 	def __init__(self):
 		self._lastAck = -1

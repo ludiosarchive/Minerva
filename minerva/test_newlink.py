@@ -12,6 +12,8 @@ from twisted.test.proto_helpers import StringTransport
 
 from minerva.decoders import BencodeStringDecoder
 
+from minerva import abstract
+
 from minerva.newlink import (
 	Frame, Stream, StreamTracker, NoSuchStream, StreamAlreadyExists,
 	BadFrame, IMinervaProtocol, IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
@@ -125,12 +127,14 @@ class _DummyId(object):
 class MockStream(object):
 	streamId = _DummyId("a stream id of unusual length")
 
-	def __init__(self, clock=None, streamId=None):
+	def __init__(self, clock=None, streamId=None, streamProtocolFactory=None):
 		## if streamId is None: # make a random one?
 		self.virgin = True
 		self._notifications = []
 		self.streamId = streamId
+		self.streamProtocolFactory = streamProtocolFactory
 		self.log = []
+		self._incoming = abstract.Incoming()
 
 
 	def sendBoxes(self, boxes):
@@ -158,6 +162,11 @@ class MockStream(object):
 		self.log.append(['serverShuttingDown', transport])
 
 
+	def getSACK(self):
+		self.log.append(['getSACK'])
+		return self._incoming.getSACK()
+
+
 	def notifyFinish(self):
 		"""
 		Notify when finishing the request
@@ -173,6 +182,39 @@ class MockStream(object):
 		for d in self._notifications:
 			d.callback(None)
 		self._notifications = None
+
+
+
+class MockStreamProtocol(object):
+	implements(IMinervaProtocol)
+
+	def streamStarted(self, stream):
+		self.log = []
+		self.log.append(['streamStarted', stream])
+		self.stream = stream
+
+
+	def streamEnded(self, reason):
+		self.log.append(['streamEnded', reason])
+
+
+	def streamQualityChanged(self, quality):
+		self.log.append(['streamQualityChanged', quality])
+
+
+	def boxesReceived(self, boxes):
+		self.log.append(['boxesReceived', boxes])
+
+
+
+class MockStreamProtocolFactory(object):
+	implements(IMinervaFactory)
+
+	def buildProtocol(self, stream):
+		obj = MockStreamProtocol()
+		obj.factory = self
+		obj.streamStarted(stream)
+		return obj
 
 
 
@@ -257,7 +299,7 @@ def todo(method):
 class StreamTests(unittest.TestCase):
 
 	def test_repr(self):
-		s = Stream(None, _DummyId('some fake id'))
+		s = Stream(None, _DummyId('some fake id'), None)
 		r = repr(s)
 		self.assert_('<Stream' in r, r)
 		self.assert_('streamId=' in r, r)
@@ -266,13 +308,13 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_notifyFinishReturnsDeferred(self):
-		s = Stream(None, _DummyId('some fake id'))
+		s = Stream(None, _DummyId('some fake id'), None)
 		d = s.notifyFinish()
 		self.assertEqual(defer.Deferred, type(d))
 
 
 	def test_notifyFinishActuallyCalled(self):
-		s = Stream(None, _DummyId('some fake id'))
+		s = Stream(None, _DummyId('some fake id'), None)
 		d = s.notifyFinish()
 		called = [False]
 		def cb(val):
@@ -284,12 +326,27 @@ class StreamTests(unittest.TestCase):
 		assert called[0]
 
 
+	def test_getSACK(self):
+		s = Stream(None, _DummyId('some fake id'), MockStreamProtocolFactory())
+
+		t = DummySocketLikeTransport()
+		s.transportOnline(t)
+		
+		self.aE((-1, []), s.getSACK())
+		s.boxesReceived(t, [(0, ['box'])], 3)
+		self.aE((0, []), s.getSACK())
+		s.boxesReceived(t, [(4, ['box'])], 3)
+		self.aE((0, [4]), s.getSACK())
+		s.boxesReceived(t, [(5, ['box'])], 3)
+		self.aE((0, [4, 5]), s.getSACK())
+
+
 	@todo
 	def test_noLongerVirgin(self):
 		"""
 		Stream is no longer a virgin after a transport is attached to it
 		"""
-		s = Stream(None, _DummyId('some fake id'))
+		s = Stream(None, _DummyId('some fake id'), None)
 
 		self.aI(True, s. virgin)
 
@@ -309,7 +366,7 @@ class StreamTests(unittest.TestCase):
 	@todo
 	def test_transportOnline(self):
 		clock = task.Clock()
-		s = Stream(clock, _DummyId('some fake id'))
+		s = Stream(clock, _DummyId('some fake id'), None)
 		t = DummySocketLikeTransport()
 		s.transportOnline(t)
 
@@ -317,7 +374,7 @@ class StreamTests(unittest.TestCase):
 	@todo
 	def test_transportOnlineOffline(self):
 		clock = task.Clock()
-		s = Stream(clock, _DummyId('some fake id'))
+		s = Stream(clock, _DummyId('some fake id'), None)
 		t = DummySocketLikeTransport()
 		s.transportOnline(t)
 		s.transportOffline(t)
@@ -329,7 +386,7 @@ class StreamTests(unittest.TestCase):
 		transportOffline(some transport that was never registered) raises RuntimeError
 		"""
 		clock = task.Clock()
-		s = Stream(clock, _DummyId('some fake id'))
+		s = Stream(clock, _DummyId('some fake id'), None)
 		t = DummySocketLikeTransport()
 		self.aR(RuntimeError, lambda: s.transportOffline(t))
 
@@ -535,8 +592,9 @@ class DummyStreamTracker(object):
 
 	stream = MockStream
 
-	def __init__(self, clock, _streams):
+	def __init__(self, clock, streamProtocolFactory, _streams):
 		self._clock = clock
+		self._streamProtocolFactory = streamProtocolFactory
 		self._streams = _streams
 
 
@@ -554,7 +612,7 @@ class DummyStreamTracker(object):
 		if streamId in self._streams:
 			raise StreamAlreadyExists()
 
-		s = self.stream(self._clock, streamId)
+		s = self.stream(self._clock, streamId, self._streamProtocolFactory)
 		self._streams[streamId] = s
 
 		d = s.notifyFinish()
@@ -594,7 +652,7 @@ class SocketTransportTests(unittest.TestCase):
 
 	def setUp(self):
 		clock = task.Clock()
-		self.streamTracker = DummyStreamTracker(clock, {})
+		self.streamTracker = DummyStreamTracker(clock, None, {})
 		self._reset()
 
 
@@ -791,33 +849,3 @@ class BasicMinervaFactoryTests(unittest.TestCase):
 		f = BasicMinervaFactory()
 		self.aR(TypeError, lambda: f.buildProtocol(MockStream(None, None)))
 
-
-
-class DemoProtocol(object):
-	implements(IMinervaProtocol)
-	
-	def streamStarted(self, stream):
-		self.stream = stream
-
-
-	def streamEnded(self, reason):
-		pass
-
-
-	def streamQualityChanged(self, quality):
-		pass
-
-
-	def boxesReceived(self, boxes):
-		pass
-
-
-
-class DemoFactory(object):
-	implements(IMinervaFactory)
-
-	def buildProtocol(self, stream):
-		obj = DemoProtocol()
-		obj.factory = self
-		obj.streamStarted(stream)
-		return obj
