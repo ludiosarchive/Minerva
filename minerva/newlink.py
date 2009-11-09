@@ -232,8 +232,8 @@ class Stream(object):
 		"""
 		Send C{boxes} boxes to the peer.
 
-		@type boxes: list
-		@param boxes: a list of boxes
+		@param boxes: a sequence of boxes
+		@type boxes: a sequence
 		"""
 		1/0
 
@@ -253,6 +253,8 @@ class Stream(object):
 		items = self._incoming.getDeliverableItems()
 		if items:
 			self._protocol.boxesReceived(items)
+		# We deliver the deliverable boxes before resetting the connection (if necessary),
+		# just in case the client sent something useful.
 		if self._incoming.getUndeliveredCount() > 5000 or self._incoming.getMaxConsumption() > 4 * 1024 * 1024:
 			self.reset('resources exhausted')
 

@@ -354,9 +354,13 @@ class StreamTests(unittest.TestCase):
 		], i.log)
 
 
-
 	@todo
 	def test_boxesReceivedExhaustion(self):
+		1/0
+
+
+	@todo
+	def test_sendBoxes(self):
 		1/0
 
 

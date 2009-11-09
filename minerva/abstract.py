@@ -2,6 +2,7 @@ from pypycpyo import mutables
 id = mutables.ReservedForLocals
 
 import re
+import warnings
 from collections import deque
 
 from twisted.python import log
@@ -87,10 +88,12 @@ def ensureNonNegIntLimit(value, limit):
 
 
 
-class SeqNumTooHighError(Exception):
+class InvalidSACK(Exception):
 	"""
 	Could not delete up to a certain seqNum, because that seqNum
 	is too high. (Client sent a bogus S2C ACK number.)
+
+	(or SACK info is otherwise invalid)
 	"""
 
 
@@ -104,7 +107,7 @@ class WantedItemsTooLowError(Exception):
 class Queue(object):
 	"""
 	This is a queue that assigns a never-repeating sequence number
-	to each item.
+	to each item, and can remove items based on SACK tuples.
 	"""
 
 	# TODO: more features to manipulate a Queue
@@ -149,15 +152,28 @@ class Queue(object):
 
 
 	def removeAllBefore(self, seqNum):
-		"""
-		Remove all items preceding item with sequence number L{seqNum}.
+		warnings.warn(
+			"Use handleSACK instead of removeAllBefore",
+			DeprecationWarning,
+			stacklevel=2)
+		return self.handleSACK((seqNum - 1, []))
 
-		This does NOT mean to remove L{seqNum} items.
+
+	def handleSACK(self, sackInfo):
 		"""
+		Remove all items that are no longer needed, based on C{sackInfo}.
+
+		@param sackInfo: SACK tuple
+		@type sackInfo: tuple
+		"""
+		seqNum = sackInfo[0] + 1
+		# TODO: actually make SACK work by using a better datastructure
+		# for queue, and using the sackInfo[1] information
+
 		assert seqNum >= 0, seqNum
 
 		if seqNum > (len(self._items) + self._seqNumAt0):
-			raise SeqNumTooHighError(
+			raise InvalidSACK(
 				"seqNum = %d, len(self._items) = %d, self._seqNumAt0 = %d"
 				% (seqNum, len(self._items), self._seqNumAt0))
 

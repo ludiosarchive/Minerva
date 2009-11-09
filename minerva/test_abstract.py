@@ -161,13 +161,13 @@ class TestQueue(unittest.TestCase):
 
 	def test_removeAllBeforeTooHigh0(self):
 		q = abstract.Queue()
-		self.assertRaises(abstract.SeqNumTooHighError, lambda: q.removeAllBefore(1))
+		self.assertRaises(abstract.InvalidSACK, lambda: q.removeAllBefore(1))
 
 
 	def test_removeAllBeforeTooHigh1(self):
 		q = abstract.Queue()
 		q.append('zero')
-		self.assertRaises(abstract.SeqNumTooHighError, lambda: q.removeAllBefore(2))
+		self.assertRaises(abstract.InvalidSACK, lambda: q.removeAllBefore(2))
 
 
 	def test_removeAllBeforeAgain(self):
