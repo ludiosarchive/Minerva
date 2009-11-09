@@ -774,6 +774,24 @@ class SocketTransportTests(unittest.TestCase):
 		], self.gotFrames)
 
 
+	def test_sendBoxesStart1(self):
+		"""
+		Calling sendBoxes(queue, start=1) on a transport actually results in
+		(box 1 and later) in queue being written
+		"""
+		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+		frame0 = [Fn.hello, helloData]
+		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		q = abstract.Queue()
+		q.extend([['box0'], ['box1']])
+		self.protocol.sendBoxes(q, start=1)
+		self.parser.dataReceived(self.t.value())
+		self.aE([
+			[Fn.seqnum, 1],
+			[Fn.box, ['box1']],
+		], self.gotFrames)
+
+
 	def test_invalidFrameType(self):
 		self.protocol.dataReceived(self.serializeFrames([[9999]]))
 		self.parser.dataReceived(self.t.value())
