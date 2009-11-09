@@ -118,7 +118,7 @@ class Queue(object):
 
 	def __init__(self):
 		# The sequence number of the 0th item in the queue
-		self._seqNumAt0 = 0
+		self._seqNumAt0 = 0 # TODO: remove _
 		self._items = deque()
 
 

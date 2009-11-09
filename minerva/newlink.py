@@ -239,7 +239,11 @@ class Stream(object):
 		if self._activeS2CTransport is not None:
 			# TODO: start=<some number> if we just switched to a new transport
 			# without waiting for the client.
-			self._activeS2CTransport.sendBoxes(queue, start=None)
+			if self._pretendAcked is None:
+				start = None
+			else:
+				start = max(self._pretendAcked + 1, self.queue._seqNumAt0)
+			self._activeS2CTransport.sendBoxes(queue, start=start)
 
 
 	def sendBoxes(self, boxes):
@@ -666,6 +670,10 @@ class BasicMinervaFactory(object):
 
 class IMinervaTransport(IPushProducer):
 
+	lastBoxSent = Attribute(
+		"Sequence number of the last box written to the socket/request, or -1 if no boxes ever written")
+
+
 	def sendBoxes(queue, start):
 		"""
 		Send boxes in queue C{queue} to the peer.
@@ -700,6 +708,8 @@ class SocketTransport(protocol.Protocol):
 		self._streamTracker = streamTracker
 		self._firewall = firewall
 
+		self.lastBoxSent = -1
+		self._paused = False
 		self._gotHello = False
 		self._authed = False
 		self._stream = None
@@ -709,7 +719,27 @@ class SocketTransport(protocol.Protocol):
 
 
 	def sendBoxes(self, queue, start):
-		1/0
+		if self._authed is not True or self._gotHello is not True:
+			raise RuntimeError("_authed=%r, _gotHello=%r" % (self._authed, self._gotHello))
+
+		if self._paused:
+			if self.noisy:
+				log.msg('I was asked to send another box from %r but I am paused right now.' % (queue,))
+			return
+
+		# Even if there's a lot of stuff in the queue, try to write everything.
+		toSend = ''
+		# we might want to send boxes frame instead of box sometimes? no?
+		lastBox = self.lastBoxSent
+		for seqNum, box in queue.iterItems(start=start):
+			if lastBox == -1 or lastBox + 1 != seqNum:
+				toSend += self._encodeFrame([Fn.seqnum, seqNum]) 
+			toSend += self._encodeFrame([Fn.box, box])
+			lastBox = seqNum
+		if len(toSend) > 1024 * 1024:
+			log.msg('Caution: %r asked me to send a large amount of data (%r bytes)' % (self._stream, len(toSend)))
+		self.transport.write(toSend)
+		self.lastBoxSent = lastBox
 
 
 	def _gotHelloFrame(self, frame):
@@ -893,15 +923,15 @@ class SocketTransport(protocol.Protocol):
 
 
 	def pauseProducing(self):
-		1/0
+		self._paused = True
 
 
 	def resumeProducing(self):
-		1/0
+		self._paused = False
 
 
 	def stopProducing(self):
-		1/0
+		self._paused = True
 
 
 	def connectionLost(self, reason):
@@ -912,6 +942,7 @@ class SocketTransport(protocol.Protocol):
 
 
 	def connectionMade(self):
+		# TODO: set tcp no_delay; make tests check
 		if self.noisy:
 			log.msg('Connection made for %r' % (self,))
 		self.transport.registerProducer(self, True)

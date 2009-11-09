@@ -235,6 +235,7 @@ class DummyHttpTransport(object):
 class DummySocketLikeTransport(object):
 	request = None
 	globalCounter = [-1]
+	lastBoxSent = -1
 	
 	def __init__(self):
 		self.credentialsData = {}
@@ -743,6 +744,34 @@ class SocketTransportTests(unittest.TestCase):
 		verify.verifyObject(IProtocol, self.protocol)
 		verify.verifyObject(IPushProducer, self.protocol)
 		verify.verifyObject(IMinervaTransport, self.protocol)
+
+
+	def test_sendBoxesUnauthed(self):
+		"""
+		Calling sendBoxes on an unauthed transport raises L{RuntimeError}
+		"""
+		q = abstract.Queue()
+		q.extend([['box0'], ['box1']])
+		self.aR(RuntimeError, lambda: self.protocol.sendBoxes(q, start=None))
+
+
+	def test_sendBoxesStartNone(self):
+		"""
+		Calling sendBoxes(queue, start=None) on a transport actually results in all
+		boxes in queue being written
+		"""
+		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+		frame0 = [Fn.hello, helloData]
+		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		q = abstract.Queue()
+		q.extend([['box0'], ['box1']])
+		self.protocol.sendBoxes(q, start=None)
+		self.parser.dataReceived(self.t.value())
+		self.aE([
+			[Fn.seqnum, 0],
+			[Fn.box, ['box0']],
+			[Fn.box, ['box1']],
+		], self.gotFrames)
 
 
 	def test_invalidFrameType(self):
