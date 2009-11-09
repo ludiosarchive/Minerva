@@ -93,6 +93,7 @@ class ISimpleConsumer(Interface):
 		@return: C{None}
 		"""
 
+
 	def unregisterProducer():
 		"""
 		Stop consuming data from a producer, without disconnecting.
@@ -261,7 +262,6 @@ class Stream(object):
 
 		self.virgin = True # no transports have ever attached to it
 		self._activeS2CTransport = None
-		self._producer = None
 		self._notifications = []
 		self._transports = set()
 		self.disconnected = False
@@ -269,6 +269,15 @@ class Stream(object):
 		self._incoming = abstract.Incoming()
 		self._pretendAcked = None
 		self._waitMap = {}
+
+		self._producer = None
+		self._streamingProducer = False
+
+		# on the active S2C transport, is there a registered producer?
+		#     None = no
+		#     True = yes, a streaming producer
+		#     False = yes, a pull producer
+		self._activeS2CProducerType = None
 
 
 	def __repr__(self):
@@ -351,6 +360,7 @@ class Stream(object):
 		if self._activeS2CTransport == transport:
 			lastBoxSent = self._activeS2CTransport.lastBoxSent
 			self._activeS2CTransport = None
+			self._activeS2CProducerType = None
 
 		# ...even if C{transport} wasn't active?
 		try:
@@ -367,14 +377,36 @@ class Stream(object):
 			self.pauseProducing()
 
 
+	def _unregisterDownstreamProducer(self, transport):
+		if self._activeS2CProducerType is True or self._activeS2CProducerType is False:
+			transport.unregisterProducer()
+		self._activeS2CProducerType = None
+
+
+	# Called when we have a new active S2C transport, or when a MinervaProtocol registers a producer with us (Stream)
+	def _registerDownstreamProducer(self, transport):
+		transport.registerProducer(self, self._streamingProducer)
+		self._activeS2CProducerType = self._streamingProducer
+
+
+	def _newActiveS2C(self, transport):
+		if self._activeS2CTransport:
+			self._unregisterDownstreamProducer(self._activeS2CTransport)
+			self._activeS2CTransport.closeGently()
+		self._activeS2CTransport = transport
+		if self._producer:
+			self._registerDownstreamProducer(transport)
+
+
 	def startGettingBoxes(self, transport, waitOnTransport):
 		"""
 		Transport C{transport} says it wants to receive boxes after transport
 		C{waitOnTransport} closes. If there is no need to wait on a transport,
 		C{waitOnTransport} is C{None}.
 		"""
+		print 'startGettingBoxes', transport, waitOnTransport
 		if waitOnTransport is None:
-			self._activeS2CTransport = transport
+			self._newActiveS2C(transport)
 			self._tryToSend()
 		else:
 			self._waitMap[waitOnTransport] = transport
@@ -447,6 +479,9 @@ class Stream(object):
 			elif self._paused: # We may have been paused before a producer was registered
 				producer.pauseProducing()
 
+		if self._activeS2CTransport:
+			self._registerDownstreamProducer(self._activeS2CTransport)
+
 
 	# called by StreamProtocol instances
 	def unregisterProducer(self):
@@ -454,6 +489,8 @@ class Stream(object):
 		Stop consuming data from a producer, without disconnecting.
 		"""
 		self.producer = None
+		if self._activeS2CTransport:
+			self._unregisterDownstreamProducer(self._activeS2CTransport)
 
 
 	# called by the active S2C transport in response to TCP pressure,
@@ -775,7 +812,8 @@ _2_64 = 2**64
 
 class SocketTransport(protocol.Protocol):
 
-	implements(IProtocol, IPushProducer, IMinervaTransport)
+	# are we there yet?
+	implements(IProtocol, ISimpleConsumer, IPushProducer, IMinervaTransport)
 
 	request = None # no associated HTTP request
 
@@ -796,6 +834,34 @@ class SocketTransport(protocol.Protocol):
 		self._parser = decoders.BencodeStringDecoder()
 		self._parser.MAX_LENGTH = self.MAX_LENGTH
 		self._parser.manyDataCallback = self._framesReceived
+
+		self._producer = None
+		self._streamingProducer = False
+
+
+	# called by Stream instances
+	def registerProducer(self, producer, streaming):
+		# XXX de-duplicate with Stream.registerProducer ; maybe move this to a mixin?
+		if self._producer is not None:
+			raise RuntimeError("Cannot register producer %s, "
+				"because producer %s was never unregistered." % (producer, self._producer))
+		if self.disconnected:
+			producer.stopProducing()
+		else:
+			self._producer = producer
+			self._streamingProducer = streaming
+			if not streaming:
+				producer.resumeProducing()
+			elif self._paused: # We may have been paused before a producer was registered
+				producer.pauseProducing()
+
+
+	# called by Stream instances
+	def unregisterProducer(self):
+		"""
+		Stop consuming data from a producer, without disconnecting.
+		"""
+		self.producer = None
 
 
 	def sendBoxes(self, queue, start):
@@ -897,8 +963,8 @@ class SocketTransport(protocol.Protocol):
 
 		def cbAuthOkay(_):
 			self._authed = True
-			if self._paused:
-				self._stream.pauseProducing()
+			#if self._producer and self._streamingProducer and self._paused:
+			#	self._producer.pauseProducing()
 			self._stream.transportOnline(self)
 
 		def cbAuthFailed(_):
@@ -1006,6 +1072,13 @@ class SocketTransport(protocol.Protocol):
 
 		# TODO: set timer and close the connection ourselves in 5 seconds
 		##self.transport.loseConnection()
+
+
+	def closeGently(self):
+		toSend = ''
+		toSend += self._encodeFrame([Fn.you_close_it])
+		toSend += self._encodeFrame([Fn.my_last_frame])
+		self.transport.write(toSend)
 
 
 	def pauseProducing(self):
