@@ -1146,8 +1146,10 @@ class ProducerIntegrationTests(unittest.TestCase):
 
 		producer1 = DummyProducer()
 		self.transport.registerProducer(producer1, streaming=True)
+		# The Minerva transport is registered, not the producer itself
 		self.aI(self.t.producer, self.transport)
 		self.aI(self.t.streaming, True)
+		self.aE([], producer1.log)
 
 		self.transport.unregisterProducer()
 		# it is idempotent
@@ -1155,8 +1157,26 @@ class ProducerIntegrationTests(unittest.TestCase):
 
 		producer2 = DummyProducer()
 		self.transport.registerProducer(producer2, streaming=False)
+		# The Minerva transport is registered, not the producer itself
 		self.aI(self.t.producer, self.transport)
 		self.aI(self.t.streaming, False)
+		self.aE([], producer2.log)
+
+
+	def test_transportPausedRegisterStreamingProducer(self):
+		self.transport.pauseProducing()
+
+		producer1 = DummyProducer()
+		self.transport.registerProducer(producer1, streaming=True)
+		self.aE([['pauseProducing']], producer1.log)
+
+
+	def test_transportPausedRegisterPullProducer(self):
+		self.transport.pauseProducing()
+
+		producer1 = DummyProducer()
+		self.transport.registerProducer(producer1, streaming=False)
+		self.aE([], producer1.log)
 
 
 
