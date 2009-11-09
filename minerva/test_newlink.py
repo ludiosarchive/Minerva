@@ -831,6 +831,21 @@ class SocketTransportTests(unittest.TestCase):
 		], self.gotFrames)
 
 
+	def test_sendBoxesNoneSentIfPaused(self):
+		"""
+		Calling sendBoxes when the transport is paused does not result
+		in a write to the transport.
+		"""
+		frame0 = self._getValidHelloFrame()
+		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		q = abstract.Queue()
+		q.extend([['box0'], ['box1']])
+		self.protocol.pauseProducing() # in a non-test environment, Twisted's TCP stuff calls pauseProducing
+		self.protocol.sendBoxes(q, start=None)
+		self._parseFrames()
+		self.aE([], self.gotFrames)
+
+
 	def test_invalidFrameType(self):
 		self.protocol.dataReceived(self.serializeFrames([[9999]]))
 		self._parseFrames()
