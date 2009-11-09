@@ -492,6 +492,8 @@ class StreamTests(unittest.TestCase):
 
 	# probably have better tests that test more for online/offline
 
+	# some of the below are probably wrong (esp. the producer stuff)
+
 	# TODO: test that if Stream paused, and streaming producer registered, producer is immediately paused
 	# TODO: test that if Stream.pauseProducing called, and a streaming producer is registered, producer is immediately paused
 	# TODO: test that if Stream.resumeProducing called, and any producer is registered, producer is immediately resumed
@@ -772,8 +774,8 @@ class SocketTransportTests(unittest.TestCase):
 
 		reactor = FakeReactor()
 		self.t = StringTransport()
-		self.protocol = SocketTransport(reactor, None, self.streamTracker, DummyFirewall())
-		self.protocol.makeConnection(self.t)
+		self.transport = SocketTransport(reactor, None, self.streamTracker, DummyFirewall())
+		self.transport.makeConnection(self.t)
 
 
 	def _getValidHelloFrame(self):
@@ -791,10 +793,10 @@ class SocketTransportTests(unittest.TestCase):
 
 
 	def test_implements(self):
-		verify.verifyObject(IProtocol, self.protocol)
-		verify.verifyObject(ISimpleConsumer, self.protocol)
-		verify.verifyObject(IPushProducer, self.protocol)
-		verify.verifyObject(IMinervaTransport, self.protocol)
+		verify.verifyObject(IProtocol, self.transport)
+		verify.verifyObject(ISimpleConsumer, self.transport)
+		verify.verifyObject(IPushProducer, self.transport)
+		verify.verifyObject(IMinervaTransport, self.transport)
 
 
 	def test_sendBoxesUnauthed(self):
@@ -803,7 +805,7 @@ class SocketTransportTests(unittest.TestCase):
 		"""
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1']])
-		self.aR(RuntimeError, lambda: self.protocol.sendBoxes(q, start=None))
+		self.aR(RuntimeError, lambda: self.transport.sendBoxes(q, start=None))
 
 
 	def test_sendBoxesStartNone(self):
@@ -812,10 +814,10 @@ class SocketTransportTests(unittest.TestCase):
 		boxes in queue being written
 		"""
 		frame0 = self._getValidHelloFrame()
-		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		self.transport.dataReceived(self.serializeFrames([frame0]))
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1']])
-		self.protocol.sendBoxes(q, start=None)
+		self.transport.sendBoxes(q, start=None)
 		self._parseFrames()
 		self.aE([
 			[Fn.seqnum, 0],
@@ -830,10 +832,10 @@ class SocketTransportTests(unittest.TestCase):
 		(box 1 and later) in queue being written
 		"""
 		frame0 = self._getValidHelloFrame()
-		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		self.transport.dataReceived(self.serializeFrames([frame0]))
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1'], ['box2']])
-		self.protocol.sendBoxes(q, start=1)
+		self.transport.sendBoxes(q, start=1)
 		self._parseFrames()
 		self.aE([
 			[Fn.seqnum, 1],
@@ -853,12 +855,12 @@ class SocketTransportTests(unittest.TestCase):
 			`if len(toSend) > 1024 * 1024:' branch.
 		"""
 		frame0 = self._getValidHelloFrame()
-		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		self.transport.dataReceived(self.serializeFrames([frame0]))
 		q = abstract.Queue()
 		box0 = ['box0'*(1*1024*1024)]
 		box1 = ['box1'*(1*1024*1024)]
 		q.extend([box0, box1])
-		self.protocol.sendBoxes(q, start=None)
+		self.transport.sendBoxes(q, start=None)
 		self._parseFrames()
 		self.aE([
 			[Fn.seqnum, 0],
@@ -873,11 +875,11 @@ class SocketTransportTests(unittest.TestCase):
 		in a write to the transport.
 		"""
 		frame0 = self._getValidHelloFrame()
-		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		self.transport.dataReceived(self.serializeFrames([frame0]))
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1']])
-		self.protocol.pauseProducing() # in a non-test environment, Twisted's TCP stuff calls pauseProducing
-		self.protocol.sendBoxes(q, start=None)
+		self.transport.pauseProducing() # in a non-test environment, Twisted's TCP stuff calls pauseProducing
+		self.transport.sendBoxes(q, start=None)
 		self._parseFrames()
 		self.aE([], self.gotFrames)
 
@@ -888,7 +890,7 @@ class SocketTransportTests(unittest.TestCase):
 		be prepared for it, even if we haven't found the _stream yet.
 		"""
 		# no error
-		self.protocol.pauseProducing()
+		self.transport.pauseProducing()
 
 	# argh, this was part of above test
 #		frame0 = self._getValidHelloFrame()
@@ -900,11 +902,11 @@ class SocketTransportTests(unittest.TestCase):
 #		# XXXXXXXXXXX ^^^ fix above
 #
 #		frame1 = [Fn.gimme_boxes, -1]
-#		self.protocol.dataReceived(self.serializeFrames([frame0, frame1]))
+#		self.transport.dataReceived(self.serializeFrames([frame0, frame1]))
 #		stream = self.streamTracker.getStream(StreamId('\x00'*16))
 #		#print self.streamTracker._streams
 #		self.aE([
-#			['transportOnline', self.protocol],
+#			['transportOnline', self.transport],
 #		], stream.log)
 #
 #		minervaProto = list(self.protocolFactory.instances)[0]
@@ -919,42 +921,42 @@ class SocketTransportTests(unittest.TestCase):
 		Twisted will call resumeProducing whenever it feels like it, and we have to
 		be prepared for it, even if we haven't found the _stream yet.
 		"""
-		self.protocol.resumeProducing()
+		self.transport.resumeProducing()
 
 
 	def test_invalidFrameType(self):
-		self.protocol.dataReceived(self.serializeFrames([[9999]]))
+		self.transport.dataReceived(self.serializeFrames([[9999]]))
 		self._parseFrames()
 		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
 	def test_firstFrameWasNotHelloFrame(self):
 		frame0 = [Fn.reset]
-		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		self.transport.dataReceived(self.serializeFrames([frame0]))
 		self._parseFrames()
 		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
 	def test_frameCorruption(self):
-		self.protocol.dataReceived('1:xxxxxxxx')
+		self.transport.dataReceived('1:xxxxxxxx')
 		self._parseFrames()
 		self.aE([[Fn.tk_frame_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
 	def test_frameTooLong(self):
-		self.protocol.dataReceived('%d:' % (1024*1024 + 1))
+		self.transport.dataReceived('%d:' % (1024*1024 + 1))
 		self._parseFrames()
 		self.aE([[Fn.tk_frame_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
 	def test_intraFrameCorruption(self):
-		self.protocol.dataReceived('1:{') # incomplete JSON
+		self.transport.dataReceived('1:{') # incomplete JSON
 		self._parseFrames()
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
 	def test_intraFrameCorruptionTrailingGarbage(self):
-		self.protocol.dataReceived('3:{}x') # complete JSON but with trailing garbage
+		self.transport.dataReceived('3:{}x') # complete JSON but with trailing garbage
 		# Note that simplejson allows trailing whitespace, which we should add a test for; TODO XXX
 		
 		self._parseFrames()
@@ -963,7 +965,7 @@ class SocketTransportTests(unittest.TestCase):
 
 	def test_validHello(self):
 		frame0 = self._getValidHelloFrame()
-		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		self.transport.dataReceived(self.serializeFrames([frame0]))
 		self._parseFrames()
 		self.aE([], self.gotFrames)
 
@@ -971,7 +973,7 @@ class SocketTransportTests(unittest.TestCase):
 	def test_validHelloWithCredentials(self):
 		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30, c={'not_looked_at': True})
 		frame0 = [Fn.hello, helloData]
-		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		self.transport.dataReceived(self.serializeFrames([frame0]))
 		self._parseFrames()
 		self.aE([], self.gotFrames)
 
@@ -983,7 +985,7 @@ class SocketTransportTests(unittest.TestCase):
 		for n in [1, 1000, 10000, 12378912, 1283718237]:
 			helloData = dict(n=n, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
 			frame0 = [Fn.hello, helloData]
-			self.protocol.dataReceived(self.serializeFrames([frame0]))
+			self.transport.dataReceived(self.serializeFrames([frame0]))
 			self._parseFrames()
 			self.aE([], self.gotFrames)
 			self._reset()
@@ -995,7 +997,7 @@ class SocketTransportTests(unittest.TestCase):
 		"""
 		helloData = dict(n=0, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
 		frame0 = [Fn.hello, helloData]
-		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		self.transport.dataReceived(self.serializeFrames([frame0]))
 		self._parseFrames()
 		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
@@ -1006,7 +1008,7 @@ class SocketTransportTests(unittest.TestCase):
 		"""
 		helloData = dict(n=0, w=False, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
 		frame0 = [Fn.hello, helloData]
-		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		self.transport.dataReceived(self.serializeFrames([frame0]))
 		self._parseFrames()
 		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
@@ -1018,7 +1020,7 @@ class SocketTransportTests(unittest.TestCase):
 		"""
 		def act():
 			frame0 = self._getValidHelloFrame()
-			self.protocol.dataReceived(self.serializeFrames([frame0]))
+			self.transport.dataReceived(self.serializeFrames([frame0]))
 			self._parseFrames()
 			self.aE([], self.gotFrames)
 		act()
@@ -1069,7 +1071,7 @@ class SocketTransportTests(unittest.TestCase):
 
 				##print badHello
 
-				self.protocol.dataReceived(self.serializeFrames([badHello]))
+				self.transport.dataReceived(self.serializeFrames([badHello]))
 				self._parseFrames()
 				self.aE(
 					[[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it], [Fn.my_last_frame]],
@@ -1081,6 +1083,80 @@ class SocketTransportTests(unittest.TestCase):
 
 		# sanity check; make sure we actually tested things
 		assert ran == 78, "Ran %d times; change this assert as needed" % (ran,)
+
+
+
+class DummyProducer(object):
+	resumed = False
+	stopped = False
+	paused = False
+
+	def __init__(self):
+		self.log = []
+
+
+	def resumeProducing(self):
+		self.log.append(['resumeProducing'])
+		self.resumed = True
+		self.paused = False
+
+
+	def pauseProducing(self):
+		self.log.append(['pauseProducing'])
+		self.paused = True
+
+
+	def stopProducing(self):
+		self.log.append(['stopProducing'])
+		self.stopped = True
+
+
+
+class StringTransportMoreLikeReality(StringTransport):
+
+	def unregisterProducer(self):
+		"""
+		StringTransport does some weird stuff.
+
+		Real twisted code doesn't raise RuntimeError if no producer is registered.
+		Real twisted code doesn't set <streamingTransportVar> = None
+		"""
+		self.producer = None
+
+
+
+class ProducerIntegrationTests(unittest.TestCase):
+
+	def setUp(self):
+		reactor = FakeReactor()
+		clock = task.Clock()
+		
+		self.proto = MockMinervaProtocol()
+		self.tracker = StreamTracker(reactor, clock, self.proto)
+		self.transport = SocketTransport(reactor, clock, self.tracker, DummyFirewall())
+
+		self.t = StringTransportMoreLikeReality()
+		self.transport.makeConnection(self.t)
+
+
+	def test_transport(self):
+		# No _producer yet? pauseProducing and resumeProducing are still legal
+		self.transport.pauseProducing()
+		self.transport.resumeProducing()
+
+		producer1 = DummyProducer()
+		self.transport.registerProducer(producer1, streaming=True)
+		self.aI(self.t.producer, self.transport)
+		self.aI(self.t.streaming, True)
+
+		self.transport.unregisterProducer()
+		# it is idempotent
+		self.transport.unregisterProducer()
+
+		producer2 = DummyProducer()
+		self.transport.registerProducer(producer2, streaming=False)
+		self.aI(self.t.producer, self.transport)
+		self.aI(self.t.streaming, False)
 
 
 

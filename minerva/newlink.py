@@ -866,7 +866,7 @@ class SocketTransport(protocol.Protocol):
 		"""
 		Stop consuming data from a producer, without disconnecting.
 		"""
-		self.producer = None
+		self._producer = None
 		self.transport.unregisterProducer()
 
 
@@ -1087,16 +1087,17 @@ class SocketTransport(protocol.Protocol):
 		self.transport.write(toSend)
 
 
+	# We trust Twisted to only call this if we registered a streaming producer with self.transport
 	def pauseProducing(self):
 		self._paused = True
-		if self._stream:
-			self._stream.pauseProducing()
+		if self._producer:
+			self._producer.pauseProducing()
 
 
 	def resumeProducing(self):
 		self._paused = False
-		if self._stream:
-			self._stream.resumeProducing()
+		if self._producer:
+			self._producer.resumeProducing()
 
 
 	def stopProducing(self):
