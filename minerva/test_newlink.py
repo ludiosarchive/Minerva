@@ -165,6 +165,18 @@ class MockStream(object):
 		self.log.append(['serverShuttingDown', transport])
 
 
+	def pauseProducing(self):
+		self.log.append(['pauseProducing'])
+
+
+	def resumeProducing(self):
+		self.log.append(['resumeProducing'])
+
+
+	def stopProducing(self):
+		self.log.append(['stopProducing'])
+
+
 	def getSACK(self):
 		self.log.append(['getSACK'])
 		return self._incoming.getSACK()
@@ -339,6 +351,12 @@ def todo(reasonOrMethod):
 
 
 class StreamTests(unittest.TestCase):
+
+	def test_implements(self):
+		s = Stream(None, _DummyId('some fake id'), None)
+		verify.verifyObject(IPushProducer, s)
+		verify.verifyObject(IConsumer, s)
+
 
 	def test_repr(self):
 		s = Stream(None, _DummyId('some fake id'), None)

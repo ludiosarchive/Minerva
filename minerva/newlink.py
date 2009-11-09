@@ -210,7 +210,7 @@ class Stream(object):
 
 	# TODO: disconnect timer - no transport in N minutes
 
-	implements(IConsumer)
+	implements(IConsumer, IPushProducer)
 
 	def __init__(self, clock, streamId, streamProtocolFactory):
 		self._clock = clock
@@ -254,6 +254,15 @@ class Stream(object):
 		@type boxes: a sequence
 		"""
 		self.queue.extend(boxes)
+		self._tryToSend()
+
+
+	def write(self, box):
+		"""
+		This method is implemented only so that we look like an IConsumer.
+		Do not use it.
+		"""
+		self.queue.append(box)
 		self._tryToSend()
 
 
@@ -362,6 +371,13 @@ class Stream(object):
 
 
 	# This is a copy/paste from twisted.internet.interfaces.IConsumer with changes
+
+	# called by MinervaProtocol instances
+	
+	# The only reason we have this is because not all MinervaProtocols will be L{IProducer}s
+	# (some will be very simple). Why not just implement pause/resume/stopProducing
+	# in BasicMinervaProtocol with ': pass' methods? Because the protocol wouldn't change
+	# its behavior; this is bad, it is unholy to send data when you are paused.
 	def registerProducer(self, producer, streaming):
 		"""
 		Register to receive data from a producer that creates S2C boxes.
@@ -388,13 +404,35 @@ class Stream(object):
 			self._streamingProducer = streaming
 			if not streaming:
 				producer.resumeProducing()
+			elif self._paused: # We may have been paused before a producer was registered
+				producer.pauseProducing()
 
 
+	# called by StreamProtocol instances
 	def unregisterProducer(self):
 		"""
 		Stop consuming data from a producer, without disconnecting.
 		"""
 		self.producer = None
+
+
+	# called by the active S2C transport in response to TCP pressure
+	def pauseProducing(self):
+		self._paused = True
+		if self._producer and self._streamingProducer:
+			self._protocol.pauseProducing()
+
+
+	# called by the active S2C transport in response to TCP pressure
+	def resumeProducing(self):
+		self._paused = False
+		if self._producer:
+			self._protocol.resumeProducing()
+
+
+	# ???
+	def stopProducing(self):
+		1/0
 
 
 	def _die(self):
@@ -924,10 +962,12 @@ class SocketTransport(protocol.Protocol):
 
 	def pauseProducing(self):
 		self._paused = True
+		self._stream.pauseProducing()
 
 
 	def resumeProducing(self):
 		self._paused = False
+		self._stream.resumeProducing()
 
 
 	def stopProducing(self):
@@ -942,7 +982,7 @@ class SocketTransport(protocol.Protocol):
 
 
 	def connectionMade(self):
-		# TODO: set tcp no_delay; make tests check
+		# TODO: set tcp no_delay; make tests check for this
 		if self.noisy:
 			log.msg('Connection made for %r' % (self,))
 		self.transport.registerProducer(self, True)
