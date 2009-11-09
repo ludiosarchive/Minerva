@@ -1,5 +1,7 @@
 from twisted.trial import unittest
 
+from minerva.test_newlink import todo
+
 import abstract
 
 
@@ -136,20 +138,6 @@ class TestQueue(unittest.TestCase):
 		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems(start=1)))
 
 
-	def test_iterItemsNoStartNumber(self):
-		"""
-		A L{start} for iterItems is not required.
-		"""
-		q = abstract.Queue()
-		q.append('zero')
-		q.extend(['one', 'two'])
-		self.assertEqual([(0, 'zero'), (1, 'one'), (2, 'two')], list(q.iterItems()))
-		q.handleSACK((-1, []))
-		self.assertEqual([(0, 'zero'), (1, 'one'), (2, 'two')], list(q.iterItems()))
-		q.handleSACK((0, []))
-		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems()))
-
-
 	def test_appendExtendQueueStart3(self):
 		q = abstract.Queue()
 		q.append('zero')
@@ -203,6 +191,41 @@ class TestQueue(unittest.TestCase):
 
 		# There should be 5 items left in the queue
 		self.assertEqual([(4,4), (5,5), (6,6), (7,7), (8,8)], list(q.iterItems(start=4)))
+
+
+	def test_iterItemsNoStartNumber(self):
+		"""
+		A L{start} for iterItems is not required.
+		"""
+		q = abstract.Queue()
+		q.append('zero')
+		q.extend(['one', 'two'])
+		self.assertEqual([(0, 'zero'), (1, 'one'), (2, 'two')], list(q.iterItems()))
+		q.handleSACK((-1, []))
+		self.assertEqual([(0, 'zero'), (1, 'one'), (2, 'two')], list(q.iterItems()))
+		q.handleSACK((0, []))
+		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems()))
+
+
+	@todo
+	def test_handleSACKReallyDoesSACK(self):
+		"""
+		handleSACK actually removes the selectively-acknowledged items from the queue 
+		"""
+		q = abstract.Queue()
+		q.append('zero')
+		q.extend(['one', 'two', 'three'])
+		self.assertEqual([(0, 'zero'), (1, 'one'), (2, 'two'), (3, 'three')], list(q.iterItems()))
+		q.handleSACK((-1, [1]))
+		self.assertEqual([(0, 'zero'), (2, 'two'), (3, 'three')], list(q.iterItems()))
+		q.handleSACK((0, [3]))
+		self.assertEqual([(2, 'two')], list(q.iterItems()))
+		q.append('four')
+		self.assertEqual([(2, 'two'), (4, 'four')], list(q.iterItems()))
+		q.handleSACK((0, [2, 4])) # although this is a very strange SACK (because it should have been (4, [])), it is still legal
+		self.assertEqual([], list(q.iterItems()))
+		q.append('five')
+		self.assertEqual([(5, 'five')], list(q.iterItems()))
 
 
 
