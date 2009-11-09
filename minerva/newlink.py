@@ -306,6 +306,10 @@ class Stream(object):
 		@param boxes: a sequence of boxes
 		@type boxes: a sequence
 		"""
+		# We don't need to self._producer.pauseProducing() if queue is too big here,
+		# because:
+		#     1) active S2C transport are responsible for pausing if there is TCP pressure
+		#     2) if there is no active S2C transport, we already paused it 
 		self.queue.extend(boxes)
 		self._tryToSend()
 
@@ -355,9 +359,10 @@ class Stream(object):
 		"""
 		Called by faces to tell me that new transport C{transport} has disconnected.
 		"""
-		shouldPause = True
+		shouldPause = False
 		self._transports.remove(transport)
 		if self._activeS2CTransport == transport:
+			shouldPause = True
 			lastBoxSent = self._activeS2CTransport.lastBoxSent
 			self._activeS2CTransport = None
 			self._activeS2CProducerType = None
@@ -471,13 +476,13 @@ class Stream(object):
 				"because producer %s was never unregistered." % (producer, self._producer))
 		if self.disconnected:
 			producer.stopProducing()
-		else:
-			self._producer = producer
-			self._streamingProducer = streaming
-			if not streaming:
-				producer.resumeProducing()
-			elif self._paused: # We may have been paused before a producer was registered
-				producer.pauseProducing()
+			return
+
+		self._producer = producer
+		self._streamingProducer = streaming
+
+		if streaming and self._paused: # We may have been paused before a producer was registered
+			producer.pauseProducing()
 
 		if self._activeS2CTransport:
 			self._registerDownstreamProducer(self._activeS2CTransport)
@@ -845,15 +850,15 @@ class SocketTransport(protocol.Protocol):
 		if self._producer is not None:
 			raise RuntimeError("Cannot register producer %s, "
 				"because producer %s was never unregistered." % (producer, self._producer))
-		if self.disconnected:
-			producer.stopProducing()
-		else:
-			self._producer = producer
-			self._streamingProducer = streaming
-			if not streaming:
-				producer.resumeProducing()
-			elif self._paused: # We may have been paused before a producer was registered
-				producer.pauseProducing()
+
+		# no 'disconnected' check?
+
+		self._producer = producer
+		self._streamingProducer = streaming
+		if streaming and self._paused: # We may have been paused before a producer was registered
+			producer.pauseProducing()
+
+		self.transport.registerProducer(self, streaming)
 
 
 	# called by Stream instances
@@ -862,6 +867,7 @@ class SocketTransport(protocol.Protocol):
 		Stop consuming data from a producer, without disconnecting.
 		"""
 		self.producer = None
+		self.transport.unregisterProducer()
 
 
 	def sendBoxes(self, queue, start):
@@ -1108,7 +1114,6 @@ class SocketTransport(protocol.Protocol):
 		# TODO: set tcp no_delay; make tests check for this
 		if self.noisy:
 			log.msg('Connection made for %r' % (self,))
-		self.transport.registerProducer(self, True)
 
 
 
