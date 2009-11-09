@@ -7,6 +7,7 @@ from twisted.trial import unittest
 
 from twisted.web import server, resource
 from twisted.internet import protocol, defer, address, interfaces, task
+from twisted.internet.interfaces import IConsumer, IPushProducer, IProtocol, IProtocolFactory
 from twisted.web.test.test_web import DummyRequest as _TwistedDummyRequest
 #from twisted.internet.test.test_base import FakeReactor as _TwistedFakeReactor
 from twisted.test.proto_helpers import StringTransport
@@ -18,7 +19,7 @@ from minerva import abstract
 from minerva.newlink import (
 	Frame, Stream, StreamTracker, NoSuchStream, StreamAlreadyExists,
 	BadFrame, IMinervaProtocol, IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
-	SocketTransport
+	IMinervaTransport, SocketTransport
 )
 
 from minerva.website import (
@@ -405,12 +406,11 @@ class StreamTests(unittest.TestCase):
 		self.aE((0, [4, 5]), s.getSACK())
 
 
-	@todo
 	def test_noLongerVirgin(self):
 		"""
 		Stream is no longer a virgin after a transport is attached to it
 		"""
-		s = Stream(None, _DummyId('some fake id'), None)
+		s = Stream(None, _DummyId('some fake id'), MockStreamProtocolFactory())
 
 		self.aI(True, s. virgin)
 
@@ -729,6 +729,12 @@ class SocketTransportTests(unittest.TestCase):
 		self.t = StringTransport()
 		self.protocol = SocketTransport(reactor, None, self.streamTracker, DummyFirewall())
 		self.protocol.makeConnection(self.t)
+
+
+	def test_implements(self):
+		verify.verifyObject(IProtocol, self.protocol)
+		verify.verifyObject(IPushProducer, self.protocol)
+		verify.verifyObject(IMinervaTransport, self.protocol)
 
 
 	def test_invalidFrameType(self):

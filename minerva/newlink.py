@@ -56,7 +56,7 @@ from collections import deque
 from zope.interface import Interface, Attribute, implements
 from twisted.python import log
 from twisted.internet import protocol, defer
-from twisted.internet.interfaces import IConsumer, IProtocol, IProtocolFactory
+from twisted.internet.interfaces import IConsumer, IPushProducer, IProtocol, IProtocolFactory
 from twisted.web import resource
 
 
@@ -232,7 +232,9 @@ class Stream(object):
 
 	def _tryToSend(self):
 		if self._activeS2CTransport is not None:
-			1/0
+			# TODO: start=<some number> if we just switched to a new transport
+			# without waiting for the client.
+			self._activeS2CTransport.sendBoxes(queue, start=None)
 
 
 	def sendBoxes(self, boxes):
@@ -243,6 +245,7 @@ class Stream(object):
 		@type boxes: a sequence
 		"""
 		self.queue.extend(boxes)
+		self._tryToSend()
 
 
 	def reset(self, reasonString=u''):
@@ -284,7 +287,8 @@ class Stream(object):
 		Called by faces to tell me that new transport C{transport} has disconnected.
 		"""
 		self._transports.remove(transport)
-		1/0
+		if self._activeS2CTransport == transport:
+			self._activeS2CTransport = None
 
 
 	def startGettingBoxes(self, transport, waitOnTransport):
@@ -493,7 +497,7 @@ class StreamTracker(object):
 
 
 
-class IMinervaProtocol(Interface):
+class IMinervaProtocol(IPushProducer):
 	"""
 	An interface for frame-based communication that abstracts
 	away the Comet logic and transports.
@@ -570,6 +574,18 @@ class BasicMinervaProtocol(object):
 		pass
 
 
+	def pauseProducing(self):
+		pass
+
+
+	def resumeProducing(self):
+		pass
+
+
+	def stopProducing(self):
+		pass
+
+
 
 class IMinervaFactory(Interface):
 	"""
@@ -621,6 +637,19 @@ class BasicMinervaFactory(object):
 
 
 
+class IMinervaTransport(IPushProducer):
+
+	def sendBoxes(queue, start):
+		"""
+		Send boxes in queue C{queue} to the peer.
+
+		@param queue: an L{abstract.Queue}
+		@param start: where to start in the queue, or C{None}
+		@type start: L{int} or L{NoneType}
+		"""
+
+
+
 def dumpToJson7Bit(data):
 	return simplejson.dumps(data, separators=(',', ':'))
 
@@ -631,10 +660,11 @@ _2_64 = 2**64
 
 class SocketTransport(protocol.Protocol):
 
-	implements(IProtocol) # , MinervaTransport
+	implements(IProtocol, IPushProducer, IMinervaTransport)
 
 	request = None # no associated HTTP request
 
+	MAX_LENGTH = 1024*1024
 	noisy = True
 
 	def __init__(self, reactor, clock, streamTracker, firewall):
@@ -647,8 +677,12 @@ class SocketTransport(protocol.Protocol):
 		self._authed = False
 		self._stream = None
 		self._parser = decoders.BencodeStringDecoder()
-		self._parser.MAX_LENGTH = 1024*1024
-		self._parser.manyDataCallback = self.framesReceived
+		self._parser.MAX_LENGTH = self.MAX_LENGTH
+		self._parser.manyDataCallback = self._framesReceived
+
+
+	def sendBoxes(self, queue, start):
+		1/0
 
 
 	def _gotHelloFrame(self, frame):
@@ -738,7 +772,7 @@ class SocketTransport(protocol.Protocol):
 		d.addErrback(log.err)
 
 
-	def framesReceived(self, frames):
+	def _framesReceived(self, frames):
 		for frameString in frames:
 			assert isinstance(frameString, str)
 			try:
@@ -832,6 +866,18 @@ class SocketTransport(protocol.Protocol):
 		##self.transport.loseConnection()
 
 
+	def pauseProducing(self):
+		1/0
+
+
+	def resumeProducing(self):
+		1/0
+
+
+	def stopProducing(self):
+		1/0
+
+
 	def connectionLost(self, reason):
 		if self.noisy:
 			log.msg('Connection lost for %r reason %r' % (self, reason))
@@ -842,6 +888,7 @@ class SocketTransport(protocol.Protocol):
 	def connectionMade(self):
 		if self.noisy:
 			log.msg('Connection made for %r' % (self,))
+		self.transport.registerProducer(self, True)
 
 
 
