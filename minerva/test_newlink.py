@@ -747,6 +747,14 @@ class SocketTransportTests(unittest.TestCase):
 		return frame
 
 
+	def _parseFrames(self):
+		"""
+		Feed the bytes received into the parser, which will append complete
+		frames to self.gotFrames
+		"""
+		self.parser.dataReceived(self.t.value())
+
+
 	def test_implements(self):
 		verify.verifyObject(IProtocol, self.protocol)
 		verify.verifyObject(IPushProducer, self.protocol)
@@ -772,7 +780,7 @@ class SocketTransportTests(unittest.TestCase):
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1']])
 		self.protocol.sendBoxes(q, start=None)
-		self.parser.dataReceived(self.t.value())
+		self._parseFrames()
 		self.aE([
 			[Fn.seqnum, 0],
 			[Fn.box, ['box0']],
@@ -790,7 +798,7 @@ class SocketTransportTests(unittest.TestCase):
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1']])
 		self.protocol.sendBoxes(q, start=1)
-		self.parser.dataReceived(self.t.value())
+		self._parseFrames()
 		self.aE([
 			[Fn.seqnum, 1],
 			[Fn.box, ['box1']],
@@ -799,32 +807,32 @@ class SocketTransportTests(unittest.TestCase):
 
 	def test_invalidFrameType(self):
 		self.protocol.dataReceived(self.serializeFrames([[9999]]))
-		self.parser.dataReceived(self.t.value())
+		self._parseFrames()
 		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
 	def test_firstFrameWasNotHelloFrame(self):
 		frame0 = [Fn.reset]
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
-		self.parser.dataReceived(self.t.value())
+		self._parseFrames()
 		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
 	def test_frameCorruption(self):
 		self.protocol.dataReceived('1:xxxxxxxx')
-		self.parser.dataReceived(self.t.value())
+		self._parseFrames()
 		self.aE([[Fn.tk_frame_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
 	def test_frameTooLong(self):
 		self.protocol.dataReceived('%d:' % (1024*1024 + 1))
-		self.parser.dataReceived(self.t.value())
+		self._parseFrames()
 		self.aE([[Fn.tk_frame_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
 	def test_intraFrameCorruption(self):
 		self.protocol.dataReceived('1:{') # incomplete JSON
-		self.parser.dataReceived(self.t.value())
+		self._parseFrames()
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
@@ -832,14 +840,14 @@ class SocketTransportTests(unittest.TestCase):
 		self.protocol.dataReceived('3:{}x') # complete JSON but with trailing garbage
 		# Note that simplejson allows trailing whitespace, which we should add a test for; TODO XXX
 		
-		self.parser.dataReceived(self.t.value())
+		self._parseFrames()
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
 	def test_validHello(self):
 		frame0 = self._getValidHelloFrame()
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
-		self.parser.dataReceived(self.t.value())
+		self._parseFrames()
 		self.aE([], self.gotFrames)
 
 
@@ -847,7 +855,7 @@ class SocketTransportTests(unittest.TestCase):
 		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30, c={'not_looked_at': True})
 		frame0 = [Fn.hello, helloData]
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
-		self.parser.dataReceived(self.t.value())
+		self._parseFrames()
 		self.aE([], self.gotFrames)
 
 
@@ -859,7 +867,7 @@ class SocketTransportTests(unittest.TestCase):
 			helloData = dict(n=n, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
 			frame0 = [Fn.hello, helloData]
 			self.protocol.dataReceived(self.serializeFrames([frame0]))
-			self.parser.dataReceived(self.t.value())
+			self._parseFrames()
 			self.aE([], self.gotFrames)
 			self._reset()
 
@@ -871,7 +879,7 @@ class SocketTransportTests(unittest.TestCase):
 		helloData = dict(n=0, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
 		frame0 = [Fn.hello, helloData]
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
-		self.parser.dataReceived(self.t.value())
+		self._parseFrames()
 		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
@@ -882,7 +890,7 @@ class SocketTransportTests(unittest.TestCase):
 		helloData = dict(n=0, w=False, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
 		frame0 = [Fn.hello, helloData]
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
-		self.parser.dataReceived(self.t.value())
+		self._parseFrames()
 		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
@@ -894,7 +902,7 @@ class SocketTransportTests(unittest.TestCase):
 		def act():
 			frame0 = self._getValidHelloFrame()
 			self.protocol.dataReceived(self.serializeFrames([frame0]))
-			self.parser.dataReceived(self.t.value())
+			self._parseFrames()
 			self.aE([], self.gotFrames)
 		act()
 
@@ -945,7 +953,7 @@ class SocketTransportTests(unittest.TestCase):
 				##print badHello
 
 				self.protocol.dataReceived(self.serializeFrames([badHello]))
-				self.parser.dataReceived(self.t.value())
+				self._parseFrames()
 				self.aE(
 					[[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it], [Fn.my_last_frame]],
 					self.gotFrames)
