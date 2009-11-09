@@ -1178,6 +1178,11 @@ class ProducerIntegrationTests(unittest.TestCase):
 
 
 	def test_transportPausedRegisterStreamingProducer(self):
+		"""
+		Twisted can pause the Minerva transport at any time, and we need
+		to convey this 'paused' information to a producer, even if it
+		registered at a later time.
+		"""
 		self.transport.pauseProducing()
 
 		producer1 = DummyProducer()
@@ -1186,6 +1191,10 @@ class ProducerIntegrationTests(unittest.TestCase):
 
 
 	def test_transportPausedRegisterPullProducer(self):
+		"""
+		See docstring for L{test_transportPausedRegisterStreamingProducer}.
+		Pull producers don't need to be paused, so the producer is left untouched.
+		"""
 		self.transport.pauseProducing()
 
 		producer1 = DummyProducer()
