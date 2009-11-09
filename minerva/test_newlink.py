@@ -234,8 +234,16 @@ class DummyHttpTransport(object):
 
 class DummySocketLikeTransport(object):
 	request = None
+	globalCounter = [-1]
+	
 	def __init__(self):
 		self.credentialsData = {}
+		self.pretendGotHello()
+
+
+	def pretendGotHello(self):
+		self.globalCounter[0] += 1
+		self.transportNumber = self.globalCounter[0]
 
 
 

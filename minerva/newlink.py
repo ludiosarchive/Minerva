@@ -79,33 +79,34 @@ class Frame(object):
 	"""
 
 	# Most-frequently-used types should be non-negative and single-digit.
+	# num -> (name, minArgs, maxArgs)
 	knownTypes = {
-		0: 'boxes',
-		1: 'box', # not used yet
-		2: 'seqnum', # not used yet
-		3: 'my_last_frame',
-		4: 'sack',
-		5: 'hello',
-		6: 'gimme_boxes',
-		7: 'gimme_sack_and_close',
-		8: 'timestamp',
-		10: 'reset',
-		11: 'you_close_it',
-		12: 'start_timestamps',
-		13: 'stop_timestamps',
+		0: ('boxes', 1, 1),
+		1: ('box', 1, 1), # not used yet
+		2: ('seqnum', 1, 1), # not used yet
+		3: ('my_last_frame', 0, 0),
+		4: ('sack', 2, 2),
+		5: ('hello', 1, 1),
+		6: ('gimme_boxes', 1, 1),
+		7: ('gimme_sack_and_close', 0, 0),
+		8: ('timestamp', 1, 1),
+		10: ('reset', 1, 1),
+		11: ('you_close_it', 0, 0),
+		12: ('start_timestamps', 3, 3),
+		13: ('stop_timestamps', 1, 1),
 
-		601: 'tk_stream_attach_failure', # Either because no such Stream, or bad credentialsData
-		602: 'tk_acked_unsent_boxes',
-		603: 'tk_invalid_frame_type_or_arguments',
-		610: 'tk_frame_corruption',
-		611: 'tk_intraframe_corruption',
-		650: 'tk_brb', # Server is overloaded or shutting down, tells client to come back soon
+		601: ('tk_stream_attach_failure', 0, 0), # Either because no such Stream, or bad credentialsData
+		602: ('tk_acked_unsent_boxes', 0, 0),
+		603: ('tk_invalid_frame_type_or_arguments', 0, 0),
+		610: ('tk_frame_corruption', 0, 0),
+		611: ('tk_intraframe_corruption', 0, 0),
+		650: ('tk_brb', 0, 0), # Server is overloaded or shutting down, tells client to come back soon
 	}
 
 	class names:
 		pass
 	names = names()
-	for num, name in knownTypes.iteritems():
+	for num, (name, minArgs, maxArgs) in knownTypes.iteritems():
 		setattr(names, name, num)
 
 	__slots__ = ['contents', 'type']
@@ -128,11 +129,13 @@ class Frame(object):
 
 	def __repr__(self):
 		return '<%s type %r, contents %r>' % (
-			self.__class__.__name__, self.knownTypes[self.type], self.contents)
+			self.__class__.__name__, self.knownTypes[self.type][0], self.contents)
 
 
 	def getType(self):
-		return self.knownTypes[self.type]
+		return self.knownTypes[self.type][0]
+
+
 
 Fn = Frame.names
 
@@ -223,6 +226,8 @@ class Stream(object):
 		self.disconnected = False
 		self.queue = abstract.Queue()
 		self._incoming = abstract.Incoming()
+		self._pretendAcked = None
+		self._waitMap = {}
 
 
 	def __repr__(self):
@@ -269,6 +274,13 @@ class Stream(object):
 			self.reset('resources exhausted')
 
 
+	def sackReceived(self, sackInfo):
+		# No need to pretend any more, because we just got a likely-up-to-date sack from the client
+		self._pretendAcked = None
+		
+		return self._queue.handleSACK(sackInfo)
+
+
 	def transportOnline(self, transport):
 		"""
 		Called by faces to tell me that new transport C{transport} has connected.
@@ -288,7 +300,18 @@ class Stream(object):
 		"""
 		self._transports.remove(transport)
 		if self._activeS2CTransport == transport:
+			lastBoxSent = self._activeS2CTransport.lastBoxSent
 			self._activeS2CTransport = None
+
+		# ...even if C{transport} wasn't active?
+		try:
+			self._activeS2CTransport = self._waitMap[transport.transportNumber]
+		except KeyError:
+			pass
+		else:
+			# switch to the waiting transport
+			self._pretendAcked = lastBoxSent
+			self._tryToSend()
 
 
 	def startGettingBoxes(self, transport, waitOnTransport):
@@ -297,7 +320,11 @@ class Stream(object):
 		C{waitOnTransport} closes. If there is no need to wait on a transport,
 		C{waitOnTransport} is C{None}.
 		"""
-		1/0
+		if waitOnTransport is None:
+			self._activeS2CTransport = transport
+			self._tryToSend()
+		else:
+			self._waitMap[waitOnTransport] = transport
 
 
 	def getSACK(self):
@@ -691,10 +718,7 @@ class SocketTransport(protocol.Protocol):
 			return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 		self._gotHello = True
 
-		try:
-			helloData = frame.contents[1]
-		except IndexError:
-			return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+		helloData = frame.contents[1]
 
 		# credentialsData is always optional
 		try:
@@ -738,7 +762,7 @@ class SocketTransport(protocol.Protocol):
 		self._protocolVersion = protocolVersion
 		self.streamId = streamId
 		self.credentialsData = credentialsData
-		self._transportNumber = transportNumber
+		self.transportNumber = transportNumber
 		self._maxReceiveBytes = maxReceiveBytes
 		self._maxOpenTime = maxOpenTime
 
@@ -785,7 +809,9 @@ class SocketTransport(protocol.Protocol):
 			except BadFrame:
 				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
-			frameType = frame.getType()
+			frameType, minArgs, maxArgs = Frame.knownTypes[frameObj[0]]
+			if not minArgs <= len(frameObj) - 1 <= maxArgs:
+				 return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
 			# We demand a 'hello' frame before any other type of frame
 			if self._gotHello is False and frameType != 'hello':
@@ -794,11 +820,11 @@ class SocketTransport(protocol.Protocol):
 			if frameType == 'hello':
 				return self._gotHelloFrame(frame)
 			elif frameType == 'gimme_boxes':
-				_secondArg = frame.contents[1]
+				_secondArg = frameObj[1]
 				if _secondArg == -1:
 					waitOnTransport = None
 				else:
-					waitOnTransport = abstract.ensureNonNegIntLimit(frame.contents[1], _2_64)
+					waitOnTransport = abstract.ensureNonNegIntLimit(frameObj[1], _2_64)
 				# Option 1:
 				# grab the reference to the other transport, notifyFinish(), add callback to tell Stream to start giving me boxes
 				# sometimes, other transport will already be gone, so we'll call Stream right now
@@ -821,7 +847,7 @@ class SocketTransport(protocol.Protocol):
 				toSend += self._encodeFrame([Fn.my_last_frame])
 				self.transport.write(toSend)
 			elif frameType == 'boxes':
-				seqNumStrToBoxDict = frame.contents[1]
+				seqNumStrToBoxDict = frameObj[1]
 				memorySizeOfBoxes = len(frameString)
 				boxes = []
 				for seqNumStr, box in seqNumStrToBoxDict.iteritems():
@@ -837,7 +863,7 @@ class SocketTransport(protocol.Protocol):
 			elif frameType == 'reset':
 				1/0
 			elif frameType == 'sack':
-				1/0
+				self._stream.sackReceived(frameObj[1])
 
 
 	def dataReceived(self, data):
