@@ -8,7 +8,7 @@ from twisted.trial import unittest
 
 from twisted.web import server, resource
 from twisted.internet import protocol, defer, address, interfaces, task
-from twisted.internet.interfaces import IConsumer, IPushProducer, IProtocol, IProtocolFactory
+from twisted.internet.interfaces import IPushProducer, IProtocol, IProtocolFactory
 from twisted.web.test.test_web import DummyRequest as _TwistedDummyRequest
 #from twisted.internet.test.test_base import FakeReactor as _TwistedFakeReactor
 from twisted.test.proto_helpers import StringTransport
@@ -18,8 +18,8 @@ from minerva.decoders import BencodeStringDecoder
 from minerva import abstract
 
 from minerva.newlink import (
-	Frame, Stream, StreamTracker, NoSuchStream, StreamAlreadyExists,
-	BadFrame, IMinervaProtocol, IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
+	Frame, Stream, StreamId, StreamTracker, NoSuchStream, StreamAlreadyExists,
+	BadFrame, ISimpleConsumer, IMinervaProtocol, IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
 	IMinervaTransport, SocketTransport
 )
 
@@ -355,7 +355,7 @@ class StreamTests(unittest.TestCase):
 	def test_implements(self):
 		s = Stream(None, _DummyId('some fake id'), None)
 		verify.verifyObject(IPushProducer, s)
-		verify.verifyObject(IConsumer, s)
+		verify.verifyObject(ISimpleConsumer, s)
 
 
 	def test_repr(self):
@@ -870,6 +870,32 @@ class SocketTransportTests(unittest.TestCase):
 		self.protocol.sendBoxes(q, start=None)
 		self._parseFrames()
 		self.aE([], self.gotFrames)
+
+
+	def test_pauseProducingWhenStreamNotFoundYet(self):
+		"""
+		Twisted will call pauseProducing whenever it feels like it, and we have to
+		be prepared for it, even if we haven't found the _stream yet.
+		"""
+		self.protocol.pauseProducing()
+
+		# If the transport grabs a hold of the _stream now, it will be immediately paused
+		frame0 = self._getValidHelloFrame()
+		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		stream = self.streamTracker.getStream(StreamId('\x00'*16))
+		#print self.streamTracker._streams
+		self.aE([
+			['pauseProducing'],
+			['transportOnline', self.protocol],
+		], stream.log)
+
+
+	def test_resumeProducingWhenStreamNotFoundYet(self):
+		"""
+		Twisted will call resumeProducing whenever it feels like it, and we have to
+		be prepared for it, even if we haven't found the _stream yet.
+		"""
+		self.protocol.resumeProducing()
 
 
 	def test_invalidFrameType(self):

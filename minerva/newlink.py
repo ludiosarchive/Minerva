@@ -56,8 +56,47 @@ from collections import deque
 from zope.interface import Interface, Attribute, implements
 from twisted.python import log
 from twisted.internet import protocol, defer
-from twisted.internet.interfaces import IConsumer, IPushProducer, IProtocol, IProtocolFactory
+from twisted.internet.interfaces import IPushProducer, IProtocol, IProtocolFactory
 from twisted.web import resource
+
+
+# Copy/paste of twisted.internet.interfaces.IConsumer, with 'write' method removed
+class ISimpleConsumer(Interface):
+	"""
+	A consumer consumes data from a producer.
+	"""
+
+	def registerProducer(producer, streaming):
+		"""
+		Register to receive data from a producer.
+
+		This sets self to be a consumer for a producer.  When this object runs
+		out of data (as when a send(2) call on a socket succeeds in moving the
+		last data from a userspace buffer into a kernelspace buffer), it will
+		ask the producer to resumeProducing().
+
+		For L{IPullProducer} providers, C{resumeProducing} will be called once
+		each time data is required.
+
+		For L{IPushProducer} providers, C{pauseProducing} will be called
+		whenever the write buffer fills up and C{resumeProducing} will only be
+		called when it empties.
+
+		@type producer: L{IProducer} provider
+
+		@type streaming: C{bool}
+		@param streaming: C{True} if C{producer} provides L{IPushProducer},
+		C{False} if C{producer} provides L{IPullProducer}.
+
+		@raise RuntimeError: If a producer is already registered.
+
+		@return: C{None}
+		"""
+
+	def unregisterProducer():
+		"""
+		Stop consuming data from a producer, without disconnecting.
+		"""
 
 
 
@@ -212,7 +251,7 @@ class Stream(object):
 
 	# TODO: disconnect timer - no transport in N minutes
 
-	implements(IConsumer, IPushProducer)
+	implements(ISimpleConsumer, IPushProducer)
 
 	def __init__(self, clock, streamId, streamProtocolFactory):
 		self._clock = clock
@@ -246,6 +285,7 @@ class Stream(object):
 			else:
 				start = max(self._pretendAcked + 1, self.queue._seqNumAt0)
 			self._activeS2CTransport.sendBoxes(self.queue, start=start)
+			# If we have a pull producer registered and queue is empty, pull more data
 			if self._producer and not self._streamingProducer and len(self.queue) == 0:
 				self._producer.resumeProducing()
 
@@ -258,15 +298,6 @@ class Stream(object):
 		@type boxes: a sequence
 		"""
 		self.queue.extend(boxes)
-		self._tryToSend()
-
-
-	def write(self, box):
-		"""
-		This method is implemented only so that we look like an IConsumer.
-		Do not use it.
-		"""
-		self.queue.append(box)
 		self._tryToSend()
 
 
@@ -866,6 +897,8 @@ class SocketTransport(protocol.Protocol):
 
 		def cbAuthOkay(_):
 			self._authed = True
+			if self._paused:
+				self._stream.pauseProducing()
 			self._stream.transportOnline(self)
 
 		def cbAuthFailed(_):
@@ -977,16 +1010,18 @@ class SocketTransport(protocol.Protocol):
 
 	def pauseProducing(self):
 		self._paused = True
-		self._stream.pauseProducing()
+		if self._stream:
+			self._stream.pauseProducing()
 
 
 	def resumeProducing(self):
 		self._paused = False
-		self._stream.resumeProducing()
+		if self._stream:
+			self._stream.resumeProducing()
 
 
 	def stopProducing(self):
-		self._paused = True
+		pass
 
 
 	def connectionLost(self, reason):
