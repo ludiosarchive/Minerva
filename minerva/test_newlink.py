@@ -1,5 +1,6 @@
 import simplejson
 import base64
+import copy
 from functools import wraps
 
 from zope.interface import implements, verify
@@ -740,6 +741,12 @@ class SocketTransportTests(unittest.TestCase):
 		self.protocol.makeConnection(self.t)
 
 
+	def _getValidHelloFrame(self):
+		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+		frame = [Fn.hello, helloData]
+		return frame
+
+
 	def test_implements(self):
 		verify.verifyObject(IProtocol, self.protocol)
 		verify.verifyObject(IPushProducer, self.protocol)
@@ -760,8 +767,7 @@ class SocketTransportTests(unittest.TestCase):
 		Calling sendBoxes(queue, start=None) on a transport actually results in all
 		boxes in queue being written
 		"""
-		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
-		frame0 = [Fn.hello, helloData]
+		frame0 = self._getValidHelloFrame()
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1']])
@@ -779,8 +785,7 @@ class SocketTransportTests(unittest.TestCase):
 		Calling sendBoxes(queue, start=1) on a transport actually results in
 		(box 1 and later) in queue being written
 		"""
-		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
-		frame0 = [Fn.hello, helloData]
+		frame0 = self._getValidHelloFrame()
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1']])
@@ -832,8 +837,7 @@ class SocketTransportTests(unittest.TestCase):
 
 
 	def test_validHello(self):
-		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
-		frame0 = [Fn.hello, helloData]
+		frame0 = self._getValidHelloFrame()
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
 		self.parser.dataReceived(self.t.value())
 		self.aE([], self.gotFrames)
@@ -888,8 +892,7 @@ class SocketTransportTests(unittest.TestCase):
 		we silently ignore the w=True if the Stream is already created.
 		"""
 		def act():
-			helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
-			frame0 = [Fn.hello, helloData]
+			frame0 = self._getValidHelloFrame()
 			self.protocol.dataReceived(self.serializeFrames([frame0]))
 			self.parser.dataReceived(self.t.value())
 			self.aE([], self.gotFrames)
@@ -907,7 +910,7 @@ class SocketTransportTests(unittest.TestCase):
 		Test that all any problem with the hello frame results in a
 		'tk_invalid_frame_type_or_arguments' error frame
 		"""
-		goodHello = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+		goodHello = self._getValidHelloFrame()
 
 		DeleteProperty = object()
 
@@ -929,20 +932,19 @@ class SocketTransportTests(unittest.TestCase):
 
 		for mutateProperty, mutateValues in badMutations.iteritems():
 			for value in mutateValues:
-				badHello = goodHello.copy()
+				badHello = copy.deepcopy(goodHello)
 				if value is not DeleteProperty:
-					badHello[mutateProperty] = value
+					badHello[1][mutateProperty] = value
 				else:
 					try:
-						del badHello[mutateProperty]
+						del badHello[1][mutateProperty]
 					except KeyError:
 						 # If it wasn't there in the first place, deleting it from badHello can't cause an error later
 						continue
 
 				##print badHello
 
-				frame0 = [Fn.hello, badHello]
-				self.protocol.dataReceived(self.serializeFrames([frame0]))
+				self.protocol.dataReceived(self.serializeFrames([badHello]))
 				self.parser.dataReceived(self.t.value())
 				self.aE(
 					[[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it], [Fn.my_last_frame]],
