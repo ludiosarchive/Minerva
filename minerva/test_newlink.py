@@ -482,9 +482,17 @@ class StreamTests(unittest.TestCase):
 		t = DummySocketLikeTransport()
 		self.aR(RuntimeError, lambda: s.transportOffline(t))
 
-
 	# probably have better tests that test more for online/offline
 
+	# TODO: test that if Stream paused, and streaming producer registered, producer is immediately paused
+	# TODO: test that if Stream.pauseProducing called, and a streaming producer is registered, producer is immediately paused
+	# TODO: test that if Stream.resumeProducing called, and any producer is registered, producer is immediately resumed
+	# TODO: test that Stream.sackReceived clears the "pretendAcked" mode (test the effect of this, not _pretendAcked)
+	# TODO: test that if active S2C transport closes, and no waiting S2C transport, pauseProducing is called
+	# TODO: test that if active S2C transport closes, and there IS a waiting S2C transport, pauseProducing is NOT called
+	# TODO: test that if we have a non-streaming producer registered, producer.resumeProducing() is called any time the queue is empty
+	# TODO: test that if getUndeliveredCount > 5000, Stream is reset
+	# TODO: test that if getMaxConsumption > 4MB, Stream is reset
 
 
 

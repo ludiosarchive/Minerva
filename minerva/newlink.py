@@ -149,6 +149,8 @@ class StreamId(abstract.GenericIdentifier):
 class IStreamNotificationReceiver(Interface):
 	"""
 	Objects that implement this can get notified about new and dying Streams.
+
+	The intention is for some L{ITransportFirewall}s to use this.
 	"""
 	def streamUp(stream):
 		"""
@@ -243,7 +245,9 @@ class Stream(object):
 				start = None
 			else:
 				start = max(self._pretendAcked + 1, self.queue._seqNumAt0)
-			self._activeS2CTransport.sendBoxes(queue, start=start)
+			self._activeS2CTransport.sendBoxes(self.queue, start=start)
+			if self._producer and not self._streamingProducer and len(self.queue) == 0:
+				self._producer.resumeProducing()
 
 
 	def sendBoxes(self, boxes):
@@ -311,6 +315,7 @@ class Stream(object):
 		"""
 		Called by faces to tell me that new transport C{transport} has disconnected.
 		"""
+		shouldPause = True
 		self._transports.remove(transport)
 		if self._activeS2CTransport == transport:
 			lastBoxSent = self._activeS2CTransport.lastBoxSent
@@ -323,8 +328,12 @@ class Stream(object):
 			pass
 		else:
 			# switch to the waiting transport
+			shouldPause = False
 			self._pretendAcked = lastBoxSent
 			self._tryToSend()
+
+		if shouldPause:
+			self.pauseProducing()
 
 
 	def startGettingBoxes(self, transport, waitOnTransport):
@@ -416,14 +425,16 @@ class Stream(object):
 		self.producer = None
 
 
-	# called by the active S2C transport in response to TCP pressure
+	# called by the active S2C transport in response to TCP pressure,
+	# and by self if there is no active S2C transport.
 	def pauseProducing(self):
 		self._paused = True
 		if self._producer and self._streamingProducer:
 			self._protocol.pauseProducing()
 
 
-	# called by the active S2C transport in response to TCP pressure
+	# called by the active S2C transport in response to TCP pressure,
+	# and by self if there is no active S2C transport.
 	def resumeProducing(self):
 		self._paused = False
 		if self._producer:
@@ -932,6 +943,10 @@ class SocketTransport(protocol.Protocol):
 				1/0
 			elif frameType == 'sack':
 				self._stream.sackReceived(frameObj[1])
+			elif frameType == 'start_timestamps':
+				1/0
+			elif frameType == 'stop_timestamps':
+				1/0
 
 
 	def dataReceived(self, data):
