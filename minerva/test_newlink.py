@@ -749,7 +749,7 @@ class SocketTransportTests(unittest.TestCase):
 
 	def _parseFrames(self):
 		"""
-		Feed the bytes received into the parser, which will append complete
+		Feed the received bytes into the parser, which will append complete
 		frames to self.gotFrames
 		"""
 		self.parser.dataReceived(self.t.value())
@@ -796,12 +796,38 @@ class SocketTransportTests(unittest.TestCase):
 		frame0 = self._getValidHelloFrame()
 		self.protocol.dataReceived(self.serializeFrames([frame0]))
 		q = abstract.Queue()
-		q.extend([['box0'], ['box1']])
+		q.extend([['box0'], ['box1'], ['box2']])
 		self.protocol.sendBoxes(q, start=1)
 		self._parseFrames()
 		self.aE([
 			[Fn.seqnum, 1],
 			[Fn.box, ['box1']],
+			[Fn.box, ['box2']],
+		], self.gotFrames)
+
+
+	# TODO: once abstract.Queue supports SACK, add a test that really uses SACK here
+
+
+	def test_sendBoxesHugeBoxes(self):
+		"""
+		Like test_sendBoxesStartNone, except there is a lot of data.
+		
+		At the time this was written, it was intended to exercise the
+			`if len(toSend) > 1024 * 1024:' branch.
+		"""
+		frame0 = self._getValidHelloFrame()
+		self.protocol.dataReceived(self.serializeFrames([frame0]))
+		q = abstract.Queue()
+		box0 = ['box0'*(1*1024*1024)]
+		box1 = ['box1'*(1*1024*1024)]
+		q.extend([box0, box1])
+		self.protocol.sendBoxes(q, start=None)
+		self._parseFrames()
+		self.aE([
+			[Fn.seqnum, 0],
+			[Fn.box, box0],
+			[Fn.box, box1],
 		], self.gotFrames)
 
 
