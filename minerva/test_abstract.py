@@ -136,6 +136,20 @@ class TestQueue(unittest.TestCase):
 		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems(start=1)))
 
 
+	def test_iterItemsNoStartNumber(self):
+		"""
+		A L{start} for iterItems is not required.
+		"""
+		q = abstract.Queue()
+		q.append('zero')
+		q.extend(['one', 'two'])
+		self.assertEqual([(0, 'zero'), (1, 'one'), (2, 'two')], list(q.iterItems()))
+		q.handleSACK((-1, []))
+		self.assertEqual([(0, 'zero'), (1, 'one'), (2, 'two')], list(q.iterItems()))
+		q.handleSACK((0, []))
+		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems()))
+
+
 	def test_appendExtendQueueStart3(self):
 		q = abstract.Queue()
 		q.append('zero')

@@ -134,20 +134,24 @@ class Queue(object):
 		return len(self._items)
 
 
-	def iterItems(self, start):
+	def iterItems(self, start=None):
 		"""
-		Yield (seqNumber, item) for every item in the queue starting
-		at L{start}.
-		"""
-		assert start >= 0, start
+		Yield (seqNumber, item) for every item in the queue.
 
+		If C{start} is not C{None}, items before L{start} will be skipped.
+		"""
 		baseN = self._seqNumAt0
-		if start < baseN:
-			raise WantedItemsTooLowError("I was asked for %d+; my lowest item is %d" % (start, baseN))
+
+		if start is not None:
+			assert start >= 0, start
+
+			if start < baseN:
+				raise WantedItemsTooLowError("I was asked for %d+; my lowest item is %d" % (start, baseN))
+
 		# TODO: do we need to list() this to avoid re-entrancy bugs?
 		for n, item in enumerate(self._items):
 			seqNum = baseN + n
-			if seqNum >= start:
+			if start is None or seqNum >= start:
 				yield (seqNum, item)
 
 

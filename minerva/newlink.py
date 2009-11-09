@@ -205,6 +205,8 @@ class Stream(object):
 	streaming should implement an application-level producer/consumer system.
 	"""
 
+	# TODO: disconnect timer - no transport in N minutes
+
 	implements(IConsumer)
 
 	def __init__(self, clock, streamId, streamProtocolFactory):
@@ -219,13 +221,18 @@ class Stream(object):
 		self._notifications = []
 		self._transports = set()
 		self.disconnected = False
-		self.queue = deque()
+		self.queue = abstract.Queue()
 		self._incoming = abstract.Incoming()
 
 
 	def __repr__(self):
 		return ('<%s streamId=%r, len(queue)=%r, disconnected=%r>'
 			% (self.__class__.__name__, self.streamId, len(self.queue), self.disconnected))
+
+
+	def _tryToSend(self):
+		if self._activeS2CTransport is not None:
+			1/0
 
 
 	def sendBoxes(self, boxes):
@@ -235,7 +242,7 @@ class Stream(object):
 		@param boxes: a sequence of boxes
 		@type boxes: a sequence
 		"""
-		1/0
+		self.queue.extend(boxes)
 
 
 	def reset(self, reasonString=u''):
