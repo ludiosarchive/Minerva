@@ -1149,8 +1149,15 @@ class ProducerIntegrationTests(unittest.TestCase):
 		# The Minerva transport is registered, not the producer itself
 		self.aI(self.t.producer, self.transport)
 		self.aI(self.t.streaming, True)
-		self.aE([], producer1.log)
 
+		# pauseProducing/resumeProducing calls are sent directly to producer, without much thinking
+		self.transport.pauseProducing()
+		self.transport.pauseProducing()
+		self.transport.resumeProducing()
+		self.transport.resumeProducing()
+		self.aE([['pauseProducing'], ['pauseProducing'], ['resumeProducing'], ['resumeProducing']], producer1.log)
+
+		# Unregister the streaming producer
 		self.transport.unregisterProducer()
 		# it is idempotent
 		self.transport.unregisterProducer()
@@ -1160,7 +1167,14 @@ class ProducerIntegrationTests(unittest.TestCase):
 		# The Minerva transport is registered, not the producer itself
 		self.aI(self.t.producer, self.transport)
 		self.aI(self.t.streaming, False)
-		self.aE([], producer2.log)
+
+		# pauseProducing/resumeProducing calls are sent directly to producer (even when it is a pull producer),
+		# without much thinking
+		self.transport.pauseProducing()
+		self.transport.pauseProducing()
+		self.transport.resumeProducing()
+		self.transport.resumeProducing()
+		self.aE([['pauseProducing'], ['pauseProducing'], ['resumeProducing'], ['resumeProducing']], producer2.log)
 
 
 	def test_transportPausedRegisterStreamingProducer(self):
