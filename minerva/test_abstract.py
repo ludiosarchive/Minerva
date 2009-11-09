@@ -207,7 +207,7 @@ class TestQueue(unittest.TestCase):
 		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems()))
 
 
-	@todo
+	@todo("nice but not essential")
 	def test_handleSACKReallyDoesSACK(self):
 		"""
 		handleSACK actually removes the selectively-acknowledged items from the queue 
