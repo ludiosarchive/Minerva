@@ -403,13 +403,13 @@ class Stream(object):
 			self._registerDownstreamProducer(transport)
 
 
-	def startGettingBoxes(self, transport, waitOnTransport):
+	def subscribeToBoxes(self, transport, waitOnTransport):
 		"""
 		Transport C{transport} says it wants to receive boxes after transport
 		C{waitOnTransport} closes. If there is no need to wait on a transport,
 		C{waitOnTransport} is C{None}.
 		"""
-		print 'startGettingBoxes', transport, waitOnTransport
+		print 'subscribeToBoxes', transport, waitOnTransport
 		if waitOnTransport is None:
 			self._newActiveS2C(transport)
 			self._tryToSend()
@@ -1021,7 +1021,7 @@ class SocketTransport(protocol.Protocol):
 
 				# TODO: remember to properly hook up this transport's consumer with Stream's producer
 
-				self._stream.startGettingBoxes(self, waitOnTransport)
+				self._stream.subscribeToBoxes(self, waitOnTransport)
 			elif frameType == 'gimme_sack_and_close':
 				sackFrame = self._stream.getSACK()
 				sackFrame.insert(0, Fn.sack)

@@ -390,7 +390,7 @@ class TestIncomingConsumption(unittest.TestCase):
 		self.aE(100, i.getMaxConsumption())
 
 		_ = i.give([[4, 'box4'], [5, 'box5'], [6, 'box6']], 300)
-		print i._consumption
+		##print i._consumption
 		self.aE(400, i.getMaxConsumption())
 
 

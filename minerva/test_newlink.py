@@ -84,9 +84,11 @@ class DummyChannel(object):
 	class SSL(TCP):
 		implements(interfaces.ISSLTransport)
 
-	site = server.Site(resource.Resource())
 
-	def __init__(self):
+	def __init__(self, clock=None):
+		if clock is None:
+			clock = task.Clock()
+		self.site = server.Site(resource.Resource())
 		self.transport = self.TCP()
 
 
@@ -896,7 +898,7 @@ class SocketTransportTests(unittest.TestCase):
 #		frame0 = self._getValidHelloFrame()
 #		# We need to send a gimme_boxes frame to make this the active transport.
 #		# When this frame is received,
-#		#     1) transport will call _stream.startGettingBoxes
+#		#     1) transport will call _stream.subscribeToBoxes
 #		#     2) Stream._newActiveS2C will be called, _registerDownstreamProducer will be called,
 #		#           causing the stream to be registered as transport's producer
 #		# XXXXXXXXXXX ^^^ fix above
