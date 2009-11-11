@@ -97,19 +97,16 @@ Problems with JSON:
 
 
 
-Other cool Minerva features you won't find anywhere else:
+Other cool Minerva features:
 
 	Minerva can respond to TCP pressure using Twisted's producer/consumer system.
 	You can easily stream megabytes of frames to a client while using little memory
 	on the server. Responding to TCP pressure is useful, because it will save the client
 	from having to send application-level "back off" / "ok, resume" messages.
 
-	When Minerva needs to use HTTP transports, it tries its best to use a maximum
-	of two TCP connections. It can do this because it understands when browsers
-	will have to open a new TCP connection for a request.
+	Minerva JavaScript client: When Minerva needs to use HTTP transports, it tries its best to use a maximum
+	of two TCP connections. Minerva understands when browsers have to open new TCP connections.
 
-	The Minerva JavaScript client will avoid aborting HTTP connections. Aborting an HTTP
-	connection from the client is bad because it necessitates closing the TCP connection.
-	This is bad because the next HTTP request would (likely) require a new TCP connection,
-	which requires a 3-way handshake.
-
+	Minerva JavaScript client: To reduce TCP connection establishment latencies, the client will avoid
+	aborting HTTP connections. Because of how HTTP works, aborting an HTTP connection
+	from the client necessitates closing the TCP connection.
