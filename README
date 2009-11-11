@@ -13,15 +13,15 @@ Why you might want Minerva:
 
 	You don't really need Comet, but want your "AJAX" to be reliable and secure:
 		Minerva automatically retries requests if they fail
-		Minerva can use WebSocket/Flash sockets, which can make it harder for
-			your users to use Firebug/httpfox to determine what you are sending over the wire
+		Minerva can use WebSocket/Flash sockets, which make it harder for
+			your users to figure out what you sent over the wire with Firebug/HttpFox.
 		Minerva handles the CSRF stuff, as long as you set it up right
 
 	You don't really need Comet, but your JavaScript application needs to make a bunch of requests,
 	and you would rather write this as a "real" protocol instead of a bunch of AJAX requests.
 
-	You are writing a desktop application that must run in extremely internet-hostile environments
-	that do not even allow unmutilated socket connections over port 443.
+	You are writing a desktop application that needs a "real" protocol, and it must run in
+	internet-hostile environments that do not even allow unmutilated socket connections over port 443.
 		You can write a Minerva client that uses IE's proxy settings, or even controls a real
 		IE window, to send and receive data.
 
@@ -29,12 +29,13 @@ Why you might want Minerva:
 Terminology:
 	stream - the stateful object that protocols use to send and receive data. This is sort
 		of like a TCP connection, but better in most ways.
-	transport - a temporary thing that Minerva uses to move data across.
+	transport - an HTTP request/response, or socket, or WebSocket, that Minerva uses to send/receive frames.
 
 
 Minerva will move heaven and earth to get your data across as efficiently and reliably as possible.
-It uses streaming HTTP connections, unless it suspects a buffering proxy is in the way. Minerva
-streams will survive disconnects. Data will never be re-ordered or lost (unless the stream is abandoned).
+It uses streaming HTTP connections, unless it suspects a buffering proxy is in the way.
+By "extra-reliable TCP" above, we meant that Minerva streams survive disconnects.
+It also maintains the TCP properties of in-order and reliable data delivery.
 
 
 Above, we said that Minerva is a "framed and extra-reliable TCP".
@@ -42,8 +43,7 @@ By framed, we mean that applications send and receive frames, not octets.
 Why force applications to work with frames instead of octets? One might
 object and say that applications need direct access to octets, but consider these points:
 
-	Minerva's frame overhead is minimal: 4 extra bytes are needed to
-	send an integer 0-9, or 6 extra bytes to send an ASCII letter.
+	Minerva's frame overhead is minimal: just 4-6 extra bytes per frame.
 
 	Even if you send just one byte over TCP, the TCP/IP overhead will be approximately 52 bytes
 	(there is even more overhead when HTTP chunk lengths or TLS are involved).
