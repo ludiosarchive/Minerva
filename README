@@ -26,6 +26,17 @@ Why you might want Minerva:
 		IE window, to send and receive data.
 
 
+Terminology:
+	stream - the stateful object that protocols use to send and receive data. This is sort
+		of like a TCP connection, but better in most ways.
+	transport - a temporary thing that Minerva uses to move data across.
+
+
+Minerva will move heaven and earth to get your data across as efficiently and reliably as possible.
+It uses streaming HTTP connections, unless it suspects a buffering proxy is in the way. Minerva
+streams will survive disconnects. Data will never be re-ordered or lost (unless the stream is abandoned).
+
+
 Above, we said that Minerva is a "framed and extra-reliable TCP".
 By framed, we mean that applications send and receive frames, not octets.
 Why force applications to work with frames instead of octets? One might
