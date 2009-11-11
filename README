@@ -37,26 +37,51 @@ object and say that applications need direct access to octets, but consider thes
 	Even if you send just one byte over TCP, the TCP/IP overhead will be approximately 52 bytes
 	(there is even more overhead when HTTP chunk lengths or TLS are involved).
 
-	Minerva would need to encode and decode using base64 or similar, because:
+	If it worked with octets, Minerva would need to encode and decode these octets
+	using base64 or similar, because:
 
 		Over HTTP transports, NULL cannot be sent to IE or Opera
 
 		Minerva sometimes needs to send metadata over the transports that applications are using,
-		to determine if a transport is stalled or being buffered.
+		to determine if a transport is stalled or being buffered by proxies.
 
 	WebSocket natively uses frames, and NULLs cannot be sent over them (as of 2009-11).
 
+	We want to avoid using JavaScript (especially IE's slow JScript) to parse frames.
+	Instead we delegate this to the web browser's C++ code, or Flash's AVM2.
+	We want to avoid using JavaScript (especially IE's slow JScript) to handle the UTF-8<->Unicode conversion.
+	By requiring frames, it's an easy step to require Unicode frames, so Minerva can handle this
+	instead of the application.
 
-
-Because Minerva's primary use
-case is web applications, and we want the web browser's C++ code to
-handle the UTF-8<->unicode conversions, as well as handle frame extraction
-(possible with htmlfile and WebSocket). Side note: using Flash's AVM2 to extract
-frames may be faster than JavaScript in IE, yielding yet another advantage
-to have a concept of frames at the "wire protocol level".
 
 
 The frames contain semi-structured data (JSON). JSON is used as a building
 block because:
-	the primary u
-	the IE htmlfile transport allows "direct" parsing
+	The IE htmlfile transport automatically parses JSON as it is dumped into the HTML page,
+	because it is basically executing JavaScript. Which means we don't have to dump
+	a string to the page first, and then send it through a decoder.
+
+	(in theory) In IE, using AVM2 to encode/decode JSON might be faster than eval() or json2.js,
+	so Minerva can do whatever is fastest instead of requiring the application to do its own thing.
+
+	JSON requires encoding NULL (U+0000), which is good because we cannot send it over some transports.
+
+	Everyone understands JSON, and it is well-supported in most languages.
+
+	IE8, Chrome, Firefox, Safari, and Opera have native JSON encoders and decoders.
+
+	No obvious memory-exhaustion problems. Cclients cannot send "x"*1000000 or
+	some nonsense and have it fill up memory)
+
+
+
+Problems with JSON:
+	No support for dates, or sets
+
+	Allows unlimited nesting, so you must worry about stack exhaustion.
+
+	Because JSON allows as many keys as you want, you have to deal with possible
+	CPU-resource DoS caused by clients exploiting predictable hashing algorithms
+
+	The overhead of quoting every key in {"key": value} even when key is not a
+	reserved word in JavaScript is annoying
