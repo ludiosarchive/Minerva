@@ -43,23 +43,24 @@ By framed, we mean that applications send and receive frames, not octets.
 Why force applications to work with frames instead of octets? One might
 object and say that applications need direct access to octets, but consider these points:
 
-	Minerva's frame overhead is minimal: just 4-6 extra bytes per frame.
+	Minerva's frame overhead is minimal: just 5-7 extra bytes for the smallest frames.
 
-	Even if you send just one byte over TCP, the TCP/IP overhead will be approximately 52 bytes
-	(there is even more overhead when HTTP chunk lengths or TLS are involved).
+		This overhead is dwarfed by the per-packet TCP/IP overhead of ~52 bytes
+		(there is even more overhead when HTTP chunk lengths or TLS are involved).
 
 	If it worked with octets, Minerva would need to encode and decode these octets
 	using base64 or similar, because:
 
-		Over HTTP transports, NULL cannot be sent to IE or Opera
+		Over HTTP transports, NULL cannot be sent to IE or Opera.
 
 		Minerva sometimes needs to send metadata over the transports that applications are using,
 		to determine if a transport is stalled or being buffered by proxies.
 
-	WebSocket natively uses frames, and NULLs cannot be sent over them (as of 2009-11).
+	WebSocket uses frames natively, and NULLs cannot be sent over them (as of 2009-11).
 
-	We want to avoid using JavaScript (especially IE's slow JScript) to parse frames.
+	When possible, we want to avoid using JavaScript (especially IE's slow JScript) to parse frames.
 	Instead we delegate this to the web browser's C++ code, or Flash's AVM2.
+	
 	We want to avoid using JavaScript (especially IE's slow JScript) to handle the UTF-8<->Unicode conversion.
 	By requiring frames, it's an easy step to require Unicode frames, so Minerva can handle this
 	instead of the application.
@@ -75,24 +76,21 @@ block because:
 	(in theory) In IE, using AVM2 to encode/decode JSON might be faster than eval() or json2.js,
 	so Minerva can do whatever is fastest instead of requiring the application to do its own thing.
 
-	JSON requires encoding NULL (U+0000), which is good because we cannot send it over some transports.
-
-	Everyone understands JSON, and it is well-supported in most languages.
+	JSON requires encoding NULL (U+0000), which is good because we cannot send it over
+	all transports anyway.
 
 	IE8, Chrome, Firefox, Safari, and Opera have native JSON encoders and decoders.
 
-	No obvious memory-exhaustion problems. Cclients cannot send "x"*1000000 or
+	No obvious memory-exhaustion problems. Clients cannot send "x"*1000000 or
 	some nonsense and have it fill up memory)
-
-
 
 Problems with JSON:
 	No support for dates, or sets
 
 	Allows unlimited nesting, so you must worry about stack exhaustion.
 
-	Because JSON allows as many keys as you want, you have to deal with possible
-	CPU-resource DoS caused by clients exploiting predictable hashing algorithms
+	Because JSON allows as many keys as you want, servers have to deal with possible
+	CPU-resource DoS caused by clients exploiting predictable hashing algorithms.
 
 	The overhead of quoting every key in {"key": value} even when key is not a
-	reserved word in JavaScript is annoying
+	reserved word in JavaScript is annoying.
