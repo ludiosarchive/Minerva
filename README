@@ -1,1 +1,62 @@
-Coreweb Network Extension (Minerva)
+Minerva
+===
+
+The goal of Minerva is to implement a framed and extra-reliable TCP on top of
+various transports:
+	HTTP requests and responses (optionally HTTPSed),
+	TCP connections (for now, only unencrypted),
+	WebSocket (optionally TLSed)
+
+
+Why you might want Minerva:
+	You need "Comet"/"HTTP push" to push data to users, similar to meebo/google talk/google finance
+
+	You don't really need Comet, but want your "AJAX" to be reliable and secure:
+		Minerva automatically retries requests if they fail
+		Minerva can use WebSocket/Flash sockets, which can make it harder for
+			your users to use Firebug/httpfox to determine what you are sending over the wire
+		Minerva handles the CSRF stuff, as long as you set it up right
+
+	You don't really need Comet, but your JavaScript application needs to make a bunch of requests,
+	and you would rather write this as a "real" protocol instead of a bunch of AJAX requests.
+
+	You are writing a desktop application that must run in extremely internet-hostile environments
+	that do not even allow unmutilated socket connections over port 443.
+		You can write a Minerva client that uses IE's proxy settings, or even controls a real
+		IE window, to send and receive data.
+
+
+Above, we said that Minerva is a "framed and extra-reliable TCP".
+By framed, we mean that applications send and receive frames, not octets.
+Why force applications to work with frames instead of octets? One might
+object and say that applications need direct access to octets, but consider these points:
+
+	Minerva's frame overhead is minimal: 4 extra bytes are needed to
+	send an integer 0-9, or 6 extra bytes to send an ASCII letter.
+
+	Even if you send just one byte over TCP, the TCP/IP overhead will be approximately 52 bytes
+	(there is even more overhead when HTTP chunk lengths or TLS are involved).
+
+	Minerva would need to encode and decode using base64 or similar, because:
+
+		Over HTTP transports, NULL cannot be sent to IE or Opera
+
+		Minerva sometimes needs to send metadata over the transports that applications are using,
+		to determine if a transport is stalled or being buffered.
+
+	WebSocket natively uses frames, and NULLs cannot be sent over them (as of 2009-11).
+
+
+
+Because Minerva's primary use
+case is web applications, and we want the web browser's C++ code to
+handle the UTF-8<->unicode conversions, as well as handle frame extraction
+(possible with htmlfile and WebSocket). Side note: using Flash's AVM2 to extract
+frames may be faster than JavaScript in IE, yielding yet another advantage
+to have a concept of frames at the "wire protocol level".
+
+
+The frames contain semi-structured data (JSON). JSON is used as a building
+block because:
+	the primary u
+	the IE htmlfile transport allows "direct" parsing
