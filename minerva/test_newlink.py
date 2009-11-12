@@ -465,30 +465,27 @@ class StreamTests(unittest.TestCase):
 		self.aI(False, s.virgin)
 
 
-	@todo
 	def test_transportOnline(self):
 		clock = task.Clock()
-		s = Stream(clock, _DummyId('some fake id'), None)
+		s = Stream(clock, _DummyId('some fake id'), MockMinervaProtocolFactory())
 		t = DummySocketLikeTransport()
 		s.transportOnline(t)
 
 
-	@todo
 	def test_transportOnlineOffline(self):
 		clock = task.Clock()
-		s = Stream(clock, _DummyId('some fake id'), None)
+		s = Stream(clock, _DummyId('some fake id'), MockMinervaProtocolFactory())
 		t = DummySocketLikeTransport()
 		s.transportOnline(t)
 		s.transportOffline(t)
 
 
-	@todo
 	def test_transportOfflineUnknownTransport(self):
 		"""
 		transportOffline(some transport that was never registered) raises RuntimeError
 		"""
 		clock = task.Clock()
-		s = Stream(clock, _DummyId('some fake id'), None)
+		s = Stream(clock, _DummyId('some fake id'), MockMinervaProtocolFactory())
 		t = DummySocketLikeTransport()
 		self.aR(RuntimeError, lambda: s.transportOffline(t))
 

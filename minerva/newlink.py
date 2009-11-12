@@ -359,8 +359,11 @@ class Stream(object):
 		"""
 		Called by faces to tell me that new transport C{transport} has disconnected.
 		"""
+		try:
+			self._transports.remove(transport)
+		except KeyError:
+			raise RuntimeError("Cannot take %r offline; it wasn't registered" % (transport,))
 		shouldPause = False
-		self._transports.remove(transport)
 		if self._activeS2CTransport == transport:
 			shouldPause = True
 			lastBoxSent = self._activeS2CTransport.lastBoxSent
