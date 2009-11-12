@@ -104,9 +104,15 @@ Other cool Minerva features:
 	on the server. Responding to TCP pressure is useful, because it will save the client
 	from having to send application-level "back off" / "ok, resume" messages.
 
-	Minerva JavaScript client: When Minerva needs to use HTTP transports, it tries its best to use a maximum
+	Minerva JavaScript client: When Minerva uses HTTP transports, it tries its best to use a maximum
 	of two TCP connections. Minerva understands when browsers have to open new TCP connections.
 
 	Minerva JavaScript client: To reduce TCP connection establishment latencies, the client will avoid
 	aborting HTTP connections. Because of how HTTP works, aborting an HTTP connection
 	from the client necessitates closing the TCP connection.
+
+	(planned) Minerva JavaScript client: Minerva uses "request interleaving" to reduce the gap
+	where no data can be sent server->client.
+
+
+Problems with Minerva:
