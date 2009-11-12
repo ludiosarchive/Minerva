@@ -88,7 +88,7 @@ class DummyChannel(object):
 	def __init__(self, clock=None):
 		if clock is None:
 			clock = task.Clock()
-		self.site = server.Site(resource.Resource())
+		self.site = server.Site(resource.Resource(), clock=clock)
 		self.transport = self.TCP()
 
 
