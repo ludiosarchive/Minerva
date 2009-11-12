@@ -494,12 +494,15 @@ class StreamTests(unittest.TestCase):
 	# some of the below are probably wrong (esp. the producer stuff)
 
 	# TODO: test that if Stream paused, and streaming producer registered, producer is immediately paused
-	# TODO: test that if Stream.pauseProducing called, and a streaming producer is registered, producer is immediately paused
-	# TODO: test that if Stream.resumeProducing called, and any producer is registered, producer is immediately resumed
+	# WRONG, lowest-level Twisted code calls the right methods regardless or push/pull producer -
+		# TODO: test that if Stream.pauseProducing called, and a streaming producer is registered, producer is immediately paused
+	# WRONG, see above -
+		# TODO: test that if Stream.resumeProducing called, and any producer is registered, producer is immediately resumed
 	# TODO: test that Stream.sackReceived clears the "pretendAcked" mode (test the effect of this, not _pretendAcked)
 	# TODO: test that if active S2C transport closes, and no waiting S2C transport, pauseProducing is called
 	# TODO: test that if active S2C transport closes, and there IS a waiting S2C transport, pauseProducing is NOT called
-	# TODO: test that if we have a non-streaming producer registered, producer.resumeProducing() is called any time the queue is empty
+	# WRONG, lowest-level Twisted code initiates all the pulling
+		# TODO: test that if we have a non-streaming producer registered, producer.resumeProducing() is called any time the queue is empty
 	# TODO: test that if getUndeliveredCount > 5000, Stream is reset
 	# TODO: test that if getMaxConsumption > 4MB, Stream is reset
 
@@ -1124,7 +1127,7 @@ class StringTransportMoreLikeReality(StringTransport):
 
 
 
-class ProducerIntegrationTests(unittest.TestCase):
+class TransportProducerTests(unittest.TestCase):
 
 	def setUp(self):
 		reactor = FakeReactor()
