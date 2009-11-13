@@ -524,6 +524,10 @@ class StreamTests(unittest.TestCase):
 			['writeBoxes', s.queue, None],
 		])
 
+		# Just to exercise transportOffline
+		s.transportOffline(t1)
+		s.transportOffline(t2)
+
 
 	def test_sendBoxesConnectionInterleaving(self):
 		"""
@@ -580,6 +584,10 @@ class StreamTests(unittest.TestCase):
 			['writeBoxes', s.queue, 5],
 			['writeBoxes', s.queue, None],
 		])
+
+		# Just to exercise transportOffline
+		s.transportOffline(t1)
+		s.transportOffline(t2)
 
 
 	def test_getSACK(self):

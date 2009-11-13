@@ -103,6 +103,7 @@ Other cool Minerva features:
 	You can easily stream megabytes of frames to a client while using little memory
 	on the server. Responding to TCP pressure is useful, because it will save the client
 	from having to send application-level "back off" / "ok, resume" messages.
+	See section ("producers/consumers") below.
 
 	Minerva JavaScript client: When Minerva uses HTTP transports, it tries its best to use a maximum
 	of two TCP connections. Minerva understands when browsers have to open new TCP connections.
@@ -115,4 +116,42 @@ Other cool Minerva features:
 	where no data can be sent server->client.
 
 
-Problems with Minerva:
+
+Minerva limitations:
+
+	Runs on Python, which is really slow.
+
+	Relies on subdomains + document.domain for cross-domain communication,
+	which necessitates a wildcard SSL cert
+
+
+
+Producers/consumers, technical details:
+
+	"type of producer" means pull/push
+
+	This is the object layout, "upstream" objects at top. Objects on adjacent lines
+	usually know about each other.
+
+	MinervaProtocol
+	Stream
+	*Transport
+	(Twisted)
+
+	When a client connects, (Twisted) causes *Transport creation,
+	which causes Stream creation, which causes MinervaProtocol creation. This
+	might not happen instantly, because *Transport must be authenticated first.
+	At this time, there are no producers in the system.
+
+	MinervaProtocol can at any time register or unregister a pull or push producer with Stream.
+
+	Stream's goal is to attach the same type of producer with every S2C transport that attaches to it,
+	even if the S2C transport isn't attached yet.
+
+	Stream must also unregister producers from transports that are no longer active S2C transports.
+
+	If type of producer is push, Stream must also call pauseProducing on MinervaProtocol whenever
+	there are no active S2C transports. It must also call resumeProducing when this situation ends.
+
+	*Transport's job is simple, it just registers itself as the correct type of producer with Twisted.
+	One edge case: it must remember if Twisted paused it, and if so, pauseProducing newly-attached push producers.
