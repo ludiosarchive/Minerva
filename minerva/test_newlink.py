@@ -441,9 +441,42 @@ class StreamTests(unittest.TestCase):
 		], i.log)
 
 
-	@todo
-	def test_boxesReceivedExhaustion(self):
-		1/0
+	def test_boxesReceivedResetsBecauseTooManyBoxes(self):
+		"""
+		If too many boxes are stuck in Incoming, the Stream is reset
+		"""
+		factory = MockMinervaProtocolFactory()
+		s = Stream(None, _DummyId('some fake id'), factory)
+		t = DummySocketLikeTransport()
+		s.transportOnline(t)
+
+		manyBoxes = []
+		for n in xrange(1, 5002):
+			manyBoxes.append((n, 'box'))
+		assert len(manyBoxes) == 5001
+
+		# box #0 is never given, so it cannot deliver any of them
+
+		s.boxesReceived(t, manyBoxes, 1) # wow, 5001 boxes take just one byte
+		self.aE([['reset', u'resources exhausted']], t.log)
+
+
+	def test_boxesReceivedResetsBecauseTooManyBytes(self):
+		"""
+		If too many (estimated) bytes are in Incoming, the Stream is reset
+		"""
+		factory = MockMinervaProtocolFactory()
+		s = Stream(None, _DummyId('some fake id'), factory)
+		t = DummySocketLikeTransport()
+		s.transportOnline(t)
+
+		# we don't need to actually make this big; we can lie to the Stream
+		notManyBoxes = [(1, 'x')]
+
+		# box #0 is never given, so it cannot deliver any of them
+
+		s.boxesReceived(t, notManyBoxes, 4*1024*1024 + 1)
+		self.aE([['reset', u'resources exhausted']], t.log)
 
 
 	def test_sendBoxesAndActiveStreams(self):

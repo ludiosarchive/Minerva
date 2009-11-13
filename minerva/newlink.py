@@ -348,7 +348,8 @@ class Stream(object):
 			self._protocol.boxesReceived(items)
 		# We deliver the deliverable boxes before resetting the connection (if necessary),
 		# just in case the client sent something useful.
-		if self._incoming.getUndeliveredCount() > self.maxUndeliveredBoxes or \
+		if \
+		self._incoming.getUndeliveredCount() > self.maxUndeliveredBoxes or \
 		self._incoming.getMaxConsumption() > self.maxUndeliveredBytes:
 			self.reset(u'resources exhausted')
 
@@ -428,7 +429,7 @@ class Stream(object):
 		If L{succeedsTransport} != None, temporarily assume that all boxes written to
 		#<succeedsTransport> were SACKed.
 		"""
-		print 'subscribeToBoxes', transport, succeedsTransport
+		##print 'subscribeToBoxes', transport, succeedsTransport
 		if succeedsTransport is not None:
 			self._pretendAcked = self._activeS2CTransport.lastBoxSent
 		self._newActiveS2C(transport)
