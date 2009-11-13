@@ -624,7 +624,7 @@ class StreamTests(unittest.TestCase):
 	# TODO: test that Stream.sackReceived clears the "pretendAcked" mode (test the effect of this, not _pretendAcked)
 	# TODO: test that if active S2C transport closes, and no waiting S2C transport, pauseProducing is called
 	# TODO: test that if active S2C transport closes, and there IS a waiting S2C transport, pauseProducing is NOT called
-	# TODO: test that if a new active S2C is registered, the old active S2C is closed
+	# DONE - TODO: test that if a new active S2C is registered, the old active S2C is closed
 	# WRONG, lowest-level Twisted code initiates all the pulling
 		# TODO: test that if we have a non-streaming producer registered, producer.resumeProducing() is called any time the queue is empty
 	# TODO: test that if getUndeliveredCount > 5000, Stream is reset
@@ -916,6 +916,7 @@ class SocketTransportTests(unittest.TestCase):
 		frames to self.gotFrames
 		"""
 		self.parser.dataReceived(self.t.value())
+		self.t.clear()
 
 
 	def test_implements(self):
@@ -925,18 +926,18 @@ class SocketTransportTests(unittest.TestCase):
 		verify.verifyObject(IMinervaTransport, self.transport)
 
 
-	def test_sendBoxesUnauthed(self):
+	def test_writeBoxesUnauthed(self):
 		"""
-		Calling sendBoxes on an unauthed transport raises L{RuntimeError}
+		Calling writeBoxes on an unauthed transport raises L{RuntimeError}
 		"""
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1']])
 		self.aR(RuntimeError, lambda: self.transport.writeBoxes(q, start=None))
 
 
-	def test_sendBoxesStartNone(self):
+	def test_writeBoxesStartNone(self):
 		"""
-		Calling sendBoxes(queue, start=None) on a transport actually results in all
+		Calling writeBoxes(queue, start=None) on a transport actually results in all
 		boxes in queue being written
 		"""
 		frame0 = self._getValidHelloFrame()
@@ -952,9 +953,9 @@ class SocketTransportTests(unittest.TestCase):
 		], self.gotFrames)
 
 
-	def test_sendBoxesStart1(self):
+	def test_writeBoxesStart1(self):
 		"""
-		Calling sendBoxes(queue, start=1) on a transport actually results in
+		Calling writeBoxes(queue, start=1) on a transport actually results in
 		(box 1 and later) in queue being written
 		"""
 		frame0 = self._getValidHelloFrame()
@@ -973,9 +974,9 @@ class SocketTransportTests(unittest.TestCase):
 	# TODO: once abstract.Queue supports SACK, add a test that really uses SACK here
 
 
-	def test_sendBoxesHugeBoxes(self):
+	def test_writeBoxesHugeBoxes(self):
 		"""
-		Like test_sendBoxesStartNone, except there is a lot of data.
+		Like test_writeBoxesStartNone, except there is a lot of data.
 		
 		At the time this was written, it was intended to exercise the
 			`if len(toSend) > 1024 * 1024:' branch.
@@ -995,9 +996,9 @@ class SocketTransportTests(unittest.TestCase):
 		], self.gotFrames)
 
 
-	def test_sendBoxesNoneSentIfPaused(self):
+	def test_writeBoxesNoneSentIfPaused(self):
 		"""
-		Calling sendBoxes when the transport is paused does not result
+		Calling writeBoxes when the transport is paused does not result
 		in a write to the transport.
 		"""
 		frame0 = self._getValidHelloFrame()
@@ -1008,6 +1009,26 @@ class SocketTransportTests(unittest.TestCase):
 		self.transport.writeBoxes(q, start=None)
 		self._parseFrames()
 		self.aE([], self.gotFrames)
+
+
+	def test_writeBoxesSentOnlyOnce(self):
+		"""
+		The transport remembers which boxes it already sent, so boxes
+		are not double-sent even if they are still in the queue.
+		"""
+		frame0 = self._getValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0]))
+		q = abstract.Queue()
+		q.extend([['box0'], ['box1']])
+		self.transport.writeBoxes(q, start=None)
+		self.transport.writeBoxes(q, start=None)
+		self._parseFrames()
+		self.aE([[Fn.seqnum, 0], [Fn.box, ['box0']], [Fn.box, ['box1']]], self.gotFrames)
+
+		q.extend([['box2']])
+		self.transport.writeBoxes(q, start=None)
+		self._parseFrames()
+		self.aE([[Fn.seqnum, 0], [Fn.box, ['box0']], [Fn.box, ['box1']], [Fn.box, ['box2']]], self.gotFrames)
 
 
 	def test_pauseProducingWhenStreamNotFoundYet(self):

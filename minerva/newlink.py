@@ -801,6 +801,7 @@ class IMinervaTransport(IPushProducer):
 	def writeBoxes(queue, start):
 		"""
 		Write boxes in queue C{queue} to the peer.
+		This never writes boxes that were already written to the peer.
 
 		@param queue: an L{abstract.Queue}
 		@param start: where to start in the queue, or C{None}
@@ -907,6 +908,9 @@ class SocketTransport(protocol.Protocol):
 		# we might want to send boxes frame instead of box sometimes? no?
 		lastBox = self.lastBoxSent
 		for seqNum, box in queue.iterItems(start=start):
+			##print seqNum, box, lastBox
+			if seqNum <= lastBox:
+				continue
 			if lastBox == -1 or lastBox + 1 != seqNum:
 				toSend += self._encodeFrame([Fn.seqnum, seqNum]) 
 			toSend += self._encodeFrame([Fn.box, box])
