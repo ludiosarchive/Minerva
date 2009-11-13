@@ -391,13 +391,13 @@ class Stream(object):
 			self._transports.remove(transport)
 		except KeyError:
 			raise RuntimeError("Cannot take %r offline; it wasn't registered" % (transport,))
-		shouldPause = False
 		if self._activeS2CTransport == transport:
-			shouldPause = True
+			self._unregisterDownstreamProducer()
+			self._activeS2CPaused = False
 			self._activeS2CTransport = None
 
-		if shouldPause:
-			self.pauseProducing()
+			if self._producer and self._streamingProducer:
+				self._producer.pauseProducing()
 
 
 	def _unregisterDownstreamProducer(self):
@@ -529,17 +529,21 @@ class Stream(object):
 #			self._producer.resumeProducing()
 
 
-	# called by the active S2C transport in response to TCP pressure,
-	# and by self if there is no active S2C transport.
 	def pauseProducing(self):
+		"""
+		We assume this is called only by the active S2C transport. The pause
+		status is no longer relevant after the active S2C transport detaches.
+		"""
 		self._activeS2CPaused = True
 		if self._producer:
 			self._producer.pauseProducing()
 
 
-	# called by the active S2C transport in response to TCP pressure,
-	# and by self if there is no active S2C transport.
+	# ONLY called by the active S2C transport in response to TCP pressure
 	def resumeProducing(self):
+		"""
+		We assume this is called only by the active S2C transport.
+		"""
 		self._activeS2CPaused = False
 		if self._producer:
 			self._producer.resumeProducing()
