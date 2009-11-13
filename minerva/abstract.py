@@ -134,6 +134,10 @@ class Queue(object):
 		return len(self._items)
 
 
+	def __repr__(self):
+		return '<Queue with %r items, first is #%r>' % (len(self), self._seqNumAt0)
+
+
 	def iterItems(self, start=None):
 		"""
 		Yield (seqNumber, item) for every item in the queue.

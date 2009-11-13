@@ -254,6 +254,9 @@ class Stream(object):
 
 	implements(ISimpleConsumer, IPushProducer)
 
+	maxUndeliveredBoxes = 5000 # boxes
+	maxUndeliveredBytes = 4 * 1024 * 1024 # bytes
+
 	def __init__(self, clock, streamId, streamProtocolFactory):
 		self._clock = clock
 		self.streamId = streamId
@@ -345,15 +348,22 @@ class Stream(object):
 			self._protocol.boxesReceived(items)
 		# We deliver the deliverable boxes before resetting the connection (if necessary),
 		# just in case the client sent something useful.
-		if self._incoming.getUndeliveredCount() > 5000 or self._incoming.getMaxConsumption() > 4 * 1024 * 1024:
+		if self._incoming.getUndeliveredCount() > self.maxUndeliveredBoxes or \
+		self._incoming.getMaxConsumption() > self.maxUndeliveredBytes:
 			self.reset(u'resources exhausted')
 
 
 	def sackReceived(self, sackInfo):
 		# No need to pretend any more, because we just got a likely-up-to-date sack from the client
+		wasPretending = self._pretendAcked
 		self._pretendAcked = None
 		
-		return self._queue.handleSACK(sackInfo)
+		self.queue.handleSACK(sackInfo)
+
+		if wasPretending:
+			# Try to send, because the SACK may have indicated that the client
+			# lost boxes that were delivered to the older active S2C transport.
+			self._tryToSend()
 
 
 	def transportOnline(self, transport):
@@ -909,7 +919,7 @@ class SocketTransport(protocol.Protocol):
 		lastBox = self.lastBoxSent
 		for seqNum, box in queue.iterItems(start=start):
 			##print seqNum, box, lastBox
-			if seqNum <= lastBox:
+			if seqNum <= lastBox: # This might have to change to support SACK.
 				continue
 			if lastBox == -1 or lastBox + 1 != seqNum:
 				toSend += self._encodeFrame([Fn.seqnum, seqNum]) 

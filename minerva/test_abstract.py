@@ -115,6 +115,15 @@ class TestEnsureNonNegIntLimit(unittest.TestCase):
 class TestQueue(unittest.TestCase):
 	"""Tests for minerva.abstract.Queue"""
 
+	def test_repr(self):
+		q = abstract.Queue()
+		self.aE('<Queue with 0 items, first is #0>', repr(q))
+		q.extend(['a', 'b'])
+		self.aE('<Queue with 2 items, first is #0>', repr(q))
+		q.removeAllBefore(1)
+		self.aE('<Queue with 1 items, first is #1>', repr(q))
+		
+
 	def test_iterEmptyQueue(self):
 		q = abstract.Queue()
 		self.assertEqual([], list(q.iterItems(start=0)))
