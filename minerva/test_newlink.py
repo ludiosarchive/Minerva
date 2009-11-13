@@ -679,10 +679,17 @@ class StreamTests(unittest.TestCase):
 	# TODO: probably have better tests that test more for online/offline
 
 
-	def test_resetCallsAllTransports(self):
+	def _makeStuff(self):
+		factory = MockMinervaProtocolFactory()
 		clock = task.Clock()
-		s = Stream(clock, _DummyId('some fake id'), MockMinervaProtocolFactory())
+		s = Stream(clock, _DummyId('some fake id'), factory)
 		t1 = DummySocketLikeTransport()
+
+		return factory, clock, s, t1
+
+
+	def test_resetCallsAllTransports(self):
+		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1)
 		t2 = DummySocketLikeTransport()
 		s.transportOnline(t2)
@@ -708,30 +715,23 @@ class StreamTests(unittest.TestCase):
 		# TODO: test that if we have a non-streaming producer registered, producer.resumeProducing() is called any time the queue is empty
 
 
+
 	def test_registerUnregisterProducerWithNoActiveTransport(self):
 		"""
 		Test that registerProducer and unregisterProducer seem to work,
 		with desired error conditions and idempotency.
 		"""
-		factory = MockMinervaProtocolFactory()
-		clock = task.Clock()
-		s = Stream(clock, _DummyId('some fake id'), factory)
-		t1 = DummySocketLikeTransport()
+		factory, clock, s, t1 = self._makeStuff()
 
-		# Connect and disconnect a transport just to make Stream create an instance of a MinervaProtocol
-		s.transportOnline(t1)
-		s.transportOffline(t1)
-
-		proto = list(factory.instances)[0]
-
+		producer1 = MockProducer()
 		# Unregister is basically a no-op if no producer is registered.
 		# This matches L{twisted.internet.abstract.FileHandle}'s behavior.
 		s.unregisterProducer()
 
 		# Register
-		s.registerProducer(proto, streaming=True)
+		s.registerProducer(producer1, streaming=True)
 		# Registering again raises RuntimeError
-		self.aR(RuntimeError, lambda: s.registerProducer(proto, streaming=True))
+		self.aR(RuntimeError, lambda: s.registerProducer(producer1, streaming=True))
 		# ...even if it's not anything like a producer
 		self.aR(RuntimeError, lambda: s.registerProducer(None, streaming=False))
 
@@ -739,7 +739,7 @@ class StreamTests(unittest.TestCase):
 		s.unregisterProducer()
 
 		# To make sure unregister worked, check that registerProducer doesn't raise an error
-		s.registerProducer(proto, streaming=False)
+		s.registerProducer(producer1, streaming=False)
 
 
 	@todo
@@ -747,14 +747,12 @@ class StreamTests(unittest.TestCase):
 		1/0
 
 
-	def test_streamAlreadyPausedPausesProducer(self):
+
+	def test_pausedStreamPausesNewPushProducer(self):
 		"""
 		If Stream was already paused, new push producers are paused when registered.
 		"""
-		factory = MockMinervaProtocolFactory()
-		clock = task.Clock()
-		s = Stream(clock, _DummyId('some fake id'), factory)
-		t1 = DummySocketLikeTransport()
+		factory, clock, s, t1 = self._makeStuff()
 
 		s.pauseProducing()
 
@@ -768,19 +766,23 @@ class StreamTests(unittest.TestCase):
 		s.registerProducer(producer2, streaming=True)
 		self.aE([['pauseProducing']], producer2.log)
 
-		# pull producers are not pauseProducing'ed
-		s.unregisterProducer()
-		pullProducer = MockProducer()
-		s.registerProducer(pullProducer, streaming=False)
-		self.aE([], pullProducer.log)
-
 		# ... stops happening (for push producers) if the Stream is unpaused
 		s.resumeProducing()
-
 		s.unregisterProducer()
 		producer3 = MockProducer()
 		s.registerProducer(producer3, streaming=True)
 		self.aE([], producer3.log)
+
+
+	def test_pausedStreamDoesNotPausesNewPullProducer(self):
+		factory, clock, s, t1 = self._makeStuff()
+		s.pauseProducing()
+
+		# pull producers are not pauseProducing'ed, since they're effectively paused by default
+		s.unregisterProducer()
+		pullProducer = MockProducer()
+		s.registerProducer(pullProducer, streaming=False)
+		self.aE([], pullProducer.log)
 
 
 
