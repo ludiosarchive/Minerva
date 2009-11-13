@@ -128,9 +128,10 @@ Minerva limitations:
 
 Producers/consumers, technical details:
 
-	"type of producer" means pull/push
+	"type of producer" means pull or push.
+	See http://twistedmatrix.com/projects/core/documentation/howto/producers.html
 
-	This is the object layout, "upstream" objects at top. Objects on adjacent lines
+	This is the object chain, "upstream" objects at top. Objects on adjacent lines
 	usually know about each other.
 
 	MinervaProtocol
@@ -155,3 +156,14 @@ Producers/consumers, technical details:
 
 	*Transport's job is simple, it just registers itself as the correct type of producer with Twisted.
 	One edge case: it must remember if Twisted paused it, and if so, pauseProducing newly-attached push producers.
+
+	During normal operation for a registered PULL producer, these conditions result in
+	resumeProducing calls on MinervaProtocol:
+		(Twisted) - when it wants more data to send
+
+	During normal operation for a registered PUSH producer, these conditions result in
+	pauseProducing or resumeProducing calls on MinervaProtocol:
+		(Twisted) - when it wants more data to send
+		*Transport - if it was paused earlier by (Twisted)
+		Stream - when there are no active S2C transports
+		Stream - (if paused) when an active S2C transport appears
