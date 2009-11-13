@@ -470,7 +470,7 @@ class StreamTests(unittest.TestCase):
 		t = DummySocketLikeTransport()
 		s.transportOnline(t)
 
-		# we don't need to actually make this big; we can lie to the Stream
+		# we don't actually need to make this box big; we can lie to the Stream about how big it is
 		notManyBoxes = [(1, 'x')]
 
 		# box #0 is never given, so it cannot deliver any of them
@@ -658,8 +658,6 @@ class StreamTests(unittest.TestCase):
 		self.aE(t2.log, [["reset", u'the reason']])
 
 
-	# some of the below are probably wrong (esp. the producer stuff)
-
 	# TODO: test that if Stream paused, and streaming producer registered, producer is immediately paused
 
 	# WRONG, lowest-level Twisted code calls the right methods regardless or push/pull producer -
@@ -667,17 +665,11 @@ class StreamTests(unittest.TestCase):
 	# WRONG, see above -
 		# TODO: test that if Stream.resumeProducing called, and any producer is registered, producer is immediately resumed
 
-	# TODO: test that Stream.sackReceived clears the "pretendAcked" mode (test the effect of this, not _pretendAcked)
 	# TODO: test that if active S2C transport closes, and no waiting S2C transport, pauseProducing is called
 	# TODO: test that if active S2C transport closes, and there IS a waiting S2C transport, pauseProducing is NOT called
-	# DONE - TODO: test that if a new active S2C is registered, the old active S2C is closed
 
 	# WRONG, lowest-level Twisted code initiates all the pulling
 		# TODO: test that if we have a non-streaming producer registered, producer.resumeProducing() is called any time the queue is empty
-
-	# TODO: test that if getUndeliveredCount > 5000, Stream is reset
-	# TODO: test that if getMaxConsumption > 4MB, Stream is reset
-
 
 
 class StreamTrackerObserverTests(unittest.TestCase):
