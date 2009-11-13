@@ -299,6 +299,12 @@ class Stream(object):
 				self._producer.resumeProducing()
 
 
+	def _die(self):
+		for d in self._notifications:
+			d.callback(None)
+		self._notifications = None
+
+
 	def sendBoxes(self, boxes):
 		"""
 		Send C{boxes} boxes to the peer.
@@ -318,7 +324,9 @@ class Stream(object):
 		"""
 		Reset (disconnect) with reason C{reasonString}.
 		"""
-		1/0
+		for t in self._transports:
+			t.reset()
+		self._die()
 
 
 	def boxesReceived(self, transport, boxes, memorySizeOfBoxes):
@@ -332,7 +340,7 @@ class Stream(object):
 		# We deliver the deliverable boxes before resetting the connection (if necessary),
 		# just in case the client sent something useful.
 		if self._incoming.getUndeliveredCount() > 5000 or self._incoming.getMaxConsumption() > 4 * 1024 * 1024:
-			self.reset('resources exhausted')
+			self.reset(u'resources exhausted')
 
 
 	def sackReceived(self, sackInfo):
@@ -520,12 +528,6 @@ class Stream(object):
 	# ???
 	def stopProducing(self):
 		1/0
-
-
-	def _die(self):
-		for d in self._notifications:
-			d.callback(None)
-		self._notifications = None
 
 
 
@@ -809,6 +811,21 @@ class IMinervaTransport(IPushProducer):
 		"""
 
 
+	def closeGently():
+		"""
+		Close this transport. Usually happens if the transport is no longer
+		useful (due to HTTP limitations), or because a new active S2C
+		transport has connected.
+		"""
+
+
+	def reset():
+		"""
+		The stream that this transport is related to is resetting. Transport
+		must notify peer of the reset.
+		"""
+
+
 
 def dumpToJson7Bit(data):
 	return simplejson.dumps(data, separators=(',', ':'))
@@ -1085,6 +1102,14 @@ class SocketTransport(protocol.Protocol):
 
 	def closeGently(self):
 		toSend = ''
+		toSend += self._encodeFrame([Fn.you_close_it])
+		toSend += self._encodeFrame([Fn.my_last_frame])
+		self.transport.write(toSend)
+
+
+	def reset(self):
+		toSend = ''
+		toSend += self._encodeFrame([Fn.reset])
 		toSend += self._encodeFrame([Fn.you_close_it])
 		toSend += self._encodeFrame([Fn.my_last_frame])
 		self.transport.write(toSend)

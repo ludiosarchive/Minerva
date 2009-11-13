@@ -262,12 +262,17 @@ class DummySocketLikeTransport(object):
 	
 	def __init__(self):
 		self.credentialsData = {}
+		self.log = []
 		self.pretendGotHello()
 
 
 	def pretendGotHello(self):
 		self.globalCounter[0] += 1
 		self.transportNumber = self.globalCounter[0]
+
+
+	def reset(self):
+		self.log.append(['reset'])
 
 
 
@@ -391,7 +396,7 @@ class StreamTests(unittest.TestCase):
 			self.aI(None, val)
 			called[0] = True
 		d.addCallback(cb)
-		s._die() # TODO XXX replace with some public test
+		s.reset()
 
 		assert called[0]
 
@@ -489,10 +494,26 @@ class StreamTests(unittest.TestCase):
 		t = DummySocketLikeTransport()
 		self.aR(RuntimeError, lambda: s.transportOffline(t))
 
-	# probably have better tests that test more for online/offline
+	# TODO: probably have better tests that test more for online/offline
+
+
+	def test_resetCallsAllTransports(self):
+		clock = task.Clock()
+		s = Stream(clock, _DummyId('some fake id'), MockMinervaProtocolFactory())
+		t1 = DummySocketLikeTransport()
+		s.transportOnline(t1)
+		t2 = DummySocketLikeTransport()
+		s.transportOnline(t2)
+
+		s.reset()
+		self.aE(t1.log, [["reset"]])
+		self.aE(t2.log, [["reset"]])
+
+
 
 	# some of the below are probably wrong (esp. the producer stuff)
 
+	# TODO: test reset()
 	# TODO: test that if Stream paused, and streaming producer registered, producer is immediately paused
 	# WRONG, lowest-level Twisted code calls the right methods regardless or push/pull producer -
 		# TODO: test that if Stream.pauseProducing called, and a streaming producer is registered, producer is immediately paused
@@ -501,6 +522,7 @@ class StreamTests(unittest.TestCase):
 	# TODO: test that Stream.sackReceived clears the "pretendAcked" mode (test the effect of this, not _pretendAcked)
 	# TODO: test that if active S2C transport closes, and no waiting S2C transport, pauseProducing is called
 	# TODO: test that if active S2C transport closes, and there IS a waiting S2C transport, pauseProducing is NOT called
+	# TODO: test that if a new active S2C is registered, the old active S2C is closed
 	# WRONG, lowest-level Twisted code initiates all the pulling
 		# TODO: test that if we have a non-streaming producer registered, producer.resumeProducing() is called any time the queue is empty
 	# TODO: test that if getUndeliveredCount > 5000, Stream is reset
