@@ -275,12 +275,7 @@ class Stream(object):
 		self._producer = None
 		self._streamingProducer = False
 
-		# on the active S2C transport, is there a registered producer?
-		#     None = no
-		#     True = yes, a streaming producer
-		#     False = yes, a pull producer
-		self._activeS2CProducerType = None
-
+		self._registeredDownstream = False
 		self._activeS2CPaused = False
 
 
@@ -400,31 +395,32 @@ class Stream(object):
 		if self._activeS2CTransport == transport:
 			shouldPause = True
 			self._activeS2CTransport = None
-			self._activeS2CProducerType = None
 
 		if shouldPause:
 			self.pauseProducing()
 
 
-	def _unregisterDownstreamProducer(self, transport):
-		if self._activeS2CProducerType is True or self._activeS2CProducerType is False:
-			transport.unregisterProducer()
-		self._activeS2CProducerType = None
+	def _unregisterDownstreamProducer(self):
+		if self._registeredDownstream:
+			self._activeS2CTransport.unregisterProducer()
+			self._registeredDownstream = False
 
 
 	# Called when we have a new active S2C transport, or when a MinervaProtocol registers a producer with us (Stream)
-	def _registerDownstreamProducer(self, transport):
-		transport.registerProducer(self, self._streamingProducer)
-		self._activeS2CProducerType = self._streamingProducer
+	def _registerDownstreamProducer(self):
+		if not self._registeredDownstream:
+			self._activeS2CTransport.registerProducer(self, self._streamingProducer)
+			self._registeredDownstream = True
 
 
 	def _newActiveS2C(self, transport):
 		if self._activeS2CTransport:
-			self._unregisterDownstreamProducer(self._activeS2CTransport)
+			self._unregisterDownstreamProducer()
+			self._activeS2CPaused = False
 			self._activeS2CTransport.closeGently()
 		self._activeS2CTransport = transport
 		if self._producer:
-			self._registerDownstreamProducer(transport)
+			self._registerDownstreamProducer()
 
 
 	def subscribeToBoxes(self, transport, succeedsTransport):
@@ -509,7 +505,7 @@ class Stream(object):
 			producer.pauseProducing()
 
 		if self._activeS2CTransport:
-			self._registerDownstreamProducer(self._activeS2CTransport)
+			self._registerDownstreamProducer()
 
 
 	# called by MinervaProtocol instances
@@ -519,7 +515,7 @@ class Stream(object):
 		"""
 		self._producer = None
 		if self._activeS2CTransport:
-			self._unregisterDownstreamProducer(self._activeS2CTransport)
+			self._unregisterDownstreamProducer()
 
 ## LAME
 #	def _updateUpstreamProducer(self):
