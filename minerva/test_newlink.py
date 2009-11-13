@@ -271,8 +271,16 @@ class DummySocketLikeTransport(object):
 		self.transportNumber = self.globalCounter[0]
 
 
-	def reset(self):
-		self.log.append(['reset'])
+	def closeGently(self):
+		self.log.append(['closeGently'])
+
+
+	def reset(self, reasonString):
+		self.log.append(['reset', reasonString])
+
+
+	def sendBoxes(self, queue, start):
+		self.log.append(['sendBoxes', queue, start])
 
 
 
@@ -396,7 +404,7 @@ class StreamTests(unittest.TestCase):
 			self.aI(None, val)
 			called[0] = True
 		d.addCallback(cb)
-		s.reset()
+		s.reset('because we want to see if the notifyFinish deferreds get called')
 
 		assert called[0]
 
@@ -429,9 +437,19 @@ class StreamTests(unittest.TestCase):
 		1/0
 
 
-	@todo
 	def test_sendBoxes(self):
-		1/0
+		s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
+		t1 = DummySocketLikeTransport()
+		s.transportOnline(t1)
+		s.sendBoxes([['box1'], ['box2']])
+
+		# Boxes don't reach the transport because the transport isn't active yet
+		self.aE(t1.log, [])
+
+		# Make it active
+		s.subscribeToBoxes(t1, waitOnTransport=None)
+
+		self.aE(t1.log, [['sendBoxes', s.queue, None]])
 
 
 	def test_getSACK(self):
@@ -505,15 +523,13 @@ class StreamTests(unittest.TestCase):
 		t2 = DummySocketLikeTransport()
 		s.transportOnline(t2)
 
-		s.reset()
-		self.aE(t1.log, [["reset"]])
-		self.aE(t2.log, [["reset"]])
-
+		s.reset(u'the reason')
+		self.aE(t1.log, [["reset", u'the reason']])
+		self.aE(t2.log, [["reset", u'the reason']])
 
 
 	# some of the below are probably wrong (esp. the producer stuff)
 
-	# TODO: test reset()
 	# TODO: test that if Stream paused, and streaming producer registered, producer is immediately paused
 	# WRONG, lowest-level Twisted code calls the right methods regardless or push/pull producer -
 		# TODO: test that if Stream.pauseProducing called, and a streaming producer is registered, producer is immediately paused

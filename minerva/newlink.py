@@ -320,12 +320,12 @@ class Stream(object):
 		self._tryToSend()
 
 
-	def reset(self, reasonString=u''):
+	def reset(self, reasonString):
 		"""
 		Reset (disconnect) with reason C{reasonString}.
 		"""
 		for t in self._transports:
-			t.reset()
+			t.reset(reasonString)
 		self._die()
 
 
@@ -353,8 +353,11 @@ class Stream(object):
 	def transportOnline(self, transport):
 		"""
 		Called by faces to tell me that new transport C{transport} has connected.
-		This is called even for very-short-term C2S HTTP transports. Caller is responsible
-		for only calling this once.
+		This is called even for very-short-term C2S HTTP transports.
+
+		Caller is responsible for verifying that a transport should really be attached
+		to this stream before calling L{transportOnline}. Usually this is done by
+		authenticating based on data in the `hello' frame.
 		"""
 		self._transports.add(transport)
 		self.virgin = False
@@ -819,10 +822,13 @@ class IMinervaTransport(IPushProducer):
 		"""
 
 
-	def reset():
+	def reset(reasonString):
 		"""
 		The stream that this transport is related to is resetting. Transport
 		must notify peer of the reset.
+
+		@param reasonString: plain-English reason why the stream is resetting
+		@type reasonString: unicode
 		"""
 
 
@@ -891,6 +897,9 @@ class SocketTransport(protocol.Protocol):
 
 
 	def sendBoxes(self, queue, start):
+		"""
+		@see L{IMinervaTransport.sendBoxes}
+		"""
 		if self._authed is not True or self._gotHello is not True:
 			raise RuntimeError("_authed=%r, _gotHello=%r" % (self._authed, self._gotHello))
 
@@ -1101,15 +1110,21 @@ class SocketTransport(protocol.Protocol):
 
 
 	def closeGently(self):
+		"""
+		@see L{IMinervaTransport.closeGently}
+		"""
 		toSend = ''
 		toSend += self._encodeFrame([Fn.you_close_it])
 		toSend += self._encodeFrame([Fn.my_last_frame])
 		self.transport.write(toSend)
 
 
-	def reset(self):
+	def reset(self, reasonString):
+		"""
+		@see L{IMinervaTransport.reset}
+		"""
 		toSend = ''
-		toSend += self._encodeFrame([Fn.reset])
+		toSend += self._encodeFrame([Fn.reset, reasonString])
 		toSend += self._encodeFrame([Fn.you_close_it])
 		toSend += self._encodeFrame([Fn.my_last_frame])
 		self.transport.write(toSend)
