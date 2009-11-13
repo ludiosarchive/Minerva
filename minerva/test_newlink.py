@@ -129,6 +129,32 @@ class _DummyId(object):
 
 
 
+class MockProducer(object):
+	resumed = False
+	stopped = False
+	paused = False
+
+	def __init__(self):
+		self.log = []
+
+
+	def resumeProducing(self):
+		self.log.append(['resumeProducing'])
+		self.resumed = True
+		self.paused = False
+
+
+	def pauseProducing(self):
+		self.log.append(['pauseProducing'])
+		self.paused = True
+
+
+	def stopProducing(self):
+		self.log.append(['stopProducing'])
+		self.stopped = True
+
+
+
 class MockStream(object):
 	streamId = _DummyId("a stream id of unusual length")
 
@@ -661,7 +687,9 @@ class StreamTests(unittest.TestCase):
 		t2 = DummySocketLikeTransport()
 		s.transportOnline(t2)
 
+		self.aE(False, s.disconnected)
 		s.reset(u'the reason')
+		self.aE(True, s.disconnected)
 		self.aE(t1.log, [["reset", u'the reason']])
 		self.aE(t2.log, [["reset", u'the reason']])
 
@@ -681,6 +709,10 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_registerUnregisterProducerWithNoActiveTransport(self):
+		"""
+		Test that registerProducer and unregisterProducer seem to work,
+		with desired error conditions and idempotency.
+		"""
 		factory = MockMinervaProtocolFactory()
 		clock = task.Clock()
 		s = Stream(clock, _DummyId('some fake id'), factory)
@@ -708,6 +740,47 @@ class StreamTests(unittest.TestCase):
 
 		# To make sure unregister worked, check that registerProducer doesn't raise an error
 		s.registerProducer(proto, streaming=False)
+
+
+	@todo
+	def test_registerUnregisterProducerWithActiveTransport(self):
+		1/0
+
+
+	def test_streamAlreadyPausedPausesProducer(self):
+		"""
+		If Stream was already paused, new push producers are paused when registered.
+		"""
+		factory = MockMinervaProtocolFactory()
+		clock = task.Clock()
+		s = Stream(clock, _DummyId('some fake id'), factory)
+		t1 = DummySocketLikeTransport()
+
+		s.pauseProducing()
+
+		producer1 = MockProducer()
+		s.registerProducer(producer1, streaming=True)
+		self.aE([['pauseProducing']], producer1.log)
+
+		# ... and it still happens if a completely new producer is registered
+		s.unregisterProducer()
+		producer2 = MockProducer()
+		s.registerProducer(producer2, streaming=True)
+		self.aE([['pauseProducing']], producer2.log)
+
+		# pull producers are not pauseProducing'ed
+		s.unregisterProducer()
+		pullProducer = MockProducer()
+		s.registerProducer(pullProducer, streaming=False)
+		self.aE([], pullProducer.log)
+
+		# ... stops happening (for push producers) if the Stream is unpaused
+		s.resumeProducing()
+
+		s.unregisterProducer()
+		producer3 = MockProducer()
+		s.registerProducer(producer3, streaming=True)
+		self.aE([], producer3.log)
 
 
 
@@ -1373,32 +1446,6 @@ class SocketTransportTests(unittest.TestCase):
 
 
 
-class DummyProducer(object):
-	resumed = False
-	stopped = False
-	paused = False
-
-	def __init__(self):
-		self.log = []
-
-
-	def resumeProducing(self):
-		self.log.append(['resumeProducing'])
-		self.resumed = True
-		self.paused = False
-
-
-	def pauseProducing(self):
-		self.log.append(['pauseProducing'])
-		self.paused = True
-
-
-	def stopProducing(self):
-		self.log.append(['stopProducing'])
-		self.stopped = True
-
-
-
 class StringTransportMoreLikeReality(StringTransport):
 
 	def unregisterProducer(self):
@@ -1431,7 +1478,7 @@ class TransportProducerTests(unittest.TestCase):
 		self.transport.pauseProducing()
 		self.transport.resumeProducing()
 
-		producer1 = DummyProducer()
+		producer1 = MockProducer()
 		self.transport.registerProducer(producer1, streaming=True)
 		# The Minerva transport is registered, not the producer itself
 		self.aI(self.t.producer, self.transport)
@@ -1449,7 +1496,7 @@ class TransportProducerTests(unittest.TestCase):
 		# it is idempotent
 		self.transport.unregisterProducer()
 
-		producer2 = DummyProducer()
+		producer2 = MockProducer()
 		self.transport.registerProducer(producer2, streaming=False)
 		# The Minerva transport is registered, not the producer itself
 		self.aI(self.t.producer, self.transport)
@@ -1472,7 +1519,7 @@ class TransportProducerTests(unittest.TestCase):
 		"""
 		self.transport.pauseProducing()
 
-		producer1 = DummyProducer()
+		producer1 = MockProducer()
 		self.transport.registerProducer(producer1, streaming=True)
 		self.aE([['pauseProducing']], producer1.log)
 
@@ -1484,7 +1531,7 @@ class TransportProducerTests(unittest.TestCase):
 		"""
 		self.transport.pauseProducing()
 
-		producer1 = DummyProducer()
+		producer1 = MockProducer()
 		self.transport.registerProducer(producer1, streaming=False)
 		self.aE([], producer1.log)
 

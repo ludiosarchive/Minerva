@@ -336,6 +336,7 @@ class Stream(object):
 		"""
 		Reset (disconnect) with reason C{reasonString}.
 		"""
+		self.disconnected = True
 		for t in self._transports:
 			t.reset(reasonString)
 		self._die()
@@ -496,9 +497,9 @@ class Stream(object):
 		if self._producer is not None:
 			raise RuntimeError("Cannot register producer %s, "
 				"because producer %s was never unregistered." % (producer, self._producer))
-		if self.disconnected:
-			producer.stopProducing()
-			return
+		##if self.disconnected:
+		##	producer.stopProducing()
+		##	return
 
 		self._producer = producer
 		self._streamingProducer = streaming
@@ -525,7 +526,7 @@ class Stream(object):
 	def pauseProducing(self):
 		self._paused = True
 		if self._producer and self._streamingProducer:
-			self._protocol.pauseProducing()
+			self._producer.pauseProducing()
 
 
 	# called by the active S2C transport in response to TCP pressure,
@@ -533,7 +534,7 @@ class Stream(object):
 	def resumeProducing(self):
 		self._paused = False
 		if self._producer:
-			self._protocol.resumeProducing()
+			self._producer.resumeProducing()
 
 
 	# ???
