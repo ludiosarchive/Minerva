@@ -268,7 +268,6 @@ class Stream(object):
 		self.queue = abstract.Queue()
 		self._incoming = abstract.Incoming()
 		self._pretendAcked = None
-		self._waitMap = {}
 
 		self._producer = None
 		self._streamingProducer = False
@@ -287,11 +286,18 @@ class Stream(object):
 
 	def _tryToSend(self):
 		if self._activeS2CTransport is not None:
-			# TODO: start=<some number> if we just switched to a new transport
-			# without waiting for the client.
 			if self._pretendAcked is None:
 				start = None
 			else:
+				# In this case, avoid calling writeBoxes when there aren't any new boxes. 
+				# Sample:
+				# Wrote boxes 0, 1 over T#1; T#2 connects and makes _pretendAcked = 1
+				# queue is still _seqNumAt0 == 0, len(self.queue) == 2
+				# This function is called;
+				# (not 0 + 2 > 1 + 1), so return
+				##print self.queue._seqNumAt0 + len(self.queue), self._pretendAcked + 1
+				if not self.queue._seqNumAt0 + len(self.queue) > self._pretendAcked + 1:
+					return
 				start = max(self._pretendAcked + 1, self.queue._seqNumAt0)
 			self._activeS2CTransport.writeBoxes(self.queue, start=start)
 			# If we have a pull producer registered and queue is empty, pull more data
@@ -377,20 +383,8 @@ class Stream(object):
 		shouldPause = False
 		if self._activeS2CTransport == transport:
 			shouldPause = True
-			lastBoxSent = self._activeS2CTransport.lastBoxSent
 			self._activeS2CTransport = None
 			self._activeS2CProducerType = None
-
-		# ...even if C{transport} wasn't active?
-		try:
-			self._activeS2CTransport = self._waitMap[transport.transportNumber]
-		except KeyError:
-			pass
-		else:
-			# switch to the waiting transport
-			shouldPause = False
-			self._pretendAcked = lastBoxSent
-			self._tryToSend()
 
 		if shouldPause:
 			self.pauseProducing()
@@ -417,18 +411,18 @@ class Stream(object):
 			self._registerDownstreamProducer(transport)
 
 
-	def subscribeToBoxes(self, transport, waitOnTransport):
+	def subscribeToBoxes(self, transport, succeedsTransport):
 		"""
-		Transport C{transport} says it wants to receive boxes after transport
-		C{waitOnTransport} closes. If there is no need to wait on a transport,
-		C{waitOnTransport} is C{None}.
+		Transport C{transport} says it wants to start receiving boxes.
+
+		If L{succeedsTransport} != None, temporarily assume that all boxes written to
+		#<succeedsTransport> were SACKed.
 		"""
-		print 'subscribeToBoxes', transport, waitOnTransport
-		if waitOnTransport is None:
-			self._newActiveS2C(transport)
-			self._tryToSend()
-		else:
-			self._waitMap[waitOnTransport] = transport
+		print 'subscribeToBoxes', transport, succeedsTransport
+		if succeedsTransport is not None:
+			self._pretendAcked = self._activeS2CTransport.lastBoxSent
+		self._newActiveS2C(transport)
+		self._tryToSend()
 
 
 	def getSACK(self):
@@ -1035,9 +1029,9 @@ class SocketTransport(protocol.Protocol):
 			elif frameType == 'gimme_boxes':
 				_secondArg = frameObj[1]
 				if _secondArg == -1:
-					waitOnTransport = None
+					succeedsTransport = None
 				else:
-					waitOnTransport = abstract.ensureNonNegIntLimit(frameObj[1], _2_64)
+					succeedsTransport = abstract.ensureNonNegIntLimit(frameObj[1], _2_64)
 				# Option 1:
 				# grab the reference to the other transport, notifyFinish(), add callback to tell Stream to start giving me boxes
 				# sometimes, other transport will already be gone, so we'll call Stream right now
@@ -1050,7 +1044,7 @@ class SocketTransport(protocol.Protocol):
 
 				# TODO: remember to properly hook up this transport's consumer with Stream's producer
 
-				self._stream.subscribeToBoxes(self, waitOnTransport)
+				self._stream.subscribeToBoxes(self, succeedsTransport)
 			elif frameType == 'gimme_sack_and_close':
 				sackFrame = self._stream.getSACK()
 				sackFrame.insert(0, Fn.sack)

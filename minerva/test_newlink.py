@@ -282,6 +282,15 @@ class DummySocketLikeTransport(object):
 	def writeBoxes(self, queue, start):
 		self.log.append(['writeBoxes', queue, start])
 
+		lastBox = self.lastBoxSent
+		for seqNum, box in queue.iterItems(start=start):
+			if lastBox == -1 or lastBox + 1 != seqNum:
+				pass
+				##toSend += self._encodeFrame([Fn.seqnum, seqNum])
+			##toSend += self._encodeFrame([Fn.box, box])
+			lastBox = seqNum
+		self.lastBoxSent = lastBox
+
 
 
 class FrameTests(unittest.TestCase):
@@ -439,20 +448,94 @@ class StreamTests(unittest.TestCase):
 
 	def test_sendBoxesAndActiveStreams(self):
 		"""
-		Test that boxes are sent to the active S2C transport.
+		Test that boxes are sent to the correct transport.
+		Test that obsolete formerly-active S2C transports are "closed gently"
+		Test that Stream tries to send boxes down new active S2C transports.
 		"""
 		s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
 		t1 = DummySocketLikeTransport()
 		s.transportOnline(t1)
-		s.sendBoxes([['box1'], ['box2']])
+		s.sendBoxes([['box0'], ['box1']])
 
 		# Boxes don't reach the transport because the transport isn't active yet
 		self.aE(t1.log, [])
 
 		# Make it active
-		s.subscribeToBoxes(t1, waitOnTransport=None)
+		s.subscribeToBoxes(t1, succeedsTransport=None)
 
-		self.aE(t1.log, [['writeBoxes', s.queue, None]])
+		self.aE(t1.log, [
+			['writeBoxes', s.queue, None],
+		])
+
+		# Now connect a new transport
+		t2 = DummySocketLikeTransport()
+		s.transportOnline(t2)
+
+		s.sendBoxes([['box2'], ['box3']])
+		# box2 and box3 still went to the old transport because t2 isn't the activeS2CTransport
+		self.aE(t1.log, [
+			['writeBoxes', s.queue, None],
+			['writeBoxes', s.queue, None],
+		])
+		self.aE(t2.log, [])
+
+		# Now make t2 active
+		s.subscribeToBoxes(t2, succeedsTransport=None)
+
+		self.aE(t1.log, [
+			['writeBoxes', s.queue, None],
+			['writeBoxes', s.queue, None],
+			['closeGently'],
+		])
+		self.aE(t2.log, [
+			['writeBoxes', s.queue, None],
+		])
+
+
+	def test_sendBoxesConnectionInterleaving(self):
+		"""
+		If active S2C transport with transportNumber 30 (T#30) is connected,
+		and boxes 0 through 4 were sent down T#30,
+		and no SACK has come from the client yet,
+		and new transport with transportNumber 31 (T#31) connects with succeedsTransport=30,
+		and two new boxes are supposed to be sent,
+		Stream calls transport's writeBoxes but tells it to skip over boxes 0 through 4.
+		"""
+		s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
+		t1 = DummySocketLikeTransport()
+		t1.transportNumber = 30
+		s.transportOnline(t1)
+		s.sendBoxes([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
+
+		# Boxes don't reach the transport because the transport isn't active yet
+		self.aE(t1.log, [])
+
+		# Make it active
+		s.subscribeToBoxes(t1, succeedsTransport=None)
+
+		self.aE(t1.log, [
+			['writeBoxes', s.queue, None],
+		])
+
+		# Now connect a new transport and make it active
+		t2 = DummySocketLikeTransport()
+		t2.transportNumber = 31
+		s.transportOnline(t2)
+		s.subscribeToBoxes(t2, succeedsTransport=30)
+
+		self.aE(t1.log, [
+			['writeBoxes', s.queue, None],
+			['closeGently'],
+		])
+		# Because there are no new boxes yet, writeBoxes should not be called yet
+		self.aE(t2.log, [
+		])
+
+		s.sendBoxes([['box5'], ['box6']])
+
+		self.aE(t2.log, [
+			['writeBoxes', s.queue, 5],
+		])
 
 
 	def test_getSACK(self):
