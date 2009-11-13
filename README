@@ -124,6 +124,11 @@ Minerva limitations:
 	Relies on subdomains + document.domain for cross-domain communication,
 	which necessitates a wildcard SSL cert
 
+		Future: use postMessage, and Google Closure's VBScript-based transport for IE
+
+	Minerva server ignores the selectively-acknowledged boxes in the SACK frame
+	(only the primary ACK number is used)
+
 
 
 Producers/consumers, technical details:

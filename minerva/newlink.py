@@ -866,6 +866,7 @@ class SocketTransport(protocol.Protocol):
 		self._firewall = firewall
 
 		self.lastBoxSent = -1
+		self._lastStartParam = 2**128
 		self._paused = False
 		self._gotHello = False
 		self._authed = False
@@ -915,6 +916,11 @@ class SocketTransport(protocol.Protocol):
 			if self.noisy:
 				log.msg('I was asked to send another box from %r but I am paused right now.' % (queue,))
 			return
+
+		# See test_writeBoxesConnectionInterleavingSupport
+		if start < self._lastStartParam:
+			self.lastBoxSent = -1
+			self._lastStartParam = start
 
 		# Even if there's a lot of stuff in the queue, try to write everything.
 		toSend = ''

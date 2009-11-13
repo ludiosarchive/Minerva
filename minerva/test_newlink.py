@@ -1082,6 +1082,64 @@ class SocketTransportTests(unittest.TestCase):
 		self.aE([[Fn.seqnum, 0], [Fn.box, ['box0']], [Fn.box, ['box1']], [Fn.box, ['box2']]], self.gotFrames)
 
 
+	def test_writeBoxesConnectionInterleavingSupport(self):
+		"""
+		If this transport succeeded another transport, Stream will call writeBoxes
+		with a start=<number>. If the client later sends a SACK that implies they
+		did not receive all the boxes sent over the old transport, this transport
+		will have to jump back and send older boxes.
+
+		See also L{StreamTests.test_sendBoxesConnectionInterleaving}
+		"""
+		frame0 = self._getValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0]))
+		q = abstract.Queue()
+		q.extend([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
+
+		self.transport.writeBoxes(q, start=3)
+		self.transport.writeBoxes(q, start=3) # doing it again is pretty much a no-op
+		self.transport.writeBoxes(q, start=None)
+		self.transport.writeBoxes(q, start=None) # doing it again is pretty much a no-op
+		self._parseFrames()
+		self.aE([
+			[Fn.seqnum, 3],
+			[Fn.box, ['box3']],
+			[Fn.box, ['box4']],
+			[Fn.seqnum, 0],
+			[Fn.box, ['box0']],
+			[Fn.box, ['box1']],
+			[Fn.box, ['box2']],
+			[Fn.box, ['box3']],
+			[Fn.box, ['box4']],
+		], self.gotFrames)
+
+
+	def test_writeBoxesConnectionInterleavingSupportStart1(self):
+		"""
+		Same as L{test_writeBoxesConnectionInterleavingSupport} but start=1 instead of None
+		"""
+		frame0 = self._getValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0]))
+		q = abstract.Queue()
+		q.extend([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
+
+		self.transport.writeBoxes(q, start=3)
+		self.transport.writeBoxes(q, start=3) # doing it again is pretty much a no-op
+		self.transport.writeBoxes(q, start=1)
+		self.transport.writeBoxes(q, start=1) # doing it again is pretty much a no-op
+		self._parseFrames()
+		self.aE([
+			[Fn.seqnum, 3],
+			[Fn.box, ['box3']],
+			[Fn.box, ['box4']],
+			[Fn.seqnum, 1],
+			[Fn.box, ['box1']],
+			[Fn.box, ['box2']],
+			[Fn.box, ['box3']],
+			[Fn.box, ['box4']],
+		], self.gotFrames)
+
+
 	def test_pauseProducingWhenStreamNotFoundYet(self):
 		"""
 		Twisted will call pauseProducing whenever it feels like it, and we have to
@@ -1180,7 +1238,7 @@ class SocketTransportTests(unittest.TestCase):
 		"""
 		Connection number can be anywhere between 0 <= n <= 2**64
 		"""
-		for n in [1, 1000, 10000, 12378912, 1283718237]:
+		for n in [1, 1000, 10000, 12378912, 1283718237, 2**63]:
 			helloData = dict(n=n, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
 			frame0 = [Fn.hello, helloData]
 			self.transport.dataReceived(self.serializeFrames([frame0]))
