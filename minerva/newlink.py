@@ -272,6 +272,7 @@ class Stream(object):
 		self._incoming = abstract.Incoming()
 		self._pretendAcked = None
 
+		self._paused = False
 		self._producer = None
 		self._streamingProducer = False
 
@@ -509,12 +510,12 @@ class Stream(object):
 			self._registerDownstreamProducer(self._activeS2CTransport)
 
 
-	# called by StreamProtocol instances
+	# called by MinervaProtocol instances
 	def unregisterProducer(self):
 		"""
 		Stop consuming data from a producer, without disconnecting.
 		"""
-		self.producer = None
+		self._producer = None
 		if self._activeS2CTransport:
 			self._unregisterDownstreamProducer(self._activeS2CTransport)
 
@@ -918,6 +919,7 @@ class SocketTransport(protocol.Protocol):
 			return
 
 		# See test_writeBoxesConnectionInterleavingSupport
+		# Remember that None < any number
 		if start < self._lastStartParam:
 			self.lastBoxSent = -1
 			self._lastStartParam = start

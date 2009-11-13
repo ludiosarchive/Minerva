@@ -680,6 +680,37 @@ class StreamTests(unittest.TestCase):
 		# TODO: test that if we have a non-streaming producer registered, producer.resumeProducing() is called any time the queue is empty
 
 
+	def test_registerUnregisterProducerWithNoActiveTransport(self):
+		factory = MockMinervaProtocolFactory()
+		clock = task.Clock()
+		s = Stream(clock, _DummyId('some fake id'), factory)
+		t1 = DummySocketLikeTransport()
+
+		# Connect and disconnect a transport just to make Stream create an instance of a MinervaProtocol
+		s.transportOnline(t1)
+		s.transportOffline(t1)
+
+		proto = list(factory.instances)[0]
+
+		# Unregister is basically a no-op if no producer is registered.
+		# This matches L{twisted.internet.abstract.FileHandle}'s behavior.
+		s.unregisterProducer()
+
+		# Register
+		s.registerProducer(proto, streaming=True)
+		# Registering again raises RuntimeError
+		self.aR(RuntimeError, lambda: s.registerProducer(proto, streaming=True))
+		# ...even if it's not anything like a producer
+		self.aR(RuntimeError, lambda: s.registerProducer(None, streaming=False))
+
+		# Unregister
+		s.unregisterProducer()
+
+		# To make sure unregister worked, check that registerProducer doesn't raise an error
+		s.registerProducer(proto, streaming=False)
+
+
+
 class StreamTrackerObserverTests(unittest.TestCase):
 
 	def test_observeStreams(self):
