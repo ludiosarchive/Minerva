@@ -279,8 +279,8 @@ class DummySocketLikeTransport(object):
 		self.log.append(['reset', reasonString])
 
 
-	def sendBoxes(self, queue, start):
-		self.log.append(['sendBoxes', queue, start])
+	def writeBoxes(self, queue, start):
+		self.log.append(['writeBoxes', queue, start])
 
 
 
@@ -437,7 +437,10 @@ class StreamTests(unittest.TestCase):
 		1/0
 
 
-	def test_sendBoxes(self):
+	def test_sendBoxesAndActiveStreams(self):
+		"""
+		Test that boxes are sent to the active S2C transport.
+		"""
 		s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
 		t1 = DummySocketLikeTransport()
 		s.transportOnline(t1)
@@ -449,7 +452,7 @@ class StreamTests(unittest.TestCase):
 		# Make it active
 		s.subscribeToBoxes(t1, waitOnTransport=None)
 
-		self.aE(t1.log, [['sendBoxes', s.queue, None]])
+		self.aE(t1.log, [['writeBoxes', s.queue, None]])
 
 
 	def test_getSACK(self):
@@ -845,7 +848,7 @@ class SocketTransportTests(unittest.TestCase):
 		"""
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1']])
-		self.aR(RuntimeError, lambda: self.transport.sendBoxes(q, start=None))
+		self.aR(RuntimeError, lambda: self.transport.writeBoxes(q, start=None))
 
 
 	def test_sendBoxesStartNone(self):
@@ -857,7 +860,7 @@ class SocketTransportTests(unittest.TestCase):
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1']])
-		self.transport.sendBoxes(q, start=None)
+		self.transport.writeBoxes(q, start=None)
 		self._parseFrames()
 		self.aE([
 			[Fn.seqnum, 0],
@@ -875,7 +878,7 @@ class SocketTransportTests(unittest.TestCase):
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1'], ['box2']])
-		self.transport.sendBoxes(q, start=1)
+		self.transport.writeBoxes(q, start=1)
 		self._parseFrames()
 		self.aE([
 			[Fn.seqnum, 1],
@@ -900,7 +903,7 @@ class SocketTransportTests(unittest.TestCase):
 		box0 = ['box0'*(1*1024*1024)]
 		box1 = ['box1'*(1*1024*1024)]
 		q.extend([box0, box1])
-		self.transport.sendBoxes(q, start=None)
+		self.transport.writeBoxes(q, start=None)
 		self._parseFrames()
 		self.aE([
 			[Fn.seqnum, 0],
@@ -919,7 +922,7 @@ class SocketTransportTests(unittest.TestCase):
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1']])
 		self.transport.pauseProducing() # in a non-test environment, Twisted's TCP stuff calls pauseProducing
-		self.transport.sendBoxes(q, start=None)
+		self.transport.writeBoxes(q, start=None)
 		self._parseFrames()
 		self.aE([], self.gotFrames)
 

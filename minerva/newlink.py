@@ -293,7 +293,7 @@ class Stream(object):
 				start = None
 			else:
 				start = max(self._pretendAcked + 1, self.queue._seqNumAt0)
-			self._activeS2CTransport.sendBoxes(self.queue, start=start)
+			self._activeS2CTransport.writeBoxes(self.queue, start=start)
 			# If we have a pull producer registered and queue is empty, pull more data
 			if self._producer and not self._streamingProducer and len(self.queue) == 0:
 				self._producer.resumeProducing()
@@ -804,9 +804,9 @@ class IMinervaTransport(IPushProducer):
 		"Sequence number of the last box written to the socket/request, or -1 if no boxes ever written")
 
 
-	def sendBoxes(queue, start):
+	def writeBoxes(queue, start):
 		"""
-		Send boxes in queue C{queue} to the peer.
+		Write boxes in queue C{queue} to the peer.
 
 		@param queue: an L{abstract.Queue}
 		@param start: where to start in the queue, or C{None}
@@ -896,9 +896,9 @@ class SocketTransport(protocol.Protocol):
 		self.transport.unregisterProducer()
 
 
-	def sendBoxes(self, queue, start):
+	def writeBoxes(self, queue, start):
 		"""
-		@see L{IMinervaTransport.sendBoxes}
+		@see L{IMinervaTransport.writeBoxes}
 		"""
 		if self._authed is not True or self._gotHello is not True:
 			raise RuntimeError("_authed=%r, _gotHello=%r" % (self._authed, self._gotHello))
