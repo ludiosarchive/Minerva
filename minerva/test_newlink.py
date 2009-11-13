@@ -318,6 +318,15 @@ class DummySocketLikeTransport(object):
 		self.lastBoxSent = lastBox
 
 
+	def registerProducer(self, producer, streaming):
+		self.log.append(['registerProducer', producer, streaming])
+
+
+	def unregisterProducer(self):
+		self.log.append(['unregisterProducer'])
+
+
+
 
 class FrameTests(unittest.TestCase):
 
@@ -753,6 +762,11 @@ class StreamTests(unittest.TestCase):
 		If Stream was already paused, new push producers are paused when registered.
 		"""
 		factory, clock, s, t1 = self._makeStuff()
+
+		# Need to do this to have at least one connected transport,
+		# otherwise all push producers all paused when registered.
+		s.transportOnline(t1)
+		s.subscribeToBoxes(t1, succeedsTransport=None)
 
 		s.pauseProducing()
 

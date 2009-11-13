@@ -272,7 +272,6 @@ class Stream(object):
 		self._incoming = abstract.Incoming()
 		self._pretendAcked = None
 
-		self._paused = False
 		self._producer = None
 		self._streamingProducer = False
 
@@ -281,6 +280,8 @@ class Stream(object):
 		#     True = yes, a streaming producer
 		#     False = yes, a pull producer
 		self._activeS2CProducerType = None
+
+		self._activeS2CPaused = False
 
 
 	def __repr__(self):
@@ -504,7 +505,7 @@ class Stream(object):
 		self._producer = producer
 		self._streamingProducer = streaming
 
-		if streaming and self._paused: # We may have been paused before a producer was registered
+		if streaming and (self._activeS2CPaused or self._activeS2CTransport is None):
 			producer.pauseProducing()
 
 		if self._activeS2CTransport:
@@ -520,19 +521,30 @@ class Stream(object):
 		if self._activeS2CTransport:
 			self._unregisterDownstreamProducer(self._activeS2CTransport)
 
+## LAME
+#	def _updateUpstreamProducer(self):
+#		if not self._producer:
+#			return
+#
+#		if self._activeS2CPaused or self.activeS2CTransport is None:
+#			if self._streamingProducer:
+#				self._producer.pauseProducing()
+#		else:
+#			self._producer.resumeProducing()
+
 
 	# called by the active S2C transport in response to TCP pressure,
 	# and by self if there is no active S2C transport.
 	def pauseProducing(self):
-		self._paused = True
-		if self._producer and self._streamingProducer:
+		self._activeS2CPaused = True
+		if self._producer:
 			self._producer.pauseProducing()
 
 
 	# called by the active S2C transport in response to TCP pressure,
 	# and by self if there is no active S2C transport.
 	def resumeProducing(self):
-		self._paused = False
+		self._activeS2CPaused = False
 		if self._producer:
 			self._producer.resumeProducing()
 
