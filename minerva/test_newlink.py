@@ -18,31 +18,22 @@ from minerva import abstract
 from minerva.helpers import todo
 
 from minerva.newlink import (
-	Frame, Stream, StreamId, StreamTracker, NoSuchStream, StreamAlreadyExists,
-	BadFrame, ISimpleConsumer, IMinervaProtocol, IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
-	IMinervaTransport, SocketTransport
+	Frame, Stream, StreamId, StreamTracker, NoSuchStream,
+	StreamAlreadyExists, BadFrame, ISimpleConsumer, IMinervaProtocol,
+	IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
+	IMinervaTransport, SocketTransport,
 )
 
 from minerva.website import (
 	RejectTransport, ITransportFirewall, CsrfTransportFirewall,
-	NoopTransportFirewall, AntiHijackTransportFirewall
+	NoopTransportFirewall, AntiHijackTransportFirewall,
 )
 
 from minerva.mocks import (
-	FakeReactor,
-	DummyChannel,
-	DummyRequest,
-	_DummyId,
-	MockProducer,
-	MockStream,
-	MockMinervaProtocol,
-	MockMinervaProtocolFactory,
-	DummyHttpTransport,
-	DummySocketLikeTransport,
-	MockObserver,
-	BrokenOnPurposeError,
-	BrokenMockObserver,
-	DummyStreamTracker,
+	FakeReactor, DummyChannel, DummyRequest, _DummyId, MockProducer,
+	MockStream, MockMinervaProtocol, MockMinervaProtocolFactory,
+	DummyHttpTransport, DummySocketLikeTransport, MockObserver,
+	BrokenOnPurposeError, BrokenMockObserver, DummyStreamTracker,
 	DummyFirewall,
 )
 
@@ -494,7 +485,8 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_registerUnregisterPushProducerThenSubscribe(self):
-		"""Regression test for a mistake"""
+		"""Regression test for a mistake in the code, where code forgot to check
+		for non-None self._producer"""
 		factory, clock, s, t1 = self._makeStuff()
 
 		producer1 = MockProducer()
