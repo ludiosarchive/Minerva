@@ -20,7 +20,7 @@ from minerva.newlink import (
 	Frame, Stream, StreamId, StreamTracker, NoSuchStream,
 	StreamAlreadyExists, BadFrame, ISimpleConsumer, IMinervaProtocol,
 	IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
-	IMinervaTransport, SocketTransport,
+	IMinervaTransport, SocketTransport
 )
 
 from minerva.website import (
