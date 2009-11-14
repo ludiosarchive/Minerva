@@ -141,7 +141,7 @@ Producers/consumers:
 	attaches itself). This poses some challenges to the implementation, because Minerva
 	transports may frequently attach and detach from the Stream.
 
-	In general, TCP pressure from the TCP transport of the active S2C
+	In general, TCP pressure from the TCP transport of the primary
 	transport directly affects the producer attached to Stream. Also, if the producer is a push
 	producer and no Minerva transports are attached the Stream, the producer is paused. 
 
@@ -171,10 +171,10 @@ Producers/consumers, technical details:
 	Stream's goal is to attach the same type of producer with every S2C transport that attaches to it,
 	even if the S2C transport isn't attached yet.
 
-	Stream must also unregister producers from transports that are no longer active S2C transports.
+	Stream must also unregister producers from transports that are no longer primary transports.
 
 	If type of producer is push, Stream must also call pauseProducing on MinervaProtocol whenever
-	there are no active S2C transports. It must also call resumeProducing when this situation ends.
+	there is no primary transport. It must also call resumeProducing when this situation ends.
 
 	*Transport's job is simple, it just registers itself as the correct type of producer with Twisted.
 	One edge case: it must remember if Twisted paused it, and if so, pauseProducing newly-attached push producers.
@@ -187,5 +187,5 @@ Producers/consumers, technical details:
 	pauseProducing or resumeProducing calls on MinervaProtocol:
 		(Twisted) - when it wants more data to send
 		*Transport - if it was paused earlier by (Twisted)
-		Stream - when there are no active S2C transports
-		Stream - (if paused) when an active S2C transport appears
+		Stream - when there are no primary transports
+		Stream - (if paused) when a primary transport appears

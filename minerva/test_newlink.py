@@ -163,18 +163,18 @@ class StreamTests(unittest.TestCase):
 	def test_sendBoxesAndActiveStreams(self):
 		"""
 		Test that boxes are sent to the correct transport.
-		Test that obsolete formerly-active S2C transports are "closed gently"
-		Test that Stream tries to send boxes down new active S2C transports.
+		Test that obsolete formerly-primary transports are "closed gently"
+		Test that Stream tries to send boxes down new primary transports.
 		"""
 		s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
 		t1 = DummySocketLikeTransport()
 		s.transportOnline(t1)
 		s.sendBoxes([['box0'], ['box1']])
 
-		# Boxes don't reach the transport because the transport isn't active yet
+		# Boxes don't reach the transport because the transport isn't primary yet
 		self.aE(t1.log, [])
 
-		# Make it active
+		# Make it primary
 		s.subscribeToBoxes(t1, succeedsTransport=None)
 
 		self.aE(t1.log, [
@@ -186,14 +186,14 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t2)
 
 		s.sendBoxes([['box2'], ['box3']])
-		# box2 and box3 still went to the old transport because t2 isn't the activeS2CTransport
+		# box2 and box3 still went to the old transport because t2 isn't the primary transport
 		self.aE(t1.log, [
 			['writeBoxes', s.queue, None],
 			['writeBoxes', s.queue, None],
 		])
 		self.aE(t2.log, [])
 
-		# Now make t2 active
+		# Now make t2 primary
 		s.subscribeToBoxes(t2, succeedsTransport=None)
 
 		self.aE(t1.log, [
@@ -212,7 +212,7 @@ class StreamTests(unittest.TestCase):
 
 	def test_sendBoxesConnectionInterleaving(self):
 		"""
-		If active S2C transport with transportNumber 30 (T#30) is connected,
+		If primary transport with transportNumber 30 (T#30) is connected,
 		and boxes 0 through 4 were sent down T#30,
 		and no SACK has come from the client yet,
 		and new transport with transportNumber 31 (T#31) connects with succeedsTransport=30,
@@ -225,17 +225,17 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t1)
 		s.sendBoxes([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
 
-		# Boxes don't reach the transport because the transport isn't active yet
+		# Boxes don't reach the transport because the transport isn't primary yet
 		self.aE(t1.log, [])
 
-		# Make it active
+		# Make it primary
 		s.subscribeToBoxes(t1, succeedsTransport=None)
 
 		self.aE(t1.log, [
 			['writeBoxes', s.queue, None],
 		])
 
-		# Now connect a new transport and make it active
+		# Now connect a new transport and make it primary
 		t2 = DummySocketLikeTransport()
 		t2.transportNumber = 31
 		s.transportOnline(t2)
@@ -359,8 +359,8 @@ class StreamTests(unittest.TestCase):
 	# WRONG, see above -
 		# TODO: test that if Stream.resumeProducing called, and any producer is registered, producer is immediately resumed
 
-	# TODO: test that if active S2C transport closes, and no waiting S2C transport, pauseProducing is called
-	# TODO: test that if active S2C transport closes, and there IS a waiting S2C transport, pauseProducing is NOT called
+	# TODO: test that if primary transport closes, and no waiting S2C transport, pauseProducing is called
+	# TODO: test that if primary transport closes, and there IS a waiting S2C transport, pauseProducing is NOT called
 
 	# WRONG, lowest-level Twisted code initiates all the pulling
 		# TODO: test that if we have a non-streaming producer registered, producer.resumeProducing() is called any time the queue is empty

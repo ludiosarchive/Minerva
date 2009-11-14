@@ -32,10 +32,8 @@ Minerva glossary:
 	"S2C transport" - a transport that is being used or will be used for sending S2C boxes,
 		regardless of whether it it used for C2S as well.
 
-	waiting S2C transport - a transport that is waiting for another transport to close,
-		before any S2C boxes go over it.
-
-	active S2C transport - the transport that is actually sending boxes to the client.
+	primary transport (formerly "active S2C transport") - the transport that is currently
+		designated to send boxes to the client.
 
 Other glossary:
 
@@ -262,7 +260,7 @@ class Stream(object):
 		self._protocol = None
 
 		self.virgin = True # no transports have ever attached to it
-		self._activeS2CTransport = None
+		self._primaryTransport = None
 		self._notifications = []
 		self._transports = set()
 		self.disconnected = False
@@ -273,8 +271,8 @@ class Stream(object):
 		self._producer = None
 		self._streamingProducer = False
 
-		self._registeredDownstream = False
-		self._activeS2CPaused = False
+		self._primaryHasProducer = False
+		self._primaryPaused = False
 
 
 	def __repr__(self):
@@ -286,11 +284,11 @@ class Stream(object):
 		if len(self.queue) == 0:
 			return
 
-		if self._activeS2CTransport is not None:
+		if self._primaryTransport is not None:
 			if self._pretendAcked is None:
 				start = None
 			else:
-				# In this case, avoid calling writeBoxes when there aren't any new boxes. 
+				# In this case, avoid calling writeBoxes when there aren't any new boxes.
 				# Sample:
 				# Wrote boxes 0, 1 over T#1; T#2 connects and makes _pretendAcked = 1
 				# queue is still _seqNumAt0 == 0, len(self.queue) == 2
@@ -300,7 +298,7 @@ class Stream(object):
 				if not self.queue._seqNumAt0 + len(self.queue) > self._pretendAcked + 1:
 					return
 				start = max(self._pretendAcked + 1, self.queue._seqNumAt0)
-			self._activeS2CTransport.writeBoxes(self.queue, start=start)
+			self._primaryTransport.writeBoxes(self.queue, start=start)
 
 			# Probably wrong; Twisted is responsible for starting the resumeProducing chain
 			### If we have a pull producer registered and queue is empty, pull more data
@@ -324,7 +322,7 @@ class Stream(object):
 		# We don't need to self._producer.pauseProducing() if queue is too big here,
 		# because:
 		#     1) active S2C transport are responsible for pausing if there is TCP pressure
-		#     2) if there is no active S2C transport, we already paused it 
+		#     2) if there is no active S2C transport, we already paused it
 		self.queue.extend(boxes)
 		self._tryToSend()
 
@@ -359,7 +357,7 @@ class Stream(object):
 		# No need to pretend any more, because we just got a likely-up-to-date sack from the client
 		wasPretending = self._pretendAcked
 		self._pretendAcked = None
-		
+
 		self.queue.handleSACK(sackInfo)
 
 		if wasPretending:
@@ -392,44 +390,44 @@ class Stream(object):
 			self._transports.remove(transport)
 		except KeyError:
 			raise RuntimeError("Cannot take %r offline; it wasn't registered" % (transport,))
-		if self._activeS2CTransport == transport:
+		if self._primaryTransport == transport:
 			self._unregisterProducerDownstream()
-			self._activeS2CPaused = False
-			self._activeS2CTransport = None
+			self._primaryPaused = False
+			self._primaryTransport = None
 
 			if self._producer and self._streamingProducer:
 				self._producer.pauseProducing()
 
 
 	# TODO: consider implementing an _updateProducerSituation that everyone calls,
-	# instead of having hidden assumptions about state in every function 
+	# instead of having hidden assumptions about state in every function
 
 
 	def _unregisterProducerDownstream(self):
-		if self._registeredDownstream:
-			self._activeS2CTransport.unregisterProducer()
-			self._registeredDownstream = False
+		if self._primaryHasProducer:
+			self._primaryTransport.unregisterProducer()
+			self._primaryHasProducer = False
 
 
 	# Called when we have a new active S2C transport, or when a MinervaProtocol registers a producer with us (Stream)
 	def _registerProducerDownstream(self):
-		if not self._registeredDownstream:
-			self._activeS2CTransport.registerProducer(self, self._streamingProducer)
-			self._registeredDownstream = True
+		if not self._primaryHasProducer:
+			self._primaryTransport.registerProducer(self, self._streamingProducer)
+			self._primaryHasProducer = True
 
 
 	def _newActiveS2C(self, transport):
-		if self._activeS2CTransport:
+		if self._primaryTransport:
 			self._unregisterProducerDownstream()
-			self._activeS2CPaused = False
-			self._activeS2CTransport.closeGently()
+			self._primaryPaused = False
+			self._primaryTransport.closeGently()
 		else:
 			# There was no active S2C transport, so if we had a push
 			# producer, it was paused, and we need to unpause it.
 			if self._producer and self._streamingProducer:
 				self._producer.resumeProducing()
 
-		self._activeS2CTransport = transport
+		self._primaryTransport = transport
 		if self._producer:
 			self._registerProducerDownstream()
 
@@ -443,7 +441,7 @@ class Stream(object):
 		"""
 		##print 'subscribeToBoxes', transport, succeedsTransport
 		if succeedsTransport is not None:
-			self._pretendAcked = self._activeS2CTransport.lastBoxSent
+			self._pretendAcked = self._primaryTransport.lastBoxSent
 		self._newActiveS2C(transport)
 		self._tryToSend()
 
@@ -481,7 +479,7 @@ class Stream(object):
 	# This is a copy/paste from twisted.internet.interfaces.IConsumer with changes
 
 	# called by MinervaProtocol instances
-	
+
 	# The only reason we have this is because not all MinervaProtocols will be L{IProducer}s
 	# (some will be very simple). Why not just implement pause/resume/stopProducing
 	# in BasicMinervaProtocol with ': pass' methods? Because the protocol wouldn't change
@@ -512,10 +510,10 @@ class Stream(object):
 		self._producer = producer
 		self._streamingProducer = streaming
 
-		if streaming and (self._activeS2CPaused or self._activeS2CTransport is None):
+		if streaming and (self._primaryPaused or self._primaryTransport is None):
 			producer.pauseProducing()
 
-		if self._activeS2CTransport:
+		if self._primaryTransport:
 			self._registerProducerDownstream()
 
 
@@ -525,7 +523,7 @@ class Stream(object):
 		Stop consuming data from a producer, without disconnecting.
 		"""
 		self._producer = None
-		if self._activeS2CTransport:
+		if self._primaryTransport:
 			self._unregisterProducerDownstream()
 
 ## LAME
@@ -533,7 +531,7 @@ class Stream(object):
 #		if not self._producer:
 #			return
 #
-#		if self._activeS2CPaused or self.activeS2CTransport is None:
+#		if self._primaryPaused or self.activeS2CTransport is None:
 #			if self._streamingProducer:
 #				self._producer.pauseProducing()
 #		else:
@@ -545,7 +543,7 @@ class Stream(object):
 		We assume this is called only by the active S2C transport. The pause
 		status is no longer relevant after the active S2C transport detaches.
 		"""
-		self._activeS2CPaused = True
+		self._primaryPaused = True
 		if self._producer:
 			self._producer.pauseProducing()
 
@@ -555,7 +553,7 @@ class Stream(object):
 		"""
 		We assume this is called only by the active S2C transport.
 		"""
-		self._activeS2CPaused = False
+		self._primaryPaused = False
 		if self._producer:
 			self._producer.resumeProducing()
 
@@ -946,7 +944,7 @@ class SocketTransport(protocol.Protocol):
 			if seqNum <= lastBox: # This might have to change to support SACK.
 				continue
 			if lastBox == -1 or lastBox + 1 != seqNum:
-				toSend += self._encodeFrame([Fn.seqnum, seqNum]) 
+				toSend += self._encodeFrame([Fn.seqnum, seqNum])
 			toSend += self._encodeFrame([Fn.box, box])
 			lastBox = seqNum
 		if len(toSend) > 1024 * 1024:
