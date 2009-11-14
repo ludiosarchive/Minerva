@@ -568,6 +568,22 @@ class StreamTests(unittest.TestCase):
 		self.aE([], producer1.log)
 
 
+	def test_transportOfflineOnlyPausesIfTransportIsPrimary(self):
+		factory, clock, s, t1 = self._makeStuff()
+
+		s.transportOnline(t1)
+		s.subscribeToBoxes(t1, succeedsTransport=None)
+
+		producer1 = MockProducer()
+		s.registerProducer(producer1, streaming=True)
+
+		t2 = DummySocketLikeTransport() # not the primary transport
+		s.transportOnline(t2)
+		s.transportOffline(t2)
+
+		self.aE([], producer1.log)
+
+
 	def test_registerUnregisterPushProducerThenSubscribe(self):
 		"""Regression test for a mistake in the code, where code forgot to check
 		for non-None self._producer"""

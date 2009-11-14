@@ -392,8 +392,8 @@ class Stream(object):
 			raise RuntimeError("Cannot take %r offline; it wasn't registered" % (transport,))
 		if self._primaryTransport == transport:
 			self._unregisterProducerOnPrimary()
-			self._primaryPaused = False
 			self._primaryTransport = None
+			self._primaryPaused = False # There is no primary...
 
 			if self._producer and self._streamingProducer:
 				self._producer.pauseProducing()
@@ -419,14 +419,13 @@ class Stream(object):
 			# is no longer relevant, so go back to resume.
 			if self._primaryPaused and self._producer and self._streamingProducer:
 				self._producer.resumeProducing()
-			self._primaryPaused = False
+			self._primaryPaused = False # TODO XXX: can we make a test that fails if this is indented right once?
 			self._primaryTransport.closeGently()
 		else:
 			# There was no active S2C transport, so if we had a push
 			# producer, it was paused, and we need to unpause it.
 			if self._producer and self._streamingProducer:
 				self._producer.resumeProducing()
-			# No need to set self._primaryPaused = False because that is done in transportOffline
 			assert self._primaryPaused == False
 
 		self._primaryTransport = transport
