@@ -390,7 +390,7 @@ class Stream(object):
 			self._transports.remove(transport)
 		except KeyError:
 			raise RuntimeError("Cannot take %r offline; it wasn't registered" % (transport,))
-		if self._primaryTransport == transport:
+		if transport is self._primaryTransport:
 			self._unregisterProducerOnPrimary()
 			self._primaryTransport = None
 			self._primaryPaused = False # There is no primary...
