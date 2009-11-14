@@ -509,9 +509,7 @@ class StreamTests(unittest.TestCase):
 class StreamTrackerObserverTests(unittest.TestCase):
 
 	def test_observeStreams(self):
-		"""
-		observeStreams works and doesn't actually call anything on the observer yet.
-		"""
+		"""observeStreams works and doesn't actually call anything on the observer yet."""
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, None, None)
 		o = MockObserver()
@@ -550,9 +548,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 
 
 	def test_unobserveUnknownRaisesError(self):
-		"""
-		unobserveStreams raises L{RuntimeError} if unobserving an unknown observer
-		"""
+		"""unobserveStreams raises L{RuntimeError} if unobserving an unknown observer"""
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, None, None)
 		o = MockObserver()
@@ -560,9 +556,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 
 
 	def test_unobserveTwiceRaisesError(self):
-		"""
-		calling unobserveStreams for same observer raises L{RuntimeError}
-		"""
+		"""calling unobserveStreams for same observer raises L{RuntimeError}"""
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, None, None)
 		o = MockObserver()
@@ -572,9 +566,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 
 
 	def test_manyObservers(self):
-		"""
-		still works when there are many observers
-		"""
+		"""still works when there are many observers"""
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, None, None)
 
@@ -1010,9 +1002,7 @@ class SocketTransportTests(unittest.TestCase):
 
 
 	def test_connectionNumberDoesntMatter(self):
-		"""
-		Connection number can be anywhere between 0 <= n <= 2**64
-		"""
+		"""Connection number can be anywhere between 0 <= n <= 2**64"""
 		for n in [1, 1000, 10000, 12378912, 1283718237, 2**63]:
 			helloData = dict(n=n, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
 			frame0 = [Fn.hello, helloData]
@@ -1023,9 +1013,7 @@ class SocketTransportTests(unittest.TestCase):
 
 
 	def test_validHelloButNoSuchStream(self):
-		"""
-		test that we get error 'tk_stream_attach_failure' if no such stream
-		"""
+		"""test that we get error 'tk_stream_attach_failure' if no such stream"""
 		helloData = dict(n=0, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
 		frame0 = [Fn.hello, helloData]
 		self.transport.dataReceived(self.serializeFrames([frame0]))
@@ -1034,9 +1022,7 @@ class SocketTransportTests(unittest.TestCase):
 
 
 	def test_validHelloButNoSuchStreamExplicitW(self):
-		"""
-		Same test as test_validHelloButNoSuchStream but with explicit w=False
-		"""
+		"""Same test as test_validHelloButNoSuchStream but with explicit w=False"""
 		helloData = dict(n=0, w=False, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
 		frame0 = [Fn.hello, helloData]
 		self.transport.dataReceived(self.serializeFrames([frame0]))
