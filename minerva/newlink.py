@@ -418,6 +418,12 @@ class Stream(object):
 			self._unregisterDownstreamProducer()
 			self._activeS2CPaused = False
 			self._activeS2CTransport.closeGently()
+		else:
+			# There was no active S2C transport, so if we had a push
+			# producer, it was paused, and we need to unpause it.
+			if self._producer and self._streamingProducer:
+				self._producer.resumeProducing()
+
 		self._activeS2CTransport = transport
 		if self._producer:
 			self._registerDownstreamProducer()

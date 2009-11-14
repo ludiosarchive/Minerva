@@ -469,9 +469,7 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_boxesReceivedResetsBecauseTooManyBoxes(self):
-		"""
-		If too many boxes are stuck in Incoming, the Stream is reset
-		"""
+		"""If too many boxes are stuck in Incoming, the Stream is reset"""
 		factory = MockMinervaProtocolFactory()
 		s = Stream(None, _DummyId('some fake id'), factory)
 		t = DummySocketLikeTransport()
@@ -489,9 +487,7 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_boxesReceivedResetsBecauseTooManyBytes(self):
-		"""
-		If too many (estimated) bytes are in Incoming, the Stream is reset
-		"""
+		"""If too many (estimated) bytes are in Incoming, the Stream is reset"""
 		factory = MockMinervaProtocolFactory()
 		s = Stream(None, _DummyId('some fake id'), factory)
 		t = DummySocketLikeTransport()
@@ -633,9 +629,7 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_noLongerVirgin(self):
-		"""
-		Stream is no longer a virgin after a transport is attached to it
-		"""
+		"""Stream is no longer a virgin after a transport is attached to it"""
 		s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
 
 		self.aI(True, s. virgin)
@@ -669,9 +663,7 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_transportOfflineUnknownTransport(self):
-		"""
-		transportOffline(some transport that was never registered) raises RuntimeError
-		"""
+		"""transportOffline(some transport that was never registered) raises RuntimeError"""
 		clock = task.Clock()
 		s = Stream(clock, _DummyId('some fake id'), MockMinervaProtocolFactory())
 		t = DummySocketLikeTransport()
@@ -750,9 +742,7 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_pausedStreamPausesNewPushProducer(self):
-		"""
-		If Stream was already paused, new push producers are paused when registered.
-		"""
+		"""If Stream was already paused, new push producers are paused when registered."""
 		factory, clock, s, t1 = self._makeStuff()
 
 		# Need to do this to have at least one connected transport,
@@ -782,6 +772,8 @@ class StreamTests(unittest.TestCase):
 
 	def test_pausedStreamDoesNotPausesNewPullProducer(self):
 		factory, clock, s, t1 = self._makeStuff()
+		s.transportOnline(t1)
+		s.subscribeToBoxes(t1, succeedsTransport=None)
 		s.pauseProducing()
 
 		# pull producers are not pauseProducing'ed, since they're effectively paused by default
@@ -789,6 +781,60 @@ class StreamTests(unittest.TestCase):
 		pullProducer = MockProducer()
 		s.registerProducer(pullProducer, streaming=False)
 		self.aE([], pullProducer.log)
+
+
+	def test_lackOfTransportsPausesPushProducer(self):
+		"""When a stream has no transports attached, the push producer is paused."""
+		factory, clock, s, t1 = self._makeStuff()
+
+		producer1 = MockProducer()
+		s.registerProducer(producer1, streaming=True)
+		self.aE([
+			['pauseProducing'],
+		], producer1.log)
+
+		s.transportOnline(t1)
+		s.subscribeToBoxes(t1, succeedsTransport=None)
+
+		self.aE([
+			['pauseProducing'],
+			['resumeProducing'],
+		], producer1.log)
+
+		s.transportOffline(t1)
+
+		self.aE([
+			['pauseProducing'],
+			['resumeProducing'],
+			['pauseProducing'],
+		], producer1.log)
+
+
+	def test_lackOfTransportsIgnoresPullProducer(self):
+		"""When a stream has no transports attached, the pull producer is untouched."""
+		factory, clock, s, t1 = self._makeStuff()
+
+		producer1 = MockProducer()
+		s.registerProducer(producer1, streaming=False)
+
+		s.transportOnline(t1)
+		s.subscribeToBoxes(t1, succeedsTransport=None)
+
+		s.transportOffline(t1)
+
+		self.aE([], producer1.log)
+
+
+	def test_registerUnregisterPushProducerThenSubscribe(self):
+		"""Regression test for a mistake"""
+		factory, clock, s, t1 = self._makeStuff()
+
+		producer1 = MockProducer()
+		s.registerProducer(producer1, streaming=True)
+		s.unregisterProducer()
+
+		s.transportOnline(t1)
+		s.subscribeToBoxes(t1, succeedsTransport=None)
 
 
 
