@@ -399,10 +399,6 @@ class Stream(object):
 				self._producer.pauseProducing()
 
 
-	# TODO: consider implementing an _updateProducerSituation that everyone calls,
-	# instead of having hidden assumptions about state in every function
-
-
 	def _unregisterProducerOnPrimary(self):
 		if self._primaryHasProducer:
 			self._primaryTransport.unregisterProducer()
@@ -419,7 +415,7 @@ class Stream(object):
 	def _newPrimary(self, transport):
 		if self._primaryTransport:
 			self._unregisterProducerOnPrimary()
-			# If old primary transport paused us, this pause state
+			# If old primary transport paused us, our producer was paused, and this pause state
 			# is no longer relevant, so go back to resume.
 			if self._primaryPaused and self._producer and self._streamingProducer:
 				self._producer.resumeProducing()
@@ -516,8 +512,8 @@ class Stream(object):
 		self._producer = producer
 		self._streamingProducer = streaming
 
-		if streaming and (self._primaryPaused or self._primaryTransport is None):
-			producer.pauseProducing()
+		if self._streamingProducer and (self._primaryPaused or self._primaryTransport is None):
+			self._producer.pauseProducing()
 
 		if self._primaryTransport:
 			self._registerProducerOnPrimary()

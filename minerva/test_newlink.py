@@ -520,6 +520,39 @@ class StreamTests(unittest.TestCase):
 		self.aE([['pauseProducing'], ['resumeProducing']], producer1.log)
 
 
+	def test_newPrimaryTransportResumesAndLeavesGoodState(self):
+		"""
+		Similar to L{test_newPrimaryTransportResumesIfNecessary}. Make
+		sure Stream doesn't do strange things (like resumeProducing twice
+		in a row when another transport connects.)
+		"""
+		factory, clock, s, t1 = self._makeStuff()
+
+		s.transportOnline(t1)
+		s.subscribeToBoxes(t1, succeedsTransport=None)
+
+		producer1 = MockProducer()
+		s.registerProducer(producer1, streaming=True)
+
+		self.aE([], producer1.log)
+
+		s.pauseProducing() # pretend that t1 called this
+
+		self.aE([['pauseProducing']], producer1.log)
+
+		t2 = DummySocketLikeTransport()
+		s.transportOnline(t2)
+		s.subscribeToBoxes(t2, succeedsTransport=None)
+
+		self.aE([['pauseProducing'], ['resumeProducing']], producer1.log)
+
+		t3 = DummySocketLikeTransport()
+		s.transportOnline(t3)
+		s.subscribeToBoxes(t3, succeedsTransport=None)
+
+		self.aE([['pauseProducing'], ['resumeProducing']], producer1.log)
+
+
 	def test_lackOfTransportsIgnoresPullProducer(self):
 		"""When a stream has no transports attached, the pull producer is untouched."""
 		factory, clock, s, t1 = self._makeStuff()
