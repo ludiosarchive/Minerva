@@ -391,9 +391,10 @@ class Stream(object):
 		except KeyError:
 			raise RuntimeError("Cannot take %r offline; it wasn't registered" % (transport,))
 		if transport is self._primaryTransport:
+			# Is this really needed? Why would a transport send signals after it is offline?
 			self._unregisterProducerOnPrimary()
 			self._primaryTransport = None
-			self._primaryPaused = False # There is no primary...
+			##self._primaryPaused = False # Because there is no primary. Add test?
 
 			if self._producer and self._streamingProducer:
 				self._producer.pauseProducing()
@@ -526,17 +527,6 @@ class Stream(object):
 		self._producer = None
 		if self._primaryTransport:
 			self._unregisterProducerOnPrimary()
-
-## LAME
-#	def _updateUpstreamProducer(self):
-#		if not self._producer:
-#			return
-#
-#		if self._primaryPaused or self.activeS2CTransport is None:
-#			if self._streamingProducer:
-#				self._producer.pauseProducing()
-#		else:
-#			self._producer.resumeProducing()
 
 
 	def pauseProducing(self):

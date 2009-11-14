@@ -544,12 +544,16 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t2)
 		s.subscribeToBoxes(t2, succeedsTransport=None)
 
+		self.aE([['registerProducer', s, True], ['unregisterProducer'], ['closeGently']], t1.log)
+		self.aE([['registerProducer', s, True]], t2.log)
 		self.aE([['pauseProducing'], ['resumeProducing']], producer1.log)
 
 		t3 = DummySocketLikeTransport()
 		s.transportOnline(t3)
 		s.subscribeToBoxes(t3, succeedsTransport=None)
 
+		self.aE([['registerProducer', s, True], ['unregisterProducer'], ['closeGently']], t2.log)
+		self.aE([['registerProducer', s, True]], t3.log)
 		self.aE([['pauseProducing'], ['resumeProducing']], producer1.log)
 
 
@@ -655,6 +659,30 @@ class StreamTests(unittest.TestCase):
 			self.aE([
 				['registerProducer', s, streaming],
 			], t2.log)
+
+
+	def test_transportOfflineEffectOnTransports(self):
+		factory, clock, s, t1 = self._makeStuff()
+
+		s.transportOnline(t1)
+		s.subscribeToBoxes(t1, succeedsTransport=None)
+
+		producer1 = MockProducer()
+		s.registerProducer(producer1, streaming=True)
+
+		s.transportOffline(t1)
+		s.unregisterProducer()
+
+		producer2 = MockProducer()
+		s.registerProducer(producer2, streaming=True)
+
+		self.aE([['registerProducer', s, True], ['unregisterProducer']], t1.log)
+
+		t2 = DummySocketLikeTransport() # not the primary transport
+		s.transportOnline(t2) # not primary yet
+		self.aE([], t2.log)
+		s.subscribeToBoxes(t2, succeedsTransport=None)
+		self.aE([['registerProducer', s, True]], t2.log)
 
 
 
