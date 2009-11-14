@@ -430,6 +430,8 @@ class Stream(object):
 			# producer, it was paused, and we need to unpause it.
 			if self._producer and self._streamingProducer:
 				self._producer.resumeProducing()
+			# No need to set self._primaryPaused = False because that is done in transportOffline
+			assert self._primaryPaused == False
 
 		self._primaryTransport = transport
 		if self._producer:

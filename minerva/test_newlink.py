@@ -352,12 +352,6 @@ class StreamTests(unittest.TestCase):
 		self.aE(t2.log, [["reset", u'the reason']])
 
 
-	# TODO: test that if primary transport closes, and there IS a waiting S2C transport, pauseProducing is NOT called
-
-	# WRONG, lowest-level Twisted code initiates all the pulling
-		# TODO: test that if we have a non-streaming producer registered, producer.resumeProducing() is called any time the queue is empty
-
-
 	def test_registerUnregisterProducerWithNoActiveTransport(self):
 		"""
 		Test that registerProducer and unregisterProducer seem to work,
