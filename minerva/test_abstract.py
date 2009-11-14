@@ -1,6 +1,6 @@
 from twisted.trial import unittest
 
-from minerva.test_newlink import todo
+from minerva.helpers import todo
 
 import abstract
 

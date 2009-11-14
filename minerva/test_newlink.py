@@ -9,13 +9,13 @@ from twisted.trial import unittest
 from twisted.web import server, resource
 from twisted.internet import protocol, defer, address, interfaces, task
 from twisted.internet.interfaces import IPushProducer, IProtocol, IProtocolFactory
-from twisted.web.test.test_web import DummyRequest as _TwistedDummyRequest
-#from twisted.internet.test.test_base import FakeReactor as _TwistedFakeReactor
 from twisted.test.proto_helpers import StringTransport
 
 from minerva.decoders import BencodeStringDecoder
 
 from minerva import abstract
+
+from minerva.helpers import todo
 
 from minerva.newlink import (
 	Frame, Stream, StreamId, StreamTracker, NoSuchStream, StreamAlreadyExists,
@@ -28,295 +28,25 @@ from minerva.website import (
 	NoopTransportFirewall, AntiHijackTransportFirewall
 )
 
+from minerva.mocks import (
+	FakeReactor,
+	DummyChannel,
+	DummyRequest,
+	_DummyId,
+	MockProducer,
+	MockStream,
+	MockMinervaProtocol,
+	MockMinervaProtocolFactory,
+	DummyHttpTransport,
+	DummySocketLikeTransport,
+	MockObserver,
+	BrokenOnPurposeError,
+	BrokenMockObserver,
+	DummyStreamTracker,
+	DummyFirewall,
+)
+
 Fn = Frame.names
-
-
-class FakeReactor(object):
-	# TODO	: implements() IReactorCore interface? or whatever addSystemEventTrigger is part of?
-
-	def __init__(self, *args, **kargs):
-		self.log = []
-
-
-	def addSystemEventTrigger(self, *args):
-		self.log.append(['addSystemEventTrigger'] + list(args))
-
-
-
-# copy/paste from twisted.web.test.test_web, but added a setTcpNoDelay
-class DummyChannel(object):
-	requestIsDone = False
-
-	class TCP(object):
-		port = 80
-		socket = None
-		connectionLostReason = None
-
-		def __init__(self):
-			self.noDelayEnabled = False
-			self.written = ''
-			self.producers = []
-
-		def getPeer(self):
-			return address.IPv4Address("TCP", '192.168.1.1', 12344)
-
-		def write(self, bytes):
-			assert isinstance(bytes, str)
-			self.written += bytes
-
-		def writeSequence(self, iovec):
-			for v in iovec:
-				self.write(v)
-
-		def getHost(self):
-			return address.IPv4Address("TCP", '10.0.0.1', self.port)
-
-		def registerProducer(self, producer, streaming):
-			self.producers.append((producer, streaming))
-
-		def setTcpNoDelay(self, enabled):
-			self.noDelayEnabled = bool(enabled)
-
-		def connectionLost(self, reason):
-			self.connectionLostReason = reason
-
-
-	class SSL(TCP):
-		implements(interfaces.ISSLTransport)
-
-
-	def __init__(self, clock=None):
-		if clock is None:
-			clock = task.Clock()
-		self.site = server.Site(resource.Resource(), clock=clock)
-		self.transport = self.TCP()
-
-
-	def requestDone(self, request):
-		self.requestIsDone = True
-
-
-
-class DummyRequest(_TwistedDummyRequest):
-
-	def __init__(self, *args, **kwargs):
-		_TwistedDummyRequest.__init__(self, *args, **kwargs)
-
-		# This is needed because _BaseHTTPTransport does
-		#     self.request.channel.transport.setTcpNoDelay(True)
-		self.channel = DummyChannel()
-
-		self.received_cookies = {}
-
-
-	def setHeader(self, name, value):
-		"""
-		L{twisted.web.test.test_web.DummyRequest} does strange stuff in
-		C{setHeader} -- it modifies self.outgoingHeaders, which is not close
-		enough to reality.
-		"""
-		self.responseHeaders.setRawHeaders(name, [value])
-
-
-	def getCookie(self, name):
-		return self.received_cookies.get(name)
-
-
-
-class _DummyId(object):
-	def __init__(self, id):
-		self.id = id
-
-
-
-class MockProducer(object):
-	resumed = False
-	stopped = False
-	paused = False
-
-	def __init__(self):
-		self.log = []
-
-
-	def resumeProducing(self):
-		self.log.append(['resumeProducing'])
-		self.resumed = True
-		self.paused = False
-
-
-	def pauseProducing(self):
-		self.log.append(['pauseProducing'])
-		self.paused = True
-
-
-	def stopProducing(self):
-		self.log.append(['stopProducing'])
-		self.stopped = True
-
-
-
-class MockStream(object):
-	streamId = _DummyId("a stream id of unusual length")
-
-	def __init__(self, clock=None, streamId=None, streamProtocolFactory=None):
-		## if streamId is None: # make a random one?
-		self.virgin = True
-		self._notifications = []
-		self.streamId = streamId
-		self.streamProtocolFactory = streamProtocolFactory
-		self.log = []
-		self._incoming = abstract.Incoming()
-
-
-	def sendBoxes(self, boxes):
-		self.log.append(['sendBoxes', boxes])
-
-
-	def reset(self, reasonString=u''):
-		self.log.append(['reset', reasonString])
-
-
-	def framesReceived(self, transport, frames):
-		self.log.append(['framesReceived', transport, frames])
-
-
-	def transportOnline(self, transport):
-		self.virgin = False
-		self.log.append(['transportOnline', transport])
-
-
-	def transportOffline(self, transport):
-		self.log.append(['transportOffline', transport])
-
-
-	def serverShuttingDown(self, transport):
-		self.log.append(['serverShuttingDown', transport])
-
-
-	def pauseProducing(self):
-		self.log.append(['pauseProducing'])
-
-
-	def resumeProducing(self):
-		self.log.append(['resumeProducing'])
-
-
-	def stopProducing(self):
-		self.log.append(['stopProducing'])
-
-
-	def getSACK(self):
-		self.log.append(['getSACK'])
-		return self._incoming.getSACK()
-
-
-	def notifyFinish(self):
-		"""
-		Notify when finishing the request
-
-		@return: A deferred. The deferred will be triggered when the
-		stream is finished -- always with a C{None} value.
-		"""
-		self._notifications.append(defer.Deferred())
-		return self._notifications[-1]
-
-
-	def _pretendFinish(self):
-		for d in self._notifications:
-			d.callback(None)
-		self._notifications = None
-
-
-
-class MockMinervaProtocol(object):
-	implements(IMinervaProtocol)
-
-	def streamStarted(self, stream):
-		self.factory.instances.add(self)
-		self.log = []
-		self.log.append(['streamStarted', stream])
-		self.stream = stream
-
-
-	def streamEnded(self, reason):
-		self.log.append(['streamEnded', reason])
-
-
-	def streamQualityChanged(self, quality):
-		self.log.append(['streamQualityChanged', quality])
-
-
-	def boxesReceived(self, boxes):
-		self.log.append(['boxesReceived', boxes])
-
-
-
-class MockMinervaProtocolFactory(object):
-	implements(IMinervaFactory)
-
-	def __init__(self):
-		self.instances = set()
-
-
-	def buildProtocol(self, stream):
-		obj = MockMinervaProtocol()
-		obj.factory = self
-		obj.streamStarted(stream)
-		return obj
-
-
-
-class DummyHttpTransport(object):
-	def __init__(self, request):
-		self.request = request
-		self.credentialsData = {}
-
-
-
-class DummySocketLikeTransport(object):
-	request = None
-	globalCounter = [-1]
-	lastBoxSent = -1
-	
-	def __init__(self):
-		self.credentialsData = {}
-		self.log = []
-		self.pretendGotHello()
-
-
-	def pretendGotHello(self):
-		self.globalCounter[0] += 1
-		self.transportNumber = self.globalCounter[0]
-
-
-	def closeGently(self):
-		self.log.append(['closeGently'])
-
-
-	def reset(self, reasonString):
-		self.log.append(['reset', reasonString])
-
-
-	def writeBoxes(self, queue, start):
-		self.log.append(['writeBoxes', queue, start])
-
-		lastBox = self.lastBoxSent
-		for seqNum, box in queue.iterItems(start=start):
-			if lastBox == -1 or lastBox + 1 != seqNum:
-				pass
-				##toSend += self._encodeFrame([Fn.seqnum, seqNum])
-			##toSend += self._encodeFrame([Fn.box, box])
-			lastBox = seqNum
-		self.lastBoxSent = lastBox
-
-
-	def registerProducer(self, producer, streaming):
-		self.log.append(['registerProducer', producer, streaming])
-
-
-	def unregisterProducer(self):
-		self.log.append(['unregisterProducer'])
-
 
 
 
@@ -344,68 +74,6 @@ class FrameTests(unittest.TestCase):
 	def test_repr(self):
 		f = Frame([0, u"hello"])
 		self.assertEqual("<Frame type 'boxes', contents [0, u'hello']>", repr(f))
-
-
-
-class MockObserver(object):
-
-	def __init__(self):
-		self.log = []
-
-
-	def streamUp(self, stream):
-		self.log.append(['streamUp', stream])
-
-
-	def streamDown(self, stream):
-		self.log.append(['streamDown', stream])
-
-
-
-class BrokenOnPurposeError(Exception):
-	pass
-
-
-
-class BrokenMockObserver(object):
-
-	def streamUp(self, stream):
-		raise BrokenOnPurposeError("raising inside streamUp in evil test")
-
-
-	def streamDown(self, stream):
-		raise BrokenOnPurposeError("raising inside streamDown in evil test")
-
-
-
-def todo(reasonOrMethod):
-	"""
-	This is a both a decorator and a decorator-returner, depending on
-	what C{reasonOrMethod} is.
-
-	This allows you to do
-
-	@todo
-	def test_that_will_fail(self):
-		...
-
-	or
-
-	@todo("some reason or explanation")
-	def test_that_will_fail2(self):
-		...
-	"""
-
-	if hasattr(reasonOrMethod, '__call__'):
-		method = reasonOrMethod
-		method.todo = 'todo'
-		return method
-
-	def decorator(method):
-		method.todo = reasonOrMethod
-		return method
-
-	return decorator
 
 
 
@@ -1027,57 +695,6 @@ class StreamTrackerTests(unittest.TestCase):
 		act = lambda: st.buildStream(id)
 		act()
 		self.aR(StreamAlreadyExists, act)
-
-
-
-class DummyStreamTracker(object):
-
-	stream = MockStream
-
-	def __init__(self, clock, streamProtocolFactory, _streams):
-		self._clock = clock
-		self._streamProtocolFactory = streamProtocolFactory
-		self._streams = _streams
-
-
-	def getStream(self, streamId):
-		try:
-			return self._streams[streamId]
-		except KeyError:
-			raise NoSuchStream("I don't know about %r" % (streamId,))
-
-
-	def buildStream(self, streamId):
-		"""
-		This is missing a lot of features that are in the real L{StreamTracker}.
-		"""
-		if streamId in self._streams:
-			raise StreamAlreadyExists()
-
-		s = self.stream(self._clock, streamId, self._streamProtocolFactory)
-		self._streams[streamId] = s
-
-		d = s.notifyFinish()
-		d.addBoth(self._forgetStream, streamId)
-		return s
-
-
-	def _forgetStream(self, _ignoredNone, streamId):
-		del self._streams[streamId]
-
-
-	def countStreams(self):
-		return len(self._streams)
-
-
-
-class DummyFirewall(object):
-	
-	def checkTransport(self, transport, requestNewStream):
-		d = defer.Deferred()
-		d.callback(None)
-		return d
-
 
 
 # TODO: generalize many of these tests and test them for the WebSocket and HTTP faces as well.
