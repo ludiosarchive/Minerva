@@ -853,7 +853,8 @@ _2_64 = 2**64
 
 class SocketTransport(protocol.Protocol):
 
-	# are we there yet?
+	# Note that even though it implements IPushProducer, a Minerva transport
+	# will sometimes act as a pull producer.
 	implements(IProtocol, ISimpleConsumer, IPushProducer, IMinervaTransport)
 
 	request = None # no associated HTTP request
