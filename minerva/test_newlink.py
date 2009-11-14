@@ -393,12 +393,6 @@ class StreamTests(unittest.TestCase):
 		s.registerProducer(producer1, streaming=False)
 
 
-	@todo
-	def test_registerUnregisterProducerWithActiveTransport(self):
-		1/0
-
-
-
 	def test_pausedStreamPausesNewPushProducer(self):
 		"""If Stream was already paused, new push producers are paused when registered."""
 		factory, clock, s, t1 = self._makeStuff()
@@ -494,6 +488,66 @@ class StreamTests(unittest.TestCase):
 
 		s.transportOnline(t1)
 		s.subscribeToBoxes(t1, succeedsTransport=None)
+
+
+	def test_downstreamProducerRegistration(self):
+		for streaming in (True, False):
+			factory, clock, s, t1 = self._makeStuff()
+
+			producer1 = MockProducer()
+
+			s.registerProducer(producer1, streaming=streaming)
+
+			# Stream already has a producer before transport attaches and becomes primary
+			s.transportOnline(t1)
+			s.subscribeToBoxes(t1, succeedsTransport=None)
+
+			self.aE([
+				['registerProducer', s, streaming],
+			], t1.log)
+
+			s.unregisterProducer()
+
+			self.aE([
+				['registerProducer', s, streaming],
+				['unregisterProducer'],
+			], t1.log)
+
+			# Now attach again
+			s.registerProducer(producer1, streaming=streaming)
+
+			self.aE([
+				['registerProducer', s, streaming],
+				['unregisterProducer'],
+				['registerProducer', s, streaming],
+			], t1.log)
+
+
+	def test_producerRegstrationWithNewActiveS2CTransport(self):
+		for streaming in (True, False):
+			factory, clock, s, t1 = self._makeStuff()
+
+			producer1 = MockProducer()
+
+			s.registerProducer(producer1, streaming=streaming)
+
+			# Stream already has a producer before transport attaches and becomes primary
+			s.transportOnline(t1)
+			s.subscribeToBoxes(t1, succeedsTransport=None)
+
+			t2 = DummySocketLikeTransport()
+			s.transportOnline(t1)
+			s.subscribeToBoxes(t2, succeedsTransport=None)
+
+			self.aE([
+				['registerProducer', s, streaming],
+				['unregisterProducer'],
+				['closeGently'],
+			], t1.log)
+
+			self.aE([
+				['registerProducer', s, streaming],
+			], t2.log)
 
 
 
