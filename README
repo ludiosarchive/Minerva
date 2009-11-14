@@ -131,10 +131,25 @@ Minerva limitations:
 
 
 
+Producers/consumers:
+
+	Like twisted's TCP transport and twisted.web Requests, Minerva supports producers/consumers.
+	See http://twistedmatrix.com/projects/core/documentation/howto/producers.html
+	for information about them.
+
+	In Minerva, a producer can be attached to the Stream (generally the MinervaProtocol
+	attaches itself). This poses some challenges to the implementation, because Minerva
+	transports may frequently attach and detach from the Stream.
+
+	In general, TCP pressure from the TCP transport of the active S2C
+	transport directly affects the producer attached to Stream. Also, if the producer is a push
+	producer and no Minerva transports are attached the Stream, the producer is paused. 
+
+
+
 Producers/consumers, technical details:
 
 	"type of producer" means pull or push.
-	See http://twistedmatrix.com/projects/core/documentation/howto/producers.html
 
 	This is the object chain, "upstream" objects at top. Objects on adjacent lines
 	usually know about each other.
