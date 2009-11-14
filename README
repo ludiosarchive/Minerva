@@ -159,6 +159,8 @@ Producers/consumers, technical details:
 	*Transport
 	(Twisted)
 
+	Producer attachment goes downstream, pressure information goes upstream.
+
 	When a client connects, (Twisted) causes *Transport creation,
 	which causes Stream creation, which causes MinervaProtocol creation. This
 	might not happen instantly, because *Transport must be authenticated first.

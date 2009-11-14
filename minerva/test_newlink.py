@@ -250,14 +250,6 @@ class MockMinervaProtocol(object):
 		self.log.append(['boxesReceived', boxes])
 
 
-	def pauseProducing(self):
-		self.log.append(['pauseProducing'])
-
-
-	def resumeProducing(self):
-		self.log.append(['resumeProducing'])
-
-
 
 class MockMinervaProtocolFactory(object):
 	implements(IMinervaFactory)

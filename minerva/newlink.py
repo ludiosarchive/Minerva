@@ -679,7 +679,7 @@ class StreamTracker(object):
 
 
 
-class IMinervaProtocol(IPushProducer):
+class IMinervaProtocol(Interface):
 	"""
 	An interface for frame-based communication that abstracts
 	away the Comet logic and transports.
@@ -753,18 +753,6 @@ class BasicMinervaProtocol(object):
 
 
 	def boxesReceived(self, boxes):
-		pass
-
-
-	def pauseProducing(self):
-		pass
-
-
-	def resumeProducing(self):
-		pass
-
-
-	def stopProducing(self):
 		pass
 
 
