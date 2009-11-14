@@ -352,14 +352,6 @@ class StreamTests(unittest.TestCase):
 		self.aE(t2.log, [["reset", u'the reason']])
 
 
-	# TODO: test that if Stream paused, and streaming producer registered, producer is immediately paused
-
-	# WRONG, lowest-level Twisted code calls the right methods regardless or push/pull producer -
-		# TODO: test that if Stream.pauseProducing called, and a streaming producer is registered, producer is immediately paused
-	# WRONG, see above -
-		# TODO: test that if Stream.resumeProducing called, and any producer is registered, producer is immediately resumed
-
-	# TODO: test that if primary transport closes, and no waiting S2C transport, pauseProducing is called
 	# TODO: test that if primary transport closes, and there IS a waiting S2C transport, pauseProducing is NOT called
 
 	# WRONG, lowest-level Twisted code initiates all the pulling
@@ -489,6 +481,49 @@ class StreamTests(unittest.TestCase):
 			['resumeProducing'],
 			['pauseProducing'],
 		], producer1.log)
+
+
+	def test_newPrimaryTransportDoesNotPauseProducer(self):
+		"""
+		Stream's producer is not paused when a primary transport replaces
+		another primary transport.
+		"""
+		factory, clock, s, t1 = self._makeStuff()
+
+		s.transportOnline(t1)
+		s.subscribeToBoxes(t1, succeedsTransport=None)
+
+		producer1 = MockProducer()
+		s.registerProducer(producer1, streaming=True)
+
+		t2 = DummySocketLikeTransport()
+		s.transportOnline(t2)
+		s.subscribeToBoxes(t2, succeedsTransport=None)
+
+		self.aE([], producer1.log)
+
+
+	def test_newPrimaryTransportResumesIfNecessary(self):
+		"""
+		Stream's producer is resumed if the old primary transport called
+		paused, and a new primary transport is attached.
+		"""
+		factory, clock, s, t1 = self._makeStuff()
+
+		s.transportOnline(t1)
+		s.subscribeToBoxes(t1, succeedsTransport=None)
+
+		producer1 = MockProducer()
+		s.registerProducer(producer1, streaming=True)
+		s.pauseProducing() # pretend that primary transport t1 called this
+
+		self.aE([['pauseProducing']], producer1.log)
+
+		t2 = DummySocketLikeTransport()
+		s.transportOnline(t2)
+		s.subscribeToBoxes(t2, succeedsTransport=None)
+
+		self.aE([['pauseProducing'], ['resumeProducing']], producer1.log)
 
 
 	def test_lackOfTransportsIgnoresPullProducer(self):

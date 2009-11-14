@@ -391,7 +391,7 @@ class Stream(object):
 		except KeyError:
 			raise RuntimeError("Cannot take %r offline; it wasn't registered" % (transport,))
 		if self._primaryTransport == transport:
-			self._unregisterProducerDownstream()
+			self._unregisterProducerOnPrimary()
 			self._primaryPaused = False
 			self._primaryTransport = None
 
@@ -403,22 +403,26 @@ class Stream(object):
 	# instead of having hidden assumptions about state in every function
 
 
-	def _unregisterProducerDownstream(self):
+	def _unregisterProducerOnPrimary(self):
 		if self._primaryHasProducer:
 			self._primaryTransport.unregisterProducer()
 			self._primaryHasProducer = False
 
 
 	# Called when we have a new active S2C transport, or when a MinervaProtocol registers a producer with us (Stream)
-	def _registerProducerDownstream(self):
+	def _registerProducerOnPrimary(self):
 		if not self._primaryHasProducer:
 			self._primaryTransport.registerProducer(self, self._streamingProducer)
 			self._primaryHasProducer = True
 
 
-	def _newActiveS2C(self, transport):
+	def _newPrimary(self, transport):
 		if self._primaryTransport:
-			self._unregisterProducerDownstream()
+			self._unregisterProducerOnPrimary()
+			# If old primary transport paused us, this pause state
+			# is no longer relevant, so go back to resume.
+			if self._primaryPaused and self._producer and self._streamingProducer:
+				self._producer.resumeProducing()
 			self._primaryPaused = False
 			self._primaryTransport.closeGently()
 		else:
@@ -429,7 +433,7 @@ class Stream(object):
 
 		self._primaryTransport = transport
 		if self._producer:
-			self._registerProducerDownstream()
+			self._registerProducerOnPrimary()
 
 
 	def subscribeToBoxes(self, transport, succeedsTransport):
@@ -442,7 +446,7 @@ class Stream(object):
 		##print 'subscribeToBoxes', transport, succeedsTransport
 		if succeedsTransport is not None:
 			self._pretendAcked = self._primaryTransport.lastBoxSent
-		self._newActiveS2C(transport)
+		self._newPrimary(transport)
 		self._tryToSend()
 
 
@@ -514,7 +518,7 @@ class Stream(object):
 			producer.pauseProducing()
 
 		if self._primaryTransport:
-			self._registerProducerDownstream()
+			self._registerProducerOnPrimary()
 
 
 	# called by MinervaProtocol instances
@@ -524,7 +528,7 @@ class Stream(object):
 		"""
 		self._producer = None
 		if self._primaryTransport:
-			self._unregisterProducerDownstream()
+			self._unregisterProducerOnPrimary()
 
 ## LAME
 #	def _updateUpstreamProducer(self):
