@@ -52,7 +52,7 @@ import base64
 from zope.interface import Interface, Attribute, implements
 from twisted.python import log
 from twisted.internet import protocol, defer
-from twisted.internet.interfaces import IPushProducer, IProtocol, IProtocolFactory
+from twisted.internet.interfaces import IPushProducer, IPullProducer, IProtocol, IProtocolFactory
 from twisted.web import resource
 
 
@@ -248,7 +248,7 @@ class Stream(object):
 
 	# TODO: disconnect timer - no transport in N minutes
 
-	implements(ISimpleConsumer, IPushProducer)
+	implements(ISimpleConsumer, IPushProducer, IPullProducer)
 
 	maxUndeliveredBoxes = 5000 # boxes
 	maxUndeliveredBytes = 4 * 1024 * 1024 # bytes
@@ -531,18 +531,18 @@ class Stream(object):
 
 	def pauseProducing(self):
 		"""
-		We assume this is called only by the active S2C transport. The pause
-		status is no longer relevant after the active S2C transport detaches.
+		We assume this is called only by the primary transport. Also, the pause
+		status is no longer relevant after the primary transport detaches.
 		"""
 		self._primaryPaused = True
 		if self._producer:
 			self._producer.pauseProducing()
 
 
-	# ONLY called by the active S2C transport in response to TCP pressure
+	# ONLY called by the primary transport in response to TCP pressure
 	def resumeProducing(self):
 		"""
-		We assume this is called only by the active S2C transport.
+		We assume this is called only by the primary transport.
 		"""
 		self._primaryPaused = False
 		if self._producer:
@@ -807,7 +807,7 @@ class BasicMinervaFactory(object):
 
 
 
-class IMinervaTransport(IPushProducer):
+class IMinervaTransport(IPushProducer, IPullProducer):
 
 	lastBoxSent = Attribute(
 		"Sequence number of the last box written to the socket/request, or -1 if no boxes ever written")
@@ -853,9 +853,7 @@ _2_64 = 2**64
 
 class SocketTransport(protocol.Protocol):
 
-	# Note that even though it implements IPushProducer, a Minerva transport
-	# will sometimes act as a pull producer.
-	implements(IProtocol, ISimpleConsumer, IPushProducer, IMinervaTransport)
+	implements(IProtocol, ISimpleConsumer, IPushProducer, IPullProducer, IMinervaTransport)
 
 	request = None # no associated HTTP request
 

@@ -7,7 +7,7 @@ from twisted.trial import unittest
 
 from twisted.web import server, resource
 from twisted.internet import protocol, defer, address, interfaces, task
-from twisted.internet.interfaces import IPushProducer, IProtocol, IProtocolFactory
+from twisted.internet.interfaces import IPushProducer, IPullProducer, IProtocol, IProtocolFactory
 from twisted.test.proto_helpers import StringTransport
 
 from minerva.decoders import BencodeStringDecoder
@@ -72,6 +72,7 @@ class StreamTests(unittest.TestCase):
 	def test_implements(self):
 		s = Stream(None, _DummyId('some fake id'), None)
 		verify.verifyObject(IPushProducer, s)
+		verify.verifyObject(IPullProducer, s)
 		verify.verifyObject(ISimpleConsumer, s)
 
 
@@ -921,6 +922,7 @@ class SocketTransportTests(unittest.TestCase):
 		verify.verifyObject(IProtocol, self.transport)
 		verify.verifyObject(ISimpleConsumer, self.transport)
 		verify.verifyObject(IPushProducer, self.transport)
+		verify.verifyObject(IPullProducer, self.transport)
 		verify.verifyObject(IMinervaTransport, self.transport)
 
 
