@@ -393,40 +393,33 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_registerUnregisterProducerWithActiveTransport(self):
-		factory, clock, s, t1 = self._makeStuff()
+		for streaming in (True, False):
+			factory, clock, s, t1 = self._makeStuff()
 
-		s.transportOnline(t1)
-		s.subscribeToBoxes(t1, succeedsTransport=None)
+			s.transportOnline(t1)
+			s.subscribeToBoxes(t1, succeedsTransport=None)
 
-		# No _producer yet? pauseProducing and resumeProducing are still legal
-		s.pauseProducing()
-		s.resumeProducing()
+			# No _producer yet? pauseProducing and resumeProducing are still legal
+			s.pauseProducing()
+			s.resumeProducing()
 
-		producer1 = MockProducer()
-		s.registerProducer(producer1, streaming=True)
+			producer1 = MockProducer()
+			s.registerProducer(producer1, streaming=streaming)
 
-		# pauseProducing/resumeProducing calls are sent directly to producer, without much thinking
-		s.pauseProducing()
-		s.pauseProducing()
-		s.resumeProducing()
-		s.resumeProducing()
-		self.aE([['pauseProducing'], ['pauseProducing'], ['resumeProducing'], ['resumeProducing']], producer1.log)
+			# pauseProducing/resumeProducing calls are sent directly to producer (even when it is a pull producer),
+			# without much thinking
+			s.pauseProducing()
+			s.pauseProducing()
+			s.resumeProducing()
+			s.resumeProducing()
+			self.aE(
+				[['pauseProducing'], ['pauseProducing'], ['resumeProducing'], ['resumeProducing']],
+				producer1.log)
 
-		# Unregister the streaming producer
-		s.unregisterProducer()
-		# it is idempotent
-		s.unregisterProducer()
-
-		producer2 = MockProducer()
-		s.registerProducer(producer2, streaming=False)
-
-		# pauseProducing/resumeProducing calls are sent directly to producer (even when it is a pull producer),
-		# without much thinking
-		s.pauseProducing()
-		s.pauseProducing()
-		s.resumeProducing()
-		s.resumeProducing()
-		self.aE([['pauseProducing'], ['pauseProducing'], ['resumeProducing'], ['resumeProducing']], producer2.log)
+			# Unregister the streaming producer
+			s.unregisterProducer()
+			# it is idempotent
+			s.unregisterProducer()
 
 
 	def test_pausedStreamPausesNewPushProducer(self):
@@ -1212,41 +1205,31 @@ class TransportProducerTests(unittest.TestCase):
 
 
 	def test_transport(self):
-		# No _producer yet? pauseProducing and resumeProducing are still legal
-		self.transport.pauseProducing()
-		self.transport.resumeProducing()
+		for streaming in (True, False):
+			# No _producer yet? pauseProducing and resumeProducing are still legal
+			self.transport.pauseProducing()
+			self.transport.resumeProducing()
 
-		producer1 = MockProducer()
-		self.transport.registerProducer(producer1, streaming=True)
-		# The Minerva transport is registered, not the producer itself
-		self.aI(self.t.producer, self.transport)
-		self.aI(self.t.streaming, True)
+			producer1 = MockProducer()
+			self.transport.registerProducer(producer1, streaming=streaming)
+			# The Minerva transport is registered, not the producer itself
+			self.aI(self.t.producer, self.transport)
+			self.aI(self.t.streaming, streaming)
 
-		# pauseProducing/resumeProducing calls are sent directly to producer, without much thinking
-		self.transport.pauseProducing()
-		self.transport.pauseProducing()
-		self.transport.resumeProducing()
-		self.transport.resumeProducing()
-		self.aE([['pauseProducing'], ['pauseProducing'], ['resumeProducing'], ['resumeProducing']], producer1.log)
+			# pauseProducing/resumeProducing calls are sent directly to producer (even when it is a pull producer),
+			# without much thinking
+			self.transport.pauseProducing()
+			self.transport.pauseProducing()
+			self.transport.resumeProducing()
+			self.transport.resumeProducing()
+			self.aE(
+				[['pauseProducing'], ['pauseProducing'], ['resumeProducing'], ['resumeProducing']],
+				producer1.log)
 
-		# Unregister the streaming producer
-		self.transport.unregisterProducer()
-		# it is idempotent
-		self.transport.unregisterProducer()
-
-		producer2 = MockProducer()
-		self.transport.registerProducer(producer2, streaming=False)
-		# The Minerva transport is registered, not the producer itself
-		self.aI(self.t.producer, self.transport)
-		self.aI(self.t.streaming, False)
-
-		# pauseProducing/resumeProducing calls are sent directly to producer (even when it is a pull producer),
-		# without much thinking
-		self.transport.pauseProducing()
-		self.transport.pauseProducing()
-		self.transport.resumeProducing()
-		self.transport.resumeProducing()
-		self.aE([['pauseProducing'], ['pauseProducing'], ['resumeProducing'], ['resumeProducing']], producer2.log)
+			# Unregister the streaming producer
+			self.transport.unregisterProducer()
+			# it is idempotent
+			self.transport.unregisterProducer()
 
 
 	def test_transportPausedRegisterStreamingProducer(self):
