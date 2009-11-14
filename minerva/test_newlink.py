@@ -1,9 +1,8 @@
 import simplejson
 import base64
 import copy
-from functools import wraps
 
-from zope.interface import implements, verify
+from zope.interface import verify
 from twisted.trial import unittest
 
 from twisted.web import server, resource

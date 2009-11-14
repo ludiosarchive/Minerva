@@ -50,9 +50,7 @@ See minerva/sample/demo.py for an idea of how to use the classes below.
 from minerva import abstract, decoders
 
 import simplejson
-import hashlib
 import base64
-from collections import deque
 from zope.interface import Interface, Attribute, implements
 from twisted.python import log
 from twisted.internet import protocol, defer
