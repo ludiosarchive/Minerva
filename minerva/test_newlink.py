@@ -366,7 +366,6 @@ class StreamTests(unittest.TestCase):
 		# TODO: test that if we have a non-streaming producer registered, producer.resumeProducing() is called any time the queue is empty
 
 
-
 	def test_registerUnregisterProducerWithNoActiveTransport(self):
 		"""
 		Test that registerProducer and unregisterProducer seem to work,
@@ -391,6 +390,43 @@ class StreamTests(unittest.TestCase):
 
 		# To make sure unregister worked, check that registerProducer doesn't raise an error
 		s.registerProducer(producer1, streaming=False)
+
+
+	def test_registerUnregisterProducerWithActiveTransport(self):
+		factory, clock, s, t1 = self._makeStuff()
+
+		s.transportOnline(t1)
+		s.subscribeToBoxes(t1, succeedsTransport=None)
+
+		# No _producer yet? pauseProducing and resumeProducing are still legal
+		s.pauseProducing()
+		s.resumeProducing()
+
+		producer1 = MockProducer()
+		s.registerProducer(producer1, streaming=True)
+
+		# pauseProducing/resumeProducing calls are sent directly to producer, without much thinking
+		s.pauseProducing()
+		s.pauseProducing()
+		s.resumeProducing()
+		s.resumeProducing()
+		self.aE([['pauseProducing'], ['pauseProducing'], ['resumeProducing'], ['resumeProducing']], producer1.log)
+
+		# Unregister the streaming producer
+		s.unregisterProducer()
+		# it is idempotent
+		s.unregisterProducer()
+
+		producer2 = MockProducer()
+		s.registerProducer(producer2, streaming=False)
+
+		# pauseProducing/resumeProducing calls are sent directly to producer (even when it is a pull producer),
+		# without much thinking
+		s.pauseProducing()
+		s.pauseProducing()
+		s.resumeProducing()
+		s.resumeProducing()
+		self.aE([['pauseProducing'], ['pauseProducing'], ['resumeProducing'], ['resumeProducing']], producer2.log)
 
 
 	def test_pausedStreamPausesNewPushProducer(self):
