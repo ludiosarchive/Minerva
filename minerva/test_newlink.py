@@ -439,8 +439,8 @@ class StreamTests(unittest.TestCase):
 		self.aE([], pullProducer.log)
 
 
-	def test_lackOfTransportsPausesPushProducer(self):
-		"""When a stream has no transports attached, the push producer is paused."""
+	def test_lackOfPrimaryTransportPausesPushProducer(self):
+		"""When a stream has no primary transport attached, the push producer is paused."""
 		factory, clock, s, t1 = self._makeStuff()
 
 		producer1 = MockProducer()
@@ -464,6 +464,34 @@ class StreamTests(unittest.TestCase):
 			['resumeProducing'],
 			['pauseProducing'],
 		], producer1.log)
+
+
+	def test_lackOfPrimaryTransportPausesPushProducer2(self):
+		"""
+		If a producer is attached after the primary transport went offline,
+		producer is paused.
+		"""
+		factory, clock, s, t1 = self._makeStuff()
+
+		s.transportOnline(t1)
+		s.subscribeToBoxes(t1, succeedsTransport=None)
+
+		s.pauseProducing() # pretend that t1 called this
+
+		s.transportOffline(t1)
+
+		producer1 = MockProducer()
+
+		# Push producer
+		s.registerProducer(producer1, streaming=True)
+		self.aE([['pauseProducing']], producer1.log)
+
+		s.unregisterProducer()
+		# Pull producer
+		producer2 = MockProducer()
+		s.registerProducer(producer2, streaming=False)
+		self.aE([], producer2.log)
+
 
 
 	def test_newPrimaryTransportDoesNotPauseProducer(self):

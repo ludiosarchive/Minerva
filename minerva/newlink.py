@@ -272,6 +272,7 @@ class Stream(object):
 		self._streamingProducer = False
 
 		self._primaryHasProducer = False
+		# Does the primary transport think it is paused? Or if no primary transport, False.
 		self._primaryPaused = False
 
 
@@ -394,7 +395,12 @@ class Stream(object):
 			# Is this really needed? Why would a transport send signals after it is offline?
 			self._unregisterProducerOnPrimary()
 			self._primaryTransport = None
-			##self._primaryPaused = False # Because there is no primary. Add test? TODO XXX is it needed?
+			
+			# This line is not actually necessary, because producers attached to Stream
+			# would be paused anyway if there is no primary transport. It would insane
+			# to construct a test to ensure its existence. We leave it in anyway for ease
+			# of debugging, and in case the code changes.
+			self._primaryPaused = False
 
 			if self._producer and self._streamingProducer:
 				self._producer.pauseProducing()
@@ -414,7 +420,7 @@ class Stream(object):
 
 
 	def _newPrimary(self, transport):
-		if self._primaryTransport:
+		if self._primaryTransport: # If we already have a primary transport that hasn't detached
 			self._unregisterProducerOnPrimary()
 			# If old primary transport paused us, our producer was paused, and this pause state
 			# is no longer relevant, so go back to resume.
