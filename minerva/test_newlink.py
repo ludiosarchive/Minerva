@@ -68,10 +68,10 @@ class StreamTests(unittest.TestCase):
 	def test_repr(self):
 		s = Stream(None, _DummyId('some fake id'), None)
 		r = repr(s)
-		self.assert_('<Stream' in r, r)
-		self.assert_('streamId=' in r, r)
-		self.assert_('disconnected=False' in r, r)
-		self.assert_('len(queue)=0' in r, r)
+		self.assertIn('<Stream', r)
+		self.assertIn('streamId=', r)
+		self.assertIn('disconnected=False', r)
+		self.assertIn('len(queue)=0', r)
 
 
 	def test_notifyFinishReturnsDeferred(self):

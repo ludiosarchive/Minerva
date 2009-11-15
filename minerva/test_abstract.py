@@ -483,7 +483,7 @@ class TestGenericIdentifier(unittest.TestCase):
 
 	def test_repr(self):
 		s1 = _DummyId('z' * 16)
-		self.assert_(repr('z' * 16) in repr(s1))
+		self.assertIn(repr('z' * 16), repr(s1))
 
 
 	def test_hash(self):
