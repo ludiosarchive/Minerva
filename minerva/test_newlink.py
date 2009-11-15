@@ -45,17 +45,9 @@ class FrameTests(unittest.TestCase):
 
 
 	def test_notOkay(self):
-		self.aR(BadFrame, lambda: Frame([]))
-		self.aR(BadFrame, lambda: Frame([9999]))
-		self.aR(BadFrame, lambda: Frame({}))
-		self.aR(BadFrame, lambda: Frame({0: 'x'}))
-		self.aR(BadFrame, lambda: Frame({'0': 'x'}))
-		self.aR(BadFrame, lambda: Frame(1))
-		self.aR(BadFrame, lambda: Frame(1.5))
-		self.aR(BadFrame, lambda: Frame(simplejson.loads('NaN')))
-		self.aR(BadFrame, lambda: Frame(True))
-		self.aR(BadFrame, lambda: Frame(False))
-		self.aR(BadFrame, lambda: Frame(None))
+		badFrames = ([], [9999], {}, {0: 'x'}, {'0': 'x'}, 1, 1.5, simplejson.loads('NaN'), True, False, None)
+		for frame in badFrames:
+			self.aR(BadFrame, lambda: Frame(frame))
 
 
 	def test_repr(self):
@@ -170,14 +162,14 @@ class StreamTests(unittest.TestCase):
 		s.sendBoxes([['box0'], ['box1']])
 
 		# Boxes don't reach the transport because the transport isn't primary yet
-		self.aE(t1.log, [])
+		self.aE([], t1.log)
 
 		# Make it primary
 		s.subscribeToBoxes(t1, succeedsTransport=None)
 
-		self.aE(t1.log, [
+		self.aE([
 			['writeBoxes', s.queue, None],
-		])
+		], t1.log)
 
 		# Now connect a new transport
 		t2 = DummySocketLikeTransport()
@@ -185,23 +177,23 @@ class StreamTests(unittest.TestCase):
 
 		s.sendBoxes([['box2'], ['box3']])
 		# box2 and box3 still went to the old transport because t2 isn't the primary transport
-		self.aE(t1.log, [
+		self.aE([
 			['writeBoxes', s.queue, None],
 			['writeBoxes', s.queue, None],
-		])
-		self.aE(t2.log, [])
+		], t1.log)
+		self.aE([], t2.log)
 
 		# Now make t2 primary
 		s.subscribeToBoxes(t2, succeedsTransport=None)
 
-		self.aE(t1.log, [
+		self.aE([
 			['writeBoxes', s.queue, None],
 			['writeBoxes', s.queue, None],
 			['closeGently'],
-		])
-		self.aE(t2.log, [
+		], t1.log)
+		self.aE([
 			['writeBoxes', s.queue, None],
-		])
+		], t2.log)
 
 		# Just to exercise transportOffline
 		s.transportOffline(t1)
@@ -224,14 +216,14 @@ class StreamTests(unittest.TestCase):
 		s.sendBoxes([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
 
 		# Boxes don't reach the transport because the transport isn't primary yet
-		self.aE(t1.log, [])
+		self.aE([], t1.log)
 
 		# Make it primary
 		s.subscribeToBoxes(t1, succeedsTransport=None)
 
-		self.aE(t1.log, [
+		self.aE([
 			['writeBoxes', s.queue, None],
-		])
+		], t1.log)
 
 		# Now connect a new transport and make it primary
 		t2 = DummySocketLikeTransport()
@@ -239,19 +231,18 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t2)
 		s.subscribeToBoxes(t2, succeedsTransport=30)
 
-		self.aE(t1.log, [
+		self.aE([
 			['writeBoxes', s.queue, None],
 			['closeGently'],
-		])
+		], t1.log)
 		# Because there are no new boxes yet, writeBoxes should not be called yet
-		self.aE(t2.log, [
-		])
+		self.aE([], t2.log)
 
 		s.sendBoxes([['box5'], ['box6']])
 
-		self.aE(t2.log, [
+		self.aE([
 			['writeBoxes', s.queue, 5],
-		])
+		], t2.log)
 
 
 		# Oh no... client actually lost box3 and box4, and it sends a correct SACK.
@@ -259,10 +250,10 @@ class StreamTests(unittest.TestCase):
 
 		s.sackReceived((2, []))
 		assert len(s.queue) == 4, s.queue # box3, box4, box5, box6
-		self.aE(t2.log, [
+		self.aE([
 			['writeBoxes', s.queue, 5],
 			['writeBoxes', s.queue, None],
-		])
+		], t2.log)
 
 		# Just to exercise transportOffline
 		s.transportOffline(t1)
@@ -346,8 +337,8 @@ class StreamTests(unittest.TestCase):
 		self.aE(False, s.disconnected)
 		s.reset(u'the reason')
 		self.aE(True, s.disconnected)
-		self.aE(t1.log, [["reset", u'the reason']])
-		self.aE(t2.log, [["reset", u'the reason']])
+		self.aE([["reset", u'the reason']], t1.log)
+		self.aE([["reset", u'the reason']], t2.log)
 
 
 	def test_registerUnregisterProducerWithNoActiveTransport(self):
