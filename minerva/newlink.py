@@ -394,7 +394,7 @@ class Stream(object):
 			# Is this really needed? Why would a transport send signals after it is offline?
 			self._unregisterProducerOnPrimary()
 			self._primaryTransport = None
-			##self._primaryPaused = False # Because there is no primary. Add test?
+			##self._primaryPaused = False # Because there is no primary. Add test? TODO XXX is it needed?
 
 			if self._producer and self._streamingProducer:
 				self._producer.pauseProducing()
@@ -406,7 +406,7 @@ class Stream(object):
 			self._primaryHasProducer = False
 
 
-	# Called when we have a new active S2C transport, or when a MinervaProtocol registers a producer with us (Stream)
+	# Called when we have a new primary transport, or when a MinervaProtocol registers a producer with us (Stream)
 	def _registerProducerOnPrimary(self):
 		if not self._primaryHasProducer:
 			self._primaryTransport.registerProducer(self, self._streamingProducer)
@@ -420,7 +420,7 @@ class Stream(object):
 			# is no longer relevant, so go back to resume.
 			if self._primaryPaused and self._producer and self._streamingProducer:
 				self._producer.resumeProducing()
-			self._primaryPaused = False # TODO XXX: can we make a test that fails if this is indented right once?
+			self._primaryPaused = False # TODO low-priority: can we make a test that fails if this is indented right once?
 			self._primaryTransport.closeGently()
 		else:
 			# There was no active S2C transport, so if we had a push

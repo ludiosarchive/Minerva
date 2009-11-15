@@ -11,9 +11,7 @@ from twisted.internet.interfaces import IPushProducer, IPullProducer, IProtocol,
 from twisted.test.proto_helpers import StringTransport
 
 from minerva.decoders import BencodeStringDecoder
-
 from minerva import abstract
-
 from minerva.helpers import todo
 
 from minerva.newlink import (
@@ -39,31 +37,30 @@ from minerva.mocks import (
 Fn = Frame.names
 
 
-
 class FrameTests(unittest.TestCase):
 
 	def test_ok(self):
 		f = Frame([1])
-		self.assertEqual('box', f.getType())
+		self.aE('box', f.getType())
 
 
 	def test_notOkay(self):
-		self.assertRaises(BadFrame, lambda: Frame([]))
-		self.assertRaises(BadFrame, lambda: Frame([9999]))
-		self.assertRaises(BadFrame, lambda: Frame({}))
-		self.assertRaises(BadFrame, lambda: Frame({0: 'x'}))
-		self.assertRaises(BadFrame, lambda: Frame({'0': 'x'}))
-		self.assertRaises(BadFrame, lambda: Frame(1))
-		self.assertRaises(BadFrame, lambda: Frame(1.5))
-		self.assertRaises(BadFrame, lambda: Frame(simplejson.loads('NaN')))
-		self.assertRaises(BadFrame, lambda: Frame(True))
-		self.assertRaises(BadFrame, lambda: Frame(False))
-		self.assertRaises(BadFrame, lambda: Frame(None))
+		self.aR(BadFrame, lambda: Frame([]))
+		self.aR(BadFrame, lambda: Frame([9999]))
+		self.aR(BadFrame, lambda: Frame({}))
+		self.aR(BadFrame, lambda: Frame({0: 'x'}))
+		self.aR(BadFrame, lambda: Frame({'0': 'x'}))
+		self.aR(BadFrame, lambda: Frame(1))
+		self.aR(BadFrame, lambda: Frame(1.5))
+		self.aR(BadFrame, lambda: Frame(simplejson.loads('NaN')))
+		self.aR(BadFrame, lambda: Frame(True))
+		self.aR(BadFrame, lambda: Frame(False))
+		self.aR(BadFrame, lambda: Frame(None))
 
 
 	def test_repr(self):
 		f = Frame([0, u"hello"])
-		self.assertEqual("<Frame type 'boxes', contents [0, u'hello']>", repr(f))
+		self.aE("<Frame type 'boxes', contents [0, u'hello']>", repr(f))
 
 
 
@@ -88,7 +85,7 @@ class StreamTests(unittest.TestCase):
 	def test_notifyFinishReturnsDeferred(self):
 		s = Stream(None, _DummyId('some fake id'), None)
 		d = s.notifyFinish()
-		self.assertEqual(defer.Deferred, type(d))
+		self.aE(defer.Deferred, type(d))
 
 
 	def test_notifyFinishActuallyCalled(self):
