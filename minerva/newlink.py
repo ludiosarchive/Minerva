@@ -395,7 +395,7 @@ class Stream(object):
 			# Is this really needed? Why would a transport send signals after it is offline?
 			self._unregisterProducerOnPrimary()
 			self._primaryTransport = None
-			
+
 			# This line is not actually necessary, because even if _primaryPaused is left at True,
 			# producers attached to Stream would be paused anyway when there is no primary
 			# transport. We leave it in anyway for ease of debugging, and in case the code changes.
@@ -406,6 +406,10 @@ class Stream(object):
 
 
 	def _unregisterProducerOnPrimary(self):
+		"""
+		Keep in mind that this is called whenever you unregister a producer
+		on Stream, too. self._primaryPaused does not change.
+		"""
 		if self._primaryHasProducer:
 			self._primaryTransport.unregisterProducer()
 			self._primaryHasProducer = False
@@ -918,6 +922,7 @@ class SocketTransport(protocol.Protocol):
 		if self._authed is not True or self._gotHello is not True:
 			raise RuntimeError("_authed=%r, _gotHello=%r" % (self._authed, self._gotHello))
 
+		# XXX TODO make sure there's no harm done with pull producers
 		if self._paused:
 			if self.noisy:
 				log.msg('I was asked to send another box from %r but I am paused right now.' % (queue,))
@@ -1062,18 +1067,6 @@ class SocketTransport(protocol.Protocol):
 					succeedsTransport = None
 				else:
 					succeedsTransport = abstract.ensureNonNegIntLimit(frameObj[1], _2_64)
-				# Option 1:
-				# grab the reference to the other transport, notifyFinish(), add callback to tell Stream to start giving me boxes
-				# sometimes, other transport will already be gone, so we'll call Stream right now
-
-				# Option 2:
-				# Let Stream do all the thinking about which transports are ready to receive boxes
-
-				# Option 2 seems reasonable, because Stream already knows about this transport due to
-				# transportOnline, and it might want to do some complicated decision-making in the future.
-
-				# TODO: remember to properly hook up this transport's consumer with Stream's producer
-
 				self._stream.subscribeToBoxes(self, succeedsTransport)
 			elif frameType == 'gimme_sack_and_close':
 				sackFrame = self._stream.getSACK()
