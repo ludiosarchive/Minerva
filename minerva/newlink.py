@@ -396,10 +396,9 @@ class Stream(object):
 			self._unregisterProducerOnPrimary()
 			self._primaryTransport = None
 			
-			# This line is not actually necessary, because producers attached to Stream
-			# would be paused anyway if there is no primary transport. It would insane
-			# to construct a test to ensure its existence. We leave it in anyway for ease
-			# of debugging, and in case the code changes.
+			# This line is not actually necessary, because even if _primaryPaused is left at True,
+			# producers attached to Stream would be paused anyway when there is no primary
+			# transport. We leave it in anyway for ease of debugging, and in case the code changes.
 			self._primaryPaused = False
 
 			if self._producer and self._streamingProducer:
