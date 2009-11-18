@@ -1,17 +1,18 @@
 /**
- * Tests for CW.Net's ResponseTextDecoder
+ * Tests for cw.net's ResponseTextDecoder
  */
 
 
+// import CW
 // import CW.UnitTest
-// import CW.Net
+goog.require('cw.net');
 
 
-CW.UnitTest.TestCase.subclass(CW.Net.TestDecoder, 'TestResponseTextDecoderNull').methods(
+CW.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestResponseTextDecoderNull').methods(
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
-		self.decoder = CW.Net.ResponseTextDecoder(self.dummy);
+		self.decoder = cw.net.ResponseTextDecoder(self.dummy);
 	},
 
 	function _append(self, string) {
@@ -73,42 +74,42 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestDecoder, 'TestResponseTextDecoderNull')
 
 		// Now adding a colon should result in a ParseError
 		self._append(":");
-		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 	},
 
 	function test_corruptLength0(self) {
 		self._append("0:");
-		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 	},
 
 	function test_corruptLengthLeading0(self) {
 		self._append("02:");
-		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 	},
 
 	function test_corruptLengthNegative(self) {
 		self._append("-1:");
-		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 	},
 	
 	function test_corruptLengthDot(self) {
 		self._append("1.:");
-		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 	},
 	
 	function test_corruptLengthLettersBefore(self) {
 		self._append("f1:");
-		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 	},
 
 	function test_corruptLengthLettersAfter(self) {
 		self._append("1f:");
-		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 	},
 
 	function test_corruptLengthLettersAfterMore(self) {
 		self._append("123456f:");
-		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 	},
 
 	function test_incompleteData(self) {
@@ -143,9 +144,9 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestDecoder, 'TestResponseTextDecoderNull')
 	function test_lengthOverflowByValueCausesPermanentError(self) {
 		self.decoder.setMaxLength(2);
 		self._append("3:hey4:four");
-		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 		self._append("2:hi");
-		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 	},
 
 	/**
@@ -154,34 +155,34 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestDecoder, 'TestResponseTextDecoderNull')
 	function test_lengthOverflowByDigitsCausesPermanentError(self) {
 		self.decoder.setMaxLength(2);
 		self._append("10:helloworld");
-		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 		self._append("2:hi");
-		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 	},
 
 	function test_lengthTooLongNoColon(self) {
 		self.decoder.setMaxLength(99);
 		self._append("100");
-		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 	},
 
 	function test_lengthTooLongColon(self) {
 		self.decoder.setMaxLength(99);
 		self._append("100:");
-		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 	},
 
 	function test_lengthTooLongSameAmountOfDigits(self) {
 		self.decoder.setMaxLength(3);
 		self._append("4:four")
-		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 	},
 
 	// Note that ResponseTextDecoder doesn't have full length-corruption-detection;
 	// it will only catch some problems.
 	function test_nonDigitsInLength(self) {
 		self._append("z:four")
-		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 	},
 
 	/**
@@ -189,9 +190,9 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestDecoder, 'TestResponseTextDecoderNull')
 	 */
 	function test_badDigitsCausePermanentError(self) {
 		self._append("z:four")
-		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 		self._append("3:hey4:four");
-		self.assertThrows(CW.Net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 	}
 );
 
@@ -204,10 +205,10 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestDecoder, 'TestResponseTextDecoderNull')
  * Because we're passing in null, it doesn't know the length of C{responseText}
  * in advance, so it should actually test something usefully.
  */
-CW.Net.TestDecoder.TestResponseTextDecoderNull.subclass(
-CW.Net.TestDecoder, 'TestResponseTextDecoderNullByteAtATime').methods(
+cw.net.TestDecoder.TestResponseTextDecoderNull.subclass(
+cw.net.TestDecoder, 'TestResponseTextDecoderNullByteAtATime').methods(
 	function setUp(self) {
-		CW.Net.TestDecoder.TestResponseTextDecoderNullByteAtATime.upcall(self, 'setUp', []);
+		cw.net.TestDecoder.TestResponseTextDecoderNullByteAtATime.upcall(self, 'setUp', []);
 		// The _toSend logic is very tricky because of ParseError exceptions
 		self._toSend = 1;
 	},
@@ -234,8 +235,8 @@ CW.Net.TestDecoder, 'TestResponseTextDecoderNullByteAtATime').methods(
 );
 
 
-CW.Net.TestDecoder.TestResponseTextDecoderNull.subclass(
-CW.Net.TestDecoder, 'TestResponseTextDecoderNumber').methods(
+cw.net.TestDecoder.TestResponseTextDecoderNull.subclass(
+cw.net.TestDecoder, 'TestResponseTextDecoderNumber').methods(
 	/**
 	 * Pretend that this is the number you get when you get XHR onprogress events.
 	 * This test class *does* know how many bytes were received.
@@ -249,10 +250,10 @@ CW.Net.TestDecoder, 'TestResponseTextDecoderNumber').methods(
  * This is a test class that makes sure the decoder state isn't corrupted when it reports
  * a smaller number for L{responseTextLength} than L{responseText.length}.
  */
-CW.Net.TestDecoder.TestResponseTextDecoderNumber.subclass(
-CW.Net.TestDecoder, 'TestResponseTextDecoderNumberMinus1').methods(
+cw.net.TestDecoder.TestResponseTextDecoderNumber.subclass(
+cw.net.TestDecoder, 'TestResponseTextDecoderNumberMinus1').methods(
 	function setUp(self) {
-		CW.Net.TestDecoder.TestResponseTextDecoderNumberMinus1.upcall(self, 'setUp', []);
+		cw.net.TestDecoder.TestResponseTextDecoderNumberMinus1.upcall(self, 'setUp', []);
 		self.misreportSubtract = 1;
 	},
 
@@ -274,20 +275,20 @@ CW.Net.TestDecoder, 'TestResponseTextDecoderNumberMinus1').methods(
  * This is another test class that makes sure the decoder state isn't corrupted when it reports
  * a smaller number for L{responseTextLength} than L{responseText.length}.
  */
-CW.Net.TestDecoder.TestResponseTextDecoderNumberMinus1.subclass(
-CW.Net.TestDecoder, 'TestResponseTextDecoderNumberMinus2').methods(
+cw.net.TestDecoder.TestResponseTextDecoderNumberMinus1.subclass(
+cw.net.TestDecoder, 'TestResponseTextDecoderNumberMinus2').methods(
 	function setUp(self) {
-		CW.Net.TestDecoder.TestResponseTextDecoderNumberMinus2.upcall(self, 'setUp', []);
+		cw.net.TestDecoder.TestResponseTextDecoderNumberMinus2.upcall(self, 'setUp', []);
 		self.misreportSubtract = 2;
 	}
 );
 
 
-CW.UnitTest.TestCase.subclass(CW.Net.TestDecoder, 'TestIgnoreResponseTextOptimization').methods(
+CW.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestIgnoreResponseTextOptimization').methods(
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
-		self.decoder = CW.Net.ResponseTextDecoder(self.dummy);
+		self.decoder = cw.net.ResponseTextDecoder(self.dummy);
 	},
 
 	function test_responseTextNotReadIfNoData(self) {
@@ -324,11 +325,11 @@ CW.UnitTest.TestCase.subclass(CW.Net.TestDecoder, 'TestIgnoreResponseTextOptimiz
 /**
  * Test that the decoder does not break when it gets a too-large L{responseTextLength}.
  */
-CW.UnitTest.TestCase.subclass(CW.Net.TestDecoder, 'TestExaggeratedLength').methods(
+CW.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestExaggeratedLength').methods(
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
-		self.decoder = CW.Net.ResponseTextDecoder(self.dummy);
+		self.decoder = cw.net.ResponseTextDecoder(self.dummy);
 	},
 
 	/**

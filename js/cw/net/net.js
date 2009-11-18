@@ -2,9 +2,11 @@
 // import CW.URI
 // import CW.Defer
 
-CW.Error.subclass(CW.Net, 'ParseError');
+goog.provide('cw.net');
 
-// TODO: have some obfu-vars
+cw.net.__name__ = 'cw.net'; // For compat with CW code
+
+CW.Error.subclass(cw.net, 'ParseError');
 
 /**
  * This parser solves two problems:
@@ -26,7 +28,7 @@ CW.Error.subclass(CW.Net, 'ParseError');
  * Non-ASCII characters are forbidden, because of our optimizations,
  * and because of browser bugs related to XHR readyState 3.
  */
-CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
+CW.Class.subclass(cw.net, "ResponseTextDecoder").methods(
 	/**
 	 * L{xObject} is an L{XMLHttpRequest} or L{XDomainRequest} object
 	 * or any object with a C{responseText} property (a string).
@@ -63,7 +65,7 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 	 * for L{responseTextLength} if you do not know how many bytes are in L{responseText}.
 	 * See this class' docstring for rationale.
 	 *
-	 * L{CW.Net.ParseError} will be thrown if:
+	 * L{cw.net.ParseError} will be thrown if:
 	 *    - a frame with size greater than L{MAX_LENGTH} is found
 	 *    - if a corrupt length value is found (though the throwing may be delayed for a few bytes).
 	 */
@@ -89,7 +91,7 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 				var colon = text.indexOf(':', self._offset);
 				if(colon === -1) {
 					if(responseTextLength - self._offset > self.MAX_LENGTH_LEN) {
-						throw new CW.Net.ParseError("length too long");
+						throw new cw.net.ParseError("length too long");
 					}
 					////console.log('No colon yet. Break.')
 					break;
@@ -102,12 +104,12 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 				// Accept only positive integers with no leading zero.
 				// TODO: maybe disable this check for long-time user agents with no problems
 				if(!/^[1-9]\d*$/.test(extractedLengthStr)) {
-					throw new CW.Net.ParseError("corrupt length: " + extractedLengthStr);
+					throw new cw.net.ParseError("corrupt length: " + extractedLengthStr);
 				}
 				// TODO: check if `+extractedLengthStr' is faster; use it if it is.
 				var readLength = parseInt(extractedLengthStr, 10);
 				if(readLength > self.MAX_LENGTH) {
-					throw new CW.Net.ParseError("length too long: " + readLength);
+					throw new cw.net.ParseError("length too long: " + readLength);
 				}
 				self._modeOrReadLength = readLength;
 				self._offset += (''+readLength).length + 1; // + 1 to skip over the ":"
@@ -135,7 +137,7 @@ CW.Class.subclass(CW.Net, "ResponseTextDecoder").methods(
 
 
 
-CW.Net.getXHRObject = function getXHRObject() {
+cw.net.getXHRObject = function() {
 	// http://blogs.msdn.com/xmlteam/archive/2006/10/23/using-the-right-version-of-msxml-in-internet-explorer.aspx
 	// TODO: later do some experiments to find out if getting Msxml2.XMLHTTP.6.0 may be better
 
@@ -163,10 +165,10 @@ CW.Net.getXHRObject = function getXHRObject() {
 
 
 
-CW.Error.subclass(CW.Net, 'RequestStillActive');
-CW.Error.subclass(CW.Net, 'RequestAborted');
-CW.Error.subclass(CW.Net, 'NetworkProblem');
-CW.Error.subclass(CW.Net, 'Timeout');
+CW.Error.subclass(cw.net, 'RequestStillActive');
+CW.Error.subclass(cw.net, 'RequestAborted');
+CW.Error.subclass(cw.net, 'NetworkProblem');
+CW.Error.subclass(cw.net, 'Timeout');
 
 
 // Without CORS support for XMLHttpRequest, or XDomainRequest, we have to create
@@ -198,7 +200,7 @@ CW.Error.subclass(CW.Net, 'Timeout');
 // We don't support Interfaces yet, but we really need to.
 
 //] if _debugMode:
-CW.Class.subclass(CW.Net, "IUsableSomething").methods(
+CW.Class.subclass(cw.net, "IUsableSomething").methods(
 	/**
 	 * @return: C{true} if this object is technically capable of
 	 *    cross-domain requests, C{false} otherwise.
@@ -275,7 +277,7 @@ Disadvantages:
  * Probably not: it might be buggy or become buggier. We also
  *    want to be able to test with our own deterministic clock.
  */
-CW.Class.subclass(CW.Net, "UsableXDR").methods(
+CW.Class.subclass(cw.net, "UsableXDR").methods(
 	/**
 	 * C{window} is a C{window}-like object.
 	 * C{objectFactory} is a function that returns an
@@ -313,7 +315,7 @@ CW.Class.subclass(CW.Net, "UsableXDR").methods(
 //] if _debugMode:
 		CW.msg('_handler_XDR_onerror');
 //] endif
-		self._finishAndReset(new CW.Net.NetworkProblem());
+		self._finishAndReset(new cw.net.NetworkProblem());
 	},
 
 	function _handler_XDR_ontimeout(self) {
@@ -322,7 +324,7 @@ CW.Class.subclass(CW.Net, "UsableXDR").methods(
 //] endif
 		// Even though our XDR timeout is very high and should never be
 		// reached, we'll treat it the same as an official timeout.
-		self._finishAndReset(new CW.Net.Timeout());
+		self._finishAndReset(new cw.net.Timeout());
 	},
 
 	function _handler_XDR_onprogress(self) {
@@ -350,7 +352,7 @@ CW.Class.subclass(CW.Net, "UsableXDR").methods(
 
 	function request(self, verb, url, /*optional*/ post, /*optional*/ progressCallback) {
 		if(self._requestActive) {
-			throw new CW.Net.RequestStillActive(
+			throw new cw.net.RequestStillActive(
 				"Wait for the Deferred to fire before making another request.");
 		}
 		// We'll never know the position and totalSize.
@@ -396,14 +398,14 @@ CW.Class.subclass(CW.Net, "UsableXDR").methods(
 	},
 
 	/**
-	 * See CW.Net.IUsableSomething.abort
+	 * See cw.net.IUsableSomething.abort
 	 */
 	function abort(self) {
 		if(self._requestActive) {
 			// We MUST NOT call .abort twice on the XDR object, or call it
 			// after it's done loading.
 			self._object.abort();
-			self._finishAndReset(new CW.Net.RequestAborted());
+			self._finishAndReset(new cw.net.RequestAborted());
 		}
 	}
 );
@@ -421,7 +423,7 @@ CW.Class.subclass(CW.Net, "UsableXDR").methods(
  *
  * TODO: implement timeout?
  */
-CW.Class.subclass(CW.Net, "UsableXHR").methods(
+CW.Class.subclass(cw.net, "UsableXHR").methods(
 
 	/**
 	 * C{window} is a C{window}-like object.
@@ -435,21 +437,21 @@ CW.Class.subclass(CW.Net, "UsableXHR").methods(
 	},
 
 	/**
-	 * See CW.Net.IUsableSomething.canCrossDomains
+	 * See cw.net.IUsableSomething.canCrossDomains
 	 */
 	function canCrossDomains(self) {
 		return (typeof self._object.withCredentials === "boolean");
 	},
 
 	/**
-	 * See CW.Net.IUsableSomething.request
+	 * See cw.net.IUsableSomething.request
 	 */
 	function request(self, verb, url, /*optional*/ post, /*optional*/ progressCallback) {
 		// TODO: send as few headers possible for each browser. This requires custom
 		// per-browser if/elif'ing
 
 		if(self._requestActive) {
-			throw new CW.Net.RequestStillActive(
+			throw new cw.net.RequestStillActive(
 				"Wait for the Deferred to fire before making another request.");
 		}
 		self._position = null;
@@ -531,7 +533,7 @@ CW.Class.subclass(CW.Net, "UsableXHR").methods(
 	},
 
 	/**
-	 * See CW.Net.IUsableSomething.abort
+	 * See cw.net.IUsableSomething.abort
 	 */
 	function abort(self) {
 		if(self._requestActive) {
@@ -542,7 +544,7 @@ CW.Class.subclass(CW.Net, "UsableXHR").methods(
 			// We run the risk that the XHR object can't be reused immediately after
 			// we call .abort() on it. If this happens in a major browser, we need
 			// to give on up reusing XMLHttpRequest objects.
-			self._finishAndReset(new CW.Net.RequestAborted());
+			self._finishAndReset(new cw.net.RequestAborted());
 		}
 	},
 
@@ -628,8 +630,8 @@ CW.Class.subclass(CW.Net, "UsableXHR").methods(
  * C{url} is an instance of L{CW.URI.URL}.
  * C{post} is data to POST. Use "" (empty string) if using L{verb} "GET".
  */
-CW.Net.simpleRequest = function simpleRequest(verb, url, post) {
-	var xhr = CW.Net.UsableXHR(window, CW.Net.getXHRObject());
+cw.net.simpleRequest = function(verb, url, post) {
+	var xhr = cw.net.UsableXHR(window, cw.net.getXHRObject());
 	var d = xhr.request(verb, url, post);
 	d.addCallback(function(obj){
 		return obj.responseText;
@@ -658,10 +660,10 @@ CW.Net.simpleRequest = function simpleRequest(verb, url, post) {
 // TODO: another data structure for the queue might increase real-world performance;
 // consider trying a deque (linked list).
 
-CW.Error.subclass(CW.Net, 'StreamTimedOut');
-CW.Error.subclass(CW.Net, 'SeqNumTooHighError');
+CW.Error.subclass(cw.net, 'StreamTimedOut');
+CW.Error.subclass(cw.net, 'SeqNumTooHighError');
 
-CW.Class.subclass(CW.Net, "Stream").methods(
+CW.Class.subclass(cw.net, "Stream").methods(
 	/**
 	 * Initialize Stream with:
 	 *    L{window}, provides L{IWindowTime}
@@ -729,7 +731,7 @@ CW.Class.subclass(CW.Net, "Stream").methods(
 		// Remove old boxes from our C2S queue
 		var lastSeq = self._getLastQueueSeq();
 		if(seqNum > lastSeq) {
-			throw new CW.Net.SeqNumTooHighError("(seqNum) " + seqNum + " > " + lastSeq + " (lastSeq)");
+			throw new cw.net.SeqNumTooHighError("(seqNum) " + seqNum + " > " + lastSeq + " (lastSeq)");
 		}
 		self._queue.splice(0, seqNum - self._seqNumAt0);
 		self._seqNumAt0 = seqNum;
@@ -751,9 +753,9 @@ CW.Class.subclass(CW.Net, "Stream").methods(
 	},
 
 	/**
-	 * L{gotSendingOpportunity} is called when CW.Net is about to initialize a
+	 * L{gotSendingOpportunity} is called when cw.net is about to initialize a
 	 * new S2C transport. You can use this event to send just-created or specially-queued
-	 * boxes along with the new S2C transport. If CW.Net is about to initialize an HTTP
+	 * boxes along with the new S2C transport. If cw.net is about to initialize an HTTP
 	 * S2C transport, boxes queued right now might avoid a C2S HTTP request.
 	 * For non-HTTP transports, queuing a box right now might avoid having to send
 	 * two separate TCP packets.
@@ -808,7 +810,7 @@ CW.Class.subclass(CW.Net, "Stream").methods(
 
 // StreamFactory
 	// buildStream
-CW.Class.subclass(CW.Net, "StreamFactory").methods(
+CW.Class.subclass(cw.net, "StreamFactory").methods(
 	/**
 	 * This takes L{window} as an argument so that unit tests
 	 * can pass in a dummy window with deterministic timer features.

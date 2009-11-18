@@ -21,7 +21,7 @@ class DemoPage(resource.Resource):
 
 
 class CustomTestPage(testing.TestPage):
-	testPackages = ['CW.Net']
+	testPackages = ['cw.net']
 
 
 
