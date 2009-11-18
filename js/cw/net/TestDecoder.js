@@ -12,7 +12,7 @@ CW.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestResponseTextDecoderNull')
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
-		self.decoder = cw.net.ResponseTextDecoder(self.dummy);
+		self.decoder = new cw.net.ResponseTextDecoder(self.dummy);
 	},
 
 	function _append(self, string) {
@@ -288,7 +288,7 @@ CW.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestIgnoreResponseTextOptimiz
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
-		self.decoder = cw.net.ResponseTextDecoder(self.dummy);
+		self.decoder = new cw.net.ResponseTextDecoder(self.dummy);
 	},
 
 	function test_responseTextNotReadIfNoData(self) {
@@ -329,7 +329,7 @@ CW.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestExaggeratedLength').metho
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
-		self.decoder = cw.net.ResponseTextDecoder(self.dummy);
+		self.decoder = new cw.net.ResponseTextDecoder(self.dummy);
 	},
 
 	/**

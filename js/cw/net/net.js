@@ -2,11 +2,23 @@
 // import CW.URI
 // import CW.Defer
 
+goog.require('goog.debug.Error');
+
 goog.provide('cw.net');
 
 cw.net.__name__ = 'cw.net'; // For compat with CW code
 
-CW.Error.subclass(cw.net, 'ParseError');
+/**
+ * This is thrown when {@code ResponseTextDecoder} aborts parsing.
+ * @param {!string} msg Reason why parse failed
+ * @constructor
+ * @extends {goog.debug.Error}
+ */
+cw.net.ParseError = function(msg) {
+	goog.debug.Error.call(this, msg);
+};
+goog.inherits(cw.net.ParseError, goog.debug.Error);
+
 
 /**
  * This parser solves two problems:
@@ -28,14 +40,17 @@ CW.Error.subclass(cw.net, 'ParseError');
  * Non-ASCII characters are forbidden, because of our optimizations,
  * and because of browser bugs related to XHR readyState 3.
  */
-CW.Class.subclass(cw.net, "ResponseTextDecoder").methods(
-	/**
-	 * L{xObject} is an L{XMLHttpRequest} or L{XDomainRequest} object
-	 * or any object with a C{responseText} property (a string).
-	 *
-	 * L{MAX_LENGTH} is the maximum length of frame to parse (in characters).
-	 */
-	function __init__(self, xObject, MAX_LENGTH) {
+
+/**
+ * @param {!(XMLHttpRequest|XDomainRequest)} xObject an L{XMLHttpRequest}
+ * or L{XDomainRequest} object or any object with a C{responseText} property (a string).
+ *
+ * @param {!number} MAX_LENGTH is the maximum length of frame to parse (in characters).
+ *
+ * @constructor
+ */
+cw.net.ResponseTextDecoder = function(xObject, MAX_LENGTH) {
+		var self = this;
 		self._offset = 0;
 		// Need to have at least 1 byte before doing any parsing
 		self._ignoreUntil = 1;
@@ -46,15 +61,17 @@ CW.Class.subclass(cw.net, "ResponseTextDecoder").methods(
 			MAX_LENGTH = 1024*1024*1024;
 		}
 		self.setMaxLength(MAX_LENGTH);
-	},
+	}
 
 	/**
-	 * Set maximum frame length to L{MAX_LENGTH}.
+	 * Set maximum frame length to C{MAX_LENGTH}.
+	 *
+	 * @param {!number} MAX_LENGTH
 	 */
-	function setMaxLength(self, MAX_LENGTH) {
-		self.MAX_LENGTH = MAX_LENGTH;
-		self.MAX_LENGTH_LEN = (''+MAX_LENGTH).length;
-	},
+	cw.net.ResponseTextDecoder.prototype.setMaxLength = function(MAX_LENGTH) {
+		this.MAX_LENGTH = MAX_LENGTH;
+		this.MAX_LENGTH_LEN = (''+MAX_LENGTH).length;
+	}
 
 	/**
 	 * Check for new data in L{xObject.responseText} and return an array of new frames.
@@ -68,8 +85,13 @@ CW.Class.subclass(cw.net, "ResponseTextDecoder").methods(
 	 * L{cw.net.ParseError} will be thrown if:
 	 *    - a frame with size greater than L{MAX_LENGTH} is found
 	 *    - if a corrupt length value is found (though the throwing may be delayed for a few bytes).
+	 *
+	 * @param {?number} responseTextLength
+	 * @return {Array.<string>} an array of new frames
 	 */
-	function getNewFrames(self, responseTextLength) {
+	cw.net.ResponseTextDecoder.prototype.getNewFrames = function(responseTextLength) {
+		var self = this;
+
 		if(responseTextLength !== null && responseTextLength < self._ignoreUntil) {
 			// There certainly isn't enough data in L{responseText} yet, so return.
 			return [];
@@ -133,7 +155,6 @@ CW.Class.subclass(cw.net, "ResponseTextDecoder").methods(
 		////console.log('_ignoreUntil now', self._ignoreUntil);
 		return strings;
 	}
-);
 
 
 
