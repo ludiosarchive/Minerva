@@ -3,6 +3,7 @@
 // import CW.Defer
 
 goog.require('goog.debug.Error');
+goog.require('goog.userAgent');
 
 goog.provide('cw.net');
 
@@ -157,18 +158,26 @@ cw.net.ResponseTextDecoder = function(xObject, MAX_LENGTH) {
 	}
 
 
+/**
+ * A string representing the XHR-esque object that was last instantiated.
+ * @type {string?}
+ * @private
+ */
+cw.net.xhrObjectName_ = null;
+
 
 cw.net.getXHRObject = function() {
-	// http://blogs.msdn.com/xmlteam/archive/2006/10/23/using-the-right-version-of-msxml-in-internet-explorer.aspx
-	// TODO: later do some experiments to find out if getting Msxml2.XMLHTTP.6.0 may be better
-
+	// Order taken from goog.net.xmlhttp
 	var things = [
-		'XMLHttpRequest', function(){return new XMLHttpRequest()},
-		'Msxml2.XMLHTTP', function(){return new ActiveXObject("MSXML2.XMLHTTP.3.0")},
-		'Microsoft.XMLHTTP', function(){return new ActiveXObject("Microsoft.XMLHTTP")}
+		'MSXML2.XMLHTTP.6.0', function(){return new ActiveXObject("MSXML2.XMLHTTP.6.0")},
+		'MSXML2.XMLHTTP.3.0', function(){return new ActiveXObject("MSXML2.XMLHTTP.3.0")},
+		'MSXML2.XMLHTTP', function(){return new ActiveXObject("MSXML2.XMLHTTP")},
+		'Microsoft.XMLHTTP', function(){return new ActiveXObject("Microsoft.XMLHTTP")},
+		'XMLHttpRequest', function(){return new XMLHttpRequest()}
 	];
 
 	for (var n=1; n < things.length; n+=2) {
+		/** @preserveTry */
 		try {
 			var object = things[n]();
 			break;
@@ -177,19 +186,52 @@ cw.net.getXHRObject = function() {
 		}
 	}
 	var objectName = things[n - 1];
-//] if _debugMode:
-	CW.msg('Found object ' + object + ', name' + objectName);
-//] endif
+	cw.net.xhrObjectName_ = objectName;
 	return object;
 },
 
 
 
 
-CW.Error.subclass(cw.net, 'RequestStillActive');
-CW.Error.subclass(cw.net, 'RequestAborted');
-CW.Error.subclass(cw.net, 'NetworkProblem');
-CW.Error.subclass(cw.net, 'Timeout');
+/**
+ * @param {!string} msg Reason
+ * @constructor
+ * @extends {goog.debug.Error}
+ */
+cw.net.RequestStillActive = function(msg) {
+	goog.debug.Error.call(this, msg);
+};
+goog.inherits(cw.net.RequestStillActive, goog.debug.Error);
+
+/**
+ * @param {!string} msg Reason
+ * @constructor
+ * @extends {goog.debug.Error}
+ */
+cw.net.RequestAborted = function(msg) {
+	goog.debug.Error.call(this, msg);
+};
+goog.inherits(cw.net.RequestAborted, goog.debug.Error);
+
+/**
+ * @param {!string} msg Reason
+ * @constructor
+ * @extends {goog.debug.Error}
+ */
+cw.net.NetworkProblem = function(msg) {
+	goog.debug.Error.call(this, msg);
+};
+goog.inherits(cw.net.NetworkProblem, goog.debug.Error);
+
+/**
+ * @param {!string} msg Reason
+ * @constructor
+ * @extends {goog.debug.Error}
+ */
+cw.net.Timeout = function(msg) {
+	goog.debug.Error.call(this, msg);
+};
+goog.inherits(cw.net.Timeout, goog.debug.Error);
 
 
 // Without CORS support for XMLHttpRequest, or XDomainRequest, we have to create
@@ -220,15 +262,21 @@ CW.Error.subclass(cw.net, 'Timeout');
 
 // We don't support Interfaces yet, but we really need to.
 
-//] if _debugMode:
-CW.Class.subclass(cw.net, "IUsableSomething").methods(
+
+/**
+ * @interface
+ */
+cw.net.IUsableSomething = function() {
+	}
+
 	/**
 	 * @return: C{true} if this object is technically capable of
 	 *    cross-domain requests, C{false} otherwise.
 	 */
-	function canCrossDomains() {
+	cw.net.IUsableSomething.canCrossDomains = function() {
 
-	},
+	}
+
 
 	/**
 	 * Request some URL.
@@ -257,21 +305,18 @@ CW.Class.subclass(cw.net, "IUsableSomething").methods(
 	 * Returns an L{CW.Defer.Deferred} that fires with callback or errback. It's not safe to make
 	 * another request until this Deferred fires. Do not rely only on L{progressCallback}.
 	 */
-	function request(verb, url, /*optional*/ post, /*optional*/ progressCallback) {
+	cw.net.IUsableSomething.request = function() {
 
-	},
+	}
 
 	/**
 	 * Abort the current request. If none is active, or request was already aborted, this is a no-op.
 	 *
 	 * @return: undefined
 	 */
-	function abort() {
+	cw.net.IUsableSomething.abort = function() {
 
 	}
-);
-//] endif
-
 
 
 /*
@@ -285,18 +330,19 @@ Reasons to prefer XDomainRequest over XHR/XMLHTTP in IE8:
 Disadvantages:
 	- no header support
 	- no readyState, status, statusText, properties
-	- no support for multi-part responses. (???)
+	- no support for multi-part responses. (??? someone said this but why)
 	- only GET and POST methods supported
  */
 
 /**
  * An object that can perform XDomainRequest requests.
  *
- * Implements IUsableSomething.
- *
  * TODO: implement timeout? Should we rely on XDR's timeout?
  * Probably not: it might be buggy or become buggier. We also
  *    want to be able to test with our own deterministic clock.
+ *
+ * @constructor
+ * @implements {cw.net.IUsableSomething}
  */
 CW.Class.subclass(cw.net, "UsableXDR").methods(
 	/**
@@ -308,6 +354,13 @@ CW.Class.subclass(cw.net, "UsableXDR").methods(
 		self._window = window;
 		self._objectFactory = objectFactory;
 		self._requestActive = false;
+		self._noisy = true;
+	},
+
+	function _verboseLog(self, msg) {
+		if(self._noisy) {
+			CW.msg(msg);
+		}
 	},
 
 	function canCrossDomains(self) {
@@ -406,10 +459,10 @@ CW.Class.subclass(cw.net, "UsableXDR").methods(
 		x.open(verb, url.getString());
 		x.timeout = 3600*1000; // 1 hour. We'll do our own timeouts.
 
-		x.onerror = CW.bind(self, self._handler_XDR_onerror);
-		x.onprogress = CW.bind(self, self._handler_XDR_onprogress);
-		x.onload = CW.bind(self, self._handler_XDR_onload);
-		x.ontimeout = CW.bind(self, self._handler_XDR_ontimeout);
+		x.onerror = goog.bind(self._handler_XDR_onerror, self);
+		x.onprogress = goog.bind(self._handler_XDR_onprogress, self);
+		x.onload = goog.bind(self._handler_XDR_onload, self);
+		x.ontimeout = goog.bind(self._handler_XDR_ontimeout, self);
 
 		// .send("") for "no content" is what GWT does in
 		// google-web-toolkit/user/src/com/google/gwt/user/client/HTTPRequest.java
@@ -455,6 +508,13 @@ CW.Class.subclass(cw.net, "UsableXHR").methods(
 		self._window = window;
 		self._object = object;
 		self._requestActive = false;
+		self._noisy = true;
+	},
+
+	function _verboseLog(self, msg) {
+		if(self._noisy) {
+			CW.msg(msg);
+		}
 	},
 
 	/**
@@ -478,7 +538,7 @@ CW.Class.subclass(cw.net, "UsableXHR").methods(
 		self._position = null;
 		self._totalSize = null;
 		self._requestDoneD = new CW.Defer.Deferred();
-		self._progressCallback = progressCallback ? progressCallback : CW.emptyFunc;
+		self._progressCallback = progressCallback ? progressCallback : goog.nullFunction;
 		self._poller = null;
 
 		// To reuse the XMLHTTP object in IE7, the order must be: open, onreadystatechange, send
@@ -498,7 +558,7 @@ CW.Class.subclass(cw.net, "UsableXHR").methods(
 		// if it fires once with good numbers, it will keep firing with good numbers
 		// until the request is over.
 		try {
-			x.onprogress = CW.bind(self, self._handler_onprogress);
+			x.onprogress = goog.bind(self._handler_onprogress, self);
 		} catch(err) {
 //] if _debugMode:
 			CW.msg(self + ": failed to attach onprogress event: " + err.message);
@@ -517,10 +577,11 @@ CW.Class.subclass(cw.net, "UsableXHR").methods(
 		}
 
 		x.open(verb, url.getString(), /*async=*/true);
-		x.onreadystatechange = CW.bind(self, self._handler_onreadystatechange);
+		x.onreadystatechange = goog.bind(self._handler_onreadystatechange, self);
 
-		if(window.opera && self._progressCallback !== CW.emptyFunc) {
-			self._poller = self._window.setInterval(CW.bind(self, self._handler_poll), 50);
+		if(goog.userAgent.OPERA && self._progressCallback !== goog.nullFunction) {
+			// TODO: MUST USE goog.Timer
+			self._poller = self._window.setInterval(goog.bind(self._handler_poll, self), 50);
 		}
 
 		// .send("") for "no content" is what GWT does in

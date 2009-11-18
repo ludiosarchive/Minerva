@@ -6,6 +6,8 @@
 // import CW
 // import CW.UnitTest
 // import CW.URI
+
+goog.require('goog.userAgent');
 goog.require('cw.net');
 
 
@@ -109,8 +111,8 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').metho
 		self.target = CW.URI.URL(''+window.location).update('fragment', null);
 	},
 
-	// Override _setupDummies
-	// Override _finishRequest
+	// Subclasses override _setupDummies
+	// Subclasses override _finishRequest
 
 	/**
 	 * We can't make another request using this C{self.xhdr}
@@ -118,7 +120,7 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').metho
 	 */
 	function test_requestStillActive(self) {
 		self._setupDummies();
-		self.assertThrows(
+		return self.assertThrows(
 			cw.net.RequestStillActive,
 			function() { self.xhdr.request('GET', self.target) },
 			"Wait for the Deferred to fire before making another request."
@@ -634,7 +636,7 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackTests').method
 CW.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackOperaWorkaroundTests').methods(
 
 	function setUp(self) {
-		if(!window.opera) {
+		if(!goog.userAgent.OPERA) {
 			throw new CW.UnitTest.SkipTest("This workaround only applies to Opera.");
 		}
 		self.clock = CW.UnitTest.Clock();
