@@ -120,7 +120,7 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').metho
 	 */
 	function test_requestStillActive(self) {
 		self._setupDummies();
-		return self.assertThrows(
+		self.assertThrows(
 			cw.net.RequestStillActive,
 			function() { self.xhdr.request('GET', self.target.getString()) },
 			"Wait for the Deferred to fire before making another request."
