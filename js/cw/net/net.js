@@ -1,11 +1,16 @@
 // import CW
-// import CW.URI
-// import CW.Defer
 
 goog.require('goog.debug.Error');
+goog.require('goog.async.Deferred');
 goog.require('goog.userAgent');
 
 goog.provide('cw.net');
+goog.provide('cw.net.ParseError');
+goog.provide('cw.net.RequestStillActive');
+goog.provide('cw.net.RequestAborted');
+goog.provide('cw.net.NetworkProblem');
+goog.provide('cw.net.Timeout');
+
 
 cw.net.__name__ = 'cw.net'; // For compat with CW code
 
@@ -18,6 +23,7 @@ cw.net.__name__ = 'cw.net'; // For compat with CW code
 cw.net.ParseError = function(msg) {
 	goog.debug.Error.call(this, msg);
 };
+cw.net.ParseError.prototype.name = 'cw.net.ParseError';
 goog.inherits(cw.net.ParseError, goog.debug.Error);
 
 
@@ -201,6 +207,7 @@ cw.net.getXHRObject = function() {
 cw.net.RequestStillActive = function(msg) {
 	goog.debug.Error.call(this, msg);
 };
+cw.net.RequestStillActive.prototype.name = 'cw.net.RequestStillActive';
 goog.inherits(cw.net.RequestStillActive, goog.debug.Error);
 
 /**
@@ -211,6 +218,7 @@ goog.inherits(cw.net.RequestStillActive, goog.debug.Error);
 cw.net.RequestAborted = function(msg) {
 	goog.debug.Error.call(this, msg);
 };
+cw.net.RequestAborted.prototype.name = 'cw.net.RequestAborted';
 goog.inherits(cw.net.RequestAborted, goog.debug.Error);
 
 /**
@@ -221,6 +229,7 @@ goog.inherits(cw.net.RequestAborted, goog.debug.Error);
 cw.net.NetworkProblem = function(msg) {
 	goog.debug.Error.call(this, msg);
 };
+cw.net.NetworkProblem.prototype.name = 'cw.net.NetworkProblem';
 goog.inherits(cw.net.NetworkProblem, goog.debug.Error);
 
 /**
@@ -231,6 +240,7 @@ goog.inherits(cw.net.NetworkProblem, goog.debug.Error);
 cw.net.Timeout = function(msg) {
 	goog.debug.Error.call(this, msg);
 };
+cw.net.Timeout.prototype.name = 'cw.net.Timeout';
 goog.inherits(cw.net.Timeout, goog.debug.Error);
 
 
@@ -282,7 +292,7 @@ cw.net.IUsableSomething = function() {
 	 * Request some URL.
 	 *
 	 * C{verb} is exactly "GET" or exactly "POST"
-	 * C{url} is an instance of L{CW.URI.URL}.
+	 * C{url} is a JavaScript string, representing the target URL.
 	 * C{post} is data to POST. Use "" (empty string) if using L{verb} "GET".
 	 *
 	 * C{progressCallback}, if truthy, is a callable.
@@ -302,7 +312,7 @@ cw.net.IUsableSomething = function() {
 	 *
 	 * C{progressCallback}, if falsy, will not be called.
 	 *
-	 * Returns an L{CW.Defer.Deferred} that fires with callback or errback. It's not safe to make
+	 * Returns an L{goog.async.Deferred} that fires with callback or errback. It's not safe to make
 	 * another request until this Deferred fires. Do not rely only on L{progressCallback}.
 	 */
 	cw.net.IUsableSomething.request = function() {
@@ -430,8 +440,8 @@ CW.Class.subclass(cw.net, "UsableXDR").methods(
 				"Wait for the Deferred to fire before making another request.");
 		}
 		// We'll never know the position and totalSize.
-		self._requestDoneD = new CW.Defer.Deferred();
-		self._progressCallback = progressCallback ? progressCallback : CW.emptyFunc;
+		self._requestDoneD = new goog.async.Deferred();
+		self._progressCallback = progressCallback ? progressCallback : goog.nullFunction;
 		self._requestActive = true;
 
 		/**
@@ -456,7 +466,7 @@ CW.Class.subclass(cw.net, "UsableXDR").methods(
 		self._object = self._objectFactory();
 		var x = self._object;
 
-		x.open(verb, url.getString());
+		x.open(verb, url);
 		x.timeout = 3600*1000; // 1 hour. We'll do our own timeouts.
 
 		x.onerror = goog.bind(self._handler_XDR_onerror, self);
@@ -537,7 +547,7 @@ CW.Class.subclass(cw.net, "UsableXHR").methods(
 		}
 		self._position = null;
 		self._totalSize = null;
-		self._requestDoneD = new CW.Defer.Deferred();
+		self._requestDoneD = new goog.async.Deferred();
 		self._progressCallback = progressCallback ? progressCallback : goog.nullFunction;
 		self._poller = null;
 
@@ -570,13 +580,9 @@ CW.Class.subclass(cw.net, "UsableXHR").methods(
 		// of the request. The fragment should never be sent to the server.
 		// Only XHR/XMLHTTP are buggy this way; this does not apply to
 		// XDomainRequest
-		// TODO: decouple from CW.URI.URL, use a regex or something
-		if(url.fragment !== null) {
-			url = CW.URI.URL(url); // copy
-			url.update('fragment', null);
-		}
+		url = url.replace(/#.*/g, "");
 
-		x.open(verb, url.getString(), /*async=*/true);
+		x.open(verb, url, /*async=*/true);
 		x.onreadystatechange = goog.bind(self._handler_onreadystatechange, self);
 
 		if(goog.userAgent.OPERA && self._progressCallback !== goog.nullFunction) {
@@ -697,8 +703,8 @@ CW.Class.subclass(cw.net, "UsableXHR").methods(
 		// OR: have the server send an optional "X-UniLen" header
 
 		if(readyState == 4) {
-			// TODO: maybe do this in IE only?
-			self._object.onreadystatechange = CW.emptyFunc;
+			// TODO: maybe do this in IE only? // TODO: xhrio does it differently: either null or nullFunction depending on browser
+			self._object.onreadystatechange = goog.nullFunction;
 			self._finishAndReset(null);
 		}
 	}
@@ -742,8 +748,8 @@ cw.net.simpleRequest = function(verb, url, post) {
 // TODO: another data structure for the queue might increase real-world performance;
 // consider trying a deque (linked list).
 
-CW.Error.subclass(cw.net, 'StreamTimedOut');
-CW.Error.subclass(cw.net, 'SeqNumTooHighError');
+//CW.Error.subclass(cw.net, 'StreamTimedOut');
+//CW.Error.subclass(cw.net, 'SeqNumTooHighError');
 
 CW.Class.subclass(cw.net, "Stream").methods(
 	/**
@@ -813,7 +819,8 @@ CW.Class.subclass(cw.net, "Stream").methods(
 		// Remove old boxes from our C2S queue
 		var lastSeq = self._getLastQueueSeq();
 		if(seqNum > lastSeq) {
-			throw new cw.net.SeqNumTooHighError("(seqNum) " + seqNum + " > " + lastSeq + " (lastSeq)");
+			//throw new cw.net.SeqNumTooHighError("(seqNum) " + seqNum + " > " + lastSeq + " (lastSeq)");
+			throw new Error("(seqNum) " + seqNum + " > " + lastSeq + " (lastSeq)");
 		}
 		self._queue.splice(0, seqNum - self._seqNumAt0);
 		self._seqNumAt0 = seqNum;
