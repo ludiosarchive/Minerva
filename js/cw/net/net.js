@@ -23,8 +23,8 @@ cw.net.__name__ = 'cw.net'; // For compat with CW code
 cw.net.ParseError = function(msg) {
 	goog.debug.Error.call(this, msg);
 };
-cw.net.ParseError.prototype.name = 'cw.net.ParseError';
 goog.inherits(cw.net.ParseError, goog.debug.Error);
+cw.net.ParseError.prototype.name = 'cw.net.ParseError';
 
 
 /**
@@ -207,8 +207,8 @@ cw.net.getXHRObject = function() {
 cw.net.RequestStillActive = function(msg) {
 	goog.debug.Error.call(this, msg);
 };
-cw.net.RequestStillActive.prototype.name = 'cw.net.RequestStillActive';
 goog.inherits(cw.net.RequestStillActive, goog.debug.Error);
+cw.net.RequestStillActive.prototype.name = 'cw.net.RequestStillActive';
 
 /**
  * @param {!string} msg Reason
@@ -218,8 +218,8 @@ goog.inherits(cw.net.RequestStillActive, goog.debug.Error);
 cw.net.RequestAborted = function(msg) {
 	goog.debug.Error.call(this, msg);
 };
-cw.net.RequestAborted.prototype.name = 'cw.net.RequestAborted';
 goog.inherits(cw.net.RequestAborted, goog.debug.Error);
+cw.net.RequestAborted.prototype.name = 'cw.net.RequestAborted';
 
 /**
  * @param {!string} msg Reason
@@ -229,8 +229,8 @@ goog.inherits(cw.net.RequestAborted, goog.debug.Error);
 cw.net.NetworkProblem = function(msg) {
 	goog.debug.Error.call(this, msg);
 };
-cw.net.NetworkProblem.prototype.name = 'cw.net.NetworkProblem';
 goog.inherits(cw.net.NetworkProblem, goog.debug.Error);
+cw.net.NetworkProblem.prototype.name = 'cw.net.NetworkProblem';
 
 /**
  * @param {!string} msg Reason
@@ -240,8 +240,8 @@ goog.inherits(cw.net.NetworkProblem, goog.debug.Error);
 cw.net.Timeout = function(msg) {
 	goog.debug.Error.call(this, msg);
 };
-cw.net.Timeout.prototype.name = 'cw.net.Timeout';
 goog.inherits(cw.net.Timeout, goog.debug.Error);
+cw.net.Timeout.prototype.name = 'cw.net.Timeout';
 
 
 // Without CORS support for XMLHttpRequest, or XDomainRequest, we have to create
