@@ -6,8 +6,8 @@ from distutils.core import setup
 
 setup(
 	name='Minerva',
-	version='9.11.17',
+	version='9.11.21',
 	description="Minerva",
 	packages=['minerva', 'twisted.plugins'],
-##	package_data={'cwtools': ['*.html', 'testres/*'],},
+	package_data={'minerva': ['flash_build/*.swf'],},
 )

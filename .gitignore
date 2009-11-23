@@ -2,4 +2,5 @@
 /_trial_temp
 *.pyc
 *.pyo
+*.swf
 /twisted/plugins/dropin.cache
