@@ -1,3 +1,4 @@
+// TODO: really stop using anything from CW
 // import CW
 
 goog.require('goog.debug.Error');
@@ -11,8 +12,6 @@ goog.provide('cw.net.RequestAborted');
 goog.provide('cw.net.NetworkProblem');
 goog.provide('cw.net.Timeout');
 
-
-cw.net.__name__ = 'cw.net'; // For compat with CW code
 
 /**
  * This is thrown when {@code ResponseTextDecoder} aborts parsing.
@@ -269,10 +268,6 @@ cw.net.Timeout.prototype.name = 'cw.net.Timeout';
 // done in an iframe to achieve cross-subdomain requests.
 
 
-
-// We don't support Interfaces yet, but we really need to.
-
-
 /**
  * @interface
  */
@@ -283,7 +278,7 @@ cw.net.IUsableSomething = function() {
 	 * @return: C{true} if this object is technically capable of
 	 *    cross-domain requests, C{false} otherwise.
 	 */
-	cw.net.IUsableSomething.canCrossDomains = function() {
+	cw.net.IUsableSomething.prototype.canCrossDomains = function() {
 
 	}
 
@@ -315,7 +310,7 @@ cw.net.IUsableSomething = function() {
 	 * Returns an L{goog.async.Deferred} that fires with callback or errback. It's not safe to make
 	 * another request until this Deferred fires. Do not rely only on L{progressCallback}.
 	 */
-	cw.net.IUsableSomething.request = function() {
+	cw.net.IUsableSomething.prototype.request = function() {
 
 	}
 
@@ -324,7 +319,7 @@ cw.net.IUsableSomething = function() {
 	 *
 	 * @return: undefined
 	 */
-	cw.net.IUsableSomething.abort = function() {
+	cw.net.IUsableSomething.prototype.abort = function() {
 
 	}
 
@@ -841,6 +836,8 @@ CW.Class.subclass(cw.net, "Stream").methods(
 		// XXX do we need to do anything else here?
 	},
 
+	// TODO: this is really lame, probably just allow the registration of a pull producer for
+	// these "sending opportunities".
 	/**
 	 * L{gotSendingOpportunity} is called when cw.net is about to initialize a
 	 * new S2C transport. You can use this event to send just-created or specially-queued
