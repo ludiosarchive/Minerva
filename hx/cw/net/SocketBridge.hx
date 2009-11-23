@@ -49,14 +49,14 @@ class SocketBridge {
 	}
 	public static function handle_data(id:String, event) {
 		var socket:Socket = sockets.get(id);
-		if (socket != null)  {
+		if (socket != null) {
 			var msg = socket.readUTFBytes(socket.bytesAvailable);
 			ExternalInterface.call("(function(id, data){ var inst = window.FlashSocket._instances[id]; if (inst.on_data) inst.on_data(data);})", id, msg);
 		}	
 	}
 	public static function connect(instance_id:String, host:String, port:Int) {
 		var socket:Socket = sockets.get(instance_id);
-		if (socket != null)  {
+		if (socket != null) {
 			socket.connect(host, port); 
 		} else {
 			socket = new Socket(host, port);
@@ -102,7 +102,7 @@ class SocketBridge {
 		}
 	}
 	public static function loadPolicyFile(path:String):Void {
-	  Security.loadPolicyFile(path);
+		Security.loadPolicyFile(path);
 	}
 	public static function main() {
 		ExternalInterface.addCallback("loadPolicyFile", loadPolicyFile);	
@@ -111,12 +111,15 @@ class SocketBridge {
 		ExternalInterface.addCallback("close", close);	
 		ExternalInterface.addCallback("write", write);	
 		ExternalInterface.addCallback("CAN_I_HAS_SOCKET", CAN_I_HAS_SOCKET);
+		
 		// Despite possibly-incorrect syntax highlighting below, it's really JavaScript code, not haXe code.
 		ExternalInterface.call("
-		(function(){
-			if (window.FlashSocket) return;
-			var Class = function(properties){
-				var klass = function(event_handlers){
+		(function() {
+			if (window.FlashSocket) {
+				return;
+			}
+			var Class = function(properties) {
+				var klass = function(event_handlers) {
 					for (var p in event_handlers) {
 						if (event_handlers.hasOwnProperty(p)) {
 							this[p] = event_handlers[p];
@@ -129,15 +132,15 @@ class SocketBridge {
 				return klass;
 			};
 			window.FlashSocket = new Class({
-				init: function(){
+				init: function() {
 					this._instance = ''+window.FlashSocket._instances.length;
 					window.FlashSocket._instances.push(this);
 				},
-				close: function(){
+				close: function() {
 					window.FlashSocket._instances[this._instance] = null;
 					window.FlashSocket._bridge.close(this._instance );
 				},
-				write: function(data){
+				write: function(data) {
 					window.FlashSocket._bridge.write(this._instance, data);
 				},
 				connect: function(host, port) {
@@ -148,9 +151,13 @@ class SocketBridge {
 				}
 			});
 			window.FlashSocket._instances = [];
-			var f = function(tag){
+			var f = function(tag) {
 				var elems = document.getElementsByTagName(tag);
-				for (var i=0; i<elems.length; i++) if (elems[i].CAN_I_HAS_SOCKET) return elems[i];
+				for (var i=0; i<elems.length; i++) {
+					if (elems[i].CAN_I_HAS_SOCKET) {
+						return elems[i];
+					}
+				}
 			};
 			window.FlashSocket._bridge = f('embed') || f('object');
 		})");
