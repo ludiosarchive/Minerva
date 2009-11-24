@@ -7,12 +7,31 @@ Minerva glossary:
 		equivalently in both server-side and client-side environments.
 
 		On the server, a box might be a list, a dictionary, a unicode object (or an ASCII-only str),
-			a boolean, an integer, a long, a float, or None, or any nested combination of these.
+			a boolean, an integer, a long, a float, nan, inf, -inf, or None, or any nested combination of these.
 
 		In a JavaScript environment, a box might be an object, an array, a string,
-			a number, a boolean, or null, or any nested combination of these.
+			a number, NaN, Infinity, -Infinity, a boolean, or null, or any nested combination of these.
 
-		TODO: document or fix IE6 65535 array limit
+		Note: using NaN, Infinity, or -Infinity in your boxes is strongly discouraged, because some
+		languages and environments have problems representing them.
+
+		Note: if any clients are IE6, arrays in boxes must have 2^16 - 1 items (65535) or less,
+		because IE6 cannot `eval' a stringed-array with 2^16 or more items. [1]
+
+		Note: containers (arrays/objects) in the box can be nested a maximum of 26 levels.
+		The limit at the JSON decoder level is 30, but boxes may be sent in frames that add
+		an additional 2 levels of nesting, like this:
+
+			[1, box]    (1 additional level)
+		or
+			[0, {"30": box30, "31": box31}]    (2 additional levels)
+		or
+			[megaFrameType, {"helloData": ...}, {"boxes": {"32": box32}}]     (3 additional levels)
+
+		We reserve one additional level, leading to a maximum container nesting rule of 30 - 4 = 26.
+
+
+		[1] http://code.google.com/p/google-web-toolkit/issues/detail?id=1336
 
 	face - Internet-facing Twisted L{Protocol}s or L{t.web.r.Resource}s that
 		shovel data between Minerva transports <-> client
