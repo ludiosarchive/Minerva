@@ -177,7 +177,12 @@ class Frame(object):
 			self.type = contents[0]
 		except (IndexError, KeyError, TypeError):
 			raise BadFrame("Frame did not have a [0]th item")
-		if not self.type in self.knownTypes:
+		try:
+			notIn = self.type not in self.knownTypes
+		except TypeError:
+			raise BadFrame("Frame's [0]th item was (probably) not hashable")
+		
+		if notIn:
 			raise BadFrame("Frame(%r) but %r is not a known frame type" % (contents, self.type))
 
 		self.contents = contents

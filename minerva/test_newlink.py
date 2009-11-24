@@ -45,7 +45,9 @@ class FrameTests(unittest.TestCase):
 
 
 	def test_notOkay(self):
-		badFrames = ([], [9999], {}, {0: 'x'}, {'0': 'x'}, 1, 1.5, simplejson.loads('NaN'), True, False, None)
+		nan = simplejson.loads('NaN')
+		badFrames = ([], [9999], {}, {0: 'x'}, {'0': 'x'}, 1, 1.5, nan, True, False, None)
+		badFrames = badFrames + ([[], "something"], [{}, "something"], [float('Infinity'), "something"], [nan, "something"])
 		for frame in badFrames:
 			self.aR(BadFrame, lambda: Frame(frame))
 
@@ -1186,8 +1188,7 @@ class SocketTransportTests(unittest.TestCase):
 
 	def test_intraFrameCorruptionTooMuchNestingObject(self):
 		"""Server thinks too much nesting is equivalent to intra-frame JSON corruption"""
-		jsonNestingLimit = 32
-		n = jsonNestingLimit
+		n = jsonNestingLimit = 32
 		self.transport.dataReceived(self.serializeFrames([eval('{"":' * n + '1' + '}' * n)])) # must use eval instead of json
 		self._parseFrames()
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
@@ -1195,8 +1196,7 @@ class SocketTransportTests(unittest.TestCase):
 
 	def test_intraFrameCorruptionTooMuchNestingArray(self):
 		"""Server thinks too much nesting is equivalent to intra-frame JSON corruption"""
-		jsonNestingLimit = 32
-		n = jsonNestingLimit
+		n = jsonNestingLimit = 32
 		self.transport.dataReceived(self.serializeFrames([eval('[' * n + '1' + ']' * n)])) # must use eval instead of json
 		self._parseFrames()
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
