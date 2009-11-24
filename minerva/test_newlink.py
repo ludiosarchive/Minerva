@@ -1184,6 +1184,24 @@ class SocketTransportTests(unittest.TestCase):
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
+	def test_intraFrameCorruptionTooMuchNestingObject(self):
+		"""Server thinks too much nesting is equivalent to intra-frame JSON corruption"""
+		jsonNestingLimit = 32
+		n = jsonNestingLimit - 1
+		self.transport.dataReceived(self.serializeFrames([eval('{"":' * n + '1' + '}' * n)])) # must use eval instead of json
+		self._parseFrames()
+		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+
+
+	def test_intraFrameCorruptionTooMuchNestingArray(self):
+		"""Server thinks too much nesting is equivalent to intra-frame JSON corruption"""
+		jsonNestingLimit = 32
+		n = jsonNestingLimit - 1
+		self.transport.dataReceived(self.serializeFrames([eval('[' * n + '1' + ']' * n)])) # must use eval instead of json
+		self._parseFrames()
+		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+
+
 	def test_validHello(self):
 		frame0 = self._getValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
