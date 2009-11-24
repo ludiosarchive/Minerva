@@ -26,10 +26,11 @@ Minerva glossary:
 		or
 			[0, {"30": box30, "31": box31}]    (2 additional levels)
 		or
-			[megaFrameType, {"helloData": ...}, {"boxes": {"32": box32}}]     (3 additional levels)
+			[reservedMegaFrameType, {"helloData": ...}, {"boxes": {"32": box32}}]     (3 additional levels)
 
 		We reserve one additional level, leading to a maximum container nesting rule of 30 - 4 = 26.
-
+		Note that Minerva server will not always reject frames that slightly exceed this nesting limit,
+		so you are responsible for keeping track of your nesting.
 
 		[1] http://code.google.com/p/google-web-toolkit/issues/detail?id=1336
 
