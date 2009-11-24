@@ -18,9 +18,9 @@ Minerva glossary:
 		Note: if any clients are IE6, arrays in boxes must have 2^16 - 1 items (65535) or less,
 		because IE6 cannot `eval' a stringed-array with 2^16 or more items. [1]
 
-		Note: containers (arrays/objects) in the box can be nested a maximum of 26 levels.
+		Note: containers (arrays/objects) in the box can be nested to a maximum of 26 levels.
 		The limit at the JSON decoder level is 30, but boxes may be sent in frames that add
-		an additional 2 levels of nesting, like this:
+		additional levels of nesting, like this:
 
 			[1, box]    (1 additional level)
 		or
