@@ -7,13 +7,17 @@ Minerva glossary:
 		equivalently in both server-side and client-side environments.
 
 		On the server, a box might be a list, a dictionary, a unicode object (or an ASCII-only str),
-			a boolean, an integer, a long, a float, nan, inf, -inf, or None, or any nested combination of these.
+			a boolean, an integer, a long, a float, or None, or any nested combination of these.
 
 		In a JavaScript environment, a box might be an object, an array, a string,
-			a number, NaN, Infinity, -Infinity, a boolean, or null, or any nested combination of these.
+			a number, a boolean, or null, or any nested combination of these.
 
-		Note: using NaN, Infinity, or -Infinity in your boxes is strongly discouraged, because some
-		languages and environments have problems representing them.
+		Note on (nan, inf, -inf) (NaN, Infinity, or -Infinity):
+
+			C2S: Minerva must treat NaN / Infinity / -Infinity the same as JSON corruption.
+
+			S2C: Although Minerva will not refuse to send nan/inf/-inf in boxes,
+			clients will fail to parse them, and the stream will essentially be broken.
 
 		Note: if any clients are IE6, arrays in boxes must have 2^16 - 1 items (65535) or less,
 		because IE6 cannot `eval' a stringed-array with 2^16 or more items. [1]

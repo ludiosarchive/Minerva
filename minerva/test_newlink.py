@@ -1187,7 +1187,9 @@ class SocketTransportTests(unittest.TestCase):
 
 
 	def test_intraFrameCorruptionTooMuchNestingObject(self):
-		"""Server thinks too much nesting is equivalent to intra-frame JSON corruption"""
+		"""
+		Server thinks too much nesting is equivalent to intra-frame JSON corruption.
+		If this test fails, you need to install the patched simplejson."""
 		n = jsonNestingLimit = 32
 		self.transport.dataReceived(self.serializeFrames([eval('{"":' * n + '1' + '}' * n)])) # must use eval instead of json
 		self._parseFrames()
@@ -1195,7 +1197,9 @@ class SocketTransportTests(unittest.TestCase):
 
 
 	def test_intraFrameCorruptionTooMuchNestingArray(self):
-		"""Server thinks too much nesting is equivalent to intra-frame JSON corruption"""
+		"""
+		Server thinks too much nesting is equivalent to intra-frame JSON corruption
+		If this test fails, you need to install the patched simplejson."""
 		n = jsonNestingLimit = 32
 		self.transport.dataReceived(self.serializeFrames([eval('[' * n + '1' + ']' * n)])) # must use eval instead of json
 		self._parseFrames()

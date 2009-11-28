@@ -6,6 +6,7 @@ code will be parsing the streams.
 """
 
 import re
+import simplejson
 from minerva.abstract import strToNonNeg
 
 _postImportVars = vars().keys()
@@ -162,6 +163,57 @@ class BencodeStringDecoder(NetStringDecoder):
 	def doComma(self):
 		# Bencode strings have no trailing comma; just go back to LENGTH
 		self._readerState = LENGTH
+
+
+
+class JSONStreamDecoder(object):
+	"""
+	Decodes a stream of newline-terminated JSON documents into Python objects.
+	The stream is assumed to be UTF-8.
+	
+	Rejects NaN, Infinity, and -Infinity even though simplejson supports them.
+
+	Implementation note:
+		String append is fast enough in CPython 2.5+. On Windows CPython,
+		it can still be ~5x slower than list-based buffers.
+	"""
+	MAX_LENGTH = 1024 * 1024 * 1024 # 1 GB
+
+	@classmethod
+	def encode(cls, obj):
+		s = simplejson.dumps(obj, separators=(',', ':'))
+		s += '\n'
+		return s
+
+
+	def __init__(self):
+		self._decoder = simplejson.decoder.JSONDecoder(parse_constant=self._raise)
+		self._buffer = ''
+
+
+	def _raise(self, obj):
+		# holy encapsulation violation batman
+		raise simplejson.decoder.JSONDecodeError("I reject NaN, Infinity, and -Infinity")
+
+
+	def dataReceived(self, data):
+		self._buffer += data
+		if len(self._buffer) > self.MAX_LENGTH:
+			raise ParseError("JSON string exceeds limit of %d bytes" % (self.MAX_LENGTH,))
+		# Stop the "dribble in bytes slowly" attack (where entire buffer is repeatedly scanned for \n)
+		# This trick works here because our delimiter is 1 byte.
+		if '\n' not in data:
+			return
+		docs = []
+		at = 0
+		while True:
+			doc, end = self._decoder.raw_decode(self._buffer, at)
+			docs.append(doc)
+			at = end + 1 # skip over the \n
+			if self._buffer.find("\n", at) == -1:
+				break
+		self._buffer = self._buffer[at:]
+		self.manyDataCallback(docs)
 
 
 

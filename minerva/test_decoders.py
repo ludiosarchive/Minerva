@@ -3,30 +3,35 @@ from twisted.trial import unittest
 from minerva import decoders
 
 
-class _BaseDummy(object):
+class _BaseRecording(object):
 
 	def __init__(self):
-		self.gotStrings = []
+		self.got = []
 
 
-	def manyDataCallback(self, strings):
-		self.gotStrings.extend(strings)
+	def manyDataCallback(self, data):
+		self.got.extend(data)
 
 
 
-class DummyNetStringDecoder(_BaseDummy, decoders.NetStringDecoder):
+class RecordingNetStringDecoder(_BaseRecording, decoders.NetStringDecoder):
 	pass
 
 
 
-class DummyBencodeStringDecoder(_BaseDummy, decoders.BencodeStringDecoder):
+class RecordingBencodeStringDecoder(_BaseRecording, decoders.BencodeStringDecoder):
 	pass
 
 
 
-class DummyScriptDecoder(_BaseDummy, decoders.ScriptDecoder):
+class RecordingJSONStreamDecoder(_BaseRecording, decoders.JSONStreamDecoder):
 	pass
-	
+
+
+
+class RecordingScriptDecoder(_BaseRecording, decoders.ScriptDecoder):
+	pass
+
 
 
 # modified copy/paste from twisted.test.testdecoders
@@ -40,7 +45,7 @@ class TestNetStringDecoder(unittest.TestCase):
 		'9999999999999999999999', 'abc', '4:abcde',
 		'51:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab,',]
 
-	receiver = DummyNetStringDecoder
+	receiver = RecordingNetStringDecoder
 
 	trailingComma = ','
 
@@ -71,7 +76,7 @@ class TestNetStringDecoder(unittest.TestCase):
 					##print 'sending', repr(s)
 					a.dataReceived(s)
 
-			self.assertEquals(self.strings, a.gotStrings)
+			self.assertEquals(self.strings, a.got)
 
 
 	def test_illegal(self):
@@ -150,7 +155,7 @@ class TestNetStringDecoder(unittest.TestCase):
 		##For speed comparison:
 		##for s in strings:
 		##	a.dataReceived(receiver.encode(s))
-		self.assertEqual(strings, a.gotStrings)
+		self.assertEqual(strings, a.got)
 
 
 
@@ -161,15 +166,79 @@ class TestBencodeStringDecoder(TestNetStringDecoder):
 		'9999999999999999999999', 'abc', '4:abcde',
 		'51:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab',]
 
-	receiver = DummyBencodeStringDecoder
+	receiver = RecordingBencodeStringDecoder
 
 	trailingComma = ''
 
 
 
+class TestJSONStreamDecoder(unittest.TestCase):
+	receiver = RecordingJSONStreamDecoder
+
+	def test_encode(self):
+		self.assertEqual('"h"\n', self.receiver.encode("h"))
+		self.assertEqual('"h"\n', self.receiver.encode(u"h"))
+		self.assertEqual('[{}]\n', self.receiver.encode([{}]))
+
+
+	def test_buffer(self):
+		"""
+		Test that when strings are received in chunks of different lengths,
+		they are still parsed correctly.
+		"""
+		1/0
+
+
+	def test_illegal(self):
+		"""
+		Assert that illegal strings raise a ParseError.
+
+		This is basically redundant with L{test_illegalWithPacketSizes}
+		but keep it anyway for debugging.
+		"""
+		1/0
+		for s in self.illegalSequences:
+			a = self.receiver()
+			a.MAX_LENGTH = 50
+			##print 'Sending', repr(s)
+			self.assertRaises(decoders.ParseError, lambda s=s: a.dataReceived(s))
+
+
+	def test_illegalWithPacketSizes(self):
+		"""
+		Assert that illegal strings raise a ParseError,
+		even when they arrive in variable packet sizes.
+		"""
+		1/0
+		def sendData(a, sequence, packet_size):
+			for i in range(len(sequence)/packet_size + 1):
+				s = sequence[i*packet_size:(i+1)*packet_size]
+				if s != '':
+					##print 'sending', repr(s)
+					a.dataReceived(s)
+
+
+		for sequence in self.illegalSequences:
+			for packet_size in range(1, 2):
+
+				##print 'packet_size', packet_size
+
+				a = self.receiver()
+				a.MAX_LENGTH = 50
+
+				##print 'Sending in pieces', repr(sequence)
+
+				self.assertRaises(
+					decoders.ParseError,
+					lambda: sendData(a, sequence, packet_size)
+				)
+
+
+
+
 class TestScriptDecoder(unittest.TestCase):
 
-	receiver = DummyScriptDecoder
+	receiver = RecordingScriptDecoder
 
 	def test_encode(self):
 		big = 'x' * 100
@@ -189,7 +258,7 @@ class TestScriptDecoder(unittest.TestCase):
 					##print 'sending', repr(s)
 					a.dataReceived(s)
 
-			self.assertEquals(expected, a.gotStrings)
+			self.assertEquals(expected, a.got)
 
 
 	def test_basicUsage(self):
