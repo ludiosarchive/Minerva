@@ -166,9 +166,9 @@ class BencodeStringDecoder(NetStringDecoder):
 
 
 
-class JSONStreamDecoder(object):
+class DelimitedJSONStream(object):
 	"""
-	Decodes a stream of newline-terminated JSON documents into Python objects.
+	Decodes a stream of (1-byte-delimiter)-terminated JSON documents into Python objects.
 	The stream is assumed to be UTF-8.
 	
 	Rejects NaN, Infinity, and -Infinity even though simplejson supports them.
@@ -178,11 +178,12 @@ class JSONStreamDecoder(object):
 		it can still be ~5x slower than list-based buffers.
 	"""
 	MAX_LENGTH = 1024 * 1024 * 1024 # 1 GB
+	delimiter = '\n' # MUST be 1 byte. Do not change this after any data has been received.
 
 	@classmethod
 	def encode(cls, obj):
 		s = simplejson.dumps(obj, separators=(',', ':'))
-		s += '\n'
+		s += self.delimiter
 		return s
 
 
@@ -202,7 +203,7 @@ class JSONStreamDecoder(object):
 			raise ParseError("JSON string exceeds limit of %d bytes" % (self.MAX_LENGTH,))
 		# Stop the "dribble in bytes slowly" attack (where entire buffer is repeatedly scanned for \n)
 		# This trick works here because our delimiter is 1 byte.
-		if '\n' not in data:
+		if self.delimiter not in data:
 			return
 		docs = []
 		at = 0
@@ -210,7 +211,7 @@ class JSONStreamDecoder(object):
 			doc, end = self._decoder.raw_decode(self._buffer, at)
 			docs.append(doc)
 			at = end + 1 # skip over the \n
-			if self._buffer.find("\n", at) == -1:
+			if self._buffer.find(self.delimiter, at) == -1:
 				break
 		self._buffer = self._buffer[at:]
 		self.manyDataCallback(docs)

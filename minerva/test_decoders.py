@@ -24,7 +24,7 @@ class RecordingBencodeStringDecoder(_BaseRecording, decoders.BencodeStringDecode
 
 
 
-class RecordingJSONStreamDecoder(_BaseRecording, decoders.JSONStreamDecoder):
+class RecordingDelimitedJSONStream(_BaseRecording, decoders.DelimitedJSONStream):
 	pass
 
 
@@ -172,8 +172,10 @@ class TestBencodeStringDecoder(TestNetStringDecoder):
 
 
 
-class TestJSONStreamDecoder(unittest.TestCase):
-	receiver = RecordingJSONStreamDecoder
+class TestDelimitedJSONStream(unittest.TestCase):
+	receiver = DelimitedJSONStream
+
+	illegalSequences = ['[Infinity]', '[-Infinity]', '[NaN]', '"%s"' % ("x"*49)] # for max length 50
 
 	def test_encode(self):
 		self.assertEqual('"h"\n', self.receiver.encode("h"))
