@@ -43,7 +43,7 @@ By framed, we mean that applications send and receive frames, not octets.
 Why force applications to work with frames instead of octets? One might
 object and say that applications need direct access to octets, but consider these points:
 
-	Minerva's frame overhead is minimal: just 5-7 extra bytes for the smallest frames.
+	Minerva's frame overhead is minimal: just 3 extra bytes for the smallest frames.
 
 		This overhead is dwarfed by the per-packet TCP/IP overhead of ~52 bytes
 		(there is even more overhead when HTTP chunk lengths or TLS are involved).
@@ -129,6 +129,23 @@ Minerva limitations:
 	Minerva server ignores the selectively-acknowledged boxes in the SACK frame
 	(only the primary ACK number is used)
 
+	Minerva server does not use gzip or any other compression to compress the boxes.
+	If you want the client to receive compressed data, write your client-side logic to make
+	HTTP requests when necessary. These HTTP requests will hopefully be gzip-compressed.
+
+		Future: automatic switch to gzipped HTTP S2C if there is a large volume of data to transmit.
+			Procedure:
+				Server-side application queues big boxes, or many boxes
+				Minerva decides it would be faster to send these over a gzipped transport, even with
+					the client forced to take a round-trip hit.
+				Minerva server convinces the client to open an HTTP S2C transport
+				Minerva server remembers that it has a lot of data to send, so this transport gets gzip headers
+					and gzipped data is sent over it.
+				Because the client cannot read all of the data until the HTTP request is closed, Minerva
+					closes the transport fairly quickly.
+		Future: zlib compression when using Flash transport
+		Future: for websocket/http transports, some kind of client-side decompression inside a Web Worker 
+
 
 
 Producers/consumers:
@@ -181,11 +198,12 @@ Producers/consumers, technical details:
 
 	During normal operation for a registered PULL producer, these conditions result in
 	resumeProducing calls on MinervaProtocol:
-		(Twisted) - when it wants more data to send
+		(Twisted) - [resume] when it wants more data to send
 
 	During normal operation for a registered PUSH producer, these conditions result in
 	pauseProducing or resumeProducing calls on MinervaProtocol:
-		(Twisted) - when it wants more data to send
-		*Transport - if it was paused earlier by (Twisted)
-		Stream - when there are no primary transports
-		Stream - (if paused) when a primary transport appears
+		(Twisted) - [resume] when it wants more data to send
+		(Twisted) - [pause] when it has enough data
+		*Transport - [pause] if it was paused earlier by (Twisted)
+		Stream - [pause] when there are no primary transports
+		Stream - If paused, [resume] when a primary transport appears

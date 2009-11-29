@@ -12,7 +12,7 @@ from cwtools import testing
 from minerva import link
 
 
-class DemoPage(resource.Resource):
+class Index(resource.Resource):
 	isLeaf = True
 
 	def render_GET(self, request):
@@ -118,7 +118,7 @@ class ResourcesForTest(resource.Resource):
 
 
 
-class Index(resource.Resource):
+class Root(resource.Resource):
 
 	def __init__(self, reactor):
 		import cwtools
@@ -127,7 +127,7 @@ class Index(resource.Resource):
 
 		self._reactor = reactor
 
-		self.putChild('', DemoPage())
+		self.putChild('', Index())
 		self.putChild('@tests', CustomTestPage())
 
 		# testres_Coreweb always needed for running tests.
@@ -141,6 +141,6 @@ class Index(resource.Resource):
 
 
 def makeSite(reactor):
-	root = Index(reactor)
+	root = Root(reactor)
 	site = ConnectionTrackingSite(root, clock=reactor)
 	return site

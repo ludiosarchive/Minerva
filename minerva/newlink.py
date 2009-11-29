@@ -22,8 +22,9 @@ Minerva glossary:
 		Note: if any clients are IE6, arrays in boxes must have 2^16 - 1 items (65535) or less,
 		because IE6 cannot `eval' a stringed-array with 2^16 or more items. [1]
 
-		Note: containers (arrays/objects) in the box can be nested to a maximum of 26 levels.
-		The limit at the JSON decoder level is 30, but boxes may be sent in frames that add
+		Note: containers (arrays/objects) in the box can be nested to a maximum of 28 levels.
+		The limit at the JSON decoder level is 32 (note that this includes the very outer level).
+		The limit at the protocol level is 4 levels lower because boxes may be sent in frames that add
 		additional levels of nesting, like this:
 
 			[1, box]    (1 additional level)
@@ -32,7 +33,7 @@ Minerva glossary:
 		or
 			[reservedMegaFrameType, {"helloData": ...}, {"boxes": {"32": box32}}]     (3 additional levels)
 
-		We reserve one additional level, leading to a maximum container nesting rule of 30 - 4 = 26.
+		We reserve one additional level, leading to a maximum container nesting rule of 32 - 4 = 28.
 		Note that Minerva server will not always reject frames that slightly exceed this nesting limit,
 		so you are responsible for keeping track of your nesting.
 
