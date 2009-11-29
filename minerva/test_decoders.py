@@ -35,7 +35,7 @@ class RecordingScriptDecoder(_BaseRecording, decoders.ScriptDecoder):
 
 
 # modified copy/paste from twisted.test.testdecoders
-class TestNetStringDecoder(unittest.TestCase):
+class NetStringDecoderTests(unittest.TestCase):
 
 	# for max length 699
 	strings = ['hello', 'world', 'how', 'are', 'you123', ':today', "a"*515]
@@ -159,7 +159,7 @@ class TestNetStringDecoder(unittest.TestCase):
 
 
 
-class TestBencodeStringDecoder(TestNetStringDecoder):
+class BencodeStringDecoderTests(NetStringDecoderTests):
 
 	# for max length 50
 	illegalSequences = [
@@ -172,8 +172,8 @@ class TestBencodeStringDecoder(TestNetStringDecoder):
 
 
 
-class TestDelimitedJSONStream(unittest.TestCase):
-	receiver = DelimitedJSONStream
+class DelimitedJSONStreamTests(unittest.TestCase):
+	receiver = decoders.DelimitedJSONStream
 
 	illegalSequences = ['[Infinity]', '[-Infinity]', '[NaN]', '"%s"' % ("x"*49)] # for max length 50
 
@@ -238,7 +238,7 @@ class TestDelimitedJSONStream(unittest.TestCase):
 
 
 
-class TestScriptDecoder(unittest.TestCase):
+class ScriptDecoderTests(unittest.TestCase):
 
 	receiver = RecordingScriptDecoder
 

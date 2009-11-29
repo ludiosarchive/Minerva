@@ -183,7 +183,7 @@ class DelimitedJSONStream(object):
 	@classmethod
 	def encode(cls, obj):
 		s = simplejson.dumps(obj, separators=(',', ':'))
-		s += self.delimiter
+		s += cls.delimiter
 		return s
 
 
