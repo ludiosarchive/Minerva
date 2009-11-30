@@ -4,7 +4,7 @@ Minerva
 The goal of Minerva is to implement a framed and extra-reliable TCP on top of
 various transports:
 	HTTP requests and responses (optionally HTTPSed),
-	TCP connections (for now, only unencrypted),
+	TCP connections (for now, only unencrypted due to Flash not supporting TLS socket),
 	WebSocket (optionally TLSed)
 
 
