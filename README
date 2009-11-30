@@ -67,27 +67,42 @@ object and say that applications need direct access to octets, but consider thes
 
 
 
-The frames contain semi-structured data (JSON). JSON is used as a building
-block because:
-	The IE htmlfile transport automatically parses JSON as it is dumped into the HTML page,
-	because it is basically executing JavaScript. Which means we don't have to dump
-	a string to the page first, and then send it through a decoder.
+The frames contain semi-structured data (JSON). JSON is used as the building block
+instead of "unicode strings" or similar because:
+	The Minerva protocol itself does some pretty complex things and sends structured
+	data. The protocol would be more complicated to change, and would require more
+	code, if JSON was not the building block.
 
-	(in theory) In IE, using AVM2 to encode/decode JSON might be faster than eval() or json2.js,
-	so Minerva can do whatever is fastest instead of requiring the application to do its own thing.
+	Some environments are not unicode-safe: Firefox 2 + XHR streaming,
+	or anyone with a very bad proxy. Using JSON ensures we can easily drop down to
+	7-bit-clean mode.
 
 	JSON requires encoding NULL (U+0000), which is good because we cannot send it over
 	all transports anyway.
 
 	IE8, Chrome, Firefox, Safari, and Opera have native JSON encoders and decoders.
+	Using JSON at the Minerva level ensures the native-JSON bugs have been abstracted
+	away.
 
-	No obvious memory-exhaustion problems. Clients cannot send "x"*1000000 or
-	some nonsense and have it fill up memory)
+	The IE htmlfile transport automatically parses JSON as it is dumped into the HTML page,
+	because it is basically executing JavaScript. Which means we don't have to dump
+	a string to the page first, and then send it through a decoder.
+		Counterpoint: referencing objects across windows and stashing them somewhere
+			destroys object prototypes in IE, and could cause problems in other browsers.
+
+	(in theory) In IE, using AVM2 to encode/decode JSON might be faster than eval() or json2.js,
+	so Minerva can do whatever is fastest instead of requiring the application to do its own thing.
+
+	On the server, it's slightly more efficient to have simplejson decoding at the protocol
+	level, because we don't have to create many string objects first. This would not matter
+	in a sane language that supported automatic in-place fragmenting of string objects. 
+
 
 Problems with JSON:
 	No support for dates, or sets
 
-	Allows unlimited nesting, so you must worry about stack exhaustion.
+	Allows unlimited nesting, so you must worry about stack exhaustion. Minerva requires a
+	patched simplejson that limits nesting to 32 levels.
 
 	Because JSON allows as many keys as you want, servers have to deal with possible
 	CPU-resource DoS caused by clients exploiting predictable hashing algorithms.
@@ -95,6 +110,9 @@ Problems with JSON:
 	The overhead of quoting every key in {"key": value} even when key is not a
 	reserved word in JavaScript is annoying.
 
+	Python dictionaries lose the order of keys in objects after decoding JSON, unless
+	application tells Minerva to tell simplejson to put things in OrderedDict, which is
+	slower.
 
 
 Other cool Minerva features:
@@ -143,6 +161,11 @@ Minerva limitations:
 					and gzipped data is sent over it.
 				Because the client cannot read all of the data until the HTTP request is closed, Minerva
 					closes the transport fairly quickly.
+
+				Future: See if streaming can work with HTTP by manipulating gzip blocks at a low level
+					and switching them to uncompressed when needed.
+					http://sys.cs.rice.edu/course/comp314/09/p2/p2-guide
+
 		Future: zlib compression when using Flash transport
 		Future: for websocket/http transports, some kind of client-side decompression inside a Web Worker 
 
