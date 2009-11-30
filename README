@@ -137,7 +137,7 @@ Other cool Minerva features:
 
 Minerva limitations:
 
-	Runs on Python, which is really slow.
+	Runs on Python, which is really slow. It's destined for a port to Factor.
 
 	Relies on subdomains + document.domain for cross-domain communication,
 	which necessitates a wildcard SSL cert
