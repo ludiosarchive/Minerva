@@ -8,7 +8,7 @@ from twisted.web import resource, static, http, server
 
 from zope.interface import implements
 
-from cwtools import testing
+from cwtools import testing, jsimp
 from minerva import link
 
 
@@ -17,11 +17,6 @@ class Index(resource.Resource):
 
 	def render_GET(self, request):
 		return 'See /@tests/'
-
-
-
-class CustomTestPage(testing.TestPage):
-	testPackages = ['cw.net']
 
 
 
@@ -127,8 +122,11 @@ class Root(resource.Resource):
 
 		self._reactor = reactor
 
+		JSPATH = FilePath(os.environ['JSPATH'])
+		directoryScan = jsimp.DirectoryScan(JSPATH)
+
 		self.putChild('', Index())
-		self.putChild('@tests', CustomTestPage())
+		self.putChild('@tests', testing.TestPage(['cw.net'], directoryScan))
 
 		# testres_Coreweb always needed for running tests.
 
