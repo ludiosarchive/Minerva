@@ -137,6 +137,8 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').metho
 		self.xhdr.abort();
 		self._finishRequest();
 
+		self.requestD.addErrback(function(e){CW.msg('Ignoring error in requestD Deferred: ' + e)});
+
 		// Make the second request
 		self.requestD = self.xhdr.request('POST', self.target.getString(), 'second');
 		self._finishRequest();
@@ -181,6 +183,7 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').metho
 		self.xhdr.abort();
 		self.xhdr.abort();
 		self.assertEqual(self.mock.log, [['open', 'POST', self.target.getString(), true], ['send', ''], ['abort']]);
+		self.requestD.addErrback(function(e){CW.msg('Ignoring error in requestD Deferred: ' + e)});
 	}
 
 );
@@ -240,6 +243,8 @@ cw.net.TestNet._BaseUsableXHDRLogicTests.subclass(cw.net.TestNet, 'UsableXHRLogi
 		self.mock.responseText = 'aborted';
 		self.mock.onreadystatechange(null);
 		self.assertIdentical(goog.nullFunction, self.mock.onreadystatechange);
+
+		self.requestD.addErrback(function(e){CW.msg('Ignoring error in requestD Deferred: ' + e)});
 	}
 
 );
