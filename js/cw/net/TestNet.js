@@ -8,6 +8,8 @@
 // import CW.URI
 
 goog.require('goog.userAgent');
+goog.require('goog.json.Serializer');
+goog.require('goog.string');
 goog.require('cw.net');
 
 
@@ -415,7 +417,105 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, 'UsableXHRRealRequestTests').metho
 		});
 
 		return requestD;
+	},
+
+	// XDomainRequest fails at these; 43 extra codepoints are converted to U+FFFD replacement character:
+	// >> _expected.split('\uFFFD').length - 1;
+	// 1
+	// >> _text.split('\uFFFD').length - 1;
+	// 44
+
+	// The "forbidden" character ranges are: U+FDD0 - U+FDEF, U+FFF0 - U+FFF8, U+FFFF
+	// U+FDD0 - U+FDEF are in Arabic Presentation Forms-A, listed as Noncharacters
+	// U+FFF0 - U+FFF8 are in Specials, unallocated as of Unicode 5.2
+	// U+FFFF is in Specials, listed as Noncharacter
+
+	/**
+	 *
+	 */
+	function test_unicodeRainbowSkipFFFE(self) {
+		var buffer = [];
+		// could use String.fromCharCode.apply(null, [1, 2, 3, ...])
+		for(var i=1; i < 55295 + 1; i++) { // 55295 is max that works
+			buffer.push(String.fromCharCode(i));
+		}
+		for(var i=57344; i < 65533 + 1; i++) { // 55295 is max that works
+			buffer.push(String.fromCharCode(i));
+		}
+		buffer.push(String.fromCharCode(65535));
+		var expected = buffer.join('');
+		self.target.update('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-65533,65535-65535');
+		var requestD = self.xhdr.request('POST', self.target.getString(), '');
+		var serializer = new goog.json.Serializer();
+		function ser(obj) {
+			return serializer.serialize(obj);
+		}
+		requestD.addCallback(function(obj){
+			var text = obj.responseText;
+			_text = text;
+			_expected = expected;
+			for(var n=0, len=_expected.length; n < len; n++) {
+				var expectedChar = _expected.substr(n, 1);
+				var gotChar = _text.substr(n, 1);
+				if(expectedChar != gotChar) {
+					CW.msg(goog.string.subs("Expected %s got %s", ser(expectedChar), ser(gotChar)));
+				}
+			}
+			self.assertEqual(expected, text);
+		});
+		return requestD;
+	},
+
+	/**
+	 * Test that all codepoints that are not in the high or low surrogate planes can be received over XHR
+	 */
+	function test_unicodeRainbowWithFFFE(self) {
+		var buffer = [];
+		// could use String.fromCharCode.apply(null, [1, 2, 3, ...])
+		for(var i=1; i < 55295 + 1; i++) { // 55295 is max that works
+			buffer.push(String.fromCharCode(i));
+		}
+		for(var i=57344; i < 65535 + 1; i++) { // 55295 is max that works
+			buffer.push(String.fromCharCode(i));
+		}
+		var expected = buffer.join('');
+		// Note: can't send U+FFFE through Flash (becomes replacement character U+FFFD), but we can send it through XHR
+		self.target.update('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-65535');
+		var requestD = self.xhdr.request('POST', self.target.getString(), '');
+		requestD.addCallback(function(obj){
+			var text = obj.responseText;
+			_text = text;
+			_expected = expected;
+			self.assertEqual(expected, text);
+		});
+		return requestD;
 	}
+
+//
+//	/**
+//	 *
+//	 */
+//	function test_unicodeRainbowStopEarly(self) {
+//		var buffer = [];
+//		// could use String.fromCharCode.apply(null, [1, 2, 3, ...])
+//		for(var i=1; i < 55295 + 1; i++) { // 55295 is max that works
+//			buffer.push(String.fromCharCode(i));
+//		}
+//		for(var i=57344; i < 65525 + 1; i++) { // 55295 is max that works
+//			buffer.push(String.fromCharCode(i));
+//		}
+//		var expected = buffer.join('');
+//		// Note: can't send U+FFFE through Flash (becomes replacement character U+FFFD), but we can send it through XHR
+//		self.target.update('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-65525');
+//		var requestD = self.xhdr.request('POST', self.target.getString(), '');
+//		requestD.addCallback(function(obj){
+//			var text = obj.responseText;
+//			_text = text;
+//			_expected = expected;
+//			self.assertEqual(expected, text);
+//		});
+//		return requestD;
+//	}
 );
 
 

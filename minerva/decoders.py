@@ -6,6 +6,7 @@ code will be parsing the streams.
 """
 
 import re
+import struct
 import simplejson
 from minerva.abstract import strToNonNeg
 
@@ -14,7 +15,11 @@ _postImportVars = vars().keys()
 
 class ParseError(Exception):
 	"""The incoming data is not in a valid format format."""
-	pass
+
+
+class StringTooLongError(Exception):
+	"""The string is too long to encode."""
+
 
 
 LENGTH, DATA, COMMA = range(3)
@@ -215,6 +220,75 @@ class DelimitedJSONStream(object):
 				break
 		self._buffer = self._buffer[at:]
 		self.manyDataCallback(docs)
+
+
+
+class IntNStringDecoder(object):
+	"""
+	Generic class for length prefixed protocols.
+
+	@ivar structFormat: format used for struct packing/unpacking. Define it in
+		subclass.
+	@type structFormat: C{str}
+
+	@ivar prefixLength: length of the prefix, in bytes. Define it in subclass,
+		using C{struct.calcsize(structFormat)}
+	@type prefixLength: C{int}
+
+	@ivar maxPossibleLength: maximum possible length of a string, in bytes.
+		Define it in subclass, using C{2 ** (8 * prefixLength)}
+	@type maxPossibleLength: C{int}
+	"""
+	MAX_LENGTH = 1024 * 1024 * 1024 # 1 GB
+	_recvd = ""
+
+	def dataReceived(self, recd):
+		"""
+		Convert int prefixed strings into calls to manyDataCallback.
+		"""
+		data = []
+		self._recvd = self._recvd + recd
+		while len(self._recvd) >= self.prefixLength:
+			length ,= struct.unpack(
+				self.structFormat, self._recvd[:self.prefixLength])
+			if length > self.MAX_LENGTH:
+				raise ParseError("%d byte string too long" % length)
+			if len(self._recvd) < length + self.prefixLength:
+				break
+			packet = self._recvd[self.prefixLength:length + self.prefixLength]
+			self._recvd = self._recvd[length + self.prefixLength:]
+			data.append(packet)
+		self.manyDataCallback(data)
+
+
+	@classmethod
+	def encode(cls, s):
+		"""
+		Encode a string into something that could be sent over the connection.
+
+		@type s: C{str}
+		"""
+		lenData = len(s)
+		if lenData >= cls.maxPossibleLength:
+			raise StringTooLongError(
+				"Cannot encode %s bytes; maximum is %s" % (
+				lenData, cls.maxPossibleLength))
+		return struct.pack(cls.structFormat, lenData) + s
+
+
+
+class Int32StringDecoder(IntNStringDecoder):
+	"""
+	A receiver for int32-prefixed strings.
+
+	An int32 string is a string prefixed by 4 bytes, the 32-bit length of
+	the string encoded in network byte order.
+
+	This class publishes the same interface as NetstringReceiver.
+	"""
+	structFormat = "!I"
+	prefixLength = struct.calcsize(structFormat)
+	maxPossibleLength = 2 ** (8 * prefixLength)
 
 
 

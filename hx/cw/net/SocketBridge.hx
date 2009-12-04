@@ -113,8 +113,6 @@ class SocketBridge {
 		ExternalInterface.addCallback("CAN_I_HAS_SOCKET", CAN_I_HAS_SOCKET);
 		
 		// Despite possibly-incorrect syntax highlighting below, it's really JavaScript code, not haXe code.
-		// Note that standard Flash->JS ExternalInterface hell applies to this code;
-		// you'll need to double backslashes if you add any.
 		ExternalInterface.call("
 		(function() {
 			if (window.FlashSocket) {

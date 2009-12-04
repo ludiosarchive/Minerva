@@ -1,6 +1,9 @@
+import struct
+
 from twisted.trial import unittest
 
 from minerva import decoders
+from minerva.helpers import todo
 
 
 class _BaseRecording(object):
@@ -183,6 +186,7 @@ class DelimitedJSONStreamTests(unittest.TestCase):
 		self.assertEqual('[{}]\n', self.receiver.encode([{}]))
 
 
+	@todo
 	def test_buffer(self):
 		"""
 		Test that when strings are received in chunks of different lengths,
@@ -190,7 +194,7 @@ class DelimitedJSONStreamTests(unittest.TestCase):
 		"""
 		1/0
 
-
+	@todo
 	def test_illegal(self):
 		"""
 		Assert that illegal strings raise a ParseError.
@@ -205,7 +209,7 @@ class DelimitedJSONStreamTests(unittest.TestCase):
 			##print 'Sending', repr(s)
 			self.assertRaises(decoders.ParseError, lambda s=s: a.dataReceived(s))
 
-
+	@todo
 	def test_illegalWithPacketSizes(self):
 		"""
 		Assert that illegal strings raise a ParseError,
@@ -235,6 +239,101 @@ class DelimitedJSONStreamTests(unittest.TestCase):
 					lambda: sendData(a, sequence, packet_size)
 				)
 
+
+
+class Int32StringDecoderTests(unittest.TestCase):
+	"""
+	Test case for int32-prefixed protocol
+	"""
+	strings = ["a", "b" * 16]
+	illegalStrings = ["\x10\x00\x00\x00aaaaaa"]
+	partialStrings = ["\x00\x00\x00", "hello there", ""]
+
+
+	def getProtocol(self):
+		r = decoders.Int32StringDecoder()
+		self.received = []
+		def append(data):
+			self.received.extend(data)
+		r.manyDataCallback = append
+		return r
+		
+
+	def test_receive(self):
+		"""
+		Test receiving data find the same data send.
+		"""
+		r = self.getProtocol()
+		for s in self.strings:
+			for c in struct.pack(r.structFormat,len(s)) + s:
+				r.dataReceived(c)
+		self.assertEquals(self.received, self.strings)
+
+
+	def test_partial(self):
+		"""
+		Send partial data, nothing should be definitely received.
+		"""
+		for s in self.partialStrings:
+			r = self.getProtocol()
+			for c in s:
+				r.dataReceived(c)
+			self.assertEquals(self.received, [])
+
+
+	def test_encode(self):
+		value = decoders.Int32StringDecoder.encode("b" * 16)
+		self.assertEquals(value, struct.pack(decoders.Int32StringDecoder.structFormat, 16) + "b" * 16)
+
+
+	def test_encode32(self):
+		"""
+		Test specific behavior of the 32-bits length.
+		"""
+		value = decoders.Int32StringDecoder.encode("foo")
+		self.assertEquals(value, "\x00\x00\x00\x03foo")
+
+
+	def test_decode32(self):
+		r = self.getProtocol()
+		r.dataReceived("\x00\x00\x00\x04ubar")
+		self.assertEquals(self.received, ["ubar"])
+
+
+	def test_encodeTooLong(self):
+		class ReallyLongString(str):
+			def __len__(self):
+				# lie for a good cause
+				return 2**32 + 1
+
+		s = ReallyLongString("hi")
+		self.assertRaises(decoders.StringTooLongError, lambda: decoders.Int32StringDecoder.encode(s))
+
+	
+	def test_lengthLimitExceeded(self):
+		r = self.getProtocol()
+		r.MAX_LENGTH = 10
+		self.assertRaises(decoders.ParseError, lambda: r.dataReceived(struct.pack(r.structFormat, 11)))
+	
+	
+	def test_longStringNotDelivered(self):
+		"""
+		If a length prefix for a string longer than C{MAX_LENGTH} is delivered
+		to C{dataReceived} at the same time as the entire string, the string is
+		not passed to C{manyDataCallback}.
+		"""
+		r = self.getProtocol()
+		r.MAX_LENGTH = 10
+		self.assertRaises(decoders.ParseError, lambda: r.dataReceived(struct.pack(r.structFormat, 11) + 'x' * 11))
+		self.assertEqual(self.received, [])
+
+
+	def test_illegal(self):
+		for s in self.illegalStrings:
+			r = self.getProtocol()
+			r.MAX_LENGTH = 99999
+			for c in s:
+				self.assertRaises(decoders.ParseError, lambda: r.dataReceived(c))
 
 
 
