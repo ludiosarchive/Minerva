@@ -31,7 +31,9 @@ class NetStringDecoder(object):
 	input into strings.
 
 	When one or more strings are parsed, manyDataCallback is called with
-	a list of complete strings.
+	a list of complete strings. manyDataCallback will not include a string
+	for which a comma terminator has not arrived yet. This decoder does accept
+	0-length strings.
 
 	Security features:
 		1. Messages are limited in size, useful if you don't want someone
@@ -61,7 +63,7 @@ class NetStringDecoder(object):
 
 	def manyDataCallback(self, strings):
 		"""
-		Override this.
+		Override this in a subclass, or assign manyDataCallback after instantiating decoder.
 		"""
 		raise NotImplementedError
 
@@ -194,6 +196,13 @@ class DelimitedJSONStream(object):
 		return s
 
 
+	def manyDataCallback(self, strings):
+		"""
+		Override this in a subclass, or assign manyDataCallback after instantiating decoder.
+		"""
+		raise NotImplementedError
+
+
 	def __init__(self):
 		self._decoder = simplejson.decoder.JSONDecoder(parse_constant=self._raise)
 		self._buffer = ''
@@ -244,6 +253,28 @@ class IntNStringDecoder(object):
 	MAX_LENGTH = 1024 * 1024 * 1024 # 1 GB
 	_buffer = ""
 
+	@classmethod
+	def encode(cls, s):
+		"""
+		Encode a string into a length-prefixed string.
+
+		@type s: C{str}
+		"""
+		lenData = len(s)
+		if lenData >= cls.maxPossibleLength:
+			raise StringTooLongError(
+				"Cannot encode %s bytes; maximum is %s" % (
+				lenData, cls.maxPossibleLength))
+		return struct.pack(cls.structFormat, lenData) + s
+
+
+	def manyDataCallback(self, strings):
+		"""
+		Override this in a subclass, or assign manyDataCallback after instantiating decoder.
+		"""
+		raise NotImplementedError
+
+
 	def dataReceived(self, data):
 		"""
 		Convert int prefixed strings into calls to manyDataCallback.
@@ -276,21 +307,6 @@ class IntNStringDecoder(object):
 		# This is actually fastest when a == 0 (at least in CPython 2.7), so there's no need for: if at > 0: 
 		self._buffer = self._buffer[at:]
 		self.manyDataCallback(strings)
-
-
-	@classmethod
-	def encode(cls, s):
-		"""
-		Encode a string into a length-prefixed string.
-
-		@type s: C{str}
-		"""
-		lenData = len(s)
-		if lenData >= cls.maxPossibleLength:
-			raise StringTooLongError(
-				"Cannot encode %s bytes; maximum is %s" % (
-				lenData, cls.maxPossibleLength))
-		return struct.pack(cls.structFormat, lenData) + s
 
 
 
