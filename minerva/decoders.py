@@ -246,10 +246,11 @@ class IntNStringDecoder(object):
 		"""
 		Convert int prefixed strings into calls to manyDataCallback.
 		"""
-		# Local variables are used excessively in this method for general speedup.
+		# Keep in mind that this must work with 0-length strings.
 
 		# This function will sometimes unpack the prefix many times for the same string,
-		# depending on how many dataReceived calls it takes to arrive.
+		# depending on how many dataReceived calls it takes to arrive. struct.unpack is
+		# fast in CPython 2.7, so this doesn't matter.
 
 		self._buffer += data
 		pLen = self.prefixLength
@@ -258,18 +259,19 @@ class IntNStringDecoder(object):
 		at = 0
 		
 		while True:
-			if lenBuffer - at < pLen:
+			if lenBuffer - at < pLen: # not enough to read next prefix?
 				break
 			at_pLen = at + pLen
 			length, = struct.unpack(self.structFormat, self._buffer[at:at_pLen])
 			if length > self.MAX_LENGTH:
 				raise ParseError("%d byte string too long" % length)
-			if lenBuffer - at < length + pLen:
+			if lenBuffer - at < length + pLen: # not enough to read next string?
 				break
-			packet = self._buffer[at_pLen:at_pLen+length]
-			at = at_pLen+length
+			packet = self._buffer[at_pLen:at_pLen + length]
+			at = at_pLen + length
 			strings.append(packet)
 
+		# This is actually fastest when a == 0 (at least in CPython 2.7), so there's no need for: if at > 0: 
 		self._buffer = self._buffer[at:]
 		self.manyDataCallback(strings)
 
