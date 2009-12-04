@@ -83,6 +83,23 @@ class NetStringDecoderTests(unittest.TestCase):
 			self.assertEquals(self.strings, a.got)
 
 
+	def test_zeroLengthString(self):
+		"""
+		0-length strings are okay and should be delivered when : or :, arrives
+		"""
+		r = self.receiver()
+		r.dataReceived('0')
+		if not self.trailingComma:
+			self.assertEquals([], r.got)
+			r.dataReceived(':')
+			self.assertEquals([''], r.got)
+		else:
+			r.dataReceived(':')
+			self.assertEquals([], r.got)
+			r.dataReceived(self.trailingComma)
+			self.assertEquals([''], r.got)
+
+
 	def test_illegal(self):
 		"""
 		Assert that illegal strings raise a ParseError.
@@ -270,6 +287,20 @@ class Int32StringDecoderTests(unittest.TestCase):
 			for c in struct.pack(r.structFormat, len(s)) + s:
 				r.dataReceived(c)
 		self.assertEquals(self.received, self.strings)
+
+
+	def test_zeroLengthString(self):
+		"""
+		0-length strings are okay and should be delivered when the
+		fourth byte of the prefix arrives.
+		"""
+		r = self.getDecoder()
+		r.dataReceived('\x00')
+		r.dataReceived('\x00')
+		r.dataReceived('\x00')
+		self.assertEquals(self.received, [])
+		r.dataReceived('\x00')
+		self.assertEquals(self.received, [''])
 
 
 	def test_partial(self):

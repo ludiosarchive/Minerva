@@ -100,8 +100,6 @@ class NetStringDecoder(object):
 		self._tempData += capturedThisTime
 		assert len(self._tempData) <= self._lengthToRead, "maybeFull=%r, _lengthToRead=%r, _offset=%r" % (maybeFull, self._lengthToRead, self._offset)
 		if self._lengthToRead == len(self._tempData):
-			self._completeStrings.append(self._tempData)
-			self._tempData = ''
 			##if self.noisy: print "doData: captured a full fragment; _completeStrings is now %r" % (self._completeStrings)
 			self._offset += len(capturedThisTime)
 			# Note: When we get a full string but no comma, the string is considered complete
@@ -121,6 +119,8 @@ class NetStringDecoder(object):
 		elif maybeComma != ',':
 			raise ParseError("I was expecting a comma, found something else in %r" % ((self._data, self._offset),))
 		else:
+			self._completeStrings.append(self._tempData)
+			self._tempData = ''
 			self._offset += 1
 			self._readerState = LENGTH
 			##if self.noisy: print "doComma: going into readerState DATA with _offset=%r, _data=%r" % (self._offset, self._data)
@@ -166,6 +166,8 @@ class BencodeStringDecoder(NetStringDecoder):
 
 
 	def doComma(self):
+		self._completeStrings.append(self._tempData)
+		self._tempData = ''
 		# Bencode strings have no trailing comma; just go back to LENGTH
 		self._readerState = LENGTH
 
@@ -215,7 +217,7 @@ class DelimitedJSONStream(object):
 		while True:
 			doc, end = self._decoder.raw_decode(self._buffer, at)
 			docs.append(doc)
-			at = end + 1 # skip over the \n
+			at = end + 1 # move to the right, skip over the \n
 			if self._buffer.find(self.delimiter, at) == -1:
 				break
 		self._buffer = self._buffer[at:]
@@ -227,15 +229,15 @@ class IntNStringDecoder(object):
 	"""
 	Generic class for length prefixed protocols.
 
-	@ivar structFormat: format used for struct packing/unpacking. Define it in
+	@cvar structFormat: format used for struct packing/unpacking. Define it in
 		subclass.
 	@type structFormat: C{str}
 
-	@ivar prefixLength: length of the prefix, in bytes. Define it in subclass,
+	@cvar prefixLength: length of the prefix, in bytes. Define it in subclass,
 		using C{struct.calcsize(structFormat)}
 	@type prefixLength: C{int}
 
-	@ivar maxPossibleLength: maximum possible length of a string, in bytes.
+	@cvar maxPossibleLength: maximum possible length of a string, in bytes.
 		Define it in subclass, using C{2 ** (8 * prefixLength)}
 	@type maxPossibleLength: C{int}
 	"""
@@ -268,7 +270,7 @@ class IntNStringDecoder(object):
 			if lenBuffer - at < length + pLen: # not enough to read next string?
 				break
 			packet = self._buffer[at_pLen:at_pLen + length]
-			at = at_pLen + length
+			at = at_pLen + length # move to the right
 			strings.append(packet)
 
 		# This is actually fastest when a == 0 (at least in CPython 2.7), so there's no need for: if at > 0: 

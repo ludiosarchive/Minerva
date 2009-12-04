@@ -75,7 +75,9 @@ instead of "unicode strings" or similar because:
 
 	Some environments are not unicode-safe: Firefox 2 + XHR streaming,
 	or anyone with a very bad proxy. Using JSON ensures we can easily drop down to
-	7-bit-clean mode.
+	7-bit-clean mode. And if we're using JSON to convert ASCII to unicode, we just
+	called the JSON decoder and might as well get structured data out, instead of
+	just a string. But right now, Minerva always uses 7-bit-clean mode to avoid problems.
 
 	JSON requires encoding NULL (U+0000), which is good because we cannot send it over
 	all transports anyway.
@@ -88,7 +90,7 @@ instead of "unicode strings" or similar because:
 	because it is basically executing JavaScript. Which means we don't have to dump
 	a string to the page first, and then send it through a decoder.
 		Counterpoint: referencing objects across windows and stashing them somewhere
-			destroys object prototypes in IE, and could cause problems in other browsers.
+		destroys object prototypes in IE, and could cause problems in other browsers.
 
 	(in theory) In IE, using AVM2 to encode/decode JSON might be faster than eval() or json2.js,
 	so Minerva can do whatever is fastest instead of requiring the application to do its own thing.
