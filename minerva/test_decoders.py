@@ -37,11 +37,12 @@ class RecordingScriptDecoder(_BaseRecording, decoders.ScriptDecoder):
 
 
 
+
 # modified copy/paste from twisted.test.testdecoders
 class NetStringDecoderTests(unittest.TestCase):
 
 	# for max length 699
-	strings = ['hello', 'world', 'how', 'are', 'you123', ':today', "a"*515]
+	strings = ['', 'hello', 'world', 'how', 'are', 'you123', ':today', "a"*515]
 
 	# for max length 50
 	illegalSequences = [
@@ -239,18 +240,19 @@ class DelimitedJSONStreamTests(unittest.TestCase):
 					lambda: sendData(a, sequence, packet_size)
 				)
 
+	# TODO: test two newlines in a row?
+
 
 
 class Int32StringDecoderTests(unittest.TestCase):
 	"""
 	Test case for int32-prefixed protocol
 	"""
-	strings = ["a", "b" * 16]
-	illegalStrings = ["\x10\x00\x00\x00aaaaaa"]
+	strings = ["a", "b" * 16, "c" * 17, "d" * 255, "e" * 256]
 	partialStrings = ["\x00\x00\x00\xffhello there"]
 
 
-	def getProtocol(self):
+	def getDecoder(self):
 		r = decoders.Int32StringDecoder()
 		self.received = []
 		def append(data):
@@ -263,9 +265,9 @@ class Int32StringDecoderTests(unittest.TestCase):
 		"""
 		Test receiving data find the same data send.
 		"""
-		r = self.getProtocol()
+		r = self.getDecoder()
 		for s in self.strings:
-			for c in struct.pack(r.structFormat,len(s)) + s:
+			for c in struct.pack(r.structFormat, len(s)) + s:
 				r.dataReceived(c)
 		self.assertEquals(self.received, self.strings)
 
@@ -276,11 +278,34 @@ class Int32StringDecoderTests(unittest.TestCase):
 		"""
 		for s in self.partialStrings:
 			##print repr(s)
-			r = self.getProtocol()
+			r = self.getDecoder()
 			for c in s:
 				##print repr(s), repr(c)
 				r.dataReceived(c)
 			self.assertEquals(self.received, [])
+
+
+	def test_buffer(self):
+		"""
+		Test that when strings are received in chunks of different lengths,
+		they are still parsed correctly.
+		"""
+		toSend = ''
+		for s in self.strings:
+			toSend += decoders.Int32StringDecoder.encode(s)
+
+		for packet_size in range(1, 20):
+			##print "packet_size", packet_size
+			a = self.getDecoder()
+			a.MAX_LENGTH = 699
+
+			for i in range(len(toSend)/packet_size + 1):
+				s = toSend[i*packet_size:(i+1)*packet_size]
+				if s != '':
+					##print 'sending', repr(s)
+					a.dataReceived(s)
+
+			self.assertEquals(self.strings, self.received)
 
 
 	def test_encode(self):
@@ -297,7 +322,7 @@ class Int32StringDecoderTests(unittest.TestCase):
 
 
 	def test_decode32(self):
-		r = self.getProtocol()
+		r = self.getDecoder()
 		r.dataReceived("\x00\x00\x00\x04ubar")
 		self.assertEquals(self.received, ["ubar"])
 
@@ -313,7 +338,7 @@ class Int32StringDecoderTests(unittest.TestCase):
 
 	
 	def test_lengthLimitExceeded(self):
-		r = self.getProtocol()
+		r = self.getDecoder()
 		r.MAX_LENGTH = 10
 		self.assertRaises(decoders.ParseError, lambda: r.dataReceived(struct.pack(r.structFormat, 11)))
 	
@@ -324,14 +349,14 @@ class Int32StringDecoderTests(unittest.TestCase):
 		to C{dataReceived} at the same time as the entire string, the string is
 		not passed to C{manyDataCallback}.
 		"""
-		r = self.getProtocol()
+		r = self.getDecoder()
 		r.MAX_LENGTH = 10
 		self.assertRaises(decoders.ParseError, lambda: r.dataReceived(struct.pack(r.structFormat, 11) + 'x' * 11))
 		self.assertEqual(self.received, [])
 
 
 	def test_illegal(self):
-		r = self.getProtocol()
+		r = self.getDecoder()
 		r.dataReceived('\xff') # although this indicates a really long string, the length isn't looked at until 4 bytes arrive.
 		r.dataReceived('\x00')
 		r.dataReceived('\x00')
