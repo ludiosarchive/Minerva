@@ -248,7 +248,7 @@ class Int32StringDecoderTests(unittest.TestCase):
 	"""
 	Test case for int32-prefixed protocol
 	"""
-	strings = ["a", "b" * 16, "c" * 17, "d" * 255, "e" * 256]
+	strings = ["", "a", "b" * 16, "c" * 17, "d" * 255, "e" * 256]
 	partialStrings = ["\x00\x00\x00\xffhello there"]
 
 

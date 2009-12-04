@@ -240,31 +240,44 @@ class IntNStringDecoder(object):
 	@type maxPossibleLength: C{int}
 	"""
 	MAX_LENGTH = 1024 * 1024 * 1024 # 1 GB
-	_recvd = ""
+	_buffer = ""
 
-	def dataReceived(self, recd):
+	def dataReceived(self, data):
 		"""
 		Convert int prefixed strings into calls to manyDataCallback.
 		"""
-		data = []
-		self._recvd = self._recvd + recd
-		while len(self._recvd) >= self.prefixLength:
-			length ,= struct.unpack(
-				self.structFormat, self._recvd[:self.prefixLength])
+		# Local variables are used excessively in this method for general speedup.
+
+		# This function will sometimes unpack the prefix many times for the same string,
+		# depending on how many dataReceived calls it takes to arrive.
+
+		self._buffer += data
+		pLen = self.prefixLength
+		lenBuffer = len(self._buffer)
+		strings = []
+		at = 0
+		
+		while True:
+			if lenBuffer - at < pLen:
+				break
+			at_pLen = at + pLen
+			length, = struct.unpack(self.structFormat, self._buffer[at:at_pLen])
 			if length > self.MAX_LENGTH:
 				raise ParseError("%d byte string too long" % length)
-			if len(self._recvd) < length + self.prefixLength:
+			if lenBuffer - at < length + pLen:
 				break
-			packet = self._recvd[self.prefixLength:length + self.prefixLength]
-			self._recvd = self._recvd[length + self.prefixLength:]
-			data.append(packet)
-		self.manyDataCallback(data)
+			packet = self._buffer[at_pLen:at_pLen+length]
+			at = at_pLen+length
+			strings.append(packet)
+
+		self._buffer = self._buffer[at:]
+		self.manyDataCallback(strings)
 
 
 	@classmethod
 	def encode(cls, s):
 		"""
-		Encode a string into something that could be sent over the connection.
+		Encode a string into a length-prefixed string.
 
 		@type s: C{str}
 		"""
