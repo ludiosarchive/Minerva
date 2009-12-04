@@ -247,7 +247,7 @@ class Int32StringDecoderTests(unittest.TestCase):
 	"""
 	strings = ["a", "b" * 16]
 	illegalStrings = ["\x10\x00\x00\x00aaaaaa"]
-	partialStrings = ["\x00\x00\x00", "hello there", ""]
+	partialStrings = ["\x00\x00\x00\xffhello there"]
 
 
 	def getProtocol(self):
@@ -275,8 +275,10 @@ class Int32StringDecoderTests(unittest.TestCase):
 		Send partial data, nothing should be definitely received.
 		"""
 		for s in self.partialStrings:
+			##print repr(s)
 			r = self.getProtocol()
 			for c in s:
+				##print repr(s), repr(c)
 				r.dataReceived(c)
 			self.assertEquals(self.received, [])
 
@@ -329,11 +331,11 @@ class Int32StringDecoderTests(unittest.TestCase):
 
 
 	def test_illegal(self):
-		for s in self.illegalStrings:
-			r = self.getProtocol()
-			r.MAX_LENGTH = 99999
-			for c in s:
-				self.assertRaises(decoders.ParseError, lambda: r.dataReceived(c))
+		r = self.getProtocol()
+		r.dataReceived('\xff') # although this indicates a really long string, the length isn't looked at until 4 bytes arrive.
+		r.dataReceived('\x00')
+		r.dataReceived('\x00')
+		self.assertRaises(decoders.ParseError, lambda: r.dataReceived('\x00'))
 
 
 
