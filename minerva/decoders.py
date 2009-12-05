@@ -45,7 +45,7 @@ class NetStringDecoder(object):
 			excessive .find()  
 	"""
 
-	dead = False
+	_dead = False
 	_data = ''
 	_tempDigits = ''
 	_tempData = ''
@@ -133,8 +133,11 @@ class NetStringDecoder(object):
 		# This should re-raise ParseError when more data is fed into it, even after ParseError
 		# has already been raised.
 
-		if self.dead:
+		# This could be done in a way that doesn't require _dead, but it would involve
+		# writing a test for every single ParseError to make sure internal state isn't corrupted.
+		if self._dead:
 			raise ParseError("Don't give me data, I'm dead")
+
 		if self._completeStrings is None:
 			self._completeStrings = []
 		# Nothing ever gets left in _data because there are separate temporary buffers
@@ -153,7 +156,7 @@ class NetStringDecoder(object):
 				if ret:
 					break
 		except ParseError:
-			self.dead = True
+			self._dead = True
 			raise
 		finally:
 			self._data = ''
