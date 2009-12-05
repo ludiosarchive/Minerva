@@ -1,4 +1,5 @@
 import struct
+import simplejson
 
 from twisted.trial import unittest
 
@@ -194,14 +195,28 @@ class BencodeStringDecoderTests(NetStringDecoderTests):
 
 
 class DelimitedJSONStreamTests(unittest.TestCase):
-	receiver = decoders.DelimitedJSONStream
+	receiver = RecordingDelimitedJSONStream
 
-	illegalSequences = ['[Infinity]', '[-Infinity]', '[NaN]', '"%s"' % ("x"*49)] # for max length 50
+	# All of these are post-serialization strings. Oversize string tested with MAX_LENGTH 50
+	illegalSequences = [
+		'"%s"\n' % ("x" * 49),
+		'[Infinity]\n',
+		'[-Infinity]\n',
+		'[NaN]\n',
+		'{\n',
+		'}\n',
+		'[\n',
+		']\n',
+		'z\n',
+		' \n',
+		'\n',
+	]
 
 	def test_encode(self):
 		self.assertEqual('"h"\n', self.receiver.encode("h"))
 		self.assertEqual('"h"\n', self.receiver.encode(u"h"))
 		self.assertEqual('[{}]\n', self.receiver.encode([{}]))
+		self.assertEqual('"\\n"\n', self.receiver.encode("\n"))
 
 
 	@todo
@@ -212,25 +227,41 @@ class DelimitedJSONStreamTests(unittest.TestCase):
 		"""
 		1/0
 
-	@todo
-	def test_illegal(self):
+
+	def test_illegalStrings(self):
 		"""
-		Assert that illegal strings raise a ParseError.
+		Assert that illegal strings raise either JSONDecodeError or ParseError.
 
 		This is basically redundant with L{test_illegalWithPacketSizes}
 		but keep it anyway for debugging.
 		"""
-		1/0
 		for s in self.illegalSequences:
 			a = self.receiver()
 			a.MAX_LENGTH = 50
-			##print 'Sending', repr(s)
+			print 'Sending', repr(s)
 			self.assertRaises(decoders.ParseError, lambda s=s: a.dataReceived(s))
+
+
+	def test_parseErrorException(self):
+		"""
+		When a JSON parse error occurs, the raised ParseError contains information about
+		the JSONDecodeError, and the C{lastJsonError} attribute on the decoder is set to
+		this JSONDecodeError.
+		"""
+		a = self.receiver()
+		self.aI(None, a.lastJsonError)
+
+		exc = self.assertRaises(decoders.ParseError, lambda: a.dataReceived("}\n"))
+		expected = "JSONDecodeError('No JSON object could be decoded: line 1 column 0 (char 0)',)"
+		self.assertEqual(expected, exc.message);
+
+		self.assert_(isinstance(a.lastJsonError, simplejson.decoder.JSONDecodeError));
+
 
 	@todo
 	def test_illegalWithPacketSizes(self):
 		"""
-		Assert that illegal strings raise a ParseError,
+		Assert that illegal strings raise either JSONDecodeError or ParseError,
 		even when they arrive in variable packet sizes.
 		"""
 		1/0

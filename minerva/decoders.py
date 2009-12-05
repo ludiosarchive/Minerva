@@ -188,6 +188,13 @@ class DelimitedJSONStream(object):
 	"""
 	MAX_LENGTH = 1024 * 1024 * 1024 # 1 GB
 	delimiter = '\n' # MUST be 1 byte. Do not change this after any data has been received.
+	lastJsonError = None # Most people won't care about the JSON exception.
+	_buffer = ''
+
+	def _raise(obj):
+		raise ParseError("I reject NaN, Infinity, and -Infinity")
+	_decoder = simplejson.decoder.JSONDecoder(parse_constant=_raise)
+
 
 	@classmethod
 	def encode(cls, obj):
@@ -203,17 +210,8 @@ class DelimitedJSONStream(object):
 		raise NotImplementedError
 
 
-	def __init__(self):
-		self._decoder = simplejson.decoder.JSONDecoder(parse_constant=self._raise)
-		self._buffer = ''
-
-
-	def _raise(self, obj):
-		# holy encapsulation violation batman
-		raise simplejson.decoder.JSONDecodeError("I reject NaN, Infinity, and -Infinity")
-
-
 	def dataReceived(self, data):
+		self.lastJsonError = None
 		self._buffer += data
 		if len(self._buffer) > self.MAX_LENGTH:
 			raise ParseError("JSON string exceeds limit of %d bytes" % (self.MAX_LENGTH,))
@@ -224,7 +222,11 @@ class DelimitedJSONStream(object):
 		docs = []
 		at = 0
 		while True:
-			doc, end = self._decoder.raw_decode(self._buffer, at)
+			try:
+				doc, end = self._decoder.raw_decode(self._buffer, at)
+			except simplejson.decoder.JSONDecodeError, e:
+				self.lastJsonError = e
+				raise ParseError("%r" % (e,))
 			docs.append(doc)
 			at = end + 1 # move to the right, skip over the \n
 			if self._buffer.find(self.delimiter, at) == -1:
