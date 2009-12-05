@@ -56,9 +56,9 @@ class NetStringDecoderTests(unittest.TestCase):
 
 	def test_encode(self):
 		big = 'x' * 100
-		self.assertEqual("100:%s%s" % (big, self.trailingComma), self.receiver.encode(big))
-		self.assertEqual("5:hello" + self.trailingComma, self.receiver.encode("hello"))
-		self.assertEqual("0:" + self.trailingComma, self.receiver.encode(""))
+		self.aE("100:%s%s" % (big, self.trailingComma), self.receiver.encode(big))
+		self.aE("5:hello" + self.trailingComma, self.receiver.encode("hello"))
+		self.aE("0:" + self.trailingComma, self.receiver.encode(""))
 
 
 	def test_buffer(self):
@@ -81,7 +81,7 @@ class NetStringDecoderTests(unittest.TestCase):
 					##print 'sending', repr(s)
 					a.dataReceived(s)
 
-			self.assertEquals(self.strings, a.got)
+			self.aE(self.strings, a.got)
 
 
 	def test_zeroLengthString(self):
@@ -91,14 +91,14 @@ class NetStringDecoderTests(unittest.TestCase):
 		r = self.receiver()
 		r.dataReceived('0')
 		if not self.trailingComma:
-			self.assertEquals([], r.got)
+			self.aE([], r.got)
 			r.dataReceived(':')
-			self.assertEquals([''], r.got)
+			self.aE([''], r.got)
 		else:
 			r.dataReceived(':')
-			self.assertEquals([], r.got)
+			self.aE([], r.got)
 			r.dataReceived(self.trailingComma)
-			self.assertEquals([''], r.got)
+			self.aE([''], r.got)
 
 
 	def test_illegal(self):
@@ -112,7 +112,7 @@ class NetStringDecoderTests(unittest.TestCase):
 			a = self.receiver()
 			a.MAX_LENGTH = 50
 			##print 'Sending', repr(s)
-			self.assertRaises(decoders.ParseError, lambda s=s: a.dataReceived(s))
+			self.aR(decoders.ParseError, lambda s=s: a.dataReceived(s))
 
 
 	def test_illegalPartialLength(self):
@@ -122,7 +122,7 @@ class NetStringDecoderTests(unittest.TestCase):
 		"""
 		a = self.receiver()
 		a.dataReceived('5')
-		self.assertRaises(decoders.ParseError, lambda: a.dataReceived('x'))
+		self.aR(decoders.ParseError, lambda: a.dataReceived('x'))
 
 
 	def test_illegalWithPacketSizes(self):
@@ -149,7 +149,7 @@ class NetStringDecoderTests(unittest.TestCase):
 
 				##print 'Sending in pieces', repr(sequence)
 
-				self.assertRaises(
+				self.aR(
 					decoders.ParseError,
 					lambda: sendData(a, sequence, packet_size)
 				)
@@ -177,7 +177,7 @@ class NetStringDecoderTests(unittest.TestCase):
 		##For speed comparison:
 		##for s in strings:
 		##	a.dataReceived(receiver.encode(s))
-		self.assertEqual(strings, a.got)
+		self.aE(strings, a.got)
 
 
 
@@ -213,10 +213,10 @@ class DelimitedJSONStreamTests(unittest.TestCase):
 	]
 
 	def test_encode(self):
-		self.assertEqual('"h"\n', self.receiver.encode("h"))
-		self.assertEqual('"h"\n', self.receiver.encode(u"h"))
-		self.assertEqual('[{}]\n', self.receiver.encode([{}]))
-		self.assertEqual('"\\n"\n', self.receiver.encode("\n"))
+		self.aE('"h"\n', self.receiver.encode("h"))
+		self.aE('"h"\n', self.receiver.encode(u"h"))
+		self.aE('[{}]\n', self.receiver.encode([{}]))
+		self.aE('"\\n"\n', self.receiver.encode("\n"))
 
 
 	@todo
@@ -239,7 +239,7 @@ class DelimitedJSONStreamTests(unittest.TestCase):
 			a = self.receiver()
 			a.MAX_LENGTH = 50
 			print 'Sending', repr(s)
-			self.assertRaises(decoders.ParseError, lambda s=s: a.dataReceived(s))
+			self.aR(decoders.ParseError, lambda s=s: a.dataReceived(s))
 
 
 	def test_parseErrorException(self):
@@ -251,9 +251,9 @@ class DelimitedJSONStreamTests(unittest.TestCase):
 		a = self.receiver()
 		self.aI(None, a.lastJsonError)
 
-		exc = self.assertRaises(decoders.ParseError, lambda: a.dataReceived("}\n"))
+		exc = self.aR(decoders.ParseError, lambda: a.dataReceived("}\n"))
 		expected = "JSONDecodeError('No JSON object could be decoded: line 1 column 0 (char 0)',)"
-		self.assertEqual(expected, exc.message);
+		self.aE(expected, exc.message);
 
 		self.assert_(isinstance(a.lastJsonError, simplejson.decoder.JSONDecodeError));
 
@@ -283,7 +283,7 @@ class DelimitedJSONStreamTests(unittest.TestCase):
 
 				##print 'Sending in pieces', repr(sequence)
 
-				self.assertRaises(
+				self.aR(
 					decoders.ParseError,
 					lambda: sendData(a, sequence, packet_size)
 				)
@@ -317,7 +317,7 @@ class Int32StringDecoderTests(unittest.TestCase):
 		for s in self.strings:
 			for c in struct.pack(r.structFormat, len(s)) + s:
 				r.dataReceived(c)
-		self.assertEquals(self.received, self.strings)
+		self.aE(self.received, self.strings)
 
 
 	def test_zeroLengthString(self):
@@ -329,9 +329,9 @@ class Int32StringDecoderTests(unittest.TestCase):
 		r.dataReceived('\x00')
 		r.dataReceived('\x00')
 		r.dataReceived('\x00')
-		self.assertEquals(self.received, [])
+		self.aE(self.received, [])
 		r.dataReceived('\x00')
-		self.assertEquals(self.received, [''])
+		self.aE(self.received, [''])
 
 
 	def test_partial(self):
@@ -344,7 +344,7 @@ class Int32StringDecoderTests(unittest.TestCase):
 			for c in s:
 				##print repr(s), repr(c)
 				r.dataReceived(c)
-			self.assertEquals(self.received, [])
+			self.aE(self.received, [])
 
 
 	def test_buffer(self):
@@ -367,12 +367,12 @@ class Int32StringDecoderTests(unittest.TestCase):
 					##print 'sending', repr(s)
 					a.dataReceived(s)
 
-			self.assertEquals(self.strings, self.received)
+			self.aE(self.strings, self.received)
 
 
 	def test_encode(self):
 		value = decoders.Int32StringDecoder.encode("b" * 16)
-		self.assertEquals(value, struct.pack(decoders.Int32StringDecoder.structFormat, 16) + "b" * 16)
+		self.aE(value, struct.pack(decoders.Int32StringDecoder.structFormat, 16) + "b" * 16)
 
 
 	def test_encode32(self):
@@ -380,13 +380,13 @@ class Int32StringDecoderTests(unittest.TestCase):
 		Test specific behavior of the 32-bits length.
 		"""
 		value = decoders.Int32StringDecoder.encode("foo")
-		self.assertEquals(value, "\x00\x00\x00\x03foo")
+		self.aE(value, "\x00\x00\x00\x03foo")
 
 
 	def test_decode32(self):
 		r = self.getDecoder()
 		r.dataReceived("\x00\x00\x00\x04ubar")
-		self.assertEquals(self.received, ["ubar"])
+		self.aE(self.received, ["ubar"])
 
 
 	def test_encodeTooLong(self):
@@ -396,13 +396,13 @@ class Int32StringDecoderTests(unittest.TestCase):
 				return 2**32 + 1
 
 		s = ReallyLongString("hi")
-		self.assertRaises(decoders.StringTooLongError, lambda: decoders.Int32StringDecoder.encode(s))
+		self.aR(decoders.StringTooLongError, lambda: decoders.Int32StringDecoder.encode(s))
 
 	
 	def test_lengthLimitExceeded(self):
 		r = self.getDecoder()
 		r.MAX_LENGTH = 10
-		self.assertRaises(decoders.ParseError, lambda: r.dataReceived(struct.pack(r.structFormat, 11)))
+		self.aR(decoders.ParseError, lambda: r.dataReceived(struct.pack(r.structFormat, 11)))
 	
 	
 	def test_longStringNotDelivered(self):
@@ -413,8 +413,8 @@ class Int32StringDecoderTests(unittest.TestCase):
 		"""
 		r = self.getDecoder()
 		r.MAX_LENGTH = 10
-		self.assertRaises(decoders.ParseError, lambda: r.dataReceived(struct.pack(r.structFormat, 11) + 'x' * 11))
-		self.assertEqual(self.received, [])
+		self.aR(decoders.ParseError, lambda: r.dataReceived(struct.pack(r.structFormat, 11) + 'x' * 11))
+		self.aE(self.received, [])
 
 
 	def test_illegal(self):
@@ -422,7 +422,7 @@ class Int32StringDecoderTests(unittest.TestCase):
 		r.dataReceived('\xff') # although this indicates a really long string, the length isn't looked at until 4 bytes arrive.
 		r.dataReceived('\x00')
 		r.dataReceived('\x00')
-		self.assertRaises(decoders.ParseError, lambda: r.dataReceived('\x00'))
+		self.aR(decoders.ParseError, lambda: r.dataReceived('\x00'))
 
 
 
@@ -432,9 +432,9 @@ class ScriptDecoderTests(unittest.TestCase):
 
 	def test_encode(self):
 		big = 'x' * 100
-		self.assertEqual('<script>f(%s)</script>' % (big,), self.receiver.encode(big))
-		self.assertEqual('<script>f(hello)</script>', self.receiver.encode("hello"))
-		self.assertEqual('<script>f()</script>', self.receiver.encode(""))
+		self.aE('<script>f(%s)</script>' % (big,), self.receiver.encode(big))
+		self.aE('<script>f(hello)</script>', self.receiver.encode("hello"))
+		self.aE('<script>f()</script>', self.receiver.encode(""))
 
 
 	def _sendAndAssert(self, toSend, expected):
@@ -448,7 +448,7 @@ class ScriptDecoderTests(unittest.TestCase):
 					##print 'sending', repr(s)
 					a.dataReceived(s)
 
-			self.assertEquals(expected, a.got)
+			self.aE(expected, a.got)
 
 
 	def test_basicUsage(self):
