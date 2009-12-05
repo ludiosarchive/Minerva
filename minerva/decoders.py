@@ -45,6 +45,7 @@ class NetStringDecoder(object):
 			excessive .find()  
 	"""
 
+	dead = False
 	_data = ''
 	_tempDigits = ''
 	_tempData = ''
@@ -129,6 +130,11 @@ class NetStringDecoder(object):
 
 
 	def dataReceived(self, data):
+		# This should re-raise ParseError when more data is fed into it, even after ParseError
+		# has already been raised.
+
+		if self.dead:
+			raise ParseError("Don't give me data, I'm dead")
 		if self._completeStrings is None:
 			self._completeStrings = []
 		# Nothing ever gets left in _data because there are separate temporary buffers
@@ -147,7 +153,7 @@ class NetStringDecoder(object):
 				if ret:
 					break
 		except ParseError:
-			self.brokenPeer = 1
+			self.dead = True
 			raise
 		finally:
 			self._data = ''
@@ -186,6 +192,7 @@ class DelimitedJSONStream(object):
 		String append is fast enough in CPython 2.5+. On Windows CPython,
 		it can still be ~5x slower than list-based buffers.
 	"""
+	dead = False
 	MAX_LENGTH = 1024 * 1024 * 1024 # 1 GB
 	delimiter = '\n' # MUST be 1 byte. Do not change this after any data has been received.
 	lastJsonError = None # Most people won't care about the JSON exception.
@@ -211,6 +218,9 @@ class DelimitedJSONStream(object):
 
 
 	def dataReceived(self, data):
+		# This should re-raise ParseError when more data is fed into it, even after ParseError
+		# has already been raised.
+
 		self.lastJsonError = None
 		self._buffer += data
 		if len(self._buffer) > self.MAX_LENGTH:
@@ -282,6 +292,8 @@ class IntNStringDecoder(object):
 		Convert int prefixed strings into calls to manyDataCallback.
 		"""
 		# Keep in mind that this must work with 0-length strings.
+		# This should re-raise ParseError when more data is fed into it, even after ParseError
+		# has already been raised.
 
 		# This function will sometimes unpack the prefix many times for the same string,
 		# depending on how many dataReceived calls it takes to arrive. struct.unpack is
