@@ -28,7 +28,12 @@ class RecordingBencodeStringDecoder(_BaseRecording, decoders.BencodeStringDecode
 
 
 
-class RecordingDelimitedJSONStream(_BaseRecording, decoders.DelimitedJSONStream):
+class RecordingDelimitedJSONDecoder(_BaseRecording, decoders.DelimitedJSONDecoder):
+	pass
+
+
+
+class RecordingInt32StringDecoder(_BaseRecording, decoders.Int32StringDecoder):
 	pass
 
 
@@ -38,28 +43,7 @@ class RecordingScriptDecoder(_BaseRecording, decoders.ScriptDecoder):
 
 
 
-
-# modified copy/paste from twisted.test.testdecoders
-class NetStringDecoderTests(unittest.TestCase):
-
-	# for max length 699
-	strings = ['', 'hello', 'world', 'how', 'are', 'you123', ':today', "a"*515]
-
-	# for max length 50
-	illegalSequences = [
-		'9999999999999999999999', 'abc', '4:abcde',
-		'51:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab,',]
-
-	receiver = RecordingNetStringDecoder
-
-	trailingComma = ','
-
-	def test_encode(self):
-		big = 'x' * 100
-		self.aE("100:%s%s" % (big, self.trailingComma), self.receiver.encode(big))
-		self.aE("5:hello" + self.trailingComma, self.receiver.encode("hello"))
-		self.aE("0:" + self.trailingComma, self.receiver.encode(""))
-
+class CommonTests(object):
 
 	def test_buffer(self):
 		"""
@@ -84,6 +68,70 @@ class NetStringDecoderTests(unittest.TestCase):
 			self.aE(self.strings, a.got)
 
 
+	def test_illegal(self):
+		"""
+		Assert that illegal strings raise a ParseError.
+
+		This is basically redundant with L{test_illegalWithPacketSizes}
+		but keep it anyway for debugging.
+		"""
+		for s in self.illegalSequences:
+			a = self.receiver()
+			a.MAX_LENGTH = 50
+			##print 'Sending', repr(s)
+			self.aR(decoders.ParseError, lambda s=s: a.dataReceived(s))
+
+
+	def test_illegalWithPacketSizes(self):
+		"""
+		Assert that illegal strings raise a ParseError,
+		even when they arrive in variable packet sizes.
+		"""
+
+		def sendData(a, sequence, packet_size):
+			for i in range(len(sequence)/packet_size + 1):
+				s = sequence[i*packet_size:(i+1)*packet_size]
+				if s != '':
+					##print 'sending', repr(s)
+					a.dataReceived(s)
+
+		for sequence in self.illegalSequences:
+			for packet_size in range(1, 2):
+				##print 'packet_size', packet_size
+
+				a = self.receiver()
+				a.MAX_LENGTH = 50
+
+				##print 'Sending in pieces', repr(sequence)
+				self.aR(
+					decoders.ParseError,
+					lambda: sendData(a, sequence, packet_size)
+				)
+
+
+
+# modified copy/paste from twisted.test.testdecoders
+class NetStringDecoderTests(CommonTests, unittest.TestCase):
+
+	# for max length 699
+	strings = ['', 'hello', 'world', 'how', 'are', 'you123', ':today', "a"*515]
+
+	# for max length 50
+	illegalSequences = [
+		'9999999999999999999999', 'abc', '4:abcde',
+		'51:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab,',]
+
+	receiver = RecordingNetStringDecoder
+
+	trailingComma = ','
+
+	def test_encode(self):
+		big = 'x' * 100
+		self.aE("100:%s%s" % (big, self.trailingComma), self.receiver.encode(big))
+		self.aE("5:hello" + self.trailingComma, self.receiver.encode("hello"))
+		self.aE("0:" + self.trailingComma, self.receiver.encode(""))
+
+
 	def test_zeroLengthString(self):
 		"""
 		0-length strings are okay and should be delivered when : or :, arrives
@@ -101,20 +149,6 @@ class NetStringDecoderTests(unittest.TestCase):
 			self.aE([''], r.got)
 
 
-	def test_illegal(self):
-		"""
-		Assert that illegal strings raise a ParseError.
-
-		This is basically redundant with L{test_illegalWithPacketSizes}
-		but keep it anyway for debugging.
-		"""
-		for s in self.illegalSequences:
-			a = self.receiver()
-			a.MAX_LENGTH = 50
-			##print 'Sending', repr(s)
-			self.aR(decoders.ParseError, lambda s=s: a.dataReceived(s))
-
-
 	def test_illegalPartialLength(self):
 		"""
 		Assert that ParseError is raised when bad digits are received, not
@@ -123,36 +157,6 @@ class NetStringDecoderTests(unittest.TestCase):
 		a = self.receiver()
 		a.dataReceived('5')
 		self.aR(decoders.ParseError, lambda: a.dataReceived('x'))
-
-
-	def test_illegalWithPacketSizes(self):
-		"""
-		Assert that illegal strings raise a ParseError,
-		even when they arrive in variable packet sizes.
-		"""
-
-		def sendData(a, sequence, packet_size):
-			for i in range(len(sequence)/packet_size + 1):
-				s = sequence[i*packet_size:(i+1)*packet_size]
-				if s != '':
-					##print 'sending', repr(s)
-					a.dataReceived(s)
-
-
-		for sequence in self.illegalSequences:
-			for packet_size in range(1, 2):
-
-				##print 'packet_size', packet_size
-
-				a = self.receiver()
-				a.MAX_LENGTH = 50
-
-				##print 'Sending in pieces', repr(sequence)
-
-				self.aR(
-					decoders.ParseError,
-					lambda: sendData(a, sequence, packet_size)
-				)
 
 
 	def test_lotsOfSmallStrings(self):
@@ -194,8 +198,8 @@ class BencodeStringDecoderTests(NetStringDecoderTests):
 
 
 
-class DelimitedJSONStreamTests(unittest.TestCase):
-	receiver = RecordingDelimitedJSONStream
+class DelimitedJSONDecoderTests(CommonTests, unittest.TestCase):
+	receiver = RecordingDelimitedJSONDecoder
 
 	# All of these are post-serialization strings. Oversize string tested with MAX_LENGTH 50
 	illegalSequences = [
@@ -222,44 +226,6 @@ class DelimitedJSONStreamTests(unittest.TestCase):
 		self.aE('"\\n"\n', self.receiver.encode("\n"))
 
 
-	# TODO: maybe bring this and other methods with a mixin?
-	def test_buffer(self):
-		"""
-		Test that when strings are received in chunks of different lengths,
-		they are still parsed correctly.
-		"""
-		toSend = ''
-		for s in self.strings:
-			toSend += self.receiver.encode(s)
-
-		for packet_size in range(1, 20):
-			##print "packet_size", packet_size
-			a = self.receiver()
-			a.MAX_LENGTH = 699
-
-			for i in range(len(toSend)/packet_size + 1):
-				s = toSend[i*packet_size:(i+1)*packet_size]
-				if s != '':
-					##print 'sending', repr(s)
-					a.dataReceived(s)
-
-			self.aE(self.strings, a.got)
-
-
-	def test_illegalStrings(self):
-		"""
-		Assert that illegal strings raise a ParseError.
-
-		This is basically redundant with L{test_illegalWithPacketSizes}
-		but keep it anyway for debugging.
-		"""
-		for s in self.illegalSequences:
-			a = self.receiver()
-			a.MAX_LENGTH = 50
-			##print 'Sending', repr(s)
-			self.aR(decoders.ParseError, lambda s=s: a.dataReceived(s))
-
-
 	def test_parseErrorException(self):
 		"""
 		When a JSON parse error occurs, the raised ParseError contains information about
@@ -276,61 +242,23 @@ class DelimitedJSONStreamTests(unittest.TestCase):
 		self.assert_(isinstance(a.lastJsonError, simplejson.decoder.JSONDecodeError));
 
 
-	def test_illegalWithPacketSizes(self):
-		"""
-		Assert that illegal strings raise a ParseError,
-		even when they arrive in variable packet sizes.
-		"""
-		def sendData(a, sequence, packet_size):
-			for i in range(len(sequence)/packet_size + 1):
-				s = sequence[i*packet_size:(i+1)*packet_size]
-				if s != '':
-					##print 'sending', repr(s)
-					a.dataReceived(s)
 
+class Int32StringDecoderTests(CommonTests, unittest.TestCase):
 
-		for sequence in self.illegalSequences:
-			for packet_size in range(1, 2):
-				##print 'packet_size', packet_size
-
-				a = self.receiver()
-				a.MAX_LENGTH = 50
-
-				##print 'Sending in pieces', repr(sequence)
-
-				self.aR(
-					decoders.ParseError,
-					lambda: sendData(a, sequence, packet_size)
-				)
-
-
-
-class Int32StringDecoderTests(unittest.TestCase):
-	"""
-	Test case for int32-prefixed protocol
-	"""
+	receiver = RecordingInt32StringDecoder
 	strings = ["", "a", "b" * 16, "c" * 17, "d" * 255, "e" * 256]
 	partialStrings = ["\x00\x00\x00\xffhello there"]
-
-
-	def getDecoder(self):
-		r = decoders.Int32StringDecoder()
-		self.received = []
-		def append(data):
-			self.received.extend(data)
-		r.manyDataCallback = append
-		return r
-		
+	illegalSequences = ["\xff\x00\x00\x00XX", "\xff\xff\xff\xffXX"]
 
 	def test_receive(self):
 		"""
 		Test receiving data find the same data send.
 		"""
-		r = self.getDecoder()
+		r = self.receiver()
 		for s in self.strings:
 			for c in struct.pack(r.structFormat, len(s)) + s:
 				r.dataReceived(c)
-		self.aE(self.received, self.strings)
+		self.aE(r.got, self.strings)
 
 
 	def test_zeroLengthString(self):
@@ -338,13 +266,13 @@ class Int32StringDecoderTests(unittest.TestCase):
 		0-length strings are okay and should be delivered when the
 		fourth byte of the prefix arrives.
 		"""
-		r = self.getDecoder()
+		r = self.receiver()
 		r.dataReceived('\x00')
 		r.dataReceived('\x00')
 		r.dataReceived('\x00')
-		self.aE(self.received, [])
+		self.aE(r.got, [])
 		r.dataReceived('\x00')
-		self.aE(self.received, [''])
+		self.aE(r.got, [''])
 
 
 	def test_partial(self):
@@ -353,34 +281,11 @@ class Int32StringDecoderTests(unittest.TestCase):
 		"""
 		for s in self.partialStrings:
 			##print repr(s)
-			r = self.getDecoder()
+			r = self.receiver()
 			for c in s:
 				##print repr(s), repr(c)
 				r.dataReceived(c)
-			self.aE(self.received, [])
-
-
-	def test_buffer(self):
-		"""
-		Test that when strings are received in chunks of different lengths,
-		they are still parsed correctly.
-		"""
-		toSend = ''
-		for s in self.strings:
-			toSend += decoders.Int32StringDecoder.encode(s)
-
-		for packet_size in range(1, 20):
-			##print "packet_size", packet_size
-			a = self.getDecoder()
-			a.MAX_LENGTH = 699
-
-			for i in range(len(toSend)/packet_size + 1):
-				s = toSend[i*packet_size:(i+1)*packet_size]
-				if s != '':
-					##print 'sending', repr(s)
-					a.dataReceived(s)
-
-			self.aE(self.strings, self.received)
+			self.aE(r.got, [])
 
 
 	def test_encode(self):
@@ -397,9 +302,9 @@ class Int32StringDecoderTests(unittest.TestCase):
 
 
 	def test_decode32(self):
-		r = self.getDecoder()
+		r = self.receiver()
 		r.dataReceived("\x00\x00\x00\x04ubar")
-		self.aE(self.received, ["ubar"])
+		self.aE(r.got, ["ubar"])
 
 
 	def test_encodeTooLong(self):
@@ -413,7 +318,7 @@ class Int32StringDecoderTests(unittest.TestCase):
 
 	
 	def test_lengthLimitExceeded(self):
-		r = self.getDecoder()
+		r = self.receiver()
 		r.MAX_LENGTH = 10
 		self.aR(decoders.ParseError, lambda: r.dataReceived(struct.pack(r.structFormat, 11)))
 	
@@ -424,14 +329,14 @@ class Int32StringDecoderTests(unittest.TestCase):
 		to C{dataReceived} at the same time as the entire string, the string is
 		not passed to C{manyDataCallback}.
 		"""
-		r = self.getDecoder()
+		r = self.receiver()
 		r.MAX_LENGTH = 10
 		self.aR(decoders.ParseError, lambda: r.dataReceived(struct.pack(r.structFormat, 11) + 'x' * 11))
-		self.aE(self.received, [])
+		self.aE(r.got, [])
 
 
-	def test_illegal(self):
-		r = self.getDecoder()
+	def test_lengthCheckedAtFourthByte(self):
+		r = self.receiver()
 		r.dataReceived('\xff') # although this indicates a really long string, the length isn't looked at until 4 bytes arrive.
 		r.dataReceived('\x00')
 		r.dataReceived('\x00')

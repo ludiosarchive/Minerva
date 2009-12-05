@@ -184,7 +184,7 @@ class BencodeStringDecoder(NetStringDecoder):
 
 
 
-class DelimitedJSONStream(object):
+class DelimitedJSONDecoder(object):
 	"""
 	Decodes a stream of (1-byte-delimiter)-terminated JSON documents into Python objects.
 	The stream is assumed to be UTF-8.
