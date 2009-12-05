@@ -212,6 +212,9 @@ class DelimitedJSONStreamTests(unittest.TestCase):
 		'\n',
 	]
 
+	# Not really strings but JSON-safe objects.
+	strings = ["hello world", u"unicode", {}, [], {"key": ["val1", "val2"]}, None, False, True, 0.0, -0.5, 0.5, 5, 12738123912, 2**50]
+
 	def test_encode(self):
 		self.aE('"h"\n', self.receiver.encode("h"))
 		self.aE('"h"\n', self.receiver.encode(u"h"))
@@ -219,18 +222,33 @@ class DelimitedJSONStreamTests(unittest.TestCase):
 		self.aE('"\\n"\n', self.receiver.encode("\n"))
 
 
-	@todo
+	# TODO: maybe bring this and other methods with a mixin?
 	def test_buffer(self):
 		"""
 		Test that when strings are received in chunks of different lengths,
 		they are still parsed correctly.
 		"""
-		1/0
+		toSend = ''
+		for s in self.strings:
+			toSend += self.receiver.encode(s)
+
+		for packet_size in range(1, 20):
+			##print "packet_size", packet_size
+			a = self.receiver()
+			a.MAX_LENGTH = 699
+
+			for i in range(len(toSend)/packet_size + 1):
+				s = toSend[i*packet_size:(i+1)*packet_size]
+				if s != '':
+					##print 'sending', repr(s)
+					a.dataReceived(s)
+
+			self.aE(self.strings, a.got)
 
 
 	def test_illegalStrings(self):
 		"""
-		Assert that illegal strings raise either JSONDecodeError or ParseError.
+		Assert that illegal strings raise a ParseError.
 
 		This is basically redundant with L{test_illegalWithPacketSizes}
 		but keep it anyway for debugging.
@@ -238,7 +256,7 @@ class DelimitedJSONStreamTests(unittest.TestCase):
 		for s in self.illegalSequences:
 			a = self.receiver()
 			a.MAX_LENGTH = 50
-			print 'Sending', repr(s)
+			##print 'Sending', repr(s)
 			self.aR(decoders.ParseError, lambda s=s: a.dataReceived(s))
 
 
@@ -258,13 +276,11 @@ class DelimitedJSONStreamTests(unittest.TestCase):
 		self.assert_(isinstance(a.lastJsonError, simplejson.decoder.JSONDecodeError));
 
 
-	@todo
 	def test_illegalWithPacketSizes(self):
 		"""
-		Assert that illegal strings raise either JSONDecodeError or ParseError,
+		Assert that illegal strings raise a ParseError,
 		even when they arrive in variable packet sizes.
 		"""
-		1/0
 		def sendData(a, sequence, packet_size):
 			for i in range(len(sequence)/packet_size + 1):
 				s = sequence[i*packet_size:(i+1)*packet_size]
@@ -275,7 +291,6 @@ class DelimitedJSONStreamTests(unittest.TestCase):
 
 		for sequence in self.illegalSequences:
 			for packet_size in range(1, 2):
-
 				##print 'packet_size', packet_size
 
 				a = self.receiver()
@@ -287,8 +302,6 @@ class DelimitedJSONStreamTests(unittest.TestCase):
 					decoders.ParseError,
 					lambda: sendData(a, sequence, packet_size)
 				)
-
-	# TODO: test two newlines in a row?
 
 
 
