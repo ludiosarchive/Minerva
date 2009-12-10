@@ -209,22 +209,23 @@ Real-world deployment strategy that supports HTTP, Flash Socket, WebSocket:
 			reverse-proxying non-static content on both ports to a Twisted server that
 			is serving web resources, one of which is a newlink.HttpFace
 
-XXX FIX
-		Twisted server running newlink.SocketFace, listening on:
-			As many other ports as you want on IP0.
-			80, 443, and many other ports on IP1.
+		Twisted process running:
+			newlink.HttpFace, listening on Unix socket or TCP port for upstream proxy.
+			newlink.SocketFace, listening on 80, 443, 843, <extra ports> on IP1.
+			newlink.SocketFace + SSL, istening on 80, 443, <extra ports> on IP2.
 
-		Twisted server running newlink.SocketFace + SSL, listening on:
-			As many other ports as you want on IP0.
-			80, 443, and many other ports on IP1.
-XXX
+	Why listen on port 843? SocketFace serves Flash socket policy files when asked.
+	843 is the port where Flash first looks for a Socket master policy file. [6] If Flash
+	player cannot get the policy from port 843, it will try to get the policy from the connection
+	destination port. But by serving the policy on port 843, we reduce the time needed
+	to establish the first connection.
 
+	Note that Flash Socket cannot connect to the `+ SSL' services, so we do not need
+	to have SocketFace listen on 843 on IP2.
 
-		TODO: ... describe encryption
-
-
-	<extra suggested ports> for listening:
-		TODO: ...
+	Suggested <extra ports> for listening:
+		
+		TODO: find which ports are likely to be unblocked by proxies
 
 
 	Also, keep in mind that SSL connections will use a lot more memory compared to
@@ -240,6 +241,7 @@ XXX
 		passthrough of data when the connection doesn't look like SSL. To work with the
 		standard OpenSSL, this might require changing our Minerva protocols a bit to trigger
 		OpenSSL's fallback. This approach is very ugly. See http://twistedmatrix.com/trac/ticket/490
+	[6] http://www.adobe.com/devnet/flashplayer/articles/fplayer9_security_04.html
 
 
 

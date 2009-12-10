@@ -935,8 +935,13 @@ _2_64 = 2**64
 
 class SocketTransport(protocol.Protocol):
 	"""
-	This handles both Flash Socket and WebSocket connections.
-	TODO: actually handle it 
+	This is a hybrid:
+		Flash Socket
+		Flash Socket (ciphered)
+		Flash socket policy server
+		WebSocket
+
+	TODO: actually do it
 	"""
 	implements(IProtocol, ISimpleConsumer, IPushProducer, IPullProducer, IMinervaTransport)
 
