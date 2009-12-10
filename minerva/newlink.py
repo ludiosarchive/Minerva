@@ -120,6 +120,8 @@ from twisted.internet import protocol, defer
 from twisted.internet.interfaces import IPushProducer, IPullProducer, IProtocol, IProtocolFactory
 from twisted.web import resource
 
+_postImportVars = vars().keys()
+
 
 # Copy/paste of twisted.internet.interfaces.IConsumer, with 'write' method removed
 class ISimpleConsumer(Interface):
@@ -1286,6 +1288,5 @@ class HttpFace(resource.Resource):
 
 
 
-# FUTURE:
-## class WebSocketTransport
-## class WebSocketFace
+from pypycpyo import optimizer
+optimizer.bind_all_many(vars(), _postImportVars)

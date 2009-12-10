@@ -7,6 +7,8 @@ from collections import deque
 
 from twisted.python import log
 
+_postImportVars = vars().keys()
+
 
 _quickConvert_strToPosInt = {}
 for num in xrange(10000):
@@ -369,3 +371,8 @@ class GenericIdentifier(object):
 
 	def __repr__(self):
 		return '<StreamId id=%r>' % (self.id,)
+
+
+
+from pypycpyo import optimizer
+optimizer.bind_all_many(vars(), _postImportVars)
