@@ -1,6 +1,5 @@
 import os
 import cgi
-from collections import defaultdict
 import simplejson as json
 
 from twisted.python.filepath import FilePath
@@ -9,7 +8,7 @@ from twisted.web import resource, static, http, server
 from zope.interface import implements
 
 from cwtools import testing, jsimp
-from minerva import link
+from minerva import newlink
 
 
 class Index(resource.Resource):

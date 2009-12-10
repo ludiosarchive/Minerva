@@ -737,8 +737,9 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		self.aE([['streamUp', stream]], o.log)
 
 		st.unobserveStreams(o)
-		stream2 = st.buildStream(_DummyId('another fake id'))
-		self.aE([['streamUp', stream]], o.log) # still the same
+		# Since it's not observing, it shouldn't get any notification of this new Stream
+		_anotherStream = st.buildStream(_DummyId('another fake id'))
+		self.aE([['streamUp', stream]], o.log) # same as before
 
 
 	def test_unobserveUnknownRaisesError(self):
@@ -1185,8 +1186,8 @@ class SocketTransportTests(unittest.TestCase):
 		"""
 		Server thinks too much nesting is equivalent to intra-frame JSON corruption.
 		If this test fails, you need to install the patched simplejson."""
-		n = jsonNestingLimit = 32
-		self.transport.dataReceived(self.serializeFrames([eval('{"":' * n + '1' + '}' * n)])) # must use eval instead of json
+		nestingLimit = 32
+		self.transport.dataReceived(self.serializeFrames([eval('{"":' * nestingLimit + '1' + '}' * nestingLimit)]))
 		self._parseFrames()
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
@@ -1195,8 +1196,8 @@ class SocketTransportTests(unittest.TestCase):
 		"""
 		Server thinks too much nesting is equivalent to intra-frame JSON corruption
 		If this test fails, you need to install the patched simplejson."""
-		n = jsonNestingLimit = 32
-		self.transport.dataReceived(self.serializeFrames([eval('[' * n + '1' + ']' * n)])) # must use eval instead of json
+		nestingLimit = 32
+		self.transport.dataReceived(self.serializeFrames([eval('[' * nestingLimit + '1' + ']' * nestingLimit)]))
 		self._parseFrames()
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 

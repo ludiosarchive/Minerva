@@ -5,7 +5,6 @@ Useful for testing. Most of the time, JavaScript/Flash
 code will be parsing the streams.
 """
 
-import re
 import struct
 import simplejson
 from minerva.abstract import strToNonNeg
