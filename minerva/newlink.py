@@ -1251,7 +1251,7 @@ class SocketTransport(protocol.Protocol):
 class SocketFace(protocol.ServerFactory):
 	implements(IProtocolFactory)
 
-	protocol	 = SocketTransport
+	protocol = SocketTransport
 
 	def __init__(self, reactor, clock, streamTracker, firewall):
 		self._reactor = reactor
