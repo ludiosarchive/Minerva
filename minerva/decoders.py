@@ -101,7 +101,7 @@ class NetStringDecoder(object):
 		capturedThisTime = self._data[self._offset:self._offset + self._lengthToRead - len(self._tempData)]
 		# This has to be a string append to be fast; do not use another local variable.
 		self._tempData += capturedThisTime
-		assert len(self._tempData) <= self._lengthToRead, "maybeFull=%r, _lengthToRead=%r, _offset=%r" % (maybeFull, self._lengthToRead, self._offset)
+		assert len(self._tempData) <= self._lengthToRead, "_lengthToRead=%r, _offset=%r" % (self._lengthToRead, self._offset)
 		if self._lengthToRead == len(self._tempData):
 			##if self.noisy: print "doData: captured a full fragment; _completeStrings is now %r" % (self._completeStrings)
 			self._offset += len(capturedThisTime)
