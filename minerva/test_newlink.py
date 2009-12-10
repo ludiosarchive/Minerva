@@ -21,11 +21,6 @@ from minerva.newlink import (
 	IMinervaTransport, SocketTransport,
 )
 
-from minerva.website import (
-	RejectTransport, ITransportFirewall, CsrfTransportFirewall,
-	NoopTransportFirewall, AntiHijackTransportFirewall,
-)
-
 from minerva.mocks import (
 	FakeReactor, DummyChannel, DummyRequest, _DummyId, MockProducer,
 	MockStream, MockMinervaProtocol, MockMinervaProtocolFactory,

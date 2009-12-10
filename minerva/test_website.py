@@ -31,21 +31,25 @@ class CsrfStopperTests(unittest.TestCase):
 	def test_makeTokenDifferentForDifferentSecret(self):
 		c1 = CsrfStopper("secret string")
 		i1 = _DummyId("id")
+		token1 = c1.makeToken(i1)
 
 		c2 = CsrfStopper("secret string 2")
 		i2 = _DummyId("id")
+		token2 = c2.makeToken(i2)
 
-		self.assertNotEqual(i1, i2)
+		self.assertNotEqual(token1, token2)
 
 
 	def test_makeTokenDifferentForDifferentId(self):
 		c1 = CsrfStopper("secret string")
 		i1 = _DummyId("id")
+		token1 = c1.makeToken(i1)
 
 		c2 = CsrfStopper("secret string")
 		i2 = _DummyId("id 2")
+		token2 = c2.makeToken(i2)
 
-		self.assertNotEqual(i1, i2)
+		self.assertNotEqual(token1, token2)
 
 
 	def test_makeTokenMakesSafeBase64(self):
