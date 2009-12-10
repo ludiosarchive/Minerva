@@ -173,6 +173,76 @@ Minerva limitations:
 
 
 
+Real-world deployment strategy that supports HTTP, Flash Socket, WebSocket:
+
+	"ciphered" below refers to custom encryption used in Minerva to secure Flash sockets.
+
+	A lot of users are behind firewalls that restrict connections to ports other than 80 and 443.
+	Often traffic through port 80 is transparently modified. Only in rare cases is traffic through
+	port 443 transparently modified, so we do not put much thought into this case.
+
+	To allow these firewalled clients to connect, you'll want to listen for Flash Socket and
+	Web Socket connections on 80 and 443, as well as other ports. If your port 443
+	is already occupied by a webserver, you will need two additional public IP addresses.
+	One will be listening for Flash Socket (ciphered + unencrypted) on 443. Web Socket
+	(unencrypted) will be functional on this port as well. It is reasonable to serve unencrypted
+	WebSocket on port 443, because this has a fighting chance of making it through an HTTPS
+	CONNECT proxy [3].
+
+	If you want Web Socket (SSL), you'll need the second additional IP. This restriction could be
+	lifted [5], but it is very low priority.
+
+	To summarize port-sharing, SSL and non-SSL listeners cannot share the same port.
+	Because Flash Socket (ciphered + unencrypted) is not SSL, it can share the same port as
+	WebSocket (unencrypted)
+
+	Minerva's web resources (for long-polling/HTTP streaming) should be behind a hardened webserver
+	like nginx. Compared to twisted.web, nginx is a bit harder to DoS, handles more compatibility
+	problems, and maintains an SSL session cache [4]. These advantages (probably)
+	outweigh the overhead of connecting to a Unix domain socket for every long-polling/
+	streaming HTTP request. In the future, we may move more of Minerva's HTTP
+	functionality into nginx, in the spirit of nginx_http_push_module [2]
+
+	Here is a reasonable setup for a small website:
+
+		nginx listening on ports 80 and 443 on IP0
+			reverse-proxying non-static content on both ports to a Twisted server that
+			is serving web resources, one of which is a newlink.HttpFace
+
+XXX FIX
+		Twisted server running newlink.SocketFace, listening on:
+			As many other ports as you want on IP0.
+			80, 443, and many other ports on IP1.
+
+		Twisted server running newlink.SocketFace + SSL, listening on:
+			As many other ports as you want on IP0.
+			80, 443, and many other ports on IP1.
+XXX
+
+
+		TODO: ... describe encryption
+
+
+	<extra suggested ports> for listening:
+		TODO: ...
+
+
+	Also, keep in mind that SSL connections will use a lot more memory compared to
+	non-SSL connections. [1]
+
+	[1] google, "occupancy of ssl connections"
+	[2] http://pushmodule.slact.net/
+	[3] "Most proxies disable CONNECT to anything but port 443."
+		http://lists.whatwg.org/htdig.cgi/whatwg-whatwg.org/2008-November/017241.html
+	[4] See nginx/src/event/ngx_event_openssl.c
+	[5] This can be done by using Twisted's support for mem-bio SSL, but exarkun says
+		this copies data a lot. An alternate approach would be to use OpenSSL's built-in
+		passthrough of data when the connection doesn't look like SSL. To work with the
+		standard OpenSSL, this might require changing our Minerva protocols a bit to trigger
+		OpenSSL's fallback. This approach is very ugly. See http://twistedmatrix.com/trac/ticket/490
+
+
+
 Producers/consumers:
 
 	Like twisted's TCP transport and twisted.web Requests, Minerva supports producers/consumers.

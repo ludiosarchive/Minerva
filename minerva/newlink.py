@@ -13,8 +13,8 @@ Minerva glossary:
 			a number, a boolean, or null, or any nested combination of these.
 
 		Note on arrays:
-			if any clients are IE6, arrays in boxes must have 2^16 - 1 items (65535) or less,
-			because IE6 cannot `eval' a stringed-array with 2^16 or more items. See [1]
+			if any clients are IE6/IE7, arrays in boxes must have 2^16 - 1 items (65535) or less,
+			because IE6/IE7 cannot `eval' a stringed-array with 2^16 or more items. See [1]
 
 		Note on (nan, inf, -inf) (NaN, Infinity, or -Infinity):
 			C2S: Minerva server must treat NaN / Infinity / -Infinity the same as JSON corruption.
@@ -934,7 +934,10 @@ _2_64 = 2**64
 
 
 class SocketTransport(protocol.Protocol):
-
+	"""
+	This handles both Flash Socket and WebSocket connections.
+	TODO: actually handle it 
+	"""
 	implements(IProtocol, ISimpleConsumer, IPushProducer, IPullProducer, IMinervaTransport)
 
 	request = None # no associated HTTP request
@@ -1232,6 +1235,8 @@ class SocketTransport(protocol.Protocol):
 
 
 	def stopProducing(self):
+		# Our connectionLost logic eventually deals with the producers,
+		# so we don't need to do anything here.
 		pass
 
 
