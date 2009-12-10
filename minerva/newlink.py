@@ -61,7 +61,7 @@ Minerva glossary:
 			of a unicode string. So, do not rely on this length to be consistent.
 
 		Note on maximum nesting in boxes:
-			containers (arrays/objects) in the box can be nested to a maximum of 28 levels.
+			containers (arrays/objects) in the box can be nested to a maximum of 26 levels.
 			The limit at the JSON decoder level is 32 (note that this includes the very outer level).
 			The limit at the protocol level is 4 levels lower because boxes may be sent in frames
 			that add additional levels of nesting, like this:
@@ -72,9 +72,9 @@ Minerva glossary:
 			or
 				[reservedMegaFrameType, {"helloData": ...}, {"boxes": {"32": box32}}]     (3 additional levels)
 
-			We reserve one additional level, leading to a maximum container nesting rule of 32 - 4 = 28.
-			Note that Minerva server will not always reject frames that slightly exceed this nesting limit,
-			so you are responsible for keeping track of your nesting.
+			We reserve another three levels, leading to a maximum container nesting rule of
+			32 - (3 + 3) = 26. Note that Minerva server will not always reject frames that slightly
+			exceed this nesting limit, so you are responsible for keeping track of your nesting.
 
 		[1] http://code.google.com/p/google-web-toolkit/issues/detail?id=1336
 		[2] http://mail.python.org/pipermail/tutor/2009-April/068263.html

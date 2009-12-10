@@ -8,6 +8,6 @@ setup(
 	name='Minerva',
 	version='9.11.21',
 	description="Minerva",
-	packages=['minerva', 'twisted.plugins'],
+	packages=['minerva', 'minerva.sample', 'twisted.plugins'],
 	package_data={'minerva': ['flash_build/*.swf'],},
 )
