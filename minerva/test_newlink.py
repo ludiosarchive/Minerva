@@ -35,14 +35,26 @@ Fn = Frame.names
 class FrameTests(unittest.TestCase):
 
 	def test_ok(self):
-		f = Frame([1])
+		f = Frame([Fn.box, ["box_payload"]])
 		self.aE('box', f.getType())
 
 
 	def test_notOkay(self):
-		nan = simplejson.loads('NaN')
+		nan = simplejson.loads('NaN') # this always works, but float('nan') => 0 in Python ICC builds (maybe only with floating point optimizations?) 
 		badFrames = ([], [9999], {}, {0: 'x'}, {'0': 'x'}, 1, 1.5, nan, True, False, None)
 		badFrames = badFrames + ([[], "something"], [{}, "something"], [float('Infinity'), "something"], [nan, "something"])
+		for frame in badFrames:
+			self.aR(BadFrame, lambda: Frame(frame))
+
+
+	def test_notOkayWrongArgCount(self):
+		badFrames = [
+			[Fn.boxes],
+			[Fn.boxes, "one", "two"],
+			[Fn.you_close_it, "one"],
+			[Fn.start_timestamps, "one", "two", "three", 4],
+		]
+
 		for frame in badFrames:
 			self.aR(BadFrame, lambda: Frame(frame))
 

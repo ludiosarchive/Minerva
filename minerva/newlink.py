@@ -225,12 +225,13 @@ class Frame(object):
 		except (IndexError, KeyError, TypeError):
 			raise BadFrame("Frame did not have a [0]th item")
 		try:
-			notIn = self.type not in self.knownTypes
-		except TypeError:
-			raise BadFrame("Frame's [0]th item was (probably) not hashable")
-		
-		if notIn:
-			raise BadFrame("Frame(%r) but %r is not a known frame type" % (contents, self.type))
+			typeInfo = self.knownTypes[self.type]
+		except (KeyError, TypeError):
+			raise BadFrame("Frame(%r) has unknown frame type %r, or [0]th item was not hashable" % (contents, self.type))
+
+		_, minArgs, maxArgs = typeInfo
+		if not minArgs <= len(contents) - 1 <= maxArgs:
+			raise BadFrame("Bad argument count for Frame type %r (%r); got %r args." % (self.type, self.getType(), len(contents) - 1))
 
 		self.contents = contents
 
@@ -1123,9 +1124,7 @@ class SocketTransport(protocol.Protocol):
 			except BadFrame:
 				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
-			frameType, minArgs, maxArgs = Frame.knownTypes[frameObj[0]]
-			if not minArgs <= len(frameObj) - 1 <= maxArgs:
-				 return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+			frameType = frame.getType()
 
 			# We demand a 'hello' frame before any other type of frame
 			if self._gotHello is False and frameType != 'hello':
