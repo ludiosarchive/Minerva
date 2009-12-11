@@ -24,8 +24,8 @@ frame
 	Minerva-level and application-level data.
 box
 	an atomic piece of application-level data that can be fit into a frame and sent
-	to the peer. Sending boxes successfully is the point of Minerva. Often, a frame
-	will contain more than one box.
+	to the peer. Sending boxes successfully is the point of Minerva. At Minerva-level,
+	a frame will often contain more than one box.
 
 	Everything in a box can be represented near-equivalently in server and browser
 	environments. On the server, a box might be a ``list``, a ``dict``, a ``unicode`` object (or an ASCII-only ``str``),
@@ -131,8 +131,8 @@ for the primary domain.
 
 Chunked-encoding is irrelevant
 ---------------------------------------
-HTTP/1.1 chunked-encoded has **nothing** to do with Comet. A lot of people are confused
-by this, as evidenced by the garbage on the web. Minerva works fine over HTTP/1.0,
+Contrary to many confused blog posts, HTTP/1.1 chunked-encoded has **nothing**
+to do with Comet. Any sane HTTP-based Comet should work fine over HTTP/1.0,
 where chunks don't even exist. Chunks are a low-level detail of HTTP/1.1 that make
 it possible to send data of unknown length, and reuse the connection for more
 HTTP requests/responses.
