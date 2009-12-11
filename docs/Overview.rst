@@ -188,10 +188,10 @@ where no data can be sent server->client.
 Minerva limitations
 =============
 
-Minerva server is written in Python, which is really slow. Ideally, Minerva server would run on Factor_.
+Minerva server is written in Python, which is slow [#]_. Ideally, Minerva server would run on Factor_.
 
-Relies on subdomains + document.domain for cross-domain communication,
-which necessitates a wildcard SSL cert.
+For cross-domain communication, Minerva relies on access to many subdomains + ``document.domain``.
+If HTTPS is needed, this necessitates a wildcard SSL cert.
 
 	**Future:** For cross-domain, we could rely on one or more of:
 
@@ -202,10 +202,10 @@ which necessitates a wildcard SSL cert.
 	*	Google Closure's VBScript-based transport for IE: ``goog/net/xpc/nixtransport.js``
 
 Minerva server ignores the selectively-acknowledged boxes in the SACK frame
-(only the primary ACK number is used)
+(only the primary ACK number is used).
 
 Minerva server does not use gzip or any other compression to compress the boxes.
-If you want the client to receive compressed data, write your client-side logic to make
+If you want the client to receive compressed data, write client-side application code to make
 HTTP requests when necessary. These HTTP requests will hopefully be gzip-compressed.
 
 In the future, we could support "temporary compression" when there is a large amount
@@ -229,6 +229,8 @@ http://sys.cs.rice.edu/course/comp314/09/p2/p2-guide
 **Future:** for WebSocket and HTTP transports, some kind of client-side decompression
 could be done inside a Web Worker.
 
+..	[#] http://shootout.alioth.debian.org/u64/benchmark.php?test=all&lang=all&box=1
+
 ..	_Factor: http://factorcode.org/
 
 
@@ -251,7 +253,7 @@ If you want Web Socket (SSL), you'll need the second additional IP. This require
 lifted [#]_, but it is very low priority.
 
 To summarize port-sharing, SSL and non-SSL listeners cannot share the same port.
-Because Flash Socket (ciphered + unencrypted) is not SSL, it shares the same port as
+Because Flash Socket (ciphered + unencrypted) is not SSL, it can share the same port as
 WebSocket (unencrypted)
 
 Minerva's web resources (for long-polling/HTTP streaming) should be behind a hardened webserver
@@ -263,7 +265,7 @@ of nginx_http_push_module [#]_.
 
 Here is a reasonable setup for a small website:
 
-*	nginx listening on ports 80 and 443 on IP0
+*	nginx listening on ports 80 and 443 on ``IP0``
 
 	*	reverse-proxying non-static content on both ports to a Twisted server that
 		is serving web resources, one of which is a newlink.HttpFace
@@ -272,8 +274,8 @@ Here is a reasonable setup for a small website:
 
 	*	newlink.HttpFace, listening on a Unix socket or TCP port for upstream
 		proxy (often nginx).
-	*	newlink.SocketFace, listening on 80, 443, 843, <extra ports> on IP1.
-	*	newlink.SocketFace + SSL, listening on 80, 443, <extra ports> on IP2.
+	*	newlink.SocketFace, listening on 80, 443, 843, <extra ports> on ``IP1``.
+	*	newlink.SocketFace + SSL, listening on 80, 443, <extra ports> on ``IP2``.
 
 Why listen on port 843?
 843 is the port where Flash first looks for a Socket master policy file. [#]_ SocketFace serves Flash socket policy files when asked. If Flash
@@ -284,12 +286,13 @@ time needed to establish the first connection.
 Note: 843 is used for Minerva data transmission as well, but typically only as
 a fallback. It's not restricted to just serving the policy file.
 
-Note that Flash Socket cannot connect to the `+ SSL' listener (which right now it is
-only for WebSocket SSL), so we do not need to have a non-SSL SocketFace listen on port 843 on IP2.
+Flash Socket cannot connect to the `SocketFace + SSL` listener (which right now it is
+only for WebSocket SSL), so we do not need to have a SocketFace (non-SSL) listen on
+port 843 on IP2.
 
 Suggested <extra ports> for listening:
 
-*	21 (ftp), 22 (ssh), 110 (pop3), 143 (imap), 465 (SMTPs - MS),
+*	21 (ftp), 22 (ssh), 110 (pop3), 143 (imap), 465 (SMTPs - Microsoft) [#]_,
 	843 (Flash master policy port) 993 (imap+ssl), 995 (pop3+ssl)
 
 Also, keep in mind that SSL connections will use a lot more memory compared to
@@ -314,37 +317,48 @@ raising unix socket backlog for Twisted itself
 
 ..	[#] http://www.adobe.com/devnet/flashplayer/articles/fplayer9_security_04.html
 
+..	[#] http://it.slashdot.org/comments.pl?sid=1131325&cid=26896481
+
 ..	[#] http://google.com/search?hl=en&q=%22occupancy%20of%20ssl%20connections%22%20nginx
 
 
 Producers/consumers
 ================
 
-Like twisted's TCP transport and twisted.web Requests, Minerva supports producers/consumers [#]_.
+Like many things in Twisted, Minerva supports producers/consumers for efficient high-volume
+streaming. [#]_. In Twisted, pressure information from consumers controls the creation of
+bytes. In Minerva, it controls the creation of *frames*, not bytes.  
 
-In Minerva, a producer can be attached to the Stream (generally a MinervaProtocol
-attaches itself). This poses some challenges to the implementation, because Minerva
-transports may frequently attach and detach from the Stream.
+In Minerva, a producer can be attached to the Stream. Usually, a MinervaProtocol
+will perform this attachment.
 
-In general, TCP pressure from the TCP transport of the primary
+In general, TCP pressure from the TCP connection of the primary
 transport directly affects the producer attached to Stream. Also, if the producer is a push
-producer and no Minerva transports are attached the Stream, the producer is paused.
+producer, the producer is paused while there are no Minerva transports attached to the Stream.
+
+The implementation is complicated because Minerva transports may frequently attach and
+detach from the Stream. `Producers/consumers technical details`_ describes what really
+happens. However, it does "just work".
 
 ..	[#] http://twistedmatrix.com/projects/core/documentation/howto/producers.html
 
 
-Technical details
+Producers/consumers technical details
 ---------------------
 
-"type of producer" means pull or push.
+Skip this section unless you are trying to understand the producer/consumer code in
+``minerva.newlink``.
 
-This is the object chain, "upstream" objects at top. Objects on adjacent lines
-usually know about each other.
+"Type of producer" is *pull*, or *push*. [#]_
+
+This is the object chain, "upstream" objects are at the top. Objects on adjacent lines
+usually know about each other (have references).
 
 *	MinervaProtocol
 *	Stream
-*	\*Transport
-*	(Twisted)
+*	\*Transport (i.e. SocketTransport, XhrTransport, ScriptTransport)
+*	(Twisted) - refers to either the TCP transport or to a ``twisted.web.http.Request``.
+	Both have a ``registerProducer`` method.
 
 Producer attachment goes downstream, pressure information goes upstream.
 
@@ -353,31 +367,35 @@ which causes Stream creation, which causes MinervaProtocol creation. This
 might not happen instantly, because \*Transport must be authenticated first.
 At this time, there are no producers in the system.
 
-MinervaProtocol can at any time register or unregister a pull or push producer with Stream.
+At any time, a pull or push producer can be registered with Stream. The producer can be
+unregistered at any time. Usually, a MinervaProtocol will do the registration and unregistration.
 
-Stream's goal is to attach the same type of producer with every S2C transport that attaches to it,
-even if the S2C transport isn't attached yet.
+Stream's goal is to register the same type of producer with every primary transport that
+attaches to it, even if the primary transport isn't attached yet (or not yet primary). Stream
+must also unregister producers from transports that are no longer primary transports.
 
-Stream must also unregister producers from transports that are no longer primary transports.
+If type of producer is push, Stream must also call ``pauseProducing`` on MinervaProtocol whenever
+there is no primary transport. It must also call ``resumeProducing`` when this situation ends.
 
-If type of producer is push, Stream must also call pauseProducing on MinervaProtocol whenever
-there is no primary transport. It must also call resumeProducing when this situation ends.
+\*Transport's job is simple, it just registers itself as the correct type of producer with (Twisted).
+One edge case: it must remember if (Twisted) paused it, and if so, ``pauseProducing`` newly-attached push producers.
 
-\*Transport's job is simple, it just registers itself as the correct type of producer with Twisted.
-One edge case: it must remember if Twisted paused it, and if so, pauseProducing newly-attached push producers.
+During normal operation for a registered *pull* producer, these conditions result in
+``resumeProducing`` calls on MinervaProtocol:
 
-During normal operation for a registered PULL producer, these conditions result in
-resumeProducing calls on MinervaProtocol:
 *	(Twisted) - [resume] when it wants more data to send
 
-During normal operation for a registered PUSH producer, these conditions result in
-pauseProducing or resumeProducing calls on MinervaProtocol:
+During normal operation for a registered *push* producer, these conditions result in
+``pauseProducing`` or ``resumeProducing`` calls on MinervaProtocol:
 
 *	(Twisted) - [resume] when it wants more data to send
 *	(Twisted) - [pause] when it has enough data
 *	\*Transport - [pause] if it was paused earlier by (Twisted)
 *	Stream - [pause] when there are no primary transports
 *	Stream - If paused, [resume] when a primary transport appears
+
+
+..	[#] http://twistedmatrix.com/projects/core/documentation/howto/producers.html
 
 
 
