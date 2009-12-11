@@ -6,3 +6,6 @@ date > ./minerva/flash_build/build.log
 echo >> ./minerva/flash_build/build.log
 haxe -v -swf-version 9 -swf ./minerva/flash_build/app.swf -main cw.net.SocketBridge >> ./minerva/flash_build/build.log
 cp /med/builds/swfobject/swfobject/expressInstall.swf ./minerva/flash_build/
+
+# This depends on docutils
+rst2html.py README > README.html

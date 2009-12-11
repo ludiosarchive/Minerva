@@ -224,8 +224,8 @@ Real-world deployment strategy that supports HTTP, Flash Socket, WebSocket:
 		Note: 843 is used for Minerva data transmission as well, but typically only as
 		a fallback. It's not restricted to just serving the policy file.
 
-	Note that Flash Socket cannot connect to the `+ SSL' listener (right now it is just for
-	WebSocket SSL), so we do not need to have SocketFace listen on port 843 on IP2.
+	Note that Flash Socket cannot connect to the `+ SSL' listener (which right now it is
+	only for WebSocket SSL), so we do not need to have a non-SSL SocketFace listen on port 843 on IP2.
 
 	Optional <extra ports> for listening:
 		21 (ftp), 22 (ssh), 110 (pop3), 143 (imap), 465 (SMTPs - MS),
@@ -237,6 +237,9 @@ Real-world deployment strategy that supports HTTP, Flash Socket, WebSocket:
 
 	Also, keep in mind that SSL connections will use a lot more memory compared to
 	non-SSL connections. [1]
+
+	TODO: import information about increasing connection limits on Linux, including
+		raising unix socket backlog for Twisted itself
 
 	[1] google, "occupancy of ssl connections"
 	[2] http://pushmodule.slact.net/
