@@ -259,16 +259,19 @@ Design your protocol the way you would design any other frame-based protocol, bu
 1.	Boxes are semi-structured (serialized and deserialized with JSON). Exploit the structure
 	of arrays and objects when possible.
 
-2.	Observe all of the `Box limitations`_
+2.	Observe all of the `Box limitations`_; otherwise, your streams may reset.
 
 3.	Make your boxes small. Minerva usually doesn't send more than one box at a time
-	(there is no interleaving). A big box might "hold up" other queued boxes.
+	(there is no interleaving). A big box might hold up other queued boxes.
 	If you need to send a lot of data, try to find a reasonable way to split and reassemble it,
 	it in the spirit of `amphacks/mediumbox.py`_.
 
 4.	If you care about performance in IE, prefer ``Array`` s to ``Object`` s. IE allocates
 	a lot of objects when you iterate over an ``Object`` with ``for(k in obj)``, and its
 	garbage collector is poor (especially before XP SP3/JScript 5.7) [#]_ [#]_.
+
+5.	Don't rely on the length of unicode strings to be the same in both server and browser
+	environments. `Notes on Python UCS-2/UCS-4 builds, and unicode length`_ explains.
 
 ..	[#] http://ajaxian.com/archives/garbage-collection-in-ie6
 ..	[#] http://pupius.co.uk/blog/2007/03/garbage-collection-in-ie6/
