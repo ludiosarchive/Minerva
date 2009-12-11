@@ -97,7 +97,7 @@ Why you might want Minerva
 
 	*	Minerva automatically retries requests if they fail.
 
-	*	Minerva can use WebSocket/Flash sockets, which provide some obfuscation against
+	*	Minerva can use WebSocket/Flash Socket, which provide some obfuscation against
 		Firebug/HttpFox.
 
 	*	Minerva does CSRF protection on all transports, as long as you set it up right.
@@ -235,27 +235,6 @@ slower.
 
 
 
-Other Minerva features
-====================
-
-Minerva can respond to TCP pressure using Twisted's producer/consumer system.
-Applications can stream megabytes of frames to the peer while using little memory.
-Responding to TCP pressure is useful, because it often absolves the client
-from having to send application-level "back off" and "ok, resume" messages.
-See section `Producers/consumers`_.
-
-Minerva JavaScript client: When Minerva uses HTTP transports, it tries its best to use a maximum
-of two TCP connections. Minerva understands when browsers have to open new TCP connections.
-
-Minerva JavaScript client: To reduce TCP connection establishment latencies, the client will avoid
-aborting HTTP connections. Because of how HTTP works, aborting an HTTP connection
-from the client necessitates closing the TCP connection.
-
-(Planned) Minerva JavaScript client: Minerva uses "request interleaving" to reduce the gap
-where no data can be sent server->client.
-
-
-
 Designing your application protocol
 =========================
 **TODO**: Write a bit more about standardized request/response mechanism.
@@ -277,6 +256,32 @@ Things to keep in mind:
 ..	[#] http://pupius.co.uk/blog/2007/03/garbage-collection-in-ie6/
 
 ..	_`amphacks/mediumbox.py`: http://bazaar.launchpad.net/~glyph/%2Bjunk/amphacks/annotate/head%3A/python/amphacks/mediumbox.py
+
+
+
+Uncommon features in Minerva
+=====================
+
+Minerva does a lot of neat stuff you won't find in other Comet servers.
+
+*	Minerva can respond to TCP pressure using Twisted's producer/consumer system.
+	Applications can stream megabytes of frames to the peer while using little memory.
+	Responding to TCP pressure is useful, because it often absolves the client
+	from having to send application-level "back off" and "ok, resume" messages.
+	See section `Producers/consumers`_.
+
+*	Minerva client: When Minerva uses HTTP transports, it tries its best to use a maximum
+	of two TCP connections. Minerva understands when browsers have to open new TCP connections.
+
+*	Minerva client: To reduce TCP connection establishment latencies, the client will avoid
+	aborting HTTP connections. Because of how HTTP works in browser environments, closing
+	an HTTP connection client-side necessitates closing the TCP connection.
+
+*	**Future:** Minerva client: use "request interleaving" to reduce the gap
+	where no data can be sent server->client. Minerva server's design makes this
+	feature easy to implement. The only thing the client has to do to "request
+	interleave" is to connect a new S2C transport before the existing one is closed
+	by the server.
 
 
 
@@ -385,19 +390,19 @@ use only ASCII-safe JSON. It may apply in future versions, so keep it mind.
 Real-world deployment strategy that supports HTTP, Flash Socket, WebSocket
 =======================================================
 
-A lot of users are behind firewalls that restrict connections to ports other than 80 and 443.
-Often traffic through port 80 is transparently modified. Only in rare cases is traffic through
-port 443 transparently modified, so we do not put much thought into this case.
+Many users are behind firewalls that restrict connections to ports other than 80 and 443.
+In addition, traffic through port 80 is often transparently modified. Only in rare cases is
+traffic through port 443 transparently modified, so we do not put much thought into this case.
 
 To allow these firewalled clients to connect, you'll want to listen for Flash Socket and
-Web Socket connections on 80 and 443, as well as other ports. If your port 443
+WebSocket connections on 80 and 443, as well as other ports. If your port 443
 is already occupied by a webserver, you will need two additional public IP addresses.
-One will be listening for Flash Socket (ciphered + unencrypted) on 443. Web Socket
+One will be listening for Flash Socket (ciphered + unencrypted) on 443. WebSocket
 (unencrypted) will be functional on this port as well. It is reasonable to serve unencrypted
 WebSocket on port 443, because this has a fighting chance of making it through an HTTPS
 CONNECT proxy [#]_.
 
-If you want Web Socket (SSL), you'll need the second additional IP. This requirement could be
+If you want WebSocket (SSL), you'll need the second additional IP. This requirement could be
 lifted [#]_, but it is very low priority.
 
 To summarize port-sharing, SSL and non-SSL listeners cannot share the same port.
@@ -407,7 +412,7 @@ WebSocket (unencrypted)
 Minerva's web resources (for long-polling/HTTP streaming) should be behind a hardened webserver
 like nginx. Compared to twisted.web, nginx is a bit harder to DoS, handles more compatibility
 problems, and maintains an SSL session cache [#]_. These advantages probably
-outweigh the overhead of an open socket for every long-polling/streaming HTTP request.
+outweigh the overhead of an extra open socket (inside the server datacenter) for every long-polling/streaming HTTP request.
 In the future, we may move more of Minerva's HTTP functionality into nginx, in the spirit
 of nginx_http_push_module [#]_.
 
@@ -427,27 +432,22 @@ Here is a reasonable setup for a small website:
 
 Why listen on port 843?
 843 is the port where Flash first looks for a Socket master policy file. [#]_ SocketFace serves Flash socket policy files when asked. If Flash
-player cannot get the policy file from port 843, it will try to get the policy from the
+player cannot get the policy file from port 843, it will try to get the policy file from the
 connection destination port. But by serving the policy on port 843, we reduce the
 time needed to establish the first connection.
 
 Note: 843 is used for Minerva data transmission as well, but typically only as
 a fallback. It's not restricted to just serving the policy file.
 
-Flash Socket cannot connect to the `SocketFace + SSL` listener (which right now it is
-only for WebSocket SSL), so we do not need to have a SocketFace (non-SSL) listen on
-port 843 on IP2.
+Flash Socket cannot connect to the `SocketFace + SSL` listener (which right now is
+only for WebSocket SSL), so we do not need to have a SocketFace (non-SSL) serving policy on
+port 843 on ``IP2``.
 
 Suggested <extra ports> for listening:
 
 *	21 (ftp), 22 (ssh), 110 (pop3), 143 (imap), 465 (SMTPs - Microsoft) [#]_,
 	843 (Flash master policy port) 993 (imap+ssl), 995 (pop3+ssl)
 
-Also, keep in mind that SSL connections will use a lot more memory compared to
-non-SSL connections. [#]_
-
-**TODO:** import information about increasing connection limits on Linux, including
-raising unix socket backlog for Twisted itself
 
 ..	[#] "Most proxies disable CONNECT to anything but port 443."
   	http://lists.whatwg.org/htdig.cgi/whatwg-whatwg.org/2008-November/017241.html
@@ -467,7 +467,62 @@ raising unix socket backlog for Twisted itself
 
 ..	[#] http://it.slashdot.org/comments.pl?sid=1131325&cid=26896481
 
+
+
+Handling a lot of connections
+-------------------------------------
+
+If you need Minerva to handle a lot of connections, here are the things you should
+do, in order of priority:
+
+1.	Raise the ``ulimit -n`` of the shell that the Twisted process (`and nginx`_)
+	are started in. This allows the process to have more file descriptors open.
+	``ulimit -n 40000`` is a reasonable start.
+
+	To test that your ``ulimit -n`` command actually worked, you can use the
+	``findfhlimit`` script included in Pypycpyo.
+
+2.	Raise the system-enforced maximum backlog to 512. On Linux, it is 128 by default. ::
+
+		cat /proc/sys/net/core/somaxconn
+		sudo echo -n 512 > /proc/sys/net/core/somaxconn
+		cat /proc/sys/net/core/somaxconn
+
+	Note: nginx's compile-time backlog is 511 [#]_, so raising the system limit will "uncap"
+	it to 511.
+
+3.	Raise the backlog on the Twisted process (default 50). This is typically done by adding a
+	``backlog`` parameter to the `strports`_ strings that your ``twistd`` plugin
+	accepts as command line arguments. A backlog of 511 would be reasonable.
+
+4.	On Linux, you may have to raise ``/proc/sys/fs/file-max`` (default 97519)::
+
+		sudo echo -n 300000 > /proc/sys/net/core/somaxconn
+
+	This hint comes from [#]_.
+
+
+5.	You can further tune the kernel to support more open connections. If this is necessary,
+	you will see ``Out of socket memory`` messages on Linux in your syslog. See
+	`"Tuning the Linux Kernel for many tcp connections"`_.
+
+Also, keep in mind that SSL connections use much more memory than
+non-SSL connections. [#]_
+
+
+..	_`strports`: http://twistedmatrix.com/documents/9.0.0/api/twisted.application.strports.html
+
+..	_`and nginx`: http://timanovsky.wordpress.com/2009/01/09/toward-a-million-user-long-poll-http-application-nginx-erlang-mochiweb/
+
+..	_`"Tuning the Linux Kernel for many tcp connections"`: http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1
+
+..	[#] grep the nginx source for ``NGX_LISTEN_BACKLOG``
+
+..	[#] http://amix.dk/blog/viewEntry/19456
+
 ..	[#] http://google.com/search?hl=en&q=%22occupancy%20of%20ssl%20connections%22%20nginx
+
+
 
 
 Producers/consumers
