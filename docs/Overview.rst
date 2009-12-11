@@ -5,9 +5,24 @@ Minerva overview
 .. contents:: Table of Contents
 
 
+Other available documentation
+======================
+
+This isn't the only documentation. There's also:
+
+*	`protocol.xlsx`_, which describes the various frames used in the Minerva protocol.
+
+*	``minerva/sample/`` in the source tree contains a demo application. **TODO:** How to run it? Should there be a twistd plugin for it?
+
+*	The source code itself, and the extensive unit tests (run them with ``trial minerva``).
+
+
+..	_`protocol.xlsx`: protocol.xlsx
+
 
 Terminology
 =========
+
 application
 	the application that is using Minerva. An application has both a server-side
 	and client-side component.
@@ -218,37 +233,40 @@ We used to think there were more advantages, but they were found to be incorrect
 
 Problems with JSON
 -------------------------
-No support for dates, or sets
+*	No support for dates, or sets
 
-Allows unlimited nesting, so you must worry about stack exhaustion. Minerva requires a
-patched simplejson that limits nesting to 32 levels.
+*	Allows unlimited nesting, so you must worry about stack exhaustion. Minerva requires a
+	patched simplejson that limits nesting to 32 levels.
 
-Because JSON allows as many keys as you want, servers have to deal with possible
-CPU-resource DoS caused by clients exploiting predictable hashing algorithms.
+*	Because JSON allows as many keys as you want, servers have to deal with possible
+	CPU-resource DoS caused by clients exploiting predictable hashing algorithms.
 
-The overhead of quoting every key in {"key": value} even when key is not a
-reserved word in JavaScript is annoying.
+*	The overhead of quoting every key in {"key": value} even when key is not a
+	reserved word in JavaScript is wasteful.
 
-Python dictionaries lose the order of keys in objects after decoding JSON, unless
-application tells Minerva to tell simplejson to put things in OrderedDict, which is
-slower.
+*	Python dictionaries lose the order of keys in objects after decoding JSON, unless
+	application tells Minerva to tell simplejson to put things in ``OrderedDict``, which is
+	slower.
 
 
 
 Designing your application protocol
 =========================
-**TODO**: Write a bit more about standardized request/response mechanism.
+**TODO**: Write about the standard AMP-style request/response mechanism.
 
-Things to keep in mind:
+Design your protocol the way you would design any other frame-based protocol, but with these things in mind:
 
-1.	Observe all of the `Box limitations`_
+1.	Boxes are semi-structured (serialized and deserialized with JSON). Exploit the structure
+	of arrays and objects when possible.
 
-2.	Make your boxes small. Minerva usually doesn't send more than one box at a time
+2.	Observe all of the `Box limitations`_
+
+3.	Make your boxes small. Minerva usually doesn't send more than one box at a time
 	(there is no interleaving). A big box might "hold up" other queued boxes.
 	If you need to send a lot of data, try to find a reasonable way to split and reassemble it,
 	it in the spirit of `amphacks/mediumbox.py`_.
 
-3.	If you care about performance in IE, prefer ``Array`` s to ``Object`` s. IE allocates
+4.	If you care about performance in IE, prefer ``Array`` s to ``Object`` s. IE allocates
 	a lot of objects when you iterate over an ``Object`` with ``for(k in obj)``, and its
 	garbage collector is poor (especially before XP SP3/JScript 5.7) [#]_ [#]_.
 
@@ -516,7 +534,7 @@ do, in order of priority:
 		See `"Changing the Ephemeral Port Range"`_ for non-Linux ways to increase it.
 
 Also, keep in mind that `SSL connections use much more memory`_ than
-non-SSL connections. [#]_
+non-SSL connections.
 
 
 ..	_`strports`: http://twistedmatrix.com/documents/9.0.0/api/twisted.application.strports.html
