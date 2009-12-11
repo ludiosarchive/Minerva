@@ -5,6 +5,7 @@ Minerva overview
 .. contents:: Table of Contents
 
 
+
 Terminology
 =========
 stream
@@ -30,6 +31,7 @@ crypted
 		``[32-bit length of frame][160-bit SHA1 of frame][frame]``
 
 
+
 Goals of Minerva
 ============
 
@@ -51,6 +53,7 @@ Neither the server nor the client application has to worry about which
 transport is carrying their data. Note: applications are still informed when
 the transport type changes, because they may want to send
 data more or less frequently.
+
 
 
 Why you might want Minerva
@@ -97,10 +100,11 @@ object and say that applications need direct access to octets, but consider thes
 		to determine if a transport is stalled or being buffered by proxies.
 
 *	WebSocket uses frames natively, and they are mapped 1:1 to Minerva frames.
-	Also,``0xFF`` cannot be sent over WebSocket (as of 2009-11).
+	Also, ``0xFF`` cannot be sent over WebSocket (as of 2009-11).
 
 *	The application doesn't have to assemble the octets and convert them to Unicode,
 	since this already happened when the frame was parsed.
+
 
 
 Why are frames JSON-based?
@@ -131,17 +135,14 @@ We used to think there were more advantages, but they were found to be incorrect
 * 	We thought that we could avoid ``eval()`` ing strings when the IE htmlfile transport
 	was in use, by dumping the JSON data straight into the ``<script>`` tags written
 	out in the transport. But this
-	creates problems with array prototypes_ in IE and probably leaves iframe windows
+	creates problems with array prototypes [#]_ in IE and probably leaves iframe windows
 	uncollectable in other browsers.
 
 *	We thought that decoding JSON in Flash might be faster than ``eval()`` in IE,
 	but this is very untrue.
 
-.. _prototypes: see comments in ``goog.typeOf`` in Closure Library.
-
-On the server, it's slightly more efficient to have simplejson decoding at the protocol
-level, because we don't have to create many string objects first. This would not matter
-in a sane language that supported automatic in-place fragmenting of string objects.
+..	[#] see comments in ``goog.typeOf`` function in Closure Library: 
+	http://code.google.com/p/closure-library/source/browse/trunk/closure/goog/base.js?r=2#525
 
 
 Problems with JSON
@@ -162,14 +163,15 @@ application tells Minerva to tell simplejson to put things in OrderedDict, which
 slower.
 
 
-Other cool Minerva features
+
+Other Minerva features
 ====================
 
 Minerva can respond to TCP pressure using Twisted's producer/consumer system.
-You can easily stream megabytes of frames to a client while using little memory
-on the server. Responding to TCP pressure is useful, because it will save the client
-from having to send application-level "back off" / "ok, resume" messages.
-See section ("producers/consumers") below.
+Applications can stream megabytes of frames to the peer while using little memory.
+Responding to TCP pressure is useful, because it often absolves the client
+from having to send application-level "back off" and "ok, resume" messages.
+See section `Producers/consumers`_.
 
 Minerva JavaScript client: When Minerva uses HTTP transports, it tries its best to use a maximum
 of two TCP connections. Minerva understands when browsers have to open new TCP connections.
@@ -186,12 +188,18 @@ where no data can be sent server->client.
 Minerva limitations
 =============
 
-Runs on Python, which is really slow. It's destined for a port to Factor.
+Minerva server is written in Python, which is really slow. Ideally, Minerva server would run on Factor_.
 
 Relies on subdomains + document.domain for cross-domain communication,
-which necessitates a wildcard SSL cert
+which necessitates a wildcard SSL cert.
 
-	Future: use postMessage, and Google Closure's VBScript-based transport for IE
+	**Future:** For cross-domain, we could rely on one or more of:
+
+	*	postMessage
+	*	XHR + Origin support
+	*	XDR
+	*	Flash Socket with wildcard allow
+	*	Google Closure's VBScript-based transport for IE: ``goog/net/xpc/nixtransport.js``
 
 Minerva server ignores the selectively-acknowledged boxes in the SACK frame
 (only the primary ACK number is used)
@@ -221,6 +229,7 @@ http://sys.cs.rice.edu/course/comp314/09/p2/p2-guide
 **Future:** for WebSocket and HTTP transports, some kind of client-side decompression
 could be done inside a Web Worker.
 
+..	_Factor: http://factorcode.org/
 
 
 Real-world deployment strategy that supports HTTP, Flash Socket, WebSocket

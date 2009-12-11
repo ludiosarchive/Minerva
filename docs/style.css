@@ -3,7 +3,7 @@ body, li, p, td {
 }
 
 html {
-	background-color: #ccc;
+	background-color: rgb(183, 176, 164);
 }
 
 html, body {
@@ -11,11 +11,11 @@ html, body {
 }
 
 .document {
-	border-radius: 0.5em;
-	-moz-border-radius: 0.5em;
-	-webkit-border-radius: 0.5em;
+	border-radius: 0.4em;
+	-moz-border-radius: 0.4em;
+	-webkit-border-radius: 0.4em;
 	padding: 2em;
-	background-color: #eee;
+	background-color: #f7f7f7;
 	max-width: 42em;
 	margin: 0 auto 0 auto;
 }
