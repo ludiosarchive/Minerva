@@ -131,15 +131,19 @@ HTTP requests and per-domain connection limits
 -------------------------------------------------------------
 
 HTTP requests do not map 1:1 to TCP connections. Browsers will make many
-HTTP requests over the same connection when possible. If a connection is
+HTTP requests over the same connection when possible. This typically only
+happens with HTTP/1.1, and only if the domains for the requests are identical. If a connection is
 busy servicing another request, the browser will open a new connection,
 up to a per-domain maximum. In modern browsers, the per-domain limit is
-4-6 connections [#]_. The `rules for IE`_ are a bit more complicated. In a typical
+4-6 connections. `Browserscope's Network tab`_ shows the limit for each browser.
+The `rules for IE`_ are much more complicated than Browserscope shows.
+
+In a typical
 configuration of Minerva, Minerva connects HTTP-based S2C transports
 to separate subdomains, to avoid using up the precious 2-6 connections
 for the primary domain.
 
-..	[#] http://www.browserscope.org/ (See "Network" tab)
+..	_`Browserscope's Network tab`: http://www.browserscope.org/?category=network&v=top
 
 ..	_`rules for IE`: http://msdn.microsoft.com/en-us/library/cc304129%28VS.85,loband%29.aspx#concurrent_connections
 
