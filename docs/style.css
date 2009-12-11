@@ -24,21 +24,25 @@ h1, h1 *, h2 *, h3 * {
 	font-family: Calibri, Arial, sans-serif;
 }
 
+h1 a, h2 a, h3 a, h4 a, h5 a {
+	color: black;
+}
+
 h1 {
 	font-size: 1.5em;
 }
 
 h2 {
-	font-size: 1.25em;
+	font-size: 1.2em;
 }
 
 h3 {
-	font-size: 1.1em;
+	font-size: 1em;
 }
 
 
 li {
-	margin-bottom: 0.5em;
+	margin: 0.25em 0 0.25em 0;
 }
 
 /* for debugging

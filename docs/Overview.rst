@@ -16,6 +16,7 @@ frame
 box
 	a piece of JSON-encoded data that is sent over streams. *box* refers only
 	to application-level data.
+	**TODO:** Move the real description and limitations of *box* from newlink.py to this file.
 transport
 	an HTTP request/response, or socket, or WebSocket, that Minerva uses to
 	send/receive frames.
@@ -310,11 +311,9 @@ raising unix socket backlog for Twisted itself
 Producers/consumers
 ================
 
-Like twisted's TCP transport and twisted.web Requests, Minerva supports producers/consumers.
-See http://twistedmatrix.com/projects/core/documentation/howto/producers.html
-for information about them.
+Like twisted's TCP transport and twisted.web Requests, Minerva supports producers/consumers [#]_.
 
-In Minerva, a producer can be attached to the Stream (generally the MinervaProtocol
+In Minerva, a producer can be attached to the Stream (generally a MinervaProtocol
 attaches itself). This poses some challenges to the implementation, because Minerva
 transports may frequently attach and detach from the Stream.
 
@@ -322,6 +321,7 @@ In general, TCP pressure from the TCP transport of the primary
 transport directly affects the producer attached to Stream. Also, if the producer is a push
 producer and no Minerva transports are attached the Stream, the producer is paused.
 
+..	[#] http://twistedmatrix.com/projects/core/documentation/howto/producers.html
 
 
 Technical details
@@ -332,16 +332,16 @@ Technical details
 This is the object chain, "upstream" objects at top. Objects on adjacent lines
 usually know about each other.
 
-	*	MinervaProtocol
-	*	Stream
-	*	\*Transport
-	*	(Twisted)
+*	MinervaProtocol
+*	Stream
+*	\*Transport
+*	(Twisted)
 
 Producer attachment goes downstream, pressure information goes upstream.
 
-When a client connects, (Twisted) causes *Transport creation,
+When a client connects, (Twisted) causes \*Transport creation,
 which causes Stream creation, which causes MinervaProtocol creation. This
-might not happen instantly, because *Transport must be authenticated first.
+might not happen instantly, because \*Transport must be authenticated first.
 At this time, there are no producers in the system.
 
 MinervaProtocol can at any time register or unregister a pull or push producer with Stream.
@@ -354,20 +354,21 @@ Stream must also unregister producers from transports that are no longer primary
 If type of producer is push, Stream must also call pauseProducing on MinervaProtocol whenever
 there is no primary transport. It must also call resumeProducing when this situation ends.
 
-*Transport's job is simple, it just registers itself as the correct type of producer with Twisted.
+\*Transport's job is simple, it just registers itself as the correct type of producer with Twisted.
 One edge case: it must remember if Twisted paused it, and if so, pauseProducing newly-attached push producers.
 
 During normal operation for a registered PULL producer, these conditions result in
 resumeProducing calls on MinervaProtocol:
-	(Twisted) - [resume] when it wants more data to send
+*	(Twisted) - [resume] when it wants more data to send
 
 During normal operation for a registered PUSH producer, these conditions result in
 pauseProducing or resumeProducing calls on MinervaProtocol:
-	(Twisted) - [resume] when it wants more data to send
-	(Twisted) - [pause] when it has enough data
-	*Transport - [pause] if it was paused earlier by (Twisted)
-	Stream - [pause] when there are no primary transports
-	Stream - If paused, [resume] when a primary transport appears
+
+*	(Twisted) - [resume] when it wants more data to send
+*	(Twisted) - [pause] when it has enough data
+*	\*Transport - [pause] if it was paused earlier by (Twisted)
+*	Stream - [pause] when there are no primary transports
+*	Stream - If paused, [resume] when a primary transport appears
 
 
 
