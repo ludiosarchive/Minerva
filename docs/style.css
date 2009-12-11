@@ -1,4 +1,4 @@
-* {
+body, li, p, td {
 	font-family: Calibri, Verdana, Arial, sans-serif;
 }
 
@@ -35,6 +35,17 @@ h2 {
 h3 {
 	font-size: 1.1em;
 }
+
+
+li {
+	margin-bottom: 0.5em;
+}
+
+/* for debugging
+ul, ol {
+	border: 1px solid green !important;
+}
+*/
 
 
 /*

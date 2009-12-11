@@ -39,26 +39,27 @@ various transports:
 *	TCP connections, using Flash Socket (no TLS support because Flash does not support it, but optionally crypted)
 *	WebSocket (optionally TLSed)
 
-Minerva uses streaming HTTP connections, unless it suspects a buffering proxy is in
-the way. Minerva streams survive transport disconnects. Minerva streams survive
+Minerva uses streaming HTTP connections, unless it detects that HTTP responses
+are being buffered (by a buffering proxy, antivirus software, etc). Minerva streams
+survive transport disconnects. Minerva streams survive
 changes in the environment (buffering proxy just installed, all WebSocket connections
 just blocked, etc). Minerva maintains TCP's in-order and reliable data delivery, even
-as the stream spans transports.
+as the stream spans many transports.
 
 Neither the server nor the client application has to worry about which
 transport is carrying their data. Note: applications are still informed when
-the transport changes to another type, because they may want to send
+the transport type changes, because they may want to send
 data more or less frequently.
 
 
 Why you might want Minerva
 =====================
-* You need Comet/"HTTP push" to push data to users, similar to Meebo, Google Talk, or Google Finance.
+*	You need Comet/"HTTP push" to push data to users, similar to Meebo, Google Talk, or Google Finance.
 
-* You don't really need Comet, but want your "AJAX" to be reliable, secure, and protocol-like:
+*	You don't really need Comet, but want your "AJAX" to be reliable, secure, and protocol-like:
 
 	*	You can write the network interaction as a well-defined protocol, instead of many different
-		HTTP requests with their own semantics. 
+		HTTP requests with their own semantics.
 
 	*	Minerva automatically retries requests if they fail.
 
@@ -82,28 +83,23 @@ By framed, we mean that applications send and receive frames, not octets.
 Why force applications to work with frames instead of octets? One might
 object and say that applications need direct access to octets, but consider these points:
 
-	Minerva's frame overhead is minimal: just 3 extra bytes for the smallest frames.
+*	Minerva's frame overhead is minimal: just 3 extra bytes for the smallest frames.
+	This overhead is dwarfed by the per-packet TCP/IP overhead of ~52 bytes.
+	There is even more overhead when HTTP chunk lengths or TLS are involved.
 
-		This overhead is dwarfed by the per-packet TCP/IP overhead of ~52 bytes
-		(there is even more overhead when HTTP chunk lengths or TLS are involved).
-
-	If it worked with octets, Minerva would need to encode and decode these octets
+*	If it worked with octets, Minerva would need to encode and decode these octets
 	using base64 or similar, because:
 
-		Over HTTP transports, NULL cannot be sent to IE or Opera.
+	*	Over HTTP transports, ``NULL`` cannot be sent to IE or Opera.
 
-		Minerva sometimes needs to send metadata over the transports that applications are using,
+	*	Minerva sometimes needs to send metadata over the transports that applications are using,
 		to determine if a transport is stalled or being buffered by proxies.
 
-	WebSocket uses frames natively, and NULLs cannot be sent over them (as of 2009-11).
+*	WebSocket uses frames natively, and they are mapped 1:1 to Minerva frames.
+	Also,``0xFF`` cannot be sent over WebSocket (as of 2009-11).
 
-	When possible, we want to avoid using JavaScript (especially IE's slow JScript) to parse frames.
-	Instead we delegate this to the web browser's C++ code, or Flash's AVM2.
-	
-	We want to avoid using JavaScript (especially IE's slow JScript) to handle the UTF-8<->Unicode conversion.
-	By requiring frames, it's an easy step to require Unicode frames, so Minerva can handle this
-	instead of the application.
-
+*	The application doesn't have to assemble the octets and convert them to Unicode,
+	since this already happened when the frame was parsed.
 
 
 Why are frames JSON-based?
@@ -112,38 +108,33 @@ Why are frames JSON-based?
 Frames contain semi-structured data (JSON). JSON is used as the building block
 instead of "unicode strings" or similar because:
 
-	*	The Minerva protocol itself does some pretty complex things and sends structured
-		data. The protocol would be more complicated to change, and would require more
-		code, if JSON was not the building block.
+*	The Minerva protocol itself does some pretty complex things and sends structured
+	data. The protocol would be more complicated to change, and would require more
+	code, if JSON was not the building block.
 
-	*	Some environments are not unicode-safe: Firefox 2 + XHR streaming,
-		or anyone with a very bad proxy. Using JSON ensures we can easily drop down to
-		7-bit-clean mode. And if we're using JSON to convert ASCII to unicode, we just
-		called the JSON decoder and might as well get structured data out, instead of
-		just a string. But right now, Minerva always uses 7-bit-clean mode to avoid problems.
+*	Some environments are not unicode-safe: Firefox 2 + XHR streaming,
+	or anyone with a very bad proxy. Using JSON ensures we can easily drop down to
+	7-bit-clean mode. And if we're using JSON to convert ASCII to unicode, we just
+	called the JSON decoder and might as well get structured data out, instead of
+	just a string. But right now, Minerva always uses 7-bit-clean mode to avoid problems.
 
-	*	JSON requires encoding NULL (U+0000), which is good because we cannot send it over
-		all transports anyway.
+*	JSON requires encoding control characters including `NULL` and `LF`, which is good
+	because we cannot send it over all transports anyway.
 
-	*	IE8, Chrome, Firefox, Safari, and Opera have native JSON encoders and decoders.
-		Using JSON at the Minerva level ensures the native-JSON bugs have been abstracted
-		away.
+*	IE8, Chrome, Firefox, Safari, and Opera have native JSON encoders and decoders.
+	Using JSON at the Minerva level ensures the native-JSON bugs have been abstracted
+	away.
 
-	*	The IE htmlfile transport automatically parses JSON as it is dumped into the HTML page,
-		because it is basically executing JavaScript. Which means we don't have to dump
-		a string to the page first, and then send it through a decoder.
-			Counterpoint: referencing objects across windows and stashing them somewhere
-			destroys object prototypes in IE, and could cause problems in other browsers.
+We used to think there were more advantages, but they were found to be incorrect:
 
-Note: we used to think there were more advantages, but they were found to be incorrect:
+* 	We thought that we could avoid ``eval()`` ing strings when the IE htmlfile transport
+	was in use, by dumping the JSON data straight into the ``<script>`` tags written
+	out in the transport. But this
+	creates problems with array prototypes_ in IE and probably leaves iframe windows
+	uncollectable in other browsers.
 
-	* 	We thought that we could avoid ``eval()``ing strings when the IE htmlfile transport
-		was in use by dumping the JSON data straight into the ``<script>`` tag. But this
-		creates problems with array prototypes_ in IE and probably leaves iframe windows
-		uncollectable in other browsers.
-
-	*	We thought that decoding JSON in Flash might be faster than ``eval()`` in IE,
-		but this is very untrue.
+*	We thought that decoding JSON in Flash might be faster than ``eval()`` in IE,
+	but this is very untrue.
 
 .. _prototypes: see comments in ``goog.typeOf`` in Closure Library.
 
@@ -208,23 +199,26 @@ Minerva server does not use gzip or any other compression to compress the boxes.
 If you want the client to receive compressed data, write your client-side logic to make
 HTTP requests when necessary. These HTTP requests will hopefully be gzip-compressed.
 
-	Future: automatic switch to gzipped HTTP S2C if there is a large volume of data to transmit.
-		Procedure:
-			Server-side application queues big boxes, or many boxes
-			Minerva decides it would be faster to send these over a gzipped transport, even with
-				the client forced to take a round-trip hit.
-			Minerva server convinces the client to open an HTTP S2C transport
-			Minerva server remembers that it has a lot of data to send, so this transport gets gzip headers
-				and gzipped data is sent over it.
-			Because the client cannot read all of the data until the HTTP request is closed, Minerva
-				closes the transport fairly quickly.
+In the future, we could support "temporary compression" when there is a large amount
+of data to send S2C. It would work like this:
 
-			Future: See if streaming can work with HTTP by manipulating gzip blocks at a low level
-				and switching them to uncompressed when needed.
-				http://sys.cs.rice.edu/course/comp314/09/p2/p2-guide
+1.	Server-side application queues big boxes, or many boxes
+2.	Minerva decides it would be faster to send these over a gzipped transport, even with
+	the client forced to take a round-trip hit.
+3.	Minerva server convinces the client to open an HTTP S2C transport
+4.	Minerva server remembers that it has a lot of data to send, so this transport gets gzip headers
+	and gzipped data is sent over it.
+5.	Because the client cannot read all of the data until the HTTP request is closed, Minerva
+	closes the transport fairly quickly.
 
-	Future: zlib compression when using Flash transport
-	Future: for websocket/http transports, some kind of client-side decompression inside a Web Worker
+**Future:** See if streaming can work with HTTP by manipulating gzip blocks at a low level
+and switching them to uncompressed when needed.
+http://sys.cs.rice.edu/course/comp314/09/p2/p2-guide
+
+**Future:** for Flash Socket, do zlib compression.
+
+**Future:** for WebSocket and HTTP transports, some kind of client-side decompression
+could be done inside a Web Worker.
 
 
 
@@ -334,10 +328,10 @@ Technical details
 This is the object chain, "upstream" objects at top. Objects on adjacent lines
 usually know about each other.
 
-MinervaProtocol
-Stream
-*Transport
-(Twisted)
+	*	MinervaProtocol
+	*	Stream
+	*	\*Transport
+	*	(Twisted)
 
 Producer attachment goes downstream, pressure information goes upstream.
 
@@ -370,3 +364,13 @@ pauseProducing or resumeProducing calls on MinervaProtocol:
 	*Transport - [pause] if it was paused earlier by (Twisted)
 	Stream - [pause] when there are no primary transports
 	Stream - If paused, [resume] when a primary transport appears
+
+
+
+Special client-side producer
+----------------------------------
+Minerva client supports registering a special pull producer that will be pulled right
+before Minerva client makes any HTTP request. This is useful if Minerva client is using
+HTTP as primary transport, and client application wants to occasionally upload data
+without incurring the cost of a C2S HTTP request. If Minerva is using HTTP as primary
+transport, the pull producer will be pulled around every 55 seconds.
