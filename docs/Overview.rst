@@ -342,7 +342,7 @@ Array size limit
 ------------------
 
 The size of arrays is informally limited to 65535 (2^16 - 1). This is only because IE6/IE7
-cannot ``eval`` a stringed-array with 2^16 or more items. See [#]_.
+cannot ``eval`` a stringed-array with 2^16 or more items. A `GWT bug report`_ describes the issue.
 Coreweb's ``CW.Test.TestAssumptions`` confirms this limitation precisely, and confirms
 that it applies only to IE6/IE7. This limitation applies to all arrays in the box, including the
 outer container. If a server application violates this limit with an IE6/IE7 client, the
@@ -350,7 +350,7 @@ stream will reset.
 
 **Future**: Automatically serve "fixed" boxes to IE6/IE7 clients, as GWT's RPC does.
 
-..	[#] http://code.google.com/p/google-web-toolkit/issues/detail?id=1336
+..	_`GWT bug report`: http://code.google.com/p/google-web-toolkit/issues/detail?id=1336
 
 
 Maximum nesting limit
@@ -414,7 +414,7 @@ like nginx. Compared to twisted.web, nginx is a bit harder to DoS, handles more 
 problems, and maintains an SSL session cache [#]_. These advantages probably
 outweigh the overhead of an extra open socket (inside the server datacenter) for every long-polling/streaming HTTP request.
 In the future, we may move more of Minerva's HTTP functionality into nginx, in the spirit
-of nginx_http_push_module [#]_.
+of `nginx_http_push_module`_.
 
 Here is a reasonable setup for a small website:
 
@@ -431,7 +431,8 @@ Here is a reasonable setup for a small website:
 	*	newlink.SocketFace + SSL, listening on 80, 443, <extra ports> on ``IP2``.
 
 Why listen on port 843?
-843 is the port where Flash first looks for a Socket master policy file. [#]_ SocketFace serves Flash socket policy files when asked. If Flash
+843 is the port where Flash first looks for a `Socket master policy file`_.
+SocketFace serves Flash socket policy files when asked. If Flash
 player cannot get the policy file from port 843, it will try to get the policy file from the
 connection destination port. But by serving the policy on port 843, we reduce the
 time needed to establish the first connection.
@@ -445,7 +446,7 @@ port 843 on ``IP2``.
 
 Suggested <extra ports> for listening:
 
-*	21 (ftp), 22 (ssh), 110 (pop3), 143 (imap), 465 (SMTPs - Microsoft) [#]_,
+*	21 (ftp), 22 (ssh), 110 (pop3), 143 (imap), 465 (SMTPs - Microsoft),
 	843 (Flash master policy port) 993 (imap+ssl), 995 (pop3+ssl)
 
 
@@ -461,11 +462,9 @@ Suggested <extra ports> for listening:
 ..	[#] See nginx/src/event/ngx_event_openssl.c
 	http://repo.or.cz/w/nginx.git/blob/master:/src/event/ngx_event_openssl.c
 
-..	[#] http://pushmodule.slact.net/
+..	_`nginx_http_push_module`: http://pushmodule.slact.net/
 
-..	[#] http://www.adobe.com/devnet/flashplayer/articles/fplayer9_security_04.html
-
-..	[#] http://it.slashdot.org/comments.pl?sid=1131325&cid=26896481
+..	_`Socket master policy file`: http://www.adobe.com/devnet/flashplayer/articles/fplayer9_security_04.html
 
 
 
