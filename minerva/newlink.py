@@ -1,83 +1,7 @@
 """
+You really want to read docs/Overview.rst to understand the code in this file.
 
 Minerva glossary:
-
-	box -
-		Anything that can be encoded/decoded by JSON and represented
-		near-equivalently in both server-side and client-side environments.
-
-		On the server, a box might be a list, a dictionary, a unicode object (or an ASCII-only str),
-			a boolean, an integer, a long, a float, or None, or any nested combination of these.
-
-		In a JavaScript environment, a box might be an object, an array, a string,
-			a number, a boolean, or null, or any nested combination of these.
-
-		Note on arrays:
-			if any clients are IE6/IE7, arrays in boxes must have 2^16 - 1 items (65535) or less,
-			because IE6/IE7 cannot `eval' a stringed-array with 2^16 or more items. See [1]
-
-		Note on (nan, inf, -inf) (NaN, Infinity, or -Infinity):
-			C2S: Minerva server must treat NaN / Infinity / -Infinity the same as JSON corruption.
-
-			S2C: Although Minerva server will not refuse to send nan/inf/-inf in boxes,
-			clients will fail to parse them, and the stream will essentially be broken.
-
-		Note on unicode codepoints:
-			Only use unicode to represent text. Do not use codepoints to represent numbers or
-			delimiters, unless you use only codepoints which are unreserved and allocated to
-			characters in the Unicode 5.2 standard. Future optimizations may make it impossible
-			to transmit certain codepoints or combinations of codepoints. For example, invalid
-			surrogate pairs, as well as U+FDD0 - U+FDEF, U+FFF0 - U+FFF8, U+FFFE, U+FFFF,
-			as well as other Noncharacters, may be silently replaced with U+FFFD "Replacement Character".
-			Minerva reserves the right to only sometimes substitute to U+FFFD, even for adjacent
-			frames in the same stream.
-
-		Note on Python UCS-2/UCS-4 builds:
-			Minerva server runs correctly on both Python "UCS-2" and UCS-4 builds.
-			See what happens when a character outside BMP,
-			U+1D400 MATHEMATICAL BOLD CAPITAL A, is decoded by the server:
-
-				UCS-4 Python>>> json.loads('"\ud835\udc00"')
-					u'\U0001d400'
-				UCS-4 Python>>> len(_)
-					1
-
-				UCS-2 Python>>> json.loads('"\ud835\udc00"')
-					u'\U0001d400'
-				UCS-2 Python>>> len(_)
-					2
-
-				The big \UXXXXXXXX escapes in "UCS-2" builds are just a lie. Your mind should see
-				UTF-16 surrogates. The 2-length object is even slicable:
-
-				UCS-2 Python>>> u'\U0001d400'[1]
-					u'\udc00'
-
-			"Python isn't strictly UCS-2 anymore, but it doesn't completely implement UTF-16
-			either, since string functions return incorrect results for characters outside the BMP." [2]
-
-			JavaScript specifies UTF-16 in the language, so it will be more like the "UCS-2" build
-			of Python. This means that the server and client will not always agree on the length
-			of a unicode string. So, do not rely on this length to be consistent.
-
-		Note on maximum nesting in boxes:
-			containers (arrays/objects) in the box can be nested to a maximum of 26 levels.
-			The limit at the JSON decoder level is 32 (note that this includes the very outer level).
-			The limit at the protocol level is 4 levels lower because boxes may be sent in frames
-			that add additional levels of nesting, like this:
-
-				[1, box]    (1 additional level)
-			or
-				[0, {"30": box30, "31": box31}]    (2 additional levels)
-			or
-				[reservedMegaFrameType, {"helloData": ...}, {"boxes": {"32": box32}}]     (3 additional levels)
-
-			We reserve another three levels, leading to a maximum container nesting rule of
-			32 - (3 + 3) = 26. Note that Minerva server will not always reject frames that slightly
-			exceed this nesting limit, so you are responsible for keeping track of your nesting.
-
-		[1] http://code.google.com/p/google-web-toolkit/issues/detail?id=1336
-		[2] http://mail.python.org/pipermail/tutor/2009-April/068263.html
 
 	face - Internet-facing Twisted L{Protocol}s or L{t.web.r.Resource}s that
 		shovel data between Minerva transports <-> client
@@ -926,7 +850,7 @@ class IMinervaTransport(IPushProducer, IPullProducer):
 
 
 def dumpToJson7Bit(data):
-	return simplejson.dumps(data, separators=(',', ':'))
+	return simplejson.dumps(data, separators=(',', ':'), allow_nan=False)
 
 
 ##WAITING_FOR_AUTH, AUTHING, DYING, AUTH_OK = range(4)

@@ -2,6 +2,12 @@ body, li, p, td {
 	font-family: Calibri, Verdana, Arial, sans-serif;
 }
 
+pre, code, .literal {
+	font-family: Consolas, monospace;
+	font-size: 0.8em;
+	background-color: #eee;
+}
+
 html {
 	background-color: rgb(183, 176, 164);
 }

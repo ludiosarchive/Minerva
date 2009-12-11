@@ -17,7 +17,16 @@ frame
 box
 	a piece of JSON-encoded data that is sent over streams. *box* refers only
 	to application-level data.
-	**TODO:** Move the real description and limitations of *box* from newlink.py to this file.
+
+	Everything in a box can be represented near-equivalently in server and browser
+	environments. On the server, a box might be a ``list``, a ``dict``, a ``unicode`` object (or an ASCII-only ``str``),
+	a ``bool``, an ``int``, a ``long``, a ``float``, or ``None``, or any nested combination of these.
+
+	In a JavaScript environment, a box might be an ``Object``, an ``Array``, a string,
+	a number, a boolean, or ``null``, or any nested combination of these.
+
+	There is a limit to how much nesting a box can have (26 levels), and the size of an
+	Array (65535 items). See `Box limitations`_ for more.
 transport
 	an HTTP request/response, or socket, or WebSocket, that Minerva uses to
 	send/receive frames.
@@ -135,7 +144,7 @@ We used to think there were more advantages, but they were found to be incorrect
 * 	We thought that we could avoid ``eval()`` ing strings when the IE htmlfile transport
 	was in use, by dumping the JSON data straight into the ``<script>`` tags written
 	out in the transport. But this
-	creates problems with array prototypes [#]_ in IE and probably leaves iframe windows
+	creates problems with array prototypes in IE [#]_ and probably leaves iframe windows
 	uncollectable in other browsers.
 
 *	We thought that decoding JSON in Flash might be faster than ``eval()`` in IE,
@@ -185,6 +194,10 @@ where no data can be sent server->client.
 
 
 
+Designing your application protocol
+=============
+
+
 Minerva limitations
 =============
 
@@ -232,6 +245,58 @@ could be done inside a Web Worker.
 ..	[#] http://shootout.alioth.debian.org/u64/benchmark.php?test=all&lang=all&box=1
 
 ..	_Factor: http://factorcode.org/
+
+
+
+Box limitations
+===========
+
+Array size limit
+------------------
+
+The size of arrays is informally limited to 65535 (2^16 - 1). This is only because IE6/IE7
+cannot ``eval`` a stringed-array with 2^16 or more items. See [#]_.
+Coreweb's ``CW.Test.TestAssumptions`` confirms it applies only to IE6/IE7.
+This limitation applies to all arrays in the box. If server application sends an array
+with more items, the stream will reset.
+
+**Future**: Automatically serve "fixed" boxes to IE6/IE7 clients, as GWT's RPC does.
+
+..	[#] http://code.google.com/p/google-web-toolkit/issues/detail?id=1336
+
+
+Maximum nesting limit
+----------------------------
+Containers (arrays/objects) in the box can be nested to a maximum of 26 levels.
+The limit at the JSON decoder level is 32 (note that this includes the very outer level).
+The limit at the protocol level is 6 levels lower because boxes may be sent in frames
+that add additional levels of nesting, like this:
+
+*	``[1, box]``    (1 additional level)
+*	``[0, {"30": box30, "31": box31}]``    (2 additional levels)
+*	``[reservedMegaFrameType, {"helloData": ...}, {"boxes": {"32": box32}}]``     (3 additional levels)
+
+We reserve another three levels, leading to a maximum allowed container nesting of
+32 - (3 + 3) = 26. Note that Minerva server will not always reject frames that slightly
+exceed this nesting limit, so applications are responsible for keeping track of nesting.
+
+
+Noncharacter Unicode codepoints
+------------------------------------------
+Only use unicode to represent text. Do not use codepoints to represent numbers or
+delimiters, unless you use only codepoints which are unreserved and allocated to
+characters in the `Unicode 5.2 standard`_. Future optimizations may make it impossible
+to transmit certain codepoints or combinations of codepoints. For example, invalid
+surrogate pairs, as well as ``U+FDD0`` - ``U+FDEF``, ``U+FFF0`` - ``U+FFF8``,
+``U+FFFE``, ``U+FFFF``, as well as other Noncharacters, may be silently replaced
+with ``U+FFFD REPLACEMENT CHARACTER``. Minerva reserves the right to only
+sometimes substitute to ``U+FFFD``, even for adjacent frames in the same stream.
+
+This limitation doesn't apply to the current version of Minerva because both client and server
+use only ASCII-safe JSON. It may apply in future versions, so keep it mind.
+
+..	_`Unicode 5.2 standard`: http://www.unicode.org/versions/Unicode5.2.0/
+
 
 
 Real-world deployment strategy that supports HTTP, Flash Socket, WebSocket
@@ -406,3 +471,45 @@ before Minerva client makes any HTTP request. This is useful if Minerva client i
 HTTP as primary transport, and client application wants to occasionally upload data
 without incurring the cost of a C2S HTTP request. If Minerva is using HTTP as primary
 transport, the pull producer will be pulled around every 55 seconds.
+
+
+
+
+Notes on Python UCS-2/UCS-4 builds, and unicode length
+=========================================
+Minerva server runs correctly on both Python "UCS-2" and UCS-4 builds.
+Observe what happens when a character outside the BMP_,
+``U+1D400 MATHEMATICAL BOLD CAPITAL A``, is decoded by the server:::
+
+	UCS-4 Python>>> import json; json.loads('"\ud835\udc00"')
+	u'\U0001d400'
+
+	UCS-4 Python>>> len(_)
+	1
+
+
+	UCS-2 Python>>> import json; json.loads('"\ud835\udc00"')
+	u'\U0001d400'
+
+	UCS-2 Python>>> len(_)
+	2
+
+
+The big ``\UXXXXXXXX`` escapes in "UCS-2" builds are just a lie. Your mind should see
+UTF-16 surrogates. The 2-length object is even slicable:::
+
+	UCS-2 Python>>> u'\U0001d400'[1]
+	u'\udc00'
+
+"Python isn't strictly UCS-2 anymore, but it doesn't completely implement UTF-16
+either, since string functions return incorrect results for characters outside the BMP." [#]_
+
+JavaScript specifies UTF-16 in the language, so it will act more like the "UCS-2" build
+of Python. Keep in mind that the server and client will not always agree on the length
+of a unicode string. So, do not rely on this length to be consistent.
+
+
+..	[#] http://mail.python.org/pipermail/tutor/2009-April/068263.html
+
+
+..	_BMP: http://unicode.org/glossary/#basic_multilingual_plane

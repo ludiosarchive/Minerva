@@ -207,7 +207,7 @@ class DelimitedJSONDecoder(object):
 
 	@classmethod
 	def encode(cls, obj):
-		s = simplejson.dumps(obj, separators=(',', ':'))
+		s = simplejson.dumps(obj, separators=(',', ':'), allow_nan=False)
 		s += cls.delimiter
 		return s
 
