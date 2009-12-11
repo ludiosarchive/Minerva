@@ -495,18 +495,28 @@ do, in order of priority:
 	``backlog`` parameter to the `strports`_ strings that your ``twistd`` plugin
 	accepts as command line arguments. A backlog of 511 would be reasonable.
 
-4.	On Linux, you may have to raise ``/proc/sys/fs/file-max`` (default 97519)::
+4.	On Linux, you should raise ``/proc/sys/fs/file-max`` (default is 70K-100K). This hint
+	comes from [#]_::
 
 		sudo echo -n 300000 > /proc/sys/net/core/somaxconn
 
-	This hint comes from [#]_.
-
-
-5.	You can further tune the kernel to support more open connections. If this is necessary,
+5.	You can tune the kernel to support more open connections. If this is necessary,
 	you will see ``Out of socket memory`` messages on Linux in your syslog. See
 	`"Tuning the Linux Kernel for many tcp connections"`_.
 
-Also, keep in mind that SSL connections use much more memory than
+6.	Options for benchmarking and testing only:
+
+	*	Prevent sockets from staying in the TIME_WAIT state for more than ~1 second::
+
+			echo 1 > /proc/sys/net/ipv4/tcp_tw_recycle
+
+	*	Widen the ephemeral port range::
+
+			echo "1024 65535" > /proc/sys/net/ipv4/ip_local_port_range
+
+		See `"Changing the Ephemeral Port Range"`_ for non-Linux ways to increase it.
+
+Also, keep in mind that `SSL connections use much more memory`_ than
 non-SSL connections. [#]_
 
 
@@ -516,12 +526,13 @@ non-SSL connections. [#]_
 
 ..	_`"Tuning the Linux Kernel for many tcp connections"`: http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1
 
+..	_`"Changing the Ephemeral Port Range"`: http://www.ncftp.com/ncftpd/doc/misc/ephemeral_ports.html#Changing
+
+..	_`SSL connections use much more memory`: http://google.com/search?hl=en&q=%22occupancy%20of%20ssl%20connections%22%20nginx
+
 ..	[#] grep the nginx source for ``NGX_LISTEN_BACKLOG``
 
 ..	[#] http://amix.dk/blog/viewEntry/19456
-
-..	[#] http://google.com/search?hl=en&q=%22occupancy%20of%20ssl%20connections%22%20nginx
-
 
 
 
