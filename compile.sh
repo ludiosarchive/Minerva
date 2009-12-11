@@ -8,4 +8,5 @@ haxe -v -swf-version 9 -swf ./minerva/flash_build/app.swf -main cw.net.SocketBri
 cp /med/builds/swfobject/swfobject/expressInstall.swf ./minerva/flash_build/
 
 # This depends on docutils
-rst2html.py README > README.html
+rst2html.py --stylesheet-path=docs/style.css --report=3 README > README.html
+rst2html.py --stylesheet-path=docs/style.css --warnings=_with_warnings_README.log README > _with_warnings_README.html 
