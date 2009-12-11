@@ -30,6 +30,13 @@ class UAToStreamsCorrelator(defaultdict):
 # With ICsrfStopper defining the more specific "base64 only" requirement.
 
 class ICsrfStopper(Interface):
+	"""
+	TODO: docstring here
+
+	Note: Callers wrap with maybeDeferred." means that callers wrap this method with
+		L{twisted.internet.defer.maybeDeferred}, so you can return a
+		Deferred that follows this method's raise/return specification.
+	"""
 
 	def makeToken(uuid):
 		"""

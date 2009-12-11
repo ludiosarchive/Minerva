@@ -8,15 +8,24 @@ Minerva overview
 
 Terminology
 =========
+application
+	the application that is using Minerva. An application has both a server-side
+	and client-side component.
+client
+	the thing that connects to a Minerva server. Typically a web browser.
 stream
 	the stateful object that protocols use to send and receive data. This is sort
 	of like a TCP connection, but better in most ways.
+peer
+	the thing on the other side of the Minerva stream. For a server, it is a client;
+	for a client, the server.
 frame
-	a piece of JSON-encoded data that is sent over streams. This includes both
+	a piece of JSON-encoded data that is sent over streams. This ecompasses both
 	Minerva-level and application-level data.
 box
-	a piece of JSON-encoded data that is sent over streams. *box* refers only
-	to application-level data.
+	an atomic piece of application-level data that can be fit into a frame and sent
+	to the peer. Sending boxes successfully is the point of Minerva. Often, a frame
+	will contain more than one box.
 
 	Everything in a box can be represented near-equivalently in server and browser
 	environments. On the server, a box might be a ``list``, a ``dict``, a ``unicode`` object (or an ASCII-only ``str``),
@@ -25,11 +34,22 @@ box
 	In a JavaScript environment, a box might be an ``Object``, an ``Array``, a string,
 	a number, a boolean, or ``null``, or any nested combination of these.
 
-	There is a limit to how much nesting a box can have (26 levels), and the size of an
-	Array (65535 items). See `Box limitations`_ for more.
+	There is a limit to how much nesting a box can have (26 levels), the size of an
+	Array (65535 items), and what codepoints are allowed in ``unicode``/strings
+	(avoid Noncharacters and unallocated Specials). See `Box limitations`_ for details.
+S2C
+	server-to-client (e.g. a S2C transport, or a S2C box)
+C2S
+	client-to-server. (e.g. a C2S transport, or a C2S box)
 transport
 	an HTTP request/response, or socket, or WebSocket, that Minerva uses to
 	send/receive frames.
+S2C transport
+	a transport that is being used or will be used to send S2C boxes,
+	regardless of whether it it used for C2S as well.
+primary transport
+	In server context: the transport that is currently designated to send boxes to the client.
+	This was formerly called "active S2C transport".
 crypted
 	refers to not-yet-implemented encryption for Flash Socket, likely to be based
 	on a variant of ChaCha12 where client downloads 448 bits of random
@@ -67,6 +87,7 @@ data more or less frequently.
 
 Why you might want Minerva
 =====================
+
 *	You need Comet/"HTTP push" to push data to users, similar to Meebo, Google Talk, or Google Finance.
 
 *	You don't really need Comet, but want your "AJAX" to be reliable, secure, and protocol-like:
@@ -86,6 +107,47 @@ Why you might want Minerva
 	With Minerva's HTTP transports, you can write a Minerva client that uses IE's proxy settings,
 	or even controls a real IE window, to send and receive data.
 
+
+
+Things you should know about browsers and HTTP
+====================================
+
+HTTP requests and per-domain connection limits
+-------------------------------------------------------------
+
+HTTP requests do not map 1:1 to TCP connections. Browsers will make many
+HTTP requests over the same connection when possible. If a connection is
+busy servicing another request, the browser will open a new connection,
+up to a per-domain maximum. In modern browsers, the per-domain limit is
+4-6 connections [#]_. The `rules for IE`_ are a bit more complicated. In a typical
+configuration of Minerva, Minerva connects HTTP-based S2C transports
+to separate subdomains, to avoid using up the precious 2-6 connections
+for the primary domain.
+
+..	[#] http://www.browserscope.org/ (See "Network" tab)
+
+..	_`rules for IE`: http://msdn.microsoft.com/en-us/library/cc304129%28VS.85,loband%29.aspx#concurrent_connections
+
+
+Chunked-encoding is irrelevant
+---------------------------------------
+HTTP/1.1 chunked-encoded has **nothing** to do with Comet. A lot of people are confused
+by this, as evidenced by the garbage on the web. Minerva works fine over HTTP/1.0,
+where chunks don't even exist. Chunks are a low-level detail of HTTP/1.1 that make
+it possible to send data of unknown length, and reuse the connection for more
+HTTP requests/responses.
+
+
+Learning more
+-------------------
+
+You can learn a lot about web browsers by reading `Google's browsersec`_,
+and by reading the source code of `Closure Library`_. browsersec has many
+errors and generalizations, but most of it is correct and very interesting.
+
+
+..	_`Google's browsersec`: http://code.google.com/p/browsersec/wiki/Main
+..	_`Closure Library`: http://code.google.com/p/closure-library/
 
 
 Why is Minerva frame-based?
@@ -195,7 +257,27 @@ where no data can be sent server->client.
 
 
 Designing your application protocol
-=============
+=========================
+**TODO**: Write a bit more about standardized request/response mechanism.
+
+Things to keep in mind:
+
+1.	Observe all of the `Box limitations`_
+
+2.	Make your boxes small. Minerva usually doesn't send more than one box at a time
+	(there is no interleaving). A big box might "hold up" other queued boxes.
+	If you need to send a lot of data, try to find a reasonable way to split and reassemble it,
+	it in the spirit of `amphacks/mediumbox.py`_.
+
+3.	If you care about performance in IE, prefer ``Array`` s to ``Object`` s. IE allocates
+	a lot of objects when you iterate over an ``Object`` with ``for(k in obj)``, and its
+	garbage collector is poor (especially before XP SP3/JScript 5.7) [#]_ [#]_.
+
+..	[#] http://ajaxian.com/archives/garbage-collection-in-ie6
+..	[#] http://pupius.co.uk/blog/2007/03/garbage-collection-in-ie6/
+
+..	_`amphacks/mediumbox.py`: http://bazaar.launchpad.net/~glyph/%2Bjunk/amphacks/annotate/head%3A/python/amphacks/mediumbox.py
+
 
 
 Minerva limitations
@@ -210,7 +292,7 @@ If HTTPS is needed, this necessitates a wildcard SSL cert.
 
 	*	postMessage
 	*	XHR + Origin support
-	*	XDR
+	*	XDR (XDomainRequest, only in IE8+)
 	*	Flash Socket with wildcard allow
 	*	Google Closure's VBScript-based transport for IE: ``goog/net/xpc/nixtransport.js``
 
@@ -256,9 +338,10 @@ Array size limit
 
 The size of arrays is informally limited to 65535 (2^16 - 1). This is only because IE6/IE7
 cannot ``eval`` a stringed-array with 2^16 or more items. See [#]_.
-Coreweb's ``CW.Test.TestAssumptions`` confirms it applies only to IE6/IE7.
-This limitation applies to all arrays in the box. If server application sends an array
-with more items, the stream will reset.
+Coreweb's ``CW.Test.TestAssumptions`` confirms this limitation precisely, and confirms
+that it applies only to IE6/IE7. This limitation applies to all arrays in the box, including the
+outer container. If a server application violates this limit with an IE6/IE7 client, the
+stream will reset.
 
 **Future**: Automatically serve "fixed" boxes to IE6/IE7 clients, as GWT's RPC does.
 

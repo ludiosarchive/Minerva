@@ -1,36 +1,6 @@
 """
 You really want to read docs/Overview.rst to understand the code in this file.
 
-Minerva glossary:
-
-	face - Internet-facing Twisted L{Protocol}s or L{t.web.r.Resource}s that
-		shovel data between Minerva transports <-> client
-
-	server - us. (Minerva)
-
-	client - a web browser or some other client that can speak to Minerva's faces.
-
-	S2C - server to client
-
-	C2S - client to server
-
-	"sent S2C" - sent from server to client
-
-	S2C boxes - boxes to be sent from the server to the client
-
-	"S2C transport" - a transport that is being used or will be used for sending S2C boxes,
-		regardless of whether it it used for C2S as well.
-
-	primary transport (formerly "active S2C transport") - the transport that is currently
-		designated to send boxes to the client.
-
-Other glossary:
-
-	"Callers wrap with maybeDeferred." - callers wrap this method with
-		L{twisted.internet.defer.maybeDeferred}, so you can return a
-		Deferred that follows this method's raise/return specification.
-
-
 See minerva/sample/demo.py for an idea of how to use the classes below.
 """
 
