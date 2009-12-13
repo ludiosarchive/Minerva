@@ -830,7 +830,7 @@ _2_64 = 2**64
 
 class SocketTransport(protocol.Protocol):
 	"""
-	This is private. Use SocketFace, which will contruct this Protocol.
+	This is private. Use SocketFace, which will build this Protocol.
 
 	This is a hybrid:
 		Flash Socket
@@ -856,14 +856,15 @@ class SocketTransport(protocol.Protocol):
 
 		self.lastBoxSent = -1
 		self._lastStartParam = 2**128
-		self._paused = False
 		self._gotHello = False
 		self._authed = False
+		self._terminating = False
 		self._stream = None
 		self._parser = decoders.BencodeStringDecoder()
 		self._parser.MAX_LENGTH = self.MAX_LENGTH
 		self._parser.manyDataCallback = self._framesReceived
 
+		self._paused = False
 		self._producer = None
 		self._streamingProducer = False
 
@@ -1052,7 +1053,8 @@ class SocketTransport(protocol.Protocol):
 
 
 	def dataReceived(self, data):
-		# TODO: drop data if corruption happened earlier?
+		if self._terminating:
+			return
 		try:
 			self._parser.dataReceived(data)
 		except decoders.ParseError:
@@ -1072,6 +1074,7 @@ class SocketTransport(protocol.Protocol):
 		toSend += self._encodeFrame([Fn.you_close_it])
 		toSend += self._encodeFrame([Fn.my_last_frame])
 		self.transport.write(toSend)
+		self._terminating = True
 
 		# TODO: set timer and close the connection ourselves in 5 seconds
 		##self.transport.loseConnection()
@@ -1085,6 +1088,7 @@ class SocketTransport(protocol.Protocol):
 		toSend += self._encodeFrame([Fn.you_close_it])
 		toSend += self._encodeFrame([Fn.my_last_frame])
 		self.transport.write(toSend)
+		self._terminating = True
 
 
 	def reset(self, reasonString):
@@ -1096,6 +1100,7 @@ class SocketTransport(protocol.Protocol):
 		toSend += self._encodeFrame([Fn.you_close_it])
 		toSend += self._encodeFrame([Fn.my_last_frame])
 		self.transport.write(toSend)
+		self._terminating = True
 
 
 	# called by Stream instances

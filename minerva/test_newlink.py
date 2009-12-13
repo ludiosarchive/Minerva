@@ -1155,10 +1155,22 @@ class SocketTransportTests(unittest.TestCase):
 		self.transport.resumeProducing()
 
 
+	def _testExtraDataReceivedIgnored(self):
+		"""
+		If the Minerva transport is shutting down (because it received bad frames or something),
+		it will silently ignore any data it receives.
+		"""
+		existingFrames = self.gotFrames[:]
+		self.transport.dataReceived(self.serializeFrames([[9999]]))
+		self._parseFrames()
+		self.aE(existingFrames, self.gotFrames)
+
+
 	def test_invalidFrameType(self):
 		self.transport.dataReceived(self.serializeFrames([[9999]]))
 		self._parseFrames()
 		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+		self._testExtraDataReceivedIgnored()
 
 
 	def test_firstFrameWasNotHelloFrame(self):
@@ -1166,24 +1178,28 @@ class SocketTransportTests(unittest.TestCase):
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		self._parseFrames()
 		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+		self._testExtraDataReceivedIgnored()
 
 
 	def test_frameCorruption(self):
 		self.transport.dataReceived('1:xxxxxxxx')
 		self._parseFrames()
 		self.aE([[Fn.tk_frame_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+		self._testExtraDataReceivedIgnored()
 
 
 	def test_frameTooLong(self):
 		self.transport.dataReceived('%d:' % (1024*1024 + 1))
 		self._parseFrames()
 		self.aE([[Fn.tk_frame_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+		self._testExtraDataReceivedIgnored()
 
 
 	def test_intraFrameCorruption(self):
 		self.transport.dataReceived('1:{') # incomplete JSON
 		self._parseFrames()
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+		self._testExtraDataReceivedIgnored()
 
 
 	def test_intraFrameCorruptionTrailingGarbage(self):
@@ -1192,6 +1208,7 @@ class SocketTransportTests(unittest.TestCase):
 		
 		self._parseFrames()
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+		self._testExtraDataReceivedIgnored()
 
 
 	def test_intraFrameCorruptionTooMuchNestingObject(self):
@@ -1202,6 +1219,7 @@ class SocketTransportTests(unittest.TestCase):
 		self.transport.dataReceived(self.serializeFrames([eval('{"":' * nestingLimit + '1' + '}' * nestingLimit)]))
 		self._parseFrames()
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+		self._testExtraDataReceivedIgnored()
 
 
 	def test_intraFrameCorruptionTooMuchNestingArray(self):
@@ -1212,6 +1230,7 @@ class SocketTransportTests(unittest.TestCase):
 		self.transport.dataReceived(self.serializeFrames([eval('[' * nestingLimit + '1' + ']' * nestingLimit)]))
 		self._parseFrames()
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+		self._testExtraDataReceivedIgnored()
 
 
 	def test_validHello(self):
@@ -1247,6 +1266,7 @@ class SocketTransportTests(unittest.TestCase):
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		self._parseFrames()
 		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+		self._testExtraDataReceivedIgnored()
 
 
 	def test_validHelloButNoSuchStreamExplicitW(self):
@@ -1256,6 +1276,7 @@ class SocketTransportTests(unittest.TestCase):
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		self._parseFrames()
 		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+		self._testExtraDataReceivedIgnored()
 
 
 	def test_newStreamMoreThanOnceOk(self):
@@ -1322,6 +1343,7 @@ class SocketTransportTests(unittest.TestCase):
 					[[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it], [Fn.my_last_frame]],
 					self.gotFrames)
 				##print self.gotFrames
+				self._testExtraDataReceivedIgnored()
 				self._reset()
 
 				ran += 1
