@@ -926,7 +926,7 @@ class SocketTransportTests(unittest.TestCase):
 		self.transport.makeConnection(self.t)
 
 
-	def _getValidHelloFrame(self):
+	def _makeValidHelloFrame(self):
 		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
 		frame = [Fn.hello, helloData]
 		return frame
@@ -966,7 +966,7 @@ class SocketTransportTests(unittest.TestCase):
 		Calling writeBoxes(queue, start=None) on a transport actually results in all
 		boxes in queue being written
 		"""
-		frame0 = self._getValidHelloFrame()
+		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1']])
@@ -984,7 +984,7 @@ class SocketTransportTests(unittest.TestCase):
 		Calling writeBoxes(queue, start=1) on a transport actually results in
 		(box 1 and later) in queue being written
 		"""
-		frame0 = self._getValidHelloFrame()
+		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1'], ['box2']])
@@ -1007,7 +1007,7 @@ class SocketTransportTests(unittest.TestCase):
 		At the time this was written, it was intended to exercise the
 			`if len(toSend) > 1024 * 1024:' branch.
 		"""
-		frame0 = self._getValidHelloFrame()
+		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		q = abstract.Queue()
 		box0 = ['box0'*(1*1024*1024)]
@@ -1027,7 +1027,7 @@ class SocketTransportTests(unittest.TestCase):
 		Calling writeBoxes when the transport is paused does not result
 		in a write to the transport.
 		"""
-		frame0 = self._getValidHelloFrame()
+		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1']])
@@ -1042,7 +1042,7 @@ class SocketTransportTests(unittest.TestCase):
 		The transport remembers which boxes it already sent, so boxes
 		are not double-sent even if they are still in the queue.
 		"""
-		frame0 = self._getValidHelloFrame()
+		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1']])
@@ -1066,7 +1066,7 @@ class SocketTransportTests(unittest.TestCase):
 
 		See also L{StreamTests.test_sendBoxesConnectionInterleaving}
 		"""
-		frame0 = self._getValidHelloFrame()
+		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
@@ -1093,7 +1093,7 @@ class SocketTransportTests(unittest.TestCase):
 		"""
 		Same as L{test_writeBoxesConnectionInterleavingSupport} but start=1 instead of None
 		"""
-		frame0 = self._getValidHelloFrame()
+		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
@@ -1124,7 +1124,7 @@ class SocketTransportTests(unittest.TestCase):
 		self.transport.pauseProducing()
 
 	# argh, this was part of above test
-#		frame0 = self._getValidHelloFrame()
+#		frame0 = self._makeValidHelloFrame()
 #		# We need to send a gimme_boxes frame to make this the active transport.
 #		# When this frame is received,
 #		#     1) transport will call _stream.subscribeToBoxes
@@ -1234,7 +1234,7 @@ class SocketTransportTests(unittest.TestCase):
 
 
 	def test_validHello(self):
-		frame0 = self._getValidHelloFrame()
+		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		self._parseFrames()
 		self.aE([], self.gotFrames)
@@ -1285,7 +1285,7 @@ class SocketTransportTests(unittest.TestCase):
 		we silently ignore the w=True if the Stream is already created.
 		"""
 		def act():
-			frame0 = self._getValidHelloFrame()
+			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0]))
 			self._parseFrames()
 			self.aE([], self.gotFrames)
@@ -1303,7 +1303,7 @@ class SocketTransportTests(unittest.TestCase):
 		Test that all any problem with the hello frame results in a
 		'tk_invalid_frame_type_or_arguments' error frame
 		"""
-		goodHello = self._getValidHelloFrame()
+		goodHello = self._makeValidHelloFrame()
 
 		DeleteProperty = object()
 
