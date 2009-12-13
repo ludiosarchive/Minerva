@@ -825,7 +825,9 @@ def dumpToJson7Bit(data):
 
 
 ##WAITING_FOR_AUTH, AUTHING, DYING, AUTH_OK = range(4)
-_2_64 = 2**64
+
+# Acceptable protocol modes for SocketTransport to be in. Int32* are for Flash Socket.
+UNKNOWN, POLICYFILE, INT32, INT32CRYPTO, WEBSOCKET, BENCODE, HTTP = range(7)
 
 
 class SocketTransport(protocol.Protocol):
@@ -856,6 +858,8 @@ class SocketTransport(protocol.Protocol):
 
 		self.lastBoxSent = -1
 		self._lastStartParam = 2**128
+		self._mode = UNKNOWN
+		self._initialBuffer = '' # Buffer data while determining the mode
 		self._gotHello = False
 		self._authed = False
 		self._terminating = False
@@ -937,7 +941,7 @@ class SocketTransport(protocol.Protocol):
 		try:
 			# any line below can raise KeyError; additional exceptions marked with 'e:'
 
-			transportNumber = abstract.ensureNonNegIntLimit(helloData['n'], _2_64)
+			transportNumber = abstract.ensureNonNegIntLimit(helloData['n'], 2**64)
 			protocolVersion = helloData['v']
 			# -- no transportType
 			i = helloData['i']
@@ -945,8 +949,8 @@ class SocketTransport(protocol.Protocol):
 				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 			streamId = StreamId(base64.b64decode(i)) # e: abstract.InvalidIdentifier, TypeError (if base64 problem)
 			# -- no numPaddingBytes
-			maxReceiveBytes = abstract.ensureNonNegIntLimit(helloData['r'], _2_64) # e: ValueError, TypeError
-			maxOpenTime = abstract.ensureNonNegIntLimit(helloData['m'], _2_64) # e: ValueError, TypeError
+			maxReceiveBytes = abstract.ensureNonNegIntLimit(helloData['r'], 2**64) # e: ValueError, TypeError
+			maxOpenTime = abstract.ensureNonNegIntLimit(helloData['m'], 2**64) # e: ValueError, TypeError
 			# -- no readOnlyOnce
 		except (KeyError, TypeError, ValueError, abstract.InvalidIdentifier):
 			return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
@@ -1018,7 +1022,7 @@ class SocketTransport(protocol.Protocol):
 				if _secondArg == -1:
 					succeedsTransport = None
 				else:
-					succeedsTransport = abstract.ensureNonNegIntLimit(frameObj[1], _2_64)
+					succeedsTransport = abstract.ensureNonNegIntLimit(frameObj[1], 2**64)
 				self._stream.subscribeToBoxes(self, succeedsTransport)
 			elif frameType == 'gimme_sack_and_close':
 				sackFrame = self._stream.getSACK()
@@ -1055,14 +1059,39 @@ class SocketTransport(protocol.Protocol):
 	def dataReceived(self, data):
 		if self._terminating:
 			return
-		try:
-			self._parser.dataReceived(data)
-		except decoders.ParseError:
-			self._closeWith(Fn.tk_frame_corruption)
+
+		# Before we can even speak "Minerva" and send frames, we need to determine
+		# what mode the client wants us to speak in.
+		if self._mode == UNKNOWN:
+			self._initialBuffer += data
+			if self._initialBuffer.startswith('<bencode/>\r\n'):
+				self._mode = BENCODE
+				frameData = self._initialBuffer[len('<bencode/>\r\n'):]
+
+			if len(self._initialBuffer) > 512: # TODO: really long enough to determine mode?
+				self._terminating = True # Terminating, but we can't even send any type of frame.
+				self.transport.close()
+		else:
+			frameData = data
+
+		if self._mode == UNKNOWN:
+			return
+
+		if self._mode == BENCODE:
+			try:
+				self._parser.dataReceived(frameData)
+			except decoders.ParseError:
+				self._closeWith(Fn.tk_frame_corruption)
+		else:
+			1/0
 
 
 	def _encodeFrame(self, frameData):
-		return decoders.BencodeStringDecoder.encode(dumpToJson7Bit(frameData))
+		assert self._mode != UNKNOWN
+		if self._mode == BENCODE:
+			return decoders.BencodeStringDecoder.encode(dumpToJson7Bit(frameData))
+		else:
+			1/0
 
 
 	def _closeWith(self, errorType, *args):

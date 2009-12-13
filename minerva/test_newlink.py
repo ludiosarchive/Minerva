@@ -924,6 +924,7 @@ class SocketTransportTests(unittest.TestCase):
 		factory = SocketFace(reactor, None, self.streamTracker, DummyFirewall())
 		self.transport = factory.buildProtocol(addr=None)
 		self.transport.makeConnection(self.t)
+		self.transport.dataReceived('<bencode/>\r\n')
 
 
 	def _makeValidHelloFrame(self):
