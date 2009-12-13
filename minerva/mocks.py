@@ -3,6 +3,7 @@ from zope.interface import implements
 from twisted.internet import protocol, defer, address, interfaces, task
 from twisted.web import server, resource
 from twisted.web.test.test_web import DummyRequest as _TwistedDummyRequest
+from twisted.test.proto_helpers import StringTransport
 #from twisted.internet.test.test_base import FakeReactor as _TwistedFakeReactor
 
 from minerva import abstract
@@ -24,10 +25,33 @@ class FakeReactor(object):
 
 
 
+class DummyTCPTransport(StringTransport):
+
+	def __init__(self, *args, **kwargs):
+		StringTransport.__init__(self, *args, **kwargs)
+		self.noDelayEnabled = False
+
+
+	def unregisterProducer(self):
+		"""
+		StringTransport does some weird stuff.
+
+		Real twisted code doesn't raise RuntimeError if no producer is registered.
+		Real twisted code doesn't set <streamingTransportVar> = None
+		"""
+		self.producer = None
+
+
+	def setTcpNoDelay(self, enabled):
+		self.noDelayEnabled = bool(enabled)
+
+
+
 # copy/paste from twisted.web.test.test_web, but added a setTcpNoDelay
 class DummyChannel(object):
 	requestIsDone = False
 
+	# TODO: probably use DummyTCPTransport instead of this less-featured `class TCP'
 	class TCP(object):
 		port = 80
 		socket = None

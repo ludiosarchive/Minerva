@@ -8,7 +8,6 @@ from twisted.trial import unittest
 from twisted.web import server, resource
 from twisted.internet import protocol, defer, address, interfaces, task
 from twisted.internet.interfaces import IPushProducer, IPullProducer, IProtocol, IProtocolFactory
-from twisted.test.proto_helpers import StringTransport
 
 from minerva.decoders import BencodeStringDecoder
 from minerva import abstract
@@ -26,7 +25,7 @@ from minerva.mocks import (
 	MockStream, MockMinervaProtocol, MockMinervaProtocolFactory,
 	DummyHttpTransport, DummySocketLikeTransport, MockObserver,
 	BrokenOnPurposeError, BrokenMockObserver, DummyStreamTracker,
-	DummyFirewall,
+	DummyFirewall, DummyTCPTransport
 )
 
 Fn = Frame.names
@@ -921,7 +920,7 @@ class SocketTransportTests(unittest.TestCase):
 		self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
 
 		reactor = FakeReactor()
-		self.t = StringTransport()
+		self.t = DummyTCPTransport()
 		self.transport = SocketTransport(reactor, None, self.streamTracker, DummyFirewall())
 		self.transport.makeConnection(self.t)
 
@@ -937,7 +936,7 @@ class SocketTransportTests(unittest.TestCase):
 		Feed the received bytes into the parser, which will append complete
 		frames to self.gotFrames
 
-		If a partial Minerva frame is at the end of the StringTransport buffer,
+		If a partial Minerva frame is at the end of the DummyTCPTransport buffer,
 		calling this WILL LOSE the partial frame.
 		"""
 		self.parser.dataReceived(self.t.value())
@@ -1330,17 +1329,11 @@ class SocketTransportTests(unittest.TestCase):
 		assert ran == 78, "Ran %d times; change this assert as needed" % (ran,)
 
 
-
-class StringTransportMoreLikeReality(StringTransport):
-
-	def unregisterProducer(self):
+	def test_noDelayEnabled(self):
 		"""
-		StringTransport does some weird stuff.
-
-		Real twisted code doesn't raise RuntimeError if no producer is registered.
-		Real twisted code doesn't set <streamingTransportVar> = None
+		When a Minerva transport is created, its underlying TCP transport has TCP_NODELAY enabled.
 		"""
-		self.producer = None
+		self.aE(True, self.transport.transport.noDelayEnabled)
 
 
 
@@ -1354,7 +1347,7 @@ class TransportProducerTests(unittest.TestCase):
 		self.tracker = StreamTracker(reactor, clock, self.proto)
 		self.transport = SocketTransport(reactor, clock, self.tracker, DummyFirewall())
 
-		self.t = StringTransportMoreLikeReality()
+		self.t = DummyTCPTransport()
 		self.transport.makeConnection(self.t)
 
 

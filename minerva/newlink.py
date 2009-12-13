@@ -1147,7 +1147,7 @@ class SocketTransport(protocol.Protocol):
 
 
 	def connectionMade(self):
-		# TODO: set tcp no_delay; make tests check for this
+		self.transport.setTcpNoDelay(True)
 		if self.noisy:
 			log.msg('Connection made for %r' % (self,))
 
