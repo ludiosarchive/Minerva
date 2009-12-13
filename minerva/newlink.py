@@ -895,6 +895,8 @@ class SocketTransport(protocol.Protocol):
 		@see L{IMinervaTransport.writeBoxes}
 		"""
 		if self._authed is not True or self._gotHello is not True:
+			# How did someone ask me to write boxes at this time? This should
+			# never happen.
 			raise RuntimeError("_authed=%r, _gotHello=%r" % (self._authed, self._gotHello))
 
 		# XXX TODO make sure there's no harm done with pull producers
@@ -984,7 +986,7 @@ class SocketTransport(protocol.Protocol):
 		# We get/build a Stream instance before the firewall checkTransport
 		# because the firewall needs to know if we're working with a virgin
 		# Stream or not. And there's no way to reliably know this before doing the buildStream/getStream stuff,
-		# because 'requestNewStream=True' doesn't imply that a new stream will
+		# because 'requestNewStream=True' doesn't always imply that a new stream will
 		# actually be created.
 
 		if requestNewStream:
@@ -1002,8 +1004,6 @@ class SocketTransport(protocol.Protocol):
 
 		def cbAuthOkay(_):
 			self._authed = True
-			#if self._producer and self._streamingProducer and self._paused:
-			#	self._producer.pauseProducing()
 			self._stream.transportOnline(self)
 
 		def cbAuthFailed(_):

@@ -2,6 +2,7 @@ import os
 import cgi
 import simplejson as json
 
+from twisted.python import log
 from twisted.python.filepath import FilePath
 from twisted.web import resource, static, http, server
 
@@ -9,13 +10,6 @@ from zope.interface import implements
 
 from cwtools import testing, jsimp
 from minerva import newlink
-
-
-class Index(resource.Resource):
-	isLeaf = True
-
-	def render_GET(self, request):
-		return 'See /@tests/'
 
 
 
@@ -31,11 +25,13 @@ class ConnectionTrackingHTTPChannel(http.HTTPChannel):
 
 	def connectionMade(self, *args, **kwargs):
 		http.HTTPChannel.connectionMade(self, *args, **kwargs)
+		log.msg('Connection made: %r' % (self,))
 		self.factory.connections.add(self)
 
 
 	def connectionLost(self, *args, **kwargs):
 		http.HTTPChannel.connectionLost(self, *args, **kwargs)
+		log.msg('Connection lost: %r' % (self,))
 		self.factory.connections.remove(self)
 
 
@@ -158,6 +154,51 @@ class UnicodeRainbow(resource.Resource):
 
 
 
+class Index(resource.Resource):
+	isLeaf = True
+
+	def render_GET(self, request):
+		return '''\
+<!doctype html>
+<ul>
+<li><a href="/@tests/">/@tests/</a>
+<li><a href="/@testres_Coreweb/">/@testres_Coreweb/</a>
+<li><a href="/@testres_Minerva/">/@testres_Minerva/</a>
+	<ul>
+	<li><a href="/@testres_Minerva/DisplayConnections/">DisplayConnections/</a>
+	<li><a href="/@testres_Minerva/SimpleResponse/">SimpleResponse/</a>
+	<li><a href="/@testres_Minerva/UnicodeRainbow/">UnicodeRainbow/</a>
+	<li><a href="/@testres_Minerva/NoOriginHeader/">NoOriginHeader/</a>
+	</ul>
+<li><a href="/sandbox/">/sandbox/</a>
+</ul>
+'''
+
+
+class Sandbox(resource.Resource):
+	isLeaf = True
+
+	def __init__(self, reactor):
+		resource.Resource.__init__(self)
+		self._reactor = reactor
+
+
+	def render_GET(self, request):
+		return '''\
+GET.
+
+<form name="input" action="/sandbox/" method="POST">
+<input type="text" name="user">
+<input type="submit" value="Submit">
+</form>
+'''
+
+
+	def render_POST(self, request):
+		request.content.seek(0)
+		return 'POST with request.content: %r' % (request.content.read(),)
+
+
 
 class ResourcesForTest(resource.Resource):
 	def __init__(self, reactor):
@@ -195,6 +236,8 @@ class Root(resource.Resource):
 
 		testres_Minerva = ResourcesForTest(reactor)
 		self.putChild('@testres_Minerva', testres_Minerva)
+
+		self.putChild('sandbox', Sandbox(self._reactor))
 
 
 

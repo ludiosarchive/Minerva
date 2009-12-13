@@ -434,12 +434,17 @@ To summarize port-sharing, SSL and non-SSL listeners cannot share the same port.
 Because Flash Socket (ciphered + unencrypted) is not SSL, it can share the same port as
 WebSocket (unencrypted)
 
-Minerva's web resources (for long-polling/HTTP streaming) should be behind a hardened webserver
-like nginx. Compared to twisted.web, nginx is a bit harder to DoS, handles more compatibility
-problems, and maintains an SSL session cache [#]_. These advantages probably
-outweigh the overhead of an extra open socket (inside the server datacenter) for every long-polling/streaming HTTP request.
-In the future, we may move more of Minerva's HTTP functionality into nginx, in the spirit
-of `nginx_http_push_module`_.
+You should consider putting Minerva's web resources (for long-polling/HTTP streaming) behind a hardened webserver
+like nginx. It is probably okay to expose twisted.web directly, as long as Twisted z9trunk is used.
+Compared to twisted.web, nginx is a bit harder to DoS, handles rare compatibility
+problems, and maintains a cross-worker SSL session cache [#]_. It is unknown if these advantages
+outweigh the overhead of an extra open socket (inside the server datacenter) for every
+long-polling/streaming HTTP request. In the future, we may move more of Minerva's HTTP functionality
+into nginx, in the spirit of `nginx_http_push_module`_. (Or just ignore the problem because
+everyone will have WebSocket/Flash Socket).
+
+**TODO**: Find out if TCP pressure (producers/consumers) works when streaming
+requests are behind nginx. If not, advice in this section must change.
 
 Here is a reasonable setup for a small website:
 
