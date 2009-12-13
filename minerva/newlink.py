@@ -456,7 +456,7 @@ class Stream(object):
 
 	# This is a copy/paste from twisted.internet.interfaces.IConsumer with changes
 
-	# called by MinervaProtocol instances
+	# called by MinervaProtocol instances or anyone else interested in the Stream
 
 	# The only reason we have this is because not all MinervaProtocols will be L{IProducer}s
 	# (some will be very simple). Why not just implement pause/resume/stopProducing
@@ -495,7 +495,7 @@ class Stream(object):
 			self._registerProducerOnPrimary()
 
 
-	# called by MinervaProtocol instances
+	# called by MinervaProtocol instances or anyone else interested in the Stream
 	def unregisterProducer(self):
 		"""
 		Stop consuming data from a producer, without disconnecting.
@@ -505,6 +505,7 @@ class Stream(object):
 			self._unregisterProducerOnPrimary()
 
 
+	# called ONLY by the primary transport in response to TCP pressure
 	def pauseProducing(self):
 		"""
 		We assume this is called only by the primary transport. Also, the pause
@@ -515,7 +516,7 @@ class Stream(object):
 			self._producer.pauseProducing()
 
 
-	# ONLY called by the primary transport in response to TCP pressure
+	# called ONLY by the primary transport in response to TCP pressure
 	def resumeProducing(self):
 		"""
 		We assume this is called only by the primary transport.
@@ -525,9 +526,9 @@ class Stream(object):
 			self._producer.resumeProducing()
 
 
-	# ???
+	# Called by no one. Implemented only to pass zope.interface checks in unit tests.
 	def stopProducing(self):
-		1/0
+		assert False, "Stream.stopProducing should never be called"
 
 
 
@@ -829,6 +830,8 @@ _2_64 = 2**64
 
 class SocketTransport(protocol.Protocol):
 	"""
+	This is private. Use SocketFace, which will contruct this Protocol.
+
 	This is a hybrid:
 		Flash Socket
 		Flash Socket (ciphered)
@@ -844,11 +847,12 @@ class SocketTransport(protocol.Protocol):
 	MAX_LENGTH = 1024*1024
 	noisy = True
 
-	def __init__(self, reactor, clock, streamTracker, firewall):
+	def __init__(self, reactor, clock, streamTracker, firewall, policyString):
 		self._reactor = reactor
 		self._clock = clock
 		self._streamTracker = streamTracker
 		self._firewall = firewall
+		self._policyString = policyString
 
 		self.lastBoxSent = -1
 		self._lastStartParam = 2**128
@@ -862,32 +866,6 @@ class SocketTransport(protocol.Protocol):
 
 		self._producer = None
 		self._streamingProducer = False
-
-
-	# called by Stream instances
-	def registerProducer(self, producer, streaming):
-		# XXX de-duplicate with Stream.registerProducer ; maybe move this to a mixin?
-		if self._producer is not None:
-			raise RuntimeError("Cannot register producer %s, "
-				"because producer %s was never unregistered." % (producer, self._producer))
-
-		# no 'disconnected' check?
-
-		self._producer = producer
-		self._streamingProducer = streaming
-		if streaming and self._paused: # We may have been paused before a producer was registered
-			producer.pauseProducing()
-
-		self.transport.registerProducer(self, streaming)
-
-
-	# called by Stream instances
-	def unregisterProducer(self):
-		"""
-		Stop consuming data from a producer, without disconnecting.
-		"""
-		self._producer = None
-		self.transport.unregisterProducer()
 
 
 	def writeBoxes(self, queue, start):
@@ -1120,19 +1098,47 @@ class SocketTransport(protocol.Protocol):
 		self.transport.write(toSend)
 
 
-	# We trust Twisted to only call this if we registered a streaming producer with self.transport
+	# called by Stream instances
+	def registerProducer(self, producer, streaming):
+		# XXX de-duplicate with Stream.registerProducer ; maybe move this to a mixin?
+		if self._producer is not None:
+			raise RuntimeError("Cannot register producer %s, "
+				"because producer %s was never unregistered." % (producer, self._producer))
+
+		# no 'disconnected' check?
+
+		self._producer = producer
+		self._streamingProducer = streaming
+		if streaming and self._paused: # We may have been paused before a producer was registered
+			producer.pauseProducing()
+
+		self.transport.registerProducer(self, streaming)
+
+
+	# called by Stream instances
+	def unregisterProducer(self):
+		"""
+		Stop consuming data from a producer, without disconnecting.
+		"""
+		self._producer = None
+		self.transport.unregisterProducer()
+
+
+	# called by Twisted. We trust Twisted to only call this if we registered a push producer with self.transport
 	def pauseProducing(self):
 		self._paused = True
 		if self._producer:
 			self._producer.pauseProducing()
 
 
+	# called by Twisted.
 	def resumeProducing(self):
 		self._paused = False
 		if self._producer:
 			self._producer.resumeProducing()
 
 
+	# called by Twisted.
 	def stopProducing(self):
 		# Our connectionLost logic eventually deals with the producers,
 		# so we don't need to do anything here.
@@ -1158,15 +1164,26 @@ class SocketFace(protocol.ServerFactory):
 
 	protocol = SocketTransport
 
-	def __init__(self, reactor, clock, streamTracker, firewall):
+	def __init__(self, reactor, clock, streamTracker, firewall, policyString=None):
+		"""
+		@param reactor: must provide... TODO WHAT?
+		@param clock: must provide L{IReactorTime}
+		@param streamTracker: The StreamTracker that will know about all active Streams.
+		@type streamTracker: L{StreamTracker}
+		@param firewall: The transport firewall to use. Must provide L{website.ITransportFirewall}
+		@param policyString: is a Flash/Silverlight policy file as a string,
+			sent in response to <policy-file-request/>C{NULL}
+		@type policyString: C{str} or C{NoneType}
+		"""
 		self._reactor = reactor
 		self._clock = clock
 		self._streamTracker = streamTracker
 		self._firewall = firewall
+		self._policyString = policyString
 
 
-	def buildProtocol(self):
-		p = self.protocol(self._reactor, self._clock, self._streamTracker, self._firewall)
+	def buildProtocol(self, addr):
+		p = self.protocol(self._reactor, self._clock, self._streamTracker, self._firewall, self._policyString)
 		p.factory = self
 		return p
 

@@ -17,7 +17,7 @@ from minerva.newlink import (
 	Frame, Stream, StreamId, StreamTracker, NoSuchStream,
 	StreamAlreadyExists, BadFrame, ISimpleConsumer, IMinervaProtocol,
 	IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
-	IMinervaTransport, SocketTransport,
+	IMinervaTransport, SocketTransport, SocketFace
 )
 
 from minerva.mocks import (
@@ -921,7 +921,8 @@ class SocketTransportTests(unittest.TestCase):
 
 		reactor = FakeReactor()
 		self.t = DummyTCPTransport()
-		self.transport = SocketTransport(reactor, None, self.streamTracker, DummyFirewall())
+		factory = SocketFace(reactor, None, self.streamTracker, DummyFirewall())
+		self.transport = factory.buildProtocol(addr=None)
 		self.transport.makeConnection(self.t)
 
 
@@ -1345,7 +1346,7 @@ class TransportProducerTests(unittest.TestCase):
 		
 		self.proto = MockMinervaProtocol()
 		self.tracker = StreamTracker(reactor, clock, self.proto)
-		self.transport = SocketTransport(reactor, clock, self.tracker, DummyFirewall())
+		self.transport = SocketTransport(reactor, clock, self.tracker, DummyFirewall(), None)
 
 		self.t = DummyTCPTransport()
 		self.transport.makeConnection(self.t)
