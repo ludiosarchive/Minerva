@@ -1217,28 +1217,9 @@ class SocketTransportTests(unittest.TestCase):
 		# no error
 		self.transport.pauseProducing()
 
-	# argh, this was part of above test
-#		frame0 = self._makeValidHelloFrame()
-#		# We need to send a gimme_boxes frame to make this the active transport.
-#		# When this frame is received,
-#		#     1) transport will call _stream.subscribeToBoxes
-#		#     2) Stream._newActiveS2C will be called, _registerDownstreamProducer will be called,
-#		#           causing the stream to be registered as transport's producer
-#		# XXXXXXXXXXX ^^^ fix above
-#
-#		frame1 = [Fn.gimme_boxes, -1]
-#		self.transport.dataReceived(self.serializeFrames([frame0, frame1]))
-#		stream = self.streamTracker.getStream(StreamId('\x00'*16))
-#		#print self.streamTracker._streams
-#		self.aE([
-#			['transportOnline', self.transport],
-#		], stream.log)
-#
-#		minervaProto = list(self.protocolFactory.instances)[0]
-#		self.aE([
-#			['streamStarted', stream],
-#			['pauseProducing'],
-#		], minervaProto.log)
+		# test_transportPausedRegisterStreamingProducer tests
+		# that a producer registered with a Minerva transport is actually paused
+		# by an already-paused transport.
 
 
 	def test_resumeProducingWhenStreamNotFoundYet(self):
