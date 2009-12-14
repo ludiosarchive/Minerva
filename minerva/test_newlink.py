@@ -996,7 +996,7 @@ class SocketTransportTests(unittest.TestCase):
 		toSend = ''
 		for frame in frames:
 			bytes = simplejson.dumps(frame)
-			toSend += BencodeStringDecoder.encode(bytes)
+			toSend += self.parser.encode(bytes)
 		return toSend
 
 
@@ -1258,6 +1258,7 @@ class SocketTransportTests(unittest.TestCase):
 
 
 	def test_frameCorruption(self):
+		# TODO: only run this test for Bencode?
 		self.transport.dataReceived('1:xxxxxxxx')
 		self._parseFrames()
 		self.aE([[Fn.tk_frame_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
@@ -1265,6 +1266,7 @@ class SocketTransportTests(unittest.TestCase):
 
 
 	def test_frameTooLong(self):
+		# TODO: no early detection of "too long" for WebSocket or HTTP. Only run for Bencode and int32?
 		self.transport.dataReceived('%d:' % (1024*1024 + 1))
 		self._parseFrames()
 		self.aE([[Fn.tk_frame_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
@@ -1272,14 +1274,14 @@ class SocketTransportTests(unittest.TestCase):
 
 
 	def test_intraFrameCorruption(self):
-		self.transport.dataReceived('1:{') # incomplete JSON
+		self.transport.dataReceived(self.parser.encode('{')) # incomplete JSON
 		self._parseFrames()
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 		self._testExtraDataReceivedIgnored()
 
 
 	def test_intraFrameCorruptionTrailingGarbage(self):
-		self.transport.dataReceived('3:{}x') # complete JSON but with trailing garbage
+		self.transport.dataReceived(self.parser.encode('{}x')) # complete JSON but with trailing garbage
 		# Note that simplejson allows trailing whitespace, which we should add a test for; TODO XXX
 		
 		self._parseFrames()
