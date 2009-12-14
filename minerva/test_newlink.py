@@ -895,6 +895,32 @@ class StreamTrackerTests(unittest.TestCase):
 		self.aR(StreamAlreadyExists, act)
 
 
+
+class SocketTransportModeSelectionTests(unittest.TestCase):
+	"""
+	Test the very initial stage of the communication, where the
+	mode is selected.
+	"""
+
+	def test_modeBencode(self):
+		clock = task.Clock()
+		self.protocolFactory = MockMinervaProtocolFactory()
+		self.streamTracker = DummyStreamTracker(clock, self.protocolFactory, {})
+
+		self.gotFrames = []
+		self.parser = BencodeStringDecoder()
+		self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
+
+		reactor = FakeReactor()
+		self.t = DummyTCPTransport()
+		factory = SocketFace(reactor, None, self.streamTracker, DummyFirewall())
+		self.transport = factory.buildProtocol(addr=None)
+		self.transport.makeConnection(self.t)
+
+		
+
+
+
 # TODO: generalize many of these tests and test them for the WebSocket and HTTP faces as well.
 
 class SocketTransportTests(unittest.TestCase):

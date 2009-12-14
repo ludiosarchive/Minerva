@@ -7,6 +7,24 @@ from minerva import decoders
 from minerva.helpers import todo
 
 
+
+def diceString(toSend, packet_size):
+	pieces = []
+	for i in range(len(toSend)/packet_size + 1):
+		s = toSend[i*packet_size:(i+1)*packet_size]
+		if s != '':
+			pieces.append(s)
+	return pieces
+
+
+assert diceString("hello", 1) == list("hello")
+assert diceString("hello", 2) == ["he", "ll", "o"]
+assert diceString("hello", 3) == ["hel", "lo"]
+
+assert diceString("hello", 5) == ["hello"]
+assert diceString("hello", 6) == ["hello"]
+
+
 class _BaseRecording(object):
 
 	def __init__(self):
@@ -59,11 +77,9 @@ class CommonTests(object):
 			a = self.receiver()
 			a.MAX_LENGTH = 699
 
-			for i in range(len(toSend)/packet_size + 1):
-				s = toSend[i*packet_size:(i+1)*packet_size]
-				if s != '':
-					##print 'sending', repr(s)
-					a.dataReceived(s)
+			for s in diceString(toSend, packet_size):
+				##print 'sending', repr(s)
+				a.dataReceived(s)
 
 			self.aE(self.strings, a.got)
 
@@ -89,14 +105,11 @@ class CommonTests(object):
 		"""
 
 		def sendData(a, sequence, packet_size):
-			for i in range(len(sequence)/packet_size + 1):
-				s = sequence[i*packet_size:(i+1)*packet_size]
-				if s != '':
-					##print 'sending', repr(s)
-					a.dataReceived(s)
+			for s in diceString(sequence, packet_size):
+				a.dataReceived(s)
 
 		for sequence in self.illegalSequences:
-			for packet_size in range(1, 2):
+			for packet_size in range(1, 20):
 				##print 'packet_size', packet_size
 
 				a = self.receiver()
@@ -360,11 +373,9 @@ class ScriptDecoderTests(unittest.TestCase):
 			##print "packet_size", packet_size
 			a = self.receiver()
 
-			for i in range(len(toSend)/packet_size + 1):
-				s = toSend[i*packet_size:(i+1)*packet_size]
-				if s != '':
-					##print 'sending', repr(s)
-					a.dataReceived(s)
+			for s in diceString(toSend, packet_size):
+				##print 'sending', repr(s)
+				a.dataReceived(s)
 
 			self.aE(expected, a.got)
 
