@@ -1233,6 +1233,9 @@ class SocketFace(protocol.ServerFactory):
 
 	def setPolicyString(self, policyString):
 		"""
+		Set the Flash/Silverlight socket policy to C{policyString}. Existing open connections
+		will serve the old policy (though this is of little consequence).
+
 		@param policyString: a Flash/Silverlight policy file as a string,
 			sent in response to <policy-file-request/>C{NULL}.
 		@type policyString: C{str} or C{NoneType}

@@ -913,8 +913,8 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 	def _resetConnection(self):
 		reactor = FakeReactor()
 		self.t = DummyTCPTransport()
-		factory = SocketFace(reactor, None, self.streamTracker, DummyFirewall())
-		self.transport = factory.buildProtocol(addr=None)
+		self.face = SocketFace(reactor, None, self.streamTracker, DummyFirewall(), policyString='<nonsense-policy/>')
+		self.transport = self.face.buildProtocol(addr=None)
 		self.transport.makeConnection(self.t)
 
 
@@ -924,10 +924,10 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 		disconnects us, without writing anything.
 		"""
 		toSend = ' ' * 512
-		for packet_size in [1, 2, 200, 511, 512]:
+		for packetSize in [1, 2, 200, 511, 512]:
 			self._resetConnection()
 			assert self.t.disconnecting == False
-			for s in diceString(toSend, packet_size):
+			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
 			self.aE('', self.t.value())
 			self.aE(True, self.t.disconnecting)
@@ -946,7 +946,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			self.parser = BencodeStringDecoder()
 			self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
 
-		for packet_size in range(1, 20):
+		for packetSize in range(1, 20):
 			self._resetConnection()
 			resetParser()
 
@@ -957,10 +957,34 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			frame0 = [Fn.hello, helloData]
 			toSend = '<bencode/>\n' + serializeFrames([frame0])
 			
-			for s in diceString(toSend, packet_size):
+			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
 			self.parser.dataReceived(self.t.value())
 			self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+
+
+	def test_modePolicyFile(self):
+		toSend = '<policy-file-request/>\x00'
+		for packetSize in range(1, 20):
+			self._resetConnection()
+			for s in diceString(toSend, packetSize):
+				self.transport.dataReceived(s)
+			self.aE('<nonsense-policy/>\x00', self.t.value())
+			self.aE(False, self.t.disconnecting)
+
+
+	def test_modePolicyFilePlusGarbage(self):
+		"""
+		It's okay if the client sends some extra garbage after the NULL
+		(though no client has been observed to do this).
+		"""
+		toSend = '<policy-file-request/>\x00BLAH, BLAH, BLAH'
+		for packetSize in range(1, 20):
+			self._resetConnection()
+			for s in diceString(toSend, packetSize):
+				self.transport.dataReceived(s)
+			self.aE('<nonsense-policy/>\x00', self.t.value())
+			self.aE(False, self.t.disconnecting)
 
 
 

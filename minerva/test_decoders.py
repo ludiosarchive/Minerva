@@ -8,10 +8,10 @@ from minerva.helpers import todo
 
 
 
-def diceString(toSend, packet_size):
+def diceString(toSend, packetSize):
 	pieces = []
-	for i in range(len(toSend)/packet_size + 1):
-		s = toSend[i*packet_size:(i+1)*packet_size]
+	for i in range(len(toSend)/packetSize + 1):
+		s = toSend[i*packetSize:(i+1)*packetSize]
 		if s != '':
 			pieces.append(s)
 	return pieces
@@ -72,12 +72,12 @@ class CommonTests(object):
 		for s in self.strings:
 			toSend += self.receiver.encode(s)
 
-		for packet_size in range(1, 20):
-			##print "packet_size", packet_size
+		for packetSize in range(1, 20):
+			##print "packetSize", packetSize
 			a = self.receiver()
 			a.MAX_LENGTH = 699
 
-			for s in diceString(toSend, packet_size):
+			for s in diceString(toSend, packetSize):
 				##print 'sending', repr(s)
 				a.dataReceived(s)
 
@@ -104,13 +104,13 @@ class CommonTests(object):
 		even when they arrive in variable packet sizes.
 		"""
 
-		def sendData(a, sequence, packet_size):
-			for s in diceString(sequence, packet_size):
+		def sendData(a, sequence, packetSize):
+			for s in diceString(sequence, packetSize):
 				a.dataReceived(s)
 
 		for sequence in self.illegalSequences:
-			for packet_size in range(1, 20):
-				##print 'packet_size', packet_size
+			for packetSize in range(1, 20):
+				##print 'packetSize', packetSize
 
 				a = self.receiver()
 				a.MAX_LENGTH = 50
@@ -118,7 +118,7 @@ class CommonTests(object):
 				##print 'Sending in pieces', repr(sequence)
 				self.aR(
 					decoders.ParseError,
-					lambda: sendData(a, sequence, packet_size)
+					lambda: sendData(a, sequence, packetSize)
 				)
 
 
@@ -369,11 +369,11 @@ class ScriptDecoderTests(unittest.TestCase):
 
 
 	def _sendAndAssert(self, toSend, expected):
-		for packet_size in range(1, 20):
-			##print "packet_size", packet_size
+		for packetSize in range(1, 20):
+			##print "packetSize", packetSize
 			a = self.receiver()
 
-			for s in diceString(toSend, packet_size):
+			for s in diceString(toSend, packetSize):
 				##print 'sending', repr(s)
 				a.dataReceived(s)
 

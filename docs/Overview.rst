@@ -123,6 +123,44 @@ Why you might want Minerva
 	or even controls a real IE window, to send and receive data.
 
 
+Installation requirements
+==================
+-	CPython 2.5+ with the patch Extpatches/Python_prevent_ACA_dict_set.patch. Minerva is developed
+	and tested with CPython 2.7. Other Python implementations are untested. Minerva will
+	still work without the ACA patch, but it will be vulnerable to dedicated hackers trying
+	to stall the server.
+
+-	Twisted (branch ``z9trunk``). Minerva relies on many changes to twisted.web, many fixes
+	for resource exhaustion attacks, and improved compatibility with SSL client bugs (modified
+	``DefaultOpenSSLContextFactory``).
+
+-	simplejson (branch ``prime``). Minerva relies on a depth limit of 32 while parsing JSON. If
+	an unpatched simplejson is used, Minerva will still work but the test suite will not pass
+	(and Minerva will be vulnerable to dedicated hackers trying to segfault the server).
+
+-	zope.interface
+
+-	Pypycpyo (written by us)
+
+If you want to compile the haXe code to a SWF (for Flash Socket support on the client), you will need:
+
+-	haXe
+
+	**TODO**: describe how to use the Minerva haXe code combined with your own haXe code
+	(so that you have just one .swf file for your application)
+	 
+	**TODO**: describe patched version of haXe that compiles without debugging symbols.
+
+If you want to run the client-side test suite (``twistd`` plugin ``minervarun``), you will need:
+
+-	Coreweb (written by us)
+
+If you want to compile the RestructuredText documentation to HTML (or another format), you will need:
+
+-	docutils. This provides the ``rst2html.py`` command.
+
+
+
 Things you should know about TCP
 ========================
 
