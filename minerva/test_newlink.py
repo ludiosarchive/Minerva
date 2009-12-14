@@ -1080,8 +1080,8 @@ class SocketTransportTests(unittest.TestCase):
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		q = abstract.Queue()
-		box0 = ['box0'*(1*1024*1024)]
-		box1 = ['box1'*(1*1024*1024)]
+		box0 = ['b'*int(0.5*1024*1024)]
+		box1 = ['c'*int(0.5*1024*1024)]
 		q.extend([box0, box1])
 		self.transport.writeBoxes(q, start=None)
 		self._parseFrames()
@@ -1496,6 +1496,25 @@ class TransportProducerTests(unittest.TestCase):
 		producer1 = MockProducer()
 		self.transport.registerProducer(producer1, streaming=False)
 		self.aE([], producer1.log)
+
+
+
+class SocketFaceTests(unittest.TestCase):
+
+	def test_policyStringOkay(self):
+		face = SocketFace(FakeReactor(), None, streamTracker=None, firewall=DummyFirewall())
+		face.setPolicyString('okay')
+
+
+	def test_policyStringCannotBeUnicode(self):
+		face = SocketFace(FakeReactor(), None, streamTracker=None, firewall=DummyFirewall())
+		self.aR(TypeError, lambda: face.setPolicyString(u'hi'))
+
+
+	def test_policyStringCannotContainNull(self):
+		face = SocketFace(FakeReactor(), None, streamTracker=None, firewall=DummyFirewall())
+		self.aR(ValueError, lambda: face.setPolicyString("hello\x00"))
+		self.aR(ValueError, lambda: face.setPolicyString("\x00"))
 
 
 

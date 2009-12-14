@@ -31,7 +31,7 @@ This starts a Minerva test server."""
 
 
 def makeService(config):
-	from twisted.internet import reactor
+	from twisted.internet import reactor, task
 
 	s = service.MultiService()
 
@@ -48,10 +48,15 @@ def makeService(config):
 		serverb = strports.service(config['serverb'], site)
 		serverb.setServiceParent(s)
 
+	if os.environ.get('PYRELOADING'):
+		print 'Enabling reloader.'
+		from pypycpyo import detector
+
+		stopper = detector.SourceChangesDetector(
+			lambda: reactor.callWhenRunning(reactor.stop),
+			pyLaunchTime=2**31)
+
+		looping = task.LoopingCall(stopper.checkForChanges)
+		looping.start(1.5, now=True)
+
 	return s
-
-
-if os.environ.get('PYRELOADING'):
-	print 'Enabling reloader.'
-	from pypycpyo import detector
-	makeService = detector.reloadingService(1.5)(makeService)
