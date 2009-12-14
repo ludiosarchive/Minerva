@@ -1064,12 +1064,9 @@ class SocketTransport(protocol.Protocol):
 		# what mode the client wants us to speak in.
 		if self._mode == UNKNOWN:
 			self._initialBuffer += data
-			if self._initialBuffer.startswith('<bencode/>\n'):
-				self._mode = BENCODE
-				frameData = self._initialBuffer[len('<bencode/>\n'):]
-
 			if self._initialBuffer.startswith('<policy-file-request/>\x00'):
 				self._mode = POLICYFILE
+				del self._initialBuffer
 				self.transport.write(self._policyStringWithNull)
 				self._terminating = True
 
@@ -1081,14 +1078,19 @@ class SocketTransport(protocol.Protocol):
 
 				# TODO: loseConnection in 5-10 seconds, if client doesn't
 
-			if len(self._initialBuffer) >= 512: # TODO: really long enough to determine mode?
+				return
+			elif self._initialBuffer.startswith('<bencode/>\n'):
+				self._mode = BENCODE
+				frameData = self._initialBuffer[len('<bencode/>\n'):]
+				del self._initialBuffer
+			elif len(self._initialBuffer) >= 512: # TODO: really long enough to determine mode?
 				self._terminating = True # Terminating, but we can't even send any type of frame.
 				self.transport.loseConnection()
+				return
+			else:
+				return
 		else:
 			frameData = data
-
-		if self._mode in (UNKNOWN, POLICYFILE):
-			return
 
 		if self._mode == BENCODE:
 			try:
