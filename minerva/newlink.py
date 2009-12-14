@@ -829,6 +829,9 @@ def dumpToJson7Bit(data):
 # Acceptable protocol modes for SocketTransport to be in. Int32* are for Flash Socket.
 UNKNOWN, POLICYFILE, INT32, INT32CRYPTO, WEBSOCKET, BENCODE, HTTP = range(7)
 
+# TODO: We'll need to make sure it's impossible for an attacker to downgrade "int32+crypto"
+# down to "int32"
+
 
 class SocketTransport(protocol.Protocol):
 	"""
@@ -864,9 +867,6 @@ class SocketTransport(protocol.Protocol):
 		self._authed = False
 		self._terminating = False
 		self._stream = None
-		self._parser = decoders.BencodeStringDecoder()
-		self._parser.MAX_LENGTH = self.MAX_LENGTH
-		self._parser.manyDataCallback = self._framesReceived
 
 		self._paused = False
 		self._producer = None
@@ -1064,6 +1064,7 @@ class SocketTransport(protocol.Protocol):
 		# what mode the client wants us to speak in.
 		if self._mode == UNKNOWN:
 			self._initialBuffer += data
+
 			if self._initialBuffer.startswith('<policy-file-request/>\x00'):
 				self._mode = POLICYFILE
 				del self._initialBuffer
@@ -1079,14 +1080,20 @@ class SocketTransport(protocol.Protocol):
 				# TODO: loseConnection in 5-10 seconds, if client doesn't
 
 				return
+
 			elif self._initialBuffer.startswith('<bencode/>\n'):
 				self._mode = BENCODE
 				frameData = self._initialBuffer[len('<bencode/>\n'):]
 				del self._initialBuffer
+				self._parser = decoders.BencodeStringDecoder()
+				self._parser.MAX_LENGTH = self.MAX_LENGTH
+				self._parser.manyDataCallback = self._framesReceived
+
 			elif len(self._initialBuffer) >= 512: # TODO: really long enough to determine mode?
 				self._terminating = True # Terminating, but we can't even send any type of frame.
 				self.transport.loseConnection()
 				return
+
 			else:
 				return
 		else:
