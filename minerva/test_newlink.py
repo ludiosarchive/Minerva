@@ -9,7 +9,7 @@ from twisted.web import server, resource
 from twisted.internet import protocol, defer, address, interfaces, task
 from twisted.internet.interfaces import IPushProducer, IPullProducer, IProtocol, IProtocolFactory
 
-from minerva.decoders import BencodeStringDecoder
+from minerva.decoders import BencodeStringDecoder, Int32StringDecoder
 from minerva import abstract
 from minerva.helpers import todo
 
@@ -938,7 +938,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			toSend = ''
 			for frame in frames:
 				bytes = simplejson.dumps(frame)
-				toSend += BencodeStringDecoder.encode(bytes)
+				toSend += self.parser.encode(bytes)
 			return toSend
 
 		def resetParser():
@@ -957,6 +957,37 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			frame0 = [Fn.hello, helloData]
 			toSend = '<bencode/>\n' + serializeFrames([frame0])
 			
+			for s in diceString(toSend, packetSize):
+				self.transport.dataReceived(s)
+			self.parser.dataReceived(self.t.value())
+			self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+
+
+	# copy/paste from test_modeBencode
+	def test_modeInt32(self):
+		def serializeFrames(frames):
+			toSend = ''
+			for frame in frames:
+				bytes = simplejson.dumps(frame)
+				toSend += self.parser.encode(bytes)
+			return toSend
+
+		def resetParser():
+			self.gotFrames = []
+			self.parser = Int32StringDecoder()
+			self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
+
+		for packetSize in range(1, 20):
+			self._resetConnection()
+			resetParser()
+
+			# Send some helloData that errors with tk_stream_attach_failure. We do this just so
+			# we know we're getting frames correctly. This error is a good one to test for, unlike
+			# any "frame corruption" error, to distinguish things properly.
+			helloData = dict(n=0, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+			frame0 = [Fn.hello, helloData]
+			toSend = '<int32/>\n' + serializeFrames([frame0])
+
 			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
 			self.parser.dataReceived(self.t.value())
@@ -990,7 +1021,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 
 # TODO: generalize many of these tests and test them for the WebSocket and HTTP faces as well.
 
-class SocketTransportTests(unittest.TestCase):
+class _BaseSocketTransportTests(object):
 
 	def serializeFrames(self, frames):
 		toSend = ''
@@ -1008,16 +1039,13 @@ class SocketTransportTests(unittest.TestCase):
 
 
 	def _reset(self):
-		self.gotFrames = []
-		self.parser = BencodeStringDecoder()
-		self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
-
+		self._resetParser()
 		reactor = FakeReactor()
 		self.t = DummyTCPTransport()
 		factory = SocketFace(reactor, None, self.streamTracker, DummyFirewall())
 		self.transport = factory.buildProtocol(addr=None)
 		self.transport.makeConnection(self.t)
-		self.transport.dataReceived('<bencode/>\n')
+		self._sendModeInitializer()
 
 
 	def _makeValidHelloFrame(self):
@@ -1104,8 +1132,8 @@ class SocketTransportTests(unittest.TestCase):
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		q = abstract.Queue()
-		box0 = ['b'*int(0.5*1024*1024)]
-		box1 = ['c'*int(0.5*1024*1024)]
+		box0 = ['b'*int(0.6*1024*1024)]
+		box1 = ['c'*int(0.6*1024*1024)]
 		q.extend([box0, box1])
 		self.transport.writeBoxes(q, start=None)
 		self._parseFrames()
@@ -1258,7 +1286,9 @@ class SocketTransportTests(unittest.TestCase):
 
 
 	def test_frameCorruption(self):
-		# TODO: only run this test for Bencode?
+		"""
+		This test was designed for Bencode, but it works for Int32 as well.
+		"""
 		self.transport.dataReceived('1:xxxxxxxx')
 		self._parseFrames()
 		self.aE([[Fn.tk_frame_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
@@ -1266,6 +1296,9 @@ class SocketTransportTests(unittest.TestCase):
 
 
 	def test_frameTooLong(self):
+		"""
+		This test was designed for Bencode, but it works for Int32 as well.
+		"""
 		# TODO: no early detection of "too long" for WebSocket or HTTP. Only run for Bencode and int32?
 		self.transport.dataReceived('%d:' % (1024*1024 + 1))
 		self._parseFrames()
@@ -1435,6 +1468,32 @@ class SocketTransportTests(unittest.TestCase):
 		When a Minerva transport is created, its underlying TCP transport has TCP_NODELAY enabled.
 		"""
 		self.aE(True, self.transport.transport.noDelayEnabled)
+
+
+
+class SocketTransportTestsWithBencode(_BaseSocketTransportTests, unittest.TestCase):
+
+	def _resetParser(self):
+		self.gotFrames = []
+		self.parser = BencodeStringDecoder()
+		self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
+
+
+	def _sendModeInitializer(self):
+		self.transport.dataReceived('<bencode/>\n')
+
+
+
+class SocketTransportTestsWithInt32(_BaseSocketTransportTests, unittest.TestCase):
+
+	def _resetParser(self):
+		self.gotFrames = []
+		self.parser = Int32StringDecoder()
+		self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
+
+
+	def _sendModeInitializer(self):
+		self.transport.dataReceived('<int32/>\n')
 
 
 

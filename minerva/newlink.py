@@ -882,7 +882,9 @@ class SocketTransport(protocol.Protocol):
 			# never happen.
 			raise RuntimeError("_authed=%r, _gotHello=%r" % (self._authed, self._gotHello))
 
-		# XXX TODO make sure there's no harm done with pull producers
+		# TODO: make sure tests explicitly test that pull producers work properly if a push producer
+		# was registered, paused, and unregistered before.
+		# TODO: decide if this check is really helping anyone
 		if self._paused:
 			if self.noisy:
 				log.msg('I was asked to send another box from %r but I am paused right now.' % (queue,))
@@ -1089,6 +1091,14 @@ class SocketTransport(protocol.Protocol):
 				self._parser.MAX_LENGTH = self.MAX_LENGTH
 				self._parser.manyDataCallback = self._framesReceived
 
+			elif self._initialBuffer.startswith('<int32/>\n'):
+				self._mode = INT32
+				frameData = self._initialBuffer[len('<int32/>\n'):]
+				del self._initialBuffer
+				self._parser = decoders.Int32StringDecoder()
+				self._parser.MAX_LENGTH = self.MAX_LENGTH
+				self._parser.manyDataCallback = self._framesReceived
+
 			elif len(self._initialBuffer) >= 512: # TODO: really long enough to determine mode?
 				self._terminating = True # Terminating, but we can't even send any type of frame.
 				self.transport.loseConnection()
@@ -1099,7 +1109,7 @@ class SocketTransport(protocol.Protocol):
 		else:
 			frameData = data
 
-		if self._mode == BENCODE:
+		if self._mode in (BENCODE, INT32):
 			try:
 				self._parser.dataReceived(frameData)
 			except decoders.ParseError:
@@ -1110,8 +1120,8 @@ class SocketTransport(protocol.Protocol):
 
 	def _encodeFrame(self, frameData):
 		assert self._mode != UNKNOWN
-		if self._mode == BENCODE:
-			return decoders.BencodeStringDecoder.encode(dumpToJson7Bit(frameData))
+		if self._mode in (BENCODE, INT32):
+			return self._parser.encode(dumpToJson7Bit(frameData))
 		else:
 			1/0
 
