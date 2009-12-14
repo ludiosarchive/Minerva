@@ -49,6 +49,10 @@ class Root(resource.Resource):
 		self.putChild('', IndexPage())
 
 
+# In the real world, you might want this to be more restrictive. Minerva has its own
+# CSRF protection, so it's not critical.
+policyString = '''\
+<cross-domain-policy><allow-access-from domain="*" to-ports="*"/></cross-domain-policy>'''
 
 csrfStopper = CsrfStopper(secrets.CSRF_SECRET)
 uaToStreams = UAToStreamsCorrelator()
@@ -62,7 +66,7 @@ root = Root(clock, tracker, firewall)
 	# THINK: maybe it should not be called 'tracker'?
 
 site = server.Site(root, clock=clock)
-so = SocketFace(reactor, clock, tracker, firewall)
+so = SocketFace(reactor, clock, tracker, firewall, policyString=policyString)
 
 # FUTURE:
 ## wso = WebSocketFace(reactor, clock, tracker, firewall)
