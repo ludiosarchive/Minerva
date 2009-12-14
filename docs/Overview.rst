@@ -123,6 +123,23 @@ Why you might want Minerva
 	or even controls a real IE window, to send and receive data.
 
 
+Things you should know about TCP
+========================
+
+**TODO:** cleanup
+
+When a TCP connection is closed with the normal FIN, the side that performed
+the active close has to hold on to `TIME_WAIT`_ for ~2 minutes.
+
+Having a busy server hold on to thousands of TIME_WAIT sockets is bad.
+Minerva server tries to get the client to do the active close, which
+means the client will have to hold on to the TIME_WAIT.
+
+Also, using RST instead of FIN for any reason is bad (including the common one:
+to assassinate TIME_WAIT).
+
+..	_`TIME_WAIT`: http://www.developerweb.net/forum/showthread.php?t=2941
+
 
 Things you should know about browsers and HTTP
 ====================================
@@ -213,7 +230,7 @@ instead of "unicode strings" or similar because:
 	called the JSON decoder and might as well get structured data out, instead of
 	just a string. But right now, Minerva always uses 7-bit-clean mode to avoid problems.
 
-*	JSON requires encoding control characters including `NULL` and `LF`, which is good
+*	JSON requires encoding control characters including `0xFF` and `LF`, which is good
 	because we cannot send it over all transports anyway.
 
 *	IE8, Chrome, Firefox, Safari, and Opera have native JSON encoders and decoders.

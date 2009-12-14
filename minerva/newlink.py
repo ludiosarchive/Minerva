@@ -849,12 +849,12 @@ class SocketTransport(protocol.Protocol):
 	MAX_LENGTH = 1024*1024
 	noisy = True
 
-	def __init__(self, reactor, clock, streamTracker, firewall, policyString):
+	def __init__(self, reactor, clock, streamTracker, firewall, policyStringWithNull):
 		self._reactor = reactor
 		self._clock = clock
 		self._streamTracker = streamTracker
 		self._firewall = firewall
-		self._policyString = policyString
+		self._policyStringWithNull = policyStringWithNull
 
 		self.lastBoxSent = -1
 		self._lastStartParam = 2**128
@@ -1068,13 +1068,26 @@ class SocketTransport(protocol.Protocol):
 				self._mode = BENCODE
 				frameData = self._initialBuffer[len('<bencode/>\n'):]
 
+			if self._initialBuffer.startswith('<policy-file-request/>\x00'):
+				self._mode = POLICYFILE
+				self.transport.write(self._policyStringWithNull)
+				self._terminating = True
+
+				# No need to loseConnection here, because Flash player will close it:
+				# "The server must send a null byte to terminate a policy file and may then close
+				#	the connection; if the server does not close the connection, the Flash Player will
+				#	do so upon receiving the terminating null byte."
+				#	http://www.adobe.com/devnet/flash/articles/fplayer_security_03.html
+
+				# TODO: loseConnection in 5-10 seconds, if client doesn't
+
 			if len(self._initialBuffer) >= 512: # TODO: really long enough to determine mode?
 				self._terminating = True # Terminating, but we can't even send any type of frame.
 				self.transport.loseConnection()
 		else:
 			frameData = data
 
-		if self._mode == UNKNOWN:
+		if self._mode in (UNKNOWN, POLICYFILE):
 			return
 
 		if self._mode == BENCODE:
@@ -1205,19 +1218,37 @@ class SocketFace(protocol.ServerFactory):
 		@param streamTracker: The StreamTracker that will know about all active Streams.
 		@type streamTracker: L{StreamTracker}
 		@param firewall: The transport firewall to use. Must provide L{website.ITransportFirewall}
-		@param policyString: is a Flash/Silverlight policy file as a string,
-			sent in response to <policy-file-request/>C{NULL}
+		@param policyString: a Flash/Silverlight policy file as a string,
+			sent in response to <policy-file-request/>C{NULL}.
 		@type policyString: C{str} or C{NoneType}
 		"""
 		self._reactor = reactor
 		self._clock = clock
 		self._streamTracker = streamTracker
 		self._firewall = firewall
-		self._policyString = policyString
+		self.setPolicyString(policyString)
+
+
+	def setPolicyString(self, policyString):
+		"""
+		@param policyString: a Flash/Silverlight policy file as a string,
+			sent in response to <policy-file-request/>C{NULL}.
+		@type policyString: C{str} or C{NoneType}
+		"""
+		if policyString is not None:
+			if isinstance(policyString, unicode):
+				raise TypeError("policyString cannot be a unicode object")
+			if '\x00' in policyString:
+				# because NULL is used to indicate end-of-policy file
+				raise ValueError("policyString cannot contain NULL byte")
+			self._policyStringWithNull = policyString + '\x00'
+		else:
+			# TODO: test that Flash Player actually closes connection when it sees just NULL
+			self._policyStringWithNull = '\x00'
 
 
 	def buildProtocol(self, addr):
-		p = self.protocol(self._reactor, self._clock, self._streamTracker, self._firewall, self._policyString)
+		p = self.protocol(self._reactor, self._clock, self._streamTracker, self._firewall, self._policyStringWithNull)
 		p.factory = self
 		return p
 

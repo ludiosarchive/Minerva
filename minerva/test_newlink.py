@@ -1234,6 +1234,7 @@ class SocketTransportTests(unittest.TestCase):
 		self.transport.dataReceived(self.serializeFrames([[9999]]))
 		self._parseFrames()
 		self.aE(existingFrames, self.gotFrames)
+		self.aE(False, self.t.disconnecting)
 
 
 	def test_invalidFrameType(self):
