@@ -28,6 +28,8 @@ from minerva.mocks import (
 	DummyFirewall, DummyTCPTransport
 )
 
+from minerva.test_decoders import diceString
+
 Fn = Frame.names
 
 
@@ -902,22 +904,63 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 	mode is selected.
 	"""
 
-	def test_modeBencode(self):
+	def setUp(self):
 		clock = task.Clock()
 		self.protocolFactory = MockMinervaProtocolFactory()
 		self.streamTracker = DummyStreamTracker(clock, self.protocolFactory, {})
 
-		self.gotFrames = []
-		self.parser = BencodeStringDecoder()
-		self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
 
+	def _resetConnection(self):
 		reactor = FakeReactor()
 		self.t = DummyTCPTransport()
 		factory = SocketFace(reactor, None, self.streamTracker, DummyFirewall())
 		self.transport = factory.buildProtocol(addr=None)
 		self.transport.makeConnection(self.t)
 
-		
+
+	def test_unknownModeCausesClose(self):
+		"""
+		If we send a bunch of nonsense during the mode-detection stage, the SocketTransport
+		disconnects us, without writing anything.
+		"""
+		toSend = ' ' * 512
+		for packet_size in [1, 2, 200, 511, 512]:
+			self._resetConnection()
+			assert self.t.disconnecting == False
+			for s in diceString(toSend, packet_size):
+				self.transport.dataReceived(s)
+			self.aE('', self.t.value())
+			self.aE(True, self.t.disconnecting)
+
+
+	def test_modeBencode(self):
+		def serializeFrames(frames):
+			toSend = ''
+			for frame in frames:
+				bytes = simplejson.dumps(frame)
+				toSend += BencodeStringDecoder.encode(bytes)
+			return toSend
+
+		def resetParser():
+			self.gotFrames = []
+			self.parser = BencodeStringDecoder()
+			self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
+
+		for packet_size in range(1, 20):
+			self._resetConnection()
+			resetParser()
+
+			# Send some helloData that errors with tk_stream_attach_failure. We do this just so
+			# we know we're getting frames correctly. This error is a good one to test for, unlike
+			# any "frame corruption" error, to distinguish things properly.
+			helloData = dict(n=0, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+			frame0 = [Fn.hello, helloData]
+			toSend = '<bencode/>\n' + serializeFrames([frame0])
+			
+			for s in diceString(toSend, packet_size):
+				self.transport.dataReceived(s)
+			self.parser.dataReceived(self.t.value())
+			self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
 
@@ -950,7 +993,7 @@ class SocketTransportTests(unittest.TestCase):
 		factory = SocketFace(reactor, None, self.streamTracker, DummyFirewall())
 		self.transport = factory.buildProtocol(addr=None)
 		self.transport.makeConnection(self.t)
-		self.transport.dataReceived('<bencode/>\r\n')
+		self.transport.dataReceived('<bencode/>\n')
 
 
 	def _makeValidHelloFrame(self):

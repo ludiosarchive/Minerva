@@ -1064,13 +1064,13 @@ class SocketTransport(protocol.Protocol):
 		# what mode the client wants us to speak in.
 		if self._mode == UNKNOWN:
 			self._initialBuffer += data
-			if self._initialBuffer.startswith('<bencode/>\r\n'):
+			if self._initialBuffer.startswith('<bencode/>\n'):
 				self._mode = BENCODE
-				frameData = self._initialBuffer[len('<bencode/>\r\n'):]
+				frameData = self._initialBuffer[len('<bencode/>\n'):]
 
-			if len(self._initialBuffer) > 512: # TODO: really long enough to determine mode?
+			if len(self._initialBuffer) >= 512: # TODO: really long enough to determine mode?
 				self._terminating = True # Terminating, but we can't even send any type of frame.
-				self.transport.close()
+				self.transport.loseConnection()
 		else:
 			frameData = data
 
