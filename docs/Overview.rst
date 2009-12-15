@@ -457,7 +457,8 @@ characters in the `Unicode 5.2 standard`_. Future optimizations may make it impo
 to transmit certain codepoints or combinations of codepoints. For example, invalid
 surrogate pairs, as well as ``U+FDD0`` - ``U+FDEF``, ``U+FFF0`` - ``U+FFF8``,
 ``U+FFFE``, ``U+FFFF``, as well as other Noncharacters, may be silently replaced
-with ``U+FFFD REPLACEMENT CHARACTER``. Minerva reserves the right to only
+with ``U+FFFD REPLACEMENT CHARACTER``. Do not use ``U+FEFF`` either, as it
+might be silently stripped in Safari 3. Minerva reserves the right to only
 sometimes substitute to ``U+FFFD``, even for adjacent frames in the same stream.
 
 This limitation doesn't apply to the current version of Minerva because both client and server

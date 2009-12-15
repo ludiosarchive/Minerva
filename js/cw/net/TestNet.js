@@ -416,6 +416,44 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseRealRequestTests').methods(
 		});
 
 		return requestD;
+	},
+
+	/**
+	 * Used by the XHR/XDR UnicodeRainbow tests
+	 */
+	function _complainAboutMismatches(self, expected, text) {
+		var serializer = new goog.json.Serializer();
+		function ser(obj) {
+			return serializer.serialize(obj);
+		}
+
+		for(var n=0, len=expected.length; n < len; n++) {
+			var expectedChar = expected.substr(n, 1);
+			var gotChar = text.substr(n, 1);
+			if(expectedChar != gotChar) {
+				cw.net.TestNet.logger.severe(goog.string.subs("Expected %s got %s", ser(expectedChar), ser(gotChar)));
+			}
+		}
+	},
+
+	/**
+	 * This tests for a range wider than our JSON uses (our JSON escapes control characters).
+	 */
+	function test_asciiRainbow(self) {
+		var buffer = [];
+		// could use String.fromCharCode.apply(null, [1, 2, 3, ...])
+		for(var i=1; i < 126 + 1; i++) { // 55295 is max that works
+			buffer.push(String.fromCharCode(i));
+		}
+		var expected = buffer.join('');
+		self.target.update('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-126');
+		var requestD = self.xhdr.request('POST', self.target.getString(), '');
+		requestD.addCallback(function(obj){
+			var text = obj.responseText;
+			self._complainAboutMismatches(expected, text);
+			self.assertEqual(expected, text);
+		});
+		return requestD;
 	}
 )
 
@@ -428,10 +466,11 @@ cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXHRRealRequ
 		self.xhdr = cw.net.UsableXHR(window, cw.net.getXHRObject());
 	},
 
-	/**
-	 *
-	 */
+
 	function test_unicodeRainbowSkipFFFE(self) {
+		if(goog.userAgent.WEBKIT && !goog.userAgent.isVersion('530.17')) {
+			throw new CW.UnitTest.SkipTest("Safari < 4 strips U+FEFF. Make a new test for if you care.");
+		}
 		var buffer = [];
 		// could use String.fromCharCode.apply(null, [1, 2, 3, ...])
 		for(var i=1; i < 55295 + 1; i++) { // 55295 is max that works
@@ -444,19 +483,9 @@ cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXHRRealRequ
 		var expected = buffer.join('');
 		self.target.update('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-65533,65535-65535');
 		var requestD = self.xhdr.request('POST', self.target.getString(), '');
-		var serializer = new goog.json.Serializer();
-		function ser(obj) {
-			return serializer.serialize(obj);
-		}
 		requestD.addCallback(function(obj){
 			var text = obj.responseText;
-			for(var n=0, len=expected.length; n < len; n++) {
-				var expectedChar = expected.substr(n, 1);
-				var gotChar = text.substr(n, 1);
-				if(expectedChar != gotChar) {
-					cw.net.TestNet.logger.severe(goog.string.subs("Expected %s got %s", ser(expectedChar), ser(gotChar)));
-				}
-			}
+			self._complainAboutMismatches(expected, text);
 			self.assertEqual(expected, text);
 		});
 		return requestD;
@@ -466,6 +495,9 @@ cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXHRRealRequ
 	 * Test that all codepoints that are not in the high or low surrogate planes can be received over XHR
 	 */
 	function test_unicodeRainbowWithFFFE(self) {
+		if(goog.userAgent.WEBKIT && !goog.userAgent.isVersion('530.17')) {
+			throw new CW.UnitTest.SkipTest("Safari < 4 strips U+FEFF. Make a new test for if you care.");
+		}
 		var buffer = [];
 		// could use String.fromCharCode.apply(null, [1, 2, 3, ...])
 		for(var i=1; i < 55295 + 1; i++) { // 55295 is max that works
@@ -480,6 +512,7 @@ cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXHRRealRequ
 		var requestD = self.xhdr.request('POST', self.target.getString(), '');
 		requestD.addCallback(function(obj){
 			var text = obj.responseText;
+			self._complainAboutMismatches(expected, text);
 			self.assertEqual(expected, text);
 		});
 		return requestD;
@@ -538,19 +571,9 @@ cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXDRRealRequ
 		var expected = buffer.join('');
 		self.target.update('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-64975,65008-65519,65529-65533');
 		var requestD = self.xhdr.request('POST', self.target.getString(), '');
-		var serializer = new goog.json.Serializer();
-		function ser(obj) {
-			return serializer.serialize(obj);
-		}
 		requestD.addCallback(function(obj){
 			var text = obj.responseText;
-			for(var n=0, len=expected.length; n < len; n++) {
-				var expectedChar = expected.substr(n, 1);
-				var gotChar = text.substr(n, 1);
-				if(expectedChar != gotChar) {
-					cw.net.TestNet.logger.severe(goog.string.subs("Expected %s got %s", ser(expectedChar), ser(gotChar)));
-				}
-			}
+			self._complainAboutMismatches(expected, text);
 			self.assertEqual(expected, text);
 		});
 		return requestD;
