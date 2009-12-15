@@ -270,10 +270,8 @@ class Incoming(object):
 				_lastAckP1 = self._lastAck + 1
 				self._deliverable.append(self._cached[_lastAckP1])
 				del self._cached[_lastAckP1]
-				try:
+				if _lastAckP1 in self._consumption:
 					del self._consumption[_lastAckP1]
-				except KeyError:
-					pass
 				self._lastAck = _lastAckP1
 
 		# Do this after the above, to avoid writing to _consumption in the
