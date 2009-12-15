@@ -281,13 +281,7 @@ cw.net.TestNet._BaseUsableXHDRLogicTests.subclass(cw.net.TestNet, 'UsableXDRLogi
 
 
 
-CW.UnitTest.TestCase.subclass(cw.net.TestNet, 'UsableXHRRealRequestTests').methods(
-
-	function setUp(self) {
-		self.target = CW.URI.URL(''+window.location);
-		self.xhdr = cw.net.UsableXHR(window, cw.net.getXHRObject());
-	},
-
+CW.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseRealRequestTests').methods(
 
 	function test_simpleResponseGET(self) {
 		self.target.update('path', '/@testres_Minerva/SimpleResponse/?a=0');
@@ -422,18 +416,17 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, 'UsableXHRRealRequestTests').metho
 		});
 
 		return requestD;
+	}
+)
+
+
+
+cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXHRRealRequestTests').methods(
+
+	function setUp(self) {
+		self.target = CW.URI.URL(''+window.location);
+		self.xhdr = cw.net.UsableXHR(window, cw.net.getXHRObject());
 	},
-
-	// XDomainRequest fails at these; 43 extra codepoints are converted to U+FFFD replacement character:
-	// >> _expected.split('\uFFFD').length - 1;
-	// 1
-	// >> _text.split('\uFFFD').length - 1;
-	// 44
-
-	// The "forbidden" character ranges are: U+FDD0 - U+FDEF, U+FFF0 - U+FFF8, U+FFFF
-	// U+FDD0 - U+FDEF are in Arabic Presentation Forms-A, listed as Noncharacters
-	// U+FFF0 - U+FFF8 are in Specials, unallocated as of Unicode 5.2
-	// U+FFFF is in Specials, listed as Noncharacter
 
 	/**
 	 *
@@ -517,6 +510,7 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, 'UsableXHRRealRequestTests').metho
 //		});
 //		return requestD;
 //	}
+
 );
 
 
@@ -524,7 +518,7 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, 'UsableXHRRealRequestTests').metho
  * Run L{UsableXHRRealRequestTests} except with the XDR object, if it's available in this
  * browser.
  */
-cw.net.TestNet.UsableXHRRealRequestTests.subclass(cw.net.TestNet, 'UsableXDRRealRequestTests').methods(
+cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXDRRealRequestTests').methods(
 
 	function setUp(self) {
 		if(!cw.net.TestNet.hasXDomainRequest()) {
@@ -532,6 +526,61 @@ cw.net.TestNet.UsableXHRRealRequestTests.subclass(cw.net.TestNet, 'UsableXDRReal
 		}
 		self.target = CW.URI.URL(''+window.location);
 		self.xhdr = cw.net.UsableXDR(window, function(){return new XDomainRequest()});
+	},
+
+	// A	 lot more codepoints are banned for XDR. Banned codepoints are replaced with
+	// U+FFFD REPLACEMENT CHARACTER.
+
+	// Other than bad surrogates, the "forbidden" codepoint ranges are:
+	// U+FDD0 - U+FDEF, U+FFF0 - U+FFF8, U+FFFE, U+FFFF.
+	
+	// U+FDD0 - U+FDEF are in Arabic Presentation Forms-A, listed as Noncharacters
+	// U+FFF0 - U+FFF8 are in Specials, unallocated as of Unicode 5.2
+	// U+FFFF is in Specials, listed as Noncharacter
+
+	// >>> 0xFDD0
+	// 64976
+	// >>> 0xFDEF
+	// 65007
+	// >>> 0xFFF0
+	// 65520
+	// >>> 0xFFF8
+	// 65528
+
+	function test_unicodeRainbowSkipCodepointsBannedByXDR(self) {
+		var buffer = [];
+		// could use String.fromCharCode.apply(null, [1, 2, 3, ...])
+		for(var i=1; i < 55295 + 1; i++) {
+			buffer.push(String.fromCharCode(i));
+		}
+		for(var i=57344; i < 64975 + 1; i++) {
+			buffer.push(String.fromCharCode(i));
+		}
+		for(var i=65008; i < 65519 + 1; i++) {
+			buffer.push(String.fromCharCode(i));
+		}
+		for(var i=65529; i < 65533 + 1; i++) {
+			buffer.push(String.fromCharCode(i));
+		}
+		var expected = buffer.join('');
+		self.target.update('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-64975,65008-65519,65529-65533');
+		var requestD = self.xhdr.request('POST', self.target.getString(), '');
+		var serializer = new goog.json.Serializer();
+		function ser(obj) {
+			return serializer.serialize(obj);
+		}
+		requestD.addCallback(function(obj){
+			var text = obj.responseText;
+			for(var n=0, len=expected.length; n < len; n++) {
+				var expectedChar = expected.substr(n, 1);
+				var gotChar = text.substr(n, 1);
+				if(expectedChar != gotChar) {
+					cw.net.TestNet.logger.severe(goog.string.subs("Expected %s got %s", ser(expectedChar), ser(gotChar)));
+				}
+			}
+			self.assertEqual(expected, text);
+		});
+		return requestD;
 	}
 );
 
