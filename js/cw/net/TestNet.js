@@ -7,10 +7,15 @@
 // import CW.UnitTest
 // import CW.URI
 
+goog.require('goog.debug');
 goog.require('goog.userAgent');
 goog.require('goog.json.Serializer');
 goog.require('goog.string');
 goog.require('cw.net');
+
+
+cw.net.TestNet.logger = goog.debug.Logger.getLogger('cw.net.TestNet');
+cw.net.TestNet.logger.setLevel(goog.debug.Logger.Level.ALL);
 
 
 cw.net.TestNet.hasXDomainRequest = function hasXDomainRequest() {
@@ -139,13 +144,13 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').metho
 		self.xhdr.abort();
 		self._finishRequest();
 
-		self.requestD.addErrback(function(e){CW.msg('Ignoring error in requestD Deferred: ' + e)});
+		self.requestD.addErrback(function(e){cw.net.TestNet.logger.info('Ignoring error in requestD Deferred: ' + e)});
 
 		// Make the second request
 		self.requestD = self.xhdr.request('POST', self.target.getString(), 'second');
 		self._finishRequest();
 
-		//CW.msg(CW.UnitTest.repr(self.mock.log));
+		//cw.net.TestNet.logger.info(goog.debug.expose(self.mock.log));
 		self.assertEqual([
 			['open', 'POST', self.target.getString(), true], ['send', ''], ['abort'],
 			['open', 'POST', self.target.getString(), true], ['send', 'second']
@@ -185,7 +190,7 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').metho
 		self.xhdr.abort();
 		self.xhdr.abort();
 		self.assertEqual(self.mock.log, [['open', 'POST', self.target.getString(), true], ['send', ''], ['abort']]);
-		self.requestD.addErrback(function(e){CW.msg('Ignoring error in requestD Deferred: ' + e)});
+		self.requestD.addErrback(function(e){cw.net.TestNet.logger.info('Ignoring error in requestD Deferred: ' + e)});
 	}
 
 );
@@ -246,7 +251,7 @@ cw.net.TestNet._BaseUsableXHDRLogicTests.subclass(cw.net.TestNet, 'UsableXHRLogi
 		self.mock.onreadystatechange(null);
 		self.assertIdentical(goog.nullFunction, self.mock.onreadystatechange);
 
-		self.requestD.addErrback(function(e){CW.msg('Ignoring error in requestD Deferred: ' + e)});
+		self.requestD.addErrback(function(e){cw.net.TestNet.logger.info('Ignoring error in requestD Deferred: ' + e)});
 	}
 
 );
@@ -452,13 +457,11 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, 'UsableXHRRealRequestTests').metho
 		}
 		requestD.addCallback(function(obj){
 			var text = obj.responseText;
-			_text = text;
-			_expected = expected;
-			for(var n=0, len=_expected.length; n < len; n++) {
-				var expectedChar = _expected.substr(n, 1);
-				var gotChar = _text.substr(n, 1);
+			for(var n=0, len=expected.length; n < len; n++) {
+				var expectedChar = expected.substr(n, 1);
+				var gotChar = text.substr(n, 1);
 				if(expectedChar != gotChar) {
-					CW.msg(goog.string.subs("Expected %s got %s", ser(expectedChar), ser(gotChar)));
+					cw.net.TestNet.logger.severe(goog.string.subs("Expected %s got %s", ser(expectedChar), ser(gotChar)));
 				}
 			}
 			self.assertEqual(expected, text);
@@ -484,8 +487,6 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, 'UsableXHRRealRequestTests').metho
 		var requestD = self.xhdr.request('POST', self.target.getString(), '');
 		requestD.addCallback(function(obj){
 			var text = obj.responseText;
-			_text = text;
-			_expected = expected;
 			self.assertEqual(expected, text);
 		});
 		return requestD;

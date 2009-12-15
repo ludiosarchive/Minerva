@@ -4,6 +4,8 @@
 goog.require('goog.debug.Error');
 goog.require('goog.async.Deferred');
 goog.require('goog.userAgent');
+goog.require('goog.debug.Logger');
+goog.require('goog.json');
 
 goog.provide('cw.net');
 goog.provide('cw.net.ParseError');
@@ -11,6 +13,10 @@ goog.provide('cw.net.RequestStillActive');
 goog.provide('cw.net.RequestAborted');
 goog.provide('cw.net.NetworkProblem');
 goog.provide('cw.net.Timeout');
+
+
+cw.net.logger = goog.debug.Logger.getLogger('cw.net');
+cw.net.logger.setLevel(goog.debug.Logger.Level.ALL);
 
 
 /**
@@ -109,7 +115,7 @@ cw.net.ResponseTextDecoder = function(xObject, MAX_LENGTH) {
 		var reportedLength = responseTextLength;
 		responseTextLength = text.length;
 		if(reportedLength > responseTextLength) {
-			CW.msg('Someone lied and reported a too-large responseTextLength: ' +
+			cw.net.logger.fine('Someone lied and reported a too-large responseTextLength: ' +
 				reportedLength + '; should have been ' + responseTextLength + ' or lower.');
 		}
 
@@ -362,12 +368,6 @@ CW.Class.subclass(cw.net, "UsableXDR").methods(
 		self._noisy = true;
 	},
 
-	function _verboseLog(self, msg) {
-		if(self._noisy) {
-			CW.msg(msg);
-		}
-	},
-
 	function canCrossDomains(self) {
 		return true;
 	},
@@ -391,40 +391,32 @@ CW.Class.subclass(cw.net, "UsableXDR").methods(
 	},
 
 	function _handler_XDR_onerror(self) {
-//] if _debugMode:
-		CW.msg('_handler_XDR_onerror');
-//] endif
+		cw.net.logger.fine('_handler_XDR_onerror');
 		self._finishAndReset(new cw.net.NetworkProblem());
 	},
 
 	function _handler_XDR_ontimeout(self) {
-//] if _debugMode:
-		CW.msg('_handler_XDR_ontimeout');
-//] endif
+		cw.net.logger.fine('_handler_XDR_ontimeout');
 		// Even though our XDR timeout is very high and should never be
 		// reached, we'll treat it the same as an official timeout.
 		self._finishAndReset(new cw.net.Timeout());
 	},
 
 	function _handler_XDR_onprogress(self) {
-//] if _debugMode:
-		CW.msg('_handler_XDR_onprogress ' + window.event);
-//] endif
+		cw.net.logger.finest('_handler_XDR_onprogress ' + window.event);
 		try {
 			self._progressCallback(self._object, null, null);
 		} catch(e) {
-			CW.err(e, '[_handler_XDR_onprogress] Error in _progressCallback');
+			cw.net.logger.severe('[_handler_XDR_onprogress] Error in _progressCallback', e);
 		}
 	},
 
 	function _handler_XDR_onload(self) {
-//] if _debugMode:
-		CW.msg('_handler_XDR_onload');
-//] endif
+		cw.net.logger.fine('_handler_XDR_onload');
 		try {
 			self._progressCallback(self._object, null, null);
 		} catch(e) {
-			CW.err(e, '[_handler_XDR_onload] Error in _progressCallback');
+			cw.net.logger.severe('[_handler_XDR_onload] Error in _progressCallback', e);
 		}
 		self._finishAndReset(null);
 	},
@@ -516,12 +508,6 @@ CW.Class.subclass(cw.net, "UsableXHR").methods(
 		self._noisy = true;
 	},
 
-	function _verboseLog(self, msg) {
-		if(self._noisy) {
-			CW.msg(msg);
-		}
-	},
-
 	/**
 	 * See cw.net.IUsableSomething.canCrossDomains
 	 */
@@ -565,9 +551,7 @@ CW.Class.subclass(cw.net, "UsableXHR").methods(
 		try {
 			x.onprogress = goog.bind(self._handler_onprogress, self);
 		} catch(err) {
-//] if _debugMode:
-			CW.msg(self + ": failed to attach onprogress event: " + err.message);
-//] endif
+			cw.net.logger.info(self + ": failed to attach onprogress event: " + err.message);
 		}
 		// TODO: maybe attach onerror too, to detect some network errors.
 
@@ -639,15 +623,13 @@ CW.Class.subclass(cw.net, "UsableXHR").methods(
 			try {
 				self._progressCallback(self._object, null, null);
 			} catch(e) {
-				CW.err(e, '[_handler_poll] Error in _progressCallback');
+				cw.net.logger.severe('[_handler_poll] Error in _progressCallback', e);
 			}
 		}
 	},
 
 	function _handler_onprogress(self, e) {
-//] if _debugMode:
-		CW.msg('_handler_onprogress: ' + CW.JSON.stringify(e));
-//] endif
+		cw.net.logger.finest('_handler_onprogress: ' + goog.json.serialize(e));
 
 		// In Safari 4.0.3 and Firefox 3.5.2/3.0.7, e.totalSize === 4294967295
 		// when length is unknown.
@@ -671,7 +653,7 @@ CW.Class.subclass(cw.net, "UsableXHR").methods(
 			try {
 				self._progressCallback(self._object, null, self._totalSize);
 			} catch(e) {
-				CW.err(e, '[_handler_onprogress] Error in _progressCallback');
+				cw.net.logger.severe('[_handler_onprogress] Error in _progressCallback', e);
 			}
 		}
 	},
@@ -681,14 +663,12 @@ CW.Class.subclass(cw.net, "UsableXHR").methods(
 		// with one argument, a C{readystatechange} event with no useful properties.
 		// TODO: look around in other browsers? maybe (but unlikely) they'll have a "bytes received" property.
 		var readyState = self._object.readyState;
-//] if _debugMode:
-		CW.msg(self + ': readyState: ' + readyState);
-//] endif
+		cw.net.logger.finest(self + ': readyState: ' + readyState);
 		if(readyState == 3 || readyState == 4) {
 			try {
 				self._progressCallback(self._object, self._position, self._totalSize);
 			} catch(e) {
-				CW.err(e, '[_handler_onreadystatechange] Error in _progressCallback');
+				cw.net.logger.severe('[_handler_onreadystatechange] Error in _progressCallback', e);
 			}
 		}
 
@@ -884,7 +864,8 @@ CW.Class.subclass(cw.net, "Stream").methods(
 	 * Received box L{boxes}. Override this.
 	 */
 	function boxesReceived(self, boxes) {
-		CW.msg('Forgot to override boxesReceived?');
+		// TODO: use goog.abstractMethod instead
+		throw new Error('Forgot to override boxesReceived?');
 	}
 )
 
