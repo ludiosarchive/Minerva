@@ -484,33 +484,6 @@ cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXHRRealRequ
 		});
 		return requestD;
 	}
-
-//
-//	/**
-//	 *
-//	 */
-//	function test_unicodeRainbowStopEarly(self) {
-//		var buffer = [];
-//		// could use String.fromCharCode.apply(null, [1, 2, 3, ...])
-//		for(var i=1; i < 55295 + 1; i++) { // 55295 is max that works
-//			buffer.push(String.fromCharCode(i));
-//		}
-//		for(var i=57344; i < 65525 + 1; i++) { // 55295 is max that works
-//			buffer.push(String.fromCharCode(i));
-//		}
-//		var expected = buffer.join('');
-//		// Note: can't send U+FFFE through Flash (becomes replacement character U+FFFD), but we can send it through XHR
-//		self.target.update('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-65525');
-//		var requestD = self.xhdr.request('POST', self.target.getString(), '');
-//		requestD.addCallback(function(obj){
-//			var text = obj.responseText;
-//			_text = text;
-//			_expected = expected;
-//			self.assertEqual(expected, text);
-//		});
-//		return requestD;
-//	}
-
 );
 
 
