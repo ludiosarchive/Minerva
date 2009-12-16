@@ -2,16 +2,15 @@
  * Tests for cw.net
  */
 
-
-// import CW
 // import CW.UnitTest
-// import CW.URI
 
 goog.require('goog.debug');
 goog.require('goog.userAgent');
 goog.require('goog.json.Serializer');
 goog.require('goog.string');
 goog.require('cw.net');
+goog.require('cw.URI');
+goog.require('cw.Class');
 
 
 cw.net.TestNet.logger = goog.debug.Logger.getLogger('cw.net.TestNet');
@@ -29,7 +28,7 @@ cw.net.TestNet.hasXDomainRequest = function hasXDomainRequest() {
 
 
 
-CW.Class.subclass(cw.net.TestNet, 'MockXHR').pmethods({
+cw.Class.subclass(cw.net.TestNet, 'MockXHR').pmethods({
 
 	__init__: function() {
 		this.log = [];
@@ -58,7 +57,7 @@ CW.Class.subclass(cw.net.TestNet, 'MockXHR').pmethods({
 
 
 
-CW.Class.subclass(cw.net.TestNet, 'MockXDR').pmethods({
+cw.Class.subclass(cw.net.TestNet, 'MockXDR').pmethods({
 
 	__init__: function() {
 		this.log = [];
@@ -115,7 +114,7 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, 'GetXHRObjectTests').methods(
 CW.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').methods(
 
 	function setUp(self) {
-		self.target = CW.URI.URL(''+window.location).update('fragment', null);
+		self.target = new cw.URI.URL(''+window.location).update('fragment', null);
 	},
 
 	// Subclasses override _setupDummies
@@ -462,7 +461,7 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseRealRequestTests').methods(
 cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXHRRealRequestTests').methods(
 
 	function setUp(self) {
-		self.target = CW.URI.URL(''+window.location);
+		self.target = new cw.URI.URL(''+window.location);
 		self.xhdr = cw.net.UsableXHR(window, cw.net.getXHRObject());
 	},
 
@@ -530,7 +529,7 @@ cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXDRRealRequ
 		if(!cw.net.TestNet.hasXDomainRequest()) {
 			throw new CW.UnitTest.SkipTest("XDomainRequest is required for this test.");
 		}
-		self.target = CW.URI.URL(''+window.location);
+		self.target = new cw.URI.URL(''+window.location);
 		self.xhdr = cw.net.UsableXDR(window, function(){return new XDomainRequest()});
 	},
 
@@ -588,7 +587,7 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, 'XDRErrorsTests').methods(
 		if(!cw.net.TestNet.hasXDomainRequest()) {
 			throw new CW.UnitTest.SkipTest("XDomainRequest is required for this test.");
 		}
-		self.target = CW.URI.URL(''+window.location);
+		self.target = new cw.URI.URL(''+window.location);
 		self.xdr = cw.net.UsableXDR(window, function(){return new XDomainRequest()});
 	},
 
@@ -633,7 +632,7 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, 'XDRErrorsTests').methods(
 CW.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackTests').methods(
 
 	function setUp(self) {
-		self.target = CW.URI.URL(''+window.location);
+		self.target = new cw.URI.URL(''+window.location);
 		self.target.update('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestNet.MockXHR();
 		// Never advance the clock, to prevent Opera from doing a call at 50ms intervals.
@@ -792,7 +791,7 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackOperaWorkaroun
 		}
 		self.clock = CW.UnitTest.Clock();
 
-		self.target = CW.URI.URL(''+window.location);
+		self.target = new cw.URI.URL(''+window.location);
 		self.target.update('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestNet.MockXHR();
 
@@ -874,7 +873,7 @@ CW.UnitTest.TestCase.subclass(cw.net.TestNet, 'XDRProgressCallbackTests').method
 		if(!cw.net.TestNet.hasXDomainRequest()) {
 			throw new CW.UnitTest.SkipTest("XDomainRequest is required for this test.");
 		}
-		self.target = CW.URI.URL(''+window.location);
+		self.target = new cw.URI.URL(''+window.location);
 		self.target.update('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestNet.MockXHR();
 		self.clock = CW.UnitTest.Clock();

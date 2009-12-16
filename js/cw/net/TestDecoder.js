@@ -3,7 +3,6 @@
  */
 
 
-// import CW
 // import CW.UnitTest
 goog.require('cw.net');
 

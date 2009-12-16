@@ -1,6 +1,4 @@
-// TODO: really stop using anything from CW
-// import CW
-
+goog.require('cw.Class'); // TODO: stop using it
 goog.require('goog.debug.Error');
 goog.require('goog.async.Deferred');
 goog.require('goog.userAgent');
@@ -355,7 +353,7 @@ Disadvantages:
  * @constructor
  * @implements {cw.net.IUsableSomething}
  */
-CW.Class.subclass(cw.net, "UsableXDR").methods(
+cw.Class.subclass(cw.net, "UsableXDR").methods(
 	/**
 	 * C{window} is a C{window}-like object.
 	 * C{objectFactory} is a function that returns an
@@ -494,7 +492,7 @@ CW.Class.subclass(cw.net, "UsableXDR").methods(
  *
  * TODO: implement timeout?
  */
-CW.Class.subclass(cw.net, "UsableXHR").methods(
+cw.Class.subclass(cw.net, "UsableXHR").methods(
 
 	/**
 	 * C{window} is a C{window}-like object.
@@ -726,7 +724,7 @@ cw.net.simpleRequest = function(verb, url, post) {
 //CW.Error.subclass(cw.net, 'StreamTimedOut');
 //CW.Error.subclass(cw.net, 'SeqNumTooHighError');
 
-CW.Class.subclass(cw.net, "Stream").methods(
+cw.Class.subclass(cw.net, "Stream").methods(
 	/**
 	 * Initialize Stream with:
 	 *    L{window}, provides L{IWindowTime}
@@ -877,7 +875,7 @@ CW.Class.subclass(cw.net, "Stream").methods(
 
 // StreamFactory
 	// buildStream
-CW.Class.subclass(cw.net, "StreamFactory").methods(
+cw.Class.subclass(cw.net, "StreamFactory").methods(
 	/**
 	 * This takes L{window} as an argument so that unit tests
 	 * can pass in a dummy window with deterministic timer features.
