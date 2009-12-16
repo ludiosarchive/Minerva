@@ -393,10 +393,7 @@ class RandomFactory(object):
 			self._getMore(max(nbytes, 4096))
 
 		out = self._buffer[self._position:self._position+nbytes]
-		assert len(out) == nbytes
-
 		self._position += nbytes
-
 		return out
 
 
