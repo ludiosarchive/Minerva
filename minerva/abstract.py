@@ -374,11 +374,19 @@ class GenericIdentifier(object):
 
 
 class RandomFactory(object):
+	"""
+	Factory providing a L{secureRandom} method.
+
+	This implementation buffers data from os.urandom
+	to avoid calling it every time random data is needed.
+	"""
+
+	bufferSize = 4096 * 8
 
 	__slots__ = ['_buffer', '_position']
 
 	def __init__(self):
-		self._getMore(4096)
+		self._getMore(self.bufferSize)
 
 
 	def _getMore(self, howMuch):
@@ -387,10 +395,19 @@ class RandomFactory(object):
 
 
 	def secureRandom(self, nbytes):
+		"""
+		Return a number of relatively secure random bytes.
+
+		@param nbytes: number of bytes to generate.
+		@type nbytes: C{int}
+
+		@return: a string of random bytes.
+		@rtype: C{str}
+		"""
 		nbytes = ensureNonNegInt(nbytes)
 
 		if nbytes > len(self._buffer) - self._position:
-			self._getMore(max(nbytes, 4096))
+			self._getMore(max(nbytes, self.bufferSize))
 
 		out = self._buffer[self._position:self._position+nbytes]
 		self._position += nbytes

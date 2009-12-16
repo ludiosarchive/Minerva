@@ -544,8 +544,8 @@ class RandomFactoryTests(unittest.TestCase):
 		r1 = rf.secureRandom(4000)
 		self.aE(4000, len(r1))
 
-		r2 = rf.secureRandom(4096)
-		self.aE(4096, len(r2))
+		r2 = rf.secureRandom(4096 * 8)
+		self.aE(4096 * 8, len(r2))
 
 		r3 = rf.secureRandom(2)
 		self.aE(2, len(r3))
@@ -556,11 +556,11 @@ class RandomFactoryTests(unittest.TestCase):
 	def test_veryLargeRequests(self):
 		rf = abstract.RandomFactory()
 
-		r1 = rf.secureRandom(40000)
-		self.aE(40000, len(r1))
+		r1 = rf.secureRandom(50000)
+		self.aE(50000, len(r1))
 
-		r2 = rf.secureRandom(40096)
-		self.aE(40096, len(r2))
+		r2 = rf.secureRandom(50096)
+		self.aE(50096, len(r2))
 
 		r3 = rf.secureRandom(2)
 		self.aE(2, len(r3))
@@ -571,11 +571,11 @@ class RandomFactoryTests(unittest.TestCase):
 	def test_largeRequestSameAsBufferSize(self):
 		rf = abstract.RandomFactory()
 
-		r1 = rf.secureRandom(4096)
-		self.aE(4096, len(r1))
+		r1 = rf.secureRandom(rf.bufferSize)
+		self.aE(rf.bufferSize, len(r1))
 
-		r2 = rf.secureRandom(4096)
-		self.aE(4096, len(r2))
+		r2 = rf.secureRandom(rf.bufferSize)
+		self.aE(rf.bufferSize, len(r2))
 
 		self.aNE(r1, r2)
 
@@ -588,11 +588,11 @@ class RandomFactoryTests(unittest.TestCase):
 				self._calls += 1
 
 		rf = SyscallTrackingRandomFactory()
-		for i in xrange(1024):
+		for i in xrange(1024*8):
 			rn = rf.secureRandom(16)
 			self.aE(16, len(rn))
 
-		# Even though we needed random data 1024 times, os.urandom was only called 4 times.
+		# Even though we needed random data 1024*8 times, os.urandom was only called 4 times.
 		self.aE(4, self._calls)
 
 
