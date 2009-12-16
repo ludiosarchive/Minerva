@@ -3,11 +3,11 @@
  */
 
 
-// import CW.UnitTest
+goog.require('cw.UnitTest');
 goog.require('cw.net');
 
 
-CW.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestResponseTextDecoderNull').methods(
+cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestResponseTextDecoderNull').methods(
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
@@ -283,7 +283,7 @@ cw.net.TestDecoder, 'TestResponseTextDecoderNumberMinus2').methods(
 );
 
 
-CW.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestIgnoreResponseTextOptimization').methods(
+cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestIgnoreResponseTextOptimization').methods(
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
@@ -324,7 +324,7 @@ CW.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestIgnoreResponseTextOptimiz
 /**
  * Test that the decoder does not break when it gets a too-large L{responseTextLength}.
  */
-CW.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestExaggeratedLength').methods(
+cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestExaggeratedLength').methods(
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
