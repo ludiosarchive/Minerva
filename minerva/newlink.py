@@ -424,7 +424,8 @@ class Stream(object):
 		if \
 		succeedsTransport is not None and \
 		self._primaryTransport is not None and \
-		succeedsTransport == self._primaryTransport.transportNumber:
+		succeedsTransport == self._primaryTransport.transportNumber and \
+		self._primaryTransport.lastBoxSent != -1:
 			self._pretendAcked = self._primaryTransport.lastBoxSent
 		self._newPrimary(transport)
 		self._tryToSend()

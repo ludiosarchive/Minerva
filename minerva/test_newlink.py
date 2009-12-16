@@ -332,9 +332,9 @@ class StreamTests(unittest.TestCase):
 			['closeGently'],
 		], t1.log)
 		# Because nothing was really written to the first transport, this should already have a write.
-		self.aE(
+		self.aE([
 			['writeBoxes', s.queue, None],
-		t2.log)
+		], t2.log)
 
 		s.sendBoxes([['box5'], ['box6']])
 
