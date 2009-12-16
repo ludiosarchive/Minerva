@@ -238,6 +238,13 @@ class StreamTests(unittest.TestCase):
 
 	def test_sendBoxesConnectionInterleaving(self):
 		"""
+		A new primary transport can claim that it "succeeds" another transport,
+		and the new primary will not (at least at first) get boxes that were
+		already sent to old primary.
+
+		In the implementation, Minerva temporarily "pretends" to have SACKed
+		the boxes send to old primary, until it gets an up-to-date real SACK.
+
 		If primary transport with transportNumber 30 (T#30) is connected,
 		and boxes 0 through 4 were sent down T#30,
 		and no SACK has come from the client yet,
@@ -349,20 +356,28 @@ class StreamTests(unittest.TestCase):
 		argument even though there is no primary transport, the `succeedsTransport`
 		argument is ignored.
 		"""
-		s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
-		t1 = DummySocketLikeTransport()
-		s.transportOnline(t1)
-		s.sendBoxes([['box0'], ['box1']])
+		for connectIrrelevantTransport in (True, False):
 
-		# Boxes don't reach the transport because the transport isn't primary yet
-		self.aE([], t1.log)
+			s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
 
-		# Make it primary
-		s.subscribeToBoxes(t1, succeedsTransport=9999)
+			if connectIrrelevantTransport:
+				tIrrelevant = DummySocketLikeTransport()
+				tIrrelevant.transportNumber = 9999
+				s.transportOnline(tIrrelevant)
 
-		self.aE([
-			['writeBoxes', s.queue, None],
-		], t1.log)
+			t1 = DummySocketLikeTransport()
+			s.transportOnline(t1)
+			s.sendBoxes([['box0'], ['box1']])
+
+			# Boxes don't reach the transport because the transport isn't primary yet
+			self.aE([], t1.log)
+
+			# Make it primary
+			s.subscribeToBoxes(t1, succeedsTransport=9999)
+
+			self.aE([
+				['writeBoxes', s.queue, None],
+			], t1.log)
 
 
 	def test_getSACK(self):
