@@ -343,47 +343,6 @@ class StreamTests(unittest.TestCase):
 		s.transportOffline(t2)
 
 
-
-#
-#	def test_sendBoxesConnectionInterleavingWithOldPrimaryNeverSentBoxes(self):
-#		"""
-#		Similar to test_sendBoxesConnectionInterleaving, except the old primary transport
-#		never wrote any boxes, which means its lastBoxSent == -1
-#		"""
-#		s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
-#		t1 = DummySocketLikeTransport()
-#		t1.transportNumber = 30
-#		s.transportOnline(t1)
-#		s.sendBoxes([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
-#
-#		# Boxes don't reach the transport because the transport isn't primary
-#		self.aE([], t1.log)
-#
-#		# ... and this transport never becomes primary
-#
-#		# Now connect a new transport and make it primary
-#		t2 = DummySocketLikeTransport()
-#		t2.transportNumber = 31
-#		s.transportOnline(t2)
-#		s.subscribeToBoxes(t2, succeedsTransport=30)
-#
-#		self.aE([], t1.log) # t1 was never a primary, so it doesn't get a closeGently call.
-#		self.aE([
-#			['writeBoxes', s.queue, None]
-#		], t2.log)
-#
-#		s.sendBoxes([['box5'], ['box6']])
-#
-#		self.aE([
-#			['writeBoxes', s.queue, None],
-#			['writeBoxes', s.queue, None],
-#		], t2.log)
-#
-#		# Just to exercise transportOffline
-#		s.transportOffline(t1)
-#		s.transportOffline(t2)
-
-
 	def test_subscribeToBoxesSucceedsTransportButNoPrimaryTransport(self):
 		"""
 		If a transport calls Stream.subscribeToBoxes with a `succeedsTransport`
