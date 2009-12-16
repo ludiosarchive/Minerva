@@ -1,10 +1,11 @@
 /**
- * Tests for cw.net's ResponseTextDecoder
+ * Tests for cw.net.ResponseTextDecoder
  */
-
 
 goog.require('cw.UnitTest');
 goog.require('cw.net');
+
+goog.provide('cw.net.TestDecoder');
 
 
 cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestResponseTextDecoderNull').methods(

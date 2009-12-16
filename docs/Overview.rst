@@ -423,7 +423,7 @@ Array size limit
 
 The size of arrays is informally limited to 65535 (2^16 - 1). This is only because IE6/IE7
 cannot ``eval`` a stringed-array with 2^16 or more items. A `GWT bug report`_ describes the issue.
-Coreweb's ``CW.Test.TestAssumptions`` confirms this limitation precisely, and confirms
+Coreweb's ``cw.Test.TestAssumptions`` confirms this limitation precisely, and confirms
 that it applies only to IE6/IE7. This limitation applies to all arrays in the box, including the
 outer container. If a server application violates this limit with an IE6/IE7 client, the
 stream will reset.

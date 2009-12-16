@@ -2,15 +2,18 @@
  * Tests for cw.net
  */
 
-goog.require('cw.UnitTest');
-
 goog.require('goog.debug');
 goog.require('goog.userAgent');
 goog.require('goog.json.Serializer');
 goog.require('goog.string');
+
+goog.require('cw.UnitTest');
 goog.require('cw.net');
 goog.require('cw.URI');
 goog.require('cw.Class');
+
+
+goog.provide('cw.net.TestNet');
 
 
 cw.net.TestNet.logger = goog.debug.Logger.getLogger('cw.net.TestNet');
