@@ -3,16 +3,80 @@ import base64
 from zope.interface import implements, verify
 from twisted.trial import unittest
 
-from minerva.test_newlink import (
+from twisted.web.test.test_web import DummyChannel
+from twisted.web import http
+
+from minerva.abstract import RandomFactory
+
+from minerva.mocks import (
 	DummyRequest, DummyHttpTransport, DummySocketLikeTransport, _DummyId, MockStream
 )
 
 from minerva.website import (
-	RejectTransport, ITransportFirewall, CsrfTransportFirewall,
+	CookieInstaller, RejectTransport, ITransportFirewall, CsrfTransportFirewall,
 	NoopTransportFirewall, AntiHijackTransportFirewall,
 	ICsrfStopper, CsrfStopper, RejectToken,
 	IStreamNotificationReceiver, makeLayeredFirewall, UAToStreamsCorrelator
 )
+
+
+class CookieInstallerTests(unittest.TestCase):
+
+	def setUp(self):
+		self._reset()
+
+
+	def _reset(self):
+		self.c = CookieInstaller(secureRandom=lambda nbytes: 'x'*nbytes) # not very random at all
+		self.request = http.Request(DummyChannel(), None)
+
+
+	def test_installsCookieOnCookielessRequest(self):
+		sess = self.c.getSet(self.request)
+		self.aE('x' * 16, sess)
+		self.aE(
+			['__=%s; Expires=Sat, 08 Dec 2029 23:55:42 GMT; Path=/' % base64.b64encode('x' * 16)],
+			self.request.cookies)
+
+
+	def test_installsSecureCookieOnCookielessRequestHTTPS(self):
+		self.request.isSecure = lambda: True
+		sess = self.c.getSet(self.request)
+		self.aE('x' * 16, sess)
+		self.aE(
+			['_s=%s; Expires=Sat, 08 Dec 2029 23:55:42 GMT; Path=/; Secure' % base64.b64encode('x' * 16)],
+			self.request.cookies)
+
+
+	def test_readsAlreadyInstalledCookie(self):
+		"""
+		Cookie must be very valid for it to be read.
+		"""
+		self.request.received_cookies['__'] = base64.b64encode('x' * 16)
+		sess = self.c.getSet(self.request)
+		self.aE('x' * 16, sess)
+		self.aE([], self.request.cookies)
+
+
+	def test_invalidCookiesIgnored(self):
+		invalids = [
+			"",
+			"\x00",
+			base64.b64encode('z' * 15),
+			base64.b64encode('z' * 17),
+			base64.b64encode('z' * 16).rstrip("="), # TODO: maybe support padding-free base64 in future
+			base64.b64encode('z' * 16) + "\x00",
+			base64.b64encode('z' * 16) + ";",
+			base64.b64encode('z' * 16) + "=",
+		]
+		for invalid in invalids:
+			self._reset()
+			self.request.received_cookies['__'] = invalid
+			sess = self.c.getSet(self.request)
+			self.aE('x' * 16, sess)
+			self.aE(
+				['__=%s; Expires=Sat, 08 Dec 2029 23:55:42 GMT; Path=/' % base64.b64encode('x' * 16)],
+				self.request.cookies)	
 
 
 

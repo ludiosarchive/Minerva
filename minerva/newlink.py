@@ -7,7 +7,7 @@ See minerva/sample/demo.py for an idea of how to use the classes below.
 from minerva import abstract, decoders
 
 import simplejson
-import base64
+import binascii
 from zope.interface import Interface, Attribute, implements
 from twisted.python import log
 from twisted.internet import protocol, defer
@@ -953,12 +953,12 @@ class SocketTransport(protocol.Protocol):
 			i = helloData['i']
 			if not isinstance(i, str):
 				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
-			streamId = StreamId(base64.b64decode(i)) # e: abstract.InvalidIdentifier, TypeError (if base64 problem)
+			streamId = StreamId(binascii.a2b_base64(i)) # e: abstract.InvalidIdentifier, binascii.Error (if base64 problem)
 			# -- no numPaddingBytes
 			maxReceiveBytes = abstract.ensureNonNegIntLimit(helloData['r'], 2**64) # e: ValueError, TypeError
 			maxOpenTime = abstract.ensureNonNegIntLimit(helloData['m'], 2**64) # e: ValueError, TypeError
 			# -- no readOnlyOnce
-		except (KeyError, TypeError, ValueError, abstract.InvalidIdentifier):
+		except (KeyError, TypeError, binascii.Error, ValueError, abstract.InvalidIdentifier):
 			return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
 		# Do not use protocolVersion < 2 ever because Python is very stupid about bool/int equivalence

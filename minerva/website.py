@@ -4,6 +4,7 @@ and not necessary for the use of Minerva faces.
 """
 
 import base64
+import binascii
 import hashlib
 import hmac
 from twisted.internet import defer
@@ -14,20 +15,69 @@ from minerva.newlink import IStreamNotificationReceiver
 
 
 
-
-
 class CookieInstaller(object):
 	"""
 	Gets or sets a session cookie on a L{twisted.web.server.Request} object.
 	"""
-	def __init__(self, request, secureRandom):
+	# Sent to HTTP and HTTPS.
+	cookieName = '__'
+
+	# Sent only over HTTPS. The cookie name is different so that it does not collide.
+	secureCookieName = '_s'
+
+	expires = 'Sat, 08 Dec 2029 23:55:42 GMT' # copied from Amazon
+
+	path = '/'
+
+	# TODO: 'domain' option
+
+	# TODO: maybe add some functionality to get/set the insecure cookie
+	# during HTTPS requests as well.
+
+	def __init__(self, secureRandom):
 		"""
-		C{request} is the L{Request} object.
 		C{secureRandom} is a 1-argument (# of bytes) callable that returns a
 			string of # random bytes.  
 		"""
+		self._secureRandom = secureRandom
 
-		
+
+	def getSet(self, request):
+		"""
+		Automatically read or set a session cookie on C{request},
+		a L{twisted.web.server.Request} object.
+
+		For HTTP requests, the "insecure cookie" will be read or set.
+		For HTTPS requests, the "secure cookie" will be read or set.
+			If it needs to be set, it will be set with the Secure flag.
+
+		If any cookie is not valid base64, it will be ignored and replaced.
+		If any cookie does not decode to 16 bytes, it will be ignored and replaced.
+
+		@return: 16-byte session string
+		@rtype: str
+		"""
+		secure = request.isSecure()
+		if secure:
+			k = self.secureCookieName
+		else:
+			k = self.cookieName
+
+		existingCookie = request.getCookie(k)
+
+		# If we allow base64 without padding, change to allow both 22 and 24.
+		if existingCookie and len(existingCookie) == 24:
+			try:
+				decoded = binascii.a2b_base64(existingCookie)
+				if len(decoded) == 16:
+					return decoded
+			except binascii.Error:
+				pass
+
+		rand = self._secureRandom(16)
+		v = binascii.b2a_base64(rand).rstrip('\n')
+		request.addCookie(k, v, expires=self.expires, path=self.path, secure=secure)
+		return rand
 
 
 
@@ -94,6 +144,12 @@ class CsrfStopper(object):
 	An implementation of L{ICsrfStopper} that uses a secret and hmac-sha256
 	to make and check tokens. Keeping the secret secret is of paramount
 	importance. If the secret is leaked, anyone can CSRF someone else's session.
+
+	The purpose of this is to create a 1:1 mapping of user IDs <-> CSRF tokens.
+	The CSRF token should be handed to the client but *not* somewhere where it is
+	automatically sent by the browser (whenever browser makes a request to your domain).
+	Putting the CSRF token in a cookie is completely wrong; writing the token
+	out to the JavaScript in your HTML might be okay.
 	"""
 	implements(ICsrfStopper)
 	
@@ -201,18 +257,18 @@ class NoopTransportFirewall(object):
 
 class _UAExtractorMixin(object):
 	def _getUserAgentFromRequest(self, request):
-		raw = request.getCookie(self.uaCookieName)
+		raw = request.getCookie(self.uaCookieName) # raw be None at this point
 		try:
-			return base64.b64decode(raw)
-		except TypeError:
+			return binascii.a2b_base64(raw)
+		except (TypeError, binascii.Error):
 			raise RejectTransport("missing cookie %r or corrupt base64" % (self.uaCookieName,))
 
 
 	def _getUserAgentFromCredentialsData(self, credentialsData):
-		raw = credentialsData.get(self.uaKeyInCred)
+		raw = credentialsData.get(self.uaKeyInCred) # raw be None at this point
 		try:
-			return base64.b64decode(raw)
-		except TypeError:
+			return binascii.a2b_base64(raw)
+		except (TypeError, binascii.Error):
 			raise RejectTransport("missing credentialsData[%r] or corrupt base64" % (self.uaKeyInCred,))
 
 
