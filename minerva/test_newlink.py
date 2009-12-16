@@ -103,6 +103,25 @@ class StreamTests(unittest.TestCase):
 		assert called[0]
 
 
+	def test_streamCallsStreamStarted(self):
+		"""
+		When the Stream is instantiated, it doesn't automatically
+		create a MinervaProtocol instance. When the first transport
+		attaches, Stream calls the `streamStarted` method on the MinervaProtocol.
+		"""
+		factory = MockMinervaProtocolFactory()
+		s = Stream(None, _DummyId('some fake id'), factory)
+		self.aE(0, len(factory.instances))
+
+		t = DummySocketLikeTransport()
+		s.transportOnline(t)
+		i = list(factory.instances)[0]
+
+		self.aE([
+			['streamStarted', s],
+		], i.log)
+
+
 	def test_boxesReceived(self):
 		"""
 		Test that when Stream.boxesReceived is called,
@@ -1068,7 +1087,6 @@ class _BaseSocketTransportTests(object):
 
 	def test_implements(self):
 		verify.verifyObject(IProtocol, self.transport)
-		verify.verifyObject(ISimpleConsumer, self.transport)
 		verify.verifyObject(IPushProducer, self.transport)
 		verify.verifyObject(IPullProducer, self.transport)
 		verify.verifyObject(IMinervaTransport, self.transport)

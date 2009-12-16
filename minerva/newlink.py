@@ -725,11 +725,11 @@ class BasicMinervaProtocol(object):
 
 
 	def streamEnded(self, reason):
-		pass
+		pass # TODO: need to make Stream actually call this
 
 
 	def streamQualityChanged(self, quality):
-		pass
+		pass # TODO: need to make Stream actually call this
 
 
 	def boxesReceived(self, boxes):
@@ -787,7 +787,10 @@ class BasicMinervaFactory(object):
 
 
 
-class IMinervaTransport(IPushProducer, IPullProducer):
+# A MinervaTransport must have registerProducer and unregisterProducer because
+# Stream calls those methods, but it doesn't actually need to be an IPushProducer/IPullProducer.
+# It could, in theory, buffer all the information it gets without caring about TCP pressure at all.
+class IMinervaTransport(ISimpleConsumer):
 
 	lastBoxSent = Attribute(
 		"Sequence number of the last box written to the socket/request, or -1 if no boxes ever written")
@@ -848,7 +851,7 @@ class SocketTransport(protocol.Protocol):
 
 	TODO: actually do it
 	"""
-	implements(IProtocol, ISimpleConsumer, IPushProducer, IPullProducer, IMinervaTransport)
+	implements(IMinervaTransport, IProtocol, IPushProducer, IPullProducer)
 
 	request = None # no associated HTTP request
 
