@@ -79,6 +79,15 @@ class CookieInstallerTests(unittest.TestCase):
 				self.request.cookies)	
 
 
+	def test_installsCookieWithCustomDomain(self):
+		self.c.domain = ".customdomain.com"
+		sess = self.c.getSet(self.request)
+		self.aE('x' * 16, sess)
+		self.aE(
+			['__=%s; Expires=Sat, 08 Dec 2029 23:55:42 GMT; Domain=.customdomain.com; Path=/' % base64.b64encode('x' * 16)],
+			self.request.cookies)
+
+
 
 class CsrfStopperTests(unittest.TestCase):
 

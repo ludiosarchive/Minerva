@@ -20,7 +20,7 @@ class CookieInstaller(object):
 	Gets or sets a session cookie on a L{twisted.web.server.Request} object.
 	"""
 	# Sent to HTTP and HTTPS.
-	cookieName = '__'
+	insecureCookieName = '__'
 
 	# Sent only over HTTPS. The cookie name is different so that it does not collide.
 	secureCookieName = '_s'
@@ -29,7 +29,7 @@ class CookieInstaller(object):
 
 	path = '/'
 
-	# TODO: 'domain' option
+	domain = None
 
 	# TODO: maybe add some functionality to get/set the insecure cookie
 	# during HTTPS requests as well.
@@ -61,13 +61,14 @@ class CookieInstaller(object):
 		if secure:
 			k = self.secureCookieName
 		else:
-			k = self.cookieName
+			k = self.insecureCookieName
 
 		existingCookie = request.getCookie(k)
 
 		# If we allow base64 without padding, change to allow both 22 and 24.
 		if existingCookie and len(existingCookie) == 24:
 			try:
+				# Keep in mind that a2b_base64 will skip over non-base64-alphabet characters.
 				decoded = binascii.a2b_base64(existingCookie)
 				if len(decoded) == 16:
 					return decoded
@@ -76,7 +77,7 @@ class CookieInstaller(object):
 
 		rand = self._secureRandom(16)
 		v = binascii.b2a_base64(rand).rstrip('\n')
-		request.addCookie(k, v, expires=self.expires, path=self.path, secure=secure)
+		request.addCookie(k, v, expires=self.expires, domain=self.domain, path=self.path, secure=secure)
 		return rand
 
 
