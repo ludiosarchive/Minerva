@@ -185,48 +185,55 @@ class StreamTests(unittest.TestCase):
 		Test that obsolete formerly-primary transports are "closed gently"
 		Test that Stream tries to send boxes down new primary transports.
 		"""
-		s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
-		t1 = DummySocketLikeTransport()
-		s.transportOnline(t1)
-		s.sendBoxes([['box0'], ['box1']])
+		# If a transport calls Stream.subscribeToBoxes with a `succeedsTransport`
+		# argument that doesn't match the primary transport's transport number,
+		# the `succeedsTransport` argument is ignored.
+		# Essentially, it doesn't matter whether the transport claims None or an invalid
+		# transport number; they're both treated as `None`.
+		for succeedsTransportArgFor2ndTransport in (None, 20):
+			s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
+			t1 = DummySocketLikeTransport()
+			t1.transportNumber = 30
+			s.transportOnline(t1)
+			s.sendBoxes([['box0'], ['box1']])
 
-		# Boxes don't reach the transport because the transport isn't primary yet
-		self.aE([], t1.log)
+			# Boxes don't reach the transport because the transport isn't primary yet
+			self.aE([], t1.log)
 
-		# Make it primary
-		s.subscribeToBoxes(t1, succeedsTransport=None)
+			# Make it primary
+			s.subscribeToBoxes(t1, succeedsTransport=None)
 
-		self.aE([
-			['writeBoxes', s.queue, None],
-		], t1.log)
+			self.aE([
+				['writeBoxes', s.queue, None],
+			], t1.log)
 
-		# Now connect a new transport
-		t2 = DummySocketLikeTransport()
-		s.transportOnline(t2)
+			# Now connect a new transport
+			t2 = DummySocketLikeTransport()
+			s.transportOnline(t2)
 
-		s.sendBoxes([['box2'], ['box3']])
-		# box2 and box3 still went to the old transport because t2 isn't the primary transport
-		self.aE([
-			['writeBoxes', s.queue, None],
-			['writeBoxes', s.queue, None],
-		], t1.log)
-		self.aE([], t2.log)
+			s.sendBoxes([['box2'], ['box3']])
+			# box2 and box3 still went to the old transport because t2 isn't the primary transport
+			self.aE([
+				['writeBoxes', s.queue, None],
+				['writeBoxes', s.queue, None],
+			], t1.log)
+			self.aE([], t2.log)
 
-		# Now make t2 primary
-		s.subscribeToBoxes(t2, succeedsTransport=None)
+			# Now make t2 primary
+			s.subscribeToBoxes(t2, succeedsTransport=succeedsTransportArgFor2ndTransport)
 
-		self.aE([
-			['writeBoxes', s.queue, None],
-			['writeBoxes', s.queue, None],
-			['closeGently'],
-		], t1.log)
-		self.aE([
-			['writeBoxes', s.queue, None],
-		], t2.log)
+			self.aE([
+				['writeBoxes', s.queue, None],
+				['writeBoxes', s.queue, None],
+				['closeGently'],
+			], t1.log)
+			self.aE([
+				['writeBoxes', s.queue, None],
+			], t2.log)
 
-		# Just to exercise transportOffline
-		s.transportOffline(t1)
-		s.transportOffline(t2)
+			# Just to exercise transportOffline
+			s.transportOffline(t1)
+			s.transportOffline(t2)
 
 
 	def test_sendBoxesConnectionInterleaving(self):
@@ -287,6 +294,116 @@ class StreamTests(unittest.TestCase):
 		# Just to exercise transportOffline
 		s.transportOffline(t1)
 		s.transportOffline(t2)
+
+
+	def test_sendBoxesConnectionInterleavingWithOldPrimaryNeverSentBoxes(self):
+		"""
+		Similar to test_sendBoxesConnectionInterleaving, except the old primary transport
+		never wrote any boxes, which means its lastBoxSent == -1
+		"""
+		s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
+		t1 = DummySocketLikeTransport()
+		t1.transportNumber = 30
+		s.transportOnline(t1)
+		s.sendBoxes([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
+
+		# Boxes don't reach the transport because the transport isn't primary yet
+		self.aE([], t1.log)
+
+		t1.pauseProducing() # just a trick to make t1.writeBoxes `return' early when called
+
+		# Make it primary
+		s.subscribeToBoxes(t1, succeedsTransport=None)
+
+		# It was called, though it never actually writes to the wire.
+		self.aE([
+			['writeBoxes', s.queue, None],
+		], t1.log)
+		assert t1.lastBoxSent == -1
+
+		# Now connect a new transport and make it primary
+		t2 = DummySocketLikeTransport()
+		t2.transportNumber = 31
+		s.transportOnline(t2)
+		s.subscribeToBoxes(t2, succeedsTransport=30)
+
+		self.aE([
+			['writeBoxes', s.queue, None],
+			['closeGently'],
+		], t1.log)
+		# Because nothing was really written to the first transport, this should already have a write.
+		self.aE(
+			['writeBoxes', s.queue, None],
+		t2.log)
+
+		s.sendBoxes([['box5'], ['box6']])
+
+		# Just to exercise transportOffline
+		s.transportOffline(t1)
+		s.transportOffline(t2)
+
+
+
+#
+#	def test_sendBoxesConnectionInterleavingWithOldPrimaryNeverSentBoxes(self):
+#		"""
+#		Similar to test_sendBoxesConnectionInterleaving, except the old primary transport
+#		never wrote any boxes, which means its lastBoxSent == -1
+#		"""
+#		s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
+#		t1 = DummySocketLikeTransport()
+#		t1.transportNumber = 30
+#		s.transportOnline(t1)
+#		s.sendBoxes([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
+#
+#		# Boxes don't reach the transport because the transport isn't primary
+#		self.aE([], t1.log)
+#
+#		# ... and this transport never becomes primary
+#
+#		# Now connect a new transport and make it primary
+#		t2 = DummySocketLikeTransport()
+#		t2.transportNumber = 31
+#		s.transportOnline(t2)
+#		s.subscribeToBoxes(t2, succeedsTransport=30)
+#
+#		self.aE([], t1.log) # t1 was never a primary, so it doesn't get a closeGently call.
+#		self.aE([
+#			['writeBoxes', s.queue, None]
+#		], t2.log)
+#
+#		s.sendBoxes([['box5'], ['box6']])
+#
+#		self.aE([
+#			['writeBoxes', s.queue, None],
+#			['writeBoxes', s.queue, None],
+#		], t2.log)
+#
+#		# Just to exercise transportOffline
+#		s.transportOffline(t1)
+#		s.transportOffline(t2)
+
+
+	def test_subscribeToBoxesSucceedsTransportButNoPrimaryTransport(self):
+		"""
+		If a transport calls Stream.subscribeToBoxes with a `succeedsTransport`
+		argument even though there is no primary transport, the `succeedsTransport`
+		argument is ignored.
+		"""
+		s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
+		t1 = DummySocketLikeTransport()
+		s.transportOnline(t1)
+		s.sendBoxes([['box0'], ['box1']])
+
+		# Boxes don't reach the transport because the transport isn't primary yet
+		self.aE([], t1.log)
+
+		# Make it primary
+		s.subscribeToBoxes(t1, succeedsTransport=9999)
+
+		self.aE([
+			['writeBoxes', s.queue, None],
+		], t1.log)
 
 
 	def test_getSACK(self):

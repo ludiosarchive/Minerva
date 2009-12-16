@@ -283,6 +283,7 @@ class DummySocketLikeTransport(object):
 	request = None
 	globalCounter = [-1]
 	lastBoxSent = -1
+	_paused = False
 
 	def __init__(self):
 		self.credentialsData = {}
@@ -306,6 +307,9 @@ class DummySocketLikeTransport(object):
 	def writeBoxes(self, queue, start):
 		self.log.append(['writeBoxes', queue, start])
 
+		if self._paused:
+			return # XXX TODO the implementation in newlink does this, is it really the right thing to do?
+
 		lastBox = self.lastBoxSent
 		for seqNum, box in queue.iterItems(start=start):
 			if lastBox == -1 or lastBox + 1 != seqNum:
@@ -322,6 +326,10 @@ class DummySocketLikeTransport(object):
 
 	def unregisterProducer(self):
 		self.log.append(['unregisterProducer'])
+
+
+	def pauseProducing(self):
+		self._paused = True
 
 
 

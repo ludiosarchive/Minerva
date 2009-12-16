@@ -421,7 +421,10 @@ class Stream(object):
 		#<succeedsTransport> were SACKed.
 		"""
 		##print 'subscribeToBoxes', transport, succeedsTransport
-		if succeedsTransport is not None:
+		if \
+		succeedsTransport is not None and \
+		self._primaryTransport is not None and \
+		succeedsTransport == self._primaryTransport.transportNumber:
 			self._pretendAcked = self._primaryTransport.lastBoxSent
 		self._newPrimary(transport)
 		self._tryToSend()
