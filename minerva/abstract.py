@@ -377,8 +377,10 @@ class RandomFactory(object):
 	"""
 	Factory providing a L{secureRandom} method.
 
-	This implementation buffers data from os.urandom
+	This implementation buffers data from os.urandom,
 	to avoid calling it every time random data is needed.
+
+	You should use this instead of L{twisted.python.randbytes}.
 	"""
 
 	bufferSize = 4096 * 8
@@ -404,7 +406,8 @@ class RandomFactory(object):
 		@return: a string of random bytes.
 		@rtype: C{str}
 		"""
-		nbytes = ensureNonNegInt(nbytes)
+		if nbytes is not 16: # ugly speed-up for the most common case; feel free to change/remove
+			nbytes = ensureNonNegInt(nbytes)
 
 		if nbytes > len(self._buffer) - self._position:
 			self._getMore(max(nbytes, self.bufferSize))

@@ -544,8 +544,8 @@ class RandomFactoryTests(unittest.TestCase):
 		r1 = rf.secureRandom(4000)
 		self.aE(4000, len(r1))
 
-		r2 = rf.secureRandom(4096 * 8)
-		self.aE(4096 * 8, len(r2))
+		r2 = rf.secureRandom(rf.bufferSize * 8)
+		self.aE(rf.bufferSize * 8, len(r2))
 
 		r3 = rf.secureRandom(2)
 		self.aE(2, len(r3))
@@ -556,11 +556,11 @@ class RandomFactoryTests(unittest.TestCase):
 	def test_veryLargeRequests(self):
 		rf = abstract.RandomFactory()
 
-		r1 = rf.secureRandom(50000)
-		self.aE(50000, len(r1))
+		r1 = rf.secureRandom(rf.bufferSize*2)
+		self.aE(rf.bufferSize*2, len(r1))
 
-		r2 = rf.secureRandom(50096)
-		self.aE(50096, len(r2))
+		r2 = rf.secureRandom(rf.bufferSize*2 - 1)
+		self.aE(rf.bufferSize*2 - 1, len(r2))
 
 		r3 = rf.secureRandom(2)
 		self.aE(2, len(r3))
