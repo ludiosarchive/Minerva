@@ -13,6 +13,24 @@ from collections import defaultdict
 from minerva.newlink import IStreamNotificationReceiver
 
 
+
+
+
+class CookieInstaller(object):
+	"""
+	Gets or sets a session cookie on a L{twisted.web.server.Request} object.
+	"""
+	def __init__(self, request, secureRandom):
+		"""
+		C{request} is the L{Request} object.
+		C{secureRandom} is a 1-argument (# of bytes) callable that returns a
+			string of # random bytes.  
+		"""
+
+		
+
+
+
 class UAToStreamsCorrelator(defaultdict):
 	"""
 	This is really only implemented here because it's necessary
