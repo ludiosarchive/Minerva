@@ -4,6 +4,7 @@ goog.require('goog.async.Deferred');
 goog.require('goog.userAgent');
 goog.require('goog.debug.Logger');
 goog.require('goog.json');
+goog.require('goog.string');
 
 goog.provide('cw.net');
 goog.provide('cw.net.ParseError');
@@ -876,6 +877,8 @@ cw.net.Queue = function() {
  *
  * @private
  * @interface
+ *
+ * TODO: all transports must be Disposable?
  */
 cw.net.IMinervaTransport = function() {
 
@@ -918,13 +921,28 @@ cw.net.IMinervaTransport = function() {
  * @type {!Object} clock Something that provides IWindowTime.
  * @type {!Object} protocol
  * @type {!Object} locator
+ *
+ * TODO: make Stream a Disposable and add dipose methods?
  */
 cw.net.Stream = function(clock, protocol, locator) {
 	this.clock_ = clock;
 	this.protocol_ = protocol;
 	this.locator_ = locator;
-	this.primaryTransport_ = null;
+	this.streamId_ = goog.string.getRandomString() + goog.string.getRandomString(); // usually 25 or 26 characters
 }
+
+	/**
+	 *  Counter to uniquely identify the transports in this Stream
+	 * @type {number}
+	 */
+	cw.net.Stream.prototype.transportCount_ = 0;
+
+	/**
+	 * The primary transport (getting S2C boxes)
+	 * @type {!Object}
+	 */
+	cw.net.Stream.prototype.primaryTransport_ = null;
+
 
 	/**
 	 * Send boxes `boxes` to the peer.

@@ -143,11 +143,6 @@ class Frame(object):
 Fn = Frame.names
 
 
-class StreamId(abstract.GenericIdentifier):
-	_expectedLength = 16
-	__slots__ = ['id']
-
-
 
 class IStreamNotificationReceiver(Interface):
 	"""
@@ -948,9 +943,9 @@ class SocketTransport(protocol.Protocol):
 			protocolVersion = helloData['v']
 			# -- no transportType
 			i = helloData['i']
-			if not isinstance(i, str):
+			if not isinstance(i, str) or not 20 <= len(i) <= 30:
 				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
-			streamId = StreamId(binascii.a2b_base64(i)) # e: abstract.InvalidIdentifier, binascii.Error (if base64 problem)
+			streamId = i
 			# -- no numPaddingBytes
 			maxReceiveBytes = abstract.ensureNonNegIntLimit(helloData['r'], 2**64) # e: ValueError, TypeError
 			maxOpenTime = abstract.ensureNonNegIntLimit(helloData['m'], 2**64) # e: ValueError, TypeError

@@ -14,7 +14,7 @@ from minerva import abstract
 from minerva.helpers import todo
 
 from minerva.newlink import (
-	Frame, Stream, StreamId, StreamTracker, NoSuchStream,
+	Frame, Stream, StreamTracker, NoSuchStream,
 	StreamAlreadyExists, BadFrame, ISimpleConsumer, IMinervaProtocol,
 	IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
 	IMinervaTransport, SocketTransport, SocketFace
@@ -1159,7 +1159,7 @@ class _BaseSocketTransportTests(object):
 
 
 	def _makeValidHelloFrame(self):
-		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+		helloData = dict(n=0, w=True, v=2, i='x'*26, r=2**30, m=2**30)
 		frame = [Fn.hello, helloData]
 		return frame
 
@@ -1535,7 +1535,7 @@ class _BaseSocketTransportTests(object):
 		badMutations = dict(
 			n=genericBad,
 			v=[0, 1, "1", 1.001] + genericBad,
-			i=[base64.b64encode('\x00'*15), base64.b64encode('\x00'*17), 'x', '===='] + genericBad,
+			i=['', '\x00', 'x'*1, 'x'*19, 'x'*31, 'x'*3000] + genericBad, # 19 is below limit, 31 is over limit
 			r=genericBad,
 			m=genericBad,
 			c=genericBadButDictOk,
@@ -1569,7 +1569,7 @@ class _BaseSocketTransportTests(object):
 				ran += 1
 
 		# sanity check; make sure we actually tested things
-		assert ran == 78, "Ran %d times; change this assert as needed" % (ran,)
+		assert ran == 80, "Ran %d times; change this assert as needed" % (ran,)
 
 
 	def test_noDelayEnabled(self):
