@@ -62,14 +62,8 @@ tracker.observeStreams(firewall)
 
 root = Root(clock, tracker, firewall)
 
-	# THINK: maybe StreamTracker should have .makeHttpResource .makeSocketFace .makeWebSocketFace methods?
-	# THINK: maybe it should not be called 'tracker'?
-
 site = server.Site(root, clock=clock)
 so = SocketFace(reactor, clock, tracker, firewall, policyString=policyString)
-
-# FUTURE:
-## wso = WebSocketFace(reactor, clock, tracker, firewall)
 
 # Use L{twisted.application.service.MultiService} and L{strports}
 # (all inside a twistd plugin) to expose site, so, and wso.
