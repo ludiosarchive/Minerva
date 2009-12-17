@@ -1523,14 +1523,18 @@ class _BaseSocketTransportTests(object):
 		Test that all any problem with the hello frame results in a
 		'tk_invalid_frame_type_or_arguments' error frame
 		"""
+		def listWithout(alist, without):
+			l = alist[:]
+			for w in without:
+				l.remove(w)
+			return l
+
 		goodHello = self._makeValidHelloFrame()
 
 		DeleteProperty = object()
 
 		nan = simplejson.loads('NaN')
 		genericBad = [-2**65, -1, -0.5, 0.5, nan, 2**65, "", [], {}, True, False, DeleteProperty]
-		genericBadButDictOk = genericBad[:]
-		genericBadButDictOk.remove({})
 
 		badMutations = dict(
 			n=genericBad,
@@ -1538,7 +1542,8 @@ class _BaseSocketTransportTests(object):
 			i=['', '\x00', 'x'*1, 'x'*19, 'x'*31, 'x'*3000] + genericBad, # 19 is below limit, 31 is over limit
 			r=genericBad,
 			m=genericBad,
-			c=genericBadButDictOk,
+			c=listWithout(genericBad, [{}]),
+			w=[1, 0] + listWithout(genericBad, [True, False, DeleteProperty]),
 		)
 
 		ran = 0
@@ -1569,7 +1574,7 @@ class _BaseSocketTransportTests(object):
 				ran += 1
 
 		# sanity check; make sure we actually tested things
-		assert ran == 80, "Ran %d times; change this assert as needed" % (ran,)
+		assert ran == 91, "Ran %d times; change this assert as needed" % (ran,)
 
 
 	def test_noDelayEnabled(self):

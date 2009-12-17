@@ -753,6 +753,14 @@ cw.net.IEndpointLocator = function() {
 
 
 /**
+ * The Minerva-level protocol version.
+ *
+ * @type {number}
+ */
+cw.net.protocolVersion_ = 2;
+
+
+/**
  * Frame types. Copied from minerva/newlink.py
  * 
  * @enum {number}
@@ -935,7 +943,7 @@ cw.net.Stream = function(clock, protocol, locator) {
 	 *  Counter to uniquely identify the transports in this Stream
 	 * @type {number}
 	 */
-	cw.net.Stream.prototype.transportCount_ = 0;
+	cw.net.Stream.prototype.transportCount_ = -1;
 
 	/**
 	 * The primary transport (getting S2C boxes)

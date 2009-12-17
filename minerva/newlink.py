@@ -1041,6 +1041,10 @@ class SocketTransport(protocol.Protocol):
 						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 					boxes.append(seqNum, box)
 				self._stream.boxesReceived(self, boxes, memorySizeOfBoxes)
+			elif frameType == Fn.box:
+				1/0
+			elif frameType == Fn.seqnum:
+				1/0
 			elif frameType == Fn.my_last_frame:
 				# For now, it doesn't help us make any decision.
 				pass
