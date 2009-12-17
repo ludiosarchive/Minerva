@@ -49,21 +49,25 @@ class Root(resource.Resource):
 		self.putChild('', IndexPage())
 
 
-# In the real world, you might want this to be more restrictive. Minerva has its own
-# CSRF protection, so it's not critical.
-policyString = '''\
-<cross-domain-policy><allow-access-from domain="*" to-ports="*"/></cross-domain-policy>'''
+def makeFace():
 
-csrfStopper = CsrfStopper(secrets.CSRF_SECRET)
-uaToStreams = UAToStreamsCorrelator()
-firewall = makeLayeredFirewall(csrfStopper, uaToStreams)
-tracker = StreamTracker(reactor, clock, EchoFactory())
-tracker.observeStreams(firewall)
+	# In the real world, you might want this to be more restrictive. Minerva has its own
+	# CSRF protection, so it's not critical.
+	policyString = '''\
+	<cross-domain-policy><allow-access-from domain="*" to-ports="*"/></cross-domain-policy>'''
 
-root = Root(clock, tracker, firewall)
+	csrfStopper = CsrfStopper(secrets.CSRF_SECRET)
+	uaToStreams = UAToStreamsCorrelator()
+	firewall = makeLayeredFirewall(csrfStopper, uaToStreams)
+	tracker = StreamTracker(reactor, clock, EchoFactory())
+	tracker.observeStreams(firewall)
 
-site = server.Site(root, clock=clock)
-so = SocketFace(reactor, clock, tracker, firewall, policyString=policyString)
+	root = Root(clock, tracker, firewall)
+
+	site = server.Site(root, clock=clock)
+	so = SocketFace(reactor, clock, tracker, firewall, policyString=policyString)
+
+	return so
 
 # Use L{twisted.application.service.MultiService} and L{strports}
 # (all inside a twistd plugin) to expose site, so, and wso.
