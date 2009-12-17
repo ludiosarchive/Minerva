@@ -1469,6 +1469,29 @@ class _BaseSocketTransportTests(object):
 		self.aE([], self.gotFrames)
 
 
+	def test_validHelloButSentTwice(self):
+		"""
+		Client can only send hello frame once. If they send it more than once, they get
+		tk_invalid_frame_type_or_arguments
+		"""
+		frame0 = self._makeValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0]))
+		self.transport.dataReceived(self.serializeFrames([frame0]))
+		self._parseFrames()
+		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+
+
+	def test_validHelloButSentTwiceAtSameTime(self):
+		"""
+		Client can only send hello frame once. If they send it more than once, they get
+		tk_invalid_frame_type_or_arguments
+		"""
+		frame0 = self._makeValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0, frame0]))
+		self._parseFrames()
+		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+
+
 	def test_connectionNumberDoesntMatter(self):
 		"""Connection number can be anywhere between 0 <= n <= 2**64"""
 		for n in [1, 1000, 10000, 12378912, 1283718237, 2**63]:
@@ -1614,7 +1637,9 @@ class _BaseSocketTransportTests(object):
 		If client closes connection on a Minerva transport that hasn't attached to a Stream,
 		nothing special happens.
 		"""
+		orig = self.transport.__dict__.copy()
 		self.transport.connectionLost(failure.Failure(ValueError("Just a made-up error in test_connectionLost")))
+		self.aE(orig, self.transport.__dict__) # This test might be a bit overzealous
 
 
 	def test_connectionLostWithStream(self):

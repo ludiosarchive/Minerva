@@ -826,6 +826,12 @@ def dumpToJson7Bit(data):
 	return simplejson.dumps(data, separators=(',', ':'), allow_nan=False)
 
 
+
+
+class InvalidHello(Exception):
+	pass
+
+
 ##WAITING_FOR_AUTH, AUTHING, DYING, AUTH_OK = range(4)
 
 # Acceptable protocol modes for SocketTransport to be in. Int32* are for Flash Socket.
@@ -917,24 +923,19 @@ class SocketTransport(protocol.Protocol):
 
 
 	def _gotHelloFrame(self, frame):
-		# We only allow one 'hello' per connection
-		if self._gotHello is True:
-			return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
-		self._gotHello = True
-
 		helloData = frame.contents[1]
 
 		# credentialsData is always optional
 		credentialsData = helloData['c'] if 'c' in helloData else {}
 
 		if not isinstance(credentialsData, dict):
-			return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+			raise InvalidHello
 
 		# requestNewStream is always optional
 		requestNewStream = helloData['w'] if 'w' in helloData else False
 
 		if not isinstance(requestNewStream, bool):
-			return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+			raise InvalidHello
 
 		try:
 			# any line below can raise KeyError; additional exceptions marked with 'e:'
@@ -944,18 +945,18 @@ class SocketTransport(protocol.Protocol):
 			# -- no transportType
 			i = helloData['i']
 			if not isinstance(i, str) or not 20 <= len(i) <= 30:
-				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+				raise InvalidHello
 			streamId = i
 			# -- no numPaddingBytes
 			maxReceiveBytes = abstract.ensureNonNegIntLimit(helloData['r'], 2**64) # e: ValueError, TypeError
 			maxOpenTime = abstract.ensureNonNegIntLimit(helloData['m'], 2**64) # e: ValueError, TypeError
 			# -- no readOnlyOnce
 		except (KeyError, TypeError, binascii.Error, ValueError, abstract.InvalidIdentifier):
-			return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+			raise InvalidHello
 
 		# Do not use protocolVersion < 2 ever because Python is very stupid about bool/int equivalence
 		if protocolVersion != 2:
-			return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+			raise InvalidHello
 
 		self._protocolVersion = protocolVersion
 		self.streamId = streamId
@@ -976,10 +977,7 @@ class SocketTransport(protocol.Protocol):
 			except StreamAlreadyExists:
 				self._stream = self._streamTracker.getStream(streamId)
 		else:
-			try:
-				self._stream = self._streamTracker.getStream(streamId)
-			except NoSuchStream:
-				return self._closeWith(Fn.tk_stream_attach_failure)
+			self._stream = self._streamTracker.getStream(streamId)
 
 		d = self._firewall.checkTransport(self, self._stream)
 
@@ -988,7 +986,7 @@ class SocketTransport(protocol.Protocol):
 			self._stream.transportOnline(self)
 
 		def cbAuthFailed(_):
-			return self._closeWith(Fn.tk_stream_attach_failure)
+			self._closeWith(Fn.tk_stream_attach_failure)
 
 		d.addCallbacks(cbAuthOkay, cbAuthFailed)
 		d.addErrback(log.err)
@@ -1014,7 +1012,16 @@ class SocketTransport(protocol.Protocol):
 				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 				
 			if frameType == Fn.hello:
-				return self._gotHelloFrame(frame)
+				# We only allow one 'hello' per connection
+				if self._gotHello is True:
+					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+				self._gotHello = True
+				try:
+					self._gotHelloFrame(frame)
+				except InvalidHello:
+					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+				except NoSuchStream:
+					return self._closeWith(Fn.tk_stream_attach_failure)
 			elif frameType == Fn.gimme_boxes:
 				_secondArg = frameObj[1]
 				if _secondArg == -1:
