@@ -407,7 +407,14 @@ class DummyStreamTracker(object):
 
 class DummyFirewall(object):
 
+	def __init__(self, rejectAll=False):
+		self._rejectAll = rejectAll
+
+
 	def checkTransport(self, transport, requestNewStream):
 		d = defer.Deferred()
-		d.callback(None)
+		if not self._rejectAll:
+			d.callback(None)
+		else:
+			d.errback(ValueError("%s rejecting this transport" % self.__class__.__name__))
 		return d

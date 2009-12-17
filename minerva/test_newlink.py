@@ -1148,11 +1148,11 @@ class _BaseSocketTransportTests(object):
 		self._reset()
 
 
-	def _reset(self):
+	def _reset(self, rejectAll=False):
 		self._resetParser()
 		reactor = FakeReactor()
 		self.t = DummyTCPTransport()
-		factory = SocketFace(reactor, None, self.streamTracker, DummyFirewall())
+		factory = SocketFace(reactor, None, self.streamTracker, DummyFirewall(rejectAll))
 		self.transport = factory.buildProtocol(addr=None)
 		self.transport.makeConnection(self.t)
 		self._sendModeInitializer()
@@ -1499,6 +1499,16 @@ class _BaseSocketTransportTests(object):
 		self._testExtraDataReceivedIgnored()
 
 
+	def test_validHelloButFirewallRejectedTransport(self):
+		"""If firewall rejects our transport, we get a tk_stream_attach_failure"""
+		self._reset(rejectAll=True)
+		frame0 = self._makeValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0]))
+		self._parseFrames()
+		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+		self._testExtraDataReceivedIgnored()
+
+
 	def test_newStreamMoreThanOnceOk(self):
 		"""
 		Because the response to a request with w=True might get lost in transit,
@@ -1582,6 +1592,20 @@ class _BaseSocketTransportTests(object):
 		When a Minerva transport is created, its underlying TCP transport has TCP_NODELAY enabled.
 		"""
 		self.aE(True, self.transport.transport.noDelayEnabled)
+
+
+	def test_closeGently(self):
+		self.transport.closeGently()
+		self._parseFrames()
+		self.aE([[Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+		self._testExtraDataReceivedIgnored()
+
+
+	def test_reset(self):
+		self.transport.reset(u"the reason\u2000")
+		self._parseFrames()
+		self.aE([[Fn.reset, u"the reason\u2000"], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+		self._testExtraDataReceivedIgnored()
 
 
 
@@ -1676,6 +1700,19 @@ class TransportProducerTests(unittest.TestCase):
 		producer1 = MockProducer()
 		self.transport.registerProducer(producer1, streaming=False)
 		self.aE([], producer1.log)
+
+
+	def test_cannotRegisterProducerIfRegistered(self):
+		"""
+		If a producer is already registered, registering any producer raises RuntimeError.
+		"""
+		producer1 = MockProducer()
+		self.transport.registerProducer(producer1, streaming=True)
+
+		producer2 = MockProducer()
+
+		self.aR(RuntimeError, lambda: self.transport.registerProducer(producer1, streaming=True))
+		self.aR(RuntimeError, lambda: self.transport.registerProducer(producer2, streaming=True))
 
 
 

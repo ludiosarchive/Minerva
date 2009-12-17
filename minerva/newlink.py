@@ -1127,6 +1127,7 @@ class SocketTransport(protocol.Protocol):
 
 
 	def _closeWith(self, errorType, *args):
+		assert not self._terminating
 		# TODO: sack before closing
 		invalidArgsFrameObj = [errorType]
 		invalidArgsFrameObj.extend(args)
@@ -1145,6 +1146,7 @@ class SocketTransport(protocol.Protocol):
 		"""
 		@see L{IMinervaTransport.closeGently}
 		"""
+		assert not self._terminating
 		toSend = ''
 		toSend += self._encodeFrame([Fn.you_close_it])
 		toSend += self._encodeFrame([Fn.my_last_frame])
@@ -1156,6 +1158,7 @@ class SocketTransport(protocol.Protocol):
 		"""
 		@see L{IMinervaTransport.reset}
 		"""
+		assert not self._terminating
 		toSend = ''
 		toSend += self._encodeFrame([Fn.reset, reasonString])
 		toSend += self._encodeFrame([Fn.you_close_it])
@@ -1166,7 +1169,6 @@ class SocketTransport(protocol.Protocol):
 
 	# called by Stream instances
 	def registerProducer(self, producer, streaming):
-		# XXX de-duplicate with Stream.registerProducer ; maybe move this to a mixin?
 		if self._producer is not None:
 			raise RuntimeError("Cannot register producer %s, "
 				"because producer %s was never unregistered." % (producer, self._producer))
