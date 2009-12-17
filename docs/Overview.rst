@@ -130,17 +130,17 @@ Installation requirements
 	still work without the ACA patch, but it will be vulnerable to dedicated hackers trying
 	to stall the server.
 
--	Twisted (branch ``z9trunk``). Minerva relies on many changes to twisted.web, many fixes
+-	Twisted (our branch ``z9trunk``). Minerva relies on many changes to twisted.web, many fixes
 	for resource exhaustion attacks, and improved compatibility with SSL client bugs (modified
 	``DefaultOpenSSLContextFactory``).
 
--	simplejson (branch ``prime``). Minerva relies on a depth limit of 32 while parsing JSON. If
+-	simplejson (our branch ``prime``). Minerva relies on a depth limit of 32 while parsing JSON. If
 	an unpatched simplejson is used, Minerva will still work but the test suite will not pass
 	(and Minerva will be vulnerable to dedicated hackers trying to segfault the server).
 
 -	zope.interface
 
--	Pypycpyo (written by us)
+-	Pypycpyo (our project)
 
 If you want to compile the haXe code to a SWF (for Flash Socket support on the client), you will need:
 
