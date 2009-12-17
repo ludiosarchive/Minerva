@@ -679,7 +679,7 @@ cw.Class.subclass(cw.net, "UsableXHR").methods(
 
 		if(readyState == 4) {
 			// TODO: maybe do this in IE only? // TODO: xhrio does it differently: either null or nullFunction depending on browser
-			// Note: xmlhttp/xhrio might be doing it wrong, because it'll do onreadystatechange = null; if it's using an XMLHttpRequest object in IE.
+			// Note: xmlhttp/xhrio might be doing it wrong, because it'll do onreadystatechange = null; if it's using an XMLHttpRequest object (in IE 7+).
 			self._object.onreadystatechange = goog.nullFunction;
 			self._finishAndReset(null);
 		}
@@ -710,3 +710,147 @@ cw.net.simpleRequest = function(verb, url, post) {
 // Informal interfaces:
 // IWindowTime is an object with methods setTimeout, clearTimeout, setInterval, clearInterval
 
+
+
+/**
+ * Endpoint types
+ * @enum {number}
+ */
+cw.net.EndpointType = {
+	HTTP: 1,
+	HTTPS: 2,
+	WS: 3, // WebSocket
+	WSS: 4, // WebSocket Secure
+	TCP: 5 // Flash Socket, also hypothetically Silverlight, Java, and other things that allow TCP connections.
+};
+
+
+/**
+ * Implement this interface for your "endpoint locator" object.
+ *
+ * @interface
+ */
+cw.net.IEndpointLocator = function() {
+
+		}
+
+	/**
+	 * @type {cw.net.EndpointType} The type of endpoint
+	 *
+	 * @return {?string} type The endpoint that Minerva client should connect to.
+	 * 	If `type` is HTTP or HTTPS or WS or WSS, return the
+	 * 	full URL with an appropriate scheme (http:// or https:// or ws:// or ws://).
+	 * 	If `type` is TCP, return a URL that looks like "tcp://hostname:port"
+	 * 	(both `hostname` and the `port` number are required.)
+	 *
+	 * 	If no endpoint is suitable, return `null`.
+	 */
+	cw.net.IEndpointLocator.locate = function(type) {
+
+	}
+
+
+/**
+ * Frame types. Copied from minerva/newlink.py
+ * 
+ * @enum {number}
+ */
+cw.net.FrameType = {
+	boxes: 0,
+	box: 1,
+	seqnum: 2,
+	my_last_frame: 3,
+	sack: 4,
+	hello: 5,
+	gimme_boxes: 6,
+	gimme_sack_and_close: 7,
+	timestamp: 8,
+	reset: 10,
+	you_close_it: 11,
+	start_timestamps: 12,
+	stop_timestamps: 13,
+
+	tk_stream_attach_failure: 601,
+	tk_acked_unsent_boxes: 602,
+	tk_invalid_frame_type_or_arguments: 603,
+	tk_frame_corruption: 610,
+	tk_intraframe_corruption: 611,
+	tk_brb: 650
+}
+
+
+/**
+ * Reasons why a Stream is ending
+ *
+ * TODO: are these really useful?
+ *
+ * @enum {number}
+ */
+cw.net.StreamEndReason = {
+	/**
+	 * Application has decided Stream is no longer necessary.
+	 */
+	APPLICATION_CLOSE: 1,
+	/**
+	 * The page the Stream is hosted on is closing (onunload is probably happening
+	 * above the stack).
+	 */
+	PAGE_CLOSING: 2,
+	/**
+	 * Some problem on the client or server is preventing transports from working properly.
+	 */
+	CONFIG_PROBLEM: 3,
+	/**
+	 * Minerva client lost contact with the server
+	 */
+	LOST_CONTACT: 4
+}
+
+
+
+/**
+ * (copied from minerva/newlink.py)
+ *
+ * An interface for frame-based communication that abstracts
+ * away the Comet logic and transports.
+ *
+ * Your Minerva protocols should implement this.
+ *
+ * I'm analogous to L{twisted.internet.interfaces.IProtocol}
+ *
+ * @interface
+ */
+cw.net.IMinervaProtocol = function() {
+
+	}
+
+	/**
+	 * Called when this stream has just started.
+	 *
+	 * You'll want to keep the stream around with {@code this.stream = stream}.
+	 *
+	 * @type {!cw.net.Stream} stream the Stream that was just started.
+	 */
+	cw.net.IMinervaProtocol.streamStarted = function(stream) {
+
+	}
+
+	/**
+	 * Called when this stream has ended.
+	 *
+	 * @type {!cw.net.StreamEndReason} reason The reason why stream has ended.
+	 */
+	cw.net.IMinervaProtocol.streamEnded = function(reason) {
+
+	}
+
+	// TODO: streamQualityChanged
+
+	/**
+	 * Called whenever box(es) are received.
+	 *
+	 * @type {!Array<*>} boxes The received boxes.
+	 */
+	cw.net.IMinervaProtocol.boxesReceived = function(boxes) {
+
+	}

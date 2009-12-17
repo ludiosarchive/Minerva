@@ -668,9 +668,6 @@ class IMinervaProtocol(Interface):
 	An interface for frame-based communication that abstracts
 	away the Comet logic and transports.
 
-	A MinervaProtocol will be given a C{stream} attribute pointing
-	to its L{Stream} after it is constructed.
-
 	I'm analogous to L{twisted.internet.interfaces.IProtocol}
 	"""
 
@@ -1015,22 +1012,22 @@ class SocketTransport(protocol.Protocol):
 			except BadFrame:
 				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
-			frameType = frame.getType()
+			frameType = frameObj[0]
 
 			# We demand a 'hello' frame before any other type of frame
-			if self._gotHello is False and frameType != 'hello':
+			if self._gotHello is False and frameType != Fn.hello:
 				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 				
-			if frameType == 'hello':
+			if frameType == Fn.hello:
 				return self._gotHelloFrame(frame)
-			elif frameType == 'gimme_boxes':
+			elif frameType == Fn.gimme_boxes:
 				_secondArg = frameObj[1]
 				if _secondArg == -1:
 					succeedsTransport = None
 				else:
 					succeedsTransport = abstract.ensureNonNegIntLimit(frameObj[1], 2**64)
 				self._stream.subscribeToBoxes(self, succeedsTransport)
-			elif frameType == 'gimme_sack_and_close':
+			elif frameType == Fn.gimme_sack_and_close:
 				sackFrame = self._stream.getSACK()
 				sackFrame.insert(0, Fn.sack)
 				toSend = ''
@@ -1038,7 +1035,7 @@ class SocketTransport(protocol.Protocol):
 				toSend += self._encodeFrame([Fn.you_close_it])
 				toSend += self._encodeFrame([Fn.my_last_frame])
 				self.transport.write(toSend)
-			elif frameType == 'boxes':
+			elif frameType == Fn.boxes:
 				seqNumStrToBoxDict = frameObj[1]
 				memorySizeOfBoxes = len(frameString)
 				boxes = []
@@ -1049,16 +1046,16 @@ class SocketTransport(protocol.Protocol):
 						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 					boxes.append(seqNum, box)
 				self._stream.boxesReceived(self, boxes, memorySizeOfBoxes)
-			elif frameType == 'my_last_frame':
+			elif frameType == Fn.my_last_frame:
 				# For now, it doesn't help us make any decision.
 				pass
-			elif frameType == 'reset':
+			elif frameType == Fn.reset:
 				1/0
-			elif frameType == 'sack':
+			elif frameType == Fn.sack:
 				self._stream.sackReceived(frameObj[1])
-			elif frameType == 'start_timestamps':
+			elif frameType == Fn.start_timestamps:
 				1/0
-			elif frameType == 'stop_timestamps':
+			elif frameType == Fn.stop_timestamps:
 				1/0
 
 
