@@ -464,6 +464,12 @@ class _DummyId(abstract.GenericIdentifier):
 
 
 
+class _DummyId2(abstract.GenericIdentifier):
+	_expectedLength = 16
+	__slots__ = ['id']
+
+
+
 class TestGenericIdentifier(unittest.TestCase):
 
 	def test_equal(self):
@@ -477,8 +483,14 @@ class TestGenericIdentifier(unittest.TestCase):
 		s2 = _DummyId('y' * 16)
 		self.assertNotEqual(s1, s2)
 
+
+	def test_notEqualBecauseDifferentTypes(self):
+		s1 = _DummyId('a' * 16)
 		self.assertNotEqual(s1, 0)
 		self.assertNotEqual(s1, 'z' * 16)
+
+		s2 = _DummyId2('a' * 16)
+		self.assertNotEqual(s1, s2)
 
 
 	def test_repr(self):
