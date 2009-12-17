@@ -1819,7 +1819,15 @@ class BasicMinervaFactoryTests(unittest.TestCase):
 		verify.verifyObject(IMinervaFactory, BasicMinervaFactory())
 
 
+	def test_factory(self):
+		class WorkingBasicMinervaFactory(BasicMinervaFactory):
+			protocol = BasicMinervaProtocol
+
+		f = WorkingBasicMinervaFactory()
+		protocol = f.buildProtocol(MockStream(None, None))
+		self.assert_(isinstance(protocol, BasicMinervaProtocol))
+
+
 	def test_unmodifiedFactoryIsNotCallable(self):
 		f = BasicMinervaFactory()
 		self.aR(TypeError, lambda: f.buildProtocol(MockStream(None, None)))
-
