@@ -60,18 +60,18 @@ cw.net.ParseError.prototype.name = 'cw.net.ParseError';
  * @constructor
  */
 cw.net.ResponseTextDecoder = function(xObject, MAX_LENGTH) {
-		var self = this;
-		self._offset = 0;
-		// Need to have at least 1 byte before doing any parsing
-		self._ignoreUntil = 1;
-		// Optimization: this acts as both a mode and a readLength
-		self._modeOrReadLength = 0; // 0 means mode LENGTH, >= 1 means mode DATA
-		self.xObject = xObject;
-		if(!MAX_LENGTH) {
-			MAX_LENGTH = 1024*1024*1024;
-		}
-		self.setMaxLength(MAX_LENGTH);
+	var self = this;
+	self._offset = 0;
+	// Need to have at least 1 byte before doing any parsing
+	self._ignoreUntil = 1;
+	// Optimization: this acts as both a mode and a readLength
+	self._modeOrReadLength = 0; // 0 means mode LENGTH, >= 1 means mode DATA
+	self.xObject = xObject;
+	if(!MAX_LENGTH) {
+		MAX_LENGTH = 1024*1024*1024;
 	}
+	self.setMaxLength(MAX_LENGTH);
+}
 
 	/**
 	 * Set maximum frame length to C{MAX_LENGTH}.
@@ -276,7 +276,8 @@ cw.net.Timeout.prototype.name = 'cw.net.Timeout';
  * @interface
  */
 cw.net.IUsableSomething = function() {
-	}
+
+}
 
 	/**
 	 * @return: C{true} if this object is technically capable of
@@ -732,7 +733,7 @@ cw.net.EndpointType = {
  */
 cw.net.IEndpointLocator = function() {
 
-		}
+}
 
 	/**
 	 * @type {cw.net.EndpointType} The type of endpoint
@@ -745,7 +746,7 @@ cw.net.IEndpointLocator = function() {
 	 *
 	 * 	If no endpoint is suitable, return `null`.
 	 */
-	cw.net.IEndpointLocator.locate = function(type) {
+	cw.net.IEndpointLocator.prototype.locate = function(type) {
 
 	}
 
@@ -822,7 +823,7 @@ cw.net.StreamEndReason = {
  */
 cw.net.IMinervaProtocol = function() {
 
-	}
+}
 
 	/**
 	 * Called when this stream has just started.
@@ -831,7 +832,7 @@ cw.net.IMinervaProtocol = function() {
 	 *
 	 * @type {!cw.net.Stream} stream the Stream that was just started.
 	 */
-	cw.net.IMinervaProtocol.streamStarted = function(stream) {
+	cw.net.IMinervaProtocol.prototype.streamStarted = function(stream) {
 
 	}
 
@@ -840,7 +841,7 @@ cw.net.IMinervaProtocol = function() {
 	 *
 	 * @type {!cw.net.StreamEndReason} reason The reason why stream has ended.
 	 */
-	cw.net.IMinervaProtocol.streamEnded = function(reason) {
+	cw.net.IMinervaProtocol.prototype.streamEnded = function(reason) {
 
 	}
 
@@ -851,6 +852,118 @@ cw.net.IMinervaProtocol = function() {
 	 *
 	 * @type {!Array<*>} boxes The received boxes.
 	 */
-	cw.net.IMinervaProtocol.boxesReceived = function(boxes) {
+	cw.net.IMinervaProtocol.prototype.boxesReceived = function(boxes) {
 
 	}
+
+
+
+// The initial version of Minerva client won't support a SACK-capable Incoming. It'll
+// just drop boxes that it can't deliver to the client application immediately.
+
+
+/**
+ * @constructor
+ */
+cw.net.Queue = function() {
+	// basically use a linked list from goog
+	// and a '_posAt0' thing
+}
+
+
+/**
+ * Implemented by Minerva transports. You shouldn't need this.
+ *
+ * @private
+ * @interface
+ */
+cw.net.IMinervaTransport = function() {
+
+}
+	// lastBoxSent attribute?
+
+	/**
+	 * Write boxes in queue `queue` to the peer.
+	 * This never writes boxes that were already written to the peer over this transport
+	 * (because all transports are TCP-reliable).
+	 *
+	 * @type {cw.net.Queue} queue: an L{Queue}
+	 */
+	cw.net.IMinervaTransport.prototype.writeBoxes_ = function(queue) { // No 'start' argument unlike newlink.py
+
+	}
+
+	/**
+	 * Close this transport. Usually happens if the transport is no longer
+	 * useful.
+	 */
+	cw.net.IMinervaTransport.prototype.closeGently_ = function() {
+
+	}
+
+	/**
+	 * The stream that this transport is related to is resetting. Transport
+	 * must notify peer of the reset.
+	 *
+	 * @param reasonString: plain-English reason why the stream is resetting
+	 * @type reasonString: unicode
+	 */
+	cw.net.IMinervaTransport.prototype.reset_ = function(reasonString) {
+
+	}
+
+
+
+/**
+ * @type {!Object} clock Something that provides IWindowTime.
+ * @type {!Object} protocol
+ * @type {!Object} locator
+ */
+cw.net.Stream = function(clock, protocol, locator) {
+	this.clock_ = clock;
+	this.protocol_ = protocol;
+	this.locator_ = locator;
+	this.primaryTransport_ = null;
+}
+
+	/**
+	 * Send boxes `boxes` to the peer.
+	 *
+	 * @type {!Array<*>} boxes Boxes to send.
+	 *
+	 */
+	cw.net.Stream.prototype.sendBoxes_ = function(boxes) {
+		1/0
+	}
+
+	/**
+	 * Reset (disconnect) with reason `reasonString`.
+	 *
+	 * @type {string} reasonString Reason why resetting the stream
+	 */
+	cw.net.Stream.prototype.reset_ = function(reasonString) {
+		1/0
+	}
+
+	/**
+	 * Called by transports to tell me that it has received boxes.
+	 *
+	 * @type {!Object} transport The transport that received these boxes.
+	 * @type {Array<*>} boxes In-order boxes that transport has received.
+	 */
+	cw.net.Stream.prototype.boxesReceived_ = function(transport, boxes) {
+		1/0
+	}
+
+	/**
+	 * Called by transports to tell me that server has received at least some of
+	 * our C2S boxes.
+	 *
+	 * @type {!Array<*>} sackInfo
+	 */
+	cw.net.Stream.prototype.sackReceived_ = function(sackInfo) {
+		1/0
+	}
+
+	// notifyFinish?
+	// producers?
