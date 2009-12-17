@@ -5,6 +5,7 @@ import copy
 from zope.interface import verify
 from twisted.trial import unittest
 
+from twisted.python import failure
 from twisted.web import server, resource
 from twisted.internet import protocol, defer, address, interfaces, task
 from twisted.internet.interfaces import IPushProducer, IPullProducer, IProtocol, IProtocolFactory
@@ -1608,6 +1609,33 @@ class _BaseSocketTransportTests(object):
 		self._testExtraDataReceivedIgnored()
 
 
+	def test_connectionLostWithNoStream(self):
+		"""
+		If client closes connection on a Minerva transport that hasn't attached to a Stream,
+		nothing special happens.
+		"""
+		self.transport.connectionLost(failure.Failure(ValueError("Just a made-up error in test_connectionLost")))
+
+
+	def test_connectionLostWithStream(self):
+		"""
+		If client closes connection on a Minerva transport that is attached to a Stream,
+		streamObj.transportOffline(transport) is called.
+		"""
+		frame0 = self._makeValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0]))
+		stream = self.streamTracker.getStream('x'*26)
+
+		self._parseFrames()
+		self.aE([], self.gotFrames)
+		self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.log)
+
+		self.transport.connectionLost(failure.Failure(ValueError("Just a made-up error in test_connectionLost")))
+
+		self.aE([], self.gotFrames)
+		self.aE([['notifyFinish'], ['transportOnline', self.transport], ['transportOffline', self.transport]], stream.log)
+
+
 
 class SocketTransportTestsWithBencode(_BaseSocketTransportTests, unittest.TestCase):
 
@@ -1675,6 +1703,24 @@ class TransportProducerTests(unittest.TestCase):
 			self.transport.unregisterProducer()
 			# it is idempotent
 			self.transport.unregisterProducer()
+
+
+	def test_stopProducingIgnored(self):
+		"""
+		stopProducing does nothing.
+		"""
+		# stopProducing without a producer registered does nothing
+		orig = self.transport.__dict__.copy()
+		self.transport.stopProducing()
+		self.aE(orig, self.transport.__dict__)
+
+		# stopProducing with a producer registered does nothing
+		producer1 = MockProducer()
+		self.transport.registerProducer(producer1, streaming=True)
+		orig = self.transport.__dict__.copy()
+		self.transport.stopProducing()
+		self.aE(orig, self.transport.__dict__)
+		self.aE(	[], producer1.log)
 
 
 	def test_transportPausedRegisterStreamingProducer(self):
