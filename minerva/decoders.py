@@ -183,6 +183,13 @@ class BencodeStringDecoder(NetStringDecoder):
 
 
 
+def _raise(obj):
+	raise ParseError("I reject NaN, Infinity, and -Infinity")
+
+strictDecoder = simplejson.decoder.JSONDecoder(parse_constant=_raise)
+
+
+
 class DelimitedJSONDecoder(object):
 	"""
 	Decodes a stream of (1-byte-delimiter)-terminated JSON documents into Python objects.
@@ -199,11 +206,6 @@ class DelimitedJSONDecoder(object):
 	delimiter = '\n' # MUST be 1 byte. Do not change this after any data has been received.
 	lastJsonError = None # Most people won't care about the JSON exception.
 	_buffer = ''
-
-	def _raise(obj):
-		raise ParseError("I reject NaN, Infinity, and -Infinity")
-	_decoder = simplejson.decoder.JSONDecoder(parse_constant=_raise)
-
 
 	@classmethod
 	def encode(cls, obj):
@@ -235,7 +237,7 @@ class DelimitedJSONDecoder(object):
 		at = 0
 		while True:
 			try:
-				doc, end = self._decoder.raw_decode(self._buffer, at)
+				doc, end = strictDecoder.raw_decode(self._buffer, at)
 			except simplejson.decoder.JSONDecodeError, e:
 				self.lastJsonError = e
 				raise ParseError("%r" % (e,))

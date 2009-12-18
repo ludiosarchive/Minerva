@@ -33,6 +33,10 @@ from minerva.test_decoders import diceString
 
 Fn = Frame.names
 
+nan = simplejson.loads('NaN') # this always works, but float('nan') => 0 in Python ICC builds (maybe only with floating point optimizations?)
+inf = simplejson.loads('Infinity')
+neginf = simplejson.loads('-Infinity')
+
 
 class FrameTests(unittest.TestCase):
 
@@ -42,9 +46,8 @@ class FrameTests(unittest.TestCase):
 
 
 	def test_notOkay(self):
-		nan = simplejson.loads('NaN') # this always works, but float('nan') => 0 in Python ICC builds (maybe only with floating point optimizations?) 
-		badFrames = ([], [9999], {}, {0: 'x'}, {'0': 'x'}, 1, 1.5, nan, True, False, None)
-		badFrames = badFrames + ([[], "something"], [{}, "something"], [float('Infinity'), "something"], [nan, "something"])
+		badFrames = ([], [9999], {}, {0: 'x'}, {'0': 'x'}, 1, 1.5, nan, inf, neginf, True, False, None)
+		badFrames = badFrames + ([[], "something"], [{}, "something"], [inf, "something"], [nan, "something"])
 		for frame in badFrames:
 			self.aR(BadFrame, lambda: Frame(frame))
 
@@ -1429,8 +1432,7 @@ class _BaseSocketTransportTests(object):
 
 	def test_intraFrameCorruptionTrailingGarbage(self):
 		self.transport.dataReceived(self.parser.encode('{}x')) # complete JSON but with trailing garbage
-		# Note that simplejson allows trailing whitespace, which we should add a test for; TODO XXX
-		
+
 		self._parseFrames()
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 		self._testExtraDataReceivedIgnored()
@@ -1571,8 +1573,7 @@ class _BaseSocketTransportTests(object):
 
 		DeleteProperty = object()
 
-		nan = simplejson.loads('NaN')
-		genericBad = [-2**65, -1, -0.5, 0.5, nan, 2**65, "", [], {}, True, False, DeleteProperty]
+		genericBad = [-2**65, -1, -0.5, 0.5, 2**65, "", [], {}, True, False, DeleteProperty]
 
 		badMutations = dict(
 			n=genericBad,
@@ -1612,7 +1613,7 @@ class _BaseSocketTransportTests(object):
 				ran += 1
 
 		# sanity check; make sure we actually tested things
-		assert ran == 94, "Ran %d times; change this assert as needed" % (ran,)
+		assert ran == 87, "Ran %d times; change this assert as needed" % (ran,)
 
 
 	def test_noDelayEnabled(self):
@@ -1700,7 +1701,17 @@ class _BaseSocketTransportTests(object):
 		If client sends a too-low or too-high transport number (or a wrong type)
 		in the gimme_boxes frame, the transport is killed.
 		"""
-		1/0
+		for succeedsTransport in [-1, -2**32, -0.5, 2**65, "4", True, False, [], {}]:
+			frame0 = self._makeValidHelloFrame()
+			self.transport.dataReceived(self.serializeFrames([frame0, [Fn.gimme_boxes, succeedsTransport]]))
+			stream = self.streamTracker.getStream('x'*26)
+
+			self._parseFrames()
+			self.aE(	[[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+
+			self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.log)
+			self._resetStreamTracker()
+			self._reset()
 
 
 	def test_gimmeSackAndClose(self):
@@ -1709,6 +1720,22 @@ class _BaseSocketTransportTests(object):
 
 	def test_boxes(self):
 		1/0
+
+
+	def test_nan_inf_neginf_areForbidden(self):
+		"""
+		Minerva servers treats NaN, Infinity, and -Infinity as intra-frame corruption.
+		"""
+		for bad in [nan, inf, neginf]:
+			frame0 = self._makeValidHelloFrame()
+			self.transport.dataReceived(self.serializeFrames([frame0]))
+			self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": [bad]}]]))
+
+			self._parseFrames()
+			self.aE(	[[Fn.tk_intraframe_corruption], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
+
+			self._resetStreamTracker()
+			self._reset()
 
 
 

@@ -997,8 +997,10 @@ class SocketTransport(protocol.Protocol):
 		for frameString in frames:
 			assert isinstance(frameString, str)
 			try:
-				frameObj = simplejson.loads(frameString)
-			except simplejson.decoder.JSONDecodeError:
+				frameObj, position = decoders.strictDecoder.raw_decode(frameString)
+				if position != len(frameString):
+					return self._closeWith(Fn.tk_intraframe_corruption)
+			except (simplejson.decoder.JSONDecodeError, decoders.ParseError):
 				return self._closeWith(Fn.tk_intraframe_corruption)
 
 			try:
@@ -1046,7 +1048,7 @@ class SocketTransport(protocol.Protocol):
 						seqNum = abstract.strToNonNeg(seqNumStr)
 					except ValueError:
 						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
-					boxes.append(seqNum, box)
+					boxes.append((seqNum, box))
 				self._stream.boxesReceived(self, boxes, memorySizeOfBoxes)
 
 			elif frameType == Fn.box:
