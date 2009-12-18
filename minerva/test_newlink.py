@@ -1142,10 +1142,14 @@ class _BaseSocketTransportTests(object):
 		return toSend
 
 
-	def setUp(self):
+	def _resetStreamTracker(self):
 		clock = task.Clock()
 		self.protocolFactory = MockMinervaProtocolFactory()
 		self.streamTracker = DummyStreamTracker(clock, self.protocolFactory, {})
+
+
+	def setUp(self):
+		self._resetStreamTracker()
 		self._reset()
 
 
@@ -1638,7 +1642,7 @@ class _BaseSocketTransportTests(object):
 		nothing special happens.
 		"""
 		orig = self.transport.__dict__.copy()
-		self.transport.connectionLost(failure.Failure(ValueError("Just a made-up error in test_connectionLost")))
+		self.transport.connectionLost(failure.Failure(ValueError("Just a made-up error in test_connectionLostWithNoStream")))
 		self.aE(orig, self.transport.__dict__) # This test might be a bit overzealous
 
 
@@ -1655,38 +1659,40 @@ class _BaseSocketTransportTests(object):
 		self.aE([], self.gotFrames)
 		self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.log)
 
-		self.transport.connectionLost(failure.Failure(ValueError("Just a made-up error in test_connectionLost")))
+		self.transport.connectionLost(failure.Failure(ValueError("Just a made-up error in test_connectionLostWithStream")))
 
 		self.aE([], self.gotFrames)
 		self.aE([['notifyFinish'], ['transportOnline', self.transport], ['transportOffline', self.transport]], stream.log)
 
 
 	def test_gimmeBoxes(self):
-		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
-		self.transport.dataReceived(self.serializeFrames([[Fn.gimme_boxes, None]]))
-		stream = self.streamTracker.getStream('x'*26)
+		for succeedsTransport in [None, 0, 3]:
+			frame0 = self._makeValidHelloFrame()
+			self.transport.dataReceived(self.serializeFrames([frame0]))
+			self.transport.dataReceived(self.serializeFrames([[Fn.gimme_boxes, succeedsTransport]]))
+			stream = self.streamTracker.getStream('x'*26)
 
-		self._parseFrames()
-		assert [] == self.gotFrames, self.gotFrames
+			self._parseFrames()
+			assert [] == self.gotFrames, self.gotFrames
 
-		self.aE([['notifyFinish'], ['transportOnline', self.transport], ['subscribeToBoxes', self.transport, None]], stream.log)
+			self.aE([['notifyFinish'], ['transportOnline', self.transport], ['subscribeToBoxes', self.transport, succeedsTransport]], stream.log)
+			self._resetStreamTracker()
+			self._reset()
 
 
 	def test_gimmeBoxesRightAfterHello(self):
 		"""Same as test_gimmeBoxes, but frames hello and gimme_boxes arrive at the same time."""
-		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0, [Fn.gimme_boxes, None]]))
-		stream = self.streamTracker.getStream('x'*26)
+		for succeedsTransport in [None, 0, 3]:
+			frame0 = self._makeValidHelloFrame()
+			self.transport.dataReceived(self.serializeFrames([frame0, [Fn.gimme_boxes, succeedsTransport]]))
+			stream = self.streamTracker.getStream('x'*26)
 
-		self._parseFrames()
-		assert [] == self.gotFrames, self.gotFrames
+			self._parseFrames()
+			assert [] == self.gotFrames, self.gotFrames
 
-		self.aE([['notifyFinish'], ['transportOnline', self.transport], ['subscribeToBoxes', self.transport, None]], stream.log)
-
-
-	def test_gimmeBoxesSucceedsTransport(self):
-		1/0
+			self.aE([['notifyFinish'], ['transportOnline', self.transport], ['subscribeToBoxes', self.transport, succeedsTransport]], stream.log)
+			self._resetStreamTracker()
+			self._reset()
 
 
 	def test_gimmeBoxesSucceedsTransportInvalidNumber(self):
