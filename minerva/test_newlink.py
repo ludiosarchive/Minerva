@@ -1661,6 +1661,30 @@ class _BaseSocketTransportTests(object):
 		self.aE([['notifyFinish'], ['transportOnline', self.transport], ['transportOffline', self.transport]], stream.log)
 
 
+	def test_gimmeBoxes(self):
+		1/0
+
+
+	def test_gimmeBoxesSucceedsTransport(self):
+		1/0
+
+
+	def test_gimmeBoxesSucceedsTransportInvalidNumber(self):
+		"""
+		If client sends a too-low or too-high transport number (or a wrong type)
+		in the gimme_boxes frame, the transport is killed.
+		"""
+		1/0
+
+
+	def test_gimmeSackAndClose(self):
+		1/0
+
+
+	def test_boxes(self):
+		1/0
+
+
 
 class SocketTransportTestsWithBencode(_BaseSocketTransportTests, unittest.TestCase):
 

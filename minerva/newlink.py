@@ -803,7 +803,7 @@ class IMinervaTransport(ISimpleConsumer):
 		"""
 
 
-	def closeGently():
+	def closeGently(writeSack=False):
 		"""
 		Close this transport. Usually happens if the transport is no longer
 		useful (due to HTTP limitations), or because a new active S2C
@@ -922,7 +922,7 @@ class SocketTransport(protocol.Protocol):
 		self.lastBoxSent = lastBox
 
 
-	def _gotHelloFrame(self, frame):
+	def _handleHelloFrame(self, frame):
 		helloData = frame.contents[1]
 
 		# credentialsData is always optional
@@ -1018,7 +1018,7 @@ class SocketTransport(protocol.Protocol):
 					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 				self._gotHello = True
 				try:
-					self._gotHelloFrame(frame)
+					self._handleHelloFrame(frame)
 				except InvalidHello:
 					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 				except NoSuchStream:
@@ -1028,16 +1028,13 @@ class SocketTransport(protocol.Protocol):
 				if _secondArg == -1:
 					succeedsTransport = None
 				else:
-					succeedsTransport = abstract.ensureNonNegIntLimit(frameObj[1], 2**64)
+					try:
+						succeedsTransport = abstract.ensureNonNegIntLimit(frameObj[1], 2**64)
+					except (TypeError, ValueError):
+						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 				self._stream.subscribeToBoxes(self, succeedsTransport)
 			elif frameType == Fn.gimme_sack_and_close:
-				sackFrame = self._stream.getSACK()
-				sackFrame.insert(0, Fn.sack)
-				toSend = ''
-				toSend += self._encodeFrame(sackFrame)
-				toSend += self._encodeFrame([Fn.you_close_it])
-				toSend += self._encodeFrame([Fn.my_last_frame])
-				self.transport.write(toSend)
+				return self.closeGently(writeSack=True)
 			elif frameType == Fn.boxes:
 				seqNumStrToBoxDict = frameObj[1]
 				memorySizeOfBoxes = len(frameString)
@@ -1150,12 +1147,16 @@ class SocketTransport(protocol.Protocol):
 		##self.transport.loseConnection()
 
 
-	def closeGently(self):
+	def closeGently(self, writeSack=False):
 		"""
 		@see L{IMinervaTransport.closeGently}
 		"""
 		assert not self._terminating
 		toSend = ''
+		if writeSack:
+			sackFrame = self._stream.getSACK()
+			sackFrame.insert(0, Fn.sack)
+			toSend += self._encodeFrame(sackFrame)
 		toSend += self._encodeFrame([Fn.you_close_it])
 		toSend += self._encodeFrame([Fn.my_last_frame])
 		self.transport.write(toSend)
