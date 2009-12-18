@@ -1573,7 +1573,7 @@ class _BaseSocketTransportTests(object):
 		badMutations = dict(
 			n=genericBad,
 			v=[0, 1, "1", 1.001] + genericBad,
-			i=['', '\x00', 'x'*1, 'x'*19, 'x'*31, 'x'*3000] + genericBad, # 19 is below limit, 31 is over limit
+			i=['', '\x00', 'x'*1, u'\ucccc'*25, u'\ucccc'*8, 'x'*19, 'x'*31, 'x'*3000] + genericBad, # 19 is below limit, 31 is over limit
 			r=genericBad,
 			m=genericBad,
 			c=listWithout(genericBad, [{}]),
@@ -1608,7 +1608,7 @@ class _BaseSocketTransportTests(object):
 				ran += 1
 
 		# sanity check; make sure we actually tested things
-		assert ran == 91, "Ran %d times; change this assert as needed" % (ran,)
+		assert ran == 93, "Ran %d times; change this assert as needed" % (ran,)
 
 
 	def test_noDelayEnabled(self):
