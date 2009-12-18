@@ -1064,7 +1064,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			# Send some helloData that errors with tk_stream_attach_failure. We do this just so
 			# we know we're getting frames correctly. This error is a good one to test for, unlike
 			# any "frame corruption" error, to distinguish things properly.
-			helloData = dict(n=0, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+			helloData = dict(n=0, v=2, i='\x00'*26, r=2**30, m=2**30)
 			frame0 = [Fn.hello, helloData]
 			toSend = '<bencode/>\n' + serializeFrames([frame0])
 			
@@ -1095,7 +1095,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			# Send some helloData that errors with tk_stream_attach_failure. We do this just so
 			# we know we're getting frames correctly. This error is a good one to test for, unlike
 			# any "frame corruption" error, to distinguish things properly.
-			helloData = dict(n=0, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+			helloData = dict(n=0, v=2, i='\x00'*26, r=2**30, m=2**30)
 			frame0 = [Fn.hello, helloData]
 			toSend = '<int32/>\n' + serializeFrames([frame0])
 
@@ -1462,7 +1462,7 @@ class _BaseSocketTransportTests(object):
 
 
 	def test_validHelloWithCredentials(self):
-		helloData = dict(n=0, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30, c={'not_looked_at': True})
+		helloData = dict(n=0, w=True, v=2, i='\x7f'*20, r=2**30, m=2**30, c={'not_looked_at': True})
 		frame0 = [Fn.hello, helloData]
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		self._parseFrames()
@@ -1483,8 +1483,8 @@ class _BaseSocketTransportTests(object):
 
 	def test_validHelloButSentTwiceAtSameTime(self):
 		"""
-		Client can only send hello frame once. If they send it more than once, they get
-		tk_invalid_frame_type_or_arguments
+		Client can only send hello frame once (even if both arrive in the same dataReceived call).
+		If they send it more than once, they get tk_invalid_frame_type_or_arguments
 		"""
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0, frame0]))
@@ -1495,7 +1495,7 @@ class _BaseSocketTransportTests(object):
 	def test_connectionNumberDoesntMatter(self):
 		"""Connection number can be anywhere between 0 <= n <= 2**64"""
 		for n in [1, 1000, 10000, 12378912, 1283718237, 2**63]:
-			helloData = dict(n=n, w=True, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+			helloData = dict(n=n, w=True, v=2, i='\x00'*26, r=2**30, m=2**30)
 			frame0 = [Fn.hello, helloData]
 			self.transport.dataReceived(self.serializeFrames([frame0]))
 			self._parseFrames()
@@ -1505,7 +1505,7 @@ class _BaseSocketTransportTests(object):
 
 	def test_validHelloButNoSuchStream(self):
 		"""test that we get error 'tk_stream_attach_failure' if no such stream"""
-		helloData = dict(n=0, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+		helloData = dict(n=0, v=2, i='\x00'*26, r=2**30, m=2**30)
 		frame0 = [Fn.hello, helloData]
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		self._parseFrames()
@@ -1515,7 +1515,7 @@ class _BaseSocketTransportTests(object):
 
 	def test_validHelloButNoSuchStreamExplicitW(self):
 		"""Same test as test_validHelloButNoSuchStream but with explicit w=False"""
-		helloData = dict(n=0, w=False, v=2, i=base64.b64encode('\x00'*16), r=2**30, m=2**30)
+		helloData = dict(n=0, w=False, v=2, i='\x00'*26, r=2**30, m=2**30)
 		frame0 = [Fn.hello, helloData]
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		self._parseFrames()
@@ -1573,7 +1573,7 @@ class _BaseSocketTransportTests(object):
 		badMutations = dict(
 			n=genericBad,
 			v=[0, 1, "1", 1.001] + genericBad,
-			i=['', '\x00', 'x'*1, u'\ucccc'*25, u'\ucccc'*8, 'x'*19, 'x'*31, 'x'*3000] + genericBad, # 19 is below limit, 31 is over limit
+			i=['', '\x00', 'x'*1, u'\ucccc'*25, u'\ucccc'*8, u'\x80'*25, 'x'*19, 'x'*31, 'x'*3000] + genericBad, # 19 is below limit, 31 is over limit
 			r=genericBad,
 			m=genericBad,
 			c=listWithout(genericBad, [{}]),
@@ -1608,7 +1608,7 @@ class _BaseSocketTransportTests(object):
 				ran += 1
 
 		# sanity check; make sure we actually tested things
-		assert ran == 93, "Ran %d times; change this assert as needed" % (ran,)
+		assert ran == 94, "Ran %d times; change this assert as needed" % (ran,)
 
 
 	def test_noDelayEnabled(self):
