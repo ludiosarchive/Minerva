@@ -181,8 +181,12 @@ class MockStream(object):
 		self.log.append(['reset', reasonString])
 
 
-	def framesReceived(self, transport, frames):
-		self.log.append(['framesReceived', transport, frames])
+	def boxesReceived(self, transport, boxes, memorySizeOfBoxes):
+		self.log.append(['boxesReceived', transport, boxes, memorySizeOfBoxes])
+
+
+	def sackReceived(self, sackInfo):
+		self.log.append(['sackReceived', sackInfo])
 
 
 	def transportOnline(self, transport):
@@ -192,6 +196,10 @@ class MockStream(object):
 
 	def transportOffline(self, transport):
 		self.log.append(['transportOffline', transport])
+
+
+	def subscribeToBoxes(self, transport, succeedsTransport):
+		self.log.append(['subscribeToBoxes', transport, succeedsTransport])
 
 
 	def serverShuttingDown(self, transport):

@@ -1026,10 +1026,8 @@ class SocketTransport(protocol.Protocol):
 					return self._closeWith(Fn.tk_stream_attach_failure)
 			
 			elif frameType == Fn.gimme_boxes:
-				_secondArg = frameObj[1]
-				if _secondArg == -1:
-					succeedsTransport = None
-				else:
+				succeedsTransport = frameObj[1]
+				if succeedsTransport is not None:
 					try:
 						succeedsTransport = abstract.ensureNonNegIntLimit(frameObj[1], 2**64)
 					except (TypeError, ValueError):

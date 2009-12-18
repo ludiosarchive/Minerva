@@ -1662,7 +1662,27 @@ class _BaseSocketTransportTests(object):
 
 
 	def test_gimmeBoxes(self):
-		1/0
+		frame0 = self._makeValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0]))
+		self.transport.dataReceived(self.serializeFrames([[Fn.gimme_boxes, None]]))
+		stream = self.streamTracker.getStream('x'*26)
+
+		self._parseFrames()
+		assert [] == self.gotFrames, self.gotFrames
+
+		self.aE([['notifyFinish'], ['transportOnline', self.transport], ['subscribeToBoxes', self.transport, None]], stream.log)
+
+
+	def test_gimmeBoxesRightAfterHello(self):
+		"""Same as test_gimmeBoxes, but frames hello and gimme_boxes arrive at the same time."""
+		frame0 = self._makeValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0, [Fn.gimme_boxes, None]]))
+		stream = self.streamTracker.getStream('x'*26)
+
+		self._parseFrames()
+		assert [] == self.gotFrames, self.gotFrames
+
+		self.aE([['notifyFinish'], ['transportOnline', self.transport], ['subscribeToBoxes', self.transport, None]], stream.log)
 
 
 	def test_gimmeBoxesSucceedsTransport(self):
