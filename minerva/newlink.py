@@ -1011,7 +1011,8 @@ class SocketTransport(protocol.Protocol):
 			# We demand a 'hello' frame before any other type of frame
 			if self._gotHello is False and frameType != Fn.hello:
 				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
-				
+
+
 			if frameType == Fn.hello:
 				# We only allow one 'hello' per connection
 				if self._gotHello is True:
@@ -1023,6 +1024,7 @@ class SocketTransport(protocol.Protocol):
 					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 				except NoSuchStream:
 					return self._closeWith(Fn.tk_stream_attach_failure)
+			
 			elif frameType == Fn.gimme_boxes:
 				_secondArg = frameObj[1]
 				if _secondArg == -1:
@@ -1033,8 +1035,10 @@ class SocketTransport(protocol.Protocol):
 					except (TypeError, ValueError):
 						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 				self._stream.subscribeToBoxes(self, succeedsTransport)
+
 			elif frameType == Fn.gimme_sack_and_close:
 				return self.closeGently(writeSack=True)
+
 			elif frameType == Fn.boxes:
 				seqNumStrToBoxDict = frameObj[1]
 				memorySizeOfBoxes = len(frameString)
@@ -1046,19 +1050,26 @@ class SocketTransport(protocol.Protocol):
 						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 					boxes.append(seqNum, box)
 				self._stream.boxesReceived(self, boxes, memorySizeOfBoxes)
+
 			elif frameType == Fn.box:
 				1/0
+
 			elif frameType == Fn.seqnum:
 				1/0
+
 			elif frameType == Fn.my_last_frame:
 				# For now, it doesn't help us make any decision.
 				pass
+
 			elif frameType == Fn.reset:
 				1/0
+
 			elif frameType == Fn.sack:
 				self._stream.sackReceived(frameObj[1])
+
 			elif frameType == Fn.start_timestamps:
 				1/0
+
 			elif frameType == Fn.stop_timestamps:
 				1/0
 
