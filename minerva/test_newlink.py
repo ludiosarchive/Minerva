@@ -1949,8 +1949,8 @@ class BasicMinervaFactoryTests(unittest.TestCase):
 			protocol = BasicMinervaProtocol
 
 		f = WorkingBasicMinervaFactory()
-		protocol = f.buildProtocol(MockStream(None, None))
-		self.assert_(isinstance(protocol, BasicMinervaProtocol))
+		proto = f.buildProtocol(MockStream(None, None))
+		self.assert_(isinstance(proto, BasicMinervaProtocol))
 
 
 	def test_unmodifiedFactoryIsNotCallable(self):
