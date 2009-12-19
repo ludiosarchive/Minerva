@@ -79,9 +79,9 @@ class Frame(object):
 	# num -> (name, minArgs, maxArgs)
 	knownTypes = {
 		0: ('boxes', 1, 1),
-		1: ('box', 1, 1), # not used yet
-		2: ('seqnum', 1, 1), # not used yet
-		3: ('my_last_frame', 0, 0),
+		1: ('box', 1, 1),
+		2: ('seqnum', 1, 1),
+
 		4: ('sack', 2, 2),
 		5: ('hello', 1, 1),
 		6: ('gimme_boxes', 1, 1),
@@ -1041,10 +1041,6 @@ class SocketTransport(protocol.Protocol):
 			elif frameType == Fn.seqnum:
 				1/0
 
-			elif frameType == Fn.my_last_frame:
-				# For now, it doesn't help us make any decision.
-				pass
-
 			elif frameType == Fn.reset:
 				1/0
 
@@ -1142,7 +1138,6 @@ class SocketTransport(protocol.Protocol):
 		toSend = ''
 		toSend += self._encodeFrame(invalidArgsFrameObj)
 		toSend += self._encodeFrame([Fn.you_close_it])
-		toSend += self._encodeFrame([Fn.my_last_frame])
 		self.transport.write(toSend)
 		self._terminating = True
 
@@ -1166,7 +1161,6 @@ class SocketTransport(protocol.Protocol):
 			sackFrame = [Fn.sack, self._stream.getSACK()]
 			toSend += self._encodeFrame(sackFrame)
 		toSend += self._encodeFrame([Fn.you_close_it])
-		toSend += self._encodeFrame([Fn.my_last_frame])
 		self.transport.write(toSend)
 		self._terminating = True
 
@@ -1179,7 +1173,6 @@ class SocketTransport(protocol.Protocol):
 		toSend = ''
 		toSend += self._encodeFrame([Fn.reset, reasonString])
 		toSend += self._encodeFrame([Fn.you_close_it])
-		toSend += self._encodeFrame([Fn.my_last_frame])
 		self.transport.write(toSend)
 		self._terminating = True
 

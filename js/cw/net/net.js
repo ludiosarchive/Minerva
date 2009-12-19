@@ -781,7 +781,7 @@ cw.net.FrameType = {
 	boxes: 0,
 	box: 1,
 	seqnum: 2,
-	my_last_frame: 3,
+
 	sack: 4,
 	hello: 5,
 	gimme_boxes: 6,
