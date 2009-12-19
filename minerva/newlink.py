@@ -189,8 +189,6 @@ class Stream(object):
 	streaming should implement an application-level producer/consumer system.
 	"""
 
-	# TODO: disconnect timer - no transport in N minutes
-
 	implements(ISimpleConsumer, IPushProducer, IPullProducer)
 
 	maxUndeliveredBoxes = 5000 # boxes
@@ -826,8 +824,6 @@ class SocketTransport(protocol.Protocol):
 		Flash Socket (ciphered)
 		Flash socket policy server
 		WebSocket
-
-	TODO: actually do it
 	"""
 	implements(IMinervaTransport, IProtocol, IPushProducer, IPullProducer)
 
@@ -1141,7 +1137,7 @@ class SocketTransport(protocol.Protocol):
 		self.transport.write(toSend)
 		self._terminating = True
 
-		# TODO: set timer and close the connection ourselves in 5 seconds
+		# TODO: set timer and close the connection ourselves in 5-10 seconds
 		##self.transport.loseConnection()
 
 
