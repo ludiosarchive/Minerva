@@ -742,7 +742,7 @@ cw.net.IEndpointLocator = function() {
 	 * @return {?Array.<(string|!Object.<string, *>)} The endpoint (with
 	 * 	credentials) that Minerva client should connect to.
 	 *
-	 *	Return an array of [the endpoint URL, credentialsObject], or, if no
+	 *	Return an array of [the endpoint URL, credentialsData], or, if no
 	 * 	endpoint is suitable, return `null`.
 	 *
 	 * 	the endpoint URL: If `type` is `cw.net.EndpointType.{HTTP,HTTPS,WS,WSS}`, the
@@ -750,8 +750,8 @@ cw.net.IEndpointLocator = function() {
 	 * 	If `type` is `cw.net.EndpointType.TCP`, a URL that looks like "tcp://hostname:port"
 	 * 	(both `hostname` and the `port` number are required.)
 	 *
-	 * 	credentialsObject: Object, which may be looked at by Minerva server's
-	 * 	firewall. Cannot be an Array.
+	 * 	credentialsData: `Object`, which may be looked at by Minerva server's
+	 * 	firewall. Cannot be an `Array`, or anything but `Object`.
 	 */
 	cw.net.IEndpointLocator.prototype.locate = function(type) {
 
