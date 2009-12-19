@@ -1573,7 +1573,7 @@ class _BaseSocketTransportTests(object):
 
 		DeleteProperty = object()
 
-		genericBad = [-2**65, -1, -0.5, 0.5, 2**65, "", [], {}, True, False, DeleteProperty]
+		genericBad = [-2**65, -1, -0.5, 0.5, 2**65, "", [], ["something"], {}, True, False, DeleteProperty]
 
 		badMutations = dict(
 			n=genericBad,
@@ -1613,7 +1613,7 @@ class _BaseSocketTransportTests(object):
 				ran += 1
 
 		# sanity check; make sure we actually tested things
-		assert ran == 87, "Ran %d times; change this assert as needed" % (ran,)
+		assert ran == 94, "Ran %d times; change this assert as needed" % (ran,)
 
 
 	def test_noDelayEnabled(self):

@@ -737,19 +737,31 @@ cw.net.IEndpointLocator = function() {
 }
 
 	/**
-	 * @type {cw.net.EndpointType} The type of endpoint
+	 * @type {cw.net.EndpointType} type The type of endpoint
 	 *
-	 * @return {?string} type The endpoint that Minerva client should connect to.
-	 * 	If `type` is HTTP or HTTPS or WS or WSS, return the
-	 * 	full URL with an appropriate scheme (http:// or https:// or ws:// or ws://).
-	 * 	If `type` is TCP, return a URL that looks like "tcp://hostname:port"
+	 * @return {?Array.<(string|!Object.<string, *>)} The endpoint (with
+	 * 	credentials) that Minerva client should connect to.
+	 *
+	 *	Return an array of [the endpoint URL, credentialsObject], or, if no
+	 * 	endpoint is suitable, return `null`.
+	 *
+	 * 	the endpoint URL: If `type` is `cw.net.EndpointType.{HTTP,HTTPS,WS,WSS}`, the
+	 * 	full URL with an appropriate scheme (`http://` or `https://` or `ws://` or `ws://`).
+	 * 	If `type` is `cw.net.EndpointType.TCP`, a URL that looks like "tcp://hostname:port"
 	 * 	(both `hostname` and the `port` number are required.)
 	 *
-	 * 	If no endpoint is suitable, return `null`.
+	 * 	credentialsObject: Object, which may be looked at by Minerva server's
+	 * 	firewall. Cannot be an Array.
 	 */
 	cw.net.IEndpointLocator.prototype.locate = function(type) {
 
 	}
+
+
+// TODO: need some kind of interface to allow applications to control
+// timeout behavior. Control timeout for individual HTTP/WebSocket/Flash Socket transports?
+
+// If application wants to timeout Stream on the client-side,
 
 
 /**
@@ -859,7 +871,7 @@ cw.net.IMinervaProtocol = function() {
 	/**
 	 * Called whenever box(es) are received.
 	 *
-	 * @type {!Array<*>} boxes The received boxes.
+	 * @type {!Array.<*>} boxes The received boxes.
 	 */
 	cw.net.IMinervaProtocol.prototype.boxesReceived = function(boxes) {
 
@@ -955,7 +967,7 @@ cw.net.Stream = function(clock, protocol, locator) {
 	/**
 	 * Send boxes `boxes` to the peer.
 	 *
-	 * @type {!Array<*>} boxes Boxes to send.
+	 * @type {!Array.<*>} boxes Boxes to send.
 	 *
 	 */
 	cw.net.Stream.prototype.sendBoxes_ = function(boxes) {
@@ -975,7 +987,7 @@ cw.net.Stream = function(clock, protocol, locator) {
 	 * Called by transports to tell me that it has received boxes.
 	 *
 	 * @type {!Object} transport The transport that received these boxes.
-	 * @type {Array<*>} boxes In-order boxes that transport has received.
+	 * @type {Array.<*>} boxes In-order boxes that transport has received.
 	 */
 	cw.net.Stream.prototype.boxesReceived_ = function(transport, boxes) {
 		1/0
@@ -985,7 +997,7 @@ cw.net.Stream = function(clock, protocol, locator) {
 	 * Called by transports to tell me that server has received at least some of
 	 * our C2S boxes.
 	 *
-	 * @type {!Array<*>} sackInfo
+	 * @type {!Array.<*>} sackInfo
 	 */
 	cw.net.Stream.prototype.sackReceived_ = function(sackInfo) {
 		1/0

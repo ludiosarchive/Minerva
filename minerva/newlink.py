@@ -177,25 +177,6 @@ class IStreamNotificationReceiver(Interface):
 
 
 
-class IStreamQuality(Interface):
-	socketLike = Attribute(
-		"""True if the Stream has a socket-like transport in both directions, else False.""")
-
-
-
-class StreamQuality(object):
-	"""
-	I represent the "quality" of a L{Stream} in a way that an
-	application can understand.
-	"""
-
-	implements(IStreamQuality)
-
-	def __init__(self, socketLike):
-		self.socketLike = socketLike
-
-
-
 # There is no factory for customizing the construction of L{Stream}s, just like
 # there is no factory for customizing the construction of L{twisted.internet.tcp.Server}s in Twisted.
 class Stream(object):
@@ -664,6 +645,18 @@ class IMinervaProtocol(Interface):
 	away the Comet logic and transports.
 
 	I'm analogous to L{twisted.internet.interfaces.IProtocol}
+
+	Note that the stream never ends unless you say it ends (there
+	are no timeouts in Stream). If you want to end the stream,
+	call stream.reset(u"reason why")
+
+	The simplest way to end dead Streams is to use an application-level
+	ping message that your client sends (say every 55 seconds), and
+	end the Stream if no such message has been received for 2 minutes.
+
+	TODO: expose a `primaryOnline` and `primaryOffline` or a similar
+	scheme to know some information about whether the client is even
+	connected to Minerva server.
 	"""
 
 	def streamStarted(stream):
@@ -674,28 +667,6 @@ class IMinervaProtocol(Interface):
 
 		@param stream: the L{Stream} that was started.
 		@type stream: L{Stream}
-		"""
-
-
-	def streamEnded(reason):
-		"""
-		Called when this stream has ended.
-
-		@type reason: L{twisted.p.f.Failure}
-		@param reason: reason why the stream ended
-		"""
-
-
-	def streamQualityChanged(quality):
-		"""
-		The quality of the stream has changed significantly due to
-		a change in transports. Perhaps a larger (or smaller) number
-		of discrete C2S or S2C frames can now be sent per second,
-		or the same number of frames with lower (or higher) resource
-		usage.
-
-		@type quality: L{StreamQuality}
-		@param quality: an object describing the new quality of the Stream.
 		"""
 
 
@@ -718,14 +689,6 @@ class BasicMinervaProtocol(object):
 
 	def streamStarted(self, stream):
 		self.stream = stream
-
-
-	def streamEnded(self, reason):
-		pass # TODO: need to make Stream actually call this
-
-
-	def streamQualityChanged(self, quality):
-		pass # TODO: need to make Stream actually call this
 
 
 	def boxesReceived(self, boxes):
@@ -818,6 +781,9 @@ class IMinervaTransport(ISimpleConsumer):
 
 		@param reasonString: plain-English reason why the stream is resetting
 		@type reasonString: unicode
+
+		The reset frame (incl. reasonString) are not guaranteed to arrive to the peer.
+		reasonString is only sometimes useful for debugging.
 		"""
 
 

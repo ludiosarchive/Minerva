@@ -253,14 +253,6 @@ class MockMinervaProtocol(object):
 		self.stream = stream
 
 
-	def streamEnded(self, reason):
-		self.log.append(['streamEnded', reason])
-
-
-	def streamQualityChanged(self, quality):
-		self.log.append(['streamQualityChanged', quality])
-
-
 	def boxesReceived(self, boxes):
 		self.log.append(['boxesReceived', boxes])
 
