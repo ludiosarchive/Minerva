@@ -1065,6 +1065,9 @@ class SocketTransport(protocol.Protocol):
 
 			elif frameType == Fn.stop_timestamps:
 				1/0
+				
+			else:
+				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
 		if writeSACK:
 			self._writeSACK()

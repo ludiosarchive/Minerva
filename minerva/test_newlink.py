@@ -1398,10 +1398,31 @@ class _BaseSocketTransportTests(object):
 
 
 	def test_invalidFrameType(self):
+		frame0 = self._makeValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0]))
 		self.transport.dataReceived(self.serializeFrames([[9999]]))
 		self._parseFrames()
 		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
 		self._testExtraDataReceivedIgnored()
+
+
+	def test_unacceptableFrameType(self):
+		"""A valid frame type, but server can't accept it."""
+		for frameType in [
+		Fn.tk_brb,
+		Fn.tk_intraframe_corruption,
+		Fn.tk_frame_corruption,
+		Fn.tk_invalid_frame_type_or_arguments,
+		Fn.tk_acked_unsent_boxes,
+		Fn.tk_stream_attach_failure]:
+			frame0 = self._makeValidHelloFrame()
+			self.transport.dataReceived(self.serializeFrames([frame0]))
+			self.transport.dataReceived(self.serializeFrames([[Fn.tk_brb]]))
+			self._parseFrames()
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
+			self._testExtraDataReceivedIgnored()
+
+			self._reset()
 
 
 	def test_firstFrameWasNotHelloFrame(self):
@@ -1825,10 +1846,6 @@ class _BaseSocketTransportTests(object):
 
 			self._resetStreamTracker()
 			self._reset()
-
-
-	def test_unknownFrameType(self):
-		1/0
 
 
 	def test_sackFrameValid(self):
