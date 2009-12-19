@@ -990,9 +990,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 class StreamTrackerTests(unittest.TestCase):
 
 	def test_buildStream(self):
-		"""
-		buildStream returns an instance of L{Stream}
-		"""
+		"""buildStream returns an instance of L{Stream}"""
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, None, None)
 		stream = st.buildStream('some fake id')
@@ -1000,15 +998,27 @@ class StreamTrackerTests(unittest.TestCase):
 
 
 	def test_buildStreamCannotBuildWithSameId(self):
-		"""
-		buildStream raises an error when trying to build a stream with an already-existing id
-		"""
+		"""buildStream raises an error when trying to build a stream with an already-existing id"""
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, None, None)
 		id = 'some fake id'
 		act = lambda: st.buildStream(id)
 		act()
 		self.aR(StreamAlreadyExists, act)
+
+
+	def test_antiACAImplementation(self):
+		"""
+		Verify that the implementation appears to have some protection against ACA. This
+		is kind of a bad test. If we had a generator that made short hash()-colliding strings,
+		we could make a better test.
+		"""
+		reactor = FakeReactor()
+		st = StreamTracker(reactor, None, None)
+		id = 'some fake id'
+		act = lambda: st.buildStream(id)
+		act()
+		self.aE(len(id) + 6, len(st._streams.keys()[0]))
 
 
 
