@@ -1492,6 +1492,20 @@ class _BaseSocketTransportTests(object):
 		self._testExtraDataReceivedIgnored()
 
 
+	def test_nan_inf_neginf_areForbidden(self):
+		"""Minerva servers treats NaN, Infinity, or -Infinity in the JSON the same as intraframe corruption."""
+		for bad in [nan, inf, neginf]:
+			frame0 = self._makeValidHelloFrame()
+			self.transport.dataReceived(self.serializeFrames([frame0]))
+			self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": [bad]}]]))
+
+			self._parseFrames()
+			self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], self.gotFrames)
+
+			self._resetStreamTracker()
+			self._reset()
+
+
 	def test_validHello(self):
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
@@ -1651,7 +1665,7 @@ class _BaseSocketTransportTests(object):
 	def test_firstFrameMustBeHello(self):
 		"""If hello isn't the first frame received, transport errors with tk_invalid_frame_type_or_arguments"""
 		# a completely valid frame
-		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"]}],]))
+		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"]}]]))
 		self._parseFrames()
 		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
 
@@ -1818,23 +1832,9 @@ class _BaseSocketTransportTests(object):
 			self.transport.dataReceived(self.serializeFrames([frame0]))
 			stream = self.streamTracker.getStream('x'*26)
 
-			self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {invalidKey: ["box0"]}],]))
+			self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {invalidKey: ["box0"]}]]))
 			self._parseFrames()
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
-
-			self._resetStreamTracker()
-			self._reset()
-
-
-	def test_nan_inf_neginf_areForbidden(self):
-		"""Minerva servers treats NaN, Infinity, or -Infinity in the JSON the same as intraframe corruption."""
-		for bad in [nan, inf, neginf]:
-			frame0 = self._makeValidHelloFrame()
-			self.transport.dataReceived(self.serializeFrames([frame0]))
-			self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": [bad]}]]))
-
-			self._parseFrames()
-			self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], self.gotFrames)
 
 			self._resetStreamTracker()
 			self._reset()
@@ -1846,7 +1846,7 @@ class _BaseSocketTransportTests(object):
 		stream = self.streamTracker.getStream('x'*26)
 		stream.queue.append(["box0"])
 
-		self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, []],]))
+		self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, []]]))
 		self._parseFrames()
 		self.aE([], self.gotFrames)
 		self.aE([
@@ -1863,7 +1863,7 @@ class _BaseSocketTransportTests(object):
 		stream = self.streamTracker.getStream('x'*26)
 		stream.queue.extend([["box0"], ["box1"], ["box2"]])
 
-		self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, [2]],]))
+		self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, [2]]]))
 		self._parseFrames()
 		self.aE([], self.gotFrames)
 		self.aE([
@@ -1873,17 +1873,13 @@ class _BaseSocketTransportTests(object):
 		], stream.log)
 
 
-	def test_sackFrameInvalid(self):
-		1/0
-
-
 	def test_sackedUnsentBoxes(self):
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		stream = self.streamTracker.getStream('x'*26)
 		stream.queue.append(["box0"])
 
-		self.transport.dataReceived(self.serializeFrames([[Fn.sack, 1, []],]))
+		self.transport.dataReceived(self.serializeFrames([[Fn.sack, 1, []]]))
 		self._parseFrames()
 		self.aE([[Fn.tk_acked_unsent_boxes], [Fn.you_close_it]], self.gotFrames)
 		self.aE([
@@ -1891,6 +1887,52 @@ class _BaseSocketTransportTests(object):
 			['transportOnline', self.transport],
 			['sackReceived', (1, [])],
 		], stream.log)
+
+
+	def test_sackFrameInvalidACKNumber(self):
+		# Note how an ACK of -1 is invalid. First legal ACK is 0.
+		badNumbers = [-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"], "something", {}, True, False]
+		for num in badNumbers:
+			frame0 = self._makeValidHelloFrame()
+			self.transport.dataReceived(self.serializeFrames([frame0]))
+			stream = self.streamTracker.getStream('x'*26)
+			stream.queue.extend([["box0"], ["box1"], ["box2"]])
+
+			self.transport.dataReceived(self.serializeFrames([[Fn.sack, num, []]]))
+			self._parseFrames()
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
+
+			self._reset()
+
+
+	def test_sackFrameInvalidSecondArgumentType(self):
+		badObjects = [-2**65, -1, -0.5, 0.5, 2**64+1, "", "something", {}, True, False]
+		for badObj in badObjects:
+			frame0 = self._makeValidHelloFrame()
+			self.transport.dataReceived(self.serializeFrames([frame0]))
+			stream = self.streamTracker.getStream('x'*26)
+			stream.queue.extend([["box0"], ["box1"], ["box2"]])
+
+			self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, badObj]]))
+			self._parseFrames()
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
+
+			self._reset()
+
+
+	def test_sackFrameInvalidSACKNumber(self):
+		badNumbers = [-2**65, -1, -0.5, 0.5, 2**64+1, "", ["something"], "something", [], {}, True, False]
+		for num in badNumbers:
+			frame0 = self._makeValidHelloFrame()
+			self.transport.dataReceived(self.serializeFrames([frame0]))
+			stream = self.streamTracker.getStream('x'*26)
+			stream.queue.extend([["box0"], ["box1"], ["box2"]])
+
+			self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, [1, num]]])) # 1 is valid, num is not
+			self._parseFrames()
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
+
+			self._reset()
 
 
 
