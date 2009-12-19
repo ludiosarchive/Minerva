@@ -774,7 +774,7 @@ class IMinervaTransport(ISimpleConsumer):
 		"""
 
 
-	def closeGently(writeSack=False):
+	def closeGently():
 		"""
 		Close this transport. Usually happens if the transport is no longer
 		useful (due to HTTP limitations), or because a new active S2C
@@ -1147,17 +1147,12 @@ class SocketTransport(protocol.Protocol):
 		self.transport.write(toSend)
 
 
-	def closeGently(self, writeSack=False):
+	def closeGently(self):
 		"""
 		@see L{IMinervaTransport.closeGently}
 		"""
 		assert not self._terminating
-		toSend = ''
-		if writeSack:
-			sackFrame = [Fn.sack, self._stream.getSACK()]
-			toSend += self._encodeFrame(sackFrame)
-		toSend += self._encodeFrame([Fn.you_close_it])
-		self.transport.write(toSend)
+		self.transport.write(self._encodeFrame([Fn.you_close_it]))
 		self._terminating = True
 
 
@@ -1166,8 +1161,7 @@ class SocketTransport(protocol.Protocol):
 		@see L{IMinervaTransport.reset}
 		"""
 		assert not self._terminating
-		toSend = ''
-		toSend += self._encodeFrame([Fn.reset, reasonString])
+		toSend = self._encodeFrame([Fn.reset, reasonString])
 		toSend += self._encodeFrame([Fn.you_close_it])
 		self.transport.write(toSend)
 		self._terminating = True
