@@ -1708,8 +1708,13 @@ class _BaseSocketTransportTests(object):
 			self._reset()
 
 
-	def test_gimmeSackAndClose(self):
-		1/0
+	def test_you_close_it_forbidden(self):
+		"""Socket transports don't allow a C2S you_close_it (HTTP transports do.)"""
+		frame0 = self._makeValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0, [Fn.you_close_it]]))
+		stream = self.streamTracker.getStream('x'*26)
+		self._parseFrames()
+		self.aE(	[[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it], [Fn.my_last_frame]], self.gotFrames)
 
 
 	def test_boxes(self):

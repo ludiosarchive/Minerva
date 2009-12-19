@@ -785,7 +785,7 @@ cw.net.FrameType = {
 	sack: 4,
 	hello: 5,
 	gimme_boxes: 6,
-	gimme_sack_and_close: 7,
+
 	timestamp: 8,
 	reset: 10,
 	you_close_it: 11,
@@ -815,7 +815,8 @@ cw.net.StreamEndReason = {
 	APPLICATION_CLOSE: 1,
 	/**
 	 * The page the Stream is hosted on is closing (onunload is probably happening
-	 * above the stack).
+	 * above the stack). XXX Should this be application level? Application can call stream.reset("page closing") if it wants to.
+	 * Should the stream even be reset?
 	 */
 	PAGE_CLOSING: 2,
 	/**
@@ -823,7 +824,7 @@ cw.net.StreamEndReason = {
 	 */
 	CONFIG_PROBLEM: 3,
 	/**
-	 * Minerva client lost contact with the server
+	 * Minerva client lost contact with the server. XXX application should decide when contact is lost
 	 */
 	LOST_CONTACT: 4
 }

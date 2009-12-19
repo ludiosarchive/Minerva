@@ -85,7 +85,7 @@ class Frame(object):
 		4: ('sack', 2, 2),
 		5: ('hello', 1, 1),
 		6: ('gimme_boxes', 1, 1),
-		7: ('gimme_sack_and_close', 0, 0),
+
 		8: ('timestamp', 1, 1),
 		10: ('reset', 1, 1),
 		11: ('you_close_it', 0, 0),
@@ -826,6 +826,8 @@ class SocketTransport(protocol.Protocol):
 	MAX_LENGTH = 1024*1024
 	noisy = True
 
+
+
 	def __init__(self, reactor, clock, streamTracker, firewall, policyStringWithNull):
 		self._reactor = reactor
 		self._clock = clock
@@ -960,6 +962,9 @@ class SocketTransport(protocol.Protocol):
 
 
 	def _framesReceived(self, frames):
+		# TODO: don't call transport.write() more than once for a _framesReceived() call.
+		# TODO: confirm that Twisted actually sends multiple TCP packets when .write() is called
+		# under the same stack frame.
 		writeSACK = False
 		for frameString in frames:
 			assert isinstance(frameString, str)
@@ -1003,8 +1008,9 @@ class SocketTransport(protocol.Protocol):
 						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 				self._stream.subscribeToBoxes(self, succeedsTransport)
 
-			elif frameType == Fn.gimme_sack_and_close:
-				return self.closeGently(writeSack=True)
+			elif frameType == Fn.you_close_it:
+				# TODO: allow this for HTTP: finish the HTTP request
+				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
 			elif frameType == Fn.boxes:
 				seqNumStrToBoxDict = frameObj[1]
@@ -1085,6 +1091,8 @@ class SocketTransport(protocol.Protocol):
 				self._parser = decoders.Int32StringDecoder()
 				self._parser.MAX_LENGTH = self.MAX_LENGTH
 				self._parser.manyDataCallback = self._framesReceived
+
+			# TODO: <int32-zlib/> with <x/> alias 
 
 			elif len(self._initialBuffer) >= 512: # TODO: really long enough to determine mode?
 				self._terminating = True # Terminating, but we can't even send any type of frame.

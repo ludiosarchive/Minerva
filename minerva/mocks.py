@@ -253,6 +253,10 @@ class MockMinervaProtocol(object):
 		self.stream = stream
 
 
+	def streamReset(self, reasonString):
+		self.log.append(['streamReset', reasonString])
+
+
 	def boxesReceived(self, boxes):
 		self.log.append(['boxesReceived', boxes])
 
