@@ -1724,7 +1724,7 @@ class _BaseSocketTransportTests(object):
 
 	def test_nan_inf_neginf_areForbidden(self):
 		"""
-		Minerva servers treats NaN, Infinity, and -Infinity as intra-frame corruption.
+		Minerva servers treats NaN, Infinity, or -Infinity in the JSON the same as intraframe corruption.
 		"""
 		for bad in [nan, inf, neginf]:
 			frame0 = self._makeValidHelloFrame()
