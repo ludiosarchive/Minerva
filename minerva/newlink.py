@@ -295,8 +295,7 @@ class Stream(object):
 
 
 	def sackReceived(self, sackInfo):
-		# No need to pretend any more, because we just got a likely-up-to-date sack from the client
-		
+		# No need to pretend any more, because we just got a likely-up-to-date sack from the client.
 		# TODO: perhaps have a flag for the sack frame that lets client send a "outdated SACK"
 		# that removes old frames in server's queue, but doesn't imply "I don't have anything else after this"
 		wasPretending = self._pretendAcked
@@ -1041,7 +1040,25 @@ class SocketTransport(protocol.Protocol):
 				1/0
 
 			elif frameType == Fn.sack:
-				self._stream.sackReceived(frameObj[1])
+				ackNumber, sackList = frameObj[1:]
+				try:
+					abstract.ensureNonNegIntLimit(ackNumber, 2**64) # okay to ignore return value here and below
+				except (TypeError, ValueError):
+					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+
+				if not isinstance(sackList, list):
+					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+
+				for obj in sackList:
+					try:
+						abstract.ensureNonNegIntLimit(obj, 2**64)
+					except (TypeError, ValueError):
+						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+
+				try:
+					self._stream.sackReceived((ackNumber, sackList))
+				except abstract.InvalidSACK:
+					return self._closeWith(Fn.tk_acked_unsent_boxes)
 
 			elif frameType == Fn.start_timestamps:
 				1/0

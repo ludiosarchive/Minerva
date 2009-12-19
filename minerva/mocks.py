@@ -165,6 +165,7 @@ class MockStream(object):
 		self.streamProtocolFactory = streamProtocolFactory
 		self.log = []
 		self._incoming = abstract.Incoming()
+		self.queue = abstract.Queue()
 
 
 	def sendBoxes(self, boxes):
@@ -182,6 +183,7 @@ class MockStream(object):
 
 	def sackReceived(self, sackInfo):
 		self.log.append(['sackReceived', sackInfo])
+		self.queue.handleSACK(sackInfo)
 
 
 	def transportOnline(self, transport):

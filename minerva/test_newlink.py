@@ -1626,6 +1626,14 @@ class _BaseSocketTransportTests(object):
 		assert ran == 94, "Ran %d times; change this assert as needed" % (ran,)
 
 
+	def test_firstFrameMustBeHello(self):
+		"""If hello isn't the first frame received, transport errors with tk_invalid_frame_type_or_arguments"""
+		# a completely valid frame
+		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"]}],]))
+		self._parseFrames()
+		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
+
+
 	def test_noDelayEnabled(self):
 		"""
 		When a Minerva transport is created, its underlying TCP transport has TCP_NODELAY enabled.
@@ -1824,7 +1832,36 @@ class _BaseSocketTransportTests(object):
 
 
 	def test_sackFrameValid(self):
-		1/0
+		frame0 = self._makeValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0]))
+		stream = self.streamTracker.getStream('x'*26)
+		stream.queue.append(["box0"])
+
+		self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, []],]))
+		self._parseFrames()
+		self.aE([], self.gotFrames)
+		self.aE([
+			['notifyFinish'],
+			['transportOnline', self.transport],
+			['sackReceived', (0, [])],
+		], stream.log)
+
+
+	def test_sackFrameWithSACKValid(self):
+		"""Actually test the SACK numbers"""
+		frame0 = self._makeValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0]))
+		stream = self.streamTracker.getStream('x'*26)
+		stream.queue.extend([["box0"], ["box1"], ["box2"]])
+
+		self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, [2]],]))
+		self._parseFrames()
+		self.aE([], self.gotFrames)
+		self.aE([
+			['notifyFinish'],
+			['transportOnline', self.transport],
+			['sackReceived', (0, [2])],
+		], stream.log)
 
 
 	def test_sackFrameInvalid(self):
@@ -1832,13 +1869,19 @@ class _BaseSocketTransportTests(object):
 
 
 	def test_sackedUnsentBoxes(self):
-		1/0
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		stream = self.streamTracker.getStream('x'*26)
+		stream.queue.append(["box0"])
 
-		self.transport.dataReceived(self.serializeFrames([[Fn.sack, {"0": ["box0"]}], [Fn.boxes, {"2": ["box2"]}]]))
-
+		self.transport.dataReceived(self.serializeFrames([[Fn.sack, 1, []],]))
+		self._parseFrames()
+		self.aE([[Fn.tk_acked_unsent_boxes], [Fn.you_close_it]], self.gotFrames)
+		self.aE([
+			['notifyFinish'],
+			['transportOnline', self.transport],
+			['sackReceived', (1, [])],
+		], stream.log)
 
 
 
