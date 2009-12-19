@@ -1414,7 +1414,8 @@ class _BaseSocketTransportTests(object):
 		Fn.tk_frame_corruption,
 		Fn.tk_invalid_frame_type_or_arguments,
 		Fn.tk_acked_unsent_boxes,
-		Fn.tk_stream_attach_failure]:
+		Fn.tk_stream_attach_failure,
+		Fn.you_close_it]: # TODO: allow you_close_it for HTTP
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0]))
 			self.transport.dataReceived(self.serializeFrames([[Fn.tk_brb]]))
@@ -1745,15 +1746,6 @@ class _BaseSocketTransportTests(object):
 			self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.log)
 			self._resetStreamTracker()
 			self._reset()
-
-
-	def test_you_close_it_forbidden(self):
-		"""Socket transports don't allow a C2S you_close_it (HTTP transports do.)"""
-		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0, [Fn.you_close_it]]))
-		stream = self.streamTracker.getStream('x'*26)
-		self._parseFrames()
-		self.aE(	[[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
 
 
 	def test_boxes(self):
