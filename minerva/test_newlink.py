@@ -1787,6 +1787,24 @@ class _BaseSocketTransportTests(object):
 		self.aE([[Fn.sack, [0, [2]]]], self.gotFrames)
 
 
+	def test_boxesFrameWithInvalidKeys(self):
+		"""
+		Only stringed integers in inclusive range (0, 2**64) are allowed in the keys for a
+		`boxes` frame. Other keys result in a tk_invalid_frame_type_or_arguments.
+		"""
+		for invalidKey in ["-1", "asdf", "", "nan", "Infinity", str(2**64+1)]:
+			frame0 = self._makeValidHelloFrame()
+			self.transport.dataReceived(self.serializeFrames([frame0]))
+			stream = self.streamTracker.getStream('x'*26)
+
+			self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {invalidKey: ["box0"]}],]))
+			self._parseFrames()
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
+
+			self._resetStreamTracker()
+			self._reset()
+
+
 	def test_nan_inf_neginf_areForbidden(self):
 		"""Minerva servers treats NaN, Infinity, or -Infinity in the JSON the same as intraframe corruption."""
 		for bad in [nan, inf, neginf]:
@@ -1795,10 +1813,32 @@ class _BaseSocketTransportTests(object):
 			self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": [bad]}]]))
 
 			self._parseFrames()
-			self.aE(	[[Fn.tk_intraframe_corruption], [Fn.you_close_it]], self.gotFrames)
+			self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], self.gotFrames)
 
 			self._resetStreamTracker()
 			self._reset()
+
+
+	def test_unknownFrameType(self):
+		1/0
+
+
+	def test_sackFrameValid(self):
+		1/0
+
+
+	def test_sackFrameInvalid(self):
+		1/0
+
+
+	def test_sackedUnsentBoxes(self):
+		1/0
+		frame0 = self._makeValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0]))
+		stream = self.streamTracker.getStream('x'*26)
+
+		self.transport.dataReceived(self.serializeFrames([[Fn.sack, {"0": ["box0"]}], [Fn.boxes, {"2": ["box2"]}]]))
+
 
 
 

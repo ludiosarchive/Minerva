@@ -736,6 +736,11 @@ cw.net.IEndpointLocator = function() {
 
 }
 
+	// XXX TODO: this API feels wrong. What if there are multiple available endpoints
+	// for an EndpointType? Remember: endpoints may change during runtime,
+	// and at initial page load, we may want to connect to everything to see what
+	// we can connect to.
+
 	/**
 	 * @type {cw.net.EndpointType} type The type of endpoint
 	 *

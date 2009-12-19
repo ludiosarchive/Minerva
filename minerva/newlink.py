@@ -71,8 +71,7 @@ class Frame(object):
 	require the memorization of dozens of frame codes.
 
 	I do not have a `toBytes' method or similar because
-	different transports require different serializations. For example, Flash socket
-	might require doubling up backslashes.
+	different transports require different serializations.
 	"""
 
 	# Most-frequently-used types should be non-negative and single-digit.
@@ -87,7 +86,7 @@ class Frame(object):
 		6: ('gimme_boxes', 1, 1),
 
 		8: ('timestamp', 1, 1),
-		10: ('reset', 1, 1),
+		10: ('reset', 1, 1), # reset really means "Stream is dead to me. Also, transport kill because stream is dead."
 		11: ('you_close_it', 0, 0),
 		12: ('start_timestamps', 3, 3),
 		13: ('stop_timestamps', 1, 1),
@@ -1024,7 +1023,8 @@ class SocketTransport(protocol.Protocol):
 				boxes = []
 				for seqNumStr, box in seqNumStrToBoxDict.iteritems():
 					try:
-						seqNum = abstract.strToNonNeg(seqNumStr)
+					 	# This is probably enough to stop an ACA on 64-bit Python, but maybe worry about 32-bit Python too? 
+						seqNum = abstract.ensureNonNegIntLimit(abstract.strToNonNeg(seqNumStr), 2**64)
 					except ValueError:
 						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 					boxes.append((seqNum, box))
