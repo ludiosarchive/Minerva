@@ -543,33 +543,44 @@ class StreamTracker(object):
 		self._observers = set()
 		self._reactor.addSystemEventTrigger('before', 'shutdown', self._disconnectAll)
 
+		self._preKey = abstract.secureRandom(3)
+		self._postKey = abstract.secureRandom(3)
+
+
+	def _makeSafeKey(self, key):
+		"""
+		Because the client has full control of deciding the streamId, and StreamTracker's
+		streamId -> Stream dictionary is persistent and impacts many users, an attacker
+		could deny access to everyone by opening many Streams with streamIds that hash()
+		to the same number. Our anti-ACA patch for Python does not help here.
+		We use a key prefix and suffix that is unknown to the public to stop this attack.
+		"""
+		return self._preKey + key + self._postKey
+
 
 	def getStream(self, streamId):
-		assert not isinstance(streamId, (str, unicode))
-
 		try:
-			return self._streams[streamId]
+			return self._streams[self._makeSafeKey(streamId)]
 		except KeyError:
 			raise NoSuchStream("I don't know about %r" % (streamId,))
 
 
 	def buildStream(self, streamId):
-		assert not isinstance(streamId, (str, unicode))
-
-		if streamId in self._streams:
+		safeKey = self._makeSafeKey(streamId)
+		if safeKey in self._streams:
 			raise StreamAlreadyExists(
-				"cannot make stream with id %r because %r exists" % (streamId, self._streams[streamId]))
+				"cannot make stream with id %r because it already exists" % (streamId,))
 
 		s = self.stream(self._clock, streamId, self._streamProtocolFactory)
 		# Do this first, in case an observer stupidly wants to use L{StreamTracker.getStream}.
-		self._streams[streamId] = s
+		self._streams[safeKey] = s
 
 		try:
 			for o in self._observers.copy(): # copy() to avoid reentrant `unobserveStreams' disaster
 				o.streamUp(s)
 		except:
 			# If an exception happened, at least we can clean up our part of the mess.
-			del self._streams[streamId]
+			del self._streams[safeKey]
 			raise
 		# If an exception happened in an observer, it bubbles up.
 		# If an exception happened, we don't call streamDown(s) because we don't know which
@@ -581,10 +592,9 @@ class StreamTracker(object):
 
 
 	def _forgetStream(self, _ignoredNone, streamId):
-		assert not isinstance(streamId, (str, unicode))
-
-		stream = self._streams[streamId]
-		del self._streams[streamId]
+		safeKey = self._makeSafeKey(streamId)
+		stream = self._streams[safeKey]
+		del self._streams[safeKey]
 
 		# Do this after the `del' above in case some buggy observer raises an exception.
 		for o in self._observers.copy(): # copy() to avoid reentrant `unobserveStreams' disaster
@@ -1092,7 +1102,10 @@ class SocketTransport(protocol.Protocol):
 				self._parser.MAX_LENGTH = self.MAX_LENGTH
 				self._parser.manyDataCallback = self._framesReceived
 
-			# TODO: <int32-zlib/> with <x/> alias 
+			# TODO: <int32-zlib/> with <x/> alias
+			# TODO: if we support compression, make sure people can't zlib-bomb us with exploding strings:
+			#	use the zlib Decompression Object and decompress(string[, max_length]), then check unconsumed_tail.
+			#	Note: there's probably one excess memory-copy with the unconsumed_tail stuff, but that's okay.
 
 			elif len(self._initialBuffer) >= 512: # TODO: really long enough to determine mode?
 				self._terminating = True # Terminating, but we can't even send any type of frame.
@@ -1119,7 +1132,6 @@ class SocketTransport(protocol.Protocol):
 			return self._parser.encode(dumpToJson7Bit(frameData))
 		else:
 			1/0
-
 
 
 	def _closeWith(self, errorType, *args):

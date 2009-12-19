@@ -22,7 +22,7 @@ from minerva.newlink import (
 )
 
 from minerva.mocks import (
-	FakeReactor, DummyChannel, DummyRequest, _DummyId, MockProducer,
+	FakeReactor, DummyChannel, DummyRequest, MockProducer,
 	MockStream, MockMinervaProtocol, MockMinervaProtocolFactory,
 	DummyHttpTransport, DummySocketLikeTransport, MockObserver,
 	BrokenOnPurposeError, BrokenMockObserver, DummyStreamTracker,
@@ -73,14 +73,14 @@ class FrameTests(unittest.TestCase):
 class StreamTests(unittest.TestCase):
 
 	def test_implements(self):
-		s = Stream(None, _DummyId('some fake id'), None)
+		s = Stream(None, 'some fake id', None)
 		verify.verifyObject(IPushProducer, s)
 		verify.verifyObject(IPullProducer, s)
 		verify.verifyObject(ISimpleConsumer, s)
 
 
 	def test_repr(self):
-		s = Stream(None, _DummyId('some fake id'), None)
+		s = Stream(None, 'some fake id', None)
 		r = repr(s)
 		self.assertIn('<Stream', r)
 		self.assertIn('streamId=', r)
@@ -89,13 +89,13 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_notifyFinishReturnsDeferred(self):
-		s = Stream(None, _DummyId('some fake id'), None)
+		s = Stream(None, 'some fake id', None)
 		d = s.notifyFinish()
 		self.aE(defer.Deferred, type(d))
 
 
 	def test_notifyFinishActuallyCalled(self):
-		s = Stream(None, _DummyId('some fake id'), None)
+		s = Stream(None, 'some fake id', None)
 		d = s.notifyFinish()
 		called = [False]
 		def cb(val):
@@ -114,7 +114,7 @@ class StreamTests(unittest.TestCase):
 		attaches, Stream calls the `streamStarted` method on the MinervaProtocol.
 		"""
 		factory = MockMinervaProtocolFactory()
-		s = Stream(None, _DummyId('some fake id'), factory)
+		s = Stream(None, 'some fake id', factory)
 		self.aE(0, len(factory.instances))
 
 		t = DummySocketLikeTransport()
@@ -132,7 +132,7 @@ class StreamTests(unittest.TestCase):
 		the StreamProtocol instance actually gets the boxes.
 		"""
 		factory = MockMinervaProtocolFactory()
-		s = Stream(None, _DummyId('some fake id'), factory)
+		s = Stream(None, 'some fake id', factory)
 		t = DummySocketLikeTransport()
 		s.transportOnline(t)
 
@@ -152,7 +152,7 @@ class StreamTests(unittest.TestCase):
 	def test_boxesReceivedResetsBecauseTooManyBoxes(self):
 		"""If too many boxes are stuck in Incoming, the Stream is reset"""
 		factory = MockMinervaProtocolFactory()
-		s = Stream(None, _DummyId('some fake id'), factory)
+		s = Stream(None, 'some fake id', factory)
 		t = DummySocketLikeTransport()
 		s.transportOnline(t)
 
@@ -170,7 +170,7 @@ class StreamTests(unittest.TestCase):
 	def test_boxesReceivedResetsBecauseTooManyBytes(self):
 		"""If too many (estimated) bytes are in Incoming, the Stream is reset"""
 		factory = MockMinervaProtocolFactory()
-		s = Stream(None, _DummyId('some fake id'), factory)
+		s = Stream(None, 'some fake id', factory)
 		t = DummySocketLikeTransport()
 		s.transportOnline(t)
 
@@ -195,7 +195,7 @@ class StreamTests(unittest.TestCase):
 		# Essentially, it doesn't matter whether the transport claims None or an invalid
 		# transport number; they're both treated as `None`.
 		for succeedsTransportArgFor2ndTransport in (None, 20):
-			s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
+			s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
 			t1 = DummySocketLikeTransport()
 			t1.transportNumber = 30
 			s.transportOnline(t1)
@@ -256,7 +256,7 @@ class StreamTests(unittest.TestCase):
 		and two new boxes are supposed to be sent,
 		Stream calls transport's writeBoxes but tells it to skip over boxes 0 through 4.
 		"""
-		s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
+		s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
 		t1 = DummySocketLikeTransport()
 		t1.transportNumber = 30
 		s.transportOnline(t1)
@@ -312,7 +312,7 @@ class StreamTests(unittest.TestCase):
 		Similar to test_sendBoxesConnectionInterleaving, except the old primary transport
 		never wrote any boxes, which means its lastBoxSent == -1
 		"""
-		s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
+		s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
 		t1 = DummySocketLikeTransport()
 		t1.transportNumber = 30
 		s.transportOnline(t1)
@@ -362,7 +362,7 @@ class StreamTests(unittest.TestCase):
 		"""
 		for connectIrrelevantTransport in (True, False):
 
-			s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
+			s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
 
 			if connectIrrelevantTransport:
 				tIrrelevant = DummySocketLikeTransport()
@@ -385,7 +385,7 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_getSACK(self):
-		s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
+		s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
 
 		t = DummySocketLikeTransport()
 		s.transportOnline(t)
@@ -401,7 +401,7 @@ class StreamTests(unittest.TestCase):
 
 	def test_noLongerVirgin(self):
 		"""Stream is no longer a virgin after a transport is attached to it"""
-		s = Stream(None, _DummyId('some fake id'), MockMinervaProtocolFactory())
+		s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
 
 		self.aI(True, s. virgin)
 
@@ -420,14 +420,14 @@ class StreamTests(unittest.TestCase):
 
 	def test_transportOnline(self):
 		clock = task.Clock()
-		s = Stream(clock, _DummyId('some fake id'), MockMinervaProtocolFactory())
+		s = Stream(clock, 'some fake id', MockMinervaProtocolFactory())
 		t = DummySocketLikeTransport()
 		s.transportOnline(t)
 
 
 	def test_transportOnlineOffline(self):
 		clock = task.Clock()
-		s = Stream(clock, _DummyId('some fake id'), MockMinervaProtocolFactory())
+		s = Stream(clock, 'some fake id', MockMinervaProtocolFactory())
 		t = DummySocketLikeTransport()
 		s.transportOnline(t)
 		s.transportOffline(t)
@@ -436,7 +436,7 @@ class StreamTests(unittest.TestCase):
 	def test_transportOfflineUnknownTransport(self):
 		"""transportOffline(some transport that was never registered) raises RuntimeError"""
 		clock = task.Clock()
-		s = Stream(clock, _DummyId('some fake id'), MockMinervaProtocolFactory())
+		s = Stream(clock, 'some fake id', MockMinervaProtocolFactory())
 		t = DummySocketLikeTransport()
 		self.aR(RuntimeError, lambda: s.transportOffline(t))
 
@@ -446,7 +446,7 @@ class StreamTests(unittest.TestCase):
 	def _makeStuff(self):
 		factory = MockMinervaProtocolFactory()
 		clock = task.Clock()
-		s = Stream(clock, _DummyId('some fake id'), factory)
+		s = Stream(clock, 'some fake id', factory)
 		t1 = DummySocketLikeTransport()
 
 		return factory, clock, s, t1
@@ -848,7 +848,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		o = MockObserver()
 		st.observeStreams(o)
 		st.observeStreams(o)
-		stream = st.buildStream(_DummyId('some fake id'))
+		stream = st.buildStream('some fake id')
 		self.aE([['streamUp', stream]], o.log)
 
 
@@ -860,12 +860,12 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		st = StreamTracker(reactor, None, None)
 		o = MockObserver()
 		st.observeStreams(o)
-		stream = st.buildStream(_DummyId('some fake id'))
+		stream = st.buildStream('some fake id')
 		self.aE([['streamUp', stream]], o.log)
 
 		st.unobserveStreams(o)
 		# Since it's not observing, it shouldn't get any notification of this new Stream
-		_anotherStream = st.buildStream(_DummyId('another fake id'))
+		_anotherStream = st.buildStream('another fake id')
 		self.aE([['streamUp', stream]], o.log) # same as before
 
 
@@ -900,7 +900,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 			st.observeStreams(o)
 		del o
 
-		stream = st.buildStream(_DummyId('some fake id'))
+		stream = st.buildStream('some fake id')
 
 		for o in observers:
 			self.aE([['streamUp', stream]], o.log)
@@ -933,7 +933,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 
 		st.unobserveStreams(toRemove)
 
-		stream = st.buildStream(_DummyId('some fake id'))
+		stream = st.buildStream('some fake id')
 
 		# 2000 observers got the message
 		for o in irrelevantObservers:
@@ -952,7 +952,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		st.stream = MockStream
 		o = MockObserver()
 		st.observeStreams(o)
-		stream = st.buildStream(_DummyId('some fake id'))
+		stream = st.buildStream('some fake id')
 		self.aE([['streamUp', stream]], o.log)
 
 		stream._pretendFinish()
@@ -968,7 +968,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		st.stream = MockStream
 		o = BrokenMockObserver()
 		st.observeStreams(o)
-		self.aR(BrokenOnPurposeError, lambda: st.buildStream(_DummyId('some fake id')))
+		self.aR(BrokenOnPurposeError, lambda: st.buildStream('some fake id'))
 
 
 	def test_brokenObserverExceptionRemovesStreamReference(self):
@@ -981,7 +981,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		st.stream = MockStream
 		o = BrokenMockObserver()
 		st.observeStreams(o)
-		id = _DummyId('some fake id')
+		id = 'some fake id'
 		self.aR(BrokenOnPurposeError, lambda: st.buildStream(id))
 		self.aR(NoSuchStream, lambda: st.getStream(id))
 
@@ -995,7 +995,7 @@ class StreamTrackerTests(unittest.TestCase):
 		"""
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, None, None)
-		stream = st.buildStream(_DummyId('some fake id'))
+		stream = st.buildStream('some fake id')
 		self.aI(Stream, type(stream))
 
 
@@ -1005,7 +1005,7 @@ class StreamTrackerTests(unittest.TestCase):
 		"""
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, None, None)
-		id = _DummyId('some fake id')
+		id = 'some fake id'
 		act = lambda: st.buildStream(id)
 		act()
 		self.aR(StreamAlreadyExists, act)

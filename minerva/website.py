@@ -109,7 +109,8 @@ class ICsrfStopper(Interface):
 
 	def makeToken(uuid):
 		"""
-		C{uuid} is an instance of a subclass of L{abstract.GenericIdentifier}
+		@param uuid: The string to make a token for
+		@type uuid: C{str}
 
 		@rtype: C{str}
 		@return: a bytestring of URL-safe base64 ('-' instead of '+' and '_' instead of '/'),
@@ -121,10 +122,10 @@ class ICsrfStopper(Interface):
 
 	def checkToken(uuidStr, token):
 		"""
-		@type uuidStr: L{str}
+		@type uuidStr: C{str}
 		@param uuidStr: the uuid of the client that claims its CSRF token is C{token}
 
-		@type token: L{str}
+		@type token: C{str}
 		@param token: the CSRF token from the client
 
 		@raise: L{RejectToken} if token is invalid.
@@ -168,7 +169,7 @@ class CsrfStopper(object):
 		"""
 		See L{ICsrfStopper.makeToken}
 		"""
-		digest = self.version + self._hash(uuid.id)
+		digest = self.version + self._hash(uuid)
 		return base64.urlsafe_b64encode(digest)
 
 

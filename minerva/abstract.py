@@ -421,6 +421,9 @@ class RandomFactory(object):
 		return out
 
 
+_theRandomFactory = RandomFactory()
+secureRandom = _theRandomFactory.secureRandom
+
 
 from pypycpyo import optimizer
 optimizer.bind_all_many(vars(), _postImportVars)

@@ -128,12 +128,6 @@ class DummyRequest(_TwistedDummyRequest):
 
 
 
-class _DummyId(object):
-	def __init__(self, id):
-		self.id = id
-
-
-
 class MockProducer(object):
 	resumed = False
 	stopped = False
@@ -161,7 +155,7 @@ class MockProducer(object):
 
 
 class MockStream(object):
-	streamId = _DummyId("a stream id of unusual length")
+	streamId = "a stream id of unusual length"
 
 	def __init__(self, clock=None, streamId=None, streamProtocolFactory=None):
 		## if streamId is None: # make a random one?
