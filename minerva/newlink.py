@@ -302,7 +302,7 @@ class Stream(object):
 
 	def boxesReceived(self, transport, boxes, memorySizeOfBoxes):
 		"""
-		Called by transports to tell me that it has received boxes L{boxes}.
+		Called by a transport to tell me that it has received boxes L{boxes}.
 		"""
 		self._incoming.give(boxes, memorySizeOfBoxes)
 		items = self._incoming.getDeliverableItems()
@@ -994,6 +994,7 @@ class SocketTransport(protocol.Protocol):
 
 
 	def _framesReceived(self, frames):
+		writeSACK = False
 		for frameString in frames:
 			assert isinstance(frameString, str)
 			try:
@@ -1050,6 +1051,7 @@ class SocketTransport(protocol.Protocol):
 						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 					boxes.append((seqNum, box))
 				self._stream.boxesReceived(self, boxes, memorySizeOfBoxes)
+				writeSACK = True
 
 			elif frameType == Fn.box:
 				1/0
@@ -1072,6 +1074,9 @@ class SocketTransport(protocol.Protocol):
 
 			elif frameType == Fn.stop_timestamps:
 				1/0
+
+		if writeSACK:
+			self._writeSACK()
 
 
 	def dataReceived(self, data):
@@ -1142,6 +1147,7 @@ class SocketTransport(protocol.Protocol):
 			1/0
 
 
+
 	def _closeWith(self, errorType, *args):
 		assert not self._terminating
 		# TODO: sack before closing
@@ -1158,6 +1164,12 @@ class SocketTransport(protocol.Protocol):
 		##self.transport.loseConnection()
 
 
+	def _writeSACK(self):
+		sackFrame = [Fn.sack, self._stream.getSACK()]
+		toSend = self._encodeFrame(sackFrame)
+		self.transport.write(toSend)
+
+
 	def closeGently(self, writeSack=False):
 		"""
 		@see L{IMinervaTransport.closeGently}
@@ -1165,8 +1177,7 @@ class SocketTransport(protocol.Protocol):
 		assert not self._terminating
 		toSend = ''
 		if writeSack:
-			sackFrame = self._stream.getSACK()
-			sackFrame.insert(0, Fn.sack)
+			sackFrame = [Fn.sack, self._stream.getSACK()]
 			toSend += self._encodeFrame(sackFrame)
 		toSend += self._encodeFrame([Fn.you_close_it])
 		toSend += self._encodeFrame([Fn.my_last_frame])

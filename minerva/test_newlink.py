@@ -1638,20 +1638,16 @@ class _BaseSocketTransportTests(object):
 
 
 	def test_connectionLostWithNoStream(self):
-		"""
-		If client closes connection on a Minerva transport that hasn't attached to a Stream,
-		nothing special happens.
-		"""
+		"""If client closes connection on a Minerva transport that hasn't attached to a Stream,
+		nothing special happens."""
 		orig = self.transport.__dict__.copy()
 		self.transport.connectionLost(failure.Failure(ValueError("Just a made-up error in test_connectionLostWithNoStream")))
 		self.aE(orig, self.transport.__dict__) # This test might be a bit overzealous
 
 
 	def test_connectionLostWithStream(self):
-		"""
-		If client closes connection on a Minerva transport that is attached to a Stream,
-		streamObj.transportOffline(transport) is called.
-		"""
+		"""If client closes connection on a Minerva transport that is attached to a Stream,
+		streamObj.transportOffline(transport) is called."""
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		stream = self.streamTracker.getStream('x'*26)
@@ -1697,10 +1693,8 @@ class _BaseSocketTransportTests(object):
 
 
 	def test_gimmeBoxesSucceedsTransportInvalidNumber(self):
-		"""
-		If client sends a too-low or too-high transport number (or a wrong type)
-		in the gimme_boxes frame, the transport is killed.
-		"""
+		"""If client sends a too-low or too-high transport number (or a wrong type)
+		in the gimme_boxes frame, the transport is killed."""
 		for succeedsTransport in [-1, -2**32, -0.5, 2**65, "4", True, False, [], {}]:
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0, [Fn.gimme_boxes, succeedsTransport]]))
@@ -1719,13 +1713,67 @@ class _BaseSocketTransportTests(object):
 
 
 	def test_boxes(self):
-		1/0
+		"""If client writes boxes to the transport, those boxes are delivered to Stream,
+		and a SACK is written out to the transport."""
+		expectedMemorySize = len('[0, {"0": ["box0"]}]')
+
+		frame0 = self._makeValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0]))
+		stream = self.streamTracker.getStream('x'*26)
+
+		self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.log)
+		self._parseFrames()
+		self.aE([], self.gotFrames)
+
+		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"]}]]))
+
+		self.aE([
+			['notifyFinish'],
+			['transportOnline', self.transport],
+			['boxesReceived', self.transport, [(0, ["box0"])], expectedMemorySize],
+			['getSACK']],
+		stream.log)
+		self._parseFrames()
+		self.aE([[Fn.sack, [0, []]]], self.gotFrames)
+
+		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"2": ["box2"]}]]))
+
+		self.aE([
+			['notifyFinish'],
+			['transportOnline', self.transport],
+			['boxesReceived', self.transport, [(0, ["box0"])], expectedMemorySize],
+			['getSACK'],
+			['boxesReceived', self.transport, [(2, ["box2"])], expectedMemorySize],
+			['getSACK']],
+		stream.log)
+		self._parseFrames()
+		self.aE([[Fn.sack, [0, []]], [Fn.sack, [0, [2]]]], self.gotFrames)
+
+
+	def test_boxesSameTimeOneSack(self):
+		"""If client writes multiple box/boxes frames and they arrive at the same time,
+		those boxes are delivered to Stream, and just *one* SACK is written out to the transport."""
+		expectedMemorySize = len('[0, {"0": ["box0"]}]')
+
+		frame0 = self._makeValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0]))
+		stream = self.streamTracker.getStream('x'*26)
+
+		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"]}], [Fn.boxes, {"2": ["box2"]}]]))
+
+		self.aE([
+			['notifyFinish'],
+			['transportOnline', self.transport],
+			['boxesReceived', self.transport, [(0, ["box0"])], expectedMemorySize], # TODO: maybe coalesce boxesReceived funcalls in the future
+			['boxesReceived', self.transport, [(2, ["box2"])], expectedMemorySize],
+			['getSACK']],
+		stream.log)
+		self._parseFrames()
+		self.aE([[Fn.sack, [0, [2]]]], self.gotFrames)
 
 
 	def test_nan_inf_neginf_areForbidden(self):
-		"""
-		Minerva servers treats NaN, Infinity, or -Infinity in the JSON the same as intraframe corruption.
-		"""
+		"""Minerva servers treats NaN, Infinity, or -Infinity in the JSON the same as intraframe corruption."""
 		for bad in [nan, inf, neginf]:
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0]))

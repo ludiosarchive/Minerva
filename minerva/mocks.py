@@ -183,6 +183,7 @@ class MockStream(object):
 
 	def boxesReceived(self, transport, boxes, memorySizeOfBoxes):
 		self.log.append(['boxesReceived', transport, boxes, memorySizeOfBoxes])
+		self._incoming.give(boxes, memorySizeOfBoxes)
 
 
 	def sackReceived(self, sackInfo):
