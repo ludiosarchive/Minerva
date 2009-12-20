@@ -1260,7 +1260,7 @@ class SocketTransport(protocol.Protocol):
 	# cbAuthFailed is async, so we must return if `terminating' already.
 	def _closeWith(self, errorType, *args):
 		if self._terminating:
-			return
+			return # TODO: explicit tests for this case
 		# TODO: sack before closing
 		invalidArgsFrameObj = [errorType]
 		invalidArgsFrameObj.extend(args)
@@ -1285,7 +1285,7 @@ class SocketTransport(protocol.Protocol):
 		@see L{IMinervaTransport.closeGently}
 		"""
 		if self._terminating:
-			return
+			return # TODO: explicit tests for this case
 		self.transport.write(self._encodeFrame([Fn.you_close_it]))
 		self._terminating = True
 
@@ -1295,7 +1295,7 @@ class SocketTransport(protocol.Protocol):
 		@see L{IMinervaTransport.reset}
 		"""
 		if self._terminating:
-			return
+			return # TODO: explicit tests for this case
 		toSend = self._encodeFrame([Fn.reset, reasonString, applicationLevel])
 		toSend += self._encodeFrame([Fn.you_close_it])
 		self.transport.write(toSend)

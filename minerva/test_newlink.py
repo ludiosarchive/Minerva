@@ -2282,6 +2282,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 	def test_integration(self):
 		# Send a hello frame and subscribe to boxes
+
 		transport0, tcpTransport0 = self._makeTransport()
 		parser0 = self._makeParser()
 
@@ -2295,12 +2296,15 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		proto = list(self.protocolFactory.instances)[0]
 
-		# Send two boxes; make sure the protocol gots box0; make sure we got SACK
+
+		# Send two boxes; make sure we got SACK; make sure the protocol gots box0
+
 		transport0.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"], "2": ["box2"]}]]))
 
 		self._pushParser(tcpTransport0, parser0)
 		self.aE([[Fn.sack, 0, [2]]], parser0.gotFrames)
 		self.aE([["streamStarted", stream], ["boxesReceived", [["box0"]]]], proto.getNew())
+
 
 		# Send box1 and box3; make sure the protocol gets boxes 1, 2, 3; make sure we got SACK
 
@@ -2310,12 +2314,14 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self.aE([[Fn.sack, 0, [2]], [Fn.sack, 3, []]], parser0.gotFrames)
 		self.aE([["boxesReceived", [["box1"], ["box2"], ["box3"]]]], proto.getNew())
 
+
 		# Send two boxes S2C; make sure we get them.
 
 		stream.sendBoxes([["s2cbox0"], ["s2cbox1"]])
 		
 		self._pushParser(tcpTransport0, parser0)
 		self.aE([[Fn.sack, 0, [2]], [Fn.sack, 3, []], [Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], parser0.gotFrames)
+
 
 		# Don't ACK those boxes; connect a new transport; make sure we get those S2C boxes again; make sure transport0 was closed
 
@@ -2336,6 +2342,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self._pushParser(tcpTransport0, parser0)
 		self.aE([[Fn.sack, 0, [2]], [Fn.sack, 3, []], [Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]], [Fn.you_close_it]], parser0.gotFrames)
 
+
 		# Finally ACK those boxes; connect a new transport; make sure those S2C boxes are *not* received; make sure transport1 was closed; 
 
 		transport1.dataReceived(self.serializeFrames([[Fn.sack, 1, []]]))
@@ -2352,6 +2359,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		self._pushParser(tcpTransport1, parser1)
 		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]], [Fn.you_close_it]], parser1.gotFrames)
+
 
 		# Send a reset over transport2; make sure transport2 is you_close_it'ed; make sure MinervaProtocol gets it;
 		# make sure transport0 and transport1 are untouched
