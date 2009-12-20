@@ -1273,7 +1273,7 @@ class SocketTransport(protocol.Protocol):
 
 
 	def _writeSACK(self):
-		sackFrame = [Fn.sack, self._stream.getSACK()]
+		sackFrame = (Fn.sack,) + self._stream.getSACK()
 		toSend = self._encodeFrame(sackFrame)
 		self.transport.write(toSend)
 

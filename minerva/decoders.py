@@ -188,6 +188,16 @@ def _raise(obj):
 
 strictDecoder = simplejson.decoder.JSONDecoder(parse_constant=_raise)
 
+def strictDecodeOne(s):
+	"""
+	Decode bytestring `s` to *one* object, forbidding any whitespace or
+	trailing bytes. 
+	"""
+	decoded, at = strictDecoder.raw_decode(s)
+	if at != len(s):
+		raise ParseError("strictDecodeOne expected to reach the end of the string")
+	return decoded
+
 
 
 class DelimitedJSONDecoder(object):

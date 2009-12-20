@@ -10,7 +10,7 @@ from twisted.web import server, resource
 from twisted.internet import protocol, defer, address, interfaces, task
 from twisted.internet.interfaces import IPushProducer, IPullProducer, IProtocol, IProtocolFactory
 
-from minerva.decoders import BencodeStringDecoder, Int32StringDecoder
+from minerva.decoders import BencodeStringDecoder, Int32StringDecoder, strictDecodeOne
 from minerva import abstract
 from minerva.helpers import todo
 
@@ -1115,7 +1115,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 		def resetParser():
 			self.gotFrames = []
 			self.parser = BencodeStringDecoder()
-			self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
+			self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(strictDecodeOne(f) for f in frames)
 
 		for packetSize in range(1, 20):
 			self._resetConnection()
@@ -1146,7 +1146,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 		def resetParser():
 			self.gotFrames = []
 			self.parser = Int32StringDecoder()
-			self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
+			self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(strictDecodeOne(f) for f in frames)
 
 		for packetSize in range(1, 20):
 			self._resetConnection()
@@ -1190,9 +1190,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 
 
 
-# TODO: generalize many of these tests and test them for the WebSocket and HTTP faces as well.
-
-class _BaseSocketTransportTests(object):
+class _BaseHelpers(object):
 
 	def serializeFrames(self, frames):
 		toSend = ''
@@ -1209,15 +1207,15 @@ class _BaseSocketTransportTests(object):
 
 
 	def setUp(self):
+		self._reactor = FakeReactor()
 		self._resetStreamTracker()
 		self._reset()
 
 
 	def _reset(self, rejectAll=False):
 		self._resetParser()
-		reactor = FakeReactor()
 		self.t = DummyTCPTransport()
-		factory = SocketFace(reactor, None, self.streamTracker, DummyFirewall(rejectAll))
+		factory = SocketFace(self._reactor, None, self.streamTracker, DummyFirewall(rejectAll))
 		self.transport = factory.buildProtocol(addr=None)
 		self.transport.makeConnection(self.t)
 		self._sendModeInitializer()
@@ -1240,6 +1238,11 @@ class _BaseSocketTransportTests(object):
 		self.parser.dataReceived(self.t.value())
 		self.t.clear()
 
+
+
+# TODO: generalize many of these tests and test them for the WebSocket and HTTP faces as well.
+
+class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_implements(self):
 		verify.verifyObject(IProtocol, self.transport)
@@ -1846,7 +1849,7 @@ class _BaseSocketTransportTests(object):
 			['getSACK']],
 		stream.log)
 		self._parseFrames()
-		self.aE([[Fn.sack, [0, []]]], self.gotFrames)
+		self.aE([[Fn.sack, 0, []]], self.gotFrames)
 
 		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"2": ["box2"]}]]))
 
@@ -1859,7 +1862,7 @@ class _BaseSocketTransportTests(object):
 			['getSACK']],
 		stream.log)
 		self._parseFrames()
-		self.aE([[Fn.sack, [0, []]], [Fn.sack, [0, [2]]]], self.gotFrames)
+		self.aE([[Fn.sack, 0, []], [Fn.sack, 0, [2]]], self.gotFrames)
 
 
 	def test_boxesSameTimeOneSack(self):
@@ -1881,7 +1884,7 @@ class _BaseSocketTransportTests(object):
 			['getSACK']],
 		stream.log)
 		self._parseFrames()
-		self.aE([[Fn.sack, [0, [2]]]], self.gotFrames)
+		self.aE([[Fn.sack, 0, [2]]], self.gotFrames)
 
 
 	def test_boxesFrameWithInvalidKeys(self):
@@ -2171,17 +2174,17 @@ class TransportProducerTests(unittest.TestCase):
 class SocketFaceTests(unittest.TestCase):
 
 	def test_policyStringOkay(self):
-		face = SocketFace(FakeReactor(), None, streamTracker=None, firewall=DummyFirewall())
+		face = SocketFace(FakeReactor(), clock=None, streamTracker=None, firewall=DummyFirewall())
 		face.setPolicyString('okay')
 
 
 	def test_policyStringCannotBeUnicode(self):
-		face = SocketFace(FakeReactor(), None, streamTracker=None, firewall=DummyFirewall())
+		face = SocketFace(FakeReactor(), clock=None, streamTracker=None, firewall=DummyFirewall())
 		self.aR(TypeError, lambda: face.setPolicyString(u'hi'))
 
 
 	def test_policyStringCannotContainNull(self):
-		face = SocketFace(FakeReactor(), None, streamTracker=None, firewall=DummyFirewall())
+		face = SocketFace(FakeReactor(), clock=None, streamTracker=None, firewall=DummyFirewall())
 		self.aR(ValueError, lambda: face.setPolicyString("hello\x00"))
 		self.aR(ValueError, lambda: face.setPolicyString("\x00"))
 
@@ -2212,3 +2215,56 @@ class BasicMinervaFactoryTests(unittest.TestCase):
 	def test_unmodifiedFactoryIsNotCallable(self):
 		f = BasicMinervaFactory()
 		self.aR(TypeError, lambda: f.buildProtocol(MockStream(None, None)))
+
+
+
+class IntegrationTests(_BaseHelpers, unittest.TestCase):
+	"""
+	Test SocketFace/SocketTransport/StreamTracker/Stream integration.
+	"""
+	# Note: we use _BaseHelpers's setUp
+
+	# Use the real StreamTracker
+	def _resetStreamTracker(self):
+		clock = task.Clock()
+		self.protocolFactory = MockMinervaProtocolFactory()
+		self.streamTracker = StreamTracker(self._reactor, clock, self.protocolFactory)
+
+
+	def _resetParser(self):
+		self.gotFrames = []
+		self.parser = Int32StringDecoder()
+		self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
+
+
+	def _sendModeInitializer(self):
+		self.transport.dataReceived('<int32/>\n')
+
+
+	def test_integration(self):
+		# Send a hello frame and subscribe to boxes
+		frame0 = self._makeValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0]))
+		self.transport.dataReceived(self.serializeFrames([[Fn.gimme_boxes, None]]))
+		stream = self.streamTracker.getStream('x'*26)
+
+		self._parseFrames()
+		self.aE([], self.gotFrames)
+
+		proto = list(self.protocolFactory.instances)[0]
+
+		# Send two boxes; make sure the protocol gots box0; make sure we got SACK
+		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"], "2": ["box2"]}]]))
+
+		self._parseFrames()
+		self.aE([[Fn.sack, 0, [2]]], self.gotFrames)
+		self.aE([["streamStarted", stream], ["boxesReceived", [["box0"]]]], proto.log)
+
+		# Send box1 and box3; make sure the protocol gets boxes 1, 2, 3; make sure we got SACK
+
+		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"1": ["box1"], "3": ["box3"]}]]))
+
+		self._parseFrames()
+		self.aE([[Fn.sack, 0, [2]], [Fn.sack, 3, []]], self.gotFrames)
+		self.aE([["streamStarted", stream], ["boxesReceived", [["box0"]]], ["boxesReceived", [["box1"], ["box2"], ["box3"]]]], proto.log)
+
