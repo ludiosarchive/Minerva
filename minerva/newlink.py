@@ -922,9 +922,8 @@ class SocketTransport(protocol.Protocol):
 
 	This is a hybrid:
 		Flash Socket
-		Flash Socket (ciphered)
-		Flash socket policy server
-		WebSocket
+		Flash Socket policy server
+	TODO: WebSocket, Flash Socket (encrypted), pass-through to HTTP
 	"""
 	implements(IMinervaTransport, IProtocol, IPushProducer, IPullProducer)
 
@@ -932,8 +931,6 @@ class SocketTransport(protocol.Protocol):
 
 	MAX_LENGTH = 1024*1024
 	noisy = True
-
-
 
 	def __init__(self, reactor, clock, streamTracker, firewall, policyStringWithNull):
 		self._reactor = reactor
@@ -1257,8 +1254,10 @@ class SocketTransport(protocol.Protocol):
 			1/0
 
 
-	# cbAuthFailed is async, so we must return if `terminating' already.
 	def _closeWith(self, errorType, *args):
+		# Even though the `if self._terminating` check isn't really needed right
+		# now, it become needed when SocketTransport has a connection timeout,
+		# because cbAuthFailed may call into this. 
 		if self._terminating:
 			return # TODO: explicit tests for this case
 		# TODO: sack before closing
