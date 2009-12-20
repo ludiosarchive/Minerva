@@ -2267,7 +2267,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		return frame
 
 
-	def _parseFrames2(self, tcpTransport, parser):
+	def _pushParser(self, tcpTransport, parser):
 		"""
 		Feed the received bytes into the parser, which will append complete
 		frames to self.gotFrames
@@ -2289,7 +2289,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		transport0.dataReceived(self.serializeFrames([[Fn.gimme_boxes, None]]))
 		stream = self.streamTracker.getStream('x'*26)
 
-		self._parseFrames2(tcpTransport0, parser0)
+		self._pushParser(tcpTransport0, parser0)
 		self.aE([], parser0.gotFrames)
 
 		proto = list(self.protocolFactory.instances)[0]
@@ -2297,7 +2297,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		# Send two boxes; make sure the protocol gots box0; make sure we got SACK
 		transport0.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"], "2": ["box2"]}]]))
 
-		self._parseFrames2(tcpTransport0, parser0)
+		self._pushParser(tcpTransport0, parser0)
 		self.aE([[Fn.sack, 0, [2]]], parser0.gotFrames)
 		self.aE([["streamStarted", stream], ["boxesReceived", [["box0"]]]], proto.log)
 
@@ -2305,7 +2305,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport0.dataReceived(self.serializeFrames([[Fn.boxes, {"1": ["box1"], "3": ["box3"]}]]))
 
-		self._parseFrames2(tcpTransport0, parser0)
+		self._pushParser(tcpTransport0, parser0)
 		self.aE([[Fn.sack, 0, [2]], [Fn.sack, 3, []]], parser0.gotFrames)
 		self.aE([["streamStarted", stream], ["boxesReceived", [["box0"]]], ["boxesReceived", [["box1"], ["box2"], ["box3"]]]], proto.log)
 
@@ -2313,7 +2313,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		stream.sendBoxes([["s2cbox0"], ["s2cbox1"]])
 		
-		self._parseFrames2(tcpTransport0, parser0)
+		self._pushParser(tcpTransport0, parser0)
 		self.aE([[Fn.sack, 0, [2]], [Fn.sack, 3, []], [Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], parser0.gotFrames)
 
 		# Don't ACK those boxes; connect a new transport; make sure we get those S2C boxes again; make sure transport0 was closed
@@ -2324,17 +2324,30 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		frame0 = self._makeValidHelloFrame() # TODO: increment transportNumber?
 		transport1.dataReceived(self.serializeFrames([frame0]))
 
-		self._parseFrames2(tcpTransport1, parser1)
+		self._pushParser(tcpTransport1, parser1)
 		self.aE([], parser1.gotFrames)
 
 		transport1.dataReceived(self.serializeFrames([[Fn.gimme_boxes, None]]))
 
-		self._parseFrames2(tcpTransport1, parser1)
+		self._pushParser(tcpTransport1, parser1)
 		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], parser1.gotFrames)
 
-		# Make sure transport0 was closed
-
-		self._parseFrames2(tcpTransport0, parser0)
+		self._pushParser(tcpTransport0, parser0)
 		self.aE([[Fn.sack, 0, [2]], [Fn.sack, 3, []], [Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]], [Fn.you_close_it]], parser0.gotFrames)
 
-		# Finally ACK those boxes; connect a new transport;
+		# Finally ACK those boxes; connect a new transport; make sure those S2C boxes are *not* received; make sure transport1 was closed; 
+
+		transport1.dataReceived(self.serializeFrames([[Fn.sack, 1, []]]))
+
+		transport2, tcpTransport2 = self._makeTransport()
+		parser2 = self._makeParser()
+
+		frame0 = self._makeValidHelloFrame() # TODO: increment transportNumber?
+		transport2.dataReceived(self.serializeFrames([frame0]))
+		transport2.dataReceived(self.serializeFrames([[Fn.gimme_boxes, None]]))
+
+		self._pushParser(tcpTransport2, parser2)
+		self.aE([], parser2.gotFrames)
+
+		self._pushParser(tcpTransport1, parser1)
+		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]], [Fn.you_close_it]], parser1.gotFrames)
