@@ -1982,6 +1982,9 @@ class _BaseSocketTransportTests(object):
 
 
 	def test_resetValid(self):
+		"""
+		Valid reset frames call Stream.resetFromClient
+		"""
 		for applicationLevel in (True, False):
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0]))
@@ -1998,6 +2001,29 @@ class _BaseSocketTransportTests(object):
 			self._resetStreamTracker()
 			self._reset()
 
+
+	def test_resetInvalidReasonString(self):
+		badReasonStrings = [-2**65, -1, -0.5, 0.5, 2**64+1, ["something"], [], {}, True, False]
+		for reasonString in badReasonStrings:
+			frame0 = self._makeValidHelloFrame()
+			self.transport.dataReceived(self.serializeFrames([frame0]))
+			self.transport.dataReceived(self.serializeFrames([[Fn.reset, reasonString, True]]))
+			self._parseFrames()
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
+
+			self._reset()
+
+
+	def test_resetInvalidApplicationLevel(self):
+		badApplicationLevels = [-2**65, -1, -0.5, 0, 1, 0.5, 2**64+1, "", ["something"], "something", [], {}]
+		for applicationLevel in badApplicationLevels:
+			frame0 = self._makeValidHelloFrame()
+			self.transport.dataReceived(self.serializeFrames([frame0]))
+			self.transport.dataReceived(self.serializeFrames([[Fn.reset, u'the reason\uffff', applicationLevel]]))
+			self._parseFrames()
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
+
+			self._reset()
 
 
 
