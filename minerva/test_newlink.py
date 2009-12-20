@@ -1651,10 +1651,26 @@ class _BaseSocketTransportTests(object):
 		act()
 
 
-	def test_invalidHellos(self):
+	def test_invalidHello(self):
 		"""
-		Test that all any problem with the hello frame results in a
-		'tk_invalid_frame_type_or_arguments' error frame
+		Test that a hello frame with a wrong-type helloData results in
+		tk_invalid_frame_type_or_arguments.
+		"""
+		genericBad = [-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"], True, False, None]
+
+		for bad in genericBad:
+			self.transport.dataReceived(self.serializeFrames([[Fn.hello, bad]]))
+			self._parseFrames()
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
+			self._testExtraDataReceivedIgnored()
+			
+			self._reset()
+
+
+	def test_invalidHelloKeys(self):
+		"""
+		Test that all any problem with the helloData keys results in
+		tk_invalid_frame_type_or_arguments.
 		"""
 		def listWithout(alist, without):
 			l = alist[:]
@@ -1666,7 +1682,7 @@ class _BaseSocketTransportTests(object):
 
 		DeleteProperty = object()
 
-		genericBad = [-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"], {}, True, False, DeleteProperty]
+		genericBad = [-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"], {}, True, False, None, DeleteProperty]
 
 		badMutations = dict(
 			n=genericBad,
@@ -1706,7 +1722,7 @@ class _BaseSocketTransportTests(object):
 				ran += 1
 
 		# sanity check; make sure we actually tested things
-		assert ran == 94, "Ran %d times; change this assert as needed" % (ran,)
+		assert ran == 101, "Ran %d times; change this assert as needed" % (ran,)
 
 
 	def test_noDelayEnabled(self):
@@ -1937,7 +1953,7 @@ class _BaseSocketTransportTests(object):
 
 	def test_sackFrameInvalidACKNumber(self):
 		# Note how an ACK of -1 is invalid. First legal ACK is 0.
-		badNumbers = [-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"], "something", {}, True, False]
+		badNumbers = [-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"], "something", {}, True, False, None]
 		for num in badNumbers:
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0]))
@@ -1952,7 +1968,7 @@ class _BaseSocketTransportTests(object):
 
 
 	def test_sackFrameInvalidSecondArgumentType(self):
-		badObjects = [-2**65, -1, -0.5, 0.5, 2**64+1, "", "something", {}, True, False]
+		badObjects = [-2**65, -1, -0.5, 0.5, 2**64+1, "", "something", {}, True, False, None]
 		for badObj in badObjects:
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0]))
@@ -1967,7 +1983,7 @@ class _BaseSocketTransportTests(object):
 
 
 	def test_sackFrameInvalidSACKNumber(self):
-		badNumbers = [-2**65, -1, -0.5, 0.5, 2**64+1, "", ["something"], "something", [], {}, True, False]
+		badNumbers = [-2**65, -1, -0.5, 0.5, 2**64+1, "", ["something"], "something", [], {}, True, False, None]
 		for num in badNumbers:
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0]))
@@ -2003,7 +2019,7 @@ class _BaseSocketTransportTests(object):
 
 
 	def test_resetInvalidReasonString(self):
-		badReasonStrings = [-2**65, -1, -0.5, 0.5, 2**64+1, ["something"], [], {}, True, False]
+		badReasonStrings = [-2**65, -1, -0.5, 0.5, 2**64+1, ["something"], [], {}, True, False, None]
 		for reasonString in badReasonStrings:
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0]))
@@ -2015,7 +2031,7 @@ class _BaseSocketTransportTests(object):
 
 
 	def test_resetInvalidApplicationLevel(self):
-		badApplicationLevels = [-2**65, -1, -0.5, 0, 1, 0.5, 2**64+1, "", ["something"], "something", [], {}]
+		badApplicationLevels = [-2**65, -1, -0.5, 0, 1, 0.5, 2**64+1, "", ["something"], "something", [], {}, None]
 		for applicationLevel in badApplicationLevels:
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0]))

@@ -1000,6 +1000,9 @@ class SocketTransport(protocol.Protocol):
 	def _handleHelloFrame(self, frame):
 		helloData = frame.contents[1]
 
+		if not isinstance(helloData, dict):
+			raise InvalidHello
+
 		# credentialsData is always optional
 		credentialsData = helloData['c'] if 'c' in helloData else {}
 
@@ -1019,15 +1022,14 @@ class SocketTransport(protocol.Protocol):
 			protocolVersion = helloData['v']
 			# -- no transportType
 			# Rules for streamId: must be 20-30 inclusive bytes, must not contain characters >= 127
-			i = helloData['i']
-			if not isinstance(i, str) or not 20 <= len(i) <= 30: # ,str is appropriate because of how simplejson returns str when possible
+			streamId = helloData['i']
+			if not isinstance(streamId, str) or not 20 <= len(streamId) <= 30: # ,str is appropriate because of how simplejson returns str when possible
 				raise InvalidHello
-			streamId = i
 			# -- no numPaddingBytes
 			maxReceiveBytes = abstract.ensureNonNegIntLimit(helloData['r'], 2**64) # e: ValueError, TypeError
 			maxOpenTime = abstract.ensureNonNegIntLimit(helloData['m'], 2**64) # e: ValueError, TypeError
 			# -- no readOnlyOnce
-		except (KeyError, TypeError, binascii.Error, ValueError, abstract.InvalidIdentifier):
+		except (KeyError, TypeError, ValueError):
 			raise InvalidHello
 
 		# Do not use protocolVersion < 2 ever because Python is very stupid about bool/int equivalence
