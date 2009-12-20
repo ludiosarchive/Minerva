@@ -86,7 +86,7 @@ class Frame(object):
 		6: ('gimme_boxes', 1, 1),
 
 		8: ('timestamp', 1, 1),
-		10: ('reset', 1, 1), # reset really means "Stream is dead to me. Also, transport kill because stream is dead."
+		10: ('reset', 2, 2), # reset really means "Stream is dead to me. Also, transport kill because stream is dead."
 		# TODO XXX: Ideas for reset:
 		# Use reset only to indicate serious problems with the Stream. For application-level "close",
 		# agree on an application-level box that, when received, calls Stream.close()
@@ -155,6 +155,14 @@ Fn = Frame.names
 
 
 
+class WhoReset:
+	server_minerva = 1
+	server_app = 2
+	client_minerva = 3
+	client_app = 4
+
+
+
 class IMinervaProtocol(Interface):
 	"""
 	An interface for frame-based communication that abstracts
@@ -162,7 +170,7 @@ class IMinervaProtocol(Interface):
 
 	I'm analogous to L{twisted.internet.interfaces.IProtocol}
 
-	Note that the stream never ends unless you say it ends (there
+	Note that the stream never ends due to inactivity (there
 	are no timeouts in Stream). If you want to end the stream,
 	call stream.reset(u"reason why")
 
@@ -186,6 +194,20 @@ class IMinervaProtocol(Interface):
 		"""
 
 
+	def streamReset(whoReset, reasonString):
+		"""
+		Call when this stream has reset, either internally by Minerva server's Stream, or
+		a call to Stream.reset, or by a reset frame from the peer.
+
+		@param whoReset: who reset the Stream. One of
+		C{WhoReset.{server_minerva,server_app,client_minerva,client_app}}.
+		@type whoReset: int
+
+		@param reasonString: why the L{Stream} has reset.
+		@type reasonString: L{unicode}
+		"""
+
+
 	def boxesReceived(boxes):
 		"""
 		Called whenever box(es) are received.
@@ -205,6 +227,10 @@ class BasicMinervaProtocol(object):
 
 	def streamStarted(self, stream):
 		self.stream = stream
+
+
+	def streamReset(self, whoReset, reasonString):
+		del self.stream
 
 
 	def boxesReceived(self, boxes):
@@ -387,6 +413,7 @@ class Stream(object):
 		self._tryToSend()
 
 
+	# Called by the application only. Internal Minerva code uses _internalReset.
 	def reset(self, reasonString):
 		"""
 		Reset (disconnect) with reason C{reasonString}.
@@ -395,8 +422,19 @@ class Stream(object):
 		# If no transports are connected, client will not get the reset frame. If client tries
 		# to connect a transport to a dead stream, they will get a tk_stream_attach_failure.
 		for t in self._transports:
-			t.reset(reasonString)
+			t.reset(reasonString, applicationLevel=True)
 		self._die()
+		# Call application code last, to mitigate disaster if it raises an exception.
+		self._protocol.streamReset(WhoReset.server_app, reasonString)
+
+
+	def _internalReset(self, reasonString):
+		self.disconnected = True
+		for t in self._transports:
+			t.reset(reasonString, applicationLevel=False)
+		self._die()
+		# Call application code last, to mitigate disaster if it raises an exception.
+		self._protocol.streamReset(WhoReset.server_minerva, reasonString)
 
 
 	def boxesReceived(self, transport, boxes, memorySizeOfBoxes):
@@ -412,7 +450,7 @@ class Stream(object):
 		if \
 		self._incoming.getUndeliveredCount() > self.maxUndeliveredBoxes or \
 		self._incoming.getMaxConsumption() > self.maxUndeliveredBytes:
-			self.reset(u'resources exhausted')
+			self._internalReset(u'resources exhausted')
 
 
 	def sackReceived(self, sackInfo):
@@ -794,13 +832,16 @@ class IMinervaTransport(ISimpleConsumer):
 		"""
 
 
-	def reset(reasonString):
+	def reset(reasonString, applicationLevel):
 		"""
 		The stream that this transport is related to is resetting. Transport
 		must notify peer of the reset.
 
 		@param reasonString: plain-English reason why the stream is resetting
 		@type reasonString: unicode
+
+		@param applicationLevel: is it an application-level reset?
+		@type applicationLevel: bool
 
 		The reset frame (incl. reasonString) are not guaranteed to arrive to the peer.
 		reasonString is only sometimes useful for debugging.
@@ -1190,12 +1231,12 @@ class SocketTransport(protocol.Protocol):
 		self._terminating = True
 
 
-	def reset(self, reasonString):
+	def reset(self, reasonString, applicationLevel):
 		"""
 		@see L{IMinervaTransport.reset}
 		"""
 		assert not self._terminating
-		toSend = self._encodeFrame([Fn.reset, reasonString])
+		toSend = self._encodeFrame([Fn.reset, reasonString, applicationLevel])
 		toSend += self._encodeFrame([Fn.you_close_it])
 		self.transport.write(toSend)
 		self._terminating = True

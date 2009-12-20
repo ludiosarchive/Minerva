@@ -249,8 +249,8 @@ class MockMinervaProtocol(object):
 		self.stream = stream
 
 
-	def streamReset(self, reasonString):
-		self.log.append(['streamReset', reasonString])
+	def streamReset(self, whoReset, reasonString):
+		self.log.append(['streamReset', whoReset, reasonString])
 
 
 	def boxesReceived(self, boxes):
@@ -301,8 +301,8 @@ class DummySocketLikeTransport(object):
 		self.log.append(['closeGently'])
 
 
-	def reset(self, reasonString):
-		self.log.append(['reset', reasonString])
+	def reset(self, reasonString, applicationLevel):
+		self.log.append(['reset', reasonString, applicationLevel])
 
 
 	def writeBoxes(self, queue, start):

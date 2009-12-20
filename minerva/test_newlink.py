@@ -95,7 +95,14 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_notifyFinishActuallyCalled(self):
-		s = Stream(None, 'some fake id', None)
+		factory = MockMinervaProtocolFactory()
+		s = Stream(None, 'some fake id', factory)
+		# We need to attach a transport to the Stream, so that a MinervaProtocol
+		# is instantiated. This is necessary because s.reset below is only called by
+		# "application code."
+		t = DummySocketLikeTransport()
+		s.transportOnline(t)
+
 		d = s.notifyFinish()
 		called = [False]
 		def cb(val):
@@ -164,7 +171,7 @@ class StreamTests(unittest.TestCase):
 		# box #0 is never given, so it cannot deliver any of them
 
 		s.boxesReceived(t, manyBoxes, 1) # wow, 5001 boxes take just one byte
-		self.aE([['reset', u'resources exhausted']], t.log)
+		self.aE([['reset', u'resources exhausted', False]], t.log)
 
 
 	def test_boxesReceivedResetsBecauseTooManyBytes(self):
@@ -180,7 +187,7 @@ class StreamTests(unittest.TestCase):
 		# box #0 is never given, so it cannot deliver any of them
 
 		s.boxesReceived(t, notManyBoxes, 4*1024*1024 + 1)
-		self.aE([['reset', u'resources exhausted']], t.log)
+		self.aE([['reset', u'resources exhausted', False]], t.log)
 
 
 	def test_sendBoxesAndActiveStreams(self):
@@ -461,8 +468,8 @@ class StreamTests(unittest.TestCase):
 		self.aE(False, s.disconnected)
 		s.reset(u'the reason')
 		self.aE(True, s.disconnected)
-		self.aE([["reset", u'the reason']], t1.log)
-		self.aE([["reset", u'the reason']], t2.log)
+		self.aE([["reset", u'the reason', True]], t1.log)
+		self.aE([["reset", u'the reason', True]], t2.log)
 
 
 	def test_registerUnregisterProducerWithNoActiveTransport(self):
@@ -1426,12 +1433,12 @@ class _BaseSocketTransportTests(object):
 			self._reset()
 
 
-	def test_firstFrameWasNotHelloFrame(self):
-		frame0 = [Fn.reset]
-		self.transport.dataReceived(self.serializeFrames([frame0]))
+	def test_firstFrameMustBeHello(self):
+		"""If hello isn't the first frame received, transport errors with tk_invalid_frame_type_or_arguments"""
+		# a completely valid frame
+		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"]}]]))
 		self._parseFrames()
 		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
-		self._testExtraDataReceivedIgnored()
 
 
 	def test_frameCorruption(self):
@@ -1662,14 +1669,6 @@ class _BaseSocketTransportTests(object):
 		assert ran == 94, "Ran %d times; change this assert as needed" % (ran,)
 
 
-	def test_firstFrameMustBeHello(self):
-		"""If hello isn't the first frame received, transport errors with tk_invalid_frame_type_or_arguments"""
-		# a completely valid frame
-		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"]}]]))
-		self._parseFrames()
-		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
-
-
 	def test_noDelayEnabled(self):
 		"""
 		When a Minerva transport is created, its underlying TCP transport has TCP_NODELAY enabled.
@@ -1685,9 +1684,16 @@ class _BaseSocketTransportTests(object):
 
 
 	def test_reset(self):
-		self.transport.reset(u"the reason\u2000")
+		self.transport.reset(u"the reason\u2000", applicationLevel=True)
 		self._parseFrames()
-		self.aE([[Fn.reset, u"the reason\u2000"], [Fn.you_close_it]], self.gotFrames)
+		self.aE([[Fn.reset, u"the reason\u2000", True], [Fn.you_close_it]], self.gotFrames)
+		self._testExtraDataReceivedIgnored()
+
+
+	def test_resetNotApplicationLevel(self):
+		self.transport.reset(u"the reason\u2000", applicationLevel=False)
+		self._parseFrames()
+		self.aE([[Fn.reset, u"the reason\u2000", False], [Fn.you_close_it]], self.gotFrames)
 		self._testExtraDataReceivedIgnored()
 
 
