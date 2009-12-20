@@ -1666,7 +1666,7 @@ class _BaseSocketTransportTests(object):
 
 		DeleteProperty = object()
 
-		genericBad = [-2**65, -1, -0.5, 0.5, 2**65, "", [], ["something"], {}, True, False, DeleteProperty]
+		genericBad = [-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"], {}, True, False, DeleteProperty]
 
 		badMutations = dict(
 			n=genericBad,
@@ -1795,7 +1795,7 @@ class _BaseSocketTransportTests(object):
 	def test_gimmeBoxesSucceedsTransportInvalidNumber(self):
 		"""If client sends a too-low or too-high transport number (or a wrong type)
 		in the gimme_boxes frame, the transport is killed."""
-		for succeedsTransport in [-1, -2**32, -0.5, 2**65, "4", True, False, [], {}]:
+		for succeedsTransport in [-1, -2**32, -0.5, 2**64+1, "4", True, False, [], {}]:
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0, [Fn.gimme_boxes, succeedsTransport]]))
 			stream = self.streamTracker.getStream('x'*26)
