@@ -2300,7 +2300,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		self._pushParser(tcpTransport0, parser0)
 		self.aE([[Fn.sack, 0, [2]]], parser0.gotFrames)
-		self.aE([["streamStarted", stream], ["boxesReceived", [["box0"]]]], proto.log)
+		self.aE([["streamStarted", stream], ["boxesReceived", [["box0"]]]], proto.getNew())
 
 		# Send box1 and box3; make sure the protocol gets boxes 1, 2, 3; make sure we got SACK
 
@@ -2308,7 +2308,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		self._pushParser(tcpTransport0, parser0)
 		self.aE([[Fn.sack, 0, [2]], [Fn.sack, 3, []]], parser0.gotFrames)
-		self.aE([["streamStarted", stream], ["boxesReceived", [["box0"]]], ["boxesReceived", [["box1"], ["box2"], ["box3"]]]], proto.log)
+		self.aE([["boxesReceived", [["box1"], ["box2"], ["box3"]]]], proto.getNew())
 
 		# Send two boxes S2C; make sure we get them.
 
@@ -2361,10 +2361,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self._pushParser(tcpTransport2, parser2)
 		self.aE([[Fn.you_close_it]], parser2.gotFrames)
 
-		self.aE([
-			["streamStarted", stream], ["boxesReceived", [["box0"]]], ["boxesReceived", [["box1"], ["box2"], ["box3"]]],
-			["streamReset", WhoReset.client_app, u"testing"]],
-		proto.log)
+		self.aE([["streamReset", WhoReset.client_app, u"testing"]], proto.getNew())
 
 		self._pushParser(tcpTransport0, parser0)
 		self._pushParser(tcpTransport1, parser1)

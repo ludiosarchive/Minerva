@@ -13,7 +13,23 @@ from minerva.newlink import (
 )
 
 
-class FakeReactor(object):
+class _MockMixin(object):
+
+	def getNew(self):
+		"""
+		Returns new log entries. This makes test code a lot less redundant.
+		"""
+		if not hasattr(self, '_returnNext'):
+			self._returnNext = 0
+
+		old = self._returnNext
+		self._returnNext = len(self.log)
+
+		return self.log[old:]
+
+
+
+class FakeReactor(_MockMixin):
 	# TODO	: implements() IReactorCore interface? or whatever addSystemEventTrigger is part of?
 
 	def __init__(self, *args, **kargs):
@@ -128,7 +144,7 @@ class DummyRequest(_TwistedDummyRequest):
 
 
 
-class MockProducer(object):
+class MockProducer(_MockMixin):
 	resumed = False
 	stopped = False
 	paused = False
@@ -154,7 +170,7 @@ class MockProducer(object):
 
 
 
-class MockStream(object):
+class MockStream(_MockMixin):
 	streamId = "a stream id of unusual length"
 
 	def __init__(self, clock=None, streamId=None, streamProtocolFactory=None):
@@ -243,7 +259,7 @@ class MockStream(object):
 
 
 
-class MockMinervaProtocol(object):
+class MockMinervaProtocol(_MockMixin):
 	implements(IMinervaProtocol)
 
 	def streamStarted(self, stream):
@@ -284,7 +300,7 @@ class DummyHttpTransport(object):
 
 
 
-class DummySocketLikeTransport(object):
+class DummySocketLikeTransport(_MockMixin):
 	request = None
 	globalCounter = [-1]
 	lastBoxSent = -1
@@ -338,7 +354,7 @@ class DummySocketLikeTransport(object):
 
 
 
-class MockObserver(object):
+class MockObserver(_MockMixin):
 
 	def __init__(self):
 		self.log = []
