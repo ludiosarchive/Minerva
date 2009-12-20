@@ -1418,7 +1418,7 @@ class _BaseSocketTransportTests(object):
 		Fn.you_close_it]: # TODO: allow you_close_it for HTTP
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0]))
-			self.transport.dataReceived(self.serializeFrames([[Fn.tk_brb]]))
+			self.transport.dataReceived(self.serializeFrames([[frameType]]))
 			self._parseFrames()
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
 			self._testExtraDataReceivedIgnored()

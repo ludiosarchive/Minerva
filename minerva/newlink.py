@@ -87,6 +87,18 @@ class Frame(object):
 
 		8: ('timestamp', 1, 1),
 		10: ('reset', 1, 1), # reset really means "Stream is dead to me. Also, transport kill because stream is dead."
+		# TODO XXX: Ideas for reset:
+		# Use reset only to indicate serious problems with the Stream. For application-level "close",
+		# agree on an application-level box that, when received, calls Stream.close()
+
+		# TODO: make def streamReset in IMinervaProtocol know which side initiated the reset, and reasonString
+
+		# TODO: in Minerva client, a tk_stream_attach_failure or tk_acked_unsent_boxes or tk_invalid_frame_type_or_arguments could be treated as an internal reset.
+
+		# Why applications being able to "reset" is nice:
+		# We may have features (SACK, or pre-SACK-buffer-flush) that make one side unable to successfully send/receive a box.
+		# In this case, it's great to be able to reset.
+
 		11: ('you_close_it', 0, 0),
 		12: ('start_timestamps', 3, 3),
 		13: ('stop_timestamps', 1, 1),
@@ -140,6 +152,113 @@ class Frame(object):
 
 
 Fn = Frame.names
+
+
+
+class IMinervaProtocol(Interface):
+	"""
+	An interface for frame-based communication that abstracts
+	away the Comet logic and transports.
+
+	I'm analogous to L{twisted.internet.interfaces.IProtocol}
+
+	Note that the stream never ends unless you say it ends (there
+	are no timeouts in Stream). If you want to end the stream,
+	call stream.reset(u"reason why")
+
+	The simplest way to end dead Streams is to use an application-level
+	ping message that your client sends (say every 55 seconds), and
+	end the Stream if no such message has been received for 2 minutes.
+
+	TODO: expose a `primaryOnline` and `primaryOffline` or a similar
+	scheme to know some information about whether the client is even
+	connected to Minerva server.
+	"""
+
+	def streamStarted(stream):
+		"""
+		Called when this stream has just started.
+
+		You'll want to keep the stream around with C{self.stream = stream}.
+
+		@param stream: the L{Stream} that was started.
+		@type stream: L{Stream}
+		"""
+
+
+	def boxesReceived(boxes):
+		"""
+		Called whenever box(es) are received.
+
+		@type boxes: list
+		@param boxes: a list of boxes
+		"""
+
+
+
+class BasicMinervaProtocol(object):
+	"""
+	A "base" implementation of L{IMinervaProtocol} that you don't
+	have to subclass, but can.
+	"""
+	implements(IMinervaProtocol)
+
+	def streamStarted(self, stream):
+		self.stream = stream
+
+
+	def boxesReceived(self, boxes):
+		pass
+
+
+
+class IMinervaFactory(Interface):
+	"""
+	Interface for L{MinervaProtocol} factories.
+	"""
+
+	def buildProtocol(stream):
+		"""
+		Called when a Stream has been established.
+
+		@param stream: the L{Stream} that was established.
+		@type stream: L{Stream}
+
+		Unlike the analogous Twisted L{twisted.internet.interfaces.IFactory},
+		you cannot refuse a connection here.
+
+		Unlike in Twisted, you already know a lot about the client by the time
+		C{buildProtocol} is called: their C{streamId} and C{credentialsData},
+		for example.
+
+		An implementation should
+			construct an object providing I{MinervaProtocol},
+			do C{obj.factory = self},
+			do C{obj.streamStarted(stream)},
+			and return C{obj},
+		with optionally more steps in between.
+
+		@return: an object providing L{IMinervaProtocol}.
+		"""
+
+
+
+class BasicMinervaFactory(object):
+	"""
+	A "base" implementation of L{IMinervaFactory} that you don't
+	have to subclass, but can.
+
+	Override the C{protocol} attribute.
+	"""
+	implements(IMinervaFactory)
+
+	protocol = None
+
+	def buildProtocol(self, stream):
+		obj = self.protocol()
+		obj.factory = self
+		obj.streamStarted(stream)
+		return obj
 
 
 
@@ -273,6 +392,8 @@ class Stream(object):
 		Reset (disconnect) with reason C{reasonString}.
 		"""
 		self.disconnected = True
+		# If no transports are connected, client will not get the reset frame. If client tries
+		# to connect a transport to a dead stream, they will get a tk_stream_attach_failure.
 		for t in self._transports:
 			t.reset(reasonString)
 		self._die()
@@ -642,113 +763,6 @@ class StreamTracker(object):
 			self._observers.remove(obj)
 		except KeyError:
 			raise RuntimeError("%r was not observing" % (obj,))
-
-
-
-class IMinervaProtocol(Interface):
-	"""
-	An interface for frame-based communication that abstracts
-	away the Comet logic and transports.
-
-	I'm analogous to L{twisted.internet.interfaces.IProtocol}
-
-	Note that the stream never ends unless you say it ends (there
-	are no timeouts in Stream). If you want to end the stream,
-	call stream.reset(u"reason why")
-
-	The simplest way to end dead Streams is to use an application-level
-	ping message that your client sends (say every 55 seconds), and
-	end the Stream if no such message has been received for 2 minutes.
-
-	TODO: expose a `primaryOnline` and `primaryOffline` or a similar
-	scheme to know some information about whether the client is even
-	connected to Minerva server.
-	"""
-
-	def streamStarted(stream):
-		"""
-		Called when this stream has just started.
-
-		You'll want to keep the stream around with C{self.stream = stream}.
-
-		@param stream: the L{Stream} that was started.
-		@type stream: L{Stream}
-		"""
-
-
-	def boxesReceived(boxes):
-		"""
-		Called whenever box(es) are received.
-
-		@type boxes: list
-		@param boxes: a list of boxes
-		"""
-
-
-
-class BasicMinervaProtocol(object):
-	"""
-	A "base" implementation of L{IMinervaProtocol} that you don't
-	have to subclass, but can.
-	"""
-	implements(IMinervaProtocol)
-
-	def streamStarted(self, stream):
-		self.stream = stream
-
-
-	def boxesReceived(self, boxes):
-		pass
-
-
-
-class IMinervaFactory(Interface):
-	"""
-	Interface for L{MinervaProtocol} factories.
-	"""
-
-	def buildProtocol(stream):
-		"""
-		Called when a Stream has been established.
-
-		@param stream: the L{Stream} that was established.
-		@type stream: L{Stream}
-
-		Unlike the analogous Twisted L{twisted.internet.interfaces.IFactory},
-		you cannot refuse a connection here.
-
-		Unlike in Twisted, you already know a lot about the client by the time
-		C{buildProtocol} is called: their C{streamId} and C{credentialsData},
-		for example.
-
-		An implementation should
-			construct an object providing I{MinervaProtocol},
-			do C{obj.factory = self},
-			do C{obj.streamStarted(stream)},
-			and return C{obj},
-		with optionally more steps in between.
-
-		@return: an object providing L{IMinervaProtocol}.
-		"""
-
-
-
-class BasicMinervaFactory(object):
-	"""
-	A "base" implementation of L{IMinervaFactory} that you don't
-	have to subclass, but can.
-
-	Override the C{protocol} attribute.
-	"""
-	implements(IMinervaFactory)
-
-	protocol = None
-
-	def buildProtocol(self, stream):
-		obj = self.protocol()
-		obj.factory = self
-		obj.streamStarted(stream)
-		return obj
 
 
 
