@@ -1227,7 +1227,7 @@ class _BaseHelpers(object):
 		return frame
 
 
-	def _parseFrames(self):
+	def _parseFrames(self, transport=None):
 		"""
 		Feed the received bytes into the parser, which will append complete
 		frames to self.gotFrames
@@ -1235,8 +1235,10 @@ class _BaseHelpers(object):
 		If a partial Minerva frame is at the end of the DummyTCPTransport buffer,
 		calling this WILL LOSE the partial frame.
 		"""
-		self.parser.dataReceived(self.t.value())
-		self.t.clear()
+		if transport is None:
+			transport = self.t
+		self.parser.dataReceived(transport.value())
+		transport.clear()
 
 
 
@@ -2222,49 +2224,117 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 	"""
 	Test SocketFace/SocketTransport/StreamTracker/Stream integration.
 	"""
-	# Note: we use _BaseHelpers's setUp
+	def serializeFrames(self, frames):
+		toSend = ''
+		for frame in frames:
+			bytes = simplejson.dumps(frame)
+			toSend += Int32StringDecoder.encode(bytes)
+		return toSend
 
-	# Use the real StreamTracker
+
+	def _makeParser(self):
+		gotFrames = []
+		parser = Int32StringDecoder()
+		parser.gotFrames = []
+		parser.manyDataCallback = lambda frames: parser.gotFrames.extend(simplejson.loads(f) for f in frames)
+		return parser
+
+
+	def _makeTransport(self):
+		tcpTransport = DummyTCPTransport()
+		transport = self.faceFactory.buildProtocol(addr=None)
+		transport.makeConnection(tcpTransport)
+		transport.dataReceived('<int32/>\n')
+		return transport, tcpTransport
+
+
+	# We use the real StreamTracker
 	def _resetStreamTracker(self):
 		clock = task.Clock()
 		self.protocolFactory = MockMinervaProtocolFactory()
 		self.streamTracker = StreamTracker(self._reactor, clock, self.protocolFactory)
 
 
-	def _resetParser(self):
-		self.gotFrames = []
-		self.parser = Int32StringDecoder()
-		self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
+	def setUp(self):
+		self._reactor = FakeReactor()
+		self._resetStreamTracker()
+		self.faceFactory = SocketFace(self._reactor, None, self.streamTracker, DummyFirewall(rejectAll=False))
 
 
-	def _sendModeInitializer(self):
-		self.transport.dataReceived('<int32/>\n')
+	def _makeValidHelloFrame(self):
+		helloData = dict(n=0, w=True, v=2, i='x'*26, r=2**30, m=2**30)
+		frame = [Fn.hello, helloData]
+		return frame
+
+
+	def _parseFrames2(self, tcpTransport, parser):
+		"""
+		Feed the received bytes into the parser, which will append complete
+		frames to self.gotFrames
+
+		If a partial Minerva frame is at the end of the DummyTCPTransport buffer,
+		calling this WILL LOSE the partial frame.
+		"""
+		parser.dataReceived(tcpTransport.value())
+		tcpTransport.clear()
 
 
 	def test_integration(self):
 		# Send a hello frame and subscribe to boxes
+		transport0, tcpTransport0 = self._makeTransport()
+		parser0 = self._makeParser()
+
 		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
-		self.transport.dataReceived(self.serializeFrames([[Fn.gimme_boxes, None]]))
+		transport0.dataReceived(self.serializeFrames([frame0]))
+		transport0.dataReceived(self.serializeFrames([[Fn.gimme_boxes, None]]))
 		stream = self.streamTracker.getStream('x'*26)
 
-		self._parseFrames()
-		self.aE([], self.gotFrames)
+		self._parseFrames2(tcpTransport0, parser0)
+		self.aE([], parser0.gotFrames)
 
 		proto = list(self.protocolFactory.instances)[0]
 
 		# Send two boxes; make sure the protocol gots box0; make sure we got SACK
-		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"], "2": ["box2"]}]]))
+		transport0.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"], "2": ["box2"]}]]))
 
-		self._parseFrames()
-		self.aE([[Fn.sack, 0, [2]]], self.gotFrames)
+		self._parseFrames2(tcpTransport0, parser0)
+		self.aE([[Fn.sack, 0, [2]]], parser0.gotFrames)
 		self.aE([["streamStarted", stream], ["boxesReceived", [["box0"]]]], proto.log)
 
 		# Send box1 and box3; make sure the protocol gets boxes 1, 2, 3; make sure we got SACK
 
-		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"1": ["box1"], "3": ["box3"]}]]))
+		transport0.dataReceived(self.serializeFrames([[Fn.boxes, {"1": ["box1"], "3": ["box3"]}]]))
 
-		self._parseFrames()
-		self.aE([[Fn.sack, 0, [2]], [Fn.sack, 3, []]], self.gotFrames)
+		self._parseFrames2(tcpTransport0, parser0)
+		self.aE([[Fn.sack, 0, [2]], [Fn.sack, 3, []]], parser0.gotFrames)
 		self.aE([["streamStarted", stream], ["boxesReceived", [["box0"]]], ["boxesReceived", [["box1"], ["box2"], ["box3"]]]], proto.log)
 
+		# Send two boxes S2C; make sure we get them.
+
+		stream.sendBoxes([["s2cbox0"], ["s2cbox1"]])
+		
+		self._parseFrames2(tcpTransport0, parser0)
+		self.aE([[Fn.sack, 0, [2]], [Fn.sack, 3, []], [Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], parser0.gotFrames)
+
+		# Don't ACK those boxes; connect a new transport; make sure we get those S2C boxes again; make sure transport0 was closed
+
+		transport1, tcpTransport1 = self._makeTransport()
+		parser1 = self._makeParser()
+
+		frame0 = self._makeValidHelloFrame() # TODO: increment transportNumber?
+		transport1.dataReceived(self.serializeFrames([frame0]))
+
+		self._parseFrames2(tcpTransport1, parser1)
+		self.aE([], parser1.gotFrames)
+
+		transport1.dataReceived(self.serializeFrames([[Fn.gimme_boxes, None]]))
+
+		self._parseFrames2(tcpTransport1, parser1)
+		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], parser1.gotFrames)
+
+		# Make sure transport0 was closed
+
+		self._parseFrames2(tcpTransport0, parser0)
+		self.aE([[Fn.sack, 0, [2]], [Fn.sack, 3, []], [Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]], [Fn.you_close_it]], parser0.gotFrames)
+
+		# Finally ACK those boxes; connect a new transport;
