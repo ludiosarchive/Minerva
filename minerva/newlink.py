@@ -1087,6 +1087,9 @@ class SocketTransport(protocol.Protocol):
 			except BadFrame:
 				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
+			# Below, we can assume that the frame has the minimum/maximum allowed number of
+			# arguments for the frame type.
+
 			frameType = frameObj[0]
 
 			# We demand a 'hello' frame before any other type of frame
@@ -1140,7 +1143,10 @@ class SocketTransport(protocol.Protocol):
 				1/0
 
 			elif frameType == Fn.reset:
-				1/0
+				reasonString, applicationLevel = frameObj[1:]
+				if not isinstance(reasonString, unicode) or not isinstance(applicationLevel, bool):
+					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+				self._stream.resetFromClient(reasonString, applicationLevel)
 
 			elif frameType == Fn.sack:
 				ackNumber, sackList = frameObj[1:]

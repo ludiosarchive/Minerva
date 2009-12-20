@@ -177,7 +177,7 @@ class MockStream(object):
 
 
 	def resetFromClient(self, reasonString, applicationLevel):
-		self.log.append(['reset', reasonString, applicationLevel])
+		self.log.append(['resetFromClient', reasonString, applicationLevel])
 
 
 	def boxesReceived(self, transport, boxes, memorySizeOfBoxes):

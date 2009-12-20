@@ -1981,6 +1981,23 @@ class _BaseSocketTransportTests(object):
 			self._reset()
 
 
+	def test_resetValid(self):
+		for applicationLevel in (True, False):
+			frame0 = self._makeValidHelloFrame()
+			self.transport.dataReceived(self.serializeFrames([frame0]))
+			stream = self.streamTracker.getStream('x'*26)
+
+			self.transport.dataReceived(self.serializeFrames([[Fn.reset, u'the reason\uffff', True]]))
+
+			self.aE([
+				['notifyFinish'],
+				['transportOnline', self.transport],
+				['resetFromClient', u'the reason\uffff', True],
+			], stream.log)
+
+			self._resetStreamTracker()
+			self._reset()
+
 
 
 
