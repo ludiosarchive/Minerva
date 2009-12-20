@@ -953,6 +953,33 @@ class SocketTransport(protocol.Protocol):
 		self._streamingProducer = False
 
 
+	def _encodeFrame(self, frameData):
+		assert self._mode != UNKNOWN
+		if self._mode in (BENCODE, INT32):
+			return self._parser.encode(dumpToJson7Bit(frameData))
+		else:
+			1/0
+
+
+	def _closeWith(self, errorType, *args):
+		# Even though the `if self._terminating` check isn't really needed right
+		# now, it become needed when SocketTransport has a connection timeout,
+		# because cbAuthFailed may call into this.
+		if self._terminating:
+			return # TODO: explicit tests for this case
+		# TODO: sack before closing
+		invalidArgsFrameObj = [errorType]
+		invalidArgsFrameObj.extend(args)
+		toSend = ''
+		toSend += self._encodeFrame(invalidArgsFrameObj)
+		toSend += self._encodeFrame([Fn.you_close_it])
+		self.transport.write(toSend)
+		self._terminating = True
+
+		# TODO: set timer and close the connection ourselves in 5-10 seconds
+		##self.transport.loseConnection()
+
+
 	def writeBoxes(self, queue, start):
 		"""
 		@see L{IMinervaTransport.writeBoxes}
@@ -992,6 +1019,12 @@ class SocketTransport(protocol.Protocol):
 			log.msg('Caution: %r asked me to send a large amount of data (%r bytes)' % (self._stream, len(toSend)))
 		self.transport.write(toSend)
 		self.lastBoxSent = lastBox
+
+
+	def _writeSACK(self):
+		sackFrame = (Fn.sack,) + self._stream.getSACK()
+		toSend = self._encodeFrame(sackFrame)
+		self.transport.write(toSend)
 
 
 	def _handleHelloFrame(self, frame):
@@ -1244,39 +1277,6 @@ class SocketTransport(protocol.Protocol):
 				self._closeWith(Fn.tk_frame_corruption)
 		else:
 			1/0
-
-
-	def _encodeFrame(self, frameData):
-		assert self._mode != UNKNOWN
-		if self._mode in (BENCODE, INT32):
-			return self._parser.encode(dumpToJson7Bit(frameData))
-		else:
-			1/0
-
-
-	def _closeWith(self, errorType, *args):
-		# Even though the `if self._terminating` check isn't really needed right
-		# now, it become needed when SocketTransport has a connection timeout,
-		# because cbAuthFailed may call into this. 
-		if self._terminating:
-			return # TODO: explicit tests for this case
-		# TODO: sack before closing
-		invalidArgsFrameObj = [errorType]
-		invalidArgsFrameObj.extend(args)
-		toSend = ''
-		toSend += self._encodeFrame(invalidArgsFrameObj)
-		toSend += self._encodeFrame([Fn.you_close_it])
-		self.transport.write(toSend)
-		self._terminating = True
-
-		# TODO: set timer and close the connection ourselves in 5-10 seconds
-		##self.transport.loseConnection()
-
-
-	def _writeSACK(self):
-		sackFrame = (Fn.sack,) + self._stream.getSACK()
-		toSend = self._encodeFrame(sackFrame)
-		self.transport.write(toSend)
 
 
 	def closeGently(self):
