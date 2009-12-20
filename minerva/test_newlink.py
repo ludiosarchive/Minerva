@@ -15,7 +15,7 @@ from minerva import abstract
 from minerva.helpers import todo
 
 from minerva.newlink import (
-	Frame, Stream, StreamTracker, NoSuchStream,
+	Frame, Stream, StreamTracker, NoSuchStream, WhoReset,
 	StreamAlreadyExists, BadFrame, ISimpleConsumer, IMinervaProtocol,
 	IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
 	IMinervaTransport, SocketTransport, SocketFace
@@ -460,6 +460,7 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_resetCallsAllTransports(self):
+		"""When Stream.reset is called, a reset frame goes out to all connected transports."""
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1)
 		t2 = DummySocketLikeTransport()
@@ -470,6 +471,45 @@ class StreamTests(unittest.TestCase):
 		self.aE(True, s.disconnected)
 		self.aE([["reset", u'the reason', True]], t1.log)
 		self.aE([["reset", u'the reason', True]], t2.log)
+
+
+	def test_internalResetCallsAllTransports(self):
+		"""When Stream._internalReset is called, a reset frame goes out to all connected transports.
+		TODO: Maybe don't test private methods? But heck, everything is really private.
+		"""
+		factory, clock, s, t1 = self._makeStuff()
+		s.transportOnline(t1)
+		t2 = DummySocketLikeTransport()
+		s.transportOnline(t2)
+
+		self.aE(False, s.disconnected)
+		s._internalReset(u'the reason')
+		self.aE(True, s.disconnected)
+		self.aE([["reset", u'the reason', False]], t1.log)
+		self.aE([["reset", u'the reason', False]], t2.log)
+
+
+	def test_resetFromClient(self):
+		"""
+		If a transport says it has received a reset frame, streamReset is called on the protocol,
+		and all the transports for the stream are closed.
+		"""
+		for applicationLevel in (True, False):
+			factory, clock, s, t1 = self._makeStuff()
+			s.transportOnline(t1)
+			t2 = DummySocketLikeTransport()
+			s.transportOnline(t2)
+
+			self.aE(False, s.disconnected)
+			s.resetFromClient(u'the reason\uffff', applicationLevel=applicationLevel)
+			self.aE(True, s.disconnected)
+
+			i = list(factory.instances)[0]
+			who = WhoReset.client_app if applicationLevel else WhoReset.client_minerva
+			self.aE([["streamStarted", s], ["streamReset", who, u'the reason\uffff']], i.log)
+
+			self.aE([["closeGently"]], t1.log)
+			self.aE([["closeGently"]], t2.log)
 
 
 	def test_registerUnregisterProducerWithNoActiveTransport(self):
@@ -1939,6 +1979,8 @@ class _BaseSocketTransportTests(object):
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
 
 			self._reset()
+
+
 
 
 

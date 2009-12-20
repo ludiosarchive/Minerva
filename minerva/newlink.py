@@ -392,7 +392,7 @@ class Stream(object):
 			##	self._producer.resumeProducing()
 
 
-	def _die(self):
+	def _fireNotifications(self):
 		for d in self._notifications:
 			d.callback(None)
 		self._notifications = None
@@ -423,22 +423,42 @@ class Stream(object):
 		# to connect a transport to a dead stream, they will get a tk_stream_attach_failure.
 		for t in self._transports:
 			t.reset(reasonString, applicationLevel=True)
-		self._die()
+		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
 		self._protocol.streamReset(WhoReset.server_app, reasonString)
+		del self._protocol
+
+
+	# Called by transports
+	def resetFromClient(self, reasonString, applicationLevel):
+		"""
+		Private. Do not call this.
+
+		Minerva transports call this when they get a reset frame from client.
+		"""
+		self.disconnected = True
+		for t in self._transports:
+			t.closeGently()
+		self._fireNotifications()
+		# Call application code last, to mitigate disaster if it raises an exception.
+		self._protocol.streamReset(WhoReset.client_app if applicationLevel else WhoReset.client_minerva, reasonString)
+		del self._protocol
 
 
 	def _internalReset(self, reasonString):
 		self.disconnected = True
 		for t in self._transports:
 			t.reset(reasonString, applicationLevel=False)
-		self._die()
+		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
 		self._protocol.streamReset(WhoReset.server_minerva, reasonString)
+		del self._protocol
 
 
 	def boxesReceived(self, transport, boxes, memorySizeOfBoxes):
 		"""
+		Private. Do not call this.
+
 		Called by a transport to tell me that it has received boxes L{boxes}.
 		"""
 		self._incoming.give(boxes, memorySizeOfBoxes)
@@ -454,6 +474,11 @@ class Stream(object):
 
 
 	def sackReceived(self, sackInfo):
+		"""
+		Private. Do not call this.
+		
+		Minerva transports call this when they get a sack frame from client.
+		"""
 		# No need to pretend any more, because we just got a likely-up-to-date sack from the client.
 		# TODO: perhaps have a flag for the sack frame that lets client send a "outdated SACK"
 		# that removes old frames in server's queue, but doesn't imply "I don't have anything else after this"
@@ -470,6 +495,8 @@ class Stream(object):
 
 	def transportOnline(self, transport):
 		"""
+		Private. Do not call this.
+
 		Called by faces to tell me that new transport C{transport} has connected.
 		This is called even for very-short-term C2S HTTP transports.
 
@@ -480,12 +507,16 @@ class Stream(object):
 		self._transports.add(transport)
 		self.virgin = False
 
+		# This is done here, and not in _newPrimary, because client should be able
+		# to upload boxes without ever having set up a primary transport.
 		if self._protocol is None:
 			self._protocol = self._streamProtocolFactory.buildProtocol(self)
 
 
 	def transportOffline(self, transport):
 		"""
+		Private. Do not call this.
+
 		Called by faces to tell me that new transport C{transport} has disconnected.
 		"""
 		try:
@@ -546,6 +577,8 @@ class Stream(object):
 
 	def subscribeToBoxes(self, transport, succeedsTransport):
 		"""
+		Private. Do not call this.
+
 		Transport C{transport} says it wants to start receiving boxes.
 
 		If L{succeedsTransport} != None, temporarily assume that all boxes written to
@@ -563,11 +596,19 @@ class Stream(object):
 
 
 	def getSACK(self):
+		"""
+		Private, but no side-effects.
+
+		@return: the SACK information for C2S boxes.
+		@rtype: list
+		"""
 		return self._incoming.getSACK()
 
 
 	def serverShuttingDown(self):
 		"""
+		Private. Do not call this.
+
 		Called by L{StreamTracker} to tell me that the server is shutting down.
 
 		@return: a L{Deferred} that fires when it's okay to shut down,
@@ -646,6 +687,8 @@ class Stream(object):
 	# called ONLY by the primary transport in response to TCP pressure
 	def pauseProducing(self):
 		"""
+		Private. Do not call this.
+
 		We assume this is called only by the primary transport. Also, the pause
 		status is no longer relevant after the primary transport detaches.
 		"""
@@ -657,6 +700,8 @@ class Stream(object):
 	# called ONLY by the primary transport in response to TCP pressure
 	def resumeProducing(self):
 		"""
+		Private. Do not call this.
+
 		We assume this is called only by the primary transport.
 		"""
 		self._primaryPaused = False
@@ -666,6 +711,9 @@ class Stream(object):
 
 	# Called by no one. Implemented only to pass zope.interface checks in unit tests.
 	def stopProducing(self):
+		"""
+		Private. Do not call this.
+		"""
 		assert False, "Stream.stopProducing should never be called"
 
 
