@@ -2323,7 +2323,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self.aE([[Fn.sack, 0, [2]], [Fn.sack, 3, []], [Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], parser0.gotFrames)
 
 
-		# Don't ACK those boxes; connect a new transport; make sure we get those S2C boxes again; make sure transport0 was closed
+		# Don't ACK those boxes; connect a new transport; make sure we get those S2C boxes again; make sure transport0 is terminating
 
 		transport1, tcpTransport1 = self._makeTransport()
 		parser1 = self._makeParser()
@@ -2343,7 +2343,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self.aE([[Fn.sack, 0, [2]], [Fn.sack, 3, []], [Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]], [Fn.you_close_it]], parser0.gotFrames)
 
 
-		# Finally ACK those boxes; connect a new transport; make sure those S2C boxes are *not* received; make sure transport1 was closed; 
+		# Finally ACK those boxes; connect a new transport; make sure those S2C boxes are *not* received; make sure transport1 is terminating;
 
 		transport1.dataReceived(self.serializeFrames([[Fn.sack, 1, []]]))
 
@@ -2361,7 +2361,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]], [Fn.you_close_it]], parser1.gotFrames)
 
 
-		# Send a reset over transport2; make sure transport2 is you_close_it'ed; make sure MinervaProtocol gets it;
+		# Send a reset over transport2; make sure transport2 is terminating; make sure MinervaProtocol gets it;
 		# make sure transport0 and transport1 are untouched
 
 		transport2.dataReceived(self.serializeFrames([[Fn.reset, u"testing", True]]))
@@ -2376,3 +2376,56 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		self.aE([[Fn.sack, 0, [2]], [Fn.sack, 3, []], [Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]], [Fn.you_close_it]], parser0.gotFrames)
 		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]], [Fn.you_close_it]], parser1.gotFrames)
+
+
+	def test_integrationWithSucceedsTransport(self):
+		# Send a hello frame and subscribe to boxes
+
+		transport0, tcpTransport0 = self._makeTransport()
+		parser0 = self._makeParser()
+
+		frame0 = self._makeValidHelloFrame()
+		transport0.dataReceived(self.serializeFrames([frame0]))
+		transport0.dataReceived(self.serializeFrames([[Fn.gimme_boxes, None]]))
+		stream = self.streamTracker.getStream('x'*26)
+
+		self._pushParser(tcpTransport0, parser0)
+		self.aE([], parser0.gotFrames)
+
+		proto = list(self.protocolFactory.instances)[0]
+
+
+		# Send two boxes S2C; make sure we get them.
+
+		stream.sendBoxes([["s2cbox0"], ["s2cbox1"]])
+
+		self._pushParser(tcpTransport0, parser0)
+		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], parser0.gotFrames)
+
+
+		# Connect a new transport that sends gimme_boxes with argument to succeed transport #0;
+		# make sure s2cbox0 and s2cbox1 are not written to it (because pretendAcked is in action);
+		# make sure transport0 is terminating
+
+		transport1, tcpTransport1 = self._makeTransport()
+		parser1 = self._makeParser()
+
+		newHello = self._makeValidHelloFrame()
+		newHello[1]['n'] = 1
+
+		transport1.dataReceived(self.serializeFrames([newHello]))
+		transport1.dataReceived(self.serializeFrames([[Fn.gimme_boxes, 0]])) # succeeds transport0
+
+		self._pushParser(tcpTransport1, parser1)
+		self.aE([], parser1.gotFrames)
+
+		self._pushParser(tcpTransport0, parser0)
+		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]], [Fn.you_close_it]], parser0.gotFrames)
+
+
+		# Send another box S2C and make sure it is written to transport1
+
+		stream.sendBoxes([["s2cbox2"]])
+
+		self._pushParser(tcpTransport1, parser1)
+		self.aE([[Fn.seqnum, 2], [Fn.box, ["s2cbox2"]]], parser1.gotFrames)
