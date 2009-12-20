@@ -2007,20 +2007,21 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		Valid reset frames call Stream.resetFromClient
 		"""
 		for applicationLevel in (True, False):
-			frame0 = self._makeValidHelloFrame()
-			self.transport.dataReceived(self.serializeFrames([frame0]))
-			stream = self.streamTracker.getStream('x'*26)
+			for reason in (u'the reason \uffff', 'simplejson decodes this reason to str, not unicode'):
+				frame0 = self._makeValidHelloFrame()
+				self.transport.dataReceived(self.serializeFrames([frame0]))
+				stream = self.streamTracker.getStream('x'*26)
 
-			self.transport.dataReceived(self.serializeFrames([[Fn.reset, u'the reason\uffff', True]]))
+				self.transport.dataReceived(self.serializeFrames([[Fn.reset, reason, True]]))
 
-			self.aE([
-				['notifyFinish'],
-				['transportOnline', self.transport],
-				['resetFromClient', u'the reason\uffff', True],
-			], stream.log)
+				self.aE([
+					['notifyFinish'],
+					['transportOnline', self.transport],
+					['resetFromClient', reason, True],
+				], stream.log)
 
-			self._resetStreamTracker()
-			self._reset()
+				self._resetStreamTracker()
+				self._reset()
 
 
 	def test_resetInvalidReasonString(self):
@@ -2350,4 +2351,23 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self.aE([], parser2.gotFrames)
 
 		self._pushParser(tcpTransport1, parser1)
+		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]], [Fn.you_close_it]], parser1.gotFrames)
+
+		# Send a reset over transport2; make sure transport2 is you_close_it'ed; make sure MinervaProtocol gets it;
+		# make sure transport0 and transport1 are untouched
+
+		transport2.dataReceived(self.serializeFrames([[Fn.reset, u"testing", True]]))
+
+		self._pushParser(tcpTransport2, parser2)
+		self.aE([[Fn.you_close_it]], parser2.gotFrames)
+
+		self.aE([
+			["streamStarted", stream], ["boxesReceived", [["box0"]]], ["boxesReceived", [["box1"], ["box2"], ["box3"]]],
+			["streamReset", WhoReset.client_app, u"testing"]],
+		proto.log)
+
+		self._pushParser(tcpTransport0, parser0)
+		self._pushParser(tcpTransport1, parser1)
+
+		self.aE([[Fn.sack, 0, [2]], [Fn.sack, 3, []], [Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]], [Fn.you_close_it]], parser0.gotFrames)
 		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]], [Fn.you_close_it]], parser1.gotFrames)

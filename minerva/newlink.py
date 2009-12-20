@@ -1146,7 +1146,7 @@ class SocketTransport(protocol.Protocol):
 
 			elif frameType == Fn.reset:
 				reasonString, applicationLevel = frameObj[1:]
-				if not isinstance(reasonString, unicode) or not isinstance(applicationLevel, bool):
+				if not isinstance(reasonString, basestring) or not isinstance(applicationLevel, bool):
 					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 				self._stream.resetFromClient(reasonString, applicationLevel)
 
@@ -1257,8 +1257,10 @@ class SocketTransport(protocol.Protocol):
 			1/0
 
 
+	# cbAuthFailed is async, so we must return if `terminating' already.
 	def _closeWith(self, errorType, *args):
-		assert not self._terminating
+		if self._terminating:
+			return
 		# TODO: sack before closing
 		invalidArgsFrameObj = [errorType]
 		invalidArgsFrameObj.extend(args)
@@ -1282,7 +1284,8 @@ class SocketTransport(protocol.Protocol):
 		"""
 		@see L{IMinervaTransport.closeGently}
 		"""
-		assert not self._terminating
+		if self._terminating:
+			return
 		self.transport.write(self._encodeFrame([Fn.you_close_it]))
 		self._terminating = True
 
@@ -1291,7 +1294,8 @@ class SocketTransport(protocol.Protocol):
 		"""
 		@see L{IMinervaTransport.reset}
 		"""
-		assert not self._terminating
+		if self._terminating:
+			return
 		toSend = self._encodeFrame([Fn.reset, reasonString, applicationLevel])
 		toSend += self._encodeFrame([Fn.you_close_it])
 		self.transport.write(toSend)
