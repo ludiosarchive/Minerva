@@ -1116,7 +1116,7 @@ class SocketTransport(protocol.Protocol):
 	def _framesReceived(self, frames):
 		# TODO: don't call transport.write() more than once for a _framesReceived() call.
 		# TODO: confirm that Twisted actually sends multiple TCP packets when .write() is called
-		# under the same stack frame.
+		# under the same stack frame. exarkun says it doesn't.
 		assert self._sackDirty is False
 		for frameString in frames:
 			assert isinstance(frameString, str)
@@ -1235,7 +1235,6 @@ class SocketTransport(protocol.Protocol):
 		if self._sackDirty and not self._terminating:
 			self._sackDirty = False
 			self._writeSACK()
-
 
 
 	def dataReceived(self, data):
