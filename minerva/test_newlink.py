@@ -2536,11 +2536,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			transport0.dataReceived(self.serializeFrames(frames))
 
 			self.aE([
+				[Fn.sack, 1, []],
 				[Fn.seqnum, 0],
 				[Fn.box, ["s2cbox0"]],
 				[Fn.box, ["s2cbox1"]],
 				[Fn.box, ["s2cbox2"]],
-				# TODO: should server write out a sack for client's two boxes? Seems pointless.
 				[Fn.reset, u'reset for testing in MockMinervaProtocol._callStuff', True],
 				[Fn.you_close_it]
 			], parser0.gotFrames)
@@ -2576,6 +2576,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			transport0.dataReceived(self.serializeFrames(frames))
 
 			expected = [
+				[Fn.sack, 1, []],
 				[Fn.seqnum, 0],
 				[Fn.box, ["s2cbox0"]],
 				[Fn.box, ["s2cbox1"]],
@@ -2584,8 +2585,6 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			if clientResetsImmediately:
 				expected.append([Fn.you_close_it])
-			else:
-				expected.append([Fn.sack, 1, []]) # XXX What if boxes are really big? Maybe we should be writing out sack every time instead of last?
 
 			self.aE(expected, parser0.gotFrames)
 

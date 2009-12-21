@@ -947,6 +947,7 @@ class SocketTransport(protocol.Protocol):
 		self._authed = False
 		self._terminating = False
 		self._stream = None
+		self._sackDirty = False
 
 		self._paused = False
 		self._producer = None
@@ -1016,6 +1017,12 @@ class SocketTransport(protocol.Protocol):
 			lastBox = seqNum
 		if len(toSend) > 1024 * 1024:
 			log.msg('Caution: %r asked me to send a large amount of data (%r bytes)' % (self._stream, len(toSend)))
+			
+		# See comment at the end of _framesReceived
+		if self._sackDirty:
+			self._sackDirty = False
+			self._writeSACK()
+
 		self.transport.write(toSend)
 		self.lastBoxSent = lastBox
 
@@ -1110,7 +1117,7 @@ class SocketTransport(protocol.Protocol):
 		# TODO: don't call transport.write() more than once for a _framesReceived() call.
 		# TODO: confirm that Twisted actually sends multiple TCP packets when .write() is called
 		# under the same stack frame.
-		writeSACK = False
+		self._sackDirty = False
 		for frameString in frames:
 			assert isinstance(frameString, str)
 			if self._terminating:
@@ -1174,10 +1181,10 @@ class SocketTransport(protocol.Protocol):
 					except ValueError:
 						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 					boxes.append((seqNum, box))
+				self._sackDirty = True
 				self._stream.boxesReceived(self, boxes, memorySizeOfBoxes)
 				# Remember that a lot can happen underneath that boxesReceived call, including
 				# a call to our own `reset` or `writeBoxes`.
-				writeSACK = True
 
 			elif frameType == Fn.box:
 				1/0
@@ -1221,8 +1228,14 @@ class SocketTransport(protocol.Protocol):
 			else:
 				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
-		if not self._terminating and writeSACK:
+		# The _sackDirty behavior in this class reduces the number of Fn.sack frames
+		# that are written out, while making sure that Fn.sack frames are not "held up"
+		# by boxes written out by the Stream. If Stream writes boxes during the
+		# Stream.boxesReceived call, a SACK is sent before the box(es).
+		if self._sackDirty and not self._terminating:
+			self._sackDirty = False
 			self._writeSACK()
+
 
 
 	def dataReceived(self, data):
@@ -1296,6 +1309,11 @@ class SocketTransport(protocol.Protocol):
 		"""
 		if self._terminating:
 			return # TODO: explicit tests for this case
+
+		if self._sackDirty:
+			self._sackDirty = False
+			self._writeSACK()
+
 		self.transport.write(self._encodeFrame([Fn.you_close_it]))
 		self._terminating = True
 
