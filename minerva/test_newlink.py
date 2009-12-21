@@ -2464,10 +2464,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
  		], proto.getNew())
 
 
-	def test_multipleResetFrames(self):
+	def test_resetAsFirstFrame(self):
 		"""
-		If client sends a reset frame, all frames after the first reset frame are ignored,
-		and protocol gets information from the first reset frame.
+		Test that things work when client's first frame after Fn.hello frame is a reset frame.
+		Test that all frames after the first reset frame are ignored.
+		Test that protocol gets information from the first reset frame.
 		"""
 		transport0, parser0 = self._makeTransport()
 
@@ -2482,6 +2483,26 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		proto = list(self.protocolFactory.instances)[0]
 		self.aE([["streamStarted", stream], ["streamReset", WhoReset.client_app, "reason"]], proto.getNew())
+
+
+	def test_boxThenResetWritesSACK(self):
+		"""
+		If client sends boxes and a reset frame, the boxes are Fn.sack'ed before the transport is terminated.
+		Also test that the protocol gets the right calls.
+		"""
+		transport0, parser0 = self._makeTransport()
+		frame0 = self._makeValidHelloFrame()
+
+		frames = [frame0, [Fn.gimme_boxes, None], [Fn.boxes, {"0": ["box0"], "1": ["box1"]}], [Fn.reset, u'', True]]
+		transport0.dataReceived(self.serializeFrames(frames))
+
+		self.aE([[Fn.sack, 1, []], [Fn.you_close_it]], parser0.gotFrames)
+
+		proto = list(self.protocolFactory.instances)[0]
+		self.aE([
+			["boxesReceived", [["box0"], ["box1"]]],
+			["streamReset", WhoReset.client_app, u'']
+		], proto.getNew()[1:])
 
 
 	def test_simultaneousReset(self):
@@ -2513,7 +2534,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self.aE([["streamStarted", stream], ["streamReset", WhoReset.client_app, "reason"]], proto.getNew())
 
 
-	def test_sendBoxesAndResetUnderneathStreamStartedCall(self):
+	def test_sendBoxesAndResetUnderneathStreamStartedCall(self): # keywords: reentrant
 		"""
 		If Stream.sendBoxes and Stream.reset are called underneath a call to protocol's streamStarted,
 		everything works as usual.
@@ -2552,7 +2573,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self.aE([["streamReset", WhoReset.server_app, u'reset for testing in MockMinervaProtocol._callStuff']], proto.log[1:])
 
 
-	def test_sendBoxesUnderneathStreamStartedCall(self):
+	def test_sendBoxesUnderneathStreamStartedCall(self):# keywords: reentrant
 		"""
 		If Stream.sendBoxes is called underneath a call to protocol's streamStarted,
 		everything works as usual.
@@ -2594,7 +2615,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				self.aE([], proto.log[1:])
 
 
-	def test_sendBoxesAndResetUnderneathBoxesReceivedCall(self):
+	def test_sendBoxesAndResetUnderneathBoxesReceivedCall(self): # keywords: reentrant
 		"""
 		If Stream.sendBoxes and Stream.reset are called underneath a call to protocol's boxesReceived,
 		everything works as usual.
@@ -2634,7 +2655,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			], proto.log[1:])
 
 
-	def test_sendBoxesUnderneathBoxesReceivedCall(self):
+	def test_sendBoxesUnderneathBoxesReceivedCall(self): # keywords: reentrant
 		"""
 		If Stream.sendBoxes is called underneath a call to protocol's boxesReceived,
 		everything works as usual.
@@ -2682,7 +2703,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				], proto.log[1:])
 
 
-	def test_serverResetsUnderneathBoxesReceivedCall(self):
+	def test_serverResetsUnderneathBoxesReceivedCall(self): # keywords: reentrant
 		"""
 		If client sends boxes that cause server to reset Stream, then a reset frame,
 		the C2S boxes are Fn.sack'ed before the transport is terminated.
@@ -2717,16 +2738,3 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				["boxesReceived", [["box0"], ["box1"]]],
 				["streamReset", WhoReset.server_app, u'reset for testing in MockMinervaProtocol._callStuff']
 			], proto.log[1:])
-
-
-	def test_boxThenResetWritesSACK(self):
-		"""
-		If client sends boxes and a reset frame, the boxes are Fn.sack'ed before the transport is terminated.
-		"""
-		transport0, parser0 = self._makeTransport()
-		frame0 = self._makeValidHelloFrame()
-
-		frames = [frame0, [Fn.gimme_boxes, None], [Fn.boxes, {"0": ["box0"], "1": ["box1"]}], [Fn.reset, u'', True]]
-		transport0.dataReceived(self.serializeFrames(frames))
-
-		self.aE([[Fn.sack, 1, []], [Fn.you_close_it]], parser0.gotFrames)
