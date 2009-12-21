@@ -408,7 +408,7 @@ class Stream(object):
 		# If no transports are connected, client will not get the reset frame. If client tries
 		# to connect a transport to a dead stream, they will get a tk_stream_attach_failure.
 		for t in self._transports:
-			t.reset(reasonString, applicationLevel=True)
+			t.writeReset(reasonString, applicationLevel=True)
 		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
 		try:
@@ -442,7 +442,7 @@ class Stream(object):
 		assert not self.disconnected
 		self.disconnected = True
 		for t in self._transports:
-			t.reset(reasonString, applicationLevel=False)
+			t.writeReset(reasonString, applicationLevel=False)
 		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
 		try:
@@ -880,10 +880,10 @@ class IMinervaTransport(ISimpleConsumer):
 		"""
 
 
-	def reset(reasonString, applicationLevel):
+	def writeReset(reasonString, applicationLevel):
 		"""
-		The stream that this transport is related to is resetting. Transport
-		must notify peer of the reset.
+		Write out a reset frame on this transport, to indicate that server is
+		resetting the Stream.
 
 		@param reasonString: plain-English reason why the stream is resetting
 		@type reasonString: unicode
@@ -1310,17 +1310,17 @@ class SocketTransport(protocol.Protocol):
 		if self._terminating:
 			return # TODO: explicit tests for this case
 
-		if self._sackDirty:
-			self._sackDirty = False
-			self._writeSACK()
+#		if self._sackDirty:
+#			self._sackDirty = False
+#			self._writeSACK()
 
 		self.transport.write(self._encodeFrame([Fn.you_close_it]))
 		self._terminating = True
 
 
-	def reset(self, reasonString, applicationLevel):
+	def writeReset(self, reasonString, applicationLevel):
 		"""
-		@see L{IMinervaTransport.reset}
+		@see L{IMinervaTransport.writeReset}
 		"""
 		if self._terminating:
 			return # TODO: explicit tests for this case

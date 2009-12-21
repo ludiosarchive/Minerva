@@ -171,7 +171,7 @@ class StreamTests(unittest.TestCase):
 		# box #0 is never given, so it cannot deliver any of them
 
 		s.boxesReceived(t, manyBoxes, 1) # wow, 5001 boxes take just one byte
-		self.aE([['reset', u'resources exhausted', False]], t.log)
+		self.aE([['writeReset', u'resources exhausted', False]], t.log)
 
 
 	def test_boxesReceivedResetsBecauseTooManyBytes(self):
@@ -187,7 +187,7 @@ class StreamTests(unittest.TestCase):
 		# box #0 is never given, so it cannot deliver any of them
 
 		s.boxesReceived(t, notManyBoxes, 4*1024*1024 + 1)
-		self.aE([['reset', u'resources exhausted', False]], t.log)
+		self.aE([['writeReset', u'resources exhausted', False]], t.log)
 
 
 	def test_sendBoxesAndActiveStreams(self):
@@ -469,8 +469,8 @@ class StreamTests(unittest.TestCase):
 		self.aE(False, s.disconnected)
 		s.reset(u'the reason')
 		self.aE(True, s.disconnected)
-		self.aE([["reset", u'the reason', True]], t1.log)
-		self.aE([["reset", u'the reason', True]], t2.log)
+		self.aE([["writeReset", u'the reason', True]], t1.log)
+		self.aE([["writeReset", u'the reason', True]], t2.log)
 
 
 	def test_internalResetCallsAllTransports(self):
@@ -485,8 +485,8 @@ class StreamTests(unittest.TestCase):
 		self.aE(False, s.disconnected)
 		s._internalReset(u'the reason')
 		self.aE(True, s.disconnected)
-		self.aE([["reset", u'the reason', False]], t1.log)
-		self.aE([["reset", u'the reason', False]], t2.log)
+		self.aE([["writeReset", u'the reason', False]], t1.log)
+		self.aE([["writeReset", u'the reason', False]], t2.log)
 
 
 	def test_cannotResetDisconnectedStream(self):
@@ -1779,15 +1779,15 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self._testExtraDataReceivedIgnored()
 
 
-	def test_reset(self):
-		self.transport.reset(u"the reason\u2000", applicationLevel=True)
+	def test_writeReset(self):
+		self.transport.writeReset(u"the reason\u2000", applicationLevel=True)
 		self._parseFrames()
 		self.aE([[Fn.reset, u"the reason\u2000", True], [Fn.you_close_it]], self.gotFrames)
 		self._testExtraDataReceivedIgnored()
 
 
-	def test_resetNotApplicationLevel(self):
-		self.transport.reset(u"the reason\u2000", applicationLevel=False)
+	def test_writeResetNotApplicationLevel(self):
+		self.transport.writeReset(u"the reason\u2000", applicationLevel=False)
 		self._parseFrames()
 		self.aE([[Fn.reset, u"the reason\u2000", False], [Fn.you_close_it]], self.gotFrames)
 		self._testExtraDataReceivedIgnored()
@@ -2598,6 +2598,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				self.aE([
 					["boxesReceived", [["box0"], ["box1"]]],
 				], proto.log[1:])
+
+
+	#def test_boxThenReset
 
 
 	def test_multipleResetFrames(self):

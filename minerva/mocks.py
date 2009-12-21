@@ -339,8 +339,8 @@ class DummySocketLikeTransport(_MockMixin):
 		self.log.append(['closeGently'])
 
 
-	def reset(self, reasonString, applicationLevel):
-		self.log.append(['reset', reasonString, applicationLevel])
+	def writeReset(self, reasonString, applicationLevel):
+		self.log.append(['writeReset', reasonString, applicationLevel])
 
 
 	def writeBoxes(self, queue, start):
