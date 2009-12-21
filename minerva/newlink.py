@@ -386,11 +386,6 @@ class Stream(object):
 				start = max(self._pretendAcked + 1, self.queue._seqNumAt0)
 			self._primaryTransport.writeBoxes(self.queue, start=start)
 
-			# Probably wrong; Twisted is responsible for starting the resumeProducing chain
-			### If we have a pull producer registered and queue is empty, pull more data
-			##if self._producer and not self._streamingProducer and len(self.queue) == 0:
-			##	self._producer.resumeProducing()
-
 
 	def _fireNotifications(self):
 		for d in self._notifications:
