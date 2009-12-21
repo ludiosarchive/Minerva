@@ -66,10 +66,10 @@ class BadFrame(Exception):
 
 class Frame(object):
 	"""
-	I represent a frame.
-
-	This class is mostly to make debugging and testing not
-	require the memorization of dozens of frame codes.
+	I represent a frame. When instantiated, I will check that
+	the frame type is valid, and that the number of arguments
+	in the frame is correct. I will not actually check the arguments,
+	though.
 
 	I do not have a `toBytes' method or similar because
 	different transports require different serializations.
@@ -145,7 +145,8 @@ Fn = Frame.names
 
 
 
-class WhoReset:
+class WhoReset(object):
+	__slots__ = []
 	server_minerva = 1
 	server_app = 2
 	client_minerva = 3
@@ -387,7 +388,7 @@ class Stream(object):
 		@type boxes: a sequence
 		"""
 		if self.disconnected:
-			raise RuntimeError("Cannot sendBoxes to disconnected Stream %r" % (self,))
+			raise RuntimeError("Cannot sendBoxes on disconnected Stream %r" % (self,))
 		# We don't need to self._producer.pauseProducing() if queue is too big here,
 		# because:
 		#     1) active S2C transport are responsible for pausing if there is TCP pressure
@@ -1184,7 +1185,7 @@ class SocketTransport(protocol.Protocol):
 				self._sackDirty = True
 				self._stream.boxesReceived(self, boxes, memorySizeOfBoxes)
 				# Remember that a lot can happen underneath that boxesReceived call, including
-				# a call to our own `reset` or `writeBoxes`.
+				# a call to our own `reset` or `closeGently` or `writeBoxes`.
 
 			elif frameType == Fn.box:
 				1/0
