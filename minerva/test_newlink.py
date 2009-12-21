@@ -489,6 +489,41 @@ class StreamTests(unittest.TestCase):
 		self.aE([["reset", u'the reason', False]], t2.log)
 
 
+	def test_cannotResetDisconnectedStream(self):
+		"""Trying to reset a disconnected Stream raises RuntimeError"""
+
+		# original reset caused by "application code"
+		factory, clock, s, t1 = self._makeStuff()
+		s.transportOnline(t1)
+		s.reset(u'reason')
+		self.aR(RuntimeError, lambda: s.reset(u'reason'))
+		self.aR(RuntimeError, lambda: s.reset(u'reason'))
+
+		# original reset caused by a transport
+		factory, clock, s, t1 = self._makeStuff()
+		s.transportOnline(t1)
+		s.resetFromClient(u'reason', True)
+		self.aR(RuntimeError, lambda: s.reset(u'reason'))
+		self.aR(RuntimeError, lambda: s.reset(u'reason'))
+
+
+	def test_cannotSendBoxesDisconnectedStream(self):
+		"""Trying to sendBoxes on a disconnected Stream raises RuntimeError"""
+		# original reset caused by "application code"
+		factory, clock, s, t1 = self._makeStuff()
+		s.transportOnline(t1)
+		s.reset(u'reason')
+		self.aR(RuntimeError, lambda: s.sendBoxes([["somebox"]]))
+		self.aR(RuntimeError, lambda: s.sendBoxes([["somebox"]]))
+
+		# original reset caused by a transport
+		factory, clock, s, t1 = self._makeStuff()
+		s.transportOnline(t1)
+		s.resetFromClient(u'reason', True)
+		self.aR(RuntimeError, lambda: s.sendBoxes([["somebox"]]))
+		self.aR(RuntimeError, lambda: s.sendBoxes([["somebox"]]))
+
+
 	def test_resetFromClient(self):
 		"""
 		If a transport says it has received a reset frame, streamReset is called on the protocol,
@@ -2431,33 +2466,17 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self.aE([[Fn.seqnum, 2], [Fn.box, ["s2cbox2"]]], parser1.gotFrames)
 
 
-	def test_resetUnderneathStreamStartedCall(self):
+	def test_sendBoxesAndResetUnderneathStreamStartedCall(self):
 		"""
-		If Stream.reset is called underneath a call to protocol's streamStarted,
+		If Stream.sendBoxes and Stream.reset are called underneath a call to protocol's streamStarted,
 		everything works as usual.
 		"""
 		1/0
 
 
-	def test_sendBoxesUnderneathStreamStartedCall(self):
+	def test_sendBoxesAndResetUnderneathBoxesReceivedCall(self):
 		"""
-		If Stream.sendBoxes is called underneath a call to protocol's streamStarted,
-		everything works as usual.
-		"""
-		1/0
-
-
-	def test_resetUnderneathBoxesReceivedCall(self):
-		"""
-		If Stream.reset is called underneath a call to protocol's boxesReceived,
-		everything works as usual.
-		"""
-		1/0
-
-
-	def test_sendBoxesUnderneathBoxesReceivedCall(self):
-		"""
-		If Stream.sendBoxes is called underneath a call to protocol's boxesReceived,
+		If Stream.sendBoxes and Stream.reset are called underneath a call to protocol's boxesReceived,
 		everything works as usual.
 		"""
 		1/0

@@ -170,7 +170,11 @@ class IMinervaProtocol(Interface):
 
 	I'm analogous to L{twisted.internet.interfaces.IProtocol}
 
-	Note that the stream never ends due to inactivity (there
+	Note: if you call stream.reset, some (or all) of the boxes you
+	have recently sent may be lost. If you need a proper close, use
+	your own boxes to determine that it is safe to close, then call reset.
+
+	Note: the stream never ends due to inactivity (there
 	are no timeouts in Stream). If you want to end the stream,
 	call stream.reset(u"reason why")
 
@@ -400,6 +404,8 @@ class Stream(object):
 		@param boxes: a sequence of boxes
 		@type boxes: a sequence
 		"""
+		if self.disconnected:
+			raise RuntimeError("Cannot sendBoxes to disconnected Stream %r" % (self,))
 		# We don't need to self._producer.pauseProducing() if queue is too big here,
 		# because:
 		#     1) active S2C transport are responsible for pausing if there is TCP pressure
@@ -409,6 +415,7 @@ class Stream(object):
 
 
 	# Called by the application only. Internal Minerva code uses _internalReset.
+	# This assumes _protocol has been instantiated.
 	def reset(self, reasonString):
 		"""
 		Reset (disconnect) with reason C{reasonString}.
@@ -428,7 +435,8 @@ class Stream(object):
 			del self._protocol
 
 
-	# Called by transports
+	# Called by transports.
+	# This assumes _protocol has been instantiated.
 	def resetFromClient(self, reasonString, applicationLevel):
 		"""
 		Private. Do not call this.
@@ -447,6 +455,7 @@ class Stream(object):
 			del self._protocol
 
 
+	# This assumes _protocol has been instantiated.
 	def _internalReset(self, reasonString):
 		assert not self.disconnected
 		self.disconnected = True
@@ -632,10 +641,10 @@ class Stream(object):
 	# This API resembles L{twisted.web.server.Request.notifyFinish}
 	def notifyFinish(self):
 		"""
-		Notify when finishing the request
+		Notify when finishing the request.
 
-		@return: A deferred. The deferred will be triggered when the
-		stream is finished -- always with a C{None} value.
+		@return: A deferred. The deferred's callback chain willl be fired when
+		this Stream is finished -- always with a C{None} value.
 		"""
 		self._notifications.append(defer.Deferred())
 		return self._notifications[-1]
@@ -766,6 +775,7 @@ class StreamTracker(object):
 		to the same number. Our anti-ACA patch for Python does not help here.
 		We use a key prefix and suffix that is unknown to the public to stop this attack.
 		"""
+		# TODO: maybe use salted md5 or salted sha1 to be safer
 		return self._preKey + key + self._postKey
 
 
