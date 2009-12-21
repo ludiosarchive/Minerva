@@ -427,8 +427,10 @@ class Stream(object):
 			t.reset(reasonString, applicationLevel=True)
 		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
-		self._protocol.streamReset(WhoReset.server_app, reasonString)
-		del self._protocol
+		try:
+			self._protocol.streamReset(WhoReset.server_app, reasonString)
+		finally:
+			del self._protocol
 
 
 	# Called by transports
@@ -444,8 +446,10 @@ class Stream(object):
 			t.closeGently()
 		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
-		self._protocol.streamReset(WhoReset.client_app if applicationLevel else WhoReset.client_minerva, reasonString)
-		del self._protocol
+		try:
+			self._protocol.streamReset(WhoReset.client_app if applicationLevel else WhoReset.client_minerva, reasonString)
+		finally:
+			del self._protocol
 
 
 	def _internalReset(self, reasonString):
@@ -455,8 +459,10 @@ class Stream(object):
 			t.reset(reasonString, applicationLevel=False)
 		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
-		self._protocol.streamReset(WhoReset.server_minerva, reasonString)
-		del self._protocol
+		try:
+			self._protocol.streamReset(WhoReset.server_minerva, reasonString)
+		finally:
+			del self._protocol
 
 
 	def boxesReceived(self, transport, boxes, memorySizeOfBoxes):
@@ -969,11 +975,7 @@ class SocketTransport(protocol.Protocol):
 
 
 	def _closeWith(self, errorType, *args):
-		# Even though the `if self._terminating` check isn't really needed right
-		# now, it become needed when SocketTransport has a connection timeout,
-		# because cbAuthFailed may call into this.
-		if self._terminating:
-			return # TODO: explicit tests for this case
+		assert not self._terminating
 		# TODO: sack before closing
 		invalidArgsFrameObj = [errorType]
 		invalidArgsFrameObj.extend(args)
@@ -1097,12 +1099,16 @@ class SocketTransport(protocol.Protocol):
 		d = self._firewall.checkTransport(self, self._stream)
 
 		def cbAuthOkay(_):
+			if self._terminating: # TODO: test this case
+				return
 			self._authed = True
 			self._stream.transportOnline(self)
 			# Remember, a lot of stuff can happen underneath that transportOnline call
 			# because it may construct a MinervaProtocol, which may even call reset.
 
 		def cbAuthFailed(_):
+			if self._terminating: # TODO: test this case
+				return
 			self._closeWith(Fn.tk_stream_attach_failure)
 
 		d.addCallbacks(cbAuthOkay, cbAuthFailed)
