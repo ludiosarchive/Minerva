@@ -2552,6 +2552,55 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			], proto.log[1:])
 
 
+	def test_sendBoxesUnderneathBoxesReceivedCall(self):
+		"""
+		If Stream.sendBoxes is called underneath a call to protocol's boxesReceived,
+		everything works as usual.
+		"""
+		class MyFactory(MockMinervaProtocolFactory):
+			def buildProtocol(self):
+				obj = self.protocol(when=['boxesReceived'], what=['sendBoxes'])
+				obj.factory = self
+				return obj
+
+		for clientResetsImmediately in (True, False):
+
+			self._resetStreamTracker(protocolFactoryClass=MyFactory)
+
+			transport0, parser0 = self._makeTransport()
+			frame0 = self._makeValidHelloFrame()
+
+			frames = [frame0, [Fn.gimme_boxes, None], [Fn.boxes, {"0": ["box0"], "1": ["box1"]}]]
+			if clientResetsImmediately:
+				frames.append([Fn.reset, u'', True]) # Surprise! Client wants to reset very immediately too.
+			transport0.dataReceived(self.serializeFrames(frames))
+
+			expected = [
+				[Fn.seqnum, 0],
+				[Fn.box, ["s2cbox0"]],
+				[Fn.box, ["s2cbox1"]],
+				[Fn.box, ["s2cbox2"]],
+			]
+
+			if clientResetsImmediately:
+				expected.append([Fn.you_close_it])
+			else:
+				expected.append([Fn.sack, 1, []]) # XXX What if boxes are really big? Maybe we should be writing out sack every time instead of last?
+
+			self.aE(expected, parser0.gotFrames)
+
+			proto = list(self.protocolFactory.instances)[0]
+			if clientResetsImmediately:
+				self.aE([
+					["boxesReceived", [["box0"], ["box1"]]],
+					["streamReset", WhoReset.client_app, u'']
+				], proto.log[1:])
+			else:
+				self.aE([
+					["boxesReceived", [["box0"], ["box1"]]],
+				], proto.log[1:])
+
+
 	def test_multipleResetFrames(self):
 		"""
 		If client sends a reset frame, all frames after the first reset frame are ignored,

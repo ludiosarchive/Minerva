@@ -807,36 +807,18 @@ cw.net.FrameType = {
 
 
 /**
- * Reasons why a Stream is ending
- *
- * TODO: are these really useful?
- *
  * @enum {number}
  */
-cw.net.StreamEndReason = {
-	/**
-	 * Application has decided Stream is no longer necessary.
-	 */
-	APPLICATION_CLOSE: 1,
-	/**
-	 * The page the Stream is hosted on is closing (onunload is probably happening
-	 * above the stack). XXX Should this be application level? Application can call stream.reset("page closing") if it wants to.
-	 * Should the stream even be reset?
-	 */
-	PAGE_CLOSING: 2,
-	/**
-	 * Some problem on the client or server is preventing transports from working properly.
-	 */
-	CONFIG_PROBLEM: 3,
-	/**
-	 * Minerva client lost contact with the server. XXX application should decide when contact is lost
-	 */
-	LOST_CONTACT: 4
+cw.net.WhoReset = {
+	server_minerva: 1,
+	server_app: 2,
+	client_minerva: 3,
+	client_app: 4
 }
 
 
 // Note: a tk_stream_attach_failure, or tk_acked_unsent_boxes, or tk_invalid_frame_type_or_arguments from server
-// should be treated as an internal reset.
+// should be treated as an internal reset (client_minerva).
 
 
 
@@ -847,6 +829,14 @@ cw.net.StreamEndReason = {
  * away the Comet logic and transports.
  *
  * Your Minerva protocols should implement this.
+ *
+ * Note: if you call stream.reset, some (or all) of the boxes you
+ * have recently sent may be lost. If you need a proper close, use
+ * your own boxes to determine that it is safe to close, then call reset.
+ *
+ * Note: the stream never ends due to inactivity (there
+ * are no timeouts in Stream). If you want to end the stream,
+ * call stream.reset(u"reason why")
  *
  * I'm analogous to L{twisted.internet.interfaces.IProtocol}
  *
@@ -870,14 +860,12 @@ cw.net.IMinervaProtocol = function() {
 	/**
 	 * Called when this stream has ended.
 	 *
-	 * @type {!cw.net.WhoReset} who Who reset the stream?
+	 * @type {!cw.net.WhoReset} whoReset Who reset the stream?
 	 * @type {string} reasonString The reason why stream has reset.
 	 */
-	cw.net.IMinervaProtocol.prototype.streamReset = function(who, reasonString) {
+	cw.net.IMinervaProtocol.prototype.streamReset = function(whoReset, reasonString) {
 
 	}
-
-	// TODO: streamQualityChanged
 
 	/**
 	 * Called whenever box(es) are received.
