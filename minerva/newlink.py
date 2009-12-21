@@ -1310,9 +1310,9 @@ class SocketTransport(protocol.Protocol):
 		if self._terminating:
 			return # TODO: explicit tests for this case
 
-#		if self._sackDirty:
-#			self._sackDirty = False
-#			self._writeSACK()
+		if self._sackDirty:
+			self._sackDirty = False
+			self._writeSACK()
 
 		self.transport.write(self._encodeFrame([Fn.you_close_it]))
 		self._terminating = True

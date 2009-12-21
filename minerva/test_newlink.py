@@ -2600,7 +2600,17 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				], proto.log[1:])
 
 
-	#def test_boxThenReset
+	def test_boxThenResetWritesSACK(self):
+		"""
+		If client sends boxes and a reset frame, the boxes are Fn.sack'ed before the transport is terminated.
+		"""
+		transport0, parser0 = self._makeTransport()
+		frame0 = self._makeValidHelloFrame()
+
+		frames = [frame0, [Fn.gimme_boxes, None], [Fn.boxes, {"0": ["box0"], "1": ["box1"]}], [Fn.reset, u'', True]]
+		transport0.dataReceived(self.serializeFrames(frames))
+
+		self.aE([[Fn.sack, 1, []], [Fn.you_close_it]], parser0.gotFrames)
 
 
 	def test_multipleResetFrames(self):
