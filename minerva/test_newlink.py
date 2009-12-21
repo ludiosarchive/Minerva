@@ -2600,6 +2600,43 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				], proto.log[1:])
 
 
+	def test_serverResetsUnderneathBoxesReceivedCall(self):
+		"""
+		If client sends boxes that cause server to reset Stream, then a reset frame,
+		the C2S boxes are Fn.sack'ed before the transport is terminated.
+		"""
+		class MyFactory(MockMinervaProtocolFactory):
+			def buildProtocol(self):
+				obj = self.protocol(when=['boxesReceived'], what=['reset'])
+				obj.factory = self
+				return obj
+
+		for clientResetsImmediately in (True, False):
+			self._resetStreamTracker(protocolFactoryClass=MyFactory)
+
+			transport0, parser0 = self._makeTransport()
+			frame0 = self._makeValidHelloFrame()
+
+			frames = [frame0, [Fn.gimme_boxes, None], [Fn.boxes, {"0": ["box0"], "1": ["box1"]}], [Fn.boxes, {"2": ["box2"]}]]
+			if clientResetsImmediately:
+				frames.append([Fn.reset, u"client's reason", True]) # Surprise! Client wants to reset very immediately too. But this is completely ignored.
+			transport0.dataReceived(self.serializeFrames(frames))
+
+			expected = [
+				[Fn.sack, 1, []],
+				[Fn.reset, u'reset for testing in MockMinervaProtocol._callStuff', True],
+				[Fn.you_close_it],
+			]
+
+			self.aE(expected, parser0.gotFrames)
+
+			proto = list(self.protocolFactory.instances)[0]
+			self.aE([
+				["boxesReceived", [["box0"], ["box1"]]],
+				["streamReset", WhoReset.server_app, u'reset for testing in MockMinervaProtocol._callStuff']
+			], proto.log[1:])
+
+
 	def test_boxThenResetWritesSACK(self):
 		"""
 		If client sends boxes and a reset frame, the boxes are Fn.sack'ed before the transport is terminated.

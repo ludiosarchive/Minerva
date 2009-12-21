@@ -1324,6 +1324,11 @@ class SocketTransport(protocol.Protocol):
 		"""
 		if self._terminating:
 			return # TODO: explicit tests for this case
+
+		if self._sackDirty:
+			self._sackDirty = False
+			self._writeSACK()
+
 		toSend = self._encodeFrame([Fn.reset, reasonString, applicationLevel])
 		toSend += self._encodeFrame([Fn.you_close_it])
 		self.transport.write(toSend)
