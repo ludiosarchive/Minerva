@@ -2441,15 +2441,33 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 	def test_multipleResetFrames(self):
 		"""
-		If client sends a reset frame, all frames after the reset frame are ignored.
+		If client sends a reset frame, all frames after the first reset frame are ignored,
+		and protocol gets information from the first reset frame.
 		"""
-		1/0
+		transport0, tcpTransport0 = self._makeTransport()
+		parser0 = self._makeParser()
+
+		transport0.dataReceived(self.serializeFrames([self._makeValidHelloFrame()]))
+		self._pushParser(tcpTransport0, parser0)
+		self.aE([], parser0.gotFrames)
+
+		stream = self.streamTracker.getStream('x'*26)
+
+		transport0.dataReceived(self.serializeFrames([[Fn.reset, "reason", True], [Fn.reset, "x", False], [9999, "whatever"]]))
+
+		self._pushParser(tcpTransport0, parser0)
+		self.aE([[Fn.you_close_it]], parser0.gotFrames)
+
+		proto = list(self.protocolFactory.instances)[0]
+		self.aE([["streamStarted", stream], ["streamReset", WhoReset.client_app, "reason"]], proto.getNew())
 
 
 	def test_simultaneousReset(self):
 		"""
 		If client sends a reset frame on multiple transports, both transports are terminated,
 		and protocol gets just 1 streamReset call.
+
+		Note: nothing special in the code makes this work, this test is a sanity check.
 		"""
 		transport0, tcpTransport0 = self._makeTransport()
 		parser0 = self._makeParser()
@@ -2476,5 +2494,4 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self.aE([[Fn.you_close_it]], parser1.gotFrames)
 
 		proto = list(self.protocolFactory.instances)[0]
-
 		self.aE([["streamStarted", stream], ["streamReset", WhoReset.client_app, "reason"]], proto.getNew())

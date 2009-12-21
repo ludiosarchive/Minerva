@@ -1112,8 +1112,9 @@ class SocketTransport(protocol.Protocol):
 		writeSACK = False
 		for frameString in frames:
 			assert isinstance(frameString, str)
-			##if self._terminating:
-			##	return # return instead of break to skip the `if writeSACK:` below.
+			if self._terminating:
+				writeSACK = False
+				break
 
 			try:
 				frameObj, position = decoders.strictDecoder.raw_decode(frameString)
