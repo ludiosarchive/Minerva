@@ -418,6 +418,8 @@ class Stream(object):
 		"""
 		Reset (disconnect) with reason C{reasonString}.
 		"""
+		if self.disconnected:
+			raise RuntimeError("Cannot reset disconnected Stream %r" % (self,))
 		self.disconnected = True
 		# If no transports are connected, client will not get the reset frame. If client tries
 		# to connect a transport to a dead stream, they will get a tk_stream_attach_failure.
@@ -436,6 +438,7 @@ class Stream(object):
 
 		Minerva transports call this when they get a reset frame from client.
 		"""
+		assert not self.disconnected
 		self.disconnected = True
 		for t in self._transports:
 			t.closeGently()
@@ -446,6 +449,7 @@ class Stream(object):
 
 
 	def _internalReset(self, reasonString):
+		assert not self.disconnected
 		self.disconnected = True
 		for t in self._transports:
 			t.reset(reasonString, applicationLevel=False)
@@ -467,7 +471,8 @@ class Stream(object):
 			self._protocol.boxesReceived(items)
 		# We deliver the deliverable boxes before resetting the connection (if necessary),
 		# just in case the client sent something useful.
-		if \
+		# Note: During the boxesReceived call above, someone may have reset the Stream! TODO: test for this case
+		if not self.disconnected and \
 		self._incoming.getUndeliveredCount() > self.maxUndeliveredBoxes or \
 		self._incoming.getMaxConsumption() > self.maxUndeliveredBytes:
 			self._internalReset(u'resources exhausted')
@@ -1107,6 +1112,9 @@ class SocketTransport(protocol.Protocol):
 		writeSACK = False
 		for frameString in frames:
 			assert isinstance(frameString, str)
+			##if self._terminating:
+			##	return # return instead of break to skip the `if writeSACK:` below.
+
 			try:
 				frameObj, position = decoders.strictDecoder.raw_decode(frameString)
 				if position != len(frameString):

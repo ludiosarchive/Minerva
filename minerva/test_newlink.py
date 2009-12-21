@@ -2429,3 +2429,52 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		self._pushParser(tcpTransport1, parser1)
 		self.aE([[Fn.seqnum, 2], [Fn.box, ["s2cbox2"]]], parser1.gotFrames)
+
+
+	def test_ifBoxesReceivedInProtocolCausesReset(self):
+		"""
+		If a call to protocol's boxesReceived resets the Stream, all frames are
+		ignored, including a reset frame.
+		"""
+		1/0
+
+
+	def test_multipleResetFrames(self):
+		"""
+		If client sends a reset frame, all frames after the reset frame are ignored.
+		"""
+		1/0
+
+
+	def test_simultaneousReset(self):
+		"""
+		If client sends a reset frame on multiple transports, both transports are terminated,
+		and protocol gets just 1 streamReset call.
+		"""
+		transport0, tcpTransport0 = self._makeTransport()
+		parser0 = self._makeParser()
+
+		transport0.dataReceived(self.serializeFrames([self._makeValidHelloFrame()]))
+		self._pushParser(tcpTransport0, parser0)
+		self.aE([], parser0.gotFrames)
+
+		stream = self.streamTracker.getStream('x'*26)
+
+		transport1, tcpTransport1 = self._makeTransport()
+		parser1 = self._makeParser()
+
+		transport1.dataReceived(self.serializeFrames([self._makeValidHelloFrame()]))
+		self._pushParser(tcpTransport1, parser1)
+		self.aE([], parser1.gotFrames)
+
+		transport0.dataReceived(self.serializeFrames([[Fn.reset, "reason", True]]))
+		transport1.dataReceived(self.serializeFrames([[Fn.reset, "reason", False]]))
+
+		self._pushParser(tcpTransport0, parser0)
+		self._pushParser(tcpTransport1, parser1)
+		self.aE([[Fn.you_close_it]], parser0.gotFrames)
+		self.aE([[Fn.you_close_it]], parser1.gotFrames)
+
+		proto = list(self.protocolFactory.instances)[0]
+
+		self.aE([["streamStarted", stream], ["streamReset", WhoReset.client_app, "reason"]], proto.getNew())
