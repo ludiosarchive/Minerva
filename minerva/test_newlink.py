@@ -2431,10 +2431,34 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self.aE([[Fn.seqnum, 2], [Fn.box, ["s2cbox2"]]], parser1.gotFrames)
 
 
-	def test_ifBoxesReceivedInProtocolCausesReset(self):
+	def test_resetUnderneathStreamStartedCall(self):
 		"""
-		If a call to protocol's boxesReceived resets the Stream, all frames are
-		ignored, including a reset frame.
+		If Stream.reset is called underneath a call to protocol's streamStarted,
+		everything works as usual.
+		"""
+		1/0
+
+
+	def test_sendBoxesUnderneathStreamStartedCall(self):
+		"""
+		If Stream.sendBoxes is called underneath a call to protocol's streamStarted,
+		everything works as usual.
+		"""
+		1/0
+
+
+	def test_resetUnderneathBoxesReceivedCall(self):
+		"""
+		If Stream.reset is called underneath a call to protocol's boxesReceived,
+		everything works as usual.
+		"""
+		1/0
+
+
+	def test_sendBoxesUnderneathBoxesReceivedCall(self):
+		"""
+		If Stream.sendBoxes is called underneath a call to protocol's boxesReceived,
+		everything works as usual.
 		"""
 		1/0
 

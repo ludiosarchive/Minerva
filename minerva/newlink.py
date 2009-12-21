@@ -204,7 +204,7 @@ class IMinervaProtocol(Interface):
 		@type whoReset: int
 
 		@param reasonString: why the L{Stream} has reset.
-		@type reasonString: L{unicode}
+		@type reasonString: C{unicode} or ASCII-only C{str}
 		"""
 
 
@@ -516,6 +516,8 @@ class Stream(object):
 		# to upload boxes without ever having set up a primary transport.
 		if self._protocol is None:
 			self._protocol = self._streamProtocolFactory.buildProtocol(self)
+		# Remember, that buildProtocol calls protocol's streamStarted, which can do
+		# anything to us, including reset or sendBoxes.
 
 
 	def transportOffline(self, transport):
@@ -1097,6 +1099,8 @@ class SocketTransport(protocol.Protocol):
 		def cbAuthOkay(_):
 			self._authed = True
 			self._stream.transportOnline(self)
+			# Remember, a lot of stuff can happen underneath that transportOnline call
+			# because it may construct a MinervaProtocol, which may even call reset.
 
 		def cbAuthFailed(_):
 			self._closeWith(Fn.tk_stream_attach_failure)
@@ -1175,6 +1179,8 @@ class SocketTransport(protocol.Protocol):
 						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 					boxes.append((seqNum, box))
 				self._stream.boxesReceived(self, boxes, memorySizeOfBoxes)
+				# Remember that a lot can happen underneath that boxesReceived call, including
+				# a call to our own `reset` or `writeBoxes`.
 				writeSACK = True
 
 			elif frameType == Fn.box:
