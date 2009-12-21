@@ -2303,7 +2303,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		return frame
 
 
-	def test_integration(self):
+	def test_boxSendingAndNewTransport(self):
 		# Send a hello frame and subscribe to boxes
 
 		transport0, parser0 = self._makeTransport()
@@ -2385,7 +2385,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]], [Fn.you_close_it]], parser1.gotFrames)
 
 
-	def test_integrationWithSucceedsTransport(self):
+	def test_boxSendingAndNewTransportWithSucceedsTransport(self):
 		# Send a hello frame and subscribe to boxes
 
 		transport0, parser0 = self._makeTransport()
@@ -2429,6 +2429,39 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		stream.sendBoxes([["s2cbox2"]])
 
 		self.aE([[Fn.seqnum, 2], [Fn.box, ["s2cbox2"]]], parser1.gotFrames)
+
+
+	def test_clientSendsAlreadyReceivedBoxes(self):
+		"""
+		Stream ignores boxes that were already received, and calls boxesReceived on
+		the protocol correctly.
+		"""
+		transport0, parser0 = self._makeTransport()
+
+		frame0 = self._makeValidHelloFrame()
+		transport0.dataReceived(self.serializeFrames([frame0]))
+		transport0.dataReceived(self.serializeFrames([[Fn.gimme_boxes, None]]))
+		stream = self.streamTracker.getStream('x'*26)
+
+		self.aE([], parser0.gotFrames)
+
+		proto = list(self.protocolFactory.instances)[0]
+
+		transport0.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"]}]]))
+		self.aE([[Fn.sack, 0, []]], parser0.gotFrames)
+
+		transport0.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"], "1": ["box1"]}]]))
+		self.aE([[Fn.sack, 0, []], [Fn.sack, 1, []]], parser0.gotFrames)
+
+		transport0.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"], "1": ["box1"], "2": ["box2"]}]]))
+		self.aE([[Fn.sack, 0, []], [Fn.sack, 1, []], [Fn.sack, 2, []]], parser0.gotFrames)
+
+		self.aE([
+			['streamStarted', stream],
+ 			['boxesReceived', [['box0']]],
+ 			['boxesReceived', [['box1']]],
+ 			['boxesReceived', [['box2']]]
+ 		], proto.getNew())
 
 
 	def test_multipleResetFrames(self):
