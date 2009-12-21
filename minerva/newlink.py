@@ -8,6 +8,7 @@ from minerva import abstract, decoders
 
 import simplejson
 import binascii
+import traceback
 from zope.interface import Interface, Attribute, implements
 from twisted.python import log
 from twisted.internet import protocol, defer
@@ -365,7 +366,7 @@ class Stream(object):
 		if len(self.queue) == 0:
 			return
 
-		print '_tryToSend', self._primaryTransport, self.queue
+		##print '_tryToSend', self._primaryTransport, self.queue
 		if self._primaryTransport is not None:
 			if self._pretendAcked is None:
 				start = None
@@ -990,6 +991,9 @@ class SocketTransport(protocol.Protocol):
 		"""
 		@see L{IMinervaTransport.writeBoxes}
 		"""
+		##print
+		##print
+		##traceback.print_stack()
 		if self._authed is not True or self._gotHello is not True:
 			# How did someone ask me to write boxes at this time? This should
 			# never happen.
@@ -1028,6 +1032,7 @@ class SocketTransport(protocol.Protocol):
 
 
 	def _writeSACK(self):
+		assert not self._terminating
 		sackFrame = (Fn.sack,) + self._stream.getSACK()
 		toSend = self._encodeFrame(sackFrame)
 		self.transport.write(toSend)
@@ -1120,7 +1125,6 @@ class SocketTransport(protocol.Protocol):
 		for frameString in frames:
 			assert isinstance(frameString, str)
 			if self._terminating:
-				writeSACK = False
 				break
 
 			try:
@@ -1228,7 +1232,7 @@ class SocketTransport(protocol.Protocol):
 			else:
 				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
-		if writeSACK:
+		if not self._terminating and writeSACK:
 			self._writeSACK()
 
 

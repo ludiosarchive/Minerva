@@ -2517,7 +2517,38 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		If Stream.sendBoxes and Stream.reset are called underneath a call to protocol's boxesReceived,
 		everything works as usual.
 		"""
-		1/0
+		class MyFactory(MockMinervaProtocolFactory):
+			def buildProtocol(self):
+				obj = self.protocol(when=['boxesReceived'], what=['sendBoxes', 'reset'])
+				obj.factory = self
+				return obj
+
+		for clientResetsImmediately in (True, False):
+
+			self._resetStreamTracker(protocolFactoryClass=MyFactory)
+
+			transport0, parser0 = self._makeTransport()
+			frame0 = self._makeValidHelloFrame()
+
+			frames = [frame0, [Fn.gimme_boxes, None], [Fn.boxes, {"0": ["box0"], "1": ["box1"]}]]
+			if clientResetsImmediately:
+				frames.append([Fn.reset, u'', True]) # Surprise! Client wants to reset very immediately too.
+			transport0.dataReceived(self.serializeFrames(frames))
+
+			self.aE([
+				[Fn.seqnum, 0],
+				[Fn.box, ["s2cbox0"]],
+				[Fn.box, ["s2cbox1"]],
+				[Fn.box, ["s2cbox2"]],
+				[Fn.reset, u'reset for testing in MockMinervaProtocol._callStuff', True],
+				[Fn.you_close_it]
+			], parser0.gotFrames)
+
+			proto = list(self.protocolFactory.instances)[0]
+			self.aE([
+				["boxesReceived", [["box0"], ["box1"]]],
+				["streamReset", WhoReset.server_app, u'reset for testing in MockMinervaProtocol._callStuff']
+			], proto.log[1:])
 
 
 	def test_multipleResetFrames(self):
