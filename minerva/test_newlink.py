@@ -2246,13 +2246,13 @@ class BasicMinervaFactoryTests(unittest.TestCase):
 			protocol = BasicMinervaProtocol
 
 		f = WorkingBasicMinervaFactory()
-		proto = f.buildProtocol(MockStream(None, None))
+		proto = f.buildProtocol()
 		self.assert_(isinstance(proto, BasicMinervaProtocol))
 
 
 	def test_unmodifiedFactoryIsNotCallable(self):
 		f = BasicMinervaFactory()
-		self.aR(TypeError, lambda: f.buildProtocol(MockStream(None, None)))
+		self.aR(TypeError, lambda: f.buildProtocol())
 
 
 
@@ -2285,16 +2285,16 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 
 	# We use the real StreamTracker
-	def _resetStreamTracker(self):
+	def _resetStreamTracker(self, protocolFactoryClass=MockMinervaProtocolFactory):
 		clock = task.Clock()
-		self.protocolFactory = MockMinervaProtocolFactory()
+		self.protocolFactory = protocolFactoryClass()
 		self.streamTracker = StreamTracker(self._reactor, clock, self.protocolFactory)
+		self.faceFactory = SocketFace(self._reactor, None, self.streamTracker, DummyFirewall(rejectAll=False))
 
 
 	def setUp(self):
 		self._reactor = FakeReactor()
 		self._resetStreamTracker()
-		self.faceFactory = SocketFace(self._reactor, None, self.streamTracker, DummyFirewall(rejectAll=False))
 
 
 	def _makeValidHelloFrame(self):
@@ -2436,7 +2436,80 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		If Stream.sendBoxes and Stream.reset are called underneath a call to protocol's streamStarted,
 		everything works as usual.
 		"""
-		1/0
+		class MyFactory(MockMinervaProtocolFactory):
+			def buildProtocol(self):
+				obj = self.protocol(when=['streamStarted'], what=['sendBoxes', 'reset'])
+				obj.factory = self
+				return obj
+
+		for clientResetsImmediately in (True, False):
+
+			self._resetStreamTracker(protocolFactoryClass=MyFactory)
+
+			transport0, parser0 = self._makeTransport()
+			frame0 = self._makeValidHelloFrame()
+
+			frames = [frame0, [Fn.gimme_boxes, None]]
+			if clientResetsImmediately:
+				frames.append([Fn.reset, u'', True]) # Surprise! Client wants to reset very immediately too.
+			transport0.dataReceived(self.serializeFrames(frames))
+
+			# In the implementation, streamStarted is called when the first transport attaches (i.e. before gimme_boxes).
+			# If the protocol calls sendBoxes and then reset, the boxes always get lost because no transport was primary.
+
+			self.aE([
+#				[Fn.seqnum, 0],
+#				[Fn.box, ["s2cbox0"]],
+#				[Fn.box, ["s2cbox1"]],
+#				[Fn.box, ["s2cbox2"]],
+				[Fn.reset, u'reset for testing in MockMinervaProtocol._callStuff', True],
+				[Fn.you_close_it]
+			], parser0.gotFrames)
+
+			proto = list(self.protocolFactory.instances)[0]
+			self.aE([["streamReset", WhoReset.server_app, u'reset for testing in MockMinervaProtocol._callStuff']], proto.log[1:])
+
+
+	def test_sendBoxesUnderneathStreamStartedCall(self):
+		"""
+		If Stream.sendBoxes is called underneath a call to protocol's streamStarted,
+		everything works as usual.
+		"""
+		class MyFactory(MockMinervaProtocolFactory):
+			def buildProtocol(self):
+				obj = self.protocol(when=['streamStarted'], what=['sendBoxes'])
+				obj.factory = self
+				return obj
+
+		for clientResetsImmediately in (True, False):
+
+			self._resetStreamTracker(protocolFactoryClass=MyFactory)
+
+			transport0, parser0 = self._makeTransport()
+			frame0 = self._makeValidHelloFrame()
+
+			frames = [frame0, [Fn.gimme_boxes, None]]
+			if clientResetsImmediately:
+				frames.append([Fn.reset, u'', True]) # Surprise! Client wants to reset very immediately too.
+			transport0.dataReceived(self.serializeFrames(frames))
+
+			expected = [
+				[Fn.seqnum, 0],
+				[Fn.box, ["s2cbox0"]],
+				[Fn.box, ["s2cbox1"]],
+				[Fn.box, ["s2cbox2"]],
+			]
+
+			if clientResetsImmediately:
+				expected.append([Fn.you_close_it])
+
+			self.aE(expected, parser0.gotFrames)
+
+			proto = list(self.protocolFactory.instances)[0]
+			if clientResetsImmediately:
+				self.aE([["streamReset", WhoReset.client_app, u'']], proto.log[1:])
+			else:
+				self.aE([], proto.log[1:])
 
 
 	def test_sendBoxesAndResetUnderneathBoxesReceivedCall(self):

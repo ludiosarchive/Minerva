@@ -247,24 +247,16 @@ class IMinervaFactory(Interface):
 	Interface for L{MinervaProtocol} factories.
 	"""
 
-	def buildProtocol(stream):
+	def buildProtocol():
 		"""
 		Called when a Stream has been established.
-
-		@param stream: the L{Stream} that was established.
-		@type stream: L{Stream}
 
 		Unlike the analogous Twisted L{twisted.internet.interfaces.IFactory},
 		you cannot refuse a connection here.
 
-		Unlike in Twisted, you already know a lot about the client by the time
-		C{buildProtocol} is called: their C{streamId} and C{credentialsData},
-		for example.
-
 		An implementation should
 			construct an object providing I{MinervaProtocol},
 			do C{obj.factory = self},
-			do C{obj.streamStarted(stream)},
 			and return C{obj},
 		with optionally more steps in between.
 
@@ -284,10 +276,9 @@ class BasicMinervaFactory(object):
 
 	protocol = None
 
-	def buildProtocol(self, stream):
+	def buildProtocol(self):
 		obj = self.protocol()
 		obj.factory = self
-		obj.streamStarted(stream)
 		return obj
 
 
@@ -374,6 +365,7 @@ class Stream(object):
 		if len(self.queue) == 0:
 			return
 
+		print '_tryToSend', self._primaryTransport, self.queue
 		if self._primaryTransport is not None:
 			if self._pretendAcked is None:
 				start = None
@@ -525,9 +517,9 @@ class Stream(object):
 		# This is done here, and not in _newPrimary, because client should be able
 		# to upload boxes without ever having set up a primary transport.
 		if self._protocol is None:
-			self._protocol = self._streamProtocolFactory.buildProtocol(self)
-		# Remember, that buildProtocol calls protocol's streamStarted, which can do
-		# anything to us, including reset or sendBoxes.
+			self._protocol = self._streamProtocolFactory.buildProtocol()
+			self._protocol.streamStarted(self)
+		# Remember streamStarted can do anything to us, including reset or sendBoxes.
 
 
 	def transportOffline(self, transport):
