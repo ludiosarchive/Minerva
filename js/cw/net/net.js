@@ -835,6 +835,10 @@ cw.net.StreamEndReason = {
 }
 
 
+// Note: a tk_stream_attach_failure, or tk_acked_unsent_boxes, or tk_invalid_frame_type_or_arguments from server
+// should be treated as an internal reset.
+
+
 
 /**
  * (copied from minerva/newlink.py)
@@ -866,9 +870,10 @@ cw.net.IMinervaProtocol = function() {
 	/**
 	 * Called when this stream has ended.
 	 *
-	 * @type {!cw.net.StreamEndReason} reason The reason why stream has ended.
+	 * @type {!cw.net.WhoReset} who Who reset the stream?
+	 * @type {string} reasonString The reason why stream has reset.
 	 */
-	cw.net.IMinervaProtocol.prototype.streamEnded = function(reason) {
+	cw.net.IMinervaProtocol.prototype.streamReset = function(who, reasonString) {
 
 	}
 

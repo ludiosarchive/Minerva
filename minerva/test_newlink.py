@@ -2540,6 +2540,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				[Fn.box, ["s2cbox0"]],
 				[Fn.box, ["s2cbox1"]],
 				[Fn.box, ["s2cbox2"]],
+				# TODO: should server write out a sack for client's two boxes? Seems pointless.
 				[Fn.reset, u'reset for testing in MockMinervaProtocol._callStuff', True],
 				[Fn.you_close_it]
 			], parser0.gotFrames)

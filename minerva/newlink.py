@@ -88,17 +88,6 @@ class Frame(object):
 
 		8: ('timestamp', 1, 1),
 		10: ('reset', 2, 2), # reset really means "Stream is dead to me. Also, transport kill because stream is dead."
-		# TODO XXX: Ideas for reset:
-		# Use reset only to indicate serious problems with the Stream. For application-level "close",
-		# agree on an application-level box that, when received, calls Stream.close()
-
-		# TODO: make def streamReset in IMinervaProtocol know which side initiated the reset, and reasonString
-
-		# TODO: in Minerva client, a tk_stream_attach_failure or tk_acked_unsent_boxes or tk_invalid_frame_type_or_arguments could be treated as an internal reset.
-
-		# Why applications being able to "reset" is nice:
-		# We may have features (SACK, or pre-SACK-buffer-flush) that make one side unable to successfully send/receive a box.
-		# In this case, it's great to be able to reset.
 
 		11: ('you_close_it', 0, 0),
 		12: ('start_timestamps', 3, 3),
