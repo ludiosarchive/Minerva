@@ -13,12 +13,23 @@ class Options(usage.Options):
 	synopsis = "[minervarun options]"
 
 	optParameters = [
-		["servera", "a", None,
-			"strports description for the server. "
+		["http1", "a", None,
+			"strports description for the HTTP server. "
 			"Example: 'tcp:80:interface=127.0.0.1'. "
 			"See twisted.application.strports for more examples."],
-		["serverb", "b", None,
-			"strports description for an optional second server."],
+		["http2", "b", None,
+			"strports description for an optional second HTTP server."],
+
+		# TODO: Combine "HTTP server" and "Minerva server". One server serves both. But SSL and non-SSL are different,
+		# so we'll still serve two.
+
+		["minerva1", "m", None,
+			"strports description for the Minerva server. "
+			"Example: 'tcp:80:interface=127.0.0.1'. "
+			"See twisted.application.strports for more examples."],
+		["minerva2", "n", None,
+			"strports description for an optional second Minerva server."],
+
 	]
 
 	optFlags = [
@@ -38,14 +49,14 @@ def makeService(config):
 	site = minervasite.makeSite(reactor)
 	site.displayTracebacks = not config["notracebacks"]
 
-	if not config['servera']:
-		raise ValueError("servera option is required.")
+	if not config['http1']:
+		raise ValueError("http1 option is required.")
 
-	servera = strports.service(config['servera'], site)
+	servera = strports.service(config['http1'], site)
 	servera.setServiceParent(s)
 
-	if config['serverb']:
-		serverb = strports.service(config['serverb'], site)
+	if config['http2']:
+		serverb = strports.service(config['http2'], site)
 		serverb.setServiceParent(s)
 
 	if os.environ.get('PYRELOADING'):
