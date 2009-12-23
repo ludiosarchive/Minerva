@@ -392,6 +392,7 @@ class Stream(object):
 
 		@param boxes: a sequence of boxes
 		@type boxes: a sequence
+
 		"""
 		if self.disconnected:
 			raise RuntimeError("Cannot sendBoxes on disconnected Stream %r" % (self,))
@@ -819,8 +820,7 @@ class StreamTracker(object):
 
 	def _disconnectAll(self):
 		# TODO: block new connections - stop listening on the faces? reject their requests quickly?
-		#pass
-		1/0
+		log.msg('in StreamTracker._disconnectAll; maybe you want to implement something')
 
 #		while True:
 #			try:
