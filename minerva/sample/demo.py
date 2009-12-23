@@ -21,10 +21,6 @@ class DemoProtocol(BasicMinervaProtocol):
 		self._reset = False
 
 
-	def _startSendDemo(self):
-		1/0
-
-
 	def boxesReceived(self, boxes):
 		# Remember, we cannot raise an exception here.
 
@@ -33,8 +29,8 @@ class DemoProtocol(BasicMinervaProtocol):
 			if isinstance(box, list) and len(box) == 2 and box[0] == 'echo':
 				send.append(box[1])
 
-			if isinstance(box, list) and len(box) == 1 and box[0] == 'send_demo':
-				self._startSendDemo()
+			if isinstance(box, list) and len(box) == 1 and box[0] == 'another_thing':
+				1/0
 
 		if send:
 			self.stream.sendBoxes(send)
@@ -86,7 +82,7 @@ def makeFace(clock=reactor):
 	# In the real world, you might want this to be more restrictive. Minerva has its own
 	# CSRF protection, so it's not critical.
 	policyString = '''\
-	<cross-domain-policy><allow-access-from domain="*" to-ports="*"/></cross-domain-policy>'''
+<cross-domain-policy><allow-access-from domain="*" to-ports="*"/></cross-domain-policy>'''.strip()
 
 	csrfStopper = CsrfStopper(secrets.CSRF_SECRET)
 	##uaToStreams = UAToStreamsCorrelator()
