@@ -525,7 +525,8 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_ignoreCallToSendBoxesZeroBoxes(self):
-		"""Stream ignores calls to sendBoxes with 0 boxes and doesn't call any transports."""
+		"""When Stream.sendBoxes is called with a falsy value (such as an empty list),
+		it doesn't call any transports."""
 		# original reset caused by "application code"
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1)
@@ -533,6 +534,8 @@ class StreamTests(unittest.TestCase):
 		s.sendBoxes([['box0']])
 		self.aE([['writeBoxes', s.queue, None]], t1.log)
 		s.sendBoxes([])
+		self.aE([['writeBoxes', s.queue, None]], t1.log)
+		s.sendBoxes(None) # implementation detail, hopefully no one relies on this
 		self.aE([['writeBoxes', s.queue, None]], t1.log)
 
 
