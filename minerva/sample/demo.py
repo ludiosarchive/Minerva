@@ -8,24 +8,55 @@ from twisted.web import resource, server
 from minerva.newlink import BasicMinervaProtocol, BasicMinervaFactory, StreamTracker
 from minerva.newlink import HttpFace, SocketFace
 
-from minerva.website import makeLayeredFirewall, UAToStreamsCorrelator, CsrfStopper
+from minerva.website import makeLayeredFirewall, CsrfTransportFirewall, NoopTransportFirewall, UAToStreamsCorrelator, CsrfStopper
 
 from minerva.sample import secrets
 
-clock = reactor
 
 
-class EchoProtocol(BasicMinervaProtocol):
+class DemoProtocol(BasicMinervaProtocol):
+
+	def __init__(self, clock):
+		self._clock = clock
+		self._reset = False
+
+
+	def _startSendDemo(self):
+		1/0
+
+
 	def boxesReceived(self, boxes):
-		self.stream.sendBoxes(boxes)
+		# Remember, we cannot raise an exception here.
 
-	def streamEnded(self, reason):
-		log.msg("Stream ended with reason %r" % (reason,))
+		send = []
+		for box in boxes:
+			if isinstance(box, list) and len(box) == 2 and box[0] == 'echo':
+				send.append(box[1])
+
+			if isinstance(box, list) and len(box) == 1 and box[0] == 'send_demo':
+				self._startSendDemo()
+
+		if send:
+			self.stream.sendBoxes(send)
+
+
+	def streamReset(self, whoReset, reasonString):
+		self._reset = True
+		log.msg("Stream reset: %r, %r" % (whoReset, reasonString))
 
 
 
-class EchoFactory(BasicMinervaFactory):
-	protocol = EchoProtocol
+class DemoFactory(BasicMinervaFactory):
+	protocol = DemoProtocol
+
+	def __init__(self, clock):
+		self._clock = clock
+
+
+	def buildStream(self):
+		stream = self.protocol(self._clock)
+		stream.factory = self
+		return stream
 
 
 
@@ -50,7 +81,7 @@ class Root(resource.Resource):
 
 
 
-def makeFace():
+def makeFace(clock=reactor):
 
 	# In the real world, you might want this to be more restrictive. Minerva has its own
 	# CSRF protection, so it's not critical.
@@ -58,10 +89,11 @@ def makeFace():
 	<cross-domain-policy><allow-access-from domain="*" to-ports="*"/></cross-domain-policy>'''
 
 	csrfStopper = CsrfStopper(secrets.CSRF_SECRET)
-	uaToStreams = UAToStreamsCorrelator()
-	firewall = makeLayeredFirewall(csrfStopper, uaToStreams)
-	tracker = StreamTracker(reactor, clock, EchoFactory())
-	tracker.observeStreams(firewall)
+	##uaToStreams = UAToStreamsCorrelator()
+	##firewall = makeLayeredFirewall(csrfStopper, uaToStreams)
+	firewall = CsrfTransportFirewall(NoopTransportFirewall(), csrfStopper)
+	tracker = StreamTracker(reactor, clock, DemoFactory(clock))
+	##tracker.observeStreams(firewall)
 
 	root = Root(clock, tracker, firewall)
 

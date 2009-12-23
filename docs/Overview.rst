@@ -232,7 +232,7 @@ By framed, we mean that applications send and receive frames, not octets.
 Why force applications to work with frames instead of octets? One might
 object and say that applications need direct access to octets, but consider these points:
 
-*	Minerva's frame overhead is minimal: just 3 extra bytes for the smallest frames.
+*	Minerva's frame overhead is minimal: just 4 extra bytes for the smallest frames.
 	This overhead is dwarfed by the per-packet TCP/IP overhead of ~52 bytes.
 	There is even more overhead when HTTP chunk lengths or TLS are involved.
 
@@ -273,7 +273,7 @@ instead of "unicode strings" or similar because:
 
 *	IE8, Chrome, Firefox, Safari, and Opera have native JSON encoders and decoders.
 	Using JSON at the Minerva level ensures the native-JSON bugs have been abstracted
-	away.
+	away. Note: at the present time, we don't use native JSON.
 
 We used to think there were more advantages, but they were found to be incorrect:
 

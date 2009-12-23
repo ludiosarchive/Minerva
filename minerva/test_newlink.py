@@ -524,6 +524,18 @@ class StreamTests(unittest.TestCase):
 		self.aR(RuntimeError, lambda: s.sendBoxes([["somebox"]]))
 
 
+	def test_ignoreCallToSendBoxesZeroBoxes(self):
+		"""Stream ignores calls to sendBoxes with 0 boxes and doesn't call any transports."""
+		# original reset caused by "application code"
+		factory, clock, s, t1 = self._makeStuff()
+		s.transportOnline(t1)
+		s.subscribeToBoxes(t1, None)
+		s.sendBoxes([['box0']])
+		self.aE([['writeBoxes', s.queue, None]], t1.log)
+		s.sendBoxes([])
+		self.aE([['writeBoxes', s.queue, None]], t1.log)
+
+
 	def test_resetFromClient(self):
 		"""
 		If a transport says it has received a reset frame, streamReset is called on the protocol,

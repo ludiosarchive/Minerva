@@ -184,6 +184,8 @@ class IMinervaProtocol(Interface):
 
 		You'll want to keep the stream around with C{self.stream = stream}.
 
+		You must *not* raise any exception. Wrap your code in try/except if necessary.
+
 		@param stream: the L{Stream} that was started.
 		@type stream: L{Stream}
 		"""
@@ -193,6 +195,8 @@ class IMinervaProtocol(Interface):
 		"""
 		Call when this stream has reset, either internally by Minerva server's Stream, or
 		a call to Stream.reset, or by a reset frame from the peer.
+
+		You must *not* raise any exception. Wrap your code in try/except if necessary.
 
 		@param whoReset: who reset the Stream. One of
 		C{WhoReset.{server_minerva,server_app,client_minerva,client_app}}.
@@ -206,6 +210,8 @@ class IMinervaProtocol(Interface):
 	def boxesReceived(boxes):
 		"""
 		Called whenever box(es) are received.
+
+		You must *not* raise any exception. Wrap your code in try/except if necessary.
 
 		@type boxes: list
 		@param boxes: a list of boxes
@@ -389,6 +395,10 @@ class Stream(object):
 		"""
 		if self.disconnected:
 			raise RuntimeError("Cannot sendBoxes on disconnected Stream %r" % (self,))
+
+		if not boxes:
+			return
+
 		# We don't need to self._producer.pauseProducing() if queue is too big here,
 		# because:
 		#     1) active S2C transport are responsible for pausing if there is TCP pressure
@@ -1168,7 +1178,7 @@ class SocketTransport(protocol.Protocol):
 				self._stream.subscribeToBoxes(self, succeedsTransport)
 
 			elif frameType == Fn.you_close_it:
-				# TODO: allow this for HTTP: finish the HTTP request
+				# TODO: allow this for HTTP; finish the HTTP request
 				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
 			elif frameType == Fn.boxes:
