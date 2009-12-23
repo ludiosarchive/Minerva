@@ -21,9 +21,12 @@ def strToNonNeg(value):
 	A very strict numeric-string to non-zero integer converter.
 	This should help prevent people from developing buggy clients
 	that just happen to work with our current server.
+
+	We don't use Python's int() because it allows a lot of things,
+	including int('-0') and int(' -0').
 	"""
 
-	# TODO: This (probably) makes things faster, but we need to test that it does. 
+	# TODO: This (probably) makes things faster, but we need a benchmark to know for sure. 
 	quick = _quickConvert_strToPosInt.get(value)
 	if quick is not None:
 		return quick
