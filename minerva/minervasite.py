@@ -1,6 +1,5 @@
 import os
 import cgi
-import simplejson as json
 
 from twisted.python import log
 from twisted.python.filepath import FilePath
@@ -11,6 +10,17 @@ from zope.interface import implements
 from cwtools import testing, jsimp
 from minerva import newlink
 
+
+from minerva.newlink import (
+	BasicMinervaProtocol, BasicMinervaFactory, StreamTracker, HttpFace, SocketFace)
+
+from minerva import abstract
+
+from minerva.website import (
+	makeLayeredFirewall, CsrfTransportFirewall, NoopTransportFirewall,
+	UAToStreamsCorrelator, CsrfStopper, CookieInstaller)
+
+from minerva.flashtest import pages
 
 
 class ConnectionTrackingHTTPChannel(http.HTTPChannel):
@@ -86,12 +96,12 @@ class SimpleResponse(resource.Resource):
 		request.setHeader('content-type', 'text/plain')
 		response = {}
 		response['you_sent_args'] = request.args
-		return json.dumps(response)
+		return simplejson.dumps(response)
 
 
 	def render_POST(self, request):
 		request.setHeader('Access-Control-Allow-Origin', '*')
-		return json.dumps({"you_posted_utf8": request.content.read().decode('utf-8')})
+		return simplejson.dumps({"you_posted_utf8": request.content.read().decode('utf-8')})
 
 
 
@@ -170,12 +180,12 @@ class Index(resource.Resource):
 	<li><a href="/@testres_Minerva/UnicodeRainbow/">UnicodeRainbow/</a>
 	<li><a href="/@testres_Minerva/NoOriginHeader/">NoOriginHeader/</a>
 	</ul>
-<li><a href="/sandbox/">/sandbox/</a>
+<li><a href="/form_sandbox/">/form_sandbox/</a>
 </ul>
 '''
 
 
-class Sandbox(resource.Resource):
+class FormSandbox(resource.Resource):
 	isLeaf = True
 
 	def __init__(self, reactor):
@@ -200,6 +210,73 @@ GET.
 
 
 
+
+class DemoProtocol(BasicMinervaProtocol):
+
+	def __init__(self, clock):
+		self._clock = clock
+		self._reset = False
+
+
+	def _sendDemo(self, iteration):
+		"""
+		Just a thing to send a lot of useless boxes S2C, for end-to-end testing.
+		With each iteration, it grows in box size, and # of boxes sent.
+		"""
+		if self._reset:
+			return
+
+		if iteration > 20:
+			return
+
+		box = []
+		numItems = iteration * 5
+		for n in numItems:
+			box.append('#' + str(iteration))
+
+		numBoxes = iteration
+
+		clock.callLater(0.2, self._sendDemo, iteration + 1)
+
+		self.stream.sendBoxes([box] * numBoxes)
+
+
+	def boxesReceived(self, boxes):
+		# Remember, we cannot raise an exception here.
+
+		send = []
+		for box in boxes:
+			if isinstance(box, list) and len(box) == 2 and box[0] == 'echo':
+				send.append(box[1])
+
+			if isinstance(box, list) and len(box) == 1 and box[0] == 'send_demo':
+				self._sendDemo(1)
+
+			# else ignore other boxes
+
+		self.stream.sendBoxes(send)
+
+
+	def streamReset(self, whoReset, reasonString):
+		self._reset = True
+		log.msg("Stream reset: %r, %r" % (whoReset, reasonString))
+
+
+
+class DemoFactory(BasicMinervaFactory):
+	protocol = DemoProtocol
+
+	def __init__(self, clock):
+		self._clock = clock
+
+
+	def buildStream(self):
+		stream = self.protocol(self._clock)
+		stream.factory = self
+		return stream
+
+
+
 class ResourcesForTest(resource.Resource):
 	def __init__(self, reactor):
 		resource.Resource.__init__(self)
@@ -216,7 +293,7 @@ class ResourcesForTest(resource.Resource):
 
 class Root(resource.Resource):
 
-	def __init__(self, reactor):
+	def __init__(self, reactor, csrfStopper, cookieInstaller):
 		import cwtools
 
 		resource.Resource.__init__(self)
@@ -237,11 +314,35 @@ class Root(resource.Resource):
 		testres_Minerva = ResourcesForTest(reactor)
 		self.putChild('@testres_Minerva', testres_Minerva)
 
-		self.putChild('sandbox', Sandbox(self._reactor))
+		self.putChild('form_sandbox', FormSandbox(self._reactor))
+
+		self.putChild('flashtest', pages.FlashTestPage(csrfStopper, cookieInstaller, directoryScan, JSPATH))
 
 
 
-def makeSite(reactor):
-	root = Root(reactor)
-	site = ConnectionTrackingSite(root, clock=reactor)
-	return site
+def makeMinervaAndHttp(reactor, csrfSecret):
+	clock = reactor
+
+	cookieInstaller = CookieInstaller(abstract.secureRandom)
+
+	# In the real world, you might want this to be more restrictive. Minerva has its own
+	# CSRF protection, so it's not critical.
+	policyString = '''\
+<cross-domain-policy><allow-access-from domain="*" to-ports="*"/></cross-domain-policy>'''.strip()
+
+	csrfStopper = CsrfStopper(csrfSecret)
+	##uaToStreams = UAToStreamsCorrelator()
+	##firewall = makeLayeredFirewall(csrfStopper, uaToStreams)
+	firewall = CsrfTransportFirewall(NoopTransportFirewall(), csrfStopper)
+	tracker = StreamTracker(reactor, clock, DemoFactory(clock))
+	##tracker.observeStreams(firewall)
+	##httpFace = HttpFace(clock, tracker, firewall)
+
+	socketFace = SocketFace(reactor, clock, tracker, firewall, policyString=policyString)
+
+	# the HTTP stuff
+
+	root = Root(reactor, csrfStopper, cookieInstaller)
+	httpSite = ConnectionTrackingSite(root, clock=clock)
+
+	return (socketFace, httpSite)

@@ -30,6 +30,8 @@ class Options(usage.Options):
 		["minerva2", "n", None,
 			"strports description for an optional second Minerva server."],
 
+		["secret", "s", None,
+			"A secret string used when generating CSRF tokens. Make this 32 bytes or more. If you have users, don't change it."],
 	]
 
 	optFlags = [
@@ -46,17 +48,23 @@ def makeService(config):
 
 	s = service.MultiService()
 
-	site = minervasite.makeSite(reactor)
-	site.displayTracebacks = not config["notracebacks"]
+	csrfSecret = config['secret']
+	if not csrfSecret:
+		raise ValueError("CSRF secret is required; see --help.")
+	if not len(csrfSecret) >= 32:
+		raise ValueError("CSRF secret %r is not long enough. Make it 32 bytes or more." % (csrfSecret,))
+
+	socketFace, httpSite = minervasite.makeMinervaAndHttp(reactor, csrfSecret)
+	httpSite.displayTracebacks = not config["notracebacks"]
 
 	if not config['http1']:
 		raise ValueError("http1 option is required.")
 
-	servera = strports.service(config['http1'], site)
+	servera = strports.service(config['http1'], httpSite)
 	servera.setServiceParent(s)
 
 	if config['http2']:
-		serverb = strports.service(config['http2'], site)
+		serverb = strports.service(config['http2'], httpSite)
 		serverb.setServiceParent(s)
 
 	if os.environ.get('PYRELOADING'):
