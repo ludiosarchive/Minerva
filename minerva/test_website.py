@@ -202,7 +202,9 @@ class CsrfTransportFirewallTestsHttpTransport(unittest.TestCase):
 	isSecure = False
 
 	def setUp(self):
-		self.cookieName = '_s' if self.isSecure else '__'
+		self.insecureCookieName = '__'
+		self.secureCookieName = '_s'
+		self.cookieName = self.secureCookieName if self.isSecure else self.insecureCookieName
 
 
 	def _makeThings(self, stopper, uaId, csrfTokenStr):
@@ -292,6 +294,17 @@ class CsrfTransportFirewallTestsHttpTransport(unittest.TestCase):
 class CsrfTransportFirewallTestsHttpsTransport(CsrfTransportFirewallTestsHttpTransport):
 
 	isSecure = True
+
+	def test_insecureCookieNotUsed(self):
+		"""The cookie sent for HTTP+HTTPS is not used for HTTPS requests."""
+		stopper = CsrfStopper("secret string")
+		uaId = "id of funny length probably"
+		token = stopper.makeToken(uaId)
+		firewall, transport = self._makeThings(stopper, None, token)
+		transport.request.received_cookies[self.insecureCookieName] = base64.b64encode(uaId)
+		ms = MockStream()
+		act = lambda: firewall.checkTransport(transport, ms)
+		return self.assertFailure(act(), RejectTransport)
 
 
 
