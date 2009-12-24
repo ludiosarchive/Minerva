@@ -139,6 +139,10 @@ class DummyRequest(_TwistedDummyRequest):
 		self.responseHeaders.setRawHeaders(name, [value])
 
 
+	def isSecure(self):
+		return False
+
+
 	def getCookie(self, name):
 		return self.received_cookies.get(name)
 

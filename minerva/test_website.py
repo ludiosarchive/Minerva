@@ -199,24 +199,30 @@ class NoopTransportFirewallTests(unittest.TestCase):
 class CsrfTransportFirewallTestsHttpTransport(unittest.TestCase):
 
 	timeout = 3
+	isSecure = False
 
-	def test_implements(self):
-		verify.verifyObject(ITransportFirewall, CsrfTransportFirewall(NoopTransportFirewall(), None))
+	def setUp(self):
+		self.cookieName = '_s' if self.isSecure else '__'
 
 
 	def _makeThings(self, stopper, uaId, csrfTokenStr):
 		firewall = CsrfTransportFirewall(NoopTransportFirewall(), stopper)
-		self._request = DummyRequest([])
-		transport = DummyHttpTransport(self._request)
+		request = DummyRequest([])
+		request.isSecure = lambda: self.isSecure
 		if uaId is not None:
-			self._request.received_cookies['__'] = base64.b64encode(uaId)
+			request.received_cookies[self.cookieName] = base64.b64encode(uaId)
+		transport = DummyHttpTransport(request)
 		if csrfTokenStr is not None:
 			transport.credentialsData['csrf'] = csrfTokenStr
 		return firewall, transport
 
 
 	def _setUaIdString(self, transport, string):
-		transport.request.received_cookies['__'] = string
+		transport.request.received_cookies[self.cookieName] = string
+
+
+	def test_implements(self):
+		verify.verifyObject(ITransportFirewall, CsrfTransportFirewall(NoopTransportFirewall(), None))
 
 
 	# Tests below are for "first transport" only
@@ -283,7 +289,15 @@ class CsrfTransportFirewallTestsHttpTransport(unittest.TestCase):
 	# TODO: consider checking uaId length in the future?
 
 
+class CsrfTransportFirewallTestsHttpsTransport(CsrfTransportFirewallTestsHttpTransport):
+
+	isSecure = True
+
+
+
 class CsrfTransportFirewallTestsSocketLikeTransport(CsrfTransportFirewallTestsHttpTransport):
+
+	isSecure = True
 
 	def _makeThings(self, stopper, uaId, csrfTokenStr):
 		firewall = CsrfTransportFirewall(NoopTransportFirewall(), stopper)

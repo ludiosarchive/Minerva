@@ -259,11 +259,11 @@ class NoopTransportFirewall(object):
 
 class _UAExtractorMixin(object):
 	def _getUserAgentFromRequest(self, request):
-		raw = request.getCookie(self.uaCookieName) # raw be None at this point
+		raw = request.getCookie(self.secureCookieName if request.isSecure() else self.insecureCookieName) # raw may be None at this point
 		try:
 			return binascii.a2b_base64(raw)
 		except (TypeError, binascii.Error):
-			raise RejectTransport("missing cookie %r or corrupt base64" % (self.uaCookieName,))
+			raise RejectTransport("missing cookie or corrupt base64")
 
 
 	def _getUserAgentFromCredentialsData(self, credentialsData):
@@ -304,7 +304,8 @@ class CsrfTransportFirewall(_UAExtractorMixin):
 
 	implements(ITransportFirewall)
 
-	uaCookieName = '__' # only for http transports
+	insecureCookieName = '__' # only for http
+	secureCookieName = '_s' # only for https
 	uaKeyInCred = 'uaId' # only for non-http transports
 	csrfKeyInCred = 'csrf' # both http and socket-like transports
 
@@ -318,6 +319,10 @@ class CsrfTransportFirewall(_UAExtractorMixin):
 		See L{ITransportFirewall.checkTransport}
 		"""
 		def cbChecked(_):
+			# Because the streamId chosen by the client is random and not sent
+			# automatically if another website forces a request to our domain(s),
+			# we only need to check the CSRF token for virgin Streams. The streamId
+			# is essentially just as secret as the CSRF token.
 			if stream.virgin:
 				uuid = self._getUserAgentId(transport)
 

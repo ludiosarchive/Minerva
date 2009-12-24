@@ -20,7 +20,8 @@ class FlashTestPage(resource.Resource):
 		self._JSPATH = JSPATH
 		
 		self._jinja2Env = jinja2.Environment()
-		self._basePath = FilePath('.')
+		self._basePath = FilePath(__file__).parent() # minerva/flashtest/
+		
 		self._fileName = 'flashtest.html'
 
 
