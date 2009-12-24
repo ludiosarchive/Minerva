@@ -196,10 +196,9 @@ class NoopTransportFirewallTests(unittest.TestCase):
 
 
 
-class CsrfTransportFirewallTestsHttpTransport(unittest.TestCase):
+class _CsrfTransportFirewallTests(object):
 
 	timeout = 3
-	isSecure = False
 
 	def setUp(self):
 		self.insecureCookieName = '__'
@@ -291,7 +290,26 @@ class CsrfTransportFirewallTestsHttpTransport(unittest.TestCase):
 	# TODO: consider checking uaId length in the future?
 
 
-class CsrfTransportFirewallTestsHttpsTransport(CsrfTransportFirewallTestsHttpTransport):
+
+class CsrfTransportFirewallTestsHttpTransport(_CsrfTransportFirewallTests, unittest.TestCase):
+
+	isSecure = False
+
+	def test_insecureCookieNotUsed(self):
+		"""For HTTP requests, the cookie that should arrive only in HTTPS requests is not read."""
+		stopper = CsrfStopper("secret string")
+		uaId = "id of funny length probably"
+		token = stopper.makeToken(uaId)
+		firewall, transport = self._makeThings(stopper, None, token)
+		transport.request.received_cookies[self.secureCookieName] = base64.b64encode(uaId)
+		ms = MockStream()
+		act = lambda: firewall.checkTransport(transport, ms)
+		return self.assertFailure(act(), RejectTransport)
+
+
+
+
+class CsrfTransportFirewallTestsHttpsTransport(_CsrfTransportFirewallTests, unittest.TestCase):
 
 	isSecure = True
 
@@ -308,7 +326,7 @@ class CsrfTransportFirewallTestsHttpsTransport(CsrfTransportFirewallTestsHttpTra
 
 
 
-class CsrfTransportFirewallTestsSocketLikeTransport(CsrfTransportFirewallTestsHttpTransport):
+class CsrfTransportFirewallTestsSocketLikeTransport(_CsrfTransportFirewallTests, unittest.TestCase):
 
 	isSecure = True
 
