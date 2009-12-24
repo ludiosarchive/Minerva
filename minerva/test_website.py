@@ -181,8 +181,9 @@ class CsrfStopperTests(unittest.TestCase):
 		self.assertRaises(RejectToken, lambda: c.checkToken(i, 'x' + token))
 		self.assertRaises(RejectToken, lambda: c.checkToken(i, 'xx' + token))
 
+		self.assertRaises(RejectToken, lambda: c.checkToken(i, token + 'x'))
+
 		# Surprise, all of these are still "valid" according to Python
-		##self.assertRaises(RejectToken, lambda: c.checkToken(i, token + 'x'))
 		##self.assertRaises(RejectToken, lambda: c.checkToken(i, token + '='))
 		##self.assertRaises(RejectToken, lambda: c.checkToken(i, token + '=='))
 		##self.assertRaises(RejectToken, lambda: c.checkToken(i, token + '==='))
