@@ -307,7 +307,7 @@ class CsrfTransportFirewall(_UAExtractorMixin):
 	insecureCookieName = '__' # only for http
 	secureCookieName = '_s' # only for https
 	uaKeyInCred = 'uaId' # only for non-http transports
-	csrfKeyInCred = 'csrf' # both http and socket-like transports
+	csrfKeyInCred = 'csrf' # both http(s) and socket-like transports
 
 	def __init__(self, parentFirewall, csrfStopper):
 		self._parentFirewall = parentFirewall
@@ -319,10 +319,11 @@ class CsrfTransportFirewall(_UAExtractorMixin):
 		See L{ITransportFirewall.checkTransport}
 		"""
 		def cbChecked(_):
-			# Because the streamId chosen by the client is random and not sent
-			# automatically if another website forces a request to our domain(s),
-			# we only need to check the CSRF token for virgin Streams. The streamId
-			# is essentially just as secret as the CSRF token.
+			# If an attacker forces user's browser to make requests to our domains,
+			# they cannot do anything to existing Streams because streamIds
+			# are treated as a secret by both sides. We only need to stop the case
+			# where attacker tries to set up a new Stream. This is why we check
+			# only virgin Streams for a CSRF token. 
 			if stream.virgin:
 				uuid = self._getUserAgentId(transport)
 

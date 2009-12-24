@@ -339,6 +339,17 @@ Design your protocol the way you would design any other frame-based protocol, bu
 
 
 
+Important security considerations
+========================
+Besides using the modified Python, Twisted, and simplejson, you need to:
+
+*	Keep the streamIds secret on both the client and server. Don't share
+	any streamId with the public. If you write user's streamId to a cookie,
+	be aware that any website can make a request where such cookie
+	is automatically sent.
+
+
+
 Uncommon features in Minerva
 =====================
 
