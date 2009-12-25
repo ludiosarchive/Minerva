@@ -968,7 +968,8 @@ class SocketTransport(protocol.Protocol):
 
 
 	def __repr__(self):
-		return '<newlink.SocketTransport authed=%r, terminating=%r, stream=%r, paused=%r, lastBoxSent=%r>' % (
+		return '<%s authed=%r, terminating=%r, stream=%r, paused=%r, lastBoxSent=%r>' % (
+			self.__class__.__name__,
 			self._authed, self._terminating, self._stream, self._paused, self.lastBoxSent)
 
 

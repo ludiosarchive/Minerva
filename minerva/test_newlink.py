@@ -1152,6 +1152,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 				self.transport.dataReceived(s)
 			self.aE('', self.t.value())
 			self.aE(True, self.t.disconnecting)
+			self.aE(True, self.t.aborted) # In the real world, this implies a TCP RST sent to the peer.
 
 
 	def test_modeBencode(self):
@@ -1301,6 +1302,16 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		verify.verifyObject(IPushProducer, self.transport)
 		verify.verifyObject(IPullProducer, self.transport)
 		verify.verifyObject(IMinervaTransport, self.transport)
+
+
+	def test_repr(self):
+		r = repr(self.transport)
+		self.assertIn('<SocketTransport', r)
+		self.assertIn('authed=False', r)
+		self.assertIn('terminating=False', r)
+		self.assertIn('stream=None', r)
+		self.assertIn('paused=False', r)
+		self.assertIn('lastBoxSent=-1', r)
 
 
 	def test_writeBoxesUnauthed(self):
