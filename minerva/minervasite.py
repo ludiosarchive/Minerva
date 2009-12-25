@@ -1,5 +1,6 @@
 import os
 import cgi
+import simplejson
 
 from twisted.python import log
 from twisted.python.filepath import FilePath

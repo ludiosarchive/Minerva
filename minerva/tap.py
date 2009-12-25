@@ -6,6 +6,7 @@ from twisted.application import service, strports
 from minerva import minervasite
 
 
+
 class Options(usage.Options):
 	"""
 	Define the options accepted by the I{twistd minervarun} plugin.
@@ -13,25 +14,22 @@ class Options(usage.Options):
 	synopsis = "[minervarun options]"
 
 	optParameters = [
-		["http1", "a", None,
+		["http", "h", None,
 			"strports description for the HTTP server. "
 			"Example: 'tcp:80:interface=127.0.0.1'. "
-			"See twisted.application.strports for more examples."],
-		["http2", "b", None,
-			"strports description for an optional second HTTP server."],
+			"Repeat this option for multiple servers."],
 
 		# TODO: Combine "HTTP server" and "Minerva server". One server serves both. But SSL and non-SSL are different,
 		# so we'll still serve two.
 
-		["minerva1", "m", None,
+		["minerva", "m", None,
 			"strports description for the Minerva server. "
-			"Example: 'tcp:80:interface=127.0.0.1'. "
-			"See twisted.application.strports for more examples."],
-		["minerva2", "n", None,
-			"strports description for an optional second Minerva server."],
+			"Example: 'ssl:444:privateKey=privateAndPublic.pem:interface=0'. "
+			"Repeat this option for multiple servers."],
 
 		["secret", "s", None,
-			"A secret string used when generating CSRF tokens. Make this 32 bytes or more. If you have users, don't change it."],
+			"A secret string used when generating CSRF tokens. "
+			"If you have users, don't change it. Make this 32 bytes or longer."],
 	]
 
 	optFlags = [
@@ -39,33 +37,60 @@ class Options(usage.Options):
 	]
 
 	longdesc = """\
-This starts a Minerva test server."""
+This starts the Minerva test server (minervasite), from which you can
+run the client-side unit tests in a browser, and try a few demo applications
+that use Minerva.
+
+See http://twistedmatrix.com/documents/9.0.0/api/twisted.application.strports.html
+or the source code for twisted.application.strports to see examples of strports
+descriptions.
+"""
+
+	def __init__(self):
+		usage.Options.__init__(self)
+		self['http'] = []
+		self['minerva'] = []
+	
+
+	def opt_http(self, option):
+		self['http'].append(option)
+
+
+	def opt_minerva(self, option):
+		self['minerva'].append(option)
+
+
+	def opt_secret(self, option):
+		if len(option) < 32:
+			raise usage.UsageError("CSRF secret %r is not long enough. Make it 32 bytes or longer." % (option,))
+		self['secret'] = option
+
+
+	def postOptions(self):
+		if not self['secret']:
+			raise usage.UsageError("A CSRF secret is required.")
+		if not self['http'] and not self['minerva']:
+			raise usage.UsageError("You probably want to start at least 1 http server or 1 minerva server.")
 
 
 
 def makeService(config):
 	from twisted.internet import reactor, task
 
-	s = service.MultiService()
+	multi = service.MultiService()
 
 	csrfSecret = config['secret']
-	if not csrfSecret:
-		raise ValueError("CSRF secret is required; see --help.")
-	if not len(csrfSecret) >= 32:
-		raise ValueError("CSRF secret %r is not long enough. Make it 32 bytes or more." % (csrfSecret,))
 
 	socketFace, httpSite = minervasite.makeMinervaAndHttp(reactor, csrfSecret)
 	httpSite.displayTracebacks = not config["notracebacks"]
 
-	if not config['http1']:
-		raise ValueError("http1 option is required.")
+	for httpStrport in config['http']:
+		httpServer = strports.service(httpStrport, httpSite)
+		httpServer.setServiceParent(multi)
 
-	servera = strports.service(config['http1'], httpSite)
-	servera.setServiceParent(s)
-
-	if config['http2']:
-		serverb = strports.service(config['http2'], httpSite)
-		serverb.setServiceParent(s)
+	for minervaStrport in config['minerva']:
+		minervaServer = strports.service(minervaStrport, socketFace)
+		minervaServer.setServiceParent(multi)
 
 	if os.environ.get('PYRELOADING'):
 		print 'Enabling reloader.'
@@ -78,4 +103,4 @@ def makeService(config):
 		looping = task.LoopingCall(stopper.checkForChanges)
 		looping.start(1.5, now=True)
 
-	return s
+	return multi

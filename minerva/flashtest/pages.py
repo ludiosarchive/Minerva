@@ -5,7 +5,7 @@ import simplejson
 from twisted.python.filepath import FilePath
 from twisted.web import resource, static
 
-from cwtools.htmltools import expandScript
+from cwtools.htmltools import expandScript, getTestPageCSS
 
 
 
@@ -34,6 +34,11 @@ class FlashTestPage(resource.Resource):
 
 		# This jinja2 stuff is for the html page, not the JavaScript
 		template = self._basePath.child(self._fileName).getContent().decode('utf-8')
-		dictionary = dict(expandScript=_expandScript, token=token, dumps=simplejson.dumps)
+		dictionary = dict(
+			expandScript=_expandScript,
+			getTestPageCSS=getTestPageCSS,
+			token=token,
+			dumps=simplejson.dumps,
+		)
 		rendered = self._jinja2Env.from_string(template).render(dictionary)
 		return rendered.encode('utf-8')

@@ -1,1 +1,41 @@
-Hello from flashtest
+<!doctype html>
+<html>
+<head>
+	<meta http-equiv="charset" content="text/html; charset=utf-8">
+	<title></title>
+	<style>
+		{{ getTestPageCSS() }}
+	</style>
+	<script>
+		{{ expandScript('// import cw.autoTitle') }}
+		window.CLOSURE_NO_DEPS = true;
+	</script>
+</head>
+<body>
+
+<div id="doc">
+</div>
+
+<div id="log"></div>
+
+<script>
+{{ expandScript("""
+goog.require('goog.debug.DivConsole');
+goog.require('goog.debug.Logger');
+""") }}
+</script>
+
+<script>
+var logDiv = document.getElementById('log');
+var divConsole = new goog.debug.DivConsole(logDiv);
+divConsole.setCapturing(true);
+
+var logger = goog.debug.Logger.getLogger('logger');
+logger.setLevel(goog.debug.Logger.Level.ALL);
+
+logger.info('Logger works.');
+
+</script>
+
+</body>
+</html>
