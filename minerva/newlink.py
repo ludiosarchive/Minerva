@@ -12,7 +12,9 @@ import traceback
 from zope.interface import Interface, Attribute, implements
 from twisted.python import log
 from twisted.internet import protocol, defer
+from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.interfaces import IPushProducer, IPullProducer, IProtocol, IProtocolFactory
+from twisted.python.failure import Failure
 from twisted.web import resource
 
 _postImportVars = vars().keys()
@@ -965,6 +967,11 @@ class SocketTransport(protocol.Protocol):
 		self._streamingProducer = False
 
 
+	def __repr__(self):
+		return '<newlink.SocketTransport authed=%r, terminating=%r, stream=%r, paused=%r, lastBoxSent=%r>' % (
+			self._authed, self._terminating, self._stream, self._paused, self.lastBoxSent)
+
+
 	def _encodeFrame(self, frameData):
 		assert self._mode != UNKNOWN
 		if self._mode in (BENCODE, INT32):
@@ -1294,9 +1301,11 @@ class SocketTransport(protocol.Protocol):
 			#	use the zlib Decompression Object and decompress(string[, max_length]), then check unconsumed_tail.
 			#	Note: there's probably one excess memory-copy with the unconsumed_tail stuff, but that's okay.
 
-			elif len(self._initialBuffer) >= 512: # TODO: really long enough to determine mode?
-				self._terminating = True # Terminating, but we can't even send any type of frame.
-				self.transport.loseConnection()
+			elif len(self._initialBuffer) >= 512: # TODO: increase or lower this, depending on how much we really need.
+				# Terminating, but we can't even send any type of frame.
+				self._terminating = True
+				# RST them instead of FIN, because they don't look like a well-behaving client anyway.
+				self.transport.abortConnection()
 				return
 
 			else:
