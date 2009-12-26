@@ -163,12 +163,11 @@ class BetterResource(resource.Resource):
 				Why 404 these URLs? To make sure people know
 				it's not okay to link to them.
 		"""
-		print 'looking at path', path
-		print request.prepath, request.postpath
-		print request.uri
-		#print request.prePathURL(), request.URLPath()
+		##print 'looking at path', path
+		##print request.prepath, request.postpath, request.uri
+		##print request.prePathURL(), request.URLPath()
 
-		# 404 requests for which there are no Resource
+		# 404 requests for which there is no suitable Resource
 		if not path in self.children:
 			return HelpfulNoResource()
 

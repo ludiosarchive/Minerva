@@ -14,7 +14,8 @@ from minerva.mocks import (
 )
 
 from minerva.website import (
-	CookieInstaller, BetterResource, RedirectingResource, RejectTransport, ITransportFirewall, CsrfTransportFirewall,
+	CookieInstaller, BetterResource, RedirectingResource, HelpfulNoResource,
+	RejectTransport, ITransportFirewall, CsrfTransportFirewall,
 	NoopTransportFirewall, AntiHijackTransportFirewall,
 	ICsrfStopper, CsrfStopper, RejectToken,
 	IStreamNotificationReceiver, makeLayeredFirewall, UAToStreamsCorrelator
@@ -90,12 +91,23 @@ class CookieInstallerTests(unittest.TestCase):
 
 
 
+class BetterResourceTesting(BetterResource):
+	def render_GET(self, request):
+		return 'At ' + str(request.URLPath())
+
+
+
+class BetterResourceTestingNoRenderMethod(BetterResource):
+	"""Notice how this is not a leaf, and has no render methods."""
+	def __init__(self):
+		BetterResource.__init__(self)
+		self.putChild('child', BetterResourceTesting())
+
+
+
 class BetterResourceTests(unittest.TestCase):
 
 	def _makeResource(self, isLeaf):
-		class BetterResourceTesting(BetterResource):
-			def render_GET(self, request):
-				return 'At ' + str(request.URLPath())
 		r = BetterResourceTesting()
 		r.isLeaf = isLeaf
 		return r
@@ -103,15 +115,29 @@ class BetterResourceTests(unittest.TestCase):
 
 	def test_rootURLNotRedirected(self):
 		req = DummyRequest([])
+		req.uri = '/'
 
 		r = self._makeResource(True)
 		site = server.Site(r)
 		res = site.getResourceFor(req)
-		self.assert_(isinstance(res, BetterResource), res)
+		self.assert_(isinstance(res, BetterResourceTesting), res)
+
+
+	def test_normalRequestNotRedirected(self):
+		req = DummyRequest(['hello', ''])
+		req.uri = '/hello/'
+
+		r = self._makeResource(False)
+		hello = self._makeResource(True)
+		r.putChild('hello', hello)
+		site = server.Site(r)
+		res = site.getResourceFor(req)
+		self.assert_(isinstance(res, BetterResourceTesting), res)
 
 
 	def test_redirectedToPathPlusSlash(self):
 		req = DummyRequest(['hello'])
+		req.uri = '/hello'
 
 		r = self._makeResource(False)
 		hello = self._makeResource(True)
@@ -122,9 +148,41 @@ class BetterResourceTests(unittest.TestCase):
 		self.aE("/hello/", res._location)
 
 
-#
-#	def test_redirects(self):
-#		1/0
+	def test_redirectedToPathPlusSlashForStrangeResource(self):
+		req = DummyRequest(['hello'])
+		req.uri = '/hello'
+
+		r = self._makeResource(False)
+		hello = BetterResourceTestingNoRenderMethod()
+		r.putChild('hello', hello)
+		site = server.Site(r)
+		res = site.getResourceFor(req)
+		self.assert_(isinstance(res, RedirectingResource), res)
+		self.aE("/hello/", res._location)
+
+
+	def test_404forBadPath(self):
+		req = DummyRequest(['hello'])
+		req.uri = '/hello'
+
+		r = self._makeResource(False)
+		nothello = self._makeResource(True)
+		r.putChild('nothello', nothello)
+		site = server.Site(r)
+		res = site.getResourceFor(req)
+		self.assert_(isinstance(res, HelpfulNoResource), res)
+
+
+	def test_404urlWithCrud(self):
+		req = DummyRequest(['hello', 'there'])
+		req.uri = '/hello/there'
+
+		r = self._makeResource(False)
+		hello = self._makeResource(True)
+		r.putChild('hello', hello)
+		site = server.Site(r)
+		res = site.getResourceFor(req)
+		self.assert_(isinstance(res, HelpfulNoResource), res)
 
 
 
