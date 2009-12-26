@@ -3,11 +3,13 @@ Classes for things that are closer to website-specific behavior,
 and not necessary for the use of Minerva faces.  
 """
 
+import cgi
 import base64
 import binascii
 import hashlib
 import hmac
 from twisted.internet import defer
+from twisted.web import resource
 from zope.interface import implements, Interface
 from collections import defaultdict
 
@@ -79,6 +81,110 @@ class CookieInstaller(object):
 		v = binascii.b2a_base64(rand).rstrip('\n')
 		request.addCookie(k, v, expires=self.expires, domain=self.domain, path=self.path, secure=secure)
 		return rand
+
+
+
+class HelpfulNoResource(resource.ErrorPage):
+	template = """\
+<!doctype html>
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+	<title>%(brief)s</title>
+</head>
+<body>
+	<h1>%(brief)s</h1>
+	<p>%(detail)s</p>
+</body>
+</html>"""
+
+	def __init__(self, message='Page not found. <a href="/">See the index?</a>'):
+		resource.ErrorPage.__init__(
+			self, 404, "404 Not Found", message)
+
+
+
+class RedirectingResource(resource.Resource):
+	template = """\
+<!doctype html>
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+	<title>Redirecting to %(escaped)s</title>
+</head>
+<body>
+	Redirecting to <a href="%(escaped)s">%(escaped)s</a>
+</body>
+</html>"""
+
+	def __init__(self, code, location):
+		"""
+		C{code} is the HTTP response code for the redirect, typically 301 or 302,
+		but possibly 303 or 307.
+		C{location} is the relative or absolute URL to redirect to.
+		"""
+		resource.Resource.__init__(self)
+		self._code = code
+		self._location = location
+
+
+	def render(self, request):
+		request.setResponseCode(self._code)
+		# twisted.web z9trunk protects against response-splitting, so we don't
+		# need to do anything to the Location header.
+		# Also, this is a relative redirect; non-standard, but all browsers accept it.
+		request.setHeader('Location', self._location)
+		return self.template % {'escaped': cgi.escape(self._location)}
+
+
+
+class BetterResource(resource.Resource):
+	"""
+	By default, twisted.web Resources:
+		- do NOT serve 404s if a URL is accessed as /page/extracrud
+		- do NOT redirect /page -> /page/, or /cat/page -> /cat/page/
+
+	Also, when /page is fetched, twisted.web Resource calls a render_*
+	method, and when /page/ is fetched, it looks up /page/'s children.
+	This aims to normalize the behavior, such that it looks for /page/'s
+	children even when either /page or /page/ are fetched.
+	"""
+
+	def __init__(self, cookieInstaller=None):
+		resource.Resource.__init__(self)
+		self._cookieInstaller = cookieInstaller
+
+
+	def getChildWithDefault(self, path, request):
+		"""
+		We want to serve the same 404 page for these two cases:
+			- resource was not found in self.children
+			- resource was found but there was postpath crud
+				Why 404 these URLs? To make sure people know
+				it's not okay to link to them.
+		"""
+		print 'looking at path', path
+		print request.prepath, request.postpath
+		print request.uri
+		#print request.prePathURL(), request.URLPath()
+
+		# 404 requests for which there are no Resource
+		if not path in self.children:
+			return HelpfulNoResource()
+
+		# Redirect from /page -> /page/ and so on
+		if request.postpath == [] and request.prepath != ['']:
+			# This is a non-standard relative redirect, which all browsers support.
+			# Note that request.uri are the raw octets that client sent in their GET/POST line.
+			return RedirectingResource(301, request.uri + '/')
+
+		# 404 requests that have extra crud
+		if self.children[path].isLeaf and request.postpath[0] != '':
+			assert len(request.postpath) == 1
+			return HelpfulNoResource()
+
+		return self.children[path]
+
 
 
 

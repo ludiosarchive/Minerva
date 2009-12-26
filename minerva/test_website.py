@@ -4,7 +4,8 @@ from zope.interface import implements, verify
 from twisted.trial import unittest
 
 from twisted.web.test.test_web import DummyChannel
-from twisted.web import http
+from twisted.web.server import Request
+from twisted.web import http, server
 
 from minerva.abstract import RandomFactory
 
@@ -13,7 +14,7 @@ from minerva.mocks import (
 )
 
 from minerva.website import (
-	CookieInstaller, RejectTransport, ITransportFirewall, CsrfTransportFirewall,
+	CookieInstaller, BetterResource, RedirectingResource, RejectTransport, ITransportFirewall, CsrfTransportFirewall,
 	NoopTransportFirewall, AntiHijackTransportFirewall,
 	ICsrfStopper, CsrfStopper, RejectToken,
 	IStreamNotificationReceiver, makeLayeredFirewall, UAToStreamsCorrelator
@@ -86,6 +87,45 @@ class CookieInstallerTests(unittest.TestCase):
 		self.aE(
 			['__=%s; Expires=Sat, 08 Dec 2029 23:55:42 GMT; Domain=.customdomain.com; Path=/' % base64.b64encode('x' * 16)],
 			self.request.cookies)
+
+
+
+class BetterResourceTests(unittest.TestCase):
+
+	def _makeResource(self, isLeaf):
+		class BetterResourceTesting(BetterResource):
+			def render_GET(self, request):
+				return 'At ' + str(request.URLPath())
+		r = BetterResourceTesting()
+		r.isLeaf = isLeaf
+		return r
+
+
+	def test_rootURLNotRedirected(self):
+		req = DummyRequest([])
+
+		r = self._makeResource(True)
+		site = server.Site(r)
+		res = site.getResourceFor(req)
+		self.assert_(isinstance(res, BetterResource), res)
+
+
+	def test_redirectedToPathPlusSlash(self):
+		req = DummyRequest(['hello'])
+
+		r = self._makeResource(False)
+		hello = self._makeResource(True)
+		r.putChild('hello', hello)
+		site = server.Site(r)
+		res = site.getResourceFor(req)
+		self.assert_(isinstance(res, RedirectingResource), res)
+		self.aE("/hello/", res._location)
+
+
+#
+#	def test_redirects(self):
+#		1/0
+
 
 
 

@@ -9,17 +9,14 @@ from twisted.web import resource, static, http, server
 from zope.interface import implements
 
 from cwtools import testing, jsimp
-from minerva import newlink
-
+from minerva import newlink, abstract
 
 from minerva.newlink import (
 	BasicMinervaProtocol, BasicMinervaFactory, StreamTracker, HttpFace, SocketFace)
 
-from minerva import abstract
-
 from minerva.website import (
 	makeLayeredFirewall, CsrfTransportFirewall, NoopTransportFirewall,
-	UAToStreamsCorrelator, CsrfStopper, CookieInstaller)
+	UAToStreamsCorrelator, CsrfStopper, CookieInstaller, BetterResource, HelpfulNoResource)
 
 from minerva.flashtest import pages
 
@@ -56,7 +53,7 @@ class ConnectionTrackingSite(server.Site):
 
 
 
-class DisplayConnections(resource.Resource):
+class DisplayConnections(BetterResource):
 	"""
 	Display a list of all connections connected to this server.
 	"""
@@ -72,7 +69,7 @@ class DisplayConnections(resource.Resource):
 
 
 
-class NoOriginHeader(resource.Resource):
+class NoOriginHeader(BetterResource):
 	"""
 	For testing XDR. See Minerva/js/CW/Net/TestNet.js
 	"""
@@ -86,7 +83,7 @@ class NoOriginHeader(resource.Resource):
 
 
 
-class SimpleResponse(resource.Resource):
+class SimpleResponse(BetterResource):
 	"""
 	For testing XHR. See Minerva/js/CW/Net/TestNet.js
 	"""
@@ -106,7 +103,7 @@ class SimpleResponse(resource.Resource):
 
 
 
-class UnicodeRainbow(resource.Resource):
+class UnicodeRainbow(BetterResource):
 	"""
 	For testing XHR. See Minerva/js/CW/Net/TestNet.js
 	"""
@@ -165,7 +162,7 @@ class UnicodeRainbow(resource.Resource):
 
 
 
-class Index(resource.Resource):
+class Index(BetterResource):
 	isLeaf = True
 
 	def render_GET(self, request):
@@ -182,11 +179,12 @@ class Index(resource.Resource):
 	<li><a href="/@testres_Minerva/NoOriginHeader/">NoOriginHeader/</a>
 	</ul>
 <li><a href="/form_sandbox/">/form_sandbox/</a>
+<li><a href="/flashtest/">/flashtest/</a>
 </ul>
 '''
 
 
-class FormSandbox(resource.Resource):
+class FormSandbox(BetterResource):
 	isLeaf = True
 
 	def __init__(self, reactor):
@@ -278,11 +276,12 @@ class DemoFactory(BasicMinervaFactory):
 
 
 
-class ResourcesForTest(resource.Resource):
+class ResourcesForTest(BetterResource):
 	def __init__(self, reactor):
 		resource.Resource.__init__(self)
 		self._reactor = reactor
 
+		#self.putChild('', HelpfulNoResource())
 		self.putChild('DisplayConnections', DisplayConnections())
 		self.putChild('SimpleResponse', SimpleResponse())
 		self.putChild('UnicodeRainbow', UnicodeRainbow())
@@ -292,7 +291,7 @@ class ResourcesForTest(resource.Resource):
 
 
 
-class Root(resource.Resource):
+class Root(BetterResource):
 
 	def __init__(self, reactor, csrfStopper, cookieInstaller):
 		import cwtools
