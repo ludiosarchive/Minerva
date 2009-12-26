@@ -91,9 +91,14 @@ class CookieInstallerTests(unittest.TestCase):
 
 
 
-class BetterResourceTesting(BetterResource):
+class Leaf(BetterResource):
+	isLeaf = True
 	def render_GET(self, request):
 		return 'At ' + str(request.URLPath())
+
+
+class NonLeaf(BetterResource):
+	pass
 
 
 
@@ -101,58 +106,60 @@ class BetterResourceTestingNoRenderMethod(BetterResource):
 	"""Notice how this is not a leaf, and has no render methods."""
 	def __init__(self):
 		BetterResource.__init__(self)
-		child = BetterResourceTesting()
-		child.isLeaf = True
+		child = Leaf()
 		self.putChild('child', child)
 
 
 
-class BetterResourceTestingNoRenderMethod2(BetterResource):
+class NonLeafWithIndexChild(BetterResource):
 	"""Notice how this is not a leaf, and has no render methods."""
 	def __init__(self):
 		BetterResource.__init__(self)
-		index = BetterResourceTesting()
-		index.isLeaf = True
+		index = Leaf()
 		self.putChild('', index)
 
 
 
 class BetterResourceTests(unittest.TestCase):
 
-	def _makeResource(self, isLeaf):
-		r = BetterResourceTesting()
-		r.isLeaf = isLeaf
-		return r
-
-
-	def test_rootURLNotRedirected(self):
-		req = DummyRequest([])
+	def test_rootURLNotRedirectedWithLeafRoot(self):
+		req = DummyRequest([''])
 		req.uri = '/'
 
-		r = self._makeResource(True)
+		r = Leaf()
 		site = server.Site(r)
 		res = site.getResourceFor(req)
-		self.assert_(isinstance(res, BetterResourceTesting), res)
+		self.assert_(isinstance(res, Leaf), res)
+
+
+	def test_rootURLNotRedirectedWithNonLeafRoot(self):
+		req = DummyRequest(['']) # the '' is necessary for this test, not for the above
+		req.uri = '/'
+
+		r = NonLeafWithIndexChild()
+		site = server.Site(r)
+		res = site.getResourceFor(req)
+		self.assert_(isinstance(res, Leaf), res)
 
 
 	def test_normalRequestNotRedirected(self):
 		req = DummyRequest(['hello', ''])
 		req.uri = '/hello/'
 
-		r = self._makeResource(False)
-		hello = self._makeResource(True)
+		r = NonLeaf()
+		hello = Leaf()
 		r.putChild('hello', hello)
 		site = server.Site(r)
 		res = site.getResourceFor(req)
-		self.assert_(isinstance(res, BetterResourceTesting), res)
+		self.assert_(isinstance(res, Leaf), res)
 
 
 	def test_redirectedToPathPlusSlash(self):
 		req = DummyRequest(['hello'])
 		req.uri = '/hello'
 
-		r = self._makeResource(False)
-		hello = self._makeResource(True)
+		r = NonLeaf()
+		hello = Leaf()
 		r.putChild('hello', hello)
 		site = server.Site(r)
 		res = site.getResourceFor(req)
@@ -160,12 +167,12 @@ class BetterResourceTests(unittest.TestCase):
 		self.aE("/hello/", res._location)
 
 
-	def test_redirectedToPathPlusSlash2(self):
+	def test_redirectedToPathPlusSlashForNonLeafResource(self):
 		req = DummyRequest(['hello'])
 		req.uri = '/hello'
 
-		r = self._makeResource(False)
-		hello = BetterResourceTestingNoRenderMethod2()
+		r = NonLeaf()
+		hello = NonLeafWithIndexChild()
 		r.putChild('hello', hello)
 		site = server.Site(r)
 		res = site.getResourceFor(req)
@@ -177,7 +184,7 @@ class BetterResourceTests(unittest.TestCase):
 		req = DummyRequest(['hello'])
 		req.uri = '/hello'
 
-		r = self._makeResource(False)
+		r = NonLeaf()
 		hello = BetterResourceTestingNoRenderMethod()
 		r.putChild('hello', hello)
 		site = server.Site(r)
@@ -196,8 +203,8 @@ class BetterResourceTests(unittest.TestCase):
 		req = DummyRequest(['hello'])
 		req.uri = '/hello'
 
-		r = self._makeResource(False)
-		nothello = self._makeResource(True)
+		r = NonLeaf()
+		nothello = Leaf()
 		r.putChild('nothello', nothello)
 		site = server.Site(r)
 		res = site.getResourceFor(req)
@@ -208,8 +215,8 @@ class BetterResourceTests(unittest.TestCase):
 		req = DummyRequest(['hello', 'there'])
 		req.uri = '/hello/there'
 
-		r = self._makeResource(False)
-		hello = self._makeResource(True)
+		r = NonLeaf()
+		hello = Leaf()
 		r.putChild('hello', hello)
 		site = server.Site(r)
 		res = site.getResourceFor(req)
