@@ -102,7 +102,7 @@ class NonLeaf(BetterResource):
 
 
 
-class BetterResourceTestingNoRenderMethod(BetterResource):
+class NonLeafWithChildChild(BetterResource):
 	"""Notice how this is not a leaf, and has no render methods."""
 	def __init__(self):
 		BetterResource.__init__(self)
@@ -185,7 +185,7 @@ class BetterResourceTests(unittest.TestCase):
 		req.uri = '/hello'
 
 		r = NonLeaf()
-		hello = BetterResourceTestingNoRenderMethod()
+		hello = NonLeafWithChildChild()
 		r.putChild('hello', hello)
 		site = server.Site(r)
 		res = site.getResourceFor(req)
