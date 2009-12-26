@@ -107,6 +107,16 @@ class BetterResourceTestingNoRenderMethod(BetterResource):
 
 
 
+class BetterResourceTestingNoRenderMethod2(BetterResource):
+	"""Notice how this is not a leaf, and has no render methods."""
+	def __init__(self):
+		BetterResource.__init__(self)
+		index = BetterResourceTesting()
+		index.isLeaf = True
+		self.putChild('', index)
+
+
+
 class BetterResourceTests(unittest.TestCase):
 
 	def _makeResource(self, isLeaf):
@@ -143,6 +153,19 @@ class BetterResourceTests(unittest.TestCase):
 
 		r = self._makeResource(False)
 		hello = self._makeResource(True)
+		r.putChild('hello', hello)
+		site = server.Site(r)
+		res = site.getResourceFor(req)
+		self.assert_(isinstance(res, RedirectingResource), res)
+		self.aE("/hello/", res._location)
+
+
+	def test_redirectedToPathPlusSlash2(self):
+		req = DummyRequest(['hello'])
+		req.uri = '/hello'
+
+		r = self._makeResource(False)
+		hello = BetterResourceTestingNoRenderMethod2()
 		r.putChild('hello', hello)
 		site = server.Site(r)
 		res = site.getResourceFor(req)
