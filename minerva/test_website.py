@@ -101,7 +101,9 @@ class BetterResourceTestingNoRenderMethod(BetterResource):
 	"""Notice how this is not a leaf, and has no render methods."""
 	def __init__(self):
 		BetterResource.__init__(self)
-		self.putChild('child', BetterResourceTesting())
+		child = BetterResourceTesting()
+		child.isLeaf = True
+		self.putChild('child', child)
 
 
 
@@ -148,7 +150,7 @@ class BetterResourceTests(unittest.TestCase):
 		self.aE("/hello/", res._location)
 
 
-	def test_redirectedToPathPlusSlashForStrangeResource(self):
+	def test_404forStrangeResourceBecauseNoIndex(self):
 		req = DummyRequest(['hello'])
 		req.uri = '/hello'
 
@@ -157,8 +159,14 @@ class BetterResourceTests(unittest.TestCase):
 		r.putChild('hello', hello)
 		site = server.Site(r)
 		res = site.getResourceFor(req)
-		self.assert_(isinstance(res, RedirectingResource), res)
-		self.aE("/hello/", res._location)
+		self.assert_(isinstance(res, HelpfulNoResource), res)
+
+		# Sanity check that child is accessible
+		req2 = DummyRequest(['hello', 'child'])
+		req2.uri = '/hello/child'
+		res2 = site.getResourceFor(req2)
+		self.assert_(isinstance(res2, RedirectingResource), res2)
+		self.aE("/hello/child/", res2._location)
 
 
 	def test_404forBadPath(self):

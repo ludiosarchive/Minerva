@@ -150,9 +150,10 @@ class BetterResource(resource.Resource):
 	children even when either /page or /page/ are fetched.
 	"""
 
-	def __init__(self, cookieInstaller=None):
-		resource.Resource.__init__(self)
-		self._cookieInstaller = cookieInstaller
+	# TODO: allow customizing behavior: options addSlashes and rejectExtra.
+
+#	def __init__(self):
+#		resource.Resource.__init__(self)
 
 
 	def getChildWithDefault(self, path, request):
@@ -162,6 +163,9 @@ class BetterResource(resource.Resource):
 			- resource was found but there was postpath crud
 				Why 404 these URLs? To make sure people know
 				it's not okay to link to them.
+
+		The implementation is not eager to add slashes first. If the resource
+		won't be found anyway, it returns 404s instead of redirects.
 		"""
 		##print 'looking at path', path
 		##print request.prepath, request.postpath, request.uri
@@ -172,13 +176,17 @@ class BetterResource(resource.Resource):
 			return HelpfulNoResource()
 
 		# 404 requests that have extra crud
-		if self.children[path].isLeaf:
-			if len(request.postpath) > 0 and request.postpath[0] != '':
-				assert len(request.postpath) == 1
-				return HelpfulNoResource()
+		if self.children[path].isLeaf and request.postpath and request.postpath[0] != '':
+			assert len(request.postpath) == 1
+			return HelpfulNoResource()
 
-		# Redirect from /page -> /page/ and so on
+		# Redirect from /page -> /page/ and so on. This needs to happen even
+		# if not `self.children[path].isLeaf`.
 		if request.postpath == [] and request.prepath != ['']:
+			# Avoid redirecting if the '' child for the target Resource doesn't exist
+			if not ('' in self.children[path].children or self.children[path].isLeaf):
+				return HelpfulNoResource()
+			
 			# This is a non-standard relative redirect, which all browsers support.
 			# Note that request.uri are the raw octets that client sent in their GET/POST line.
 			return RedirectingResource(301, request.uri + '/')
