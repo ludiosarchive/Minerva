@@ -223,6 +223,18 @@ class BetterResourceTests(unittest.TestCase):
 		self.assert_(isinstance(res, HelpfulNoResource), res)
 
 
+	def test_404urlWithSlashCrud(self):
+		req = DummyRequest(['hello', '', ''])
+		req.uri = '/hello//'
+
+		r = NonLeaf()
+		hello = Leaf()
+		r.putChild('hello', hello)
+		site = server.Site(r)
+		res = site.getResourceFor(req)
+		self.assert_(isinstance(res, HelpfulNoResource), res)
+
+
 
 
 class CsrfStopperTests(unittest.TestCase):

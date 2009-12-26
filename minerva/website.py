@@ -176,8 +176,7 @@ class BetterResource(resource.Resource):
 			return HelpfulNoResource()
 
 		# 404 requests that have extra crud
-		if self.children[path].isLeaf and request.postpath and request.postpath[0] != '':
-			assert len(request.postpath) == 1
+		if self.children[path].isLeaf and request.postpath not in ([], ['']):
 			return HelpfulNoResource()
 
 		# Redirect from /page -> /page/ and so on. This needs to happen even
