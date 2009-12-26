@@ -172,16 +172,17 @@ class BetterResource(resource.Resource):
 		if not path in self.children:
 			return HelpfulNoResource()
 
+		# 404 requests that have extra crud
+		if self.children[path].isLeaf:
+			if len(request.postpath) > 0 and request.postpath[0] != '':
+				assert len(request.postpath) == 1
+				return HelpfulNoResource()
+
 		# Redirect from /page -> /page/ and so on
 		if request.postpath == [] and request.prepath != ['']:
 			# This is a non-standard relative redirect, which all browsers support.
 			# Note that request.uri are the raw octets that client sent in their GET/POST line.
 			return RedirectingResource(301, request.uri + '/')
-
-		# 404 requests that have extra crud
-		if self.children[path].isLeaf and request.postpath[0] != '':
-			assert len(request.postpath) == 1
-			return HelpfulNoResource()
 
 		return self.children[path]
 
