@@ -15,7 +15,7 @@ class FlashTestPage(BetterResource):
 	isLeaf = True
 
 	def __init__(self, csrfStopper, cookieInstaller, directoryScan, JSPATH):
-		resource.Resource.__init__(self)
+		BetterResource.__init__(self)
 		self._csrfStopper = csrfStopper
 		self._cookieInstaller = cookieInstaller
 		self._directoryScan = directoryScan

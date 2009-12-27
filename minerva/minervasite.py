@@ -188,7 +188,7 @@ class FormSandbox(BetterResource):
 	isLeaf = True
 
 	def __init__(self, reactor):
-		resource.Resource.__init__(self)
+		BetterResource.__init__(self)
 		self._reactor = reactor
 
 
@@ -278,7 +278,7 @@ class DemoFactory(BasicMinervaFactory):
 
 class ResourcesForTest(BetterResource):
 	def __init__(self, reactor):
-		resource.Resource.__init__(self)
+		BetterResource.__init__(self)
 		self._reactor = reactor
 
 		#self.putChild('', HelpfulNoResource())
@@ -296,7 +296,7 @@ class Root(BetterResource):
 	def __init__(self, reactor, csrfStopper, cookieInstaller):
 		import cwtools
 
-		resource.Resource.__init__(self)
+		BetterResource.__init__(self)
 
 		self._reactor = reactor
 

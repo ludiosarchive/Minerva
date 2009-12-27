@@ -224,8 +224,8 @@ class BetterResourceTests(unittest.TestCase):
 
 
 	def test_404urlWithSlashCrud(self):
-		req = DummyRequest(['hello', '', ''])
-		req.uri = '/hello//'
+		req = DummyRequest(['hello', '', '', ''])
+		req.uri = '/hello///'
 
 		r = NonLeaf()
 		hello = Leaf()
@@ -233,6 +233,44 @@ class BetterResourceTests(unittest.TestCase):
 		site = server.Site(r)
 		res = site.getResourceFor(req)
 		self.assert_(isinstance(res, HelpfulNoResource), res)
+
+
+	# Right now, the behavior is to 404 if there are any extra slashes,
+	# except for the root Resource, which strange accepts 1 extra slash.
+
+#	def test_redirectWhenOneExtraSlash(self):
+#		req = DummyRequest(['hello', '', ''])
+#		req.uri = '/hello//'
+#
+#		r = NonLeaf()
+#		hello = Leaf()
+#		r.putChild('hello', hello)
+#		site = server.Site(r)
+#		res = site.getResourceFor(req)
+#		self.assert_(isinstance(res, RedirectingResource), res)
+#		self.aE("/hello/", res._location)
+#
+#
+#	def test_rootURLRedirectedOneExtraSlashWithLeafRoot(self):
+#		req = DummyRequest(['', ''])
+#		req.uri = '//'
+#
+#		r = Leaf()
+#		site = server.Site(r)
+#		res = site.getResourceFor(req)
+#		self.assert_(isinstance(res, RedirectingResource), res)
+#		self.aE("/", res._location)
+#
+#
+#	def test_rootURLNotRedirectedOneExtraSlashWithNonLeafRoot(self):
+#		req = DummyRequest(['', ''])
+#		req.uri = '//'
+#
+#		r = NonLeafWithIndexChild()
+#		site = server.Site(r)
+#		res = site.getResourceFor(req)
+#		self.assert_(isinstance(res, RedirectingResource), res)
+#		self.aE("/", res._location)
 
 
 
