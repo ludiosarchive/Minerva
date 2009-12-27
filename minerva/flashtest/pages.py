@@ -29,16 +29,6 @@ class FlashTestPage(BetterResource):
 
 	def render_GET(self, request):
 		cookie = self._cookieInstaller.getSet(request)
-#		if request.postpath == []:
-#			request.setResponseCode(301)
-#			# twisted.web z9trunk protects us from request-splitting
-#			request.setHeader('Location', request.path + '/') # This is a relative redirect; non-standard, but all browsers accept it.
-#			escaped = cgi.escape(request.path)
-#			return 'Moved permanently to <a href="%s">%s</a>' % (escaped, escaped)
-#		if request.postpath != ['']:
-#			request.setResponseCode(404)
-#			return '404 not found. <a href="/">See index.</a>'
-
 		token = self._csrfStopper.makeToken(cookie)
 
 		def _expandScript(s):
