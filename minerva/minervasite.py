@@ -16,9 +16,12 @@ from minerva.newlink import (
 
 from minerva.website import (
 	makeLayeredFirewall, CsrfTransportFirewall, NoopTransportFirewall,
-	UAToStreamsCorrelator, CsrfStopper, CookieInstaller, BetterResource, HelpfulNoResource)
+	UAToStreamsCorrelator, CsrfStopper)
 
 from minerva.flashtest import pages
+
+from webmagic.untwist import (
+	CookieInstaller, BetterResource, HelpfulNoResource)
 
 
 class ConnectionTrackingHTTPChannel(http.HTTPChannel):

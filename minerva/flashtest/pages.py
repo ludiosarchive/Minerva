@@ -6,8 +6,9 @@ import cgi
 from twisted.python.filepath import FilePath
 from twisted.web import resource, static
 
-from minerva.website import BetterResource
 from cwtools.htmltools import expandScript, getTestPageCSS
+
+from webmagic.untwist import BetterResource
 
 
 

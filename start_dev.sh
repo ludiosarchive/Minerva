@@ -1,6 +1,6 @@
 #!/bin/sh -e
 export JSPATH="$HOME/JSPATH"
-export PYTHONPATH=$HOME/Projects/Coreweb:$HOME/Projects/Minerva
+export PYTHONPATH=$HOME/Projects/Coreweb:$HOME/Projects/Minerva:$HOME/Projects/Webmagic
 export PYRELOADING=1
 
 echo "Using `which twistd`"
