@@ -52,7 +52,7 @@ class SocketBridge {
 		if (socket != null) {
 			var msg = socket.readUTFBytes(socket.bytesAvailable);
 			ExternalInterface.call("(function(id, data){ var inst = window.FlashSocket._instances[id]; if (inst.on_data) inst.on_data(data);})", id, msg);
-		}	
+		}
 	}
 	public static function connect(instance_id:String, host:String, port:Int) {
 		var socket:Socket = sockets.get(instance_id);

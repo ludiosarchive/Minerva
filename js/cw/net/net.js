@@ -5,6 +5,7 @@ goog.require('goog.userAgent');
 goog.require('goog.debug.Logger');
 goog.require('goog.json');
 goog.require('goog.string');
+goog.require('cw.externalinterface');
 
 goog.provide('cw.net');
 goog.provide('cw.net.ParseError');
@@ -707,6 +708,54 @@ cw.net.simpleRequest = function(verb, url, post) {
 
 
 // TODO: synchronous XHR / XMLHTTP (not possible for XDR)
+
+
+
+/**
+ * C{bridge} is the already-loaded Flash object that provides FlashConnector capabilities
+ *
+ * TODO: make this an IDisposable that removes its instance from instances_?
+ */
+cw.net.FlashSocket = function(bridge) {
+	/**
+	 * This FlashSocket's unique id.
+	 * @type {number}
+	 * @private
+	 */
+	this.id_ = ++cw.net.FlashSocket.instanceCount_;
+
+	this.bridge_ = bridge;
+
+	cw.net.FlashSocket.instances_[this.id_] = this;
+}
+
+
+cw.net.FlashSocket.prototype.connect_ = function(host, port) {
+	this.bridge_.CallFunction(cw.externalinterface.request('__FC_connect', this.id_, host, port));
+}
+
+
+cw.net.FlashSocket.prototype.writeAsciiSafe_ = function(string) {
+	this.bridge_.CallFunction(cw.externalinterface.request('__FC_write', this.id_, string));
+}
+
+
+cw.net.FlashSocket.prototype.close_ = function() {
+	this.bridge_.CallFunction(cw.externalinterface.request('__FC_close', this.id_, string));
+	delete cw.net.FlashSocket.instances_[this.id_];
+}
+
+
+
+cw.net.FlashSocket.instanceCount_ = 0;
+cw.net.FlashSocket.instances_ = {};
+
+// Closure Compiler will rename pretty much everything, but it can't
+// rename the ExternalInterface calls inside FlashConnector.hx. So,
+// we expose a global property to the instances map.
+window['__FS_instances'] = cw.net.FlashSocket.instances_;
+
+
 
 
 // Informal interfaces:

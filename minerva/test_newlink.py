@@ -1562,7 +1562,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		This test was designed for Bencode, but it works for Int32 as well.
 		"""
 		# TODO: no early detection of "too long" for WebSocket or HTTP. Only run for Bencode and int32?
-		self.transport.dataReceived('%d:' % (1024*1024 + 1))
+		self.transport.dataReceived('%d:' % (1024*1024 + 1,))
 		self._parseFrames()
 		self.aE([[Fn.tk_frame_corruption], [Fn.you_close_it]], self.gotFrames)
 		self._testExtraDataReceivedIgnored()

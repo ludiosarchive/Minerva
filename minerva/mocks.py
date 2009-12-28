@@ -12,6 +12,8 @@ from minerva.newlink import (
 	NoSuchStream, IMinervaProtocol, IMinervaFactory, StreamAlreadyExists
 )
 
+# The use of "mock" and "dummy" in this file is totally inconsistent.
+
 
 class _MockMixin(object):
 
