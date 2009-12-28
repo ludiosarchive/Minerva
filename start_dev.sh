@@ -10,4 +10,5 @@ looper twistd -r epoll -no minervarun \
 -h tcp:8111:interface=0 \
 -h ssl:444:privateKey=dev_keys/x.linuxwan.com-key.pem:interface=0 \
 -m tcp:8112:interface=0 \
+-m tcp:843:interface=0 \
 -m ssl:8113:privateKey=dev_keys/x.linuxwan.com-key.pem:interface=0

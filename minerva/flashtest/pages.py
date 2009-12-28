@@ -12,7 +12,7 @@ from webmagic.untwist import BetterResource
 
 
 
-class FlashTestPage(BetterResource):
+class Index(BetterResource):
 	isLeaf = True
 
 	def __init__(self, csrfStopper, cookieInstaller, directoryScan, JSPATH):
@@ -45,3 +45,13 @@ class FlashTestPage(BetterResource):
 		)
 		rendered = self._jinja2Env.from_string(template).render(dictionary)
 		return rendered.encode('utf-8')
+
+
+
+class FlashTestPage(resource.Resource): # ugh BetterResource is fail
+
+	def __init__(self, csrfStopper, cookieInstaller, directoryScan, JSPATH):
+		resource.Resource.__init__(self)
+
+		self.putChild('', Index(csrfStopper, cookieInstaller, directoryScan, JSPATH))
+		self.putChild('app.swf', static.File(FilePath(__file__).parent().child('app.swf').path))

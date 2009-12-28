@@ -170,20 +170,29 @@ class FlashConnector {
 	/**
 	 * Write an already-serialized frame `msg` to a socket. Returns `true` if write succeeded.
 	 */
-	public static inline function writeSerializedFrame(instance_id:String, msg:String) {
+	public static inline function writeSerializedFrames(instance_id:String, msgs:Array<String>) {
 		var socket = sockets.get(instance_id);
 		if (socket == null || !socket.connected) {
 			return false;
 		}
 
+		for(i in 0...msgs.length) {
+			var msg:String = msgs[i];
+
+			try {
+				socket.writeUnsignedInt(msg.length);
+
+				// Note: msg is not expected to be a unicode string! (Well, it is, but it only has US-ASCII codepoints.)
+				// We use writeUTFBytes because it is least-likely to be buggy in Flash Player. Back in 2008-10-08
+				// (see /home/z9/.git), we had problems with writeMultiByte(..., "iso-8859-1"); on some clients.
+				socket.writeUTFBytes(msg);
+			} catch (e : Dynamic) { // IOErrorEvent.IO_ERROR
+				// TODO: send a log message to javascript, or something
+				return false;
+			}
+		}
+
 		try {
-			socket.writeUnsignedInt(msg.length);
-
-			// Note: msg is not expected to be a unicode string! (Well, it is, but it only has US-ASCII codepoints.)
-			// We use writeUTFBytes because it is least-likely to be buggy in Flash Player. Back in 2008-10-08
-			// (see /home/z9/.git), we had problems with writeMultiByte(..., "iso-8859-1"); on some clients.
-			socket.writeUTFBytes(msg);
-
 			socket.flush();
 		} catch (e : Dynamic) { // IOErrorEvent.IO_ERROR
 			// TODO: send a log message to javascript, or something
@@ -204,7 +213,7 @@ class FlashConnector {
 
 		ExternalInterface.addCallback("__FC_connect", connect);
 		ExternalInterface.addCallback("__FC_close", close);
-		ExternalInterface.addCallback("__FC_writeSerializedFrame", writeSerializedFrame);
+		ExternalInterface.addCallback("__FC_writeSerializedFrames", writeSerializedFrames);
 	}
 
 	public static function main() {

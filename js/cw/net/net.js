@@ -9,6 +9,7 @@ goog.require('goog.Disposable');
 goog.require('cw.externalinterface');
 
 goog.provide('cw.net');
+goog.provide('cw.net.FlashSocket');
 goog.provide('cw.net.ParseError');
 goog.provide('cw.net.RequestStillActive');
 goog.provide('cw.net.RequestAborted');
@@ -758,8 +759,8 @@ cw.net.FlashSocket.prototype.connect_ = function(host, port) { // , timeout
 }
 
 
-cw.net.FlashSocket.prototype.writeSerializedFrame_ = function(string) {
-	this.bridge_.CallFunction(cw.externalinterface.request('__FC_writeSerializedFrame', this.id_, string));
+cw.net.FlashSocket.prototype.writeSerializedFrames_ = function(string) {
+	this.bridge_.CallFunction(cw.externalinterface.request('__FC_writeSerializedFrames', this.id_, string));
 }
 
 

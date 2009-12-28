@@ -9,6 +9,7 @@
 	<script>
 		{{ expandScript('// import cw.autoTitle') }}
 		window.CLOSURE_NO_DEPS = true;
+		window.CSRF_TOKEN = {{ dumps(token) }};
 	</script>
 </head>
 <body>
@@ -18,10 +19,17 @@
 
 <div id="log"></div>
 
+<div id="appswf"></div>
+
 <script>
 {{ expandScript("""
 goog.require('goog.debug.DivConsole');
 goog.require('goog.debug.Logger');
+goog.require('goog.async.Deferred');
+goog.require('goog.json.Serializer');
+goog.require('swfobject');
+goog.require('cw.net.FlashSocket');
+goog.require('cw.whoami');
 """) }}
 </script>
 
@@ -34,6 +42,69 @@ var logger = goog.debug.Logger.getLogger('logger');
 logger.setLevel(goog.debug.Logger.Level.ALL);
 
 logger.info('Logger works.');
+
+var serializer = new goog.json.Serializer();
+
+function ser(data) {
+	return serializer.serialize(data);
+}
+
+function loadSWF() {
+	var flashvars = {'onloadcallback': '_appswfLoaded'};
+	var params = {};
+	swfobject.embedSWF("app.swf", "appswf", "30", "30", "9.0.0", "expressInstall.swf", flashvars, params); // no attributes
+}
+
+function _appswfLoaded() {
+	connect(document.getElementById('appswf'));
+}
+
+function connect(bridge) {
+	var fs = new cw.net.FlashSocket(bridge);
+	var websiteHostPort = (''+document.location.host).split(':');
+	var host = websiteHostPort[0];
+	var port = 843;
+
+	fs.onconnect = function() {
+		try {
+			logger.info('onconnect');
+
+			var streamId = goog.string.getRandomString() + goog.string.getRandomString();
+			var uaId = cw.whoami.getUaId();
+			var helloData = {'n': 0, 'v': 2, 'w': true, 'i': streamId, 'c': {'uaId': uaId, 'csrf': window.CSRF_TOKEN}, 'r': 9999999, 'm': 3600};
+			var helloFrame = [5, helloData];
+
+			var boxesFrame = [0, {"0": ['send_demo']}];
+
+			fs.writeSerializedFrames_([ser(helloFrame), ser(boxesFrame)]);
+		} catch(e) {
+			logger.severe('error in onconnect', e);
+		}
+	}
+
+	fs.onclose = function() {
+		logger.info('onclose');
+		this.dispose();
+	}
+
+	fs.onioerror = function(errorText) {
+		logger.severe('onioerror: ' + errorText);
+		this.dispose();
+	}
+
+	fs.onsecurityerror = function(errorText) {
+		logger.severe('onsecurityerror: ' + errorText);
+		this.dispose();
+	}
+
+	fs.onframes = function(frames, hadError) {
+		logger.info('onframes with '+frames.length+' frame(s). hadError? ' + hadError);
+	}
+
+	fs.connect_(host, port);
+}
+
+loadSWF();
 
 </script>
 

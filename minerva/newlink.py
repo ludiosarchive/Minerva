@@ -1096,8 +1096,8 @@ class SocketTransport(protocol.Protocol):
 		self.streamId = streamId
 		self.credentialsData = credentialsData
 		self.transportNumber = transportNumber
-		self._maxReceiveBytes = maxReceiveBytes
-		self._maxOpenTime = maxOpenTime
+		self._maxReceiveBytes = maxReceiveBytes # TODO: actually implement. Or not?
+		self._maxOpenTime = maxOpenTime # TODO: actually implement. Or not?
 
 		# We get/build a Stream instance before the firewall checkTransport
 		# because the firewall needs to know if we're working with a virgin
