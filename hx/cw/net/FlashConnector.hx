@@ -34,41 +34,93 @@ import flash.external.ExternalInterface;
 import flash.net.Socket;
 import flash.system.Security;
 
-class SocketBridge {
+// TODO: the design could be better by having a separate object for each
+// connection, rather than passing the instance_id around. With this better
+// design, we wouldn't have this crazy global `expectingLength' map.
+
+// TODO: reject frames over a certain size, to prevent accidental DoS
+
+
+class FlashConnector {
 	public static var sockets:Hash<Socket> = new Hash();
 
-	public static function handle_connect(id:String, event) {
-		ExternalInterface.call("(function(id){ var inst = __FS_instances[id]; if (inst.on_connect) inst.on_connect();})", id);
+	// Map of socket # as String -> length of frame the socket is expecting (or -1 if not known)
+	public static var expectingLength:Hash<Int> = new Hash();
+
+	public static inline function handle_connect(id:String, event) {
+		ExternalInterface.call("(function(id){ var inst = __FS_instances[id]; if (inst.onconnect) inst.onconnect();})", id);
 	}
 
-	public static function handle_close(id:String, event) {
+	public static inline function handle_close(id:String, event) {
 		sockets.remove(id);
-		ExternalInterface.call("(function(id){ var inst = __FS_instances[id]; if (inst.on_close) inst.on_close();})", id);
+		expectingLength.remove(id);
+		ExternalInterface.call("(function(id){ var inst = __FS_instances[id]; if (inst.onclose) inst.onclose();})", id);
 	}
 
-	public static function handle_io_error(id:String, event) {
-		ExternalInterface.call("(function(id, err){ var inst = __FS_instances[id]; if (inst.on_io_error) inst.on_io_error(err);})", id, event.text);
+	public static inline function handle_io_error(id:String, event) {
+		ExternalInterface.call("(function(id, err){ var inst = __FS_instances[id]; if (inst.onioerror) inst.onioerror(err);})", id, event.text);
 	}
 
-	public static function handle_security_error(id:String, event) {
-		ExternalInterface.call("(function(id, err){ var inst = __FS_instances[id]; if (inst.on_security_error) inst.on_security_error(err);})", id, event.text);
+	public static inline function handle_security_error(id:String, event) {
+		ExternalInterface.call("(function(id, err){ var inst = __FS_instances[id]; if (inst.onsecurityerror) inst.onsecurityerror(err);})", id, event.text);
 	}
 
-	public static function handle_data(id:String, event) {
+	public static inline function handle_data(id:String, event) {
 		var socket:Socket = sockets.get(id);
 		if (socket != null) {
-			var msg = socket.readUTFBytes(socket.bytesAvailable);
-			ExternalInterface.call("(function(id, data){ var inst = __FS_instances[id]; if (inst.on_data) inst.on_data(data);})", id, msg);
+			var expecting:Int = expectingLength.get(id);
+			var available:UInt = socket.bytesAvailable;
+			var frames:Array<String> = new Array();
+			var hadError:Bool = false;
+
+			while(true) {
+				if(expecting == -1) { // Read the length prefix
+					if(available < 4) {
+						break;
+					}
+					available -= 4;
+					try {
+						expecting = socket.readUnsignedInt();
+					} catch (e:Dynamic) { // Unknown if IOError is ever actually thrown here
+						hadError = true;
+						break;
+					}
+				} else { // Read the payload
+					if(available < expecting) {
+						break;
+					}
+					available -= expecting;
+					// Expecting ASCII only, but using readUTFBytes anyway.
+					try {
+						var frame:String = socket.readUTFBytes(expecting);
+						frames.push(frame);
+					} catch (e:Dynamic) { // Unknown if IOError is ever actually thrown here
+						hadError = true;
+						break;
+					}
+					expecting = -1;
+				}
+			}
+
+			expectingLength.set(id, expecting);
+
+			if(frames.length > 0) {
+				// We expect an ASCII-safe string of JSON, so doing this is okay.
+				ExternalInterface.call("__FS_instances['"+id+"'].onframes("+frames+","+(hadError ? "true" : "false")+")");
+			}
 		}
 	}
 
-	public static function connect(instance_id:String, host:String, port:Int) {
+	public static inline function connect(instance_id:String, host:String, port:Int) {
+		// ugh: "If the socket is already connected, the existing connection is closed first."
+		// http://www.adobe.com/livedocs/flex/3/langref/flash/net/Socket.html#connect()
 		var socket:Socket = sockets.get(instance_id);
 		if (socket != null) {
 			socket.connect(host, port);
 		} else {
 			socket = new Socket(host, port);
 			sockets.set(instance_id, socket);
+			expectingLength.set(instance_id, -1);
 
 			socket.addEventListener( Event.CONNECT,
 				function(e):Void { handle_connect(instance_id, e); }
@@ -92,38 +144,62 @@ class SocketBridge {
 		}
 	}
 
-	public static function close(instance_id:String) {
+	/**
+	 * Close a socket. Returns `true` if close succeeded.
+	 */
+	public static inline function close(instance_id:String) {
 		var socket = sockets.get(instance_id);
-		if (socket != null) {
-			if (socket.connected) {
-				socket.close();
-				sockets.remove(instance_id);
-			}
+		if (socket == null || !socket.connected) {
+			return false;
 		}
+
+		socket.close();
+		sockets.remove(instance_id);
+		expectingLength.remove(instance_id);
+
+		return true;
 	}
 
-	public static function write(instance_id:String, msg) {
+	// TODO: find out what happens if JS->Flash ExternalInterface call is made with the wrong type of arguments
+
+	/**
+	 * Write an already-serialized frame `msg` to a socket. Returns `true` if write succeeded.
+	 */
+	public static inline function writeSerializedFrame(instance_id:String, msg:String) {
 		var socket = sockets.get(instance_id);
-		if (socket != null) {
-			if (socket.connected) {
-				socket.writeUTFBytes(msg);
-				socket.flush();
-			}
+		if (socket == null || !socket.connected) {
+			return false;
 		}
+
+		try {
+			socket.writeUnsignedInt(msg.length);
+
+			// Note: msg is not expected to be a unicode string! (Well, it is, but it only has US-ASCII codepoints.)
+			// We use writeUTFBytes because it is least-likely to be buggy in Flash Player. Back in 2008-10-08
+			// (see /home/z9/.git), we had problems with writeMultiByte(..., "iso-8859-1"); on some clients.
+			socket.writeUTFBytes(msg);
+
+			socket.flush();
+		} catch (e : Dynamic) { // IOErrorEvent.IO_ERROR
+			// TODO: send a log message to javascript, or something
+			return false;
+		}
+
+		return true;
 	}
 
-	public static function loadPolicyFile(path:String):Void {
+	public static inline function loadPolicyFile(path:String):Void {
 		Security.loadPolicyFile(path);
 	}
 
-	public static function registerCallbacks() {
+	public static inline function registerCallbacks() {
 		// TODO: maybe obfuscate these names
 
 		//ExternalInterface.addCallback("__FC_loadPolicyFile", loadPolicyFile);
 
 		ExternalInterface.addCallback("__FC_connect", connect);
 		ExternalInterface.addCallback("__FC_close", close);
-		ExternalInterface.addCallback("__FC_write", write);
+		ExternalInterface.addCallback("__FC_writeSerializedFrame", writeSerializedFrame);
 	}
 
 	public static function main() {

@@ -719,10 +719,10 @@ cw.net.simpleRequest = function(verb, url, post) {
 cw.net.FlashSocket = function(bridge) {
 	/**
 	 * This FlashSocket's unique id.
-	 * @type {number}
+	 * @type {string}
 	 * @private
 	 */
-	this.id_ = ++cw.net.FlashSocket.instanceCount_;
+	this.id_ = String(++cw.net.FlashSocket.instanceCount_);
 
 	this.bridge_ = bridge;
 
@@ -735,8 +735,8 @@ cw.net.FlashSocket.prototype.connect_ = function(host, port) {
 }
 
 
-cw.net.FlashSocket.prototype.writeAsciiSafe_ = function(string) {
-	this.bridge_.CallFunction(cw.externalinterface.request('__FC_write', this.id_, string));
+cw.net.FlashSocket.prototype.writeSerializedFrame_ = function(string) {
+	this.bridge_.CallFunction(cw.externalinterface.request('__FC_writeSerializedFrame', this.id_, string));
 }
 
 
