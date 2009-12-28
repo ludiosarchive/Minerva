@@ -5,6 +5,7 @@ goog.require('goog.userAgent');
 goog.require('goog.debug.Logger');
 goog.require('goog.json');
 goog.require('goog.string');
+goog.require('goog.Disposable');
 goog.require('cw.externalinterface');
 
 goog.provide('cw.net');
@@ -21,7 +22,7 @@ cw.net.logger.setLevel(goog.debug.Logger.Level.ALL);
 
 /**
  * This is thrown when {@code ResponseTextDecoder} aborts parsing.
- * @param {!string} msg Reason why parse failed
+ * @param {string} msg Reason why parse failed
  * @constructor
  * @extends {goog.debug.Error}
  */
@@ -57,7 +58,7 @@ cw.net.ParseError.prototype.name = 'cw.net.ParseError';
  * @param {!(XMLHttpRequest|XDomainRequest)} xObject an L{XMLHttpRequest}
  * or L{XDomainRequest} object or any object with a C{responseText} property (a string).
  *
- * @param {!number} MAX_LENGTH is the maximum length of frame to parse (in characters).
+ * @param {number} MAX_LENGTH is the maximum length of frame to parse (in characters).
  *
  * @constructor
  */
@@ -78,7 +79,7 @@ cw.net.ResponseTextDecoder = function(xObject, MAX_LENGTH) {
 	/**
 	 * Set maximum frame length to C{MAX_LENGTH}.
 	 *
-	 * @param {!number} MAX_LENGTH
+	 * @param {number} MAX_LENGTH
 	 */
 	cw.net.ResponseTextDecoder.prototype.setMaxLength = function(MAX_LENGTH) {
 		this.MAX_LENGTH = MAX_LENGTH;
@@ -205,7 +206,7 @@ cw.net.getXHRObject = function() {
 
 
 /**
- * @param {!string} msg Reason
+ * @param {string} msg Reason
  * @constructor
  * @extends {goog.debug.Error}
  */
@@ -216,7 +217,7 @@ goog.inherits(cw.net.RequestStillActive, goog.debug.Error);
 cw.net.RequestStillActive.prototype.name = 'cw.net.RequestStillActive';
 
 /**
- * @param {!string} msg Reason
+ * @param {string} msg Reason
  * @constructor
  * @extends {goog.debug.Error}
  */
@@ -227,7 +228,7 @@ goog.inherits(cw.net.RequestAborted, goog.debug.Error);
 cw.net.RequestAborted.prototype.name = 'cw.net.RequestAborted';
 
 /**
- * @param {!string} msg Reason
+ * @param {string} msg Reason
  * @constructor
  * @extends {goog.debug.Error}
  */
@@ -238,7 +239,7 @@ goog.inherits(cw.net.NetworkProblem, goog.debug.Error);
 cw.net.NetworkProblem.prototype.name = 'cw.net.NetworkProblem';
 
 /**
- * @param {!string} msg Reason
+ * @param {string} msg Reason
  * @constructor
  * @extends {goog.debug.Error}
  */
@@ -712,11 +713,27 @@ cw.net.simpleRequest = function(verb, url, post) {
 
 
 /**
- * C{bridge} is the already-loaded Flash object that provides FlashConnector capabilities
+ * C{bridge} is the already-loaded Flash object that provides FlashConnector
+ * capabilities in psuedo-namespace '__FC_'
  *
  * TODO: make this an IDisposable that removes its instance from instances_?
+ *
+ * Instantiate this object and set properties `onconnect`, `onclose`, `onioerror`,
+ * `onsecurityerror`, and `onframes`. Then call `connect_`.
+ *
+ * Note that in Flash Player 10, onsecurityerror may be fired if the connection
+ * cannot be established after 20 seconds. See http://kb2.adobe.com/cps/405/kb405545.html 
+ *
+ * Your onclose/onioerror/onsecurityerror properties should call this.dispose(),
+ * unless you are testing re-use of a Flash Socket for multiple connections
+ * (probably don't do this in production code).
+ *
+ * @constructor
+ * @extends {goog.Disposable}
  */
 cw.net.FlashSocket = function(bridge) {
+	goog.Disposable.call(this);
+	
 	/**
 	 * This FlashSocket's unique id.
 	 * @type {string}
@@ -728,9 +745,15 @@ cw.net.FlashSocket = function(bridge) {
 
 	cw.net.FlashSocket.instances_[this.id_] = this;
 }
+goog.inherits(cw.net.FlashSocket, goog.Disposable);
 
 
-cw.net.FlashSocket.prototype.connect_ = function(host, port) {
+/**
+ * @param {string} host Hostname to connect to
+ * @param {number} host Port to connect to
+ * //NOT IMPLEMENTED @param {number} timeout Flash-level timeout: "Indicates the number of milliseconds to wait for a connection."
+ */
+cw.net.FlashSocket.prototype.connect_ = function(host, port) { // , timeout
 	this.bridge_.CallFunction(cw.externalinterface.request('__FC_connect', this.id_, host, port));
 }
 
@@ -742,8 +765,19 @@ cw.net.FlashSocket.prototype.writeSerializedFrame_ = function(string) {
 
 cw.net.FlashSocket.prototype.close_ = function() {
 	this.bridge_.CallFunction(cw.externalinterface.request('__FC_close', this.id_, string));
-	delete cw.net.FlashSocket.instances_[this.id_];
+	this.dispose();
 }
+
+/**
+ * @inheritDoc
+ * @protected
+ */
+cw.net.FlashSocket.prototype.disposeInternal = function() {
+	delete cw.net.FlashSocket.instances_[this.id_];
+	delete this.bridge_;
+	cw.net.FlashSocket.superClass_.disposeInternal.call(this);
+};
+
 
 
 

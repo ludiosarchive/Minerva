@@ -1,4 +1,6 @@
 /*
+Copyright (c) 2009-2010, Minerva team. All rights reserved.
+
 Copyright (c) 2008-2009, Maries Ionel Cristian
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -18,8 +20,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
-
-Copyright (c) 2009-2010 Minerva team, All rights reserved.
 */
 
 // Note: this module uses Flash-side ExternalInterface pseudo-namespace "__FC_" 
@@ -114,11 +114,12 @@ class FlashConnector {
 	public static inline function connect(instance_id:String, host:String, port:Int) {
 		// ugh: "If the socket is already connected, the existing connection is closed first."
 		// http://www.adobe.com/livedocs/flex/3/langref/flash/net/Socket.html#connect()
+		// This implementation allows the socket to be reused.
 		var socket:Socket = sockets.get(instance_id);
-		if (socket != null) {
-			socket.connect(host, port);
-		} else {
-			socket = new Socket(host, port);
+		if (socket == null) {
+			// "It is strongly advised to use the constructor form without parameters,
+			// then add any event listeners, then call the connect method with host  and port parameters."
+			socket = new Socket();
 			sockets.set(instance_id, socket);
 			expectingLength.set(instance_id, -1);
 
@@ -142,6 +143,10 @@ class FlashConnector {
 				function(e):Void { handle_data(instance_id, e); }
 			);
 		}
+
+ 		// Flash 10 only; see http://kb2.adobe.com/cps/405/kb405545.html
+		//socket.timeout = timeout;
+		socket.connect(host, port);
 	}
 
 	/**
