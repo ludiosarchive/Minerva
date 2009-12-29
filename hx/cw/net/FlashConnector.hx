@@ -47,6 +47,9 @@ class FlashConnector {
 	// Map of socket # as String -> length of frame the socket is expecting (or -1 if not known)
 	public static var expectingLength:Hash<Int> = new Hash();
 
+	// Map of socket # as String -> first frame sent?
+	public static var firstFrameSent:Hash<Bool> = new Hash();
+
 	public static inline function handle_connect(id:String, event) {
 		ExternalInterface.call("(function(id){ var inst = __FS_instances[id]; if (inst.onconnect) inst.onconnect();})", id);
 	}
@@ -54,6 +57,7 @@ class FlashConnector {
 	public static inline function handle_close(id:String, event) {
 		sockets.remove(id);
 		expectingLength.remove(id);
+		firstFrameSent.remove(id);
 		ExternalInterface.call("(function(id){ var inst = __FS_instances[id]; if (inst.onclose) inst.onclose();})", id);
 	}
 
@@ -68,9 +72,10 @@ class FlashConnector {
 	public static inline function handle_data(id:String, event) {
 		var socket:Socket = sockets.get(id);
 		if (socket != null) {
+			var outBuffer = "["; // TODO: confirm lack of O(N^2) behavior
 			var expecting:Int = expectingLength.get(id);
 			var available:UInt = socket.bytesAvailable;
-			var frames:Array<String> = new Array();
+			var comma:String = "";
 			var hadError:Bool = false;
 
 			while(true) {
@@ -92,8 +97,9 @@ class FlashConnector {
 					available -= expecting;
 					// Expecting ASCII only, but using readUTFBytes anyway.
 					try {
-						var frame:String = socket.readUTFBytes(expecting);
-						frames.push(frame);
+						outBuffer += comma;
+						outBuffer += socket.readUTFBytes(expecting);
+						comma = ",";
 					} catch (e:Dynamic) { // Unknown if IOError is ever actually thrown here
 						hadError = true;
 						break;
@@ -104,9 +110,11 @@ class FlashConnector {
 
 			expectingLength.set(id, expecting);
 
-			if(frames.length > 0) {
+			outBuffer += "]";
+
+			if(outBuffer != "[]") {
 				// We expect an ASCII-safe string of JSON, so doing this is okay.
-				ExternalInterface.call("__FS_instances['"+id+"'].onframes("+frames+","+(hadError ? "true" : "false")+")");
+				ExternalInterface.call("__FS_instances['"+id+"'].onframes("+outBuffer+","+(hadError ? "true" : "false")+")");
 			}
 		}
 	}
@@ -122,6 +130,7 @@ class FlashConnector {
 			socket = new Socket();
 			sockets.set(instance_id, socket);
 			expectingLength.set(instance_id, -1);
+			firstFrameSent.set(instance_id, false);
 
 			socket.addEventListener( Event.CONNECT,
 				function(e):Void { handle_connect(instance_id, e); }
@@ -161,6 +170,7 @@ class FlashConnector {
 		socket.close();
 		sockets.remove(instance_id);
 		expectingLength.remove(instance_id);
+		firstFrameSent.remove(instance_id);
 
 		return true;
 	}
@@ -176,8 +186,20 @@ class FlashConnector {
 			return false;
 		}
 
+		var writePrelude = !firstFrameSent.get(instance_id);
+
 		for(i in 0...msgs.length) {
 			var msg:String = msgs[i];
+
+			if(writePrelude) {
+				try {
+					socket.writeUTFBytes("<int32/>\n");
+				} catch (e : Dynamic) { // IOErrorEvent.IO_ERROR
+					// TODO: send a log message to javascript, or something
+					return false;
+				}
+				firstFrameSent.set(instance_id, true);
+			}
 
 			try {
 				socket.writeUnsignedInt(msg.length);

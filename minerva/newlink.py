@@ -1220,7 +1220,7 @@ class SocketTransport(protocol.Protocol):
 			elif frameType == Fn.sack:
 				ackNumber, sackList = frameObj[1:]
 				try:
-					abstract.ensureNonNegIntLimit(ackNumber, 2**64) # okay to ignore return value here and below
+					abstract.ensureNonNegIntLimit(ackNumber, 2**64) # okay to ignore return value here
 				except (TypeError, ValueError):
 					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
@@ -1229,7 +1229,7 @@ class SocketTransport(protocol.Protocol):
 
 				for obj in sackList:
 					try:
-						abstract.ensureNonNegIntLimit(obj, 2**64)
+						abstract.ensureNonNegIntLimit(obj, 2**64) # okay to ignore return value here
 					except (TypeError, ValueError):
 						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 

@@ -252,10 +252,12 @@ class DemoProtocol(BasicMinervaProtocol):
 				send.append(box[1])
 
 			if isinstance(box, list) and len(box) == 1 and box[0] == 'send_demo':
+				self.stream.sendBoxes(['starting_send_demo'])
 				self._sendDemo(1)
 
 			# else ignore other boxes
 
+		# ugh
 		self.stream.sendBoxes(send)
 
 

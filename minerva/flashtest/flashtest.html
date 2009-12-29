@@ -99,6 +99,10 @@ function connect(bridge) {
 
 	fs.onframes = function(frames, hadError) {
 		logger.info('onframes with '+frames.length+' frame(s). hadError? ' + hadError);
+		for(var i=0; i < frames.length; i++) {
+			var frame = frames[i]; 
+			logger.info('frame: '+ser(frame));
+		}
 	}
 
 	fs.connect_(host, port);
