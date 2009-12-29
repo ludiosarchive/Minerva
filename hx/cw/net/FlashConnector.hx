@@ -56,22 +56,22 @@ class FlashConnector {
 	public static var preludeSent:Hash<Bool> = new Hash();
 
 	public static inline function handle_connect(id:String, event) {
-		ExternalInterface.call("(function(id){ var inst = __FS_instances[id]; if (inst.onconnect) inst.onconnect();})", id);
+		ExternalInterface.call("__FS_instances['"+id+"'].onconnect()");
 	}
 
 	public static inline function handle_close(id:String, event) {
 		sockets.remove(id);
 		expectingLength.remove(id);
 		preludeSent.remove(id);
-		ExternalInterface.call("(function(id){ var inst = __FS_instances[id]; if (inst.onclose) inst.onclose();})", id);
+		ExternalInterface.call("__FS_instances['"+id+"'].onclose()");
 	}
 
 	public static inline function handle_io_error(id:String, event) {
-		ExternalInterface.call("(function(id, err){ var inst = __FS_instances[id]; if (inst.onioerror) inst.onioerror(err);})", id, event.text);
+		ExternalInterface.call("(function(id, err){__FS_instances[id].onioerror(err)})", id, event.text);
 	}
 
 	public static inline function handle_security_error(id:String, event) {
-		ExternalInterface.call("(function(id, err){ var inst = __FS_instances[id]; if (inst.onsecurityerror) inst.onsecurityerror(err);})", id, event.text);
+		ExternalInterface.call("(function(id, err){__FS_instances[id].onsecurityerror(err)})", id, event.text);
 	}
 
 	public static inline function handle_data(id:String, event) {
