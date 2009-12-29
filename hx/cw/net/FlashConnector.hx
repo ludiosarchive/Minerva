@@ -63,7 +63,17 @@ class FlashConnection {
 		// "It is strongly advised to use the constructor form without parameters,
 		// then add any event listeners, then call the connect method with host  and port parameters."
 		socket = new Socket();
-		attachListeners();
+	}
+
+	// TODO: should we ever detach listeners?
+
+	public inline function connect(host, port) {
+		// Flash 10 only; see http://kb2.adobe.com/cps/405/kb405545.html
+	     //socket.timeout = timeout;
+	     attachListeners();
+	     socket.connect(host, port);
+
+	     return true;
 	}
 
 	public inline function handle_connect(event) {
@@ -152,9 +162,7 @@ class FlashConnector {
 			connections.set(instance_id, conn);
 		}
 
- 		// Flash 10 only; see http://kb2.adobe.com/cps/405/kb405545.html
-		//socket.timeout = timeout;
-		conn.socket.connect(host, port);
+		return conn.connect(host, port);
 	}
 
 	/**
@@ -195,13 +203,13 @@ class FlashConnector {
 			return false;
 		}
 
-		var writePrelude = conn.preludeSent;
+		var writePrelude = !conn.preludeSent;
 
 		if(writePrelude) {
 			conn.preludeSent = true;
 			try {
 				socket.writeUTFBytes("<int32/>\n");
-			} catch (e : Dynamic) { // IOErrorEvent.IO_ERROR
+			} catch (e:Dynamic) { // IOErrorEvent.IO_ERROR
 				// TODO: send a log message to javascript, or something
 				return false;
 			}
@@ -217,7 +225,7 @@ class FlashConnector {
 				// We use writeUTFBytes because it is least-likely to be buggy in Flash Player. Back in 2008-10-08
 				// (see /home/z9/.git), we had problems with writeMultiByte(..., "iso-8859-1"); on some clients.
 				socket.writeUTFBytes(msg);
-			} catch (e : Dynamic) { // IOErrorEvent.IO_ERROR
+			} catch (e:Dynamic) { // IOErrorEvent.IO_ERROR
 				// TODO: send a log message to javascript, or something
 				return false;
 			}
@@ -225,7 +233,7 @@ class FlashConnector {
 
 		try {
 			socket.flush();
-		} catch (e : Dynamic) { // IOErrorEvent.IO_ERROR
+		} catch (e:Dynamic) { // IOErrorEvent.IO_ERROR
 			// TODO: send a log message to javascript, or something
 			return false;
 		}

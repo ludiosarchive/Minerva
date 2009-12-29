@@ -755,17 +755,17 @@ goog.inherits(cw.net.FlashSocket, goog.Disposable);
  * //NOT IMPLEMENTED @param {number} timeout Flash-level timeout: "Indicates the number of milliseconds to wait for a connection."
  */
 cw.net.FlashSocket.prototype.connect_ = function(host, port) { // , timeout
-	this.bridge_.CallFunction(cw.externalinterface.request('__FC_connect', this.id_, host, port));
+	return eval(this.bridge_.CallFunction(cw.externalinterface.request('__FC_connect', this.id_, host, port)));
 }
 
 
 cw.net.FlashSocket.prototype.writeSerializedFrames_ = function(string) {
-	this.bridge_.CallFunction(cw.externalinterface.request('__FC_writeSerializedFrames', this.id_, string));
+	return eval(this.bridge_.CallFunction(cw.externalinterface.request('__FC_writeSerializedFrames', this.id_, string)));
 }
 
 
 cw.net.FlashSocket.prototype.close_ = function() {
-	this.bridge_.CallFunction(cw.externalinterface.request('__FC_close', this.id_, string));
+	return eval(this.bridge_.CallFunction(cw.externalinterface.request('__FC_close', this.id_, string)));
 	this.dispose();
 }
 

@@ -1257,6 +1257,7 @@ class SocketTransport(protocol.Protocol):
 
 
 	def dataReceived(self, data):
+		##print repr(data)
 		if self._terminating:
 			return
 

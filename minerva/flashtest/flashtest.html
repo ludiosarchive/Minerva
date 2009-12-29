@@ -76,7 +76,8 @@ function connect(bridge) {
 			var gimmeFrame = [6, null];
 			var boxesFrame = [0, {"0": ['send_demo']}];
 
-			fs.writeSerializedFrames_([ser(helloFrame), ser(gimmeFrame), ser(boxesFrame)]);
+			var out = fs.writeSerializedFrames_([ser(helloFrame), ser(gimmeFrame), ser(boxesFrame)]);
+			logger.info('writeSerializedFrames_ rvalue: ' + out);
 		} catch(e) {
 			logger.severe('error in onconnect', e);
 		}
