@@ -52,7 +52,7 @@ function ser(data) {
 function loadSWF() {
 	var flashvars = {'onloadcallback': '_appswfLoaded'};
 	var params = {};
-	swfobject.embedSWF("app.swf", "appswf", "30", "30", "9.0.0", "expressInstall.swf", flashvars, params); // no attributes
+	swfobject.embedSWF("app.swf", "appswf", "30", "30", [9, 0, 0], "expressInstall.swf", flashvars, params); // no attributes
 }
 
 function _appswfLoaded() {
