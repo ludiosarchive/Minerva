@@ -139,6 +139,47 @@ class FlashConnection {
 		}
 	}
 
+	public function writeSerializedFrames(msgs:Array<String>) {
+		if (!socket.connected) {
+			return false;
+		}
+
+		if(!preludeSent) {
+			preludeSent = true;
+			try {
+				socket.writeUTFBytes("<int32/>\n");
+			} catch (e:Dynamic) { // IOErrorEvent.IO_ERROR
+				// TODO: send a log message to javascript, or something
+				return false;
+			}
+		}
+
+		for(i in 0...msgs.length) {
+			var msg:String = msgs[i];
+
+			try {
+				socket.writeUnsignedInt(msg.length);
+
+				// Note: msg is not expected to be a unicode string! (Well, it is, but it only has US-ASCII codepoints.)
+				// We use writeUTFBytes because it is least-likely to be buggy in Flash Player. Back in 2008-10-08
+				// (see /home/z9/.git), we had problems with writeMultiByte(..., "iso-8859-1"); on some clients.
+				socket.writeUTFBytes(msg);
+			} catch (e:Dynamic) { // IOErrorEvent.IO_ERROR
+				// TODO: send a log message to javascript, or something
+				return false;
+			}
+		}
+
+		try {
+			socket.flush();
+		} catch (e:Dynamic) { // IOErrorEvent.IO_ERROR
+			// TODO: send a log message to javascript, or something
+			return false;
+		}
+
+		return true;
+	}
+
 	public inline function attachListeners() {
 		socket.addEventListener(Event.CONNECT, handle_connect);
 		socket.addEventListener(Event.CLOSE, handle_close);
@@ -198,47 +239,7 @@ class FlashConnector {
 		if(conn == null) {
 			return false;
 		}
-		var socket = conn.socket;
-		if (!socket.connected) {
-			return false;
-		}
-
-		var writePrelude = !conn.preludeSent;
-
-		if(writePrelude) {
-			conn.preludeSent = true;
-			try {
-				socket.writeUTFBytes("<int32/>\n");
-			} catch (e:Dynamic) { // IOErrorEvent.IO_ERROR
-				// TODO: send a log message to javascript, or something
-				return false;
-			}
-		}
-
-		for(i in 0...msgs.length) {
-			var msg:String = msgs[i];
-
-			try {
-				socket.writeUnsignedInt(msg.length);
-
-				// Note: msg is not expected to be a unicode string! (Well, it is, but it only has US-ASCII codepoints.)
-				// We use writeUTFBytes because it is least-likely to be buggy in Flash Player. Back in 2008-10-08
-				// (see /home/z9/.git), we had problems with writeMultiByte(..., "iso-8859-1"); on some clients.
-				socket.writeUTFBytes(msg);
-			} catch (e:Dynamic) { // IOErrorEvent.IO_ERROR
-				// TODO: send a log message to javascript, or something
-				return false;
-			}
-		}
-
-		try {
-			socket.flush();
-		} catch (e:Dynamic) { // IOErrorEvent.IO_ERROR
-			// TODO: send a log message to javascript, or something
-			return false;
-		}
-
-		return true;
+		return conn.writeSerializedFrames(msgs);
 	}
 
 	public static inline function loadPolicyFile(path:String):Void {
