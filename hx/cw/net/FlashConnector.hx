@@ -34,10 +34,6 @@ import flash.external.ExternalInterface;
 import flash.net.Socket;
 import flash.system.Security;
 
-// TODO: the design could be better by having a separate object for each
-// connection, rather than passing the instance_id around. With this better
-// design, we wouldn't have this crazy global `expectingLength' map.
-
 // TODO: reject frames over a certain size, to prevent accidental DoS
 
 // TODO: make sure Flash doesn't disconnect when there's a big unread
@@ -71,6 +67,9 @@ class FlashConnection {
 		// Flash 10 only; see http://kb2.adobe.com/cps/405/kb405545.html
 	     //socket.timeout = timeout;
 	     attachListeners();
+	     
+	     	// "If the socket is already connected, the existing connection is closed first."
+		// http://www.adobe.com/livedocs/flex/3/langref/flash/net/Socket.html#connect()
 	     socket.connect(host, port);
 
 	     return true;
@@ -201,13 +200,19 @@ class FlashConnection {
 }
 
 
+/**
+ * Consider FlashConnector as the "external interface" that is exposed to JavaScript.
+ * 
+ * Because the JavaScript code cannot hold references to FlashConnection
+ * objects, we look up the FlashConnection object every time based on the
+ * `instance_id`.
+ */
 class FlashConnector {
 	public static var connections:Hash<FlashConnection> = new Hash();
 
 	public static inline function connect(instance_id:String, host:String, port:Int) {
-		// ugh: "If the socket is already connected, the existing connection is closed first."
-		// http://www.adobe.com/livedocs/flex/3/langref/flash/net/Socket.html#connect()
-		// This implementation allows the socket to be reused.
+		// This implementation allows FlashConnection's Socket object to be reused,
+		// but reusing is not recommended.
 		var conn:FlashConnection = connections.get(instance_id);
 		if (conn == null) {
 			conn = new FlashConnection(instance_id);
