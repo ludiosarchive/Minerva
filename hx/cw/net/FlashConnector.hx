@@ -46,138 +46,138 @@ import flash.system.Security;
 // TODO: unit test everything, especially handle_data
 
 
-class FlashConnector {
-	public static var sockets:Hash<Socket> = new Hash();
+class FlashConnection {
+	public var socket:Socket;
+	public var expecting:Int;
+	public var preludeSent:Bool;
+	public var id:String;
+	//public var flashConnector:FlashConnector;
 
-	// Map of socket # as String -> length of frame the socket is expecting (or -1 if not known)
-	public static var expectingLength:Hash<Int> = new Hash();
+	public function new(myId) {
+		socket = null;
+		expecting = -1;
+		preludeSent = false;
+		id = myId;
+		//flashConnector = fc;
 
-	// Map of socket # as String -> first frame sent?
-	public static var preludeSent:Hash<Bool> = new Hash();
+		// "It is strongly advised to use the constructor form without parameters,
+		// then add any event listeners, then call the connect method with host  and port parameters."
+		socket = new Socket();
+		attachListeners();
+	}
 
-	public static inline function handle_connect(id:String, event) {
+	public inline function handle_connect(event) {
 		ExternalInterface.call("__FS_instances['"+id+"'].onconnect()");
 	}
 
-	public static inline function handle_close(id:String, event) {
-		sockets.remove(id);
-		expectingLength.remove(id);
-		preludeSent.remove(id);
+	public inline function handle_close(event) {
+		FlashConnector.done(id);
 		ExternalInterface.call("__FS_instances['"+id+"'].onclose()");
 	}
 
-	public static inline function handle_io_error(id:String, event) {
+	public inline function handle_io_error(event) {
+		// We assume that our Flash cw.json encoder is not necessary for event.text
 		ExternalInterface.call("(function(id, err){__FS_instances[id].onioerror(err)})", id, event.text);
 	}
 
-	public static inline function handle_security_error(id:String, event) {
+	public inline function handle_security_error(event) {
+		// We assume that our Flash cw.json encoder is not necessary for event.text
 		ExternalInterface.call("(function(id, err){__FS_instances[id].onsecurityerror(err)})", id, event.text);
 	}
 
-	public static inline function handle_data(id:String, event) {
-		var socket:Socket = sockets.get(id);
-		if (socket != null) {
-			var outBuffer = "["; // TODO: confirm lack of O(N^2) behavior
-			var expecting:Int = expectingLength.get(id);
-			var available:UInt = socket.bytesAvailable;
-			var comma:String = "";
-			var hadError:Bool = false;
+	public inline function handle_data(event) {
+		var outBuffer = "["; // TODO: confirm lack of O(N^2) behavior
+		var available:UInt = socket.bytesAvailable;
+		var comma:String = "";
+		var hadError:Bool = false;
 
-			while(true) {
-				if(expecting == -1) { // Read the length prefix
-					if(available < 4) {
-						break;
-					}
-					available -= 4;
-					try {
-						expecting = socket.readUnsignedInt();
-					} catch (e:Dynamic) { // Unknown if IOError is ever actually thrown here
-						hadError = true;
-						break;
-					}
-				} else { // Read the payload
-					if(available < expecting) {
-						break;
-					}
-					available -= expecting;
-					// Expecting ASCII only, but using readUTFBytes anyway.
-					try {
-						outBuffer += comma;
-						outBuffer += socket.readUTFBytes(expecting);
-						comma = ",";
-					} catch (e:Dynamic) { // Unknown if IOError is ever actually thrown here
-						hadError = true;
-						break;
-					}
-					expecting = -1;
+		while(true) {
+			if(expecting == -1) { // Read the length prefix
+				if(available < 4) {
+					break;
 				}
-			}
-
-			expectingLength.set(id, expecting);
-
-			outBuffer += "]";
-
-			if(outBuffer != "[]") {
-				// We expect an ASCII-safe string of JSON, so doing this is okay.
-				ExternalInterface.call("__FS_instances['"+id+"'].onframes("+outBuffer+","+(hadError ? "true" : "false")+")");
+				available -= 4;
+				try {
+					expecting = socket.readUnsignedInt();
+				} catch (e:Dynamic) { // Unknown if IOError is ever actually thrown here
+					hadError = true;
+					break;
+				}
+			} else { // Read the payload
+				if(available < expecting) {
+					break;
+				}
+				available -= expecting;
+				// Expecting ASCII only, but using readUTFBytes anyway.
+				try {
+					outBuffer += comma;
+					outBuffer += socket.readUTFBytes(expecting);
+					comma = ",";
+				} catch (e:Dynamic) { // Unknown if IOError is ever actually thrown here
+					hadError = true;
+					break;
+				}
+				expecting = -1;
 			}
 		}
+
+		outBuffer += "]";
+
+		if(outBuffer != "[]") {
+			// We expect an ASCII-safe string of JSON, so doing this is okay.
+			ExternalInterface.call("__FS_instances['"+id+"'].onframes("+outBuffer+","+(hadError ? "true" : "false")+")");
+		}
 	}
+
+	public inline function attachListeners() {
+		socket.addEventListener(Event.CONNECT, handle_connect);
+		socket.addEventListener(Event.CLOSE, handle_close);
+		socket.addEventListener(IOErrorEvent.IO_ERROR, handle_io_error);
+		socket.addEventListener(SecurityErrorEvent.SECURITY_ERROR, handle_security_error);
+		socket.addEventListener(ProgressEvent.SOCKET_DATA, handle_data);
+	}
+}
+
+
+class FlashConnector {
+	public static var connections:Hash<FlashConnection> = new Hash();
 
 	public static inline function connect(instance_id:String, host:String, port:Int) {
 		// ugh: "If the socket is already connected, the existing connection is closed first."
 		// http://www.adobe.com/livedocs/flex/3/langref/flash/net/Socket.html#connect()
 		// This implementation allows the socket to be reused.
-		var socket:Socket = sockets.get(instance_id);
-		if (socket == null) {
-			// "It is strongly advised to use the constructor form without parameters,
-			// then add any event listeners, then call the connect method with host  and port parameters."
-			socket = new Socket();
-			sockets.set(instance_id, socket);
-			expectingLength.set(instance_id, -1);
-			preludeSent.set(instance_id, false);
-
-			socket.addEventListener( Event.CONNECT,
-				function(e):Void { handle_connect(instance_id, e); }
-			);
-
-			socket.addEventListener( Event.CLOSE,
-				function(e):Void { handle_close(instance_id, e); }
-			);
-
-			socket.addEventListener( IOErrorEvent.IO_ERROR,
-				function(e):Void { handle_io_error(instance_id, e); }
-			);
-
-			socket.addEventListener( SecurityErrorEvent.SECURITY_ERROR,
-				function(e):Void { handle_security_error(instance_id, e); }
-			);
-
-			socket.addEventListener( ProgressEvent.SOCKET_DATA,
-				function(e):Void { handle_data(instance_id, e); }
-			);
+		var conn:FlashConnection = connections.get(instance_id);
+		if (conn == null) {
+			conn = new FlashConnection(instance_id);
+			connections.set(instance_id, conn);
 		}
 
  		// Flash 10 only; see http://kb2.adobe.com/cps/405/kb405545.html
 		//socket.timeout = timeout;
-		socket.connect(host, port);
+		conn.socket.connect(host, port);
 	}
 
 	/**
 	 * Close a socket. Returns `true` if close succeeded.
 	 */
 	public static inline function close(instance_id:String) {
-		var socket = sockets.get(instance_id);
-		if (socket == null || !socket.connected) {
+		var conn = connections.get(instance_id);
+		if(conn == null) {
+			return false;
+		}
+		var socket = conn.socket;
+		if (!socket.connected) {
 			return false;
 		}
 
 		socket.close();
-		sockets.remove(instance_id);
-		expectingLength.remove(instance_id);
-		preludeSent.remove(instance_id);
+		done(instance_id);
 
 		return true;
+	}
+
+	public static inline function done(instance_id:String) {
+		connections.remove(instance_id);
 	}
 
 	// TODO: find out what happens if JS->Flash ExternalInterface call is made with the wrong type of arguments
@@ -186,15 +186,19 @@ class FlashConnector {
 	 * Write an already-serialized frame `msg` to a socket. Returns `true` if write succeeded.
 	 */
 	public static inline function writeSerializedFrames(instance_id:String, msgs:Array<String>) {
-		var socket = sockets.get(instance_id);
-		if (socket == null || !socket.connected) {
+		var conn = connections.get(instance_id);
+		if(conn == null) {
+			return false;
+		}
+		var socket = conn.socket;
+		if (!socket.connected) {
 			return false;
 		}
 
-		var writePrelude = preludeSent.get(instance_id) == false;
+		var writePrelude = conn.preludeSent;
 
 		if(writePrelude) {
-			preludeSent.set(instance_id, true);
+			conn.preludeSent = true;
 			try {
 				socket.writeUTFBytes("<int32/>\n");
 			} catch (e : Dynamic) { // IOErrorEvent.IO_ERROR
