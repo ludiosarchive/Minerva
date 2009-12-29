@@ -76,6 +76,17 @@ class FlashConnection {
 	     return true;
 	}
 
+	public function close() {
+		if (!socket.connected) {
+			return false;
+		}
+
+		socket.close();
+		FlashConnector.done(id);
+
+		return true;
+	}
+
 	public inline function handle_connect(event) {
 		ExternalInterface.call("__FS_instances['"+id+"'].onconnect()");
 	}
@@ -214,15 +225,7 @@ class FlashConnector {
 		if(conn == null) {
 			return false;
 		}
-		var socket = conn.socket;
-		if (!socket.connected) {
-			return false;
-		}
-
-		socket.close();
-		done(instance_id);
-
-		return true;
+		return conn.close();
 	}
 
 	public static inline function done(instance_id:String) {
