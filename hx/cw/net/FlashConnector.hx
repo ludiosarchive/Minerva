@@ -40,6 +40,11 @@ import flash.system.Security;
 
 // TODO: reject frames over a certain size, to prevent accidental DoS
 
+// TODO: make sure Flash doesn't disconnect when there's a big unread
+// frame. If it disconnects, we'll have to do our own buffering.
+
+// TODO: unit test everything, especially handle_data
+
 
 class FlashConnector {
 	public static var sockets:Hash<Socket> = new Hash();
@@ -48,7 +53,7 @@ class FlashConnector {
 	public static var expectingLength:Hash<Int> = new Hash();
 
 	// Map of socket # as String -> first frame sent?
-	public static var firstFrameSent:Hash<Bool> = new Hash();
+	public static var preludeSent:Hash<Bool> = new Hash();
 
 	public static inline function handle_connect(id:String, event) {
 		ExternalInterface.call("(function(id){ var inst = __FS_instances[id]; if (inst.onconnect) inst.onconnect();})", id);
@@ -57,7 +62,7 @@ class FlashConnector {
 	public static inline function handle_close(id:String, event) {
 		sockets.remove(id);
 		expectingLength.remove(id);
-		firstFrameSent.remove(id);
+		preludeSent.remove(id);
 		ExternalInterface.call("(function(id){ var inst = __FS_instances[id]; if (inst.onclose) inst.onclose();})", id);
 	}
 
@@ -130,7 +135,7 @@ class FlashConnector {
 			socket = new Socket();
 			sockets.set(instance_id, socket);
 			expectingLength.set(instance_id, -1);
-			firstFrameSent.set(instance_id, false);
+			preludeSent.set(instance_id, false);
 
 			socket.addEventListener( Event.CONNECT,
 				function(e):Void { handle_connect(instance_id, e); }
@@ -170,7 +175,7 @@ class FlashConnector {
 		socket.close();
 		sockets.remove(instance_id);
 		expectingLength.remove(instance_id);
-		firstFrameSent.remove(instance_id);
+		preludeSent.remove(instance_id);
 
 		return true;
 	}
@@ -186,10 +191,10 @@ class FlashConnector {
 			return false;
 		}
 
-		var writePrelude = firstFrameSent.get(instance_id) == false;
+		var writePrelude = preludeSent.get(instance_id) == false;
 
 		if(writePrelude) {
-			firstFrameSent.set(instance_id, true);
+			preludeSent.set(instance_id, true);
 			try {
 				socket.writeUTFBytes("<int32/>\n");
 			} catch (e : Dynamic) { // IOErrorEvent.IO_ERROR
