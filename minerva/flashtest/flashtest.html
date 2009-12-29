@@ -73,10 +73,10 @@ function connect(bridge) {
 			var uaId = cw.whoami.getUaId();
 			var helloData = {'n': 0, 'v': 2, 'w': true, 'i': streamId, 'c': {'uaId': uaId, 'csrf': window.CSRF_TOKEN}, 'r': 9999999, 'm': 3600};
 			var helloFrame = [5, helloData];
-
+			var gimmeFrame = [6, null];
 			var boxesFrame = [0, {"0": ['send_demo']}];
 
-			fs.writeSerializedFrames_([ser(helloFrame), ser(boxesFrame)]);
+			fs.writeSerializedFrames_([ser(helloFrame), ser(gimmeFrame), ser(boxesFrame)]);
 		} catch(e) {
 			logger.severe('error in onconnect', e);
 		}

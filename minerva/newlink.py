@@ -361,10 +361,10 @@ class Stream(object):
 
 
 	def _tryToSend(self):
+		##print '_tryToSend', self, self._primaryTransport, self.queue
 		if len(self.queue) == 0:
 			return
 
-		##print '_tryToSend', self._primaryTransport, self.queue
 		if self._primaryTransport is not None:
 			if self._pretendAcked is None:
 				start = None

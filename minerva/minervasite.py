@@ -233,18 +233,19 @@ class DemoProtocol(BasicMinervaProtocol):
 
 		box = []
 		numItems = iteration * 5
-		for n in numItems:
+		for n in xrange(numItems):
 			box.append('#' + str(iteration))
 
 		numBoxes = iteration
 
-		clock.callLater(0.2, self._sendDemo, iteration + 1)
+		self._clock.callLater(0.2, self._sendDemo, iteration + 1)
 
 		self.stream.sendBoxes([box] * numBoxes)
 
 
 	def boxesReceived(self, boxes):
 		# Remember, we cannot raise an exception here.
+		##print "boxesReceived", boxes
 
 		send = []
 		for box in boxes:
@@ -274,7 +275,7 @@ class DemoFactory(BasicMinervaFactory):
 		self._clock = clock
 
 
-	def buildStream(self):
+	def buildProtocol(self):
 		stream = self.protocol(self._clock)
 		stream.factory = self
 		return stream

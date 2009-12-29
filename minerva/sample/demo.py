@@ -49,10 +49,10 @@ class DemoFactory(BasicMinervaFactory):
 		self._clock = clock
 
 
-	def buildStream(self):
-		stream = self.protocol(self._clock)
-		stream.factory = self
-		return stream
+	def buildProtocol(self):
+		proto = self.protocol(self._clock)
+		proto.factory = self
+		return proto
 
 
 

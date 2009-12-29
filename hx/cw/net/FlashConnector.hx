@@ -186,20 +186,20 @@ class FlashConnector {
 			return false;
 		}
 
-		var writePrelude = !firstFrameSent.get(instance_id);
+		var writePrelude = firstFrameSent.get(instance_id) == false;
+
+		if(writePrelude) {
+			firstFrameSent.set(instance_id, true);
+			try {
+				socket.writeUTFBytes("<int32/>\n");
+			} catch (e : Dynamic) { // IOErrorEvent.IO_ERROR
+				// TODO: send a log message to javascript, or something
+				return false;
+			}
+		}
 
 		for(i in 0...msgs.length) {
 			var msg:String = msgs[i];
-
-			if(writePrelude) {
-				try {
-					socket.writeUTFBytes("<int32/>\n");
-				} catch (e : Dynamic) { // IOErrorEvent.IO_ERROR
-					// TODO: send a log message to javascript, or something
-					return false;
-				}
-				firstFrameSent.set(instance_id, true);
-			}
 
 			try {
 				socket.writeUnsignedInt(msg.length);
