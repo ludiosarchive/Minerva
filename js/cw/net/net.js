@@ -768,7 +768,7 @@ cw.net.FlashSocket.prototype.writeSerializedFrames_ = function(string) {
 
 
 cw.net.FlashSocket.prototype.close_ = function() {
-	return eval(this.bridge_.CallFunction(cw.externalinterface.request('__FC_close', this.id_, string)));
+	return eval(this.bridge_.CallFunction(cw.externalinterface.request('__FC_close', this.id_)));
 	this.dispose();
 }
 

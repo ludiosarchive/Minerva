@@ -17,6 +17,10 @@
 <div id="doc">
 </div>
 
+<div>
+<a href="#" onclick="reconnect()">Disconnect and connect new transport</a>
+</div>
+
 <div id="log"></div>
 
 <div id="appswf"></div>
@@ -59,7 +63,13 @@ function _appswfLoaded() {
 	connect(document.getElementById('appswf'));
 }
 
+var transportCount = -1;
+var streamId = goog.string.getRandomString() + goog.string.getRandomString();
+
+var lastFs = null;
+
 function connect(bridge) {
+	logger.warning('Connecting.');
 	var fs = new cw.net.FlashSocket(bridge);
 	var websiteHostPort = (''+document.location.host).split(':');
 	var host = websiteHostPort[0];
@@ -69,11 +79,15 @@ function connect(bridge) {
 		try {
 			logger.info('onconnect');
 
-			var streamId = goog.string.getRandomString() + goog.string.getRandomString();
 			var uaId = cw.whoami.getUaId();
-			var helloData = {'n': 0, 'v': 2, 'w': true, 'i': streamId, 'c': {'uaId': uaId, 'csrf': window.CSRF_TOKEN}, 'r': 9999999, 'm': 3600};
+			var transportNumber = ++transportCount;
+			var helloData = {
+				'n': transportNumber, 'v': 2, 'w': transportNumber == 0 ? true : false, 'i': streamId,
+				'c': {'uaId': uaId, 'csrf': window.CSRF_TOKEN},
+				'r': 9999999, 'm': 3600};
 			var helloFrame = [5, helloData];
 			var gimmeFrame = [6, null];
+			// If the server receives this more than once, it is subsequently ignored because the box # is always 0, and box 0 was already received. 
 			var boxesFrame = [0, {"0": ['send_demo']}];
 
 			var out = fs.writeSerializedFrames_([ser(helloFrame), ser(gimmeFrame), ser(boxesFrame)]);
@@ -107,9 +121,17 @@ function connect(bridge) {
 	}
 
 	fs.connect_(host, port);
+
+	lastFs = fs;
 }
 
 loadSWF();
+
+function reconnect() {
+	logger.warning('Closing.');
+	lastFs.close_();
+	connect(document.getElementById('appswf'));
+}
 
 </script>
 
