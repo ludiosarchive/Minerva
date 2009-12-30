@@ -213,6 +213,25 @@ it possible to send data of unknown length, and reuse the connection for more
 HTTP requests/responses.
 
 
+Pipelining is *not* keep-alive
+-------------------------------------
+"Keep-alive" refers to HTTP connections that are kept open, so that multiple HTTP
+request/responses can happen. Keep-alive is very common with HTTP/1.1,
+and all commonly-used browsers use it.
+
+"Pipelining" refers to the HTTP client making another request before it has received
+a response to a prior request. Pipelining is typically bad for Comet because
+`requests may get "stuck"`_ behind a long-polling/streaming request.
+
+Note that only Opera pipelines by default. Firefox users can pipeline by changing a setting in ``about:config``.
+`Some proxies`_ may automatically pipeline. Minerva avoids problems with "stuck" requests
+by making "long" requests on subdomains reserved for the "long" requests. On these subdomains,
+Minerva makes only one simultaneous "long" request per subdomain.
+
+..	_`requests may get "stuck"`: https://bugzilla.mozilla.org/show_bug.cgi?id=329977#c6
+..	_`Some proxies`: http://en.wikipedia.org/wiki/HTTP_pipelining#Implementation_in_web_proxies
+
+
 Learning more
 -------------------
 
