@@ -717,10 +717,12 @@ cw.net.simpleRequest = function(verb, url, post) {
  * C{bridge} is the already-loaded Flash object that provides FlashConnector
  * capabilities in psuedo-namespace '__FC_'
  *
- * TODO: make this an IDisposable that removes its instance from instances_?
- *
  * Instantiate this object and set properties `onconnect`, `onclose`, `onioerror`,
  * `onsecurityerror`, and `onframes`. Then call `connect_`.
+ *
+ * If your on* functions raise an error, they will be completely lost. They will not
+ * be logged or displayed anywhere. Thus, you should use your own try/catch
+ * or use `goog.debug.ErrorHandler.prototype.protectEntryPoint`.
  *
  * Note that in Flash Player 10, onsecurityerror may be fired if the connection
  * cannot be established after 20 seconds. See http://kb2.adobe.com/cps/405/kb405545.html 
@@ -755,7 +757,8 @@ goog.inherits(cw.net.FlashSocket, goog.Disposable);
  * //NOT IMPLEMENTED @param {number} timeout Flash-level timeout: "Indicates the number of milliseconds to wait for a connection."
  */
 cw.net.FlashSocket.prototype.connect_ = function(host, port) { // , timeout
-	return eval(this.bridge_.CallFunction(cw.externalinterface.request('__FC_connect', this.id_, host, port)));
+	// TODO: instead of passing <int32>\n, maybe pass some sort of mode?
+	return eval(this.bridge_.CallFunction(cw.externalinterface.request('__FC_connect', this.id_, host, port, '<int32/>\n')));
 }
 
 

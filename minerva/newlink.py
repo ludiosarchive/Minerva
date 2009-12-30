@@ -95,12 +95,14 @@ class Frame(object):
 		12: ('start_timestamps', 3, 3),
 		13: ('stop_timestamps', 1, 1),
 
+		20: ('padding', 1, 1),
+
 		601: ('tk_stream_attach_failure', 0, 0), # Either because no such Stream, or bad credentialsData
 		602: ('tk_acked_unsent_boxes', 0, 0),
 		603: ('tk_invalid_frame_type_or_arguments', 0, 0),
 		610: ('tk_frame_corruption', 0, 0),
 		611: ('tk_intraframe_corruption', 0, 0),
-		650: ('tk_brb', 0, 0), # Server is overloaded or shutting down, tells client to come back soon
+		650: ('tk_brb', 1, 1), # Server is overloaded or shutting down, tells client to come back soon
 	}
 
 	class names:

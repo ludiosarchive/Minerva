@@ -45,20 +45,21 @@ import flash.system.Security;
 class FlashConnection {
 	public var socket:Socket;
 	public var expecting:Int;
+	public var prelude:String;
 	public var preludeSent:Bool;
 	public var id:String;
 	//public var flashConnector:FlashConnector;
 
-	public function new(myId) {
-		socket = null;
-		expecting = -1;
-		preludeSent = false;
-		id = myId;
+	public function new(myId, prelude) {
+		this.expecting = -1;
+		this.preludeSent = false;
+		this.id = myId;
+		this.prelude = prelude;
 		//flashConnector = fc;
 
 		// "It is strongly advised to use the constructor form without parameters,
 		// then add any event listeners, then call the connect method with host  and port parameters."
-		socket = new Socket();
+		this.socket = new Socket();
 	}
 
 	// TODO: should we ever detach listeners?
@@ -157,7 +158,7 @@ class FlashConnection {
 		if(!preludeSent) {
 			preludeSent = true;
 			try {
-				socket.writeUTFBytes("<int32/>\n");
+				socket.writeUTFBytes(this.prelude);
 			} catch (e:Dynamic) { // IOErrorEvent.IO_ERROR
 				// TODO: send a log message to javascript, or something
 				return false;
@@ -210,15 +211,16 @@ class FlashConnection {
 class FlashConnector {
 	public static var connections:Hash<FlashConnection> = new Hash();
 
-	public static inline function connect(instance_id:String, host:String, port:Int) {
+	public static inline function connect(instance_id:String, host:String, port:Int, prelude:String) {
 		// This implementation allows FlashConnection's Socket object to be reused,
 		// but reusing is not recommended.
 		var conn:FlashConnection = connections.get(instance_id);
 		if (conn == null) {
-			conn = new FlashConnection(instance_id);
+			conn = new FlashConnection(instance_id, prelude);
 			connections.set(instance_id, conn);
 		}
 
+		conn.prelude = prelude;
 		return conn.connect(host, port);
 	}
 
