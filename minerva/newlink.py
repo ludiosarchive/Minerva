@@ -99,7 +99,7 @@ class Frame(object):
 
 		601: ('tk_stream_attach_failure', 0, 0), # Either because no such Stream, or bad credentialsData
 		602: ('tk_acked_unsent_boxes', 0, 0),
-		603: ('tk_invalid_frame_type_or_arguments', 0, 0),
+		603: ('tk_invalid_frame_type_or_arguments', 0, 0), # TODO: test that transportOffline is called when client causes this after transport attached to a Stream
 		610: ('tk_frame_corruption', 0, 0),
 		611: ('tk_intraframe_corruption', 0, 0),
 		650: ('tk_brb', 1, 1), # Server is overloaded or shutting down, tells client to come back soon
@@ -423,7 +423,7 @@ class Stream(object):
 		self.disconnected = True
 		# If no transports are connected, client will not get the reset frame. If client tries
 		# to connect a transport to a dead stream, they will get a tk_stream_attach_failure.
-		for t in self._transports:
+		for t in self._transports.copy(): # Need to copy because size changes as transports call transportOffline
 			t.writeReset(reasonString, applicationLevel=True)
 		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
@@ -440,10 +440,11 @@ class Stream(object):
 		Private. Do not call this.
 
 		Minerva transports call this when they get a reset frame from client.
+		Transport still needs to call transportOffline after this.
 		"""
 		assert not self.disconnected
 		self.disconnected = True
-		for t in self._transports:
+		for t in self._transports.copy(): # Need to copy because size changes as transports call transportOffline
 			t.closeGently()
 		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
@@ -457,7 +458,7 @@ class Stream(object):
 	def _internalReset(self, reasonString):
 		assert not self.disconnected
 		self.disconnected = True
-		for t in self._transports:
+		for t in self._transports.copy(): # Need to copy because size changes as transports call transportOffline
 			t.writeReset(reasonString, applicationLevel=False)
 		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
@@ -577,7 +578,7 @@ class Stream(object):
 			if self._primaryPaused and self._producer and self._streamingProducer:
 				self._producer.resumeProducing()
 			self._primaryPaused = False # TODO low-priority: can we make a test that fails if this is indented right once?
-			self._primaryTransport.closeGently()
+			self._primaryTransport.closeGently() # TODO: test that transport calls transportOffline right after this happens
 		else:
 			# There was no active S2C transport, so if we had a push
 			# producer, it was paused, and we need to unpause it.
@@ -985,6 +986,12 @@ class SocketTransport(protocol.Protocol):
 			1/0
 
 
+	def _goOffline(self):
+		if self._stream:
+			self._stream.transportOffline(self)
+			self._stream = None
+
+
 	def _closeWith(self, errorType, *args):
 		assert not self._terminating
 		# TODO: sack before closing
@@ -995,6 +1002,7 @@ class SocketTransport(protocol.Protocol):
 		toSend += self._encodeFrame([Fn.you_close_it])
 		self.transport.write(toSend)
 		self._terminating = True
+		self._goOffline()
 
 		# TODO: set timer and close the connection ourselves in 5-10 seconds
 		##self.transport.loseConnection()
@@ -1343,6 +1351,7 @@ class SocketTransport(protocol.Protocol):
 
 		self.transport.write(self._encodeFrame([Fn.you_close_it]))
 		self._terminating = True
+		self._goOffline()
 
 
 	def writeReset(self, reasonString, applicationLevel):
@@ -1361,6 +1370,7 @@ class SocketTransport(protocol.Protocol):
 		toSend += self._encodeFrame([Fn.you_close_it])
 		self.transport.write(toSend)
 		self._terminating = True
+		self._goOffline()
 
 
 	# called by Stream instances
@@ -1414,8 +1424,7 @@ class SocketTransport(protocol.Protocol):
 			log.msg('Connection lost for %r reason %r' % (self, reason))
 		# It might already be terminating, but often not.
 		self._terminating = True
-		if self._stream:
-			self._stream.transportOffline(self)
+		self._goOffline()
 
 
 	def connectionMade(self):

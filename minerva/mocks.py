@@ -188,6 +188,7 @@ class MockStream(_MockMixin):
 		self.log = []
 		self._incoming = abstract.Incoming()
 		self.queue = abstract.Queue()
+		self.transports = set()
 
 
 	def sendBoxes(self, boxes):
@@ -200,6 +201,8 @@ class MockStream(_MockMixin):
 
 	def resetFromClient(self, reasonString, applicationLevel):
 		self.log.append(['resetFromClient', reasonString, applicationLevel])
+		for t in self.transports.copy():
+			t.closeGently()
 
 
 	def boxesReceived(self, transport, boxes, memorySizeOfBoxes):
@@ -215,10 +218,13 @@ class MockStream(_MockMixin):
 	def transportOnline(self, transport):
 		self.virgin = False
 		self.log.append(['transportOnline', transport])
+		assert transport not in self.transports
+		self.transports.add(transport)
 
 
 	def transportOffline(self, transport):
 		self.log.append(['transportOffline', transport])
+		self.transports.remove(transport)
 
 
 	def subscribeToBoxes(self, transport, succeedsTransport):

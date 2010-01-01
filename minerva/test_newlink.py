@@ -1556,6 +1556,26 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self._testExtraDataReceivedIgnored()
 
 
+	def test_frameCorruptionCallsTransportOffline(self):
+		"""If client sends a corrupt frame on a Minerva transport that is attached to a Stream,
+		streamObj.transportOffline(transport) is called.
+		
+		This test was designed for Bencode, but it works for Int32 as well.
+		"""
+		frame0 = self._makeValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0]))
+		stream = self.streamTracker.getStream('x'*26)
+
+		self._parseFrames()
+		self.aE([], self.gotFrames)
+		self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.log)
+
+		self.transport.dataReceived('1:xxxxxxxx')
+
+		self.aE([], self.gotFrames)
+		self.aE([['notifyFinish'], ['transportOnline', self.transport], ['transportOffline', self.transport]], stream.log)
+
+
 	def test_frameTooLong(self):
 		"""
 		This test was designed for Bencode, but it works for Int32 as well.
@@ -1572,6 +1592,24 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self._parseFrames()
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], self.gotFrames)
 		self._testExtraDataReceivedIgnored()
+
+
+	def test_intraFrameCorruptionCallsTransportOffline(self):
+		"""If client sends corrupt JSON on a Minerva transport that is attached to a Stream,
+		streamObj.transportOffline(transport) is called.
+		"""
+		frame0 = self._makeValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0]))
+		stream = self.streamTracker.getStream('x'*26)
+
+		self._parseFrames()
+		self.aE([], self.gotFrames)
+		self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.log)
+
+		self.transport.dataReceived(self.parser.encode('{'))
+
+		self.aE([], self.gotFrames)
+		self.aE([['notifyFinish'], ['transportOnline', self.transport], ['transportOffline', self.transport]], stream.log)
 
 
 	def test_intraFrameCorruptionTrailingGarbage(self):
@@ -1876,7 +1914,11 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self._parseFrames()
 			self.aE(	[[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
 
-			self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.log)
+			self.aE([
+				['notifyFinish'],
+				['transportOnline', self.transport],
+				['transportOffline', self.transport],
+			], stream.log)
 			self._resetStreamTracker()
 			self._reset()
 
@@ -2005,6 +2047,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			['notifyFinish'],
 			['transportOnline', self.transport],
 			['sackReceived', (1, [])],
+			['transportOffline', self.transport],
 		], stream.log)
 
 
@@ -2020,7 +2063,13 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self.transport.dataReceived(self.serializeFrames([[Fn.sack, num, []]]))
 			self._parseFrames()
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
+			self.aE([
+				['notifyFinish'],
+				['transportOnline', self.transport],
+				['transportOffline', self.transport],
+			], stream.log)
 
+			self._resetStreamTracker()
 			self._reset()
 
 
@@ -2035,7 +2084,13 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, badObj]]))
 			self._parseFrames()
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
+			self.aE([
+				['notifyFinish'],
+				['transportOnline', self.transport],
+				['transportOffline', self.transport],
+			], stream.log)
 
+			self._resetStreamTracker()
 			self._reset()
 
 
@@ -2050,7 +2105,13 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, [1, num]]])) # 1 is valid, num is not
 			self._parseFrames()
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
+			self.aE([
+				['notifyFinish'],
+				['transportOnline', self.transport],
+				['transportOffline', self.transport],
+			], stream.log)
 
+			self._resetStreamTracker()
 			self._reset()
 
 
@@ -2070,6 +2131,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 					['notifyFinish'],
 					['transportOnline', self.transport],
 					['resetFromClient', reason, True],
+					['transportOffline', self.transport],
 				], stream.log)
 
 				self._resetStreamTracker()
