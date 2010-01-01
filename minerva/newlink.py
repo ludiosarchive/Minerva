@@ -365,7 +365,7 @@ class Stream(object):
 		if len(self.queue) == 0:
 			return
 
-		if self._primaryTransport is not None:
+		if self._primaryTransport:
 			if self._pretendAcked is None:
 				start = None
 			else:
@@ -521,7 +521,7 @@ class Stream(object):
 
 		# This is done here, and not in _newPrimary, because client should be able
 		# to upload boxes without ever having set up a primary transport.
-		if self._protocol is None:
+		if not self._protocol:
 			self._protocol = self._streamProtocolFactory.buildProtocol()
 			self._protocol.streamStarted(self)
 		# Remember streamStarted can do anything to us, including reset or sendBoxes.
@@ -601,7 +601,7 @@ class Stream(object):
 		##print 'subscribeToBoxes', transport, succeedsTransport
 		if \
 		succeedsTransport is not None and \
-		self._primaryTransport is not None and \
+		self._primaryTransport and \
 		succeedsTransport == self._primaryTransport.transportNumber and \
 		self._primaryTransport.lastBoxSent != -1:
 			self._pretendAcked = self._primaryTransport.lastBoxSent
@@ -671,7 +671,7 @@ class Stream(object):
 		to pauseProducing(), but it has to be careful to write() data only
 		when its resumeProducing() method is called.
 		"""
-		if self._producer is not None:
+		if self._producer:
 			raise RuntimeError("Cannot register producer %s, "
 				"because producer %s was never unregistered." % (producer, self._producer))
 		##if self.disconnected:
@@ -681,7 +681,7 @@ class Stream(object):
 		self._producer = producer
 		self._streamingProducer = streaming
 
-		if self._streamingProducer and (self._primaryPaused or self._primaryTransport is None):
+		if self._streamingProducer and (self._primaryPaused or not self._primaryTransport):
 			self._producer.pauseProducing()
 
 		if self._primaryTransport:
@@ -1370,7 +1370,7 @@ class SocketTransport(protocol.Protocol):
 
 	# called by Stream instances
 	def registerProducer(self, producer, streaming):
-		if self._producer is not None:
+		if self._producer:
 			raise RuntimeError("Cannot register producer %s, "
 				"because producer %s was never unregistered." % (producer, self._producer))
 
