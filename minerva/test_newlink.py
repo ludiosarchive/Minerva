@@ -2298,19 +2298,27 @@ class TransportProducerTests(unittest.TestCase):
 
 	def test_stopProducingIgnored(self):
 		"""
-		stopProducing does nothing.
+		stopProducing does nothing. This test kind of sucks.
 		"""
+		def getState(transport):
+			return dict(
+				_paused=transport._paused,
+				_producer=transport._producer,
+				_streamingProducer=transport._streamingProducer,
+				_stream=transport._stream,
+			)
+
 		# stopProducing without a producer registered does nothing
-		orig = self.transport.__dict__.copy()
+		orig = getState(self.transport)
 		self.transport.stopProducing()
-		self.aE(orig, self.transport.__dict__)
+		self.aE(orig, getState(self.transport))
 
 		# stopProducing with a producer registered does nothing
 		producer1 = MockProducer()
 		self.transport.registerProducer(producer1, streaming=True)
-		orig = self.transport.__dict__.copy()
+		orig = getState(self.transport)
 		self.transport.stopProducing()
-		self.aE(orig, self.transport.__dict__)
+		self.aE(orig, getState(self.transport))
 		self.aE(	[], producer1.log)
 
 
