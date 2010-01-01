@@ -952,7 +952,7 @@ class SocketTransport(protocol.Protocol):
 	lastBoxSent = -1
 	_lastStartParam = 2**128
 	_mode = UNKNOWN
-	_initialBuffer = '' # Buffer data while determining the mode
+	_initialBuffer = '' # To buffer data while determining the mode
 	_gotHello = False
 	_terminating = False
 	_stream = None
@@ -1124,7 +1124,7 @@ class SocketTransport(protocol.Protocol):
 		d = self._firewall.checkTransport(self, stream)
 
 		def cbAuthOkay(_):
-			if self._terminating: # TODO: test this case
+			if self._terminating:
 				return
 			self._stream = stream
 			self._stream.transportOnline(self)
@@ -1132,7 +1132,7 @@ class SocketTransport(protocol.Protocol):
 			# because it may construct a MinervaProtocol, which may even call reset.
 
 		def cbAuthFailed(_):
-			if self._terminating: # TODO: test this case
+			if self._terminating:
 				return
 			self._closeWith(Fn.tk_stream_attach_failure)
 
