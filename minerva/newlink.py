@@ -948,21 +948,9 @@ class SocketTransport(protocol.Protocol):
 	MAX_LENGTH = 1024*1024
 	noisy = True
 
-	# Instance attributes
-
-	lastBoxSent = -1
-	_lastStartParam = 2**128
-	_mode = UNKNOWN
-	_initialBuffer = '' # To buffer data while determining the mode
-	_gotHello = False
-	_terminating = False
-	_stream = None
-	_sackDirty = False
-
-	_paused = False
-	_producer = None
-	_streamingProducer = False
-
+	__slots__ = (
+		'lastBoxSent,_lastStartParam,_mode,_initialBuffer,_gotHello,'
+		'_terminating,_stream,_sackDirty,_paused,_producer,_streamingProducer').split(',')
 
 	def __init__(self, reactor, clock, streamTracker, firewall, policyStringWithNull):
 		self._reactor = reactor
@@ -970,6 +958,19 @@ class SocketTransport(protocol.Protocol):
 		self._streamTracker = streamTracker
 		self._firewall = firewall
 		self._policyStringWithNull = policyStringWithNull
+
+		self.lastBoxSent = -1
+		self._lastStartParam = 2**128
+		self._mode = UNKNOWN
+		self._initialBuffer = '' # To buffer data while determining the mode
+		self._gotHello = False
+		self._terminating = False
+		self._stream = None
+		self._sackDirty = False
+
+		self._paused = False
+		self._producer = None
+		self._streamingProducer = False
 
 
 	def __repr__(self):
