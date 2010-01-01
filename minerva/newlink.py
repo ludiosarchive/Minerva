@@ -334,6 +334,11 @@ class Stream(object):
 	maxUndeliveredBoxes = 5000 # boxes
 	maxUndeliveredBytes = 4 * 1024 * 1024 # bytes
 
+	__slots__ = (
+		'_clock,streamId,_streamProtocolFactory,_protocol,virgin,_primaryTransport,'
+		'_notifications,_transports,disconnected,queue,_incoming,_pretendAcked,'
+		'_producer,_streamingProducer,_primaryHasProducer,_primaryPaused').split(',')
+
 	def __init__(self, clock, streamId, streamProtocolFactory):
 		self._clock = clock
 		self.streamId = streamId
