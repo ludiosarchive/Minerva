@@ -28,6 +28,7 @@ assert diceString("hello", 6) == ["hello"]
 class _BaseRecording(object):
 
 	def __init__(self):
+		super(_BaseRecording, self).__init__()
 		self.got = []
 
 

@@ -276,8 +276,13 @@ class IntNStringDecoder(object):
 		Define it in subclass, using C{2 ** (8 * prefixLength)}
 	@type maxPossibleLength: C{int}
 	"""
-	MAX_LENGTH = 1024 * 1024 * 1024 # 1 GB
-	_buffer = ""
+
+	__slots__ = ['MAX_LENGTH', '_buffer']
+
+	def __init__(self):
+		self.MAX_LENGTH = 1024 * 1024 * 1024 # 1 GB
+		self._buffer = ""
+
 
 	@classmethod
 	def encode(cls, s):
