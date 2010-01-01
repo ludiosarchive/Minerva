@@ -947,6 +947,22 @@ class SocketTransport(protocol.Protocol):
 	MAX_LENGTH = 1024*1024
 	noisy = True
 
+	# Instance attributes
+
+	lastBoxSent = -1
+	_lastStartParam = 2**128
+	_mode = UNKNOWN
+	_initialBuffer = '' # Buffer data while determining the mode
+	_gotHello = False
+	_terminating = False
+	_stream = None
+	_sackDirty = False
+
+	_paused = False
+	_producer = None
+	_streamingProducer = False
+
+
 	def __init__(self, reactor, clock, streamTracker, firewall, policyStringWithNull):
 		self._reactor = reactor
 		self._clock = clock
@@ -954,25 +970,11 @@ class SocketTransport(protocol.Protocol):
 		self._firewall = firewall
 		self._policyStringWithNull = policyStringWithNull
 
-		self.lastBoxSent = -1
-		self._lastStartParam = 2**128
-		self._mode = UNKNOWN
-		self._initialBuffer = '' # Buffer data while determining the mode
-		self._gotHello = False
-		self._authed = False
-		self._terminating = False
-		self._stream = None
-		self._sackDirty = False
-
-		self._paused = False
-		self._producer = None
-		self._streamingProducer = False
-
 
 	def __repr__(self):
-		return '<%s authed=%r, terminating=%r, stream=%r, paused=%r, lastBoxSent=%r>' % (
+		return '<%s terminating=%r, stream=%r, paused=%r, lastBoxSent=%r>' % (
 			self.__class__.__name__,
-			self._authed, self._terminating, self._stream, self._paused, self.lastBoxSent)
+			self._terminating, self._stream, self._paused, self.lastBoxSent)
 
 
 	def _encodeFrame(self, frameData):
@@ -1009,10 +1011,10 @@ class SocketTransport(protocol.Protocol):
 		# If the transport is terminating, it should have already called Stream.transportOffline(self) # TODO: actually make it so
 		assert not self._terminating
 
-		if self._authed is not True or self._gotHello is not True:
+		if self._gotHello is not True:
 			# How did someone ask me to write boxes at this time? This should
 			# never happen.
-			raise RuntimeError("_authed=%r, _gotHello=%r" % (self._authed, self._gotHello))
+			raise RuntimeError("_gotHello=%r" % (self._gotHello,))
 
 		# TODO: make sure tests explicitly test that pull producers work properly if a push producer
 		# was registered, paused, and unregistered before.
@@ -1125,7 +1127,6 @@ class SocketTransport(protocol.Protocol):
 			if self._terminating: # TODO: test this case
 				return
 			self._stream = stream
-			self._authed = True
 			self._stream.transportOnline(self)
 			# Remember, a lot of stuff can happen underneath that transportOnline call
 			# because it may construct a MinervaProtocol, which may even call reset.

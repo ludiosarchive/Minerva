@@ -1307,7 +1307,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 	def test_repr(self):
 		r = repr(self.transport)
 		self.assertIn('<SocketTransport', r)
-		self.assertIn('authed=False', r)
 		self.assertIn('terminating=False', r)
 		self.assertIn('stream=None', r)
 		self.assertIn('paused=False', r)
