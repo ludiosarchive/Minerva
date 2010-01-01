@@ -1410,9 +1410,10 @@ class SocketTransport(protocol.Protocol):
 
 
 	def connectionLost(self, reason):
+		# XXX need a _terminating = True here
 		if self.noisy:
 			log.msg('Connection lost for %r reason %r' % (self, reason))
-		if self._stream is not None: # XXX TODO: only call if necessary. Just because _stream is set, doesn't mean it should be called (see cbAuthOkay above)
+		if self._stream is not None:
 			self._stream.transportOffline(self)
 
 

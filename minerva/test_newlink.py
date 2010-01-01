@@ -2129,6 +2129,37 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		], stream.log)
 
 
+	def test_nothingHappensIfAuthedAfterTransportTerminated(self):
+		"""
+		If the transport is authenticated after it is already terminated, nothing happens.
+		"""
+		for rejectAll in (True, False):
+			self._resetStreamTracker()
+			self._reset(rejectAll=rejectAll, firewallActionTime=1.0)
+
+			frame0 = self._makeValidHelloFrame()
+			self.transport.dataReceived(self.serializeFrames([frame0]))
+			self._parseFrames()
+			self.aE([], self.gotFrames)
+			self.transport.dataReceived(self.serializeFrames([9999]))
+			self._parseFrames()
+
+			self.aE([[603], [11]], self.gotFrames)
+
+			stream = self.streamTracker.getStream('x'*26)
+
+			self.aE([
+				['notifyFinish'],
+			], stream.log)
+
+			self._clock.advance(1.0)
+
+			self.aE([[603], [11]], self.gotFrames)
+			self.aE([
+				['notifyFinish'],
+			], stream.log)
+
+
 
 class SocketTransportTestsWithBencode(_BaseSocketTransportTests, unittest.TestCase):
 
