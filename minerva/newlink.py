@@ -1011,7 +1011,7 @@ class SocketTransport(protocol.Protocol):
 		# If the transport is terminating, it should have already called Stream.transportOffline(self) # TODO: actually make it so
 		assert not self._terminating
 
-		if self._gotHello is not True:
+		if not self._gotHello:
 			# How did someone ask me to write boxes at this time? This should
 			# never happen.
 			raise RuntimeError("_gotHello=%r" % (self._gotHello,))
@@ -1168,13 +1168,13 @@ class SocketTransport(protocol.Protocol):
 			frameType = frameObj[0]
 
 			# We demand a 'hello' frame before any other type of frame
-			if self._gotHello is False and frameType != Fn.hello:
+			if not self._gotHello and frameType != Fn.hello:
 				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
 
 			if frameType == Fn.hello:
 				# We only allow one 'hello' per connection
-				if self._gotHello is True:
+				if self._gotHello:
 					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 				self._gotHello = True
 				try:
@@ -1337,7 +1337,7 @@ class SocketTransport(protocol.Protocol):
 		@see L{IMinervaTransport.closeGently}
 		"""
 		if self._terminating:
-			return # TODO: explicit tests for this case
+			return # TODO: explicit tests for this case (right now only covered by test_boxSendingAndNewTransport)
 
 		if self._sackDirty:
 			self._sackDirty = False
@@ -1352,7 +1352,7 @@ class SocketTransport(protocol.Protocol):
 		@see L{IMinervaTransport.writeReset}
 		"""
 		if self._terminating:
-			return # TODO: explicit tests for this case
+			return # TODO: explicit tests for this case (no coverage right now)
 
 		if self._sackDirty:
 			self._sackDirty = False
@@ -1411,10 +1411,11 @@ class SocketTransport(protocol.Protocol):
 
 
 	def connectionLost(self, reason):
-		# XXX need a _terminating = True here
 		if self.noisy:
 			log.msg('Connection lost for %r reason %r' % (self, reason))
-		if self._stream is not None:
+		# It might already be terminating, but often not.
+		self._terminating = True
+		if self._stream:
 			self._stream.transportOffline(self)
 
 
@@ -1457,7 +1458,7 @@ class SocketFace(protocol.ServerFactory):
 			sent in response to <policy-file-request/>C{NULL}.
 		@type policyString: C{str} or C{NoneType}
 		"""
-		if policyString is not None:
+		if policyString:
 			if isinstance(policyString, unicode):
 				raise TypeError("policyString cannot be a unicode object")
 			if '\x00' in policyString:

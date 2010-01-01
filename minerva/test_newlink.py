@@ -1818,14 +1818,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self._testExtraDataReceivedIgnored()
 
 
-	def test_connectionLostWithNoStream(self):
-		"""If client closes connection on a Minerva transport that hasn't attached to a Stream,
-		nothing special happens."""
-		orig = self.transport.__dict__.copy()
-		self.transport.connectionLost(failure.Failure(ValueError("Just a made-up error in test_connectionLostWithNoStream")))
-		self.aE(orig, self.transport.__dict__) # This test might be a bit overzealous
-
-
 	def test_connectionLostWithStream(self):
 		"""If client closes connection on a Minerva transport that is attached to a Stream,
 		streamObj.transportOffline(transport) is called."""
@@ -2132,31 +2124,43 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		If the transport is authenticated after it is already terminated, nothing happens.
 		"""
+		expected = {}
+		expected['bad_frame'] = [[603], [11]]
+		expected['client_closed'] = []
+
 		for rejectAll in (True, False):
-			self._resetStreamTracker()
-			self._reset(rejectAll=rejectAll, firewallActionTime=1.0)
+			for terminationMethod in ('bad_frame', 'client_closed'):
+				expectedFrames = expected[terminationMethod]
 
-			frame0 = self._makeValidHelloFrame()
-			self.transport.dataReceived(self.serializeFrames([frame0]))
-			self._parseFrames()
-			self.aE([], self.gotFrames)
-			self.transport.dataReceived(self.serializeFrames([9999]))
-			self._parseFrames()
+				self._resetStreamTracker()
+				self._reset(rejectAll=rejectAll, firewallActionTime=1.0)
 
-			self.aE([[603], [11]], self.gotFrames)
+				frame0 = self._makeValidHelloFrame()
+				self.transport.dataReceived(self.serializeFrames([frame0]))
+				self._parseFrames()
+				self.aE([], self.gotFrames)
+				if terminationMethod == 'bad_frame':
+					self.transport.dataReceived(self.serializeFrames([9999]))
+				elif terminationMethod == 'client_closed':
+					self.transport.connectionLost(ValueError("testing"))
+				else:
+					1/0
+				self._parseFrames()
 
-			stream = self.streamTracker.getStream('x'*26)
+				self.aE(expectedFrames, self.gotFrames)
 
-			self.aE([
-				['notifyFinish'],
-			], stream.log)
+				stream = self.streamTracker.getStream('x'*26)
 
-			self._clock.advance(1.0)
+				self.aE([
+					['notifyFinish'],
+				], stream.log)
 
-			self.aE([[603], [11]], self.gotFrames)
-			self.aE([
-				['notifyFinish'],
-			], stream.log)
+				self._clock.advance(1.0)
+
+				self.aE(expectedFrames, self.gotFrames)
+				self.aE([
+					['notifyFinish'],
+				], stream.log)
 
 
 
