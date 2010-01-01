@@ -343,23 +343,16 @@ class Stream(object):
 		self._clock = clock
 		self.streamId = streamId
 		self._streamProtocolFactory = streamProtocolFactory
-		self._protocol = None
+		self._protocol = self._primaryTransport = self._pretendAcked = self._producer = None
+		self.disconnected = self._streamingProducer = self._primaryHasProducer = self._primaryPaused = False
+		# _primaryPaused: Does the primary transport think it is paused? Or if no primary transport, False.
 
 		self.virgin = True # no transports have ever attached to it
-		self._primaryTransport = None
 		self._notifications = []
 		self._transports = set()
-		self.disconnected = False
+
 		self.queue = abstract.Queue()
 		self._incoming = abstract.Incoming()
-		self._pretendAcked = None
-
-		self._producer = None
-		self._streamingProducer = False
-
-		self._primaryHasProducer = False
-		# Does the primary transport think it is paused? Or if no primary transport, False.
-		self._primaryPaused = False
 
 
 	def __repr__(self):
@@ -970,14 +963,8 @@ class SocketTransport(protocol.Protocol):
 		self._lastStartParam = 2**128
 		self._mode = UNKNOWN
 		self._initialBuffer = '' # To buffer data while determining the mode
-		self._gotHello = False
-		self._terminating = False
-		self._stream = None
-		self._sackDirty = False
-
-		self._paused = False
-		self._producer = None
-		self._streamingProducer = False
+		self._gotHello = self._terminating = self._sackDirty = self._paused = self._streamingProducer = False
+		self._stream = self._producer = None
 
 
 	def __repr__(self):
