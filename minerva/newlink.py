@@ -1126,7 +1126,7 @@ class SocketTransport(protocol.Protocol):
 		def cbAuthOkay(_):
 			if self._terminating:
 				return
-			self._stream = stream
+			self._stream = stream # self._stream being set implies that were are authed, and that we called transportOnline
 			self._stream.transportOnline(self)
 			# Remember, a lot of stuff can happen underneath that transportOnline call
 			# because it may construct a MinervaProtocol, which may even call reset.
@@ -1351,8 +1351,9 @@ class SocketTransport(protocol.Protocol):
 		"""
 		@see L{IMinervaTransport.writeReset}
 		"""
-		if self._terminating:
-			return # TODO: explicit tests for this case (no coverage right now)
+		assert not self._terminating
+		#if self._terminating:
+		#	return # TODO: explicit tests for this case (no coverage right now)
 
 		if self._sackDirty:
 			self._sackDirty = False
