@@ -1263,10 +1263,10 @@ class _BaseHelpers(object):
 		self._reset()
 
 
-	def _reset(self, rejectAll=False):
+	def _reset(self, rejectAll=False, firewallActionTime=0):
 		self._resetParser()
 		self.t = DummyTCPTransport()
-		factory = SocketFace(self._reactor, None, self.streamTracker, DummyFirewall(self._clock, rejectAll))
+		factory = SocketFace(self._reactor, None, self.streamTracker, DummyFirewall(self._clock, rejectAll, firewallActionTime))
 		self.transport = factory.buildProtocol(addr=None)
 		self.transport.makeConnection(self.t)
 		self._sendModeInitializer()
@@ -2114,7 +2114,19 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		A regression test: make sure SocketTransport only calls transportOffline
 		if it called transportOnline.
 		"""
-		
+		self._reset(rejectAll=False, firewallActionTime=1.0)
+
+		frame0 = self._makeValidHelloFrame()
+		self.transport.dataReceived(self.serializeFrames([frame0]))
+		self._parseFrames()
+		self.aE([], self.gotFrames)
+		self.transport.connectionLost(ValueError("testing"))
+
+		stream = self.streamTracker.getStream('x'*26)
+
+		self.aE([
+			['notifyFinish'],
+		], stream.log)
 
 
 

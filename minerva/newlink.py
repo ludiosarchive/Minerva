@@ -1113,17 +1113,18 @@ class SocketTransport(protocol.Protocol):
 
 		if requestNewStream:
 			try:
-				self._stream = self._streamTracker.buildStream(streamId)
+				stream = self._streamTracker.buildStream(streamId)
 			except StreamAlreadyExists:
-				self._stream = self._streamTracker.getStream(streamId)
+				stream = self._streamTracker.getStream(streamId)
 		else:
-			self._stream = self._streamTracker.getStream(streamId)
+			stream = self._streamTracker.getStream(streamId)
 
-		d = self._firewall.checkTransport(self, self._stream)
+		d = self._firewall.checkTransport(self, stream)
 
 		def cbAuthOkay(_):
 			if self._terminating: # TODO: test this case
 				return
+			self._stream = stream
 			self._authed = True
 			self._stream.transportOnline(self)
 			# Remember, a lot of stuff can happen underneath that transportOnline call
