@@ -752,6 +752,8 @@ class StreamTracker(object):
 	"""
 	stream = Stream
 
+	__slots__  = '_reactor,_clock,_streamProtocolFactory,_streams,_observers,_preKey,_postKey'.split(',')
+
 	def __init__(self, reactor, clock, streamProtocolFactory):
 		self._reactor = reactor
 		self._clock = clock

@@ -924,6 +924,11 @@ class StreamTests(unittest.TestCase):
 
 
 
+class StreamTrackerWithMockStream(StreamTracker): # Need to use a subclass to avoid __slots__ problem
+	stream = MockStream
+
+
+
 class StreamTrackerObserverTests(unittest.TestCase):
 
 	def test_observeStreams(self):
@@ -1045,8 +1050,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		streamDown method on observer is called when Stream is done
 		"""
 		reactor = FakeReactor()
-		st = StreamTracker(reactor, None, None)
-		st.stream = MockStream
+		st = StreamTrackerWithMockStream(reactor, None, None)
 		o = MockObserver()
 		st.observeStreams(o)
 		stream = st.buildStream('some fake id')
@@ -1061,8 +1065,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		An exception raised by an observer makes buildStream fail
 		"""
 		reactor = FakeReactor()
-		st = StreamTracker(reactor, None, None)
-		st.stream = MockStream
+		st = StreamTrackerWithMockStream(reactor, None, None)
 		o = BrokenMockObserver()
 		st.observeStreams(o)
 		self.aR(BrokenOnPurposeError, lambda: st.buildStream('some fake id'))
@@ -1074,8 +1077,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		the Stream it just created (it cannot be retrieved using getStream)
 		"""
 		reactor = FakeReactor()
-		st = StreamTracker(reactor, None, None)
-		st.stream = MockStream
+		st = StreamTrackerWithMockStream(reactor, None, None)
 		o = BrokenMockObserver()
 		st.observeStreams(o)
 		id = 'some fake id'
