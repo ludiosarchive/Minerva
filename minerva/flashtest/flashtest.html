@@ -5,6 +5,10 @@
 	<title></title>
 	<style>
 		{{ getTestPageCSS() }}
+
+		#controls tr td {
+			padding: 0.5em 0 0.5em 0;
+		}
 	</style>
 	<script>
 		{{ expandScript('// import cw.autoTitle') }}
@@ -17,9 +21,23 @@
 <div id="doc">
 </div>
 
-<div>
-<a href="#" onclick="reconnect()">Disconnect and connect new transport</a>
-</div>
+<table id="controls">
+<tr>
+	<td>Reconnect:</td>
+	<td>
+		<input type="submit" value="Disconnect and connect new transport" onclick="reconnect();return false">
+	</td>
+</tr>
+<tr>
+<td>
+	Send ACK:
+</td>
+<td>
+	<input type="text" name="ack" id="ackstring">
+	<input type="submit" value="Send" onclick="sendAck(+byId('ackstring').value);return false">
+</td>
+</tr>
+</table>
 
 <div id="log"></div>
 
@@ -32,6 +50,7 @@ goog.require('goog.debug.Logger');
 goog.require('goog.async.Deferred');
 goog.require('goog.json.Serializer');
 goog.require('swfobject');
+goog.require('cw.net.FrameType');
 goog.require('cw.net.FlashSocket');
 goog.require('cw.whoami');
 """) }}
@@ -85,10 +104,10 @@ function connect(bridge) {
 				'n': transportNumber, 'v': 2, 'w': transportNumber == 0 ? true : false, 'i': streamId,
 				'c': {'uaId': uaId, 'csrf': window.CSRF_TOKEN},
 				'r': 9999999, 'm': 3600};
-			var helloFrame = [5, helloData];
-			var gimmeFrame = [6, null];
+			var helloFrame = [cw.net.FrameType.hello, helloData];
+			var gimmeFrame = [cw.net.FrameType.gimme_boxes, null];
 			// If the server receives this more than once, it is subsequently ignored because the box # is always 0, and box 0 was already received. 
-			var boxesFrame = [0, {"0": ['send_demo']}];
+			var boxesFrame = [cw.net.FrameType.boxes, {"0": ['send_demo']}];
 
 			var out = fs.writeSerializedFrames_([ser(helloFrame), ser(gimmeFrame), ser(boxesFrame)]);
 			logger.info('writeSerializedFrames_ rvalue: ' + out);
@@ -131,6 +150,15 @@ function reconnect() {
 	logger.warning('Closing.');
 	lastFs.close_();
 	connect(document.getElementById('appswf'));
+}
+
+function sendAck(n) {
+	logger.warning('sendAck: ' + n);
+	lastFs.writeSerializedFrames_([ser([cw.net.FrameType.sack, n, []])]);
+}
+
+function byId(o) {
+	return document.getElementById(o);
 }
 
 </script>

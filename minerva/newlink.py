@@ -1005,6 +1005,10 @@ class SocketTransport(protocol.Protocol):
 		##print
 		##print
 		##traceback.print_stack()
+
+		# If the transport is terminating, it should have already called Stream.transportOffline(self) # TODO: actually make it so
+		assert not self._terminating
+
 		if self._authed is not True or self._gotHello is not True:
 			# How did someone ask me to write boxes at this time? This should
 			# never happen.
@@ -1079,7 +1083,7 @@ class SocketTransport(protocol.Protocol):
 			transportNumber = abstract.ensureNonNegIntLimit(helloData['n'], 2**64)
 			protocolVersion = helloData['v']
 			# -- no transportType
-			# Rules for streamId: must be 20-30 inclusive bytes, must not contain characters >= 127
+			# Rules for streamId: must be 20-30 inclusive bytes, must not contain characters > 127
 			streamId = helloData['i']
 			if not isinstance(streamId, str) or not 20 <= len(streamId) <= 30: # ,str is appropriate because of how simplejson returns str when possible
 				raise InvalidHello
@@ -1407,7 +1411,7 @@ class SocketTransport(protocol.Protocol):
 	def connectionLost(self, reason):
 		if self.noisy:
 			log.msg('Connection lost for %r reason %r' % (self, reason))
-		if self._stream is not None:
+		if self._stream is not None: # XXX TODO: only call if necessary. Just because _stream is set, doesn't mean it should be called (see cbAuthOkay above)
 			self._stream.transportOffline(self)
 
 

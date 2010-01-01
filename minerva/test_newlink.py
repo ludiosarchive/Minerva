@@ -1126,15 +1126,15 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 	"""
 
 	def setUp(self):
-		clock = task.Clock()
+		self._clock = task.Clock()
 		self.protocolFactory = MockMinervaProtocolFactory()
-		self.streamTracker = DummyStreamTracker(clock, self.protocolFactory, {})
+		self.streamTracker = DummyStreamTracker(self._clock, self.protocolFactory, {})
 
 
 	def _resetConnection(self):
 		reactor = FakeReactor()
 		self.t = DummyTCPTransport()
-		self.face = SocketFace(reactor, None, self.streamTracker, DummyFirewall(), policyString='<nonsense-policy/>')
+		self.face = SocketFace(reactor, None, self.streamTracker, DummyFirewall(self._clock, rejectAll=False), policyString='<nonsense-policy/>')
 		self.transport = self.face.buildProtocol(addr=None)
 		self.transport.makeConnection(self.t)
 
@@ -1252,9 +1252,9 @@ class _BaseHelpers(object):
 
 
 	def _resetStreamTracker(self):
-		clock = task.Clock()
+		self._clock = task.Clock()
 		self.protocolFactory = MockMinervaProtocolFactory()
-		self.streamTracker = DummyStreamTracker(clock, self.protocolFactory, {})
+		self.streamTracker = DummyStreamTracker(self._clock, self.protocolFactory, {})
 
 
 	def setUp(self):
@@ -1266,7 +1266,7 @@ class _BaseHelpers(object):
 	def _reset(self, rejectAll=False):
 		self._resetParser()
 		self.t = DummyTCPTransport()
-		factory = SocketFace(self._reactor, None, self.streamTracker, DummyFirewall(rejectAll))
+		factory = SocketFace(self._reactor, None, self.streamTracker, DummyFirewall(self._clock, rejectAll))
 		self.transport = factory.buildProtocol(addr=None)
 		self.transport.makeConnection(self.t)
 		self._sendModeInitializer()
@@ -1293,7 +1293,7 @@ class _BaseHelpers(object):
 
 
 
-# TODO: generalize many of these tests and test them for the WebSocket and HTTP faces as well.
+# TODO: generalize many of these tests and test them for the HTTP face as well.
 
 class _BaseSocketTransportTests(_BaseHelpers):
 
@@ -2109,6 +2109,14 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self._reset()
 
 
+	def test_transportOfflineNotCalledIfNeverAuthed(self):
+		"""
+		A regression test: make sure SocketTransport only calls transportOffline
+		if it called transportOnline.
+		"""
+		
+
+
 
 class SocketTransportTestsWithBencode(_BaseSocketTransportTests, unittest.TestCase):
 
@@ -2144,7 +2152,7 @@ class TransportProducerTests(unittest.TestCase):
 		
 		self.proto = MockMinervaProtocol()
 		self.tracker = StreamTracker(reactor, clock, self.proto)
-		self.transport = SocketTransport(reactor, clock, self.tracker, DummyFirewall(), None)
+		self.transport = SocketTransport(reactor, clock, self.tracker, DummyFirewall(clock, rejectAll=False), None)
 
 		self.t = DummyTCPTransport()
 		self.transport.makeConnection(self.t)
@@ -2315,7 +2323,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		clock = task.Clock()
 		self.protocolFactory = protocolFactoryClass()
 		self.streamTracker = StreamTracker(self._reactor, clock, self.protocolFactory)
-		self.faceFactory = SocketFace(self._reactor, None, self.streamTracker, DummyFirewall(rejectAll=False))
+		self.faceFactory = SocketFace(self._reactor, None, self.streamTracker, DummyFirewall(clock, rejectAll=False))
 
 
 	def setUp(self):

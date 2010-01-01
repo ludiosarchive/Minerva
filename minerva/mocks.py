@@ -452,7 +452,8 @@ class DummyStreamTracker(object):
 
 class DummyFirewall(object):
 
-	def __init__(self, rejectAll=False):
+	def __init__(self, clock=None, rejectAll=False):
+		self._clock = clock
 		self._rejectAll = rejectAll
 
 

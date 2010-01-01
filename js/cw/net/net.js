@@ -9,6 +9,7 @@ goog.require('goog.Disposable');
 goog.require('cw.externalinterface');
 
 goog.provide('cw.net');
+goog.provide('cw.net.FrameType');
 goog.provide('cw.net.FlashSocket');
 goog.provide('cw.net.ParseError');
 goog.provide('cw.net.RequestStillActive');

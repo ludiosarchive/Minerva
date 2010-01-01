@@ -48,10 +48,10 @@ class Index(BetterResource):
 
 
 
-class FlashTestPage(resource.Resource): # ugh BetterResource is fail
+class FlashTestPage(BetterResource):
 
 	def __init__(self, csrfStopper, cookieInstaller, directoryScan, JSPATH):
-		resource.Resource.__init__(self)
+		BetterResource.__init__(self)
 
 		self.putChild('', Index(csrfStopper, cookieInstaller, directoryScan, JSPATH))
 		self.putChild('app.swf', static.File(FilePath(__file__).parent().child('app.swf').path))
