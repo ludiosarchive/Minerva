@@ -1004,9 +1004,7 @@ class SocketTransport(protocol.Protocol):
 		"""
 		@see L{IMinervaTransport.writeBoxes}
 		"""
-		##print
-		##print
-		##traceback.print_stack()
+		##print;print;traceback.print_stack()
 
 		# If the transport is terminating, it should have already called Stream.transportOffline(self) # TODO: actually make it so
 		assert not self._terminating
