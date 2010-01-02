@@ -1338,8 +1338,7 @@ class SocketTransport(protocol.Protocol):
 		"""
 		@see L{IMinervaTransport.closeGently}
 		"""
-		if self._terminating:
-			return # TODO: explicit tests for this case (right now only covered by test_boxSendingAndNewTransport)
+		assert not self._terminating
 
 		if self._sackDirty:
 			self._sackDirty = False
@@ -1355,8 +1354,6 @@ class SocketTransport(protocol.Protocol):
 		@see L{IMinervaTransport.writeReset}
 		"""
 		assert not self._terminating
-		#if self._terminating:
-		#	return # TODO: explicit tests for this case (no coverage right now)
 
 		if self._sackDirty:
 			self._sackDirty = False
