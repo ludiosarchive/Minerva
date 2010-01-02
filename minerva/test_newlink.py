@@ -156,7 +156,7 @@ class StreamTests(unittest.TestCase):
 		], i.log)
 
 
-	def test_boxesReceivedResetsBecauseTooManyBoxes(self):
+	def test_exhaustedIncomingResetsBecauseTooManyBoxes(self):
 		"""If too many boxes are stuck in Incoming, the Stream is reset"""
 		factory = MockMinervaProtocolFactory()
 		s = Stream(None, 'some fake id', factory)
@@ -174,7 +174,7 @@ class StreamTests(unittest.TestCase):
 		self.aE([['writeReset', u'resources exhausted', False]], t.log)
 
 
-	def test_boxesReceivedResetsBecauseTooManyBytes(self):
+	def test_exhaustedIncomingResetsBecauseTooManyBytes(self):
 		"""If too many (estimated) bytes are in Incoming, the Stream is reset"""
 		factory = MockMinervaProtocolFactory()
 		s = Stream(None, 'some fake id', factory)
@@ -188,6 +188,30 @@ class StreamTests(unittest.TestCase):
 
 		s.boxesReceived(t, notManyBoxes, 4*1024*1024 + 1)
 		self.aE([['writeReset', u'resources exhausted', False]], t.log)
+
+
+	def test_exhaustedIncomingButResetsWithApplicationReason(self):
+		"""
+		If too many (estimated) bytes are in Incoming, but the MinervaProtocol
+		did its own reset during a boxesReceived call, then the 'resource exhausted'
+		reset is not generated.
+		"""
+		class MyFactory(MockMinervaProtocolFactory):
+			def buildProtocol(self):
+				obj = self.protocol(when=['boxesReceived'], what=['reset'])
+				obj.factory = self
+				return obj
+
+		factory = MyFactory()
+		s = Stream(None, 'some fake id', factory)
+		t = DummySocketLikeTransport()
+		s.transportOnline(t)
+
+		# we don't actually need to make box #2 big; we can lie to the Stream about how big it is
+		notManyBoxes = [(0, ['box0']), (2, 'x')]
+
+		s.boxesReceived(t, notManyBoxes, 4*1024*1024 + 1)
+		self.aE([['writeReset', u'reset for testing in MockMinervaProtocol._callStuff', True]], t.log)
 
 
 	def test_sendBoxesAndActiveStreams(self):
