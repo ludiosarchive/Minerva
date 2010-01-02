@@ -130,7 +130,7 @@ class Frame(object):
 
 		_, minArgs, maxArgs = typeInfo
 		if not minArgs <= len(contents) - 1 <= maxArgs:
-			raise BadFrame("Bad argument count for Frame type %r (%r); got %r args." % (self.type, self.getType(), len(contents) - 1))
+			raise BadFrame("Bad argument count for Frame type %r (%r); got %d args." % (self.type, self.getType(), len(contents) - 1))
 
 		self.contents = contents
 
@@ -365,7 +365,7 @@ class Stream(object):
 
 
 	def __repr__(self):
-		return ('<%s streamId=%r, len(queue)=%r, disconnected=%r>'
+		return ('<%s streamId=%r, len(queue)=%d, disconnected=%r>'
 			% (self.__class__.__name__, self.streamId, len(self.queue), self.disconnected))
 
 
