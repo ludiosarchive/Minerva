@@ -478,7 +478,8 @@ class Stream(object):
 			self._protocol.boxesReceived(items)
 		# We deliver the deliverable boxes before resetting the connection (if necessary),
 		# just in case the client sent something useful.
-		# Note: During the boxesReceived call above, someone may have reset the Stream! TODO: test for "too many undelivered boxes" case
+		# Note: Underneath the boxesReceived call (above), someone may have reset the Stream!
+		# This is why we check for `not self.disconnected`.
 		if not self.disconnected and \
 		(self._incoming.getUndeliveredCount() > self.maxUndeliveredBoxes or \
 		self._incoming.getMaxConsumption() > self.maxUndeliveredBytes):
