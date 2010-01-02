@@ -1033,7 +1033,11 @@ class SocketTransport(protocol.Protocol):
 			self._lastStartParam = start
 
 		# Even if there's a lot of stuff in the queue, try to write everything.
-		toSend = ''
+		if self._sackDirty: # re: _sackDirty, see comment at the end of _framesReceived
+			self._sackDirty = False
+			toSend = self._getSACKBytes()
+		else:
+			toSend = ''
 		# we might want to send boxes frame instead of box sometimes? no?
 		lastBox = self.lastBoxSent
 		for seqNum, box in queue.iterItems(start=start):
@@ -1046,21 +1050,15 @@ class SocketTransport(protocol.Protocol):
 			lastBox = seqNum
 		if len(toSend) > 1024 * 1024:
 			log.msg('Caution: %r asked me to send a large amount of data (%r bytes)' % (self._stream, len(toSend)))
-			
-		# See comment at the end of _framesReceived
-		if self._sackDirty:
-			self._sackDirty = False
-			self._writeSACK()
 
 		self.transport.write(toSend)
 		self.lastBoxSent = lastBox
 
 
-	def _writeSACK(self):
+	def _getSACKBytes(self):
 		assert not self._terminating
 		sackFrame = (Fn.sack,) + self._stream.getSACK()
-		toSend = self._encodeFrame(sackFrame)
-		self.transport.write(toSend)
+		return self._encodeFrame(sackFrame)
 
 
 	def _handleHelloFrame(self, frame):
@@ -1263,7 +1261,7 @@ class SocketTransport(protocol.Protocol):
 		# Stream.boxesReceived call, a SACK is sent before the box(es).
 		if self._sackDirty and not self._terminating:
 			self._sackDirty = False
-			self._writeSACK()
+			self.transport.write(self._getSACKBytes())
 
 
 	def dataReceived(self, data):
@@ -1342,9 +1340,13 @@ class SocketTransport(protocol.Protocol):
 
 		if self._sackDirty:
 			self._sackDirty = False
-			self._writeSACK()
+			toSend = self._getSACKBytes()
+		else:
+			toSend = ''
 
-		self.transport.write(self._encodeFrame([Fn.you_close_it]))
+		toSend += self._encodeFrame([Fn.you_close_it])
+
+		self.transport.write(toSend)
 		self._terminating = True
 		self._goOffline()
 
@@ -1357,9 +1359,11 @@ class SocketTransport(protocol.Protocol):
 
 		if self._sackDirty:
 			self._sackDirty = False
-			self._writeSACK()
+			toSend = self._getSACKBytes()
+		else:
+			toSend = ''
 
-		toSend = self._encodeFrame([Fn.reset, reasonString, applicationLevel])
+		toSend += self._encodeFrame([Fn.reset, reasonString, applicationLevel])
 		toSend += self._encodeFrame([Fn.you_close_it])
 		self.transport.write(toSend)
 		self._terminating = True
@@ -1385,7 +1389,7 @@ class SocketTransport(protocol.Protocol):
 	# called by Stream instances
 	def unregisterProducer(self):
 		"""
-		Stop consuming data from a producer, without disconnecting.
+		Stop consuming data from a producer.
 		"""
 		self._producer = None
 		self.transport.unregisterProducer()
