@@ -146,6 +146,15 @@ class Frame(object):
 
 
 Fn = Frame.names
+# make globals that will be optimized away by pypycpyo.optimizer
+Fn_boxes = Fn.boxes
+Fn_box = Fn.box
+Fn_seqnum = Fn.seqnum
+Fn_sack = Fn.sack
+Fn_hello = Fn.hello
+Fn_gimme_boxes = Fn.gimme_boxes
+Fn_reset = Fn.reset
+Fn_you_close_it = Fn.you_close_it
 
 
 
@@ -995,7 +1004,7 @@ class SocketTransport(protocol.Protocol):
 		invalidArgsFrameObj.extend(args)
 		toSend = ''
 		toSend += self._encodeFrame(invalidArgsFrameObj)
-		toSend += self._encodeFrame([Fn.you_close_it])
+		toSend += self._encodeFrame([Fn_you_close_it])
 		self.transport.write(toSend)
 		self._terminating = True
 		self._goOffline()
@@ -1045,11 +1054,11 @@ class SocketTransport(protocol.Protocol):
 			if seqNum <= lastBox: # This might have to change to support SACK.
 				continue
 			if lastBox == -1 or lastBox + 1 != seqNum:
-				toSend += self._encodeFrame([Fn.seqnum, seqNum])
-			toSend += self._encodeFrame([Fn.box, box])
+				toSend += self._encodeFrame([Fn_seqnum, seqNum])
+			toSend += self._encodeFrame([Fn_box, box])
 			lastBox = seqNum
 		if len(toSend) > 1024 * 1024:
-			log.msg('Caution: %r asked me to send a large amount of data (%r bytes)' % (self._stream, len(toSend)))
+			log.msg('Caution: %r asked me to send a large amount of data (%d bytes)' % (self._stream, len(toSend)))
 
 		self.transport.write(toSend)
 		self.lastBoxSent = lastBox
@@ -1057,7 +1066,7 @@ class SocketTransport(protocol.Protocol):
 
 	def _getSACKBytes(self):
 		assert not self._terminating
-		sackFrame = (Fn.sack,) + self._stream.getSACK()
+		sackFrame = (Fn_sack,) + self._stream.getSACK()
 		return self._encodeFrame(sackFrame)
 
 
@@ -1168,11 +1177,11 @@ class SocketTransport(protocol.Protocol):
 			frameType = frameObj[0]
 
 			# We demand a 'hello' frame before any other type of frame
-			if not self._gotHello and frameType != Fn.hello:
+			if not self._gotHello and frameType != Fn_hello:
 				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
 
-			if frameType == Fn.hello:
+			if frameType == Fn_hello:
 				# We only allow one 'hello' per connection
 				if self._gotHello:
 					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
@@ -1184,7 +1193,7 @@ class SocketTransport(protocol.Protocol):
 				except NoSuchStream:
 					return self._closeWith(Fn.tk_stream_attach_failure)
 			
-			elif frameType == Fn.gimme_boxes:
+			elif frameType == Fn_gimme_boxes:
 				succeedsTransport = frameObj[1]
 				if succeedsTransport is not None:
 					try:
@@ -1193,11 +1202,11 @@ class SocketTransport(protocol.Protocol):
 						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 				self._stream.subscribeToBoxes(self, succeedsTransport)
 
-			elif frameType == Fn.you_close_it:
+			elif frameType == Fn_you_close_it:
 				# TODO: allow this for HTTP; finish the HTTP request
 				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
-			elif frameType == Fn.boxes:
+			elif frameType == Fn_boxes:
 				seqNumStrToBoxDict = frameObj[1]
 				memorySizeOfBoxes = len(frameString)
 				boxes = []
@@ -1213,19 +1222,19 @@ class SocketTransport(protocol.Protocol):
 				# Remember that a lot can happen underneath that boxesReceived call, including
 				# a call to our own `reset` or `closeGently` or `writeBoxes`.
 
-			elif frameType == Fn.box:
+			elif frameType == Fn_box:
 				1/0
 
-			elif frameType == Fn.seqnum:
+			elif frameType == Fn_seqnum:
 				1/0
 
-			elif frameType == Fn.reset:
+			elif frameType == Fn_reset:
 				reasonString, applicationLevel = frameObj[1:]
 				if not isinstance(reasonString, basestring) or not isinstance(applicationLevel, bool):
 					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 				self._stream.resetFromClient(reasonString, applicationLevel)
 
-			elif frameType == Fn.sack:
+			elif frameType == Fn_sack:
 				ackNumber, sackList = frameObj[1:]
 				try:
 					abstract.ensureNonNegIntLimit(ackNumber, 2**64) # okay to ignore return value here
@@ -1344,7 +1353,7 @@ class SocketTransport(protocol.Protocol):
 		else:
 			toSend = ''
 
-		toSend += self._encodeFrame([Fn.you_close_it])
+		toSend += self._encodeFrame([Fn_you_close_it])
 
 		self.transport.write(toSend)
 		self._terminating = True
@@ -1363,8 +1372,8 @@ class SocketTransport(protocol.Protocol):
 		else:
 			toSend = ''
 
-		toSend += self._encodeFrame([Fn.reset, reasonString, applicationLevel])
-		toSend += self._encodeFrame([Fn.you_close_it])
+		toSend += self._encodeFrame([Fn_reset, reasonString, applicationLevel])
+		toSend += self._encodeFrame([Fn_you_close_it])
 		self.transport.write(toSend)
 		self._terminating = True
 		self._goOffline()
