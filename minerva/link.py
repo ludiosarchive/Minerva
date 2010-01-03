@@ -114,6 +114,8 @@ request). But we still want to reduce the memory used by Queue in this server.
 So we guess if the client has received a box by looking at the TCP ACKs.
 """
 
+# XXX: tcp_unacked is wrong, use SIOCOUTQ instead
+
 def get_tcp_info(sock):
 	try:
 		# The idea comes from

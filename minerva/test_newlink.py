@@ -74,8 +74,6 @@ class StreamTests(unittest.TestCase):
 
 	def test_implements(self):
 		s = Stream(None, 'some fake id', None)
-		verify.verifyObject(IPushProducer, s)
-		verify.verifyObject(IPullProducer, s)
 		verify.verifyObject(ISimpleConsumer, s)
 
 

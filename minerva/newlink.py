@@ -338,7 +338,7 @@ class Stream(object):
 	streaming should implement an application-level producer/consumer system.
 	"""
 
-	implements(ISimpleConsumer, IPushProducer, IPullProducer)
+	implements(ISimpleConsumer) # Does not implement IPushProducer or IPullProducer because it does not expect stopProducing
 
 	maxUndeliveredBoxes = 5000 # boxes
 	maxUndeliveredBytes = 4 * 1024 * 1024 # bytes
@@ -731,14 +731,6 @@ class Stream(object):
 		self._primaryPaused = False
 		if self._producer:
 			self._producer.resumeProducing()
-
-
-	# Called by no one. Implemented only to pass zope.interface checks in unit tests.
-	def stopProducing(self):
-		"""
-		Private. Do not call this.
-		"""
-		assert False, "Stream.stopProducing should never be called"
 
 
 
