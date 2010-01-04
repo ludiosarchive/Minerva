@@ -10,6 +10,7 @@ import hashlib
 import hmac
 from twisted.internet import defer
 from twisted.web import resource
+from twisted.python.util import slowStringCompare
 from zope.interface import implements, Interface
 from collections import defaultdict
 
@@ -117,7 +118,7 @@ class CsrfStopper(object):
 		except TypeError:
 			raise RejectToken()
 
-		if expected != self.version + self._hash(uuidStr):
+		if not slowStringCompare(expected, self.version + self._hash(uuidStr)):
 			raise RejectToken()
 
 
