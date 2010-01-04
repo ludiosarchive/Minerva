@@ -224,7 +224,7 @@ class DelimitedJSONDecoder(object):
 		return s
 
 
-	def manyDataCallback(self, strings):
+	def manyDataCallback(self, docs):
 		"""
 		Override this in a subclass, or assign manyDataCallback after instantiating decoder.
 		"""

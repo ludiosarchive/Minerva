@@ -979,6 +979,8 @@ class SocketTransport(protocol.Protocol):
 		assert self._mode != UNKNOWN
 		if self._mode in (BENCODE, INT32):
 			return self._parser.encode(dumpToJson7Bit(frameData))
+		elif self_mode == HTTP:
+			return dumpToJson7Bit(frameData) + '\n'
 		else:
 			1/0
 
@@ -1329,7 +1331,7 @@ class SocketTransport(protocol.Protocol):
 				self._parser.dataReceived(frameData)
 			except decoders.ParseError:
 				self._closeWith(Fn.tk_frame_corruption)
-		else:
+		else: # Don't need to handle HTTP here because HttpFace calls _framesReceived
 			1/0
 
 
@@ -1498,8 +1500,28 @@ class HttpFace(resource.Resource):
 
 
 	def render_POST(self, request):
-		1/0
+		result = []
+		def callback(docs):
+			result[0] = docs
 
+		body = request.content.read()
+		# Proxies *might* strip whitespace around the request body, so add a newline if necessary.
+		if body and body[-1] != '\n':
+			body += "\n"
+
+		decoder = decoders.BencodeStringDecoder()
+		decoder.manyDataCallback = callback
+		decoder.dataReceived(body)
+
+		headers = request.responseHeaders._rawHeaders
+
+		# Headers taken from the ones gmail sends
+		headers['cache-control'] = ['no-cache, no-store, max-age=0, must-revalidate']
+		headers['pragma'] = ['no-cache']
+		headers['expires'] = ['Fri, 01 Jan 1990 00:00:00 GMT']
+
+		# http://code.google.com/p/doctype/wiki/ArticleScriptInclusion
+		request.write('for(;;);\n')
 
 
 from pypycpyo import optimizer
