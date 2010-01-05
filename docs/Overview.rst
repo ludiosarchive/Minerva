@@ -134,6 +134,10 @@ Installation requirements
 	for resource exhaustion attacks, `abortConnection support`_, and improved compatibility with
 	SSL client bugs (modified ``DefaultOpenSSLContextFactory``).
 
+	-	Monoclock, so that your Minerva-using servers are less affected by time jumps.
+
+	-	PyOpenSSL
+
 -	simplejson (our branch ``prime``). Minerva relies on a depth limit of 32 while parsing JSON. If
 	an unpatched simplejson is used, Minerva will still work but the test suite will not pass
 	(and Minerva will be vulnerable to dedicated hackers trying to segfault the server).
@@ -616,11 +620,15 @@ do, in order of priority:
 
 		sudo echo -n 300000 > /proc/sys/net/core/somaxconn
 
-5.	You can tune the kernel to support more open connections. If this is necessary,
+5.	If using the epoll reactor (or libevent reactor in epoll mode), you may need to raise
+	the epoll ``max_user_watches`` limit, in ``/proc/sys/fs/epoll/max_user_watches``.
+	See `man 7 epoll`_.
+
+6.	You can tune the kernel to support more open connections. If this is necessary,
 	you will see ``Out of socket memory`` messages on Linux in your syslog. See
 	`"Tuning the Linux Kernel for many tcp connections"`_.
 
-6.	Options for benchmarking and testing only:
+7.	Options for benchmarking and testing only:
 
 	*	Prevent sockets from staying in the TIME_WAIT state for more than ~1 second::
 
@@ -645,6 +653,8 @@ non-SSL connections.
 ..	_`"Changing the Ephemeral Port Range"`: http://www.ncftp.com/ncftpd/doc/misc/ephemeral_ports.html#Changing
 
 ..	_`SSL connections use much more memory`: http://google.com/search?hl=en&q=%22occupancy%20of%20ssl%20connections%22%20nginx
+
+..	_`man 7 epoll`: http://www.kernel.org/doc/man-pages/online/pages/man4/epoll.4.html
 
 ..	[#] grep the nginx source for ``NGX_LISTEN_BACKLOG``
 

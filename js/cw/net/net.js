@@ -715,9 +715,6 @@ cw.net.simpleRequest = function(verb, url, post) {
 
 
 /**
- * C{bridge} is the already-loaded Flash object that provides FlashConnector
- * capabilities in psuedo-namespace '__FC_'
- *
  * Instantiate this object and set properties `onconnect`, `onclose`, `onioerror`,
  * `onsecurityerror`, and `onframes`. Then call `connect_`.
  *
@@ -734,6 +731,9 @@ cw.net.simpleRequest = function(verb, url, post) {
  *
  * @constructor
  * @extends {goog.Disposable}
+ *
+ * @param {!Element} bridge The already-loaded Flash element that provides
+ * 		FlashConnector capabilities in psuedo-namespace '__FC_'
  */
 cw.net.FlashSocket = function(bridge) {
 	goog.Disposable.call(this);
