@@ -252,8 +252,10 @@ class DelimitedJSONDecoder(object):
 				self.lastJsonError = e
 				raise ParseError("%r" % (e,))
 			docs.append(doc)
-			at = end + 1 # move to the right, skip over the \n
-			if self._buffer.find(self.delimiter, at) == -1:
+			endDelimiterPosition = self._buffer.find(self.delimiter, end) # always there
+			at = endDelimiterPosition + 1
+			nextDelimiter = self._buffer.find(self.delimiter, at) # maybe there
+			if nextDelimiter == -1:
 				break
 		self._buffer = self._buffer[at:]
 		self.manyDataCallback(docs)

@@ -233,6 +233,31 @@ class DelimitedJSONDecoderTests(CommonTests, unittest.TestCase):
 	# Not really strings but JSON-safe objects.
 	strings = ["hello world", u"unicode", {}, [], {"key": ["val1", "val2"]}, None, False, True, 0.0, -0.5, 0.5, 5, 12738123912, 2**50]
 
+	def test_bufferWithTrailingBytes(self):
+		"""
+		Test what CommonTests.test_buffer tests, but append various bytes
+		before the delimiter. The parser should still parse these correctly.
+		"""
+		# simplejson has some interesting (and nice) parsing. Something like "abcdef" can
+		# be tacked on to any parsable JSON. "e" can be tacked on too, but not "e4" (because that changes numbers).
+		for whitespace in (' ', '  ', '\t', '\r', '\r\r\r\r', 'abcdef'):
+			##print repr(whitespace)
+			toSend = ''
+			for s in self.strings:
+				toSend += self.receiver.encode(s)[:-1] + whitespace + '\n'
+
+			for packetSize in range(1, 20):
+				##print "packetSize", packetSize
+				a = self.receiver()
+				a.MAX_LENGTH = 699
+
+				for s in diceString(toSend, packetSize):
+					##print 'sending', repr(s)
+					a.dataReceived(s)
+
+				self.aE(self.strings, a.got)
+
+
 	def test_encode(self):
 		self.aE('"h"\n', self.receiver.encode("h"))
 		self.aE('"h"\n', self.receiver.encode(u"h"))
