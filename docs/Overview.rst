@@ -123,8 +123,8 @@ Why you might want Minerva
 	or even controls a real IE window, to send and receive data.
 
 
-Installation requirements
-==================
+Installation requirements / Dependencies
+=============================
 -	CPython 2.5+ with the patch Extpatches/Python_prevent_ACA_dict_set.patch. Minerva is developed
 	and tested with CPython 2.7. Other Python implementations are untested. Minerva will
 	still work without the ACA patch, but it will be vulnerable to dedicated hackers trying
@@ -157,7 +157,9 @@ If you want to compile the haXe code to a SWF (for Flash Socket support on the c
 
 If you want to run the client-side test suite (``twistd`` plugin ``minervarun``), you will need:
 
--	Coreweb (written by us)
+-	Coreweb
+
+-	Webmagic
 
 If you want to compile the RestructuredText documentation to HTML (or another format), you will need:
 
