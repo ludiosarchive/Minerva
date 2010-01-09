@@ -56,7 +56,7 @@ class NetStringDecoder(object):
 	_offset = 0
 	_lengthToRead = None
 	_readerState = LENGTH
-	MAX_LENGTH = 1024*1024*1024 # 1GB
+	MAX_LENGTH = 20 * 1024 * 1024 # 20MB
 	noisy = False
 
 
@@ -208,7 +208,7 @@ class DelimitedJSONDecoder(object):
 	depending on how the data is received.
 	"""
 	dead = False
-	MAX_LENGTH = 1024 * 1024 * 1024 # 1 GB
+	MAX_LENGTH = 20 * 1024 * 1024 # 20 MB
 	delimiter = '\n' # MUST be 1 byte. Do not change this after any data has been received.
 	lastJsonError = None # Most people won't care about the JSON exception.
 	_buffer = ''
@@ -273,7 +273,7 @@ class IntNStringDecoder(object):
 	__slots__ = ['MAX_LENGTH', '_buffer']
 
 	def __init__(self):
-		self.MAX_LENGTH = 1024 * 1024 * 1024 # 1 GB
+		self.MAX_LENGTH = 20 * 1024 * 1024 # 20 MB
 		self._buffer = ""
 
 
