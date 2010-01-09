@@ -1509,6 +1509,9 @@ class HttpFace(resource.Resource):
 		if body and body[-1] != '\n':
 			body += "\n"
 
+		if '\r\n' in body:
+			log.msg("Unusual: found a CRLF in POST body for %r from %r" % (request, request.client))
+
 		decoder = decoders.BencodeStringDecoder()
 		decoder.manyDataCallback = callback
 		decoder.dataReceived(body)
