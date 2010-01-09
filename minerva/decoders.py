@@ -5,6 +5,9 @@ Useful for testing. Most of the time, JavaScript/Flash
 code will be parsing the streams.
 """
 
+# XXX confusion: getNewFrames functions in this file return either strings
+# or frames, depending on the decoder.
+
 import struct
 import simplejson
 from minerva.abstract import strToNonNeg
@@ -20,6 +23,9 @@ class StringTooLongError(Exception):
 	"""The string is too long to encode."""
 
 
+# possible result codes for the (frames, result_code) return values
+OK, TOO_LONG, FRAME_CORRUPTION, INTRAFRAME_CORRUPTION = range(4)
+
 
 LENGTH, DATA, COMMA = range(3)
 
@@ -29,16 +35,15 @@ class NetStringDecoder(object):
 	This uses djb's Netstrings protocol to break up the
 	input into strings.
 
-	When one or more strings are parsed, manyDataCallback is called with
-	a list of complete strings. manyDataCallback will not include a string
-	for which a comma terminator has not arrived yet. This decoder does accept
+	When one or more strings are parsed, they are returned by getNewFrames. Strings
+	for which a comma has not yet arrived are not included. This decoder *does* accept
 	0-length strings.
 
 	Security features:
 		1. Messages are limited in size, useful if you don't want someone
 		   sending you a 500MB netstring (change MAX_LENGTH to the maximum
 		   length you wish to accept).
-		2. ParseError is raised if an illegal message is received.
+		2. An error code is returned if an illegal message is received.
 		3. Small messages received at once don't cause excessive string copying.
 		4. Sending long bogus "lengths" doesn't cause exponential slowdown through
 			excessive .find()  
@@ -51,7 +56,6 @@ class NetStringDecoder(object):
 	_offset = 0
 	_lengthToRead = None
 	_readerState = LENGTH
-	_completeStrings = None
 	MAX_LENGTH = 1024*1024*1024 # 1GB
 	noisy = False
 
@@ -61,13 +65,6 @@ class NetStringDecoder(object):
 		return str(len(s)) + ':' + s + ','
 
 
-	def manyDataCallback(self, strings):
-		"""
-		Override this in a subclass, or assign manyDataCallback after instantiating decoder.
-		"""
-		raise NotImplementedError
-
-
 	def doLength(self):
 		# .find in CPython 2.7 searches left-to-right, which is good for us.
 		colonLocation = self._data.find(':', self._offset) # TODO: should there be a search limit here?
@@ -75,9 +72,11 @@ class NetStringDecoder(object):
 			try:
 				self._lengthToRead = strToNonNeg(self._tempDigits + self._data[self._offset:colonLocation])
 			except ValueError:
-				raise ParseError("non-digits before the colon while looking for length")
+				self._code = FRAME_CORRUPTION # non-digits before the colon while looking for length
+				return True
 			if self._lengthToRead > self.MAX_LENGTH:
-				raise ParseError("netstring too long")
+				self._code = TOO_LONG # netstring too long
+				return True
 			self._offset = colonLocation + 1
 			self._readerState = DATA
 			self._tempDigits = ''
@@ -89,9 +88,11 @@ class NetStringDecoder(object):
 				try:
 					strToNonNeg(self._tempDigits)
 				except ValueError:
-					raise ParseError("non-digits found in %r" % (self._tempDigits,))
+					self._code = FRAME_CORRUPTION # non-digits found
+					return True
 			if len(self._tempDigits) > len(str(self.MAX_LENGTH)): # TODO: cache this value?
-				raise ParseError("netstring too long")
+				self._code = TOO_LONG # netstring too long
+				return True
 			##if self.noisy: print "doLength: not done collecting digits yet with _tempDigits=%r" % (self._tempDigits)
 			return True # There cannot be any more useful data in the buffer.
 
@@ -102,69 +103,60 @@ class NetStringDecoder(object):
 		self._tempData += capturedThisTime
 		assert len(self._tempData) <= self._lengthToRead, "_lengthToRead=%r, _offset=%r" % (self._lengthToRead, self._offset)
 		if self._lengthToRead == len(self._tempData):
-			##if self.noisy: print "doData: captured a full fragment; _completeStrings is now %r" % (self._completeStrings)
+			##if self.noisy: print "doData: captured a full fragment"
 			self._offset += len(capturedThisTime)
-			# Note: When we get a full string but no comma, the string is considered complete
-			# and should still be given to L{manyDataCallback}
+			# Note: When we get a full string but no comma, the string is not considered complete yet.
 			self._readerState = COMMA
 			##if self.noisy: print "doData: going into readerState COMMA with _offset=%r, _data=%r" % (self._offset, self._data)
 		else:
 			return True # There cannot be any more useful data in the buffer.
 
 
-	def doComma(self):
+	def doComma(self, completeStrings):
 		maybeComma = self._data[self._offset:self._offset+1]
 		##if self.noisy: print "doComma: maybeComma=%r" % (maybeComma,)
 		if maybeComma == '':
 			# Hopefully we'll get a comma next time.
 			return True # There cannot be any more useful data in the buffer.
 		elif maybeComma != ',':
-			raise ParseError("I was expecting a comma, found something else in %r" % ((self._data, self._offset),))
+			self._code = FRAME_CORRUPTION # was expecting a comma, found something else
+			return True
 		else:
-			self._completeStrings.append(self._tempData)
+			completeStrings.append(self._tempData)
 			self._tempData = ''
 			self._offset += 1
 			self._readerState = LENGTH
 			##if self.noisy: print "doComma: going into readerState DATA with _offset=%r, _data=%r" % (self._offset, self._data)
 
 
-	def dataReceived(self, data):
-		# This should re-raise ParseError when more data is fed into it, even after ParseError
-		# has already been raised.
-
+	def getNewFrames(self, data):
 		# This could be done in a way that doesn't require _dead, but it would involve
-		# writing a test for every single ParseError to make sure internal state isn't corrupted.
+		# writing a lot more tests for every possible "bad state".
 		if self._dead:
-			raise ParseError("Don't give me data, I'm dead")
+			raise RuntimeError("Don't give me data, I'm dead")
 
-		if self._completeStrings is None:
-			self._completeStrings = []
+		self._code = OK
+		completeStrings = []
 		# Nothing ever gets left in _data because there are separate temporary buffers
 		# for digits and data.
 		self._data = data
-		try:
-			while True:
-				if self._readerState == DATA:
-					ret = self.doData()
-				elif self._readerState == COMMA:
-					ret = self.doComma()
-				elif self._readerState == LENGTH:
-					ret = self.doLength()
-				else:
-					raise RuntimeError("mode is not DATA, COMMA or LENGTH")
-				if ret:
-					break
-		except ParseError:
+		self._offset = 0
+		while True:
+			if self._readerState == DATA:
+				ret = self.doData()
+			elif self._readerState == COMMA:
+				ret = self.doComma(completeStrings)
+			elif self._readerState == LENGTH:
+				ret = self.doLength()
+			else:
+				raise RuntimeError("mode is not DATA, COMMA or LENGTH")
+			if ret:
+				break
+
+		if self._code != OK:
 			self._dead = True
-			raise
-		finally:
-			self._data = ''
-			self._offset = 0
-		
-		# Note this behavior: if there's a parse error anywhere in the L{data} passed to
-		# dataReceived, manyDataCallback won't be called.
-		self.manyDataCallback(self._completeStrings)
-		self._completeStrings = []
+
+		return completeStrings, self._code
 
 
 
@@ -175,8 +167,8 @@ class BencodeStringDecoder(NetStringDecoder):
 		return str(len(s)) + ':' + s
 
 
-	def doComma(self):
-		self._completeStrings.append(self._tempData)
+	def doComma(self, completeStrings):
+		completeStrings.append(self._tempData)
 		self._tempData = ''
 		# Bencode strings have no trailing comma; just go back to LENGTH
 		self._readerState = LENGTH
@@ -210,6 +202,10 @@ class DelimitedJSONDecoder(object):
 	Implementation note:
 		String append is fast enough in CPython 2.5+. On Windows CPython,
 		it can still be ~5x slower than list-based buffers.
+
+	MAX_LENGTH in this decoder is not very strict. The "effective max length"
+	ranges from MAX_LENGTH to (MAX_LENGTH + L{twisted.internet.abstract.FileDescriptor.bufferSize}),
+	depending on how the data is received.
 	"""
 	dead = False
 	MAX_LENGTH = 1024 * 1024 * 1024 # 1 GB
@@ -224,41 +220,36 @@ class DelimitedJSONDecoder(object):
 		return s
 
 
-	def manyDataCallback(self, docs):
-		"""
-		Override this in a subclass, or assign manyDataCallback after instantiating decoder.
-		"""
-		raise NotImplementedError
-
-
-	def dataReceived(self, data):
-		# This should re-raise ParseError when more data is fed into it, even after ParseError
-		# has already been raised.
+	def getNewFrames(self, data):
+		# This should re-return the correct error code when more data is fed into it, even after
+		# the error code was already returned.
 
 		self.lastJsonError = None
 		self._buffer += data
-		if len(self._buffer) > self.MAX_LENGTH:
-			raise ParseError("JSON string exceeds limit of %d bytes" % (self.MAX_LENGTH,))
+		docs = []
 		# Stop the "dribble in bytes slowly" attack (where entire buffer is repeatedly scanned for \n)
 		# This trick works here because our delimiter is 1 byte.
 		if self.delimiter not in data:
-			return
-		docs = []
+			if len(self._buffer) > self.MAX_LENGTH:
+				return docs, TOO_LONG
+			return docs, OK
 		at = 0
 		while True:
 			try:
 				doc, end = strictDecoder.raw_decode(self._buffer, at)
-			except simplejson.decoder.JSONDecodeError, e:
+			except (simplejson.decoder.JSONDecodeError, ParseError), e:
 				self.lastJsonError = e
-				raise ParseError("%r" % (e,))
+				return docs, INTRAFRAME_CORRUPTION
 			docs.append(doc)
-			endDelimiterPosition = self._buffer.find(self.delimiter, end) # always there
-			at = endDelimiterPosition + 1
-			nextDelimiter = self._buffer.find(self.delimiter, at) # maybe there
-			if nextDelimiter == -1:
+			# Find the delimiter that ends the document we just extracted
+			at = 1 + self._buffer.find(self.delimiter, end)
+			# If there's no delimiter after that delimiter, break.
+			if self._buffer.find(self.delimiter, at) == -1:
 				break
 		self._buffer = self._buffer[at:]
-		self.manyDataCallback(docs)
+		if len(self._buffer) > self.MAX_LENGTH: # XXX make sure this is tested
+			return docs, TOO_LONG
+		return docs, OK
 
 
 
@@ -301,23 +292,13 @@ class IntNStringDecoder(object):
 		return struct.pack(cls.structFormat, lenData) + s
 
 
-	def manyDataCallback(self, strings):
-		"""
-		Override this in a subclass, or assign manyDataCallback after instantiating decoder.
-		"""
-		raise NotImplementedError
-
-
-	def dataReceived(self, data):
-		"""
-		Convert int prefixed strings into calls to manyDataCallback.
-		"""
+	def getNewFrames(self, data):
 		# Keep in mind that this must work with 0-length strings.
-		# This should re-raise ParseError when more data is fed into it, even after ParseError
-		# has already been raised.
+		# This should re-return TOO_LONG when more data is fed into it, if
+		# TOO_LONG was already returned.
 
 		# This function will sometimes unpack the prefix many times for the same string,
-		# depending on how many dataReceived calls it takes to arrive. struct.unpack is
+		# depending on how many getNewFrames calls it takes to arrive. struct.unpack is
 		# fast in CPython 2.7, so this doesn't matter.
 
 		self._buffer += data
@@ -332,7 +313,8 @@ class IntNStringDecoder(object):
 			at_pLen = at + pLen
 			length, = struct.unpack(self.structFormat, self._buffer[at:at_pLen])
 			if length > self.MAX_LENGTH:
-				raise ParseError("%d byte string too long" % length)
+				##print "Too long", length
+				return strings, TOO_LONG
 			if lenBuffer - at < length + pLen: # not enough to read next string?
 				break
 			packet = self._buffer[at_pLen:at_pLen + length]
@@ -341,7 +323,7 @@ class IntNStringDecoder(object):
 
 		# This is actually fastest when a == 0 (at least in CPython 2.7), so there's no need for: if at > 0: 
 		self._buffer = self._buffer[at:]
-		self.manyDataCallback(strings)
+		return strings, OK
 
 
 
@@ -360,7 +342,7 @@ class Int32StringDecoder(IntNStringDecoder):
 
 
 
-class ScriptDecoder(object):
+class ScriptDecoder(object): # XXX remove this or fix manyDataCallback design
 	"""
 	This is not as loose as an SGML parser (which will handle whitespace
 	inside the "<script>" or "</script>", but it's good enough for testing.
@@ -389,7 +371,7 @@ class ScriptDecoder(object):
 		raise NotImplementedError
 
 
-	def dataReceived(self, data):
+	def getNewFrames(self, data):
 		self._buffer += data
 
 		scripts = []
