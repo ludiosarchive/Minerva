@@ -1299,7 +1299,6 @@ class SocketTransport(protocol.Protocol):
 				del self._initialBuffer
 				self._parser = decoders.BencodeStringDecoder()
 				self._parser.MAX_LENGTH = self.MAX_LENGTH
-				self._parser.manyDataCallback = self._framesReceived
 
 			elif self._initialBuffer.startswith('<int32/>\n'):
 				self._mode = INT32
@@ -1307,7 +1306,6 @@ class SocketTransport(protocol.Protocol):
 				del self._initialBuffer
 				self._parser = decoders.Int32StringDecoder()
 				self._parser.MAX_LENGTH = self.MAX_LENGTH
-				self._parser.manyDataCallback = self._framesReceived
 
 			# TODO: <int32-zlib/> with <x/> alias
 			# TODO: if we support compression, make sure people can't zlib-bomb us with exploding strings:
@@ -1327,10 +1325,15 @@ class SocketTransport(protocol.Protocol):
 			frameData = data
 
 		if self._mode in (BENCODE, INT32):
-			try:
-				self._parser.dataReceived(frameData)
-			except decoders.ParseError:
+			out, code = self._parser.getNewFrames(frameData)
+			if code == decoders.OK:
+				self._framesReceived(out)
+			elif code in (decoders.TOO_LONG, decoders.FRAME_CORRUPTION):
 				self._closeWith(Fn.tk_frame_corruption)
+			elif code == decoders.INTRAFRAME_CORRUPTION:
+				self._closeWith(Fn.tk_intraframe_corruption)
+			else:
+				raise RuntimeError("Got unknown code from parser %r: %r" % (self._parser, code))
 		else: # Don't need to handle HTTP here because HttpFace calls _framesReceived
 			1/0
 
@@ -1514,7 +1517,13 @@ class HttpFace(resource.Resource):
 
 		decoder = decoders.BencodeStringDecoder()
 		decoder.manyDataCallback = callback
-		decoder.dataReceived(body)
+		out, code = decoder.getNewFrames(body)
+		if code == decoders.OK:
+			queuedFrame = None
+		elif code in (decoders.TOO_LONG, decoders.FRAME_CORRUPTION):
+			queuedFrame = [Fn.tk_frame_corruption]
+		elif code == decoders.INTRAFRAME_CORRUPTION:
+			queuedFrame = [Fn.tk_intraframe_corruption]
 
 		headers = request.responseHeaders._rawHeaders
 

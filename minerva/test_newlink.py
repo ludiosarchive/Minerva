@@ -10,7 +10,7 @@ from twisted.web import server, resource
 from twisted.internet import protocol, defer, address, interfaces, task
 from twisted.internet.interfaces import IPushProducer, IPullProducer, IProtocol, IProtocolFactory
 
-from minerva.decoders import BencodeStringDecoder, Int32StringDecoder, strictDecodeOne
+from minerva.decoders import OK, BencodeStringDecoder, Int32StringDecoder, strictDecodeOne
 from minerva import abstract
 from minerva.helpers import todo
 
@@ -36,6 +36,13 @@ Fn = Frame.names
 nan = simplejson.loads('NaN') # this always works, but float('nan') => 0 in Python ICC builds (maybe only with floating point optimizations?)
 inf = simplejson.loads('Infinity')
 neginf = simplejson.loads('-Infinity')
+
+
+def _strictGetNewFrames(parser, data):
+	out, code = parser.getNewFrames(data)
+	if code != OK:
+		raise RuntimeError("Parse error; code was %r" % (code,))
+	return out, code
 
 
 class FrameTests(unittest.TestCase):
@@ -1217,7 +1224,6 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 		def resetParser():
 			self.gotFrames = []
 			self.parser = BencodeStringDecoder()
-			self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(strictDecodeOne(f) for f in frames)
 
 		for packetSize in range(1, 20):
 			self._resetConnection()
@@ -1232,8 +1238,9 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			
 			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
-			self.parser.dataReceived(self.t.value())
-			self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], self.gotFrames)
+			frames, code = _strictGetNewFrames(self.parser, self.t.value())
+			decodedFrames = [strictDecodeOne(f) for f in frames]
+			self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], decodedFrames)
 
 
 	# copy/paste from test_modeBencode
@@ -1248,7 +1255,6 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 		def resetParser():
 			self.gotFrames = []
 			self.parser = Int32StringDecoder()
-			self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(strictDecodeOne(f) for f in frames)
 
 		for packetSize in range(1, 20):
 			self._resetConnection()
@@ -1263,8 +1269,9 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 
 			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
-			self.parser.dataReceived(self.t.value())
-			self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], self.gotFrames)
+			frames, code = _strictGetNewFrames(self.parser, self.t.value())
+			decodedFrames = [strictDecodeOne(f) for f in frames]
+			self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], decodedFrames)
 
 
 	def test_modePolicyFile(self):
@@ -1331,7 +1338,7 @@ class _BaseHelpers(object):
 
 	def _parseFrames(self, transport=None):
 		"""
-		Feed the received bytes into the parser, which will append complete
+		Feed the received bytes into the parser, and append complete
 		frames to self.gotFrames
 
 		If a partial Minerva frame is at the end of the DummyTCPTransport buffer,
@@ -1339,7 +1346,8 @@ class _BaseHelpers(object):
 		"""
 		if transport is None:
 			transport = self.t
-		self.parser.dataReceived(transport.value())
+		frames, code = _strictGetNewFrames(self.parser, transport.value())
+		self.gotFrames.extend(simplejson.loads(f) for f in frames)
 		transport.clear()
 
 
@@ -2282,7 +2290,6 @@ class SocketTransportTestsWithBencode(_BaseSocketTransportTests, unittest.TestCa
 	def _resetParser(self):
 		self.gotFrames = []
 		self.parser = BencodeStringDecoder()
-		self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
 
 
 	def _sendModeInitializer(self):
@@ -2295,7 +2302,6 @@ class SocketTransportTestsWithInt32(_BaseSocketTransportTests, unittest.TestCase
 	def _resetParser(self):
 		self.gotFrames = []
 		self.parser = Int32StringDecoder()
-		self.parser.manyDataCallback = lambda frames: self.gotFrames.extend(simplejson.loads(f) for f in frames)
 
 
 	def _sendModeInitializer(self):
@@ -2472,11 +2478,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 	def _makeTransport(self):
 		parser = Int32StringDecoder()
 		parser.gotFrames = []
-		parser.manyDataCallback = lambda frames: parser.gotFrames.extend(simplejson.loads(f) for f in frames)
 
 		class CustomTransport(DummyTCPTransport):
 			def write(self2, data):
-				parser.dataReceived(data)
+				frames, code = _strictGetNewFrames(parser, data)
+				parser.gotFrames.extend(simplejson.loads(f) for f in frames)
 
 		tcpTransport = CustomTransport()
 		transport = self.faceFactory.buildProtocol(addr=None)
