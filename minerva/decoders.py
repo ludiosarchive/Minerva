@@ -49,7 +49,7 @@ class NetStringDecoder(object):
 			excessive .find()  
 	"""
 
-	_dead = False
+	_deadCode = None
 	_data = ''
 	_tempDigits = ''
 	_tempData = ''
@@ -130,10 +130,10 @@ class NetStringDecoder(object):
 
 
 	def getNewFrames(self, data):
-		# This could be done in a way that doesn't require _dead, but it would involve
+		# This could be done in a way that doesn't require Code, but it would involve
 		# writing a lot more tests for every possible "bad state".
-		if self._dead:
-			raise RuntimeError("Don't give me data, I'm dead")
+		if self._deadCode is not None:
+			return [], self._deadCode
 
 		self._code = OK
 		completeStrings = []
@@ -154,7 +154,7 @@ class NetStringDecoder(object):
 				break
 
 		if self._code != OK:
-			self._dead = True
+			self._deadCode = self._code
 
 		return completeStrings, self._code
 
@@ -293,6 +293,7 @@ class IntNStringDecoder(object):
 
 	def getNewFrames(self, data):
 		# Keep in mind that this must work with 0-length strings.
+
 		# This should re-return TOO_LONG when more data is fed into it, if
 		# TOO_LONG was already returned.
 
