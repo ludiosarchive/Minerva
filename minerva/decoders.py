@@ -207,7 +207,6 @@ class DelimitedJSONDecoder(object):
 	ranges from MAX_LENGTH to (MAX_LENGTH + L{twisted.internet.abstract.FileDescriptor.bufferSize}),
 	depending on how the data is received.
 	"""
-	dead = False
 	MAX_LENGTH = 20 * 1024 * 1024 # 20 MB
 	delimiter = '\n' # MUST be 1 byte. Do not change this after any data has been received.
 	lastJsonError = None # Most people won't care about the JSON exception.
