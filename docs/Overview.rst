@@ -440,6 +440,8 @@ of data to send S2C. It would work like this:
 **Future:** See if streaming can work with HTTP by manipulating gzip blocks at a low level
 and switching them to uncompressed when needed.
 http://sys.cs.rice.edu/course/comp314/09/p2/p2-guide
+See also gwt-comet DeflaterOutputStream and zlib.Z_SYNC_FLUSH and Python's test_zlib.py, which seems
+to include an example.
 
 **Future:** for Flash Socket, do zlib compression.
 
