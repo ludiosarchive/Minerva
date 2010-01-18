@@ -1197,10 +1197,6 @@ class SocketTransport(protocol.Protocol):
 						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 				self._stream.subscribeToBoxes(self, succeedsTransport)
 
-			elif frameType == Fn_you_close_it:
-				# TODO: allow this for HTTP; finish the HTTP request
-				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
-
 			elif frameType == Fn_boxes:
 				seqNumStrToBoxDict = frameObj[1]
 				memorySizeOfBoxes = len(frameString)
