@@ -193,19 +193,23 @@ def strictDecodeOne(s):
 
 
 class DelimitedJSONDecoder(object):
-	"""
+	r"""
 	Decodes a stream of (1-byte-delimiter)-terminated JSON documents into Python objects.
 	The stream is assumed to be UTF-8.
 	
 	Rejects NaN, Infinity, and -Infinity even though simplejson supports them.
 
+	`delimiter' in this decoder not very strict; garbage is ignored between the
+	end of the JSON document and the actual delimiter. In practice, this allows a `delimiter'
+	of `\n' to simultaneously delimit both `\n` and `\r\n`
+
+	`MAX_LENGTH` in this decoder is not very strict. The "effective max length"
+	ranges from `MAX_LENGTH` to `(MAX_LENGTH + L{twisted.internet.abstract.FileDescriptor.bufferSize})`,
+	depending on how the data is received.
+
 	Implementation note:
 		String append is fast enough in CPython 2.5+. On Windows CPython,
 		it can still be ~5x slower than list-based buffers.
-
-	MAX_LENGTH in this decoder is not very strict. The "effective max length"
-	ranges from MAX_LENGTH to (MAX_LENGTH + L{twisted.internet.abstract.FileDescriptor.bufferSize}),
-	depending on how the data is received.
 	"""
 	MAX_LENGTH = 20 * 1024 * 1024 # 20 MB
 	delimiter = '\n' # MUST be 1 byte. Do not change this after any data has been received.
