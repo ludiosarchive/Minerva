@@ -225,14 +225,16 @@ class DelimitedJSONDecoder(object):
 	def getNewFrames(self, data):
 		# This should re-return the correct error code when more data is fed into it, even after
 		# the error code was already returned.
+		de = self.delimiter
+		m = self.MAX_LENGTH
 
 		self.lastJsonError = None
 		self._buffer += data
 		docs = []
 		# Stop the "dribble in bytes slowly" attack (where entire buffer is repeatedly scanned for \n)
 		# This trick works here because our delimiter is 1 byte.
-		if self.delimiter not in data:
-			if len(self._buffer) > self.MAX_LENGTH:
+		if de not in data:
+			if len(self._buffer) > m:
 				return docs, TOO_LONG
 			return docs, OK
 		at = 0
@@ -244,15 +246,15 @@ class DelimitedJSONDecoder(object):
 				return docs, INTRAFRAME_CORRUPTION
 			docs.append(doc)
 			# Find the delimiter that ends the document we just extracted
-			endsAt = self._buffer.find(self.delimiter, end)
-			if endsAt - at > self.MAX_LENGTH:
+			endsAt = self._buffer.find(de, end)
+			if endsAt - at > m:
 				return docs, TOO_LONG
 			at = endsAt + 1
 			# If there's no delimiter after that delimiter, break.
-			if self._buffer.find(self.delimiter, at) == -1:
+			if self._buffer.find(de, at) == -1:
 				break
 		self._buffer = self._buffer[at:]
-		if len(self._buffer) > self.MAX_LENGTH: # XXX TODO: make sure this is tested
+		if len(self._buffer) > m: # XXX TODO: make sure this is tested
 			return docs, TOO_LONG
 		return docs, OK
 
