@@ -237,22 +237,22 @@ class DelimitedJSONDecoder(object):
 			return docs, OK
 		at = 0
 		while True:
-			# Find the delimiter that ends the document we're about to extract
-			endsAt = self._buffer.find(self.delimiter, at)
-			if endsAt - at > self.MAX_LENGTH:
-				return docs, TOO_LONG
 			try:
 				doc, end = strictDecoder.raw_decode(self._buffer, at)
 			except (simplejson.decoder.JSONDecodeError, ParseError), e:
 				self.lastJsonError = e
 				return docs, INTRAFRAME_CORRUPTION
 			docs.append(doc)
+			# Find the delimiter that ends the document we just extracted
+			endsAt = self._buffer.find(self.delimiter, end)
+			if endsAt - at > self.MAX_LENGTH:
+				return docs, TOO_LONG
 			at = endsAt + 1
 			# If there's no delimiter after that delimiter, break.
 			if self._buffer.find(self.delimiter, at) == -1:
 				break
 		self._buffer = self._buffer[at:]
-		if len(self._buffer) > self.MAX_LENGTH: # XXX make sure this is tested
+		if len(self._buffer) > self.MAX_LENGTH: # XXX TODO: make sure this is tested
 			return docs, TOO_LONG
 		return docs, OK
 
