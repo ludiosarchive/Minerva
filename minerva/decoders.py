@@ -203,9 +203,8 @@ class DelimitedJSONDecoder(object):
 	end of the JSON document and the actual delimiter. In practice, this allows a `delimiter'
 	of `\n' to simultaneously delimit both `\n` and `\r\n`
 
-	`MAX_LENGTH` in this decoder is not very strict. The "effective max length"
-	ranges from `MAX_LENGTH` to `(MAX_LENGTH + L{twisted.internet.abstract.FileDescriptor.bufferSize})`,
-	depending on how the data is received.
+		Note: the `\r` in `\r\n` "eats into" the max length. So if MAX_LENGTH is 5,
+		"hello\n" can be received, but "hello\r\n" can not!
 
 	Implementation note:
 		String append is fast enough in CPython 2.5+. On Windows CPython,
@@ -238,14 +237,17 @@ class DelimitedJSONDecoder(object):
 			return docs, OK
 		at = 0
 		while True:
+			# Find the delimiter that ends the document we're about to extract
+			endsAt = self._buffer.find(self.delimiter, at)
+			if endsAt - at > self.MAX_LENGTH:
+				return docs, TOO_LONG
 			try:
 				doc, end = strictDecoder.raw_decode(self._buffer, at)
 			except (simplejson.decoder.JSONDecodeError, ParseError), e:
 				self.lastJsonError = e
 				return docs, INTRAFRAME_CORRUPTION
 			docs.append(doc)
-			# Find the delimiter that ends the document we just extracted
-			at = 1 + self._buffer.find(self.delimiter, end)
+			at = endsAt + 1
 			# If there's no delimiter after that delimiter, break.
 			if self._buffer.find(self.delimiter, at) == -1:
 				break

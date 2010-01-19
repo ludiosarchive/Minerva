@@ -221,7 +221,7 @@ class DelimitedJSONDecoderTests(CommonTests, unittest.TestCase):
 
 	# For MAX_LENGTH == 50
 	tooLongSequences = [
-		'"%s"\n' % ("x" * 70), # This has to be a bit higher than MAX_LENGTH; see docstring for DelimitedJSONDecoder
+		'"%s"\n' % ("x" * 49),
 	]
 
 	# Not really strings but JSON-safe objects.
