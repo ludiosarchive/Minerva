@@ -465,7 +465,7 @@ class Stream(object):
 	def _internalReset(self, reasonString):
 		assert not self.disconnected
 		self.disconnected = True
-		for t in self._transports.copy(): # Need to copy because size changes as transports call transportOffline
+		for t in self._transports.copy(): # Need to copy because size changes as transports call transportOffline. TODO: a test that uses the .copy()!
 			t.writeReset(reasonString, applicationLevel=False)
 		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
