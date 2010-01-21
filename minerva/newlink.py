@@ -946,6 +946,9 @@ class SocketTransport(object):
 	MAX_LENGTH = 1024*1024
 	noisy = True
 
+	# XXX TODO: slated for removal: _reactor, _clock
+	# XXX TODO: slated for access through factory: _streamTracker, _firewall, _policyStringWithNull
+
 	__slots__ = (
 		'_reactor,_clock,_streamTracker,_firewall,_policyStringWithNull,request,'
 		'lastBoxSent,_lastStartParam,_mode,_initialBuffer,'
@@ -981,13 +984,14 @@ class SocketTransport(object):
 		assert self._mode != UNKNOWN
 		if self._mode in (BENCODE, INT32):
 			return self._parser.encode(dumpToJson7Bit(frameData))
-		elif self._mode == HTTP:
+		elif self.request:
 			return dumpToJson7Bit(frameData) + '\n'
 		else:
 			1/0
 
 
 	def _goOffline(self):
+		"""Tell Stream that we're offline, even if we still have a connection open to the peer."""
 		if self._stream:
 			self._stream.transportOffline(self)
 			self._stream = None
