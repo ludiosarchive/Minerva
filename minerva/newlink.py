@@ -979,7 +979,7 @@ class SocketTransport(protocol.Protocol):
 		assert self._mode != UNKNOWN
 		if self._mode in (BENCODE, INT32):
 			return self._parser.encode(dumpToJson7Bit(frameData))
-		elif self_mode == HTTP:
+		elif self._mode == HTTP:
 			return dumpToJson7Bit(frameData) + '\n'
 		else:
 			1/0
