@@ -43,6 +43,7 @@ import flash.system.Security;
 
 
 class FlashConnection {
+	public var flashKey:String;
 	public var socket:Socket;
 	public var expecting:Int;
 	public var prelude:String;
@@ -50,11 +51,12 @@ class FlashConnection {
 	public var id:String;
 	//public var flashConnector:FlashConnector;
 
-	public function new(myId, prelude) {
+	public function new(myId, prelude, flashKey) {
 		this.expecting = -1;
 		this.preludeSent = false;
 		this.id = myId;
 		this.prelude = prelude;
+		this.flashKey = flashKey;
 		//flashConnector = fc;
 
 		// "It is strongly advised to use the constructor form without parameters,
@@ -146,7 +148,7 @@ class FlashConnection {
 
 		if(outBuffer != "[]") {
 			// We expect an ASCII-safe string of JSON, so doing this is okay.
-			ExternalInterface.call("__FS_instances['"+id+"'].onframes("+outBuffer+","+(hadError ? "true" : "false")+")");
+			ExternalInterface.call("__FS_instances['"+id+"'].onframes("+outBuffer+","+(hadError ? "true" : "false")+",'"+flashKey+"')");
 		}
 	}
 
@@ -210,13 +212,14 @@ class FlashConnection {
  */
 class FlashConnector {
 	public static var connections:Hash<FlashConnection> = new Hash();
+	public static var flashKey:String;
 
 	public static inline function connect(instance_id:String, host:String, port:Int, prelude:String) {
 		// This implementation allows FlashConnection's Socket object to be reused,
 		// but reusing is not recommended.
 		var conn:FlashConnection = connections.get(instance_id);
 		if (conn == null) {
-			conn = new FlashConnection(instance_id, prelude);
+			conn = new FlashConnection(instance_id, prelude, flashKey);
 			connections.set(instance_id, conn);
 		}
 
@@ -268,6 +271,8 @@ class FlashConnector {
 
 	public static function main() {
 		registerCallbacks();
+
+		flashKey = flash.Lib.current.loaderInfo.parameters.flashkey;
 
 		if (flash.Lib.current.loaderInfo.parameters.onloadcallback != null) {
 			ExternalInterface.call(flash.Lib.current.loaderInfo.parameters.onloadcallback);

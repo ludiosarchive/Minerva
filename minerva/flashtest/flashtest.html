@@ -72,8 +72,14 @@ function ser(data) {
 	return serializer.serialize(data);
 }
 
+function getRandom() {
+	return goog.string.getRandomString() + goog.string.getRandomString();
+}
+
+var flashKey = goog.string.getRandomString();
+
 function loadSWF() {
-	var flashvars = {'onloadcallback': '_appswfLoaded'};
+	var flashvars = {'onloadcallback': '_appswfLoaded', 'flashkey': flashKey};
 	var params = {};
 	swfobject.embedSWF("app.swf", "appswf", "30", "30", [9, 0, 0], "expressInstall.swf", flashvars, params); // no attributes
 }
@@ -83,7 +89,7 @@ function _appswfLoaded() {
 }
 
 var transportCount = -1;
-var streamId = goog.string.getRandomString() + goog.string.getRandomString();
+var streamId = getRandom();
 
 var lastFs = null;
 
@@ -135,8 +141,8 @@ function connect(bridge) {
 		this.dispose();
 	}
 
-	fs.onframes = function(frames, hadError) {
-		logger.info('onframes with '+frames.length+' frame(s). hadError? ' + hadError);
+	fs.onframes = function(frames, hadError, flashKey) {
+		logger.info('onframes from '+flashKey+' with '+frames.length+' frame(s). hadError? ' + hadError);
 		for(var i=0; i < frames.length; i++) {
 			var frame = frames[i]; 
 			logger.info('Received: '+ser(frame));
