@@ -12,6 +12,8 @@ from minerva.newlink import (
 	NoSuchStream, IMinervaProtocol, IMinervaFactory, StreamAlreadyExists
 )
 
+from minerva.website import RejectTransport
+
 # The use of "mock" and "dummy" in this file is totally inconsistent.
 
 
@@ -465,7 +467,7 @@ class DummyFirewall(object):
 			if not self._rejectAll:
 				d.callback(None)
 			else:
-				d.errback(ValueError("%s rejecting this transport" % self.__class__.__name__))
+				d.errback(RejectTransport("%s rejecting this transport" % self.__class__.__name__))
 		if self._actionTime == 0:
 			act()
 		else:

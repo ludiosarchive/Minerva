@@ -14,7 +14,7 @@ from twisted.python.util import slowStringCompare
 from zope.interface import implements, Interface
 from collections import defaultdict
 
-from minerva.newlink import IStreamNotificationReceiver
+from minerva.interfaces import IStreamNotificationReceiver
 
 
 class UAToStreamsCorrelator(defaultdict):
