@@ -1058,7 +1058,7 @@ class SocketTransport(object):
 		"""
 		##print;print;traceback.print_stack()
 
-		# If the transport is terminating, it should have already called Stream.transportOffline(self) # TODO: actually make it so
+		# If the transport is terminating, it should have already called Stream.transportOffline(self)
 		assert not self._terminating
 		assert self._gotHello
 
