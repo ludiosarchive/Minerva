@@ -1331,7 +1331,7 @@ class _BaseHelpers(object):
 
 
 	def _makeValidHelloFrame(self):
-		helloData = dict(n=0, w=True, v=2, i='x'*26, r=2**30, m=2**30)
+		helloData = dict(n=0, w=1, v=2, i='x'*26, r=2**30, m=2**30)
 		frame = [Fn.hello, helloData]
 		return frame
 
@@ -1699,7 +1699,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_validHelloWithCredentials(self):
-		helloData = dict(n=0, w=True, v=2, i='\x7f'*20, r=2**30, m=2**30, c={'not_looked_at': True})
+		helloData = dict(n=0, w=1, v=2, i='\x7f'*20, r=2**30, m=2**30, c={'not_looked_at': True})
 		frame0 = [Fn.hello, helloData]
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		self._parseFrames()
@@ -1732,7 +1732,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 	def test_connectionNumberDoesntMatter(self):
 		"""Connection number can be anywhere between 0 <= n <= 2**64"""
 		for n in [1, 1000, 10000, 12378912, 1283718237, 2**63]:
-			helloData = dict(n=n, w=True, v=2, i='\x00'*26, r=2**30, m=2**30)
+			helloData = dict(n=n, w=1, v=2, i='\x00'*26, r=2**30, m=2**30)
 			frame0 = [Fn.hello, helloData]
 			self.transport.dataReceived(self.serializeFrames([frame0]))
 			self._parseFrames()
@@ -1751,8 +1751,8 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_validHelloButNoSuchStreamExplicitW(self):
-		"""Same test as test_validHelloButNoSuchStream but with explicit w=False"""
-		helloData = dict(n=0, w=False, v=2, i='\x00'*26, r=2**30, m=2**30)
+		"""Same test as test_validHelloButNoSuchStream but with explicit w=0"""
+		helloData = dict(n=0, w=0, v=2, i='\x00'*26, r=2**30, m=2**30)
 		frame0 = [Fn.hello, helloData]
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		self._parseFrames()
@@ -1772,8 +1772,8 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_newStreamMoreThanOnceOk(self):
 		"""
-		Because the response to a request with w=True might get lost in transit,
-		we silently ignore the w=True if the Stream is already created.
+		Because the response to a request with w=1 might get lost in transit,
+		we silently ignore the w=1 if the Stream is already created.
 		"""
 		def act():
 			frame0 = self._makeValidHelloFrame()
@@ -1829,7 +1829,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			r=genericBad,
 			m=genericBad,
 			c=listWithout(genericBad, [{}]),
-			w=[1, 0] + listWithout(genericBad, [True, False, DeleteProperty]),
 		)
 
 		ran = 0
@@ -1860,7 +1859,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				ran += 1
 
 		# sanity check; make sure we actually tested things
-		assert ran == 101, "Ran %d times; change this assert as needed" % (ran,)
+		assert ran == 89, "Ran %d times; change this assert as needed" % (ran,)
 
 
 	def test_noDelayEnabled(self):
@@ -2482,7 +2481,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 
 	def _makeValidHelloFrame(self):
-		helloData = dict(n=0, w=True, v=2, i='x'*26, r=2**30, m=2**30)
+		helloData = dict(n=0, w=1, v=2, i='x'*26, r=2**30, m=2**30)
 		frame = [Fn.hello, helloData]
 		return frame
 
