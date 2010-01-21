@@ -7,7 +7,6 @@ See minerva/sample/demo.py for an idea of how to use the classes below.
 from minerva import abstract, decoders
 
 import simplejson
-import binascii
 import traceback
 from zope.interface import Interface, Attribute, implements
 from twisted.python import log
@@ -933,7 +932,7 @@ UNKNOWN, POLICYFILE, INT32, INT32CRYPTO, WEBSOCKET, BENCODE, HTTP = range(7)
 # down to "int32"
 
 
-class SocketTransport(protocol.Protocol):
+class SocketTransport(object):
 	"""
 	This is private. Use SocketFace, which will build this Protocol.
 
@@ -944,27 +943,31 @@ class SocketTransport(protocol.Protocol):
 	"""
 	implements(IMinervaTransport, IProtocol, IPushProducer, IPullProducer)
 
-	request = None # no associated HTTP request
-
 	MAX_LENGTH = 1024*1024
 	noisy = True
 
 	__slots__ = (
-		'lastBoxSent,_lastStartParam,_mode,_initialBuffer,_gotHello,'
-		'_terminating,_stream,_sackDirty,_paused,_producer,_streamingProducer').split(',')
+		'_reactor,_clock,_streamTracker,_firewall,_policyStringWithNull,request,'
+		'lastBoxSent,_lastStartParam,_mode,_initialBuffer,'
+		'connected,_gotHello,_terminating,_sackDirty,_paused,'
+		'_stream,_producer,_parser,'
+		'streamId,credentialsData,transportNumber,'
+		'factory,transport'
+	).split(',')
 
-	def __init__(self, reactor, clock, streamTracker, firewall, policyStringWithNull):
+	def __init__(self, reactor, clock, streamTracker, firewall, policyStringWithNull, request=None):
 		self._reactor = reactor
 		self._clock = clock
 		self._streamTracker = streamTracker
 		self._firewall = firewall
 		self._policyStringWithNull = policyStringWithNull
+		self.request = request
 
 		self.lastBoxSent = -1
 		self._lastStartParam = 2**128
 		self._mode = UNKNOWN
 		self._initialBuffer = '' # To buffer data while determining the mode
-		self._gotHello = self._terminating = self._sackDirty = self._paused = self._streamingProducer = False
+		self.connected = self._gotHello = self._terminating = self._sackDirty = self._paused = False
 		self._stream = self._producer = None
 
 
@@ -1102,12 +1105,12 @@ class SocketTransport(protocol.Protocol):
 		if protocolVersion != 2:
 			raise InvalidHello
 
-		self._protocolVersion = protocolVersion
+		##self._protocolVersion = protocolVersion # Not needed yet
 		self.streamId = streamId
 		self.credentialsData = credentialsData
 		self.transportNumber = transportNumber
-		self._maxReceiveBytes = maxReceiveBytes # TODO: actually implement. Or not?
-		self._maxOpenTime = maxOpenTime # TODO: actually implement. Or not?
+		##self._maxReceiveBytes = maxReceiveBytes # TODO: actually implement. Or not?
+		##self._maxOpenTime = maxOpenTime # TODO: actually implement. Or not?
 
 		# We get/build a Stream instance before the firewall checkTransport
 		# because the firewall needs to know if we're working with a virgin
@@ -1381,11 +1384,18 @@ class SocketTransport(protocol.Protocol):
 		# no 'disconnected' check?
 
 		self._producer = producer
-		self._streamingProducer = streaming
-		if streaming and self._paused: # We may have been paused before a producer was registered
+		##self._streamingProducer = streaming # No need to keep this info around, apparently
+
+		# twisted.web.http.Request will pause a push producer if the request is queued, so we must not pause it ourselves.
+		doNotPause = self.request and self.request.queued and streaming
+
+		if streaming and self._paused and not doNotPause:
 			producer.pauseProducing()
 
-		self.transport.registerProducer(self, streaming)
+		if not self.request:
+			self.transport.registerProducer(self, streaming)
+		else:
+			self.request.registerProducer(self, streaming)
 
 
 	# called by Stream instances
@@ -1430,6 +1440,12 @@ class SocketTransport(protocol.Protocol):
 		self.transport.setTcpNoDelay(True)
 		if self.noisy:
 			log.msg('Connection made for %r' % (self,))
+
+
+	def makeConnection(self, transport):
+		self.connected = True
+		self.transport = transport
+		self.connectionMade()
 
 
 
@@ -1499,10 +1515,7 @@ class HttpFace(resource.Resource):
 
 
 	def render_POST(self, request):
-		result = []
-		def callback(docs):
-			result[0] = docs
-
+		assert request.content.tell() == 0, request.content.tell()
 		body = request.content.read()
 		# Proxies *might* strip whitespace around the request body, so add a newline if necessary.
 		if body and body[-1] != '\n':
@@ -1512,7 +1525,6 @@ class HttpFace(resource.Resource):
 			log.msg("Unusual: found a CRLF in POST body for %r from %r" % (request, request.client))
 
 		decoder = decoders.BencodeStringDecoder()
-		decoder.manyDataCallback = callback
 		out, code = decoder.getNewFrames(body)
 		if code == decoders.OK:
 			queuedFrame = None

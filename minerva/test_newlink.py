@@ -2359,7 +2359,6 @@ class TransportProducerTests(unittest.TestCase):
 			return dict(
 				_paused=transport._paused,
 				_producer=transport._producer,
-				_streamingProducer=transport._streamingProducer,
 				_stream=transport._stream,
 			)
 
@@ -2945,3 +2944,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				["boxesReceived", [["box0"], ["box1"]]],
 				["streamReset", WhoReset.server_app, u'reset for testing in MockMinervaProtocol._callStuff']
 			], proto.log[1:])
+
+
+# TODO: test_pushProducerOnQueuedRequest
+	# verify that attaching a push producer to a queued Request does not result in multiple pauseProducing calls
