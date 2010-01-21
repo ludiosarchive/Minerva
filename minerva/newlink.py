@@ -992,14 +992,64 @@ class SocketTransport(object):
 		invalidArgsFrameObj.extend(args)
 		toSend = ''
 		toSend += self._encodeFrame(invalidArgsFrameObj)
-		if not self._mode == HTTP:
+		if self._mode != HTTP:
 			toSend += self._encodeFrame([Fn_you_close_it])
 		self.writable.write(toSend)
 		self._terminating = True
 		self._goOffline()
 
+		if self._mode == HTTP:
+			self.writable.finish()
+
 		# TODO: set timer and close the connection ourselves in 5-10 seconds
 		##self.transport.loseConnection()
+
+
+	def closeGently(self):
+		"""
+		@see L{IMinervaTransport.closeGently}
+		"""
+		assert not self._terminating
+
+		if self._sackDirty:
+			self._sackDirty = False
+			toSend = self._getSACKBytes()
+		else:
+			toSend = ''
+
+		if self._mode != HTTP:
+			toSend += self._encodeFrame([Fn_you_close_it])
+
+		if toSend:
+			self.writable.write(toSend)
+		self._terminating = True
+		self._goOffline()
+
+		if self._mode == HTTP:
+			self.writable.finish()
+
+
+	def writeReset(self, reasonString, applicationLevel):
+		"""
+		@see L{IMinervaTransport.writeReset}
+		"""
+		assert not self._terminating
+
+		if self._sackDirty:
+			self._sackDirty = False
+			toSend = self._getSACKBytes()
+		else:
+			toSend = ''
+
+		toSend += self._encodeFrame([Fn_reset, reasonString, applicationLevel])
+		if self._mode != HTTP:
+			toSend += self._encodeFrame([Fn_you_close_it])
+		self.writable.write(toSend)
+		self._terminating = True
+		self._goOffline()
+
+		if self._mode == HTTP:
+			self.writable.finish()
 
 
 	def writeBoxes(self, queue, start):
@@ -1308,7 +1358,7 @@ class SocketTransport(object):
 				# Terminating, but we can't even send any type of frame.
 				self._terminating = True
 				# RST them instead of FIN, because they don't look like a well-behaving client anyway.
-				self.writable.abortConnection() # We know that writable is a `transport` here.
+				self.writable.abortConnection() # We know that writable is a `transport` here, not a Request.
 				return
 
 			else:
@@ -1328,44 +1378,6 @@ class SocketTransport(object):
 				raise RuntimeError("Got unknown code from parser %r: %r" % (self._parser, code))
 		else: # Don't need to handle HTTP here because HttpFace calls _framesReceived
 			1/0
-
-
-	def closeGently(self):
-		"""
-		@see L{IMinervaTransport.closeGently}
-		"""
-		assert not self._terminating
-
-		if self._sackDirty:
-			self._sackDirty = False
-			toSend = self._getSACKBytes()
-		else:
-			toSend = ''
-
-		toSend += self._encodeFrame([Fn_you_close_it])
-
-		self.writable.write(toSend)
-		self._terminating = True
-		self._goOffline()
-
-
-	def writeReset(self, reasonString, applicationLevel):
-		"""
-		@see L{IMinervaTransport.writeReset}
-		"""
-		assert not self._terminating
-
-		if self._sackDirty:
-			self._sackDirty = False
-			toSend = self._getSACKBytes()
-		else:
-			toSend = ''
-
-		toSend += self._encodeFrame([Fn_reset, reasonString, applicationLevel])
-		toSend += self._encodeFrame([Fn_you_close_it])
-		self.writable.write(toSend)
-		self._terminating = True
-		self._goOffline()
 
 
 	# called by Stream instances
@@ -1458,12 +1470,14 @@ class SocketTransport(object):
 		request.write('for(;;);\n')
 
 
+	# Called by HttpFace
 	def requestStarted(self, request):
 		self._mode = HTTP
 		self.writable = request
 		self._handleRequestBody()
 
 
+	# Called by twisted.web if client closes connection before the request is finished 
 	def requestAborted(self, reason):
 		if self.noisy:
 			log.msg('Peer aborted request %r on %r' % (self.writable, self))
@@ -1472,6 +1486,7 @@ class SocketTransport(object):
 		self._goOffline()
 
 
+	# Called by Twisted when a TCP connection is made
 	def makeConnection(self, transport):
 		self.connected = True
 		self.writable = transport
