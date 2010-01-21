@@ -946,26 +946,16 @@ class SocketTransport(object):
 	MAX_LENGTH = 1024*1024
 	noisy = True
 
-	# XXX TODO: slated for removal: _reactor, _clock
-	# XXX TODO: slated for access through factory: _streamTracker, _firewall, _policyStringWithNull
-
 	__slots__ = (
-		'_reactor,_clock,_streamTracker,_firewall,_policyStringWithNull,request,'
-		'lastBoxSent,_lastStartParam,_mode,_initialBuffer,'
+		'request,lastBoxSent,_lastStartParam,_mode,_initialBuffer,'
 		'connected,_gotHello,_terminating,_sackDirty,_paused,'
 		'_stream,_producer,_parser,'
 		'streamId,credentialsData,transportNumber,'
 		'factory,transport'
 	).split(',')
 
-	def __init__(self, reactor, clock, streamTracker, firewall, policyStringWithNull, request=None):
-		self._reactor = reactor
-		self._clock = clock
-		self._streamTracker = streamTracker
-		self._firewall = firewall
-		self._policyStringWithNull = policyStringWithNull
+	def __init__(self, request=None):
 		self.request = request
-
 		self.lastBoxSent = -1
 		self._lastStartParam = 2**128
 		self._mode = UNKNOWN
@@ -1124,13 +1114,13 @@ class SocketTransport(object):
 
 		if requestNewStream:
 			try:
-				stream = self._streamTracker.buildStream(streamId)
+				stream = self.factory._streamTracker.buildStream(streamId)
 			except StreamAlreadyExists:
-				stream = self._streamTracker.getStream(streamId)
+				stream = self.factory._streamTracker.getStream(streamId)
 		else:
-			stream = self._streamTracker.getStream(streamId)
+			stream = self.factory._streamTracker.getStream(streamId)
 
-		d = self._firewall.checkTransport(self, stream)
+		d = self.factory._firewall.checkTransport(self, stream)
 
 		def cbAuthOkay(_):
 			if self._terminating:
@@ -1283,7 +1273,7 @@ class SocketTransport(object):
 			if self._initialBuffer.startswith('<policy-file-request/>\x00'):
 				self._mode = POLICYFILE
 				del self._initialBuffer
-				self.transport.write(self._policyStringWithNull)
+				self.transport.write(self.factory._policyStringWithNull)
 				self._terminating = True
 
 				# No need to loseConnection here, because Flash player will close it:
@@ -1498,7 +1488,7 @@ class SocketFace(protocol.ServerFactory):
 
 
 	def buildProtocol(self, addr):
-		p = self.protocol(self._reactor, self._clock, self._streamTracker, self._firewall, self._policyStringWithNull)
+		p = self.protocol()
 		p.factory = self
 		return p
 

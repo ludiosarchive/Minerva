@@ -2317,7 +2317,9 @@ class TransportProducerTests(unittest.TestCase):
 		
 		self.proto = MockMinervaProtocol()
 		self.tracker = StreamTracker(reactor, clock, self.proto)
-		self.transport = SocketTransport(reactor, clock, self.tracker, DummyFirewall(clock, rejectAll=False), None)
+
+		factory = SocketFace(reactor, clock, self.tracker, DummyFirewall(clock, rejectAll=False), None)
+		self.transport = factory.buildProtocol(addr=None)
 
 		self.t = DummyTCPTransport()
 		self.transport.makeConnection(self.t)
