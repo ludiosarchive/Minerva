@@ -926,7 +926,7 @@ class InvalidHello(Exception):
 ##WAITING_FOR_AUTH, AUTHING, DYING, AUTH_OK = range(4)
 
 # Acceptable protocol modes for SocketTransport to be in. Int32* are for Flash Socket.
-UNKNOWN, POLICYFILE, INT32, INT32CRYPTO, WEBSOCKET, BENCODE, HTTP = range(7)
+UNKNOWN, POLICYFILE, INT32, INT32CRYPTO, WEBSOCKET, BENCODE = range(6)
 
 # TODO: We'll need to make sure it's impossible for an attacker to downgrade "int32+crypto"
 # down to "int32"
