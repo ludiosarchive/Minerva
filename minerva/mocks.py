@@ -320,23 +320,25 @@ class MockMinervaProtocolFactory(object):
 
 
 
-class DummyHttpTransport(object):
-	def __init__(self, request):
-		self.request = request
-		self.credentialsData = {}
-
-
-
 class DummySocketLikeTransport(_MockMixin):
 	request = None
 	globalCounter = [-1]
 	lastBoxSent = -1
 	_paused = False
 
-	def __init__(self):
+	def __init__(self, request=None):
 		self.credentialsData = {}
 		self.log = []
 		self.pretendGotHello()
+		if request:
+			self.writable = request
+			self._isHttp = True
+		else:
+			self._isHttp = False
+
+
+	def isHttp(self):
+		return self._isHttp
 
 
 	def pretendGotHello(self):

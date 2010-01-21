@@ -165,7 +165,7 @@ class ITransportFirewall(Interface):
 		authentication. Here, you cannot send an application-handalable exception
 		to the client.
 
-		An implementation might reach into C{transport} to look at C{.request}
+		An implementation might reach into C{transport} to look at C{.writable}
 			or C{.credentialsData} or C{.streamId}
 
 		Ideas for additional checking (these may stop amateurs from hijacking a Stream):
@@ -211,8 +211,8 @@ class _UAExtractorMixin(object):
 
 	def _getUserAgentId(self, transport):
 		# side note: nginx userid module uses non-url-safe base64 alphabet
-		if transport.request is not None:
-			return self._getUserAgentFromRequest(transport.request)
+		if transport.isHttp():
+			return self._getUserAgentFromRequest(transport.writable)
 		else:
 			return self._getUserAgentFromCredentialsData(transport.credentialsData)
 

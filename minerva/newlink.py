@@ -15,7 +15,7 @@ from twisted.internet import protocol, defer
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.interfaces import IPushProducer, IPullProducer, IProtocol, IProtocolFactory
 from twisted.python.failure import Failure
-from twisted.web import resource
+from twisted.web import resource, http
 
 _postImportVars = vars().keys()
 
@@ -881,6 +881,15 @@ class IMinervaTransport(ISimpleConsumer):
 		"""
 
 
+	def isHttp():
+		"""
+		@return: C{True} if this transport is using HTTP, otherwise C{False}.
+		@rtype: bool
+
+		@raise: L{RuntimeError} if we don't know yet.
+		"""
+
+
 
 def dumpToJson7Bit(data):
 	return simplejson.dumps(data, separators=(',', ':'), allow_nan=False)
@@ -928,7 +937,7 @@ class SocketTransport(object):
 		self._mode = UNKNOWN
 		self._initialBuffer = '' # To buffer data while determining the mode
 		self.connected = self._gotHello = self._terminating = self._sackDirty = self._paused = False
-		self._stream = self._producer = None
+		self._stream = self._producer = self.writable = None
 
 
 	def __repr__(self):
@@ -1426,6 +1435,7 @@ class SocketTransport(object):
 
 	# Called by HttpFace
 	def requestStarted(self, request):
+		assert self._mode == UNKNOWN
 		self._mode = HTTP
 		self.writable = request
 		self._handleRequestBody()
@@ -1448,6 +1458,13 @@ class SocketTransport(object):
 		transport.setTcpNoDelay(True)
 		if self.noisy:
 			log.msg('Connection made for %r' % (self,))
+
+
+	# Typically called by L{website.ITransportFirewall}s
+	def isHttp(self):
+		if self.writable is None:
+			raise RuntimeError("Don't know if this is HTTP or not. Maybe ask later.")
+		return self._mode == HTTP
 
 
 

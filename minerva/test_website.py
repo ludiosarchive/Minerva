@@ -10,7 +10,7 @@ from twisted.web import http, server
 from minerva.abstract import RandomFactory
 
 from minerva.mocks import (
-	DummyRequest, DummyHttpTransport, DummySocketLikeTransport, MockStream
+	DummyRequest, DummySocketLikeTransport, MockStream
 )
 
 from minerva.website import (
@@ -145,14 +145,15 @@ class _CsrfTransportFirewallTests(object):
 		request.isSecure = lambda: self.isSecure
 		if uaId is not None:
 			request.received_cookies[self.cookieName] = base64.b64encode(uaId)
-		transport = DummyHttpTransport(request)
+		transport = DummySocketLikeTransport(request)
+		transport.writable = request
 		if csrfTokenStr is not None:
 			transport.credentialsData['csrf'] = csrfTokenStr
 		return firewall, transport
 
 
 	def _setUaIdString(self, transport, string):
-		transport.request.received_cookies[self.cookieName] = string
+		transport.writable.received_cookies[self.cookieName] = string
 
 
 	def test_implements(self):
@@ -234,7 +235,7 @@ class CsrfTransportFirewallTestsHttpTransport(_CsrfTransportFirewallTests, unitt
 		uaId = "id of funny length probably"
 		token = stopper.makeToken(uaId)
 		firewall, transport = self._makeThings(stopper, None, token)
-		transport.request.received_cookies[self.secureCookieName] = base64.b64encode(uaId)
+		transport.writable.received_cookies[self.secureCookieName] = base64.b64encode(uaId)
 		ms = MockStream()
 		act = lambda: firewall.checkTransport(transport, ms)
 		return self.assertFailure(act(), RejectTransport)
@@ -252,7 +253,7 @@ class CsrfTransportFirewallTestsHttpsTransport(_CsrfTransportFirewallTests, unit
 		uaId = "id of funny length probably"
 		token = stopper.makeToken(uaId)
 		firewall, transport = self._makeThings(stopper, None, token)
-		transport.request.received_cookies[self.insecureCookieName] = base64.b64encode(uaId)
+		transport.writable.received_cookies[self.insecureCookieName] = base64.b64encode(uaId)
 		ms = MockStream()
 		act = lambda: firewall.checkTransport(transport, ms)
 		return self.assertFailure(act(), RejectTransport)

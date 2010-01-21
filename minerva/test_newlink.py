@@ -2,11 +2,13 @@ import simplejson
 import base64
 import copy
 
+from cStringIO import StringIO
+
 from zope.interface import verify
 from twisted.trial import unittest
 
 from twisted.python import failure
-from twisted.web import server, resource
+from twisted.web import server, resource, http
 from twisted.internet import protocol, defer, address, interfaces, task
 from twisted.internet.interfaces import IPushProducer, IPullProducer, IProtocol, IProtocolFactory
 
@@ -24,7 +26,7 @@ from minerva.newlink import (
 from minerva.mocks import (
 	FakeReactor, DummyChannel, DummyRequest, MockProducer,
 	MockStream, MockMinervaProtocol, MockMinervaProtocolFactory,
-	DummyHttpTransport, DummySocketLikeTransport, MockObserver,
+	DummySocketLikeTransport, MockObserver,
 	BrokenOnPurposeError, BrokenMockObserver, DummyStreamTracker,
 	DummyFirewall, DummyTCPTransport
 )
@@ -1296,6 +1298,28 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 				self.transport.dataReceived(s)
 			self.aE('<nonsense-policy/>\x00', self.t.value())
 			self.aE(False, self.t.disconnecting)
+
+
+
+class TransportIsHttpTests(unittest.TestCase):
+
+	def test_isHttpUnknown(self):
+		transport = SocketTransport()
+		self.aR(RuntimeError, lambda: transport.isHttp())
+
+
+	def test_isHttpNegative(self):
+		transport = SocketTransport()
+		transport.makeConnection(DummyTCPTransport())
+		self.aE(False, transport.isHttp())
+
+
+	def test_isHttpPositive(self):
+		transport = SocketTransport()
+		request = http.Request(DummyChannel(), False)
+		request.content = StringIO("yow")
+		transport.requestStarted(request)
+		self.aE(True, transport.isHttp())
 
 
 
@@ -2922,6 +2946,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				["streamReset", WhoReset.server_app, u'reset for testing in MockMinervaProtocol._callStuff']
 			], proto.log[1:])
 
+
+# TODO: integration test that uses a real firewall (we had a regression based on this)
 
 # TODO: test_pushProducerOnQueuedRequest
 	# verify that attaching a push producer to a queued Request does not result in multiple pauseProducing calls
