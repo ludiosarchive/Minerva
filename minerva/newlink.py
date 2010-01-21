@@ -1062,14 +1062,6 @@ class SocketTransport(object):
 		assert not self._terminating
 		assert self._gotHello
 
-		# TODO: make sure tests explicitly test that pull producers work properly if a push producer
-		# was registered, paused, and unregistered before.
-		# TODO: decide if this check is really helping anyone
-		if self._paused:
-			if self.noisy:
-				log.msg('I was asked to send another box from %r but I am paused right now.' % (queue,))
-			return
-
 		# See test_writeBoxesConnectionInterleavingSupport
 		# Remember that None < any number
 		if start < self._lastStartParam:

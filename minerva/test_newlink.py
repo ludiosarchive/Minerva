@@ -1433,21 +1433,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		], self.gotFrames)
 
 
-	def test_writeBoxesNoneSentIfPaused(self):
-		"""
-		Calling writeBoxes when the transport is paused does not result
-		in a write to the transport.
-		"""
-		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
-		q = abstract.Queue()
-		q.extend([['box0'], ['box1']])
-		self.transport.pauseProducing() # in a non-test environment, Twisted's TCP stuff calls pauseProducing
-		self.transport.writeBoxes(q, start=None)
-		self._parseFrames()
-		self.aE([], self.gotFrames)
-
-
 	def test_writeBoxesSentOnlyOnce(self):
 		"""
 		The transport remembers which boxes it already sent, so boxes
