@@ -926,7 +926,7 @@ class InvalidHello(Exception):
 ##WAITING_FOR_AUTH, AUTHING, DYING, AUTH_OK = range(4)
 
 # Acceptable protocol modes for SocketTransport to be in. Int32* are for Flash Socket.
-UNKNOWN, POLICYFILE, INT32, INT32CRYPTO, WEBSOCKET, BENCODE = range(6)
+UNKNOWN, POLICYFILE, INT32, INT32CRYPTO, WEBSOCKET, BENCODE, HTTP = range(7)
 
 # TODO: We'll need to make sure it's impossible for an attacker to downgrade "int32+crypto"
 # down to "int32"
@@ -941,21 +941,20 @@ class SocketTransport(object):
 		Flash Socket policy server
 	TODO: WebSocket, Flash Socket (encrypted), pass-through to HTTP
 	"""
-	implements(IMinervaTransport, IProtocol, IPushProducer, IPullProducer)
+	implements(IMinervaTransport, IPushProducer, IPullProducer) # Almost an IProtocol, but has no connectionMade
 
 	MAX_LENGTH = 1024*1024
 	noisy = True
 
 	__slots__ = (
-		'request,lastBoxSent,_lastStartParam,_mode,_initialBuffer,'
+		'writable,lastBoxSent,_lastStartParam,_mode,_initialBuffer,'
 		'connected,_gotHello,_terminating,_sackDirty,_paused,'
 		'_stream,_producer,_parser,'
 		'streamId,credentialsData,transportNumber,'
 		'factory,transport'
 	).split(',')
 
-	def __init__(self, request=None):
-		self.request = request
+	def __init__(self):
 		self.lastBoxSent = -1
 		self._lastStartParam = 2**128
 		self._mode = UNKNOWN
@@ -971,10 +970,9 @@ class SocketTransport(object):
 
 
 	def _encodeFrame(self, frameData):
-		assert self._mode != UNKNOWN
 		if self._mode in (BENCODE, INT32):
 			return self._parser.encode(dumpToJson7Bit(frameData))
-		elif self.request:
+		elif self._mode == HTTP:
 			return dumpToJson7Bit(frameData) + '\n'
 		else:
 			1/0
@@ -994,8 +992,9 @@ class SocketTransport(object):
 		invalidArgsFrameObj.extend(args)
 		toSend = ''
 		toSend += self._encodeFrame(invalidArgsFrameObj)
-		toSend += self._encodeFrame([Fn_you_close_it])
-		self.transport.write(toSend)
+		if not self._mode == HTTP:
+			toSend += self._encodeFrame([Fn_you_close_it])
+		self.writable.write(toSend)
 		self._terminating = True
 		self._goOffline()
 
@@ -1050,7 +1049,7 @@ class SocketTransport(object):
 		if len(toSend) > 1024 * 1024:
 			log.msg('Caution: %r asked me to send a large amount of data (%d bytes)' % (self._stream, len(toSend)))
 
-		self.transport.write(toSend)
+		self.writable.write(toSend)
 		self.lastBoxSent = lastBox
 
 
@@ -1257,7 +1256,7 @@ class SocketTransport(object):
 		# Stream.boxesReceived call, a SACK is sent before the box(es).
 		if self._sackDirty and not self._terminating:
 			self._sackDirty = False
-			self.transport.write(self._getSACKBytes())
+			self.writable.write(self._getSACKBytes())
 
 
 	def dataReceived(self, data):
@@ -1273,7 +1272,7 @@ class SocketTransport(object):
 			if self._initialBuffer.startswith('<policy-file-request/>\x00'):
 				self._mode = POLICYFILE
 				del self._initialBuffer
-				self.transport.write(self.factory.policyStringWithNull)
+				self.writable.write(self.factory.policyStringWithNull)
 				self._terminating = True
 
 				# No need to loseConnection here, because Flash player will close it:
@@ -1309,7 +1308,7 @@ class SocketTransport(object):
 				# Terminating, but we can't even send any type of frame.
 				self._terminating = True
 				# RST them instead of FIN, because they don't look like a well-behaving client anyway.
-				self.transport.abortConnection()
+				self.writable.abortConnection() # We know that writable is a `transport` here.
 				return
 
 			else:
@@ -1345,7 +1344,7 @@ class SocketTransport(object):
 
 		toSend += self._encodeFrame([Fn_you_close_it])
 
-		self.transport.write(toSend)
+		self.writable.write(toSend)
 		self._terminating = True
 		self._goOffline()
 
@@ -1364,7 +1363,7 @@ class SocketTransport(object):
 
 		toSend += self._encodeFrame([Fn_reset, reasonString, applicationLevel])
 		toSend += self._encodeFrame([Fn_you_close_it])
-		self.transport.write(toSend)
+		self.writable.write(toSend)
 		self._terminating = True
 		self._goOffline()
 
@@ -1381,15 +1380,12 @@ class SocketTransport(object):
 		##self._streamingProducer = streaming # No need to keep this info around, apparently
 
 		# twisted.web.http.Request will pause a push producer if the request is queued, so we must not pause it ourselves.
-		doNotPause = self.request and self.request.queued and streaming
+		doNotPause = self._mode == HTTP and self.writable.queued and streaming
 
 		if streaming and self._paused and not doNotPause:
 			producer.pauseProducing()
 
-		if not self.request:
-			self.transport.registerProducer(self, streaming)
-		else:
-			self.request.registerProducer(self, streaming)
+		self.writable.registerProducer(self, streaming)
 
 
 	# called by Stream instances
@@ -1398,10 +1394,10 @@ class SocketTransport(object):
 		Stop consuming data from a producer.
 		"""
 		self._producer = None
-		self.transport.unregisterProducer()
+		self.writable.unregisterProducer()
 
 
-	# called by Twisted. We trust Twisted to only call this if we registered a push producer with self.transport
+	# called by Twisted. We trust Twisted to only call this if we registered a push producer with self.writable
 	def pauseProducing(self):
 		self._paused = True
 		if self._producer:
@@ -1430,16 +1426,59 @@ class SocketTransport(object):
 		self._goOffline()
 
 
-	def connectionMade(self):
-		self.transport.setTcpNoDelay(True)
+	def _handleRequestBody(self):
+		request = self.writable
+
+		assert request.content.tell() == 0, request.content.tell()
+		body = request.content.read()
+		# Proxies *might* strip whitespace around the request body, so add a newline if necessary.
+		if body and body[-1] != '\n':
+			body += "\n"
+
+		if '\r\n' in body:
+			log.msg("Unusual: found a CRLF in POST body for %r from %r" % (request, request.client))
+
+		decoder = decoders.DelimitedJSONDecoder()
+		frames, code = decoder.getNewFrames(body)
+		if code == decoders.OK:
+			queuedFrame = None
+		elif code in (decoders.TOO_LONG, decoders.FRAME_CORRUPTION):
+			queuedFrame = [Fn.tk_frame_corruption]
+		elif code == decoders.INTRAFRAME_CORRUPTION:
+			queuedFrame = [Fn.tk_intraframe_corruption]
+
+		headers = request.responseHeaders._rawHeaders
+
+		# Headers taken from the ones gmail sends
+		headers['cache-control'] = ['no-cache, no-store, max-age=0, must-revalidate']
+		headers['pragma'] = ['no-cache']
+		headers['expires'] = ['Fri, 01 Jan 1990 00:00:00 GMT']
+
+		# http://code.google.com/p/doctype/wiki/ArticleScriptInclusion
+		request.write('for(;;);\n')
+
+
+	def requestStarted(self, request):
+		self._mode = HTTP
+		self.writable = request
+		self._handleRequestBody()
+
+
+	def requestAborted(self, reason):
 		if self.noisy:
-			log.msg('Connection made for %r' % (self,))
+			log.msg('Peer aborted request %r on %r' % (self.writable, self))
+		# It might already be terminating, but often not.
+		self._terminating = True
+		self._goOffline()
 
 
 	def makeConnection(self, transport):
 		self.connected = True
-		self.transport = transport
-		self.connectionMade()
+		self.writable = transport
+		# This is needed for non-HTTP connections. twisted.web sets NO_DELAY on HTTP connections for us.
+		transport.setTcpNoDelay(True)
+		if self.noisy:
+			log.msg('Connection made for %r' % (self,))
 
 
 
@@ -1509,33 +1548,10 @@ class HttpFace(resource.Resource):
 
 
 	def render_POST(self, request):
-		assert request.content.tell() == 0, request.content.tell()
-		body = request.content.read()
-		# Proxies *might* strip whitespace around the request body, so add a newline if necessary.
-		if body and body[-1] != '\n':
-			body += "\n"
-
-		if '\r\n' in body:
-			log.msg("Unusual: found a CRLF in POST body for %r from %r" % (request, request.client))
-
-		decoder = decoders.BencodeStringDecoder()
-		out, code = decoder.getNewFrames(body)
-		if code == decoders.OK:
-			queuedFrame = None
-		elif code in (decoders.TOO_LONG, decoders.FRAME_CORRUPTION):
-			queuedFrame = [Fn.tk_frame_corruption]
-		elif code == decoders.INTRAFRAME_CORRUPTION:
-			queuedFrame = [Fn.tk_intraframe_corruption]
-
-		headers = request.responseHeaders._rawHeaders
-
-		# Headers taken from the ones gmail sends
-		headers['cache-control'] = ['no-cache, no-store, max-age=0, must-revalidate']
-		headers['pragma'] = ['no-cache']
-		headers['expires'] = ['Fri, 01 Jan 1990 00:00:00 GMT']
-
-		# http://code.google.com/p/doctype/wiki/ArticleScriptInclusion
-		request.write('for(;;);\n')
+		t = SocketTransport()
+		d = request.notifyFinish()
+		d.addErrback(t.requestAborted)
+		t.requestStarted(request)
 
 
 from pypycpyo import optimizer

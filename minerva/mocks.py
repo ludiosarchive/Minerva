@@ -47,7 +47,6 @@ class DummyTCPTransport(StringTransport):
 
 	def __init__(self, *args, **kwargs):
 		StringTransport.__init__(self, *args, **kwargs)
-		self.noDelayEnabled = False
 
 
 	def unregisterProducer(self):
@@ -58,10 +57,6 @@ class DummyTCPTransport(StringTransport):
 		Real twisted code doesn't set <streamingTransportVar> = None
 		"""
 		self.producer = None
-
-
-	def setTcpNoDelay(self, enabled):
-		self.noDelayEnabled = bool(enabled)
 
 
 
