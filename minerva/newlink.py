@@ -1109,8 +1109,8 @@ class SocketTransport(object):
 		if not isinstance(credentialsData, dict):
 			raise InvalidHello
 
-		# requestNewStream is always optional. Allow 1, 1.0, True from the client.
-		requestNewStream = helloData['w'] if 'w' in helloData else False
+		# requestNewStream is always optional. Allow 2, 2.0 from the client.
+		requestNewStream = helloData['w'] == 2 if 'w' in helloData else False
 
 		try:
 			# any line below can raise KeyError; additional exceptions marked with 'e:'

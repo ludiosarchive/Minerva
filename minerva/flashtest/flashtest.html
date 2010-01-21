@@ -101,7 +101,7 @@ function connect(bridge) {
 			var uaId = cw.whoami.getUaId();
 			var transportNumber = ++transportCount;
 			var helloData = {
-				'n': transportNumber, 'v': 2, 'w': transportNumber == 0 ? 1 : 0, 'i': streamId,
+				'n': transportNumber, 'v': 2, 'w': transportNumber == 0 ? 2 : 0, 'i': streamId,
 				'c': {'uaId': uaId, 'csrf': window.CSRF_TOKEN},
 				'r': 9999999, 'm': 3600};
 			var helloFrame = [cw.net.FrameType.hello, helloData];
