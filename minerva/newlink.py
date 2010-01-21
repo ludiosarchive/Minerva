@@ -1060,11 +1060,7 @@ class SocketTransport(object):
 
 		# If the transport is terminating, it should have already called Stream.transportOffline(self) # TODO: actually make it so
 		assert not self._terminating
-
-		if not self._gotHello:
-			# How did someone ask me to write boxes at this time? This should
-			# never happen.
-			raise RuntimeError("_gotHello=%r" % (self._gotHello,))
+		assert self._gotHello
 
 		# TODO: make sure tests explicitly test that pull producers work properly if a push producer
 		# was registered, paused, and unregistered before.

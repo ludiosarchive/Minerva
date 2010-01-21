@@ -1372,15 +1372,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.assertIn('lastBoxSent=-1', r)
 
 
-	def test_writeBoxesUnauthed(self):
-		"""
-		Calling writeBoxes on an unauthed transport raises L{RuntimeError}
-		"""
-		q = abstract.Queue()
-		q.extend([['box0'], ['box1']])
-		self.aR(RuntimeError, lambda: self.transport.writeBoxes(q, start=None))
-
-
 	def test_writeBoxesStartNone(self):
 		"""
 		Calling writeBoxes(queue, start=None) on a transport actually results in all
