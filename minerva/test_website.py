@@ -3,6 +3,7 @@ import base64
 from zope.interface import implements, verify
 from twisted.trial import unittest
 
+from twisted.internet.defer import Deferred
 from twisted.web.test.test_web import DummyChannel
 from twisted.web.server import Request
 from twisted.web import http, server
@@ -215,10 +216,20 @@ class _CsrfTransportFirewallTests(object):
 		uaId = "id of funny length probably"
 		token = stopper.makeToken(uaId)
 		firewall, transport = self._makeThings(stopper, uaId, token)
-		self._setUaIdString(transport, 'xxx' + base64.b64encode(uaId))
+		self._setUaIdString(transport, 'AAA' + base64.b64encode(uaId)[3:])
 		ms = MockStream()
-		act = lambda: firewall.checkTransport(transport, ms)
-		return self.assertFailure(act(), RejectTransport)
+
+		def check(f):
+			f.trap(RejectTransport)
+			msg = f.getErrorMessage()
+			self.assertIn('got RejectToken', msg)
+
+		d = Deferred()
+		act = lambda _: firewall.checkTransport(transport, ms)
+		d.addCallback(act)
+		d.addErrback(check)
+		d.callback(None)
+		return d
 
 
 	# TODO: consider checking uaId length in the future?

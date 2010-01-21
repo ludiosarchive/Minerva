@@ -266,7 +266,11 @@ class CsrfTransportFirewall(_UAExtractorMixin):
 					raise RejectTransport("no csrf token in credentialsData")
 
 				token = transport.credentialsData[self.csrfKeyInCred]
-				return defer.maybeDeferred(self._csrfStopper.checkToken, uuid, token)
+				d = defer.maybeDeferred(self._csrfStopper.checkToken, uuid, token)
+				def rejectTokenToRejectTransport(f):
+					f.trap(RejectToken)
+					raise RejectTransport("got RejectToken")
+				return d.addErrback(rejectTokenToRejectTransport)
 			else:
 				return defer.succeed(None)
 
