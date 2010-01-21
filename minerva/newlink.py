@@ -920,7 +920,6 @@ def dumpToJson7Bit(data):
 
 
 
-
 class InvalidHello(Exception):
 	pass
 
