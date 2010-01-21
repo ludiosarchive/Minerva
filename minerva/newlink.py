@@ -1114,13 +1114,13 @@ class SocketTransport(object):
 
 		if requestNewStream:
 			try:
-				stream = self.factory._streamTracker.buildStream(streamId)
+				stream = self.factory.streamTracker.buildStream(streamId)
 			except StreamAlreadyExists:
-				stream = self.factory._streamTracker.getStream(streamId)
+				stream = self.factory.streamTracker.getStream(streamId)
 		else:
-			stream = self.factory._streamTracker.getStream(streamId)
+			stream = self.factory.streamTracker.getStream(streamId)
 
-		d = self.factory._firewall.checkTransport(self, stream)
+		d = self.factory.firewall.checkTransport(self, stream)
 
 		def cbAuthOkay(_):
 			if self._terminating:
@@ -1273,7 +1273,7 @@ class SocketTransport(object):
 			if self._initialBuffer.startswith('<policy-file-request/>\x00'):
 				self._mode = POLICYFILE
 				del self._initialBuffer
-				self.transport.write(self.factory._policyStringWithNull)
+				self.transport.write(self.factory.policyStringWithNull)
 				self._terminating = True
 
 				# No need to loseConnection here, because Flash player will close it:
@@ -1461,8 +1461,8 @@ class SocketFace(protocol.ServerFactory):
 		"""
 		self._reactor = reactor
 		self._clock = clock
-		self._streamTracker = streamTracker
-		self._firewall = firewall
+		self.streamTracker = streamTracker
+		self.firewall = firewall
 		self.setPolicyString(policyString)
 
 
@@ -1481,10 +1481,10 @@ class SocketFace(protocol.ServerFactory):
 			if '\x00' in policyString:
 				# because NULL is used to indicate end-of-policy file
 				raise ValueError("policyString cannot contain NULL byte")
-			self._policyStringWithNull = policyString + '\x00'
+			self.policyStringWithNull = policyString + '\x00'
 		else:
 			# TODO: test that Flash Player actually closes connection when it sees just NULL
-			self._policyStringWithNull = '\x00'
+			self.policyStringWithNull = '\x00'
 
 
 	def buildProtocol(self, addr):
@@ -1500,8 +1500,8 @@ class HttpFace(resource.Resource):
 	def __init__(self, clock, streamTracker, firewall):
 		resource.Resource.__init__(self)
 		self._clock = clock
-		self._streamTracker = streamTracker
-		self._firewall = firewall
+		self.streamTracker = streamTracker
+		self.firewall = firewall
 
 
 	def render_GET(self, request):
