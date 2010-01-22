@@ -111,7 +111,7 @@ class Frame(object):
 	for num, (name, minArgs, maxArgs) in knownTypes.iteritems():
 		setattr(names, name, num)
 
-	__slots__ = ['contents', 'type']
+	__slots__ = ('contents', 'type')
 
 	def __init__(self, contents):
 		"""
@@ -238,6 +238,7 @@ class BasicMinervaProtocol(object):
 	have to subclass, but can.
 	"""
 	implements(IMinervaProtocol)
+	__slots__ = ('stream', 'factory')
 
 	def streamStarted(self, stream):
 		self.stream = stream
@@ -283,6 +284,7 @@ class BasicMinervaFactory(object):
 	Override the C{protocol} attribute.
 	"""
 	implements(IMinervaFactory)
+	__slots__ = ()
 
 	protocol = None
 
@@ -311,9 +313,9 @@ class Stream(object):
 	maxUndeliveredBytes = 4 * 1024 * 1024 # bytes
 
 	__slots__ = (
-		'_clock,streamId,_streamProtocolFactory,_protocol,virgin,_primaryTransport,'
-		'_notifications,_transports,disconnected,queue,_incoming,_pretendAcked,'
-		'_producer,_streamingProducer,_primaryHasProducer,_primaryPaused').split(',')
+		'_clock', 'streamId', '_streamProtocolFactory', '_protocol', 'virgin', '_primaryTransport',
+		'_notifications', '_transports', 'disconnected', 'queue', '_incoming', '_pretendAcked',
+		'_producer', '_streamingProducer', '_primaryHasProducer', '_primaryPaused')
 
 	def __init__(self, clock, streamId, streamProtocolFactory):
 		self._clock = clock
@@ -717,9 +719,9 @@ class StreamTracker(object):
 
 	You do not want to subclass this.
 	"""
-	stream = Stream
+	__slots__  = ('_reactor', '_clock', '_streamProtocolFactory', '_streams', '_observers', '_preKey', '_postKey')
 
-	__slots__  = '_reactor,_clock,_streamProtocolFactory,_streams,_observers,_preKey,_postKey'.split(',')
+	stream = Stream
 
 	def __init__(self, reactor, clock, streamProtocolFactory):
 		self._reactor = reactor
@@ -922,16 +924,13 @@ class SocketTransport(object):
 	"""
 	implements(IMinervaTransport, IPushProducer, IPullProducer) # Almost an IProtocol, but has no connectionMade
 
+	__slots__ = (
+		'writable', 'lastBoxSent', '_lastStartParam', '_mode', '_initialBuffer', 'connected',
+		'_gotHello', '_terminating', '_sackDirty', '_paused', '_stream', '_producer', '_parser',
+		'streamId', 'credentialsData', 'transportNumber', 'factory', 'transport')
+
 	maxLength = 1024*1024
 	noisy = True
-
-	__slots__ = (
-		'writable,lastBoxSent,_lastStartParam,_mode,_initialBuffer,'
-		'connected,_gotHello,_terminating,_sackDirty,_paused,'
-		'_stream,_producer,_parser,'
-		'streamId,credentialsData,transportNumber,'
-		'factory,transport'
-	).split(',')
 
 	def __init__(self):
 		self.lastBoxSent = -1
@@ -1492,6 +1491,7 @@ class SocketTransport(object):
 
 class SocketFace(protocol.ServerFactory):
 	implements(IProtocolFactory)
+	__slots__ = ('_reactor', '_clock', 'streamTracker', 'firewall', 'policyStringWithNull')
 
 	protocol = SocketTransport
 
@@ -1542,6 +1542,7 @@ class SocketFace(protocol.ServerFactory):
 
 
 class HttpFace(resource.Resource):
+	__slots__ = ('_clock', 'streamTracker', 'firewall')
 	isLeaf = True
 
 	def __init__(self, clock, streamTracker, firewall):
