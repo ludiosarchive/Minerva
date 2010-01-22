@@ -281,6 +281,18 @@ class DelimitedJSONDecoderTests(CommonTests, unittest.TestCase):
 		self.aE((strings, decoders.OK), a.getNewFrames(toSend))
 
 
+	def test_someDocumentsParsedButRemainingBufferTooLong(self):
+		"""
+		If some lines can be extracted but the remaining buffer is too long,
+		the parser returns those lines and returns TOO_LONG.
+		"""
+		toSend = '"hello"\n"there"\n"8chars"'
+		a = self.receiver()
+		a.MAX_LENGTH = 7
+		strings = ['hello', 'there']
+		self.aE((strings, decoders.TOO_LONG), a.getNewFrames(toSend))
+
+
 	def test_lastJsonError(self):
 		"""
 		When a JSON parse error occurs, the C{lastJsonError} attribute on the decoder is set to

@@ -254,7 +254,7 @@ class DelimitedJSONDecoder(object):
 			if self._buffer.find(de, at) == -1:
 				break
 		self._buffer = self._buffer[at:]
-		if len(self._buffer) > m: # XXX TODO: make sure this is tested
+		if len(self._buffer) > m:
 			return docs, TOO_LONG
 		return docs, OK
 
