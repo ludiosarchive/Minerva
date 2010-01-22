@@ -2476,7 +2476,10 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 
 	def _makeTransport(self):
-		parser = Int32StringDecoder(maxLength=1024*1024)
+		class MyInt32StringDecoder(Int32StringDecoder):
+			# Notice the lack of __slots__
+			pass
+		parser = MyInt32StringDecoder(maxLength=1024*1024)
 		parser.gotFrames = []
 
 		class CustomTransport(DummyTCPTransport):

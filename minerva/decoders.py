@@ -49,18 +49,22 @@ class NetStringDecoder(object):
 			excessive .find()  
 	"""
 
-	_deadCode = None
-	_data = ''
-	_tempDigits = ''
-	_tempData = ''
-	_offset = 0
-	_lengthToRead = None
-	_readerState = LENGTH
 	noisy = False
 
+	__slots__ = (
+		'maxLength', '_deadCode', '_data', '_tempDigits', '_tempData',
+		'_offset', '_lengthToRead', '_readerState', '_code')
 
 	def __init__(self, maxLength):
 		self.maxLength = maxLength
+
+		self._deadCode = None
+		self._data = ''
+		self._tempDigits = ''
+		self._tempData = ''
+		self._offset = 0
+		self._lengthToRead = None
+		self._readerState = LENGTH
 
 
 	@classmethod
@@ -164,6 +168,8 @@ class NetStringDecoder(object):
 
 
 class BencodeStringDecoder(NetStringDecoder):
+
+	__slots__ = ()
 
 	@classmethod
 	def encode(cls, s):
@@ -351,6 +357,8 @@ class Int32StringDecoder(IntNStringDecoder):
 
 	This class publishes the same interface as NetstringReceiver.
 	"""
+	__slots__ = ()
+
 	structFormat = "!I"
 	prefixLength = struct.calcsize(structFormat)
 	maxPossibleLength = 2 ** (8 * prefixLength)
