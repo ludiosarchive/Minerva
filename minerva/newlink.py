@@ -905,6 +905,8 @@ class InvalidHello(Exception):
 # Acceptable protocol modes for SocketTransport to be in. Int32* are for Flash Socket.
 UNKNOWN, POLICYFILE, INT32, INT32CRYPTO, WEBSOCKET, BENCODE, HTTP = range(7)
 
+FORMAT_XHR, FORMAT_HTMLFILE = 2, 3
+
 # TODO: We'll need to make sure it's impossible for an attacker to downgrade "int32+crypto"
 # down to "int32"
 
@@ -1029,6 +1031,10 @@ class SocketTransport(object):
 			self.writable.finish()
 
 
+	def _closeIfNecessary(self):
+		pass
+
+
 	def writeBoxes(self, queue, start):
 		"""
 		@see L{IMinervaTransport.writeBoxes}
@@ -1067,6 +1073,8 @@ class SocketTransport(object):
 		self.writable.write(toSend)
 		self.lastBoxSent = lastBox
 
+		self._closeIfNecessary()
+
 
 	def _getSACKBytes(self):
 		assert not self._terminating
@@ -1086,7 +1094,7 @@ class SocketTransport(object):
 		if not isinstance(credentialsData, dict):
 			raise InvalidHello
 
-		# requestNewStream is always optional. Allow 2, 2.0 from the client.
+		# requestNewStream is always optional. Allow 2, 2.0 from the client (represents True).
 		requestNewStream = helloData['w'] == 2 if 'w' in helloData else False
 
 		try:
@@ -1094,17 +1102,33 @@ class SocketTransport(object):
 
 			transportNumber = abstract.ensureNonNegIntLimit(helloData['n'], 2**64)
 			protocolVersion = helloData['v']
-			# -- no transportType
 			# Rules for streamId: must be 20-30 inclusive bytes, must not contain characters > 127
 			streamId = helloData['i']
 			if not isinstance(streamId, str) or not 20 <= len(streamId) <= 30: # ,str is appropriate because of how simplejson returns str when possible
 				raise InvalidHello
-			# -- no numPaddingBytes
 			maxReceiveBytes = abstract.ensureNonNegIntLimit(helloData['r'], 2**64) # e: ValueError, TypeError
 			maxOpenTime = abstract.ensureNonNegIntLimit(helloData['m'], 2**64) # e: ValueError, TypeError
-			# -- no readOnlyOnce
 		except (KeyError, TypeError, ValueError):
 			raise InvalidHello
+
+		if self._mode == HTTP:
+			try:
+				httpFormat = helloData['t']
+			except KeyError:
+				raise InvalidHello
+			if not httpFormat in (FORMAT_XHR, FORMAT_HTMLFILE):
+				raise InvalidHello
+
+			# readOnlyOnce is always optional. Allow 2, 2.0 from the client (represents True).
+			readOnlyOnce = helloData['o'] == 2 if 'o' in helloData else False
+
+			numPaddingBytes = 0
+			# numPaddingBytes is always optional.
+			if 'p' in helloData:
+				try:
+					numPaddingBytes = abstract.ensureNonNegIntLimit(helloData['p'], 16*1024)
+				except (ValueError, TypeError):
+					raise InvalidHello
 
 		# Do not use protocolVersion < 2 ever because Python is very stupid about bool/int equivalence
 		if protocolVersion != 2:
