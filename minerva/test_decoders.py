@@ -56,9 +56,8 @@ class CommonTests(object):
 
 		for packetSize in range(1, 20):
 			##print "packetSize", packetSize
-			a = self.receiver()
+			a = self.receiver(maxLength=699)
 			got = []
-			a.MAX_LENGTH = 699
 
 			for s in diceString(toSend, packetSize):
 				##print 'sending', repr(s)
@@ -94,8 +93,7 @@ class CommonTests(object):
 			for sequence in sequences:
 				##print sexpectedCode
 				for packetSize in range(1, 20):
-					a = self.receiver()
-					a.MAX_LENGTH = 50
+					a = self.receiver(maxLength=50)
 
 					##print 'Sending in pieces', repr(sequence), 'packetSize=', packetSize
 					out, code = sendData(a, sequence, packetSize)
@@ -135,7 +133,7 @@ class NetStringDecoderTests(CommonTests, unittest.TestCase):
 		"""
 		0-length strings are okay and should be delivered when : or :, arrives
 		"""
-		r = self.receiver()
+		r = self.receiver(maxLength=0)
 		self.aE(([], decoders.OK), r.getNewFrames('0'))
 		if not self.trailingComma:
 			self.aE(([''], decoders.OK), r.getNewFrames(':'))
@@ -149,7 +147,7 @@ class NetStringDecoderTests(CommonTests, unittest.TestCase):
 		Assert that the error code is returned when bad digits are received, not
 		after the ":" arrives.
 		"""
-		a = self.receiver()
+		a = self.receiver(maxLength=10)
 		a.getNewFrames('5')
 		self.aE(([], decoders.FRAME_CORRUPTION), a.getNewFrames('x'))
 
@@ -170,8 +168,7 @@ class NetStringDecoderTests(CommonTests, unittest.TestCase):
 		strings = ['x'] * num
 		encoded = self.receiver.encode('x') * num # faster to encode this way
 		#encoded = ''.join(self.receiver.encode(s) for s in strings)
-		a = self.receiver()
-		a.MAX_LENGTH = 1
+		a = self.receiver(maxLength=1)
 		got, code = a.getNewFrames(encoded)
 		self.aE(decoders.OK, code)
 		self.aE(strings, got)
@@ -205,7 +202,7 @@ class DelimitedJSONDecoderTests(CommonTests, unittest.TestCase):
 
 	corruptedSequences = [] # No such thing for this decoder
 
-	# All of these are post-serialization strings. Oversize string tested with MAX_LENGTH 50
+	# All of these are post-serialization strings. Oversize string tested with maxLength 50
 	jsonCorruptedSequences = [
 		'[Infinity]\n',
 		'[-Infinity]\n',
@@ -219,7 +216,7 @@ class DelimitedJSONDecoderTests(CommonTests, unittest.TestCase):
 		'\n',
 	]
 
-	# For MAX_LENGTH == 50
+	# For maxLength == 50
 	tooLongSequences = [
 		'"%s"\n' % ("x" * 49),
 	]
@@ -242,9 +239,8 @@ class DelimitedJSONDecoderTests(CommonTests, unittest.TestCase):
 
 			for packetSize in range(1, 20):
 				##print "packetSize", packetSize
-				a = self.receiver()
+				a = self.receiver(maxLength=699)
 				got = []
-				a.MAX_LENGTH = 699
 
 				for s in diceString(toSend, packetSize):
 					##print 'sending', repr(s)
@@ -264,7 +260,7 @@ class DelimitedJSONDecoderTests(CommonTests, unittest.TestCase):
 
 	def test_bufferSizeLimit(self):
 		"""
-		If 200 bytes of data are delivered, and MAX_LENGTH is 9, and data
+		If 200 bytes of data are delivered, and maxLength is 9, and data
 		has delimiter at every 10th byte, the strings are extracted without
 		a TOO_LONG error code.
 		"""
@@ -276,8 +272,7 @@ class DelimitedJSONDecoderTests(CommonTests, unittest.TestCase):
 		for s in strings:
 			toSend += '"%s"\n' % s
 		
-		a = self.receiver()
-		a.MAX_LENGTH = 10
+		a = self.receiver(maxLength=10)
 		self.aE((strings, decoders.OK), a.getNewFrames(toSend))
 
 
@@ -287,8 +282,7 @@ class DelimitedJSONDecoderTests(CommonTests, unittest.TestCase):
 		the parser returns those lines and returns TOO_LONG.
 		"""
 		toSend = '"hello"\n"there"\n"8chars"'
-		a = self.receiver()
-		a.MAX_LENGTH = 7
+		a = self.receiver(maxLength=7)
 		strings = ['hello', 'there']
 		self.aE((strings, decoders.TOO_LONG), a.getNewFrames(toSend))
 
@@ -298,8 +292,8 @@ class DelimitedJSONDecoderTests(CommonTests, unittest.TestCase):
 		When a JSON parse error occurs, the C{lastJsonError} attribute on the decoder is set to
 		this JSONDecodeError.
 		"""
-		a = self.receiver()
-		self.aI(None, a.lastJsonError)
+		a = self.receiver(maxLength=10)
+		self.assertFalse(hasattr(a, 'lastJsonError'))
 
 		out, code = a.getNewFrames("}\n")
 		self.aE([], out)
@@ -322,7 +316,7 @@ class Int32StringDecoderTests(CommonTests, unittest.TestCase):
 		"""
 		Test receiving data find the same data send.
 		"""
-		r = self.receiver()
+		r = self.receiver(maxLength=20*1024*1024)
 		got = []
 		for s in self.strings:
 			for c in struct.pack(r.structFormat, len(s)) + s:
@@ -337,7 +331,7 @@ class Int32StringDecoderTests(CommonTests, unittest.TestCase):
 		0-length strings are okay and should be delivered when the
 		fourth byte of the prefix arrives.
 		"""
-		r = self.receiver()
+		r = self.receiver(maxLength=0)
 		self.aE(([], decoders.OK), r.getNewFrames('\x00'))
 		self.aE(([], decoders.OK), r.getNewFrames('\x00'))
 		self.aE(([], decoders.OK), r.getNewFrames('\x00'))
@@ -350,7 +344,7 @@ class Int32StringDecoderTests(CommonTests, unittest.TestCase):
 		"""
 		for s in self.partialStrings:
 			##print repr(s)
-			r = self.receiver()
+			r = self.receiver(maxLength=20*1024*1024)
 			got = []
 			for c in s:
 				##print repr(s), repr(c)
@@ -373,7 +367,7 @@ class Int32StringDecoderTests(CommonTests, unittest.TestCase):
 
 
 	def test_decode32(self):
-		r = self.receiver()
+		r = self.receiver(maxLength=10)
 		got, code = r.getNewFrames("\x00\x00\x00\x04ubar")
 		self.aE(decoders.OK, code)
 		self.aE(["ubar"], got)
@@ -390,8 +384,7 @@ class Int32StringDecoderTests(CommonTests, unittest.TestCase):
 
 	
 	def test_lengthLimitExceeded(self):
-		r = self.receiver()
-		r.MAX_LENGTH = 10
+		r = self.receiver(maxLength=10)
 		out, code = r.getNewFrames(struct.pack(r.structFormat, 11))
 		self.aE([], out)
 		self.aE(decoders.TOO_LONG, code)
@@ -399,19 +392,18 @@ class Int32StringDecoderTests(CommonTests, unittest.TestCase):
 	
 	def test_longStringNotDelivered(self):
 		"""
-		If a length prefix for a string longer than C{MAX_LENGTH} is delivered
+		If a length prefix for a string longer than C{maxLength} is delivered
 		to C{getNewFrames} at the same time as the entire string, the string is
 		not passed to C{manyDataCallback}.
 		"""
-		r = self.receiver()
-		r.MAX_LENGTH = 10
+		r = self.receiver(maxLength=10)
 		out, code = r.getNewFrames(struct.pack(r.structFormat, 11) + 'x' * 11)
 		self.aE([], out)
 		self.aE(decoders.TOO_LONG, code)
 
 
 	def test_lengthCheckedAtFourthByte(self):
-		r = self.receiver()
+		r = self.receiver(maxLength=10)
 		self.aE(([], decoders.OK), r.getNewFrames('\xff')) # although this indicates a really long string, the length isn't looked at until 4 bytes arrive.
 		self.aE(([], decoders.OK), r.getNewFrames('\x00'))
 		self.aE(([], decoders.OK), r.getNewFrames('\x00'))

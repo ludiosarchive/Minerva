@@ -1225,7 +1225,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 
 		def resetParser():
 			self.gotFrames = []
-			self.parser = BencodeStringDecoder()
+			self.parser = BencodeStringDecoder(maxLength=1024*1024)
 
 		for packetSize in range(1, 20):
 			self._resetConnection()
@@ -1256,7 +1256,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 
 		def resetParser():
 			self.gotFrames = []
-			self.parser = Int32StringDecoder()
+			self.parser = Int32StringDecoder(maxLength=1024*1024)
 
 		for packetSize in range(1, 20):
 			self._resetConnection()
@@ -2288,7 +2288,7 @@ class SocketTransportTestsWithBencode(_BaseSocketTransportTests, unittest.TestCa
 
 	def _resetParser(self):
 		self.gotFrames = []
-		self.parser = BencodeStringDecoder()
+		self.parser = BencodeStringDecoder(maxLength=1024*1024)
 
 
 	def _sendModeInitializer(self):
@@ -2300,7 +2300,7 @@ class SocketTransportTestsWithInt32(_BaseSocketTransportTests, unittest.TestCase
 
 	def _resetParser(self):
 		self.gotFrames = []
-		self.parser = Int32StringDecoder()
+		self.parser = Int32StringDecoder(maxLength=1024*1024)
 
 
 	def _sendModeInitializer(self):
@@ -2476,7 +2476,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 
 	def _makeTransport(self):
-		parser = Int32StringDecoder()
+		parser = Int32StringDecoder(maxLength=1024*1024)
 		parser.gotFrames = []
 
 		class CustomTransport(DummyTCPTransport):

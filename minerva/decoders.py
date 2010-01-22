@@ -41,7 +41,7 @@ class NetStringDecoder(object):
 
 	Security features:
 		1. Messages are limited in size, useful if you don't want someone
-		   sending you a 500MB netstring (change MAX_LENGTH to the maximum
+		   sending you a 500MB netstring (change maxLength to the maximum
 		   length you wish to accept).
 		2. An error code is returned if an illegal message is received.
 		3. Small messages received at once don't cause excessive string copying.
@@ -56,8 +56,11 @@ class NetStringDecoder(object):
 	_offset = 0
 	_lengthToRead = None
 	_readerState = LENGTH
-	MAX_LENGTH = 20 * 1024 * 1024 # 20MB
 	noisy = False
+
+
+	def __init__(self, maxLength):
+		self.maxLength = maxLength
 
 
 	@classmethod
@@ -74,7 +77,7 @@ class NetStringDecoder(object):
 			except ValueError:
 				self._code = FRAME_CORRUPTION # non-digits before the colon while looking for length
 				return True
-			if self._lengthToRead > self.MAX_LENGTH:
+			if self._lengthToRead > self.maxLength:
 				self._code = TOO_LONG # netstring too long
 				return True
 			self._offset = colonLocation + 1
@@ -90,7 +93,7 @@ class NetStringDecoder(object):
 				except ValueError:
 					self._code = FRAME_CORRUPTION # non-digits found
 					return True
-			if len(self._tempDigits) > len(str(self.MAX_LENGTH)): # TODO: cache this value?
+			if len(self._tempDigits) > len(str(self.maxLength)): # TODO: cache this value?
 				self._code = TOO_LONG # netstring too long
 				return True
 			##if self.noisy: print "doLength: not done collecting digits yet with _tempDigits=%r" % (self._tempDigits)
@@ -203,17 +206,21 @@ class DelimitedJSONDecoder(object):
 	end of the JSON document and the actual delimiter. In practice, this allows a `delimiter'
 	of `\n' to simultaneously delimit both `\n` and `\r\n`
 
-		Note: the `\r` in `\r\n` "eats into" the max length. So if MAX_LENGTH is 5,
+		Note: the `\r` in `\r\n` "eats into" the max length. So if maxLength is 5,
 		"hello\n" can be received, but "hello\r\n" can not!
 
 	Implementation note:
 		String append is fast enough in CPython 2.5+. On Windows CPython,
 		it can still be ~5x slower than list-based buffers.
 	"""
-	MAX_LENGTH = 20 * 1024 * 1024 # 20 MB
 	delimiter = '\n' # MUST be 1 byte. Do not change this after any data has been received.
-	lastJsonError = None # Most people won't care about the JSON exception.
-	_buffer = ''
+
+	__slots__ = ('maxLength', 'lastJsonError', '_buffer')
+
+	def __init__(self, maxLength):
+		self.maxLength = maxLength
+		self._buffer = ''
+
 
 	@classmethod
 	def encode(cls, obj):
@@ -226,7 +233,7 @@ class DelimitedJSONDecoder(object):
 		# This should re-return the correct error code when more data is fed into it, even after
 		# the error code was already returned.
 		de = self.delimiter
-		m = self.MAX_LENGTH
+		m = self.maxLength
 
 		self.lastJsonError = None
 		self._buffer += data
@@ -277,10 +284,10 @@ class IntNStringDecoder(object):
 	@type maxPossibleLength: C{int}
 	"""
 
-	__slots__ = ['MAX_LENGTH', '_buffer']
+	__slots__ = ('maxLength', '_buffer')
 
-	def __init__(self):
-		self.MAX_LENGTH = 20 * 1024 * 1024 # 20 MB
+	def __init__(self, maxLength):
+		self.maxLength = maxLength
 		self._buffer = ""
 
 
@@ -320,7 +327,7 @@ class IntNStringDecoder(object):
 				break
 			at_pLen = at + pLen
 			length, = struct.unpack(self.structFormat, self._buffer[at:at_pLen])
-			if length > self.MAX_LENGTH:
+			if length > self.maxLength:
 				##print "Too long", length
 				return strings, TOO_LONG
 			if lenBuffer - at < length + pLen: # not enough to read next string?

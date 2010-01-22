@@ -922,7 +922,7 @@ class SocketTransport(object):
 	"""
 	implements(IMinervaTransport, IPushProducer, IPullProducer) # Almost an IProtocol, but has no connectionMade
 
-	MAX_LENGTH = 1024*1024
+	maxLength = 1024*1024
 	noisy = True
 
 	__slots__ = (
@@ -1326,15 +1326,13 @@ class SocketTransport(object):
 				self._mode = BENCODE
 				frameData = self._initialBuffer[len('<bencode/>\n'):]
 				del self._initialBuffer
-				self._parser = decoders.BencodeStringDecoder()
-				self._parser.MAX_LENGTH = self.MAX_LENGTH
+				self._parser = decoders.BencodeStringDecoder(maxLength=self.maxLength)
 
 			elif self._initialBuffer.startswith('<int32/>\n'):
 				self._mode = INT32
 				frameData = self._initialBuffer[len('<int32/>\n'):]
 				del self._initialBuffer
-				self._parser = decoders.Int32StringDecoder()
-				self._parser.MAX_LENGTH = self.MAX_LENGTH
+				self._parser = decoders.Int32StringDecoder(maxLength=self.maxLength)
 
 			# TODO: <int32-zlib/> with <x/> alias
 			# TODO: if we support compression, make sure people can't zlib-bomb us with exploding strings:
@@ -1437,7 +1435,7 @@ class SocketTransport(object):
 		if '\r\n' in body:
 			log.msg("Unusual: found a CRLF in POST body for %r from %r" % (request, request.client))
 
-		decoder = decoders.DelimitedJSONDecoder()
+		decoder = decoders.DelimitedJSONDecoder(maxLength=self.maxLength)
 		frames, code = decoder.getNewFrames(body)
 		if code == decoders.OK:
 			queuedFrame = None
