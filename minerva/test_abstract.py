@@ -528,7 +528,7 @@ class TestGenericIdentifier(unittest.TestCase):
 class RandomFactoryTests(unittest.TestCase):
 
 	def test_smallRequests(self):
-		rf = abstract.RandomFactory()
+		rf = abstract.RandomFactory(bufferSize=4096*8)
 
 		r1 = rf.secureRandom(16)
 		self.aE(16, len(r1))
@@ -544,20 +544,22 @@ class RandomFactoryTests(unittest.TestCase):
 
 
 	def test_zeroRandomBytes(self):
-		rf = abstract.RandomFactory()
+		rf = abstract.RandomFactory(bufferSize=4096*8)
 
 		r1 = rf.secureRandom(0)
 		self.aE('', r1)
 
 
 	def test_largeRequests(self):
-		rf = abstract.RandomFactory()
+		bufferSize = 4096*8
+
+		rf = abstract.RandomFactory(bufferSize=bufferSize)
 
 		r1 = rf.secureRandom(4000)
 		self.aE(4000, len(r1))
 
-		r2 = rf.secureRandom(rf.bufferSize * 8)
-		self.aE(rf.bufferSize * 8, len(r2))
+		r2 = rf.secureRandom(bufferSize * 8)
+		self.aE(bufferSize * 8, len(r2))
 
 		r3 = rf.secureRandom(2)
 		self.aE(2, len(r3))
@@ -566,13 +568,15 @@ class RandomFactoryTests(unittest.TestCase):
 
 
 	def test_veryLargeRequests(self):
-		rf = abstract.RandomFactory()
+		bufferSize = 4096*8
 
-		r1 = rf.secureRandom(rf.bufferSize*2)
-		self.aE(rf.bufferSize*2, len(r1))
+		rf = abstract.RandomFactory(bufferSize=bufferSize)
 
-		r2 = rf.secureRandom(rf.bufferSize*2 - 1)
-		self.aE(rf.bufferSize*2 - 1, len(r2))
+		r1 = rf.secureRandom(bufferSize*2)
+		self.aE(bufferSize*2, len(r1))
+
+		r2 = rf.secureRandom(bufferSize*2 - 1)
+		self.aE(bufferSize*2 - 1, len(r2))
 
 		r3 = rf.secureRandom(2)
 		self.aE(2, len(r3))
@@ -581,13 +585,15 @@ class RandomFactoryTests(unittest.TestCase):
 
 
 	def test_largeRequestSameAsBufferSize(self):
-		rf = abstract.RandomFactory()
+		bufferSize = 4096*8
 
-		r1 = rf.secureRandom(rf.bufferSize)
-		self.aE(rf.bufferSize, len(r1))
+		rf = abstract.RandomFactory(bufferSize=bufferSize)
 
-		r2 = rf.secureRandom(rf.bufferSize)
-		self.aE(rf.bufferSize, len(r2))
+		r1 = rf.secureRandom(bufferSize)
+		self.aE(bufferSize, len(r1))
+
+		r2 = rf.secureRandom(bufferSize)
+		self.aE(bufferSize, len(r2))
 
 		self.aNE(r1, r2)
 
@@ -599,7 +605,7 @@ class RandomFactoryTests(unittest.TestCase):
 				abstract.RandomFactory._getMore(self2, howMuch)
 				self._calls += 1
 
-		rf = SyscallTrackingRandomFactory()
+		rf = SyscallTrackingRandomFactory(bufferSize=4096*8)
 		for i in xrange(1024*8):
 			rn = rf.secureRandom(16)
 			self.aE(16, len(rn))
@@ -609,7 +615,7 @@ class RandomFactoryTests(unittest.TestCase):
 
 
 	def test_invalidNumBytes(self):
-		rf = abstract.RandomFactory()
+		rf = abstract.RandomFactory(bufferSize=4096*8)
 
 		self.aR(ValueError, lambda: rf.secureRandom(-1))
 		self.aR(ValueError, lambda: rf.secureRandom(-2**128))

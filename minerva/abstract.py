@@ -120,6 +120,8 @@ class Queue(object):
 	# example: remove specific items that are no longer needed
 	# (a Stream might not have sent them yet, because there were no transports)
 
+	__slots__ = ('_seqNumAt0', '_items')
+
 	noisy = True
 
 	def __init__(self):
@@ -219,6 +221,8 @@ class Incoming(object):
 	L{give}, calling L{getUndeliveredCount} or L{getMaxConsumption}, and
 	destroying the Stream if the numbers are too high.
 	"""
+	__slots__ = ('_lastAck', '_cached', '_deliverable', '_consumption')
+
 	def __init__(self):
 		self._lastAck = -1
 
@@ -350,7 +354,7 @@ class InvalidIdentifier(Exception):
 
 class GenericIdentifier(object):
 	_expectedLength = -1
-	__slots__ = ['id']
+	__slots__ = ('id',)
 
 	def __init__(self, id):
 		if not isinstance(id, str):
@@ -390,12 +394,11 @@ class RandomFactory(object):
 	You should use this instead of L{twisted.python.randbytes}.
 	"""
 
-	bufferSize = 4096 * 8
+	__slots__ = ('_bufferSize', '_buffer', '_position')
 
-	__slots__ = ['_buffer', '_position']
-
-	def __init__(self):
-		self._getMore(self.bufferSize)
+	def __init__(self, bufferSize):
+		self._bufferSize = bufferSize
+		self._getMore(bufferSize)
 
 
 	def _getMore(self, howMuch):
@@ -417,14 +420,14 @@ class RandomFactory(object):
 			nbytes = ensureNonNegInt(nbytes)
 
 		if nbytes > len(self._buffer) - self._position:
-			self._getMore(max(nbytes, self.bufferSize))
+			self._getMore(max(nbytes, self._bufferSize))
 
 		out = self._buffer[self._position:self._position+nbytes]
 		self._position += nbytes
 		return out
 
 
-_theRandomFactory = RandomFactory()
+_theRandomFactory = RandomFactory(bufferSize=4096*8)
 secureRandom = _theRandomFactory.secureRandom
 
 

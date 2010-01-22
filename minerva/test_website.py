@@ -8,8 +8,6 @@ from twisted.web.test.test_web import DummyChannel
 from twisted.web.server import Request
 from twisted.web import http, server
 
-from minerva.abstract import RandomFactory
-
 from minerva.mocks import (
 	DummyRequest, DummySocketLikeTransport, MockStream
 )

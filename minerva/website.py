@@ -16,6 +16,8 @@ from collections import defaultdict
 
 from minerva.interfaces import IStreamNotificationReceiver
 
+_postImportVars = vars().keys()
+
 
 class UAToStreamsCorrelator(defaultdict):
 	"""
@@ -89,7 +91,8 @@ class CsrfStopper(object):
 	out to the JavaScript in your HTML might be okay.
 	"""
 	implements(ICsrfStopper)
-	
+	__slots__ = ('_secretString')
+
 	version = '\x00\x00' # one constant for now
 
 	def __init__(self, secretString):
@@ -186,6 +189,7 @@ class NoopTransportFirewall(object):
 	Accepts all transports. Doesn't check anything.
 	"""
 	implements(ITransportFirewall)
+	__slots__ = ()
 
 	def checkTransport(self, transport, stream):
 		return defer.succeed(None)
@@ -193,6 +197,8 @@ class NoopTransportFirewall(object):
 
 
 class _UAExtractorMixin(object):
+	__slots__ = ()
+
 	def _getUserAgentFromRequest(self, request):
 		raw = request.getCookie(self.secureCookieName if request.isSecure() else self.insecureCookieName) # raw may be None at this point
 		try:
@@ -238,6 +244,7 @@ class CsrfTransportFirewall(_UAExtractorMixin):
 	"""
 
 	implements(ITransportFirewall)
+	__slots__ = ('_parentFirewall', '_csrfStopper')
 
 	insecureCookieName = '__' # only for http
 	secureCookieName = '_s' # only for https
@@ -289,6 +296,7 @@ class AntiHijackTransportFirewall(_UAExtractorMixin):
 	"""
 
 	implements(ITransportFirewall, IStreamNotificationReceiver)
+	__slots__ = ('_parentFirewall', '_uaToStreams')
 
 	def __init__(self, parentFirewall, uaToStreams):
 		self._parentFirewall = parentFirewall
@@ -325,3 +333,7 @@ def makeLayeredFirewall(csrfStopper, uaToStreams):
 		)
 
 	return layeredTransportFirewall
+
+
+from pypycpyo import optimizer
+optimizer.bind_all_many(vars(), _postImportVars)
