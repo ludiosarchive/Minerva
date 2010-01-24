@@ -125,7 +125,8 @@ Why you might want Minerva
 
 Installation requirements / Dependencies
 =============================
--	CPython 2.5+ with the patch Extpatches/Python_prevent_ACA_dict_set.patch. Minerva is developed
+-	CPython 2.5+ (our branch ``prime`` or at least use the patch
+	Extpatches/Python_prevent_ACA_dict_set.patch). Minerva is developed
 	and tested with CPython 2.7. Other Python implementations are untested. Minerva will
 	still work without the ACA patch, but it will be vulnerable to dedicated hackers trying
 	to stall the server.
@@ -295,7 +296,7 @@ instead of "unicode strings" or similar because:
 	just a string. But right now, Minerva always uses 7-bit-clean mode to avoid problems.
 
 *	JSON requires encoding control characters including `0xFF` and `LF`, which is good
-	because we cannot send it over all transports anyway.
+	because we cannot send those characters over all transports anyway.
 
 *	IE8, Chrome, Firefox, Safari, and Opera have native JSON encoders and decoders.
 	Using JSON at the Minerva level ensures the native-JSON bugs have been abstracted
@@ -318,7 +319,7 @@ We used to think there were more advantages, but they were found to be incorrect
 
 Problems with JSON
 -------------------------
-*	No support for dates, or sets
+*	No support for dates, or sets, or self-references.
 
 *	Allows unlimited nesting, so you must worry about stack exhaustion. Minerva requires a
 	patched simplejson that limits nesting to 32 levels.
@@ -405,7 +406,8 @@ Minerva does a lot of neat stuff you won't find in other Comet servers.
 Minerva limitations
 =============
 
-Minerva server is written in Python, which is slow [#]_. Ideally, Minerva server would run on Factor_.
+Minerva server is written in Python, which `is slow`_. Ideally, Minerva server would be
+embedded in nginx and possibly use zeromq to copy boxes to and from application servers.
 
 For cross-domain communication, Minerva relies on access to many subdomains + ``document.domain``.
 If HTTPS is needed, this necessitates a wildcard SSL cert.
@@ -432,7 +434,7 @@ of data to send S2C. It would work like this:
 2.	Minerva decides it would be faster to send these over a gzipped transport, even with
 	the client forced to take a round-trip hit.
 3.	Minerva server convinces the client to open an HTTP S2C transport
-4.	Minerva server remembers that it has a lot of data to send, so this transport gets gzip headers
+4.	Minerva server knows that it has a lot of data to send, so this transport gets gzip headers
 	and gzipped data is sent over it.
 5.	Because the client cannot read all of the data until the HTTP request is closed, Minerva
 	closes the transport fairly quickly.
@@ -448,9 +450,7 @@ to include an example.
 **Future:** for WebSocket and HTTP transports, some kind of client-side decompression
 could be done inside a Web Worker.
 
-..	[#] http://shootout.alioth.debian.org/u64/benchmark.php?test=all&lang=all&box=1
-
-..	_Factor: http://factorcode.org/
+..	_`is slow`: http://shootout.alioth.debian.org/u64/benchmark.php?test=all&lang=all&box=1
 
 
 
@@ -486,6 +486,9 @@ that add additional levels of nesting, like this:
 We reserve another three levels, leading to a maximum allowed container nesting of
 32 - (3 + 3) = 26. Note that Minerva server will not always reject frames that slightly
 exceed this nesting limit, so applications are responsible for keeping track of nesting.
+
+**Future**: Make the server very strict about the nesting limit of 26, by passing
+a nesting limit for every ``simplejson.loads``.
 
 
 Noncharacter Unicode codepoints
