@@ -1,5 +1,12 @@
+=====
+Minerva design rationales
+=====
+
+.. contents:: Table of Contents
+
+
 Should server write out SACK on primary transport, or on the transport the client used to upload boxes?
-===
+=====
 
 Probably on the transport client used for upload, because:
 	- server has to respond on the "upload transport" anyway, it might as well write out 10 bytes for the SACK.
@@ -8,7 +15,7 @@ Probably on the transport client used for upload, because:
 
 
 HTTP/1.0 + TIME_WAIT
-===
+=====
 Minerva server assumes (maybe incorrectly) that HTTP/1.0 requests from JavaScript-enabled clients
 are insignificant. With this assumption, Minerva assumes that when it closes an HTTP request (with request.finish)
 that most of the time, the client will be the one doing the active close on the TCP connection (eventually).
