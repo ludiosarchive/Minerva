@@ -173,6 +173,7 @@ class Index(BetterResource):
 <!doctype html>
 <ul>
 <li><a href="/@tests/">/@tests/</a>
+<li><a href="/docs/">/docs/</a>
 <li><a href="/@testres_Coreweb/">/@testres_Coreweb/</a>
 <li><a href="/@testres_Minerva/">/@testres_Minerva/</a>
 	<ul>
@@ -323,6 +324,11 @@ class Root(BetterResource):
 		self.putChild('form_sandbox', FormSandbox(self._reactor))
 
 		self.putChild('flashtest', pages.FlashTestPage(csrfStopper, cookieInstaller, directoryScan, JSPATH))
+
+		# The docs are outside of the minerva package
+		docsDir = FilePath(__file__).parent().parent().child('docs')
+		if(docsDir.exists()):
+			self.putChild('docs', static.File(docsDir.path))
 
 
 
