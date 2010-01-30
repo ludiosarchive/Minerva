@@ -119,7 +119,6 @@ Fn_you_close_it = Fn.you_close_it
 
 
 class WhoReset(object):
-	__slots__ = []
 	server_minerva = 1
 	server_app = 2
 	client_minerva = 3
