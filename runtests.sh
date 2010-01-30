@@ -1,3 +1,3 @@
 #!/bin/zsh -e
 
-time PY_OPTIMIZER_DONT_OPTIMIZE=1 python -OOOOO `which trial` minerva
+time PY_OPTIMIZER_DONT_OPTIMIZE=1 python -N `which trial` minerva

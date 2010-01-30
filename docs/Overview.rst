@@ -125,7 +125,7 @@ Why you might want Minerva
 
 Installation requirements / Dependencies
 =============================
--	CPython 2.5+ (our branch ``prime`` or at least use the patch
+-	CPython 2.5+ (our branch ``prime2`` or at least use the patch
 	Extpatches/Python_prevent_ACA_dict_set.patch). Minerva is developed
 	and tested with CPython 2.7. Other Python implementations are untested. Minerva will
 	still work without the ACA patch, but it will be vulnerable to dedicated hackers trying
