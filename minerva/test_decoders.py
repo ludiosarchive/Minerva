@@ -374,13 +374,23 @@ class Int32StringDecoderTests(CommonTests, unittest.TestCase):
 
 
 	def test_encodeTooLong(self):
-		class ReallyLongString(str):
-			def __len__(self):
-				# lie for a good cause
-				return 2**32 + 1
+		"""
+		We can't test Int32StringDecoder's StringTooLongError
+		with a 32-bit Python, because returning 2**31 + 1 from a __len__
+		in 32-bit Python results in an OverflowError, as it cannot convert the long.
+		"""
+		class Int16StringDecoder(decoders.IntNStringDecoder):
+			__slots__ = ()
 
-		s = ReallyLongString("hi")
-		self.aR(decoders.StringTooLongError, lambda: decoders.Int32StringDecoder.encode(s))
+			structFormat = "!H"
+			prefixLength = struct.calcsize(structFormat)
+			maxPossibleLength = 2 ** (8 * prefixLength)
+
+			assert maxPossibleLength == 65536
+
+		s = 'x' * (65536 + 1)
+
+		self.aR(decoders.StringTooLongError, lambda: Int16StringDecoder.encode(s))
 
 	
 	def test_lengthLimitExceeded(self):
