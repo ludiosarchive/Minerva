@@ -295,8 +295,8 @@ instead of "unicode strings" or similar because:
 	called the JSON decoder and might as well get structured data out, instead of
 	just a string. But right now, Minerva always uses 7-bit-clean mode to avoid problems.
 
-*	JSON requires encoding control characters including `0xFF` and `LF`, which is good
-	because we cannot send those characters over all transports anyway.
+*	JSON requires encoding control characters including `0x00` and `0xFF` and `LF`,
+	which is good because we cannot send those characters over all transports anyway.
 
 *	IE8, Chrome, Firefox, Safari, and Opera have native JSON encoders and decoders.
 	Using JSON at the Minerva level ensures the native-JSON bugs have been abstracted
@@ -398,8 +398,8 @@ Minerva does a lot of neat stuff you won't find in other Comet servers.
 *	**Future:** Minerva client: use "request interleaving" to reduce the gap
 	where no data can be sent server->client. Minerva server's design makes this
 	feature easy to implement. The only thing the client has to do to "request
-	interleave" is to connect a new S2C transport before the existing one is closed
-	by the server.
+	interleave" is to connect a new S2C transport (with a correct ``succeedsTransport``
+	value) before the existing one is closed by the server .
 
 
 
