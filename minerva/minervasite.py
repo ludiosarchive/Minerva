@@ -29,6 +29,7 @@ class ConnectionTrackingHTTPChannel(http.HTTPChannel):
 	An L{HTTPChannel} that tells the factory about all connection
 	activity. 
 	"""
+	__slots__ = ()
 
 	def __init__(self, *args, **kwargs):
 		http.HTTPChannel.__init__(self, *args, **kwargs)
