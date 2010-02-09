@@ -12,9 +12,10 @@ goog.require('cw.net');
 goog.require('cw.URI');
 goog.require('cw.Class');
 
-
 goog.provide('cw.net.TestNet');
 
+// anti-clobbering for JScript
+(function(){
 
 cw.net.TestNet.logger = goog.debug.Logger.getLogger('cw.net.TestNet');
 cw.net.TestNet.logger.setLevel(goog.debug.Logger.Level.ALL);
@@ -934,3 +935,5 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XDRProgressCallbackTests').method
 		);
 	}
 );
+
+})(); // end anti-clobbering for JScript

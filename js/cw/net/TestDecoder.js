@@ -7,6 +7,8 @@ goog.require('cw.net');
 
 goog.provide('cw.net.TestDecoder');
 
+// anti-clobbering for JScript
+(function(){
 
 cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestResponseTextDecoderNull').methods(
 
@@ -356,3 +358,5 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestExaggeratedLength').metho
 		self.assertArraysEqual(['xxxx'], self.decoder.getNewFrames(3+10+2+4));
 	}
 )
+
+})(); // end anti-clobbering for JScript
