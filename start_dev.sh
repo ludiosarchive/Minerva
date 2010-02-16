@@ -6,7 +6,11 @@ export INTERFACE=0
 
 echo "Using `which twistd`"
 
-looper python -N `which twistd` -r epoll -no minervarun \
+looper python -N \
+-W all \
+-W 'ignore:Not importing directory' \
+-W 'ignore:the sets module is deprecated' \
+`which twistd` -r epoll -n minervarun \
 --secret "secret for testing only, do not use in production" \
 -h tcp:8111:interface=$INTERFACE \
 -h ssl:444:privateKey=dev_keys/x.linuxwan.com-key.pem:interface=$INTERFACE \
