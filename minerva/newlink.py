@@ -886,7 +886,8 @@ class SocketTransport(object):
 	__slots__ = (
 		'writable', 'lastBoxSent', '_lastStartParam', '_mode', '_initialBuffer', 'connected',
 		'_gotHello', '_terminating', '_sackDirty', '_paused', '_stream', '_producer', '_parser',
-		'streamId', 'credentialsData', 'transportNumber', 'factory', 'transport')
+		'streamId', 'credentialsData', 'transportNumber', 'factory', 'transport',
+		'_maxReceiveBytes', '_maxOpenTime')
 
 	maxLength = 1024*1024
 	noisy = True
@@ -1058,14 +1059,13 @@ class SocketTransport(object):
 		try:
 			# any line below can raise KeyError; additional exceptions marked with 'e:'
 
-			transportNumber = abstract.ensureNonNegIntLimit(helloData['n'], 2**64)
+			transportNumber = abstract.ensureNonNegIntLimit(helloData['n'], 2**64) # e: ValueError, TypeError
 			protocolVersion = helloData['v']
 			# Rules for streamId: must be 20-30 inclusive bytes, must not contain characters > 127
 			streamId = helloData['i']
 			if not isinstance(streamId, str) or not 20 <= len(streamId) <= 30: # ,str is appropriate because of how simplejson returns str when possible
 				raise InvalidHello
-			maxReceiveBytes = abstract.ensureNonNegIntLimit(helloData['r'], 2**64) # e: ValueError, TypeError
-			maxOpenTime = abstract.ensureNonNegIntLimit(helloData['m'], 2**64) # e: ValueError, TypeError
+			# No maxReceiveBytes or maxOpenTime for non-HTTP
 		except (KeyError, TypeError, ValueError):
 			raise InvalidHello
 
@@ -1084,9 +1084,15 @@ class SocketTransport(object):
 			# numPaddingBytes is always optional.
 			if 'p' in helloData:
 				try:
-					numPaddingBytes = abstract.ensureNonNegIntLimit(helloData['p'], 16*1024)
-				except (ValueError, TypeError):
+					numPaddingBytes = abstract.ensureNonNegIntLimit(helloData['p'], 16*1024) # e: ValueError, TypeError
+				except (TypeError, ValueError):
 					raise InvalidHello
+
+			try:
+				self._maxReceiveBytes = abstract.ensureNonNegIntLimit(helloData['r'], 2**64) # e: ValueError, TypeError
+				self._maxOpenTime = abstract.ensureNonNegIntLimit(helloData['m'], 2**64) # e: ValueError, TypeError
+			except (TypeError, ValueError):
+				raise InvalidHello
 
 		# Do not use protocolVersion < 2 ever because Python is very stupid about bool/int equivalence
 		if protocolVersion != 2:
@@ -1096,8 +1102,6 @@ class SocketTransport(object):
 		self.streamId = streamId
 		self.credentialsData = credentialsData
 		self.transportNumber = transportNumber
-		##self._maxReceiveBytes = maxReceiveBytes # TODO: actually implement. Or not?
-		##self._maxOpenTime = maxOpenTime # TODO: actually implement. Or not?
 
 		# We get/build a Stream instance before the firewall checkTransport
 		# because the firewall needs to know if we're working with a virgin
@@ -1276,9 +1280,8 @@ class SocketTransport(object):
 				#	do so upon receiving the terminating null byte."
 				#	http://www.adobe.com/devnet/flash/articles/fplayer_security_03.html
 
-				# TODO: loseWriteConnection in 5-10 seconds, if client doesn't. Maybe followed
-				# by loseConnection later.
-
+				# TODO: loseConnection in 5-10 seconds, if client doesn't. Don't use loseWriteConnection
+				# because the client doesn't send anything else over this connection anyway.
 				return
 
 			elif self._initialBuffer.startswith('<bencode/>\n'):

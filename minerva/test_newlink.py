@@ -1850,8 +1850,8 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			n=genericBad,
 			v=[0, 1, "1", 1.001] + genericBad,
 			i=['', '\x00', 'x'*1, u'\ucccc'*25, u'\ucccc'*8, u'\x80'*25, 'x'*19, 'x'*31, 'x'*3000] + genericBad, # 19 is below limit, 31 is over limit
-			r=genericBad,
-			m=genericBad,
+			#r=genericBad, # TODO: test for HTTP
+			#m=genericBad, # TODO: test for HTTP
 			c=listWithout(genericBad, [{}]),
 		)
 
@@ -1883,7 +1883,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				ran += 1
 
 		# sanity check; make sure we actually tested things
-		assert ran == 89, "Ran %d times; change this assert as needed" % (ran,)
+		assert ran == 63, "Ran %d times; change this assert as needed" % (ran,)
 
 
 	def test_noDelayEnabled(self):
