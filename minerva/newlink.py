@@ -939,7 +939,7 @@ class SocketTransport(object):
 			self.writable.finish()
 
 		# TODO: set timer and close the connection ourselves in 5-10 seconds
-		##self.transport.loseConnection()
+		##self.transport.loseWriteConnection(), maybe followed by loseConnection later
 
 
 	def closeGently(self):
@@ -1276,7 +1276,8 @@ class SocketTransport(object):
 				#	do so upon receiving the terminating null byte."
 				#	http://www.adobe.com/devnet/flash/articles/fplayer_security_03.html
 
-				# TODO: loseConnection in 5-10 seconds, if client doesn't
+				# TODO: loseWriteConnection in 5-10 seconds, if client doesn't. Maybe followed
+				# by loseConnection later.
 
 				return
 
