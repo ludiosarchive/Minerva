@@ -230,7 +230,7 @@ and all commonly-used browsers use it.
 a response to a prior request. Pipelining is typically bad for Comet because
 `requests may get "stuck"`_ behind a long-polling/streaming request.
 
-Note that only Opera pipelines by default. Firefox users can pipeline by changing a setting in ``about:config``.
+Among browsers, only Opera pipelines by default. Firefox users can pipeline by changing a setting in ``about:config``.
 `Some proxies`_ may automatically pipeline. Minerva avoids problems with "stuck" requests
 by making "long" requests on subdomains reserved for the "long" requests. On these subdomains,
 Minerva makes only one simultaneous "long" request per subdomain.
@@ -809,3 +809,14 @@ of a unicode string. So, do not rely on this length to be consistent.
 
 
 ..	_BMP: http://unicode.org/glossary/#basic_multilingual_plane
+
+
+
+Notes on 32-bit vs 64-bit Python
+=======================
+Minerva should work on both 32-bit and 64-bit Python. You should
+probably run it on 32-bit Python to save memory. Saving memory is almost always
+important, because you want memory available for the kernel's page cache. If you need
+to guess, you can assume that 32-bit Python will use 60% of the memory
+and 115% the time of 64-bit Python.  After starting, ``minervasite``
+uses approximately 16MB on 32-bit, and 26MB on 64-bit.
