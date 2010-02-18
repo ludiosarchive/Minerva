@@ -1413,6 +1413,11 @@ class SocketTransport(object):
 		headers['pragma'] = ['no-cache']
 		headers['expires'] = ['Fri, 01 Jan 1990 00:00:00 GMT']
 
+		# "For Webkit browsers, it's critical to specify a Content-Type of "text/plain" or
+		# "application/x-javascript" when returning script content to an XHR for progressive handling."
+		# - http://www.kylescholz.com/blog/2010/01/progressive_xmlhttprequest_1.html
+		headers['content-type'] = ['text/plain']
+
 		# http://code.google.com/p/doctype/wiki/ArticleScriptInclusion
 		request.write('for(;;);\n')
 
