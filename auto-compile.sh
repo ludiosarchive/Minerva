@@ -6,6 +6,8 @@
 cd "`dirname $0`"
 
 ./compile.sh
-while inotifywait -e modify -e move -e create -r .; do
+echo -n "# "
+while inotifywait -q -e modify -e move -e create -r .; do
+	echo -n "# "
 	./compile.sh
 done
