@@ -9,7 +9,7 @@ from twisted.web import resource, static, http, server
 from zope.interface import implements
 
 from cwtools import testing, jsimp
-from minerva import newlink, abstract
+from minerva import abstract
 
 from minerva.newlink import (
 	BasicMinervaProtocol, BasicMinervaFactory, StreamTracker, HttpFace, SocketFace)
@@ -27,7 +27,7 @@ from webmagic.untwist import (
 class ConnectionTrackingHTTPChannel(http.HTTPChannel):
 	"""
 	An L{HTTPChannel} that tells the factory about all connection
-	activity. 
+	activity.
 	"""
 	__slots__ = ()
 
@@ -315,7 +315,6 @@ class Root(BetterResource):
 		self.putChild('@tests', testing.TestPage(['cw.net'], directoryScan))
 
 		# testres_Coreweb always needed for running tests.
-
 		testres_Coreweb = FilePath(cwtools.__path__[0]).child('testres').path
 		self.putChild('@testres_Coreweb', static.File(testres_Coreweb))
 
