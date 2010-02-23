@@ -9,6 +9,7 @@ goog.require('goog.Disposable');
 goog.require('cw.externalinterface');
 
 goog.provide('cw.net');
+goog.provide('cw.net.simpleRequest');
 goog.provide('cw.net.FrameType');
 goog.provide('cw.net.FlashSocket');
 goog.provide('cw.net.ParseError');
@@ -692,13 +693,15 @@ cw.Class.subclass(cw.net, "UsableXHR").methods(
 	}
 );
 
-/*
- * Request some URL. The returned Deferred fires with the response
- * body, or with an error.
+/**
+ * Request some URL and get the response body.
  *
- * C{verb} is exactly "GET" or exactly "POST"
- * C{url} is an instance of L{CW.URI.URL}.
- * C{post} is data to POST. Use "" (empty string) if using L{verb} "GET".
+ * @param {string} verb The HTTP method: exactly "GET" or exactly "POST"
+ * @param {string} url The URL to fetch.
+ * @param {string} post The data to POST. Use "" (empty string) if using L{verb} "GET".
+ *
+ * @return {!goog.async.Deferred} A Deferred that fires with the response
+ * 	body when the request is complete, or with an error.
  */
 cw.net.simpleRequest = function(verb, url, post) {
 	var xhr = cw.net.UsableXHR(window, cw.net.getXHRObject());
