@@ -59,7 +59,8 @@ class Frame(object):
 
 		601: ('tk_stream_attach_failure', 0, 0), # Either because no such Stream, or bad credentialsData
 		602: ('tk_acked_unsent_boxes', 0, 0),
-		603: ('tk_invalid_frame_type_or_arguments', 0, 0), # TODO: test that transportOffline is called when client causes this after transport attached to a Stream
+		# TODO: test that transportOffline is called when client causes this after transport attached to a Stream
+		603: ('tk_invalid_frame_type_or_arguments', 0, 0),
 		610: ('tk_frame_corruption', 0, 0),
 		611: ('tk_intraframe_corruption', 0, 0),
 		650: ('tk_brb', 1, 1), # Server is overloaded or shutting down, tells client to come back soon
@@ -86,11 +87,13 @@ class Frame(object):
 		try:
 			typeInfo = self.knownTypes[self.type]
 		except (KeyError, TypeError):
-			raise BadFrame("Frame(%r) has unknown frame type %r, or [0]th item was not hashable" % (contents, self.type))
+			raise BadFrame("Frame(%r) has unknown frame type %r, "
+				"or [0]th item was not hashable" % (contents, self.type))
 
 		_, minArgs, maxArgs = typeInfo
 		if not minArgs <= len(contents) - 1 <= maxArgs:
-			raise BadFrame("Bad argument count for Frame type %r (%r); got %d args." % (self.type, self.getType(), len(contents) - 1))
+			raise BadFrame("Bad argument count for Frame type %r (%r); "
+				"got %d args." % (self.type, self.getType(), len(contents) - 1))
 
 		self.contents = contents
 
@@ -266,7 +269,8 @@ class Stream(object):
 	streaming should implement an application-level producer/consumer system.
 	"""
 
-	implements(ISimpleConsumer) # Does not implement IPushProducer or IPullProducer because it does not expect stopProducing
+	# Don't implement IPushProducer or IPullProducer because we don't expect stopProducing
+	implements(ISimpleConsumer)
 
 	maxUndeliveredBoxes = 5000 # boxes
 	maxUndeliveredBytes = 4 * 1024 * 1024 # bytes
@@ -280,8 +284,16 @@ class Stream(object):
 		self._clock = clock
 		self.streamId = streamId
 		self._streamProtocolFactory = streamProtocolFactory
-		self._protocol = self._primaryTransport = self._pretendAcked = self._producer = None
-		self.disconnected = self._streamingProducer = self._primaryHasProducer = self._primaryPaused = False
+
+		self._protocol = \
+		self._primaryTransport = \
+		self._pretendAcked = \
+		self._producer = None
+
+		self.disconnected = \
+		self._streamingProducer = \
+		self._primaryHasProducer = \
+		self._primaryPaused = False
 		# _primaryPaused: Does the primary transport think it is paused? Or if no primary transport, False.
 
 		self.virgin = True # no transports have ever attached to it
@@ -358,7 +370,7 @@ class Stream(object):
 		self.disconnected = True
 		# If no transports are connected, client will not get the reset frame. If client tries
 		# to connect a transport to a dead stream, they will get a tk_stream_attach_failure.
-		for t in self._transports.copy(): # Need to copy because size changes as transports call transportOffline
+		for t in self._transports.copy(): # Copy because _transports shrinks as transports call transportOffline
 			t.writeReset(reasonString, applicationLevel=True)
 		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
@@ -379,7 +391,7 @@ class Stream(object):
 		"""
 		assert not self.disconnected
 		self.disconnected = True
-		for t in self._transports.copy(): # Need to copy because size changes as transports call transportOffline
+		for t in self._transports.copy(): # Copy because _transports shrinks as transports call transportOffline
 			t.closeGently()
 		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
@@ -393,7 +405,7 @@ class Stream(object):
 	def _internalReset(self, reasonString):
 		assert not self.disconnected
 		self.disconnected = True
-		for t in self._transports.copy(): # Need to copy because size changes as transports call transportOffline. TODO: a test that uses the .copy()!
+		for t in self._transports.copy(): # Copy because _transports shrinks as transports call transportOffline # TODO: add test that requires the .copy()
 			t.writeReset(reasonString, applicationLevel=False)
 		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
@@ -678,7 +690,8 @@ class StreamTracker(object):
 
 	You do not want to subclass this.
 	"""
-	__slots__  = ('_reactor', '_clock', '_streamProtocolFactory', '_streams', '_observers', '_preKey', '_postKey')
+	__slots__  = ('_reactor', '_clock', '_streamProtocolFactory', '_streams',
+		'_observers', '_preKey', '_postKey')
 
 	stream = Stream
 
@@ -698,11 +711,12 @@ class StreamTracker(object):
 
 	def _makeSafeKey(self, key):
 		"""
-		Because the client has full control of deciding the streamId, and StreamTracker's
-		streamId -> Stream dictionary is persistent and impacts many users, an attacker
-		could deny access to everyone by opening many Streams with streamIds that hash()
-		to the same number. Our anti-ACA patch for Python does not help here.
-		We use a key prefix and suffix that is unknown to the public to stop this attack.
+		Because the client has full control of deciding the streamId, and
+		StreamTracker's streamId -> Stream dictionary is long-lasting and
+		impacts many users, an attacker could deny access to everyone by
+		opening many Streams with streamIds that hash() to the same number.
+		Our anti-ACA patch for Python does not help here. We use a key
+		prefix and suffix that is unknown to the public to stop this attack.
 		"""
 		# TODO: maybe use salted md5 or salted sha1 to be safer
 		return self._preKey + key + self._postKey
@@ -837,8 +851,8 @@ class IMinervaTransport(ISimpleConsumer):
 		@param applicationLevel: is it an application-level reset?
 		@type applicationLevel: bool
 
-		The reset frame (incl. reasonString) are not guaranteed to arrive to the peer.
-		reasonString is only sometimes useful for debugging.
+		The reset frame (incl. reasonString) are not guaranteed to arrive
+		to the peer, so it is only useful for aggregate logging and debugging.
 		"""
 
 
@@ -884,10 +898,11 @@ class SocketTransport(object):
 	implements(IMinervaTransport, IPushProducer, IPullProducer) # Almost an IProtocol, but has no connectionMade
 
 	__slots__ = (
-		'writable', 'lastBoxSent', '_lastStartParam', '_mode', '_initialBuffer', 'connected',
-		'_gotHello', '_terminating', '_sackDirty', '_paused', '_stream', '_producer', '_parser',
-		'streamId', 'credentialsData', 'transportNumber', 'factory', 'transport',
-		'_maxReceiveBytes', '_maxOpenTime')
+		'writable', 'lastBoxSent', '_lastStartParam', '_mode', '_initialBuffer',
+		'connected', '_gotHello', '_terminating', '_sackDirty', '_paused',
+		'_stream', '_producer', '_parser', 'streamId', 'credentialsData',
+		'transportNumber', 'factory', 'transport', '_maxReceiveBytes',
+		'_maxOpenTime')
 
 	maxLength = 1024*1024
 	noisy = True
@@ -897,8 +912,16 @@ class SocketTransport(object):
 		self._lastStartParam = 2**128
 		self._mode = UNKNOWN
 		self._initialBuffer = '' # To buffer data while determining the mode
-		self.connected = self._gotHello = self._terminating = self._sackDirty = self._paused = False
-		self._stream = self._producer = self.writable = None
+
+		self.connected = \
+		self._gotHello = \
+		self._terminating = \
+		self._sackDirty = \
+		self._paused = False
+
+		self._stream = \
+		self._producer = \
+		self.writable = None
 
 
 	def __repr__(self):
@@ -917,7 +940,10 @@ class SocketTransport(object):
 
 
 	def _goOffline(self):
-		"""Tell Stream that we're offline, even if we still have a connection open to the peer."""
+		"""
+		Tell Stream that we're offline, even if we still have a connection
+		open to the peer.
+		"""
 		if self._stream:
 			self._stream.transportOffline(self)
 			self._stream = None
@@ -1027,7 +1053,8 @@ class SocketTransport(object):
 			toSend += self._encodeFrame([Fn_box, box])
 			lastBox = seqNum
 		if len(toSend) > 1024 * 1024:
-			log.msg('Caution: %r asked me to send a large amount of data (%d bytes)' % (self._stream, len(toSend)))
+			log.msg("Caution: %r asked me to send a large amount of data "
+				"(%d bytes)" % (self._stream, len(toSend)))
 
 		self.writable.write(toSend)
 		self.lastBoxSent = lastBox
@@ -1063,7 +1090,8 @@ class SocketTransport(object):
 			protocolVersion = helloData['v']
 			# Rules for streamId: must be 20-30 inclusive bytes, must not contain characters > 127
 			streamId = helloData['i']
-			if not isinstance(streamId, str) or not 20 <= len(streamId) <= 30: # ,str is appropriate because of how simplejson returns str when possible
+			# ,str is appropriate only because simplejson returns str when possible
+			if not isinstance(streamId, str) or not 20 <= len(streamId) <= 30:
 				raise InvalidHello
 			# No maxReceiveBytes or maxOpenTime for non-HTTP
 		except (KeyError, TypeError, ValueError):
@@ -1105,9 +1133,9 @@ class SocketTransport(object):
 
 		# We get/build a Stream instance before the firewall checkTransport
 		# because the firewall needs to know if we're working with a virgin
-		# Stream or not. And there's no way to reliably know this before doing the buildStream/getStream stuff,
-		# because 'requestNewStream=True' doesn't always imply that a new stream will
-		# actually be created.
+		# Stream or not. And there's no way to reliably know this before
+		# doing the buildStream/getStream stuff, because 'requestNewStream=True
+		# doesn't always imply that a new stream will actually be created.
 
 		if requestNewStream:
 			try:
@@ -1122,10 +1150,13 @@ class SocketTransport(object):
 		def cbAuthOkay(_):
 			if self._terminating:
 				return
-			self._stream = stream # self._stream being set implies that were are authed, and that we called transportOnline
+			# self._stream being non-None implies that were are authed,
+			# and that we have called transportOnline (or are calling it right now).
+			self._stream = stream
 			self._stream.transportOnline(self)
-			# Remember, a lot of stuff can happen underneath that transportOnline call
-			# because it may construct a MinervaProtocol, which may even call reset.
+			# Remember, a lot of stuff can happen underneath that
+			# transportOnline call because it may construct a MinervaProtocol,
+			# which may even call reset.
 
 		def cbAuthFailed(f):
 			f.trap(RejectTransport)
@@ -1160,8 +1191,8 @@ class SocketTransport(object):
 			except BadFrame:
 				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 
-			# Below, we can assume that the frame has the minimum/maximum allowed number of
-			# arguments for the frame type.
+			# Below, we can assume that the frame has the minimum/maximum
+			# allowed number of arguments for the frame type.
 
 			frameType = frameObj[0]
 
@@ -1197,15 +1228,16 @@ class SocketTransport(object):
 				boxes = []
 				for seqNumStr, box in seqNumStrToBoxDict.iteritems():
 					try:
-					 	# This is probably enough to stop an ACA on 64-bit Python, but maybe worry about 32-bit Python too? 
+					 	# This is probably enough to stop an ACA on 64-bit
+					 	# Python, but maybe worry about 32-bit Python too?
 						seqNum = abstract.ensureNonNegIntLimit(abstract.strToNonNeg(seqNumStr), 2**64)
 					except ValueError:
 						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 					boxes.append((seqNum, box))
 				self._sackDirty = True
 				self._stream.boxesReceived(self, boxes, memorySizeOfBoxes)
-				# Remember that a lot can happen underneath that boxesReceived call, including
-				# a call to our own `reset` or `closeGently` or `writeBoxes`.
+				# Remember that a lot can happen underneath that boxesReceived call,
+				# including a call to our own `reset` or `closeGently` or `writeBoxes`.
 
 			elif frameType == Fn_box:
 				1/0
@@ -1390,12 +1422,14 @@ class SocketTransport(object):
 
 		assert request.content.tell() == 0, request.content.tell()
 		body = request.content.read()
-		# Proxies *might* strip whitespace around the request body, so add a newline if necessary.
+		# Proxies *might* strip whitespace around the request body, so add
+		# a newline if necessary.
 		if body and body[-1] != '\n':
 			body += "\n"
 
 		if '\r\n' in body:
-			log.msg("Unusual: found a CRLF in POST body for %r from %r" % (request, request.client))
+			log.msg("Unusual: found a CRLF in POST body for "
+				"%r from %r" % (request, request.client))
 
 		decoder = decoders.DelimitedJSONDecoder(maxLength=self.maxLength)
 		frames, code = decoder.getNewFrames(body)
@@ -1443,7 +1477,8 @@ class SocketTransport(object):
 	def makeConnection(self, transport):
 		self.connected = True
 		self.writable = transport
-		# This is needed for non-HTTP connections. twisted.web sets NO_DELAY on HTTP connections for us.
+		# This is needed for non-HTTP connections. twisted.web sets NO_DELAY
+		# on HTTP connections for us.
 		transport.setTcpNoDelay(True)
 		if self.noisy:
 			log.msg('Connection made for %r' % (self,))
@@ -1467,9 +1502,11 @@ class SocketFace(protocol.ServerFactory):
 		"""
 		@param reactor: must provide... TODO WHAT?
 		@param clock: must provide L{IReactorTime}
-		@param streamTracker: The StreamTracker that will know about all active Streams.
+		@param streamTracker: The StreamTracker that will know about all
+			active Streams.
 		@type streamTracker: L{StreamTracker}
-		@param firewall: The transport firewall to use. Must provide L{website.ITransportFirewall}
+		@param firewall: The transport firewall to use. Must provide
+			L{website.ITransportFirewall}
 		@param policyString: a Flash/Silverlight policy file as a string,
 			sent in response to <policy-file-request/>C{NULL}.
 		@type policyString: C{str} or C{NoneType}
@@ -1483,8 +1520,9 @@ class SocketFace(protocol.ServerFactory):
 
 	def setPolicyString(self, policyString):
 		"""
-		Set the Flash/Silverlight socket policy to C{policyString}. Existing open connections
-		will serve the old policy (though this is of little consequence).
+		Set the Flash/Silverlight socket policy to C{policyString}. Existing
+		open connections will serve the old policy (though this is of little
+		consequence).
 
 		@param policyString: a Flash/Silverlight policy file as a string,
 			sent in response to <policy-file-request/>C{NULL}.
