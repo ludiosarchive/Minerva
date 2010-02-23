@@ -6,7 +6,7 @@ from distutils.core import setup
 
 setup(
 	name='Minerva',
-	version='9.11.21',
+	version='10.2.23',
 	description="Minerva",
 	packages=['minerva', 'minerva.sample', 'minerva.flashtest', 'twisted.plugins'],
 	package_data={'minerva': ['flashtest/*.swf', 'flashtest/*.html'],},
