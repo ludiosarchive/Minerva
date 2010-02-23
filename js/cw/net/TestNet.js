@@ -118,7 +118,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'GetXHRObjectTests').methods(
 cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').methods(
 
 	function setUp(self) {
-		self.target = new cw.URI.URL(''+window.location).update('fragment', null);
+		self.target = new cw.URI.URL(''+window.location).update_('fragment', null);
 	},
 
 	// Subclasses override _setupDummies
@@ -206,7 +206,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').metho
 cw.net.TestNet._BaseUsableXHDRLogicTests.subclass(cw.net.TestNet, 'UsableXHRLogicTests').methods(
 
 	function _setupDummies(self) {
-		self.target.update('path', '/@testres_Minerva/404/');
+		self.target.update_('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestNet.MockXHR();
 		self.xhdr = cw.net.UsableXHR(window, self.mock);
 		self.requestD = self.xhdr.request('POST', self.target.getString(), '');
@@ -268,7 +268,7 @@ cw.net.TestNet._BaseUsableXHDRLogicTests.subclass(cw.net.TestNet, 'UsableXHRLogi
 cw.net.TestNet._BaseUsableXHDRLogicTests.subclass(cw.net.TestNet, 'UsableXDRLogicTests').methods(
 
 	function _setupDummies(self) {
-		self.target.update('path', '/@testres_Minerva/404/');
+		self.target.update_('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestNet.MockXDR();
 		self.xhdr = cw.net.UsableXDR(window, function(){return self.mock});
 		self.requestD = self.xhdr.request('POST', self.target.getString());
@@ -287,7 +287,7 @@ cw.net.TestNet._BaseUsableXHDRLogicTests.subclass(cw.net.TestNet, 'UsableXDRLogi
 cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseRealRequestTests').methods(
 
 	function test_simpleResponseGET(self) {
-		self.target.update('path', '/@testres_Minerva/SimpleResponse/?a=0');
+		self.target.update_('path', '/@testres_Minerva/SimpleResponse/?a=0');
 		var d = self.xhdr.request('GET', self.target.getString());
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_sent_args": {"a": ["0"]}}', obj.responseText);
@@ -297,7 +297,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseRealRequestTests').methods(
 
 
 	function test_simpleResponsePOST(self) {
-		self.target.update('path', '/@testres_Minerva/SimpleResponse/');
+		self.target.update_('path', '/@testres_Minerva/SimpleResponse/');
 		var d = self.xhdr.request('POST', self.target.getString(), 'hello\u00ff');
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_posted_utf8": "hello\\u00ff"}', obj.responseText);
@@ -312,7 +312,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseRealRequestTests').methods(
 	 * If it fails to work around it, you'll see {"a": ["0#ignored1"]} instead of {"a": ["0"]}
 	 */
 	function test_fragmentIsIgnoredGET(self) {
-		self.target.update('path', '/@testres_Minerva/SimpleResponse/?a=0').update('fragment', 'ignored1');
+		self.target.update_('path', '/@testres_Minerva/SimpleResponse/?a=0').update_('fragment', 'ignored1');
 		var d = self.xhdr.request('GET', self.target.getString());
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_sent_args": {"a": ["0"]}}', obj.responseText);
@@ -327,7 +327,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseRealRequestTests').methods(
 	 * If it fails to work around it, you'll see {"a": ["0#ignored2"]} instead of {"a": ["0"]}
 	 */
 	function test_fragmentIsIgnoredPOST(self) {
-		self.target.update('path', '/@testres_Minerva/SimpleResponse/?a=0').update('fragment', 'ignored2');
+		self.target.update_('path', '/@testres_Minerva/SimpleResponse/?a=0').update_('fragment', 'ignored2');
 		var d = self.xhdr.request('GET', self.target.getString());
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_sent_args": {"a": ["0"]}}', obj.responseText);
@@ -338,14 +338,14 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseRealRequestTests').methods(
 
 	function test_simpleReuseGET(self) {
 		var responses = [];
-		self.target.update('path', '/@testres_Minerva/SimpleResponse/?b=0');
+		self.target.update_('path', '/@testres_Minerva/SimpleResponse/?b=0');
 
 		var d = self.xhdr.request('GET', self.target.getString());
 
 		d.addCallback(function(obj){
 			responses.push(obj.responseText);
 			// This mutation is okay
-			var d2 = self.xhdr.request('GET', self.target.update('path', '/@testres_Minerva/SimpleResponse/?b=1').getString());
+			var d2 = self.xhdr.request('GET', self.target.update_('path', '/@testres_Minerva/SimpleResponse/?b=1').getString());
 			d2.addCallback(function(obj2){
 				responses.push(obj2.responseText);
 			});
@@ -368,14 +368,14 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseRealRequestTests').methods(
 
 	function test_simpleReusePOST(self) {
 		var responses = [];
-		self.target.update('path', '/@testres_Minerva/SimpleResponse/');
+		self.target.update_('path', '/@testres_Minerva/SimpleResponse/');
 
 		var d = self.xhdr.request('POST', self.target.getString(), 'A');
 
 		d.addCallback(function(obj){
 			responses.push(obj.responseText);
 			// This mutation is okay
-			var d2 = self.xhdr.request('POST', self.target.update('path', '/@testres_Minerva/SimpleResponse/').getString(), 'B');
+			var d2 = self.xhdr.request('POST', self.target.update_('path', '/@testres_Minerva/SimpleResponse/').getString(), 'B');
 			d2.addCallback(function(obj2){
 				responses.push(obj2.responseText);
 			});
@@ -405,7 +405,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseRealRequestTests').methods(
 	 * really fast, and are done before you call .abort().
 	 */
 	function test_abort(self) {
-		self.target.update('path', '/@testres_Minerva/404/');
+		self.target.update_('path', '/@testres_Minerva/404/');
 		var requestD = self.xhdr.request('POST', self.target.getString(), '');
 
 		self.assertIdentical(undefined, self.xhdr.abort());
@@ -449,7 +449,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseRealRequestTests').methods(
 			buffer.push(String.fromCharCode(i));
 		}
 		var expected = buffer.join('');
-		self.target.update('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-126');
+		self.target.update_('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-126');
 		var requestD = self.xhdr.request('POST', self.target.getString(), '');
 		requestD.addCallback(function(obj){
 			var text = obj.responseText;
@@ -484,7 +484,7 @@ cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXHRRealRequ
 		}
 		buffer.push(String.fromCharCode(65535));
 		var expected = buffer.join('');
-		self.target.update('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-65533,65535-65535');
+		self.target.update_('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-65533,65535-65535');
 		var requestD = self.xhdr.request('POST', self.target.getString(), '');
 		requestD.addCallback(function(obj){
 			var text = obj.responseText;
@@ -511,7 +511,7 @@ cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXHRRealRequ
 		}
 		var expected = buffer.join('');
 		// Note: can't send U+FFFE through Flash (becomes replacement character U+FFFD), but we can send it through XHR
-		self.target.update('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-65535');
+		self.target.update_('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-65535');
 		var requestD = self.xhdr.request('POST', self.target.getString(), '');
 		requestD.addCallback(function(obj){
 			var text = obj.responseText;
@@ -572,7 +572,7 @@ cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXDRRealRequ
 			buffer.push(String.fromCharCode(i));
 		}
 		var expected = buffer.join('');
-		self.target.update('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-64975,65008-65519,65529-65533');
+		self.target.update_('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-64975,65008-65519,65529-65533');
 		var requestD = self.xhdr.request('POST', self.target.getString(), '');
 		requestD.addCallback(function(obj){
 			var text = obj.responseText;
@@ -601,7 +601,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XDRErrorsTests').methods(
 	 * causes a L{NetworkProblem}.
 	 */
 	function test_networkProblemGET(self) {
-		self.target.update('path', '/@testres_Minerva/NoOriginHeader/');
+		self.target.update_('path', '/@testres_Minerva/NoOriginHeader/');
 		var requestD = self.xdr.request('GET', self.target.getString());
 		var d = self.assertFailure(requestD, [cw.net.NetworkProblem]);
 		return d;
@@ -613,7 +613,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XDRErrorsTests').methods(
 	 * causes a L{NetworkProblem}.
 	 */
 	function test_networkProblemPOST(self) {
-		self.target.update('path', '/@testres_Minerva/NoOriginHeader/');
+		self.target.update_('path', '/@testres_Minerva/NoOriginHeader/');
 		var requestD = self.xdr.request('POST', self.target.getString());
 		var d = self.assertFailure(requestD, [cw.net.NetworkProblem]);
 		return d;
@@ -624,7 +624,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XDRErrorsTests').methods(
 	 * Requesting something on 0.0.0.0 causes a L{NetworkProblem}.
 	 */
 	function test_networkProblemBadIP(self) {
-		self.target.update('host', '0.0.0.0');
+		self.target.update_('host', '0.0.0.0');
 		var requestD = self.xdr.request('GET', self.target.getString());
 		var d = self.assertFailure(requestD, [cw.net.NetworkProblem]);
 		return d;
@@ -637,7 +637,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackTests').method
 
 	function setUp(self) {
 		self.target = new cw.URI.URL(''+window.location);
-		self.target.update('path', '/@testres_Minerva/404/');
+		self.target.update_('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestNet.MockXHR();
 		// Never advance the clock, to prevent Opera from doing a call at 50ms intervals.
 		self.clock = cw.UnitTest.Clock();
@@ -796,7 +796,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackOperaWorkaroun
 		self.clock = cw.UnitTest.Clock();
 
 		self.target = new cw.URI.URL(''+window.location);
-		self.target.update('path', '/@testres_Minerva/404/');
+		self.target.update_('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestNet.MockXHR();
 
 	},
@@ -878,7 +878,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XDRProgressCallbackTests').method
 			throw new cw.UnitTest.SkipTest("XDomainRequest is required for this test.");
 		}
 		self.target = new cw.URI.URL(''+window.location);
-		self.target.update('path', '/@testres_Minerva/404/');
+		self.target.update_('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestNet.MockXHR();
 		self.clock = cw.UnitTest.Clock();
 	},
