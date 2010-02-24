@@ -902,7 +902,8 @@ class SocketTransport(object):
 		'connected', '_gotHello', '_terminating', '_sackDirty', '_paused',
 		'_stream', '_producer', '_parser', 'streamId', 'credentialsData',
 		'transportNumber', 'factory', 'transport', '_maxReceiveBytes',
-		'_maxOpenTime')
+		'_maxOpenTime', '_readOnlyOnce', '_numPaddingBytes')
+	# TODO: last 4 attributes above only for an HTTPSocketTransport, to save memory
 
 	maxLength = 1024*1024
 	noisy = True
@@ -1097,6 +1098,10 @@ class SocketTransport(object):
 		except (KeyError, TypeError, ValueError):
 			raise InvalidHello
 
+		# Do not use protocolVersion < 2 ever because Python is very stupid about bool/int equivalence
+		if protocolVersion != 2:
+			raise InvalidHello
+
 		if self._mode == HTTP:
 			try:
 				httpFormat = helloData['t']
@@ -1108,7 +1113,6 @@ class SocketTransport(object):
 			# readOnlyOnce is always optional. Allow 2, 2.0 from the client (represents True).
 			readOnlyOnce = helloData['o'] == 2 if 'o' in helloData else False
 
-			numPaddingBytes = 0
 			# numPaddingBytes is always optional.
 			if 'p' in helloData:
 				try:
@@ -1117,14 +1121,15 @@ class SocketTransport(object):
 					raise InvalidHello
 
 			try:
-				self._maxReceiveBytes = abstract.ensureNonNegIntLimit(helloData['r'], 2**64) # e: ValueError, TypeError
-				self._maxOpenTime = abstract.ensureNonNegIntLimit(helloData['m'], 2**64) # e: ValueError, TypeError
+				maxReceiveBytes = abstract.ensureNonNegIntLimit(helloData['r'], 2**64) # e: ValueError, TypeError
+				maxOpenTime = abstract.ensureNonNegIntLimit(helloData['m'], 2**64) # e: ValueError, TypeError
 			except (TypeError, ValueError):
 				raise InvalidHello
 
-		# Do not use protocolVersion < 2 ever because Python is very stupid about bool/int equivalence
-		if protocolVersion != 2:
-			raise InvalidHello
+			self._readOnlyOnce = readOnlyOnce
+			self._numPaddingBytes = numPaddingBytes
+			self._maxReceiveBytes = maxReceiveBytes
+			self._maxOpenTime = maxOpenTime
 
 		##self._protocolVersion = protocolVersion # Not needed yet
 		self.streamId = streamId
