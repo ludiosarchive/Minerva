@@ -11,7 +11,7 @@ looper python -N \
 -W 'ignore:Not importing directory' \
 -W 'ignore:the sets module is deprecated' \
 `which twistd` -r epoll -n minervarun \
---secret "secret for testing only, do not use in production" \
+--secretfile dev_keys/csrf_secret \
 -h tcp:8111:interface=$INTERFACE \
 -h ssl:444:privateKey=dev_keys/x.linuxwan.com-key.pem:interface=$INTERFACE \
 -m tcp:8112:interface=$INTERFACE \
