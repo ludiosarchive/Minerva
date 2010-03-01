@@ -118,7 +118,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'GetXHRObjectTests').methods(
 cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').methods(
 
 	function setUp(self) {
-		self.target = new cw.URI.URL(''+window.location).update_('fragment', null);
+		self.target = new cw.URI.URL(String(window.location)).update_('fragment', null);
 	},
 
 	// Subclasses override _setupDummies
@@ -465,7 +465,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseRealRequestTests').methods(
 cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXHRRealRequestTests').methods(
 
 	function setUp(self) {
-		self.target = new cw.URI.URL(''+window.location);
+		self.target = new cw.URI.URL(String(window.location));
 		self.xhdr = cw.net.UsableXHR(window, cw.net.getXHRObject());
 	},
 
@@ -533,7 +533,7 @@ cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXDRRealRequ
 		if(!cw.net.TestNet.hasXDomainRequest()) {
 			throw new cw.UnitTest.SkipTest("XDomainRequest is required for this test.");
 		}
-		self.target = new cw.URI.URL(''+window.location);
+		self.target = new cw.URI.URL(String(window.location));
 		self.xhdr = cw.net.UsableXDR(window, function(){return new XDomainRequest()});
 	},
 
@@ -591,7 +591,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XDRErrorsTests').methods(
 		if(!cw.net.TestNet.hasXDomainRequest()) {
 			throw new cw.UnitTest.SkipTest("XDomainRequest is required for this test.");
 		}
-		self.target = new cw.URI.URL(''+window.location);
+		self.target = new cw.URI.URL(String(window.location));
 		self.xdr = cw.net.UsableXDR(window, function(){return new XDomainRequest()});
 	},
 
@@ -636,7 +636,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XDRErrorsTests').methods(
 cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackTests').methods(
 
 	function setUp(self) {
-		self.target = new cw.URI.URL(''+window.location);
+		self.target = new cw.URI.URL(String(window.location));
 		self.target.update_('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestNet.MockXHR();
 		// Never advance the clock, to prevent Opera from doing a call at 50ms intervals.
@@ -795,7 +795,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackOperaWorkaroun
 		}
 		self.clock = cw.UnitTest.Clock();
 
-		self.target = new cw.URI.URL(''+window.location);
+		self.target = new cw.URI.URL(String(window.location));
 		self.target.update_('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestNet.MockXHR();
 
@@ -877,7 +877,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XDRProgressCallbackTests').method
 		if(!cw.net.TestNet.hasXDomainRequest()) {
 			throw new cw.UnitTest.SkipTest("XDomainRequest is required for this test.");
 		}
-		self.target = new cw.URI.URL(''+window.location);
+		self.target = new cw.URI.URL(String(window.location));
 		self.target.update_('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestNet.MockXHR();
 		self.clock = cw.UnitTest.Clock();

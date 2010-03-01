@@ -113,7 +113,7 @@ class UnicodeRainbow(BetterResource):
 	"""
 	isLeaf = True
 
-	# Copy/paste from twisted/web/static.py ; XXX LICENSE Twisted
+	# Copy/paste from twisted/web/static.py ; LICENSE: Twisted
 	def _parseRange(self, value):
 		unparsedRanges = filter(None, map(str.strip, value.split(',')))
 		parsedRanges = []

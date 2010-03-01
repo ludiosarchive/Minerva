@@ -22,7 +22,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestResponseTextDecoderNull')
 	},
 
 	function _informDecoder(self) {
-		return self.decoder.getNewFrames(self._bytesReceivedFromProgress());
+		return self.decoder.getNewFrames_(self._bytesReceivedFromProgress());
 	},
 
 	/**
@@ -129,13 +129,13 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestResponseTextDecoderNull')
 	},
 
 	function test_maxLengthEdgeCase2(self) {
-		self.decoder.setMaxLength(2);
+		self.decoder.setMaxLength_(2);
 		self._append("2:hi2:hx");
 		self.assertArraysEqual(['hi', 'hx'], self._informDecoder());
 	},
 
 	function test_maxLengthEdgeCase10(self) {
-		self.decoder.setMaxLength(10);
+		self.decoder.setMaxLength_(10);
 		self._append("10:helloworld10:hellow0rld");
 		self.assertArraysEqual(['helloworld', 'hellow0rld'], self._informDecoder());
 	},
@@ -144,7 +144,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestResponseTextDecoderNull')
 	 * Make sure ParseError stays permanent.
 	 */
 	function test_lengthOverflowByValueCausesPermanentError(self) {
-		self.decoder.setMaxLength(2);
+		self.decoder.setMaxLength_(2);
 		self._append("3:hey4:four");
 		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 		self._append("2:hi");
@@ -155,7 +155,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestResponseTextDecoderNull')
 	 * Make sure ParseError stays permanent.
 	 */
 	function test_lengthOverflowByDigitsCausesPermanentError(self) {
-		self.decoder.setMaxLength(2);
+		self.decoder.setMaxLength_(2);
 		self._append("10:helloworld");
 		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 		self._append("2:hi");
@@ -163,19 +163,19 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestResponseTextDecoderNull')
 	},
 
 	function test_lengthTooLongNoColon(self) {
-		self.decoder.setMaxLength(99);
+		self.decoder.setMaxLength_(99);
 		self._append("100");
 		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 	},
 
 	function test_lengthTooLongColon(self) {
-		self.decoder.setMaxLength(99);
+		self.decoder.setMaxLength_(99);
 		self._append("100:");
 		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 	},
 
 	function test_lengthTooLongSameAmountOfDigits(self) {
-		self.decoder.setMaxLength(3);
+		self.decoder.setMaxLength_(3);
 		self._append("4:four")
 		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 	},
@@ -220,7 +220,7 @@ cw.net.TestDecoder, 'TestResponseTextDecoderNullByteAtATime').methods(
 		var fullText = self.dummy.responseText;
 		if(fullText.length > 1024) {
 			// Skip the byte-at-a-time insanity for the tests that send big strings.
-			strings = self.decoder.getNewFrames(self._bytesReceivedFromProgress());
+			strings = self.decoder.getNewFrames_(self._bytesReceivedFromProgress());
 			self._toSend = fullText.length + 1;
 		} else {
 			for(;;) {
@@ -228,7 +228,7 @@ cw.net.TestDecoder, 'TestResponseTextDecoderNullByteAtATime').methods(
 					break;
 				}
 				self.dummy.responseText = fullText.substr(0, self._toSend);
-				strings = strings.concat(self.decoder.getNewFrames(self._bytesReceivedFromProgress()));
+				strings = strings.concat(self.decoder.getNewFrames_(self._bytesReceivedFromProgress()));
 				self._toSend += 1;
 			}
 		}
@@ -263,10 +263,10 @@ cw.net.TestDecoder, 'TestResponseTextDecoderNumberMinus1').methods(
 		var numBytes = self._bytesReceivedFromProgress();
 		var tooSmall = numBytes - self.misreportSubtract;
 		if(tooSmall < 0) {
-			return self.decoder.getNewFrames(numBytes);
+			return self.decoder.getNewFrames_(numBytes);
 		} else {
-			var strings = self.decoder.getNewFrames(tooSmall);
-			strings = strings.concat(self.decoder.getNewFrames(numBytes));
+			var strings = self.decoder.getNewFrames_(tooSmall);
+			strings = strings.concat(self.decoder.getNewFrames_(numBytes));
 			return strings;
 		}
 	}
@@ -297,28 +297,28 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestIgnoreResponseTextOptimiz
 		// If it tries to substr a L{null}, it will break.
 		self.dummy.responseText = null;
 		// But it (hopefully) didn't.
-		var strings = self.decoder.getNewFrames(0);
+		var strings = self.decoder.getNewFrames_(0);
 		self.assertArraysEqual([], strings);
 	},
 
 	function test_responseTextNotReadIfNotEnoughData(self) {
 		self.dummy.responseText = "10:h";
-		self.assertArraysEqual([], self.decoder.getNewFrames(4));
+		self.assertArraysEqual([], self.decoder.getNewFrames_(4));
 		// Decoder now knows the length. It shouldn't even look at the xObject until it has 13 bytes.
 		self.dummy.responseText = null;
-		self.assertArraysEqual([], self.decoder.getNewFrames(3+10-1)); // 1 byte fewer than needed
+		self.assertArraysEqual([], self.decoder.getNewFrames_(3+10-1)); // 1 byte fewer than needed
 		self.dummy.responseText = "10:helloworld";
-		self.assertArraysEqual(['helloworld'], self.decoder.getNewFrames(3+10));
+		self.assertArraysEqual(['helloworld'], self.decoder.getNewFrames_(3+10));
 	},
 
 	function test_responseTextNotReadIfNotEnoughNumber(self) {
 		self.dummy.responseText = "10";
-		self.assertArraysEqual([], self.decoder.getNewFrames(2));
+		self.assertArraysEqual([], self.decoder.getNewFrames_(2));
 		// It shouldn't even look at the xObject until it has 1 more byte.
 		self.dummy.responseText = null;
-		self.assertArraysEqual([], self.decoder.getNewFrames(2));
+		self.assertArraysEqual([], self.decoder.getNewFrames_(2));
 		self.dummy.responseText = "10:helloworld";
-		self.assertArraysEqual(['helloworld'], self.decoder.getNewFrames(3+10));
+		self.assertArraysEqual(['helloworld'], self.decoder.getNewFrames_(3+10));
 	}
 
 );
@@ -339,7 +339,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestExaggeratedLength').metho
 	 */
 	function test_lying1(self) {
 		self.dummy.responseText = "10:helloworl";
-		self.assertArraysEqual([], self.decoder.getNewFrames(3+10));
+		self.assertArraysEqual([], self.decoder.getNewFrames_(3+10));
 	},
 
 	/**
@@ -347,15 +347,15 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestExaggeratedLength').metho
 	 */
 	function test_lying2(self) {
 		self.dummy.responseText = "10:helloworl";
-		self.assertArraysEqual([], self.decoder.getNewFrames(3+10));
-		self.assertArraysEqual([], self.decoder.getNewFrames(3+10));
+		self.assertArraysEqual([], self.decoder.getNewFrames_(3+10));
+		self.assertArraysEqual([], self.decoder.getNewFrames_(3+10));
 
 		self.dummy.responseText = "10:helloworld";
-		self.assertArraysEqual(['helloworld'], self.decoder.getNewFrames(3+10));
+		self.assertArraysEqual(['helloworld'], self.decoder.getNewFrames_(3+10));
 		self.dummy.responseText = "10:helloworld4:x";
-		self.assertArraysEqual([], self.decoder.getNewFrames(3+10+2+4));
+		self.assertArraysEqual([], self.decoder.getNewFrames_(3+10+2+4));
 		self.dummy.responseText = "10:helloworld4:xxxx";
-		self.assertArraysEqual(['xxxx'], self.decoder.getNewFrames(3+10+2+4));
+		self.assertArraysEqual(['xxxx'], self.decoder.getNewFrames_(3+10+2+4));
 	}
 )
 

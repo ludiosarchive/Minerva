@@ -19,8 +19,13 @@ goog.provide('cw.net.NetworkProblem');
 goog.provide('cw.net.Timeout');
 
 
+/** @typedef {(XMLHttpRequest|ActiveXObject|XDomainRequest)} */
+cw.net.XHRLike;
+
+
 cw.net.logger = goog.debug.Logger.getLogger('cw.net');
 cw.net.logger.setLevel(goog.debug.Logger.Level.ALL);
+
 
 
 /**
@@ -37,140 +42,177 @@ cw.net.ParseError.prototype.name = 'cw.net.ParseError';
 
 
 /**
- * This parser solves two problems:
+ * A netstrings-like decoder that solves two problems:
  *
  *    - decoding a series of bencode strings from an object with a L{responseText}
  *          that may grow.
  *
  *    - accessing the object's C{responseText} only when necessary to avoid memory-
  *          copying and excessive CPU use in some browsers (Firefox, maybe others).
- *          (This optimization is optional; see L{getNewFrames} docstring)
+ *          (This optimization is optional; see L{getNewFrames_} docstring)
  *
  * In Firefox, accessing an XHR object's C{responseText} or C{responseText.length}
- * repeatedly may cause it to copy all the data in memory, temporarily causing ~50-80MB
- * memory spikes.
+ * repeatedly may cause it to copy all the data in memory, causing fluctuations of
+ * ~50-80MB additional memory used.
  *
- * This decoder must be manually "pushed" by calling L{getNewFrames}.
+ * This decoder must be manually "pushed" by calling L{getNewFrames_}.
  *
  * L{xObject.responseText} is assumed to have unicode/byte equivalence.
  * Non-ASCII characters are forbidden, because of our optimizations,
  * and because of browser bugs related to XHR readyState 3.
- */
-
-/**
- * @param {!(XMLHttpRequest|XDomainRequest)} xObject an L{XMLHttpRequest}
- * or L{XDomainRequest} object or any object with a C{responseText} property (a string).
  *
- * @param {number} MAX_LENGTH is the maximum length of frame to parse (in characters).
+ * @param {!cw.net.XHRLike} xObject
+ * an L{XMLHttpRequest}or L{XDomainRequest} object or any object with
+ * a C{responseText} property (a string).
+ *
+ * @param {number} maxLength is the maximum length of frame to parse (in characters).
  *
  * @constructor
  */
-cw.net.ResponseTextDecoder = function(xObject, MAX_LENGTH) {
-	var self = this;
-	self._offset = 0;
-	// Need to have at least 1 byte before doing any parsing
-	self._ignoreUntil = 1;
-	// Optimization: this acts as both a mode and a readLength
-	self._modeOrReadLength = 0; // 0 means mode LENGTH, >= 1 means mode DATA
-	self.xObject = xObject;
-	if(!MAX_LENGTH) {
-		MAX_LENGTH = 1024*1024*1024;
+cw.net.ResponseTextDecoder = function(xObject, maxLength) {
+	/**
+	 * The XHR or XHR-like object.
+	 * @type {!cw.net.XHRLike}
+	*/
+	this.xObject = xObject;
+
+	if(maxLength) {
+		this.setMaxLength_(maxLength);
 	}
-	self.setMaxLength(MAX_LENGTH);
 }
 
-	/**
-	 * Set maximum frame length to C{MAX_LENGTH}.
-	 *
-	 * @param {number} MAX_LENGTH
-	 */
-	cw.net.ResponseTextDecoder.prototype.setMaxLength = function(MAX_LENGTH) {
-		this.MAX_LENGTH = MAX_LENGTH;
-		this.MAX_LENGTH_LEN = (''+MAX_LENGTH).length;
+/**
+ * The next location decoder will read
+ * @type {number}
+ * @private
+ */
+cw.net.ResponseTextDecoder.prototype.offset_ = 0;
+
+/**
+ * A variable to optimize the decoder when the length of responseText
+ * is known without looking at responseText.length
+ * @type {number}
+ * @private
+ */
+cw.net.ResponseTextDecoder.prototype.ignoreUntil_ = 1; // Need to have at least 1 byte before doing any parsing
+
+/**
+ * Private variable representing both the "mode" and "length to read".
+ * 0 means mode LENGTH, >= 1 means mode DATA, and value represents
+ * length to read.
+ * @type {number}
+ * @private
+ */
+cw.net.ResponseTextDecoder.prototype.modeOrReadLength_ = 0; // 0 means mode LENGTH, >= 1 means mode DATA
+
+/**
+ * The size of the largest string that the decoder will accept.
+ * @type {number}
+ * @private
+ */
+cw.net.ResponseTextDecoder.prototype.maxLength_ = 20 * 1024 * 1024;
+
+/**
+ * The length of {@code String(this.maxLength_)}
+ * @type {number}
+ * @private
+ */
+cw.net.ResponseTextDecoder.prototype.maxLengthLen_ = String(cw.net.ResponseTextDecoder.prototype.maxLength_).length;
+
+
+/**
+ * Set maximum frame length to C{maxLength_}.
+ *
+ * @param {number} maxLength_
+ */
+cw.net.ResponseTextDecoder.prototype.setMaxLength_ = function(maxLength) {
+	this.maxLength_ = maxLength;
+	this.maxLengthLen_ = String(maxLength).length;
+}
+
+/**
+ * Check for new data in L{xObject.responseText} and return an array of new frames.
+ *
+ * If you know how many bytes are available in L{responseText} through a side-channel
+ * like an onprogress event, pass a number L{responseTextLength}. Passing a too-low
+ * L{responseTextLength} is safe, but will obviously fail to find some data. Pass C{null}
+ * for L{responseTextLength} if you do not know how many bytes are in L{responseText}.
+ * See this class' docstring for rationale.
+ *
+ * L{cw.net.ParseError} will be thrown if:
+ *    - a frame with size greater than L{maxLength_} is found
+ *    - if a corrupt length value is found (though the throwing may be delayed for a few bytes).
+ *
+ * @param {number|undefined} responseTextLength
+ * 
+ * @return {Array.<string>} an array of new frames
+ */
+cw.net.ResponseTextDecoder.prototype.getNewFrames_ = function(responseTextLength) {
+	var self = this;
+
+	if(responseTextLength !== null && responseTextLength < self.ignoreUntil_) {
+		// There certainly isn't enough data in L{responseText} yet, so return.
+		return [];
 	}
 
-	/**
-	 * Check for new data in L{xObject.responseText} and return an array of new frames.
-	 *
-	 * If you know how many bytes are available in L{responseText} through a side-channel
-	 * like an onprogress event, pass a number L{responseTextLength}. Passing a too-low
-	 * L{responseTextLength} is safe, but will obviously fail to find some data. Pass C{null}
-	 * for L{responseTextLength} if you do not know how many bytes are in L{responseText}.
-	 * See this class' docstring for rationale.
-	 *
-	 * L{cw.net.ParseError} will be thrown if:
-	 *    - a frame with size greater than L{MAX_LENGTH} is found
-	 *    - if a corrupt length value is found (though the throwing may be delayed for a few bytes).
-	 *
-	 * @param {?number} responseTextLength
-	 * @return {Array.<string>} an array of new frames
-	 */
-	cw.net.ResponseTextDecoder.prototype.getNewFrames = function(responseTextLength) {
-		var self = this;
+	var text = self.xObject.responseText;
 
-		if(responseTextLength !== null && responseTextLength < self._ignoreUntil) {
-			// There certainly isn't enough data in L{responseText} yet, so return.
-			return [];
-		}
+	// Users can lie about L{responseTextLength}
+	var reportedLength = responseTextLength;
+	responseTextLength = text.length;
+	if(reportedLength > responseTextLength) {
+		cw.net.logger.fine('Someone lied and reported a too-large responseTextLength: ' +
+			reportedLength + '; should have been ' + responseTextLength + ' or lower.');
+	}
 
-		var text = self.xObject.responseText;
-
-		// Users can lie about L{responseTextLength}
-		var reportedLength = responseTextLength;
-		responseTextLength = text.length;
-		if(reportedLength > responseTextLength) {
-			cw.net.logger.fine('Someone lied and reported a too-large responseTextLength: ' +
-				reportedLength + '; should have been ' + responseTextLength + ' or lower.');
-		}
-
-		var strings = [];
-		for(;;) {
-			if(self._modeOrReadLength === 0) { // mode LENGTH
-				var colon = text.indexOf(':', self._offset);
-				if(colon === -1) {
-					if(responseTextLength - self._offset > self.MAX_LENGTH_LEN) {
-						throw new cw.net.ParseError("length too long");
-					}
-					////console.log('No colon yet. Break.')
-					break;
-					// Unlike minerva._protocols, don't eager-fail if there are
-					// non-digits; it's a waste of CPU time. We'll only be collecting
-					// possibly-non-digits for MAX_LENGTH_LEN bytes.
+	var strings = [];
+	for(;;) {
+		if(self.modeOrReadLength_ === 0) { // mode LENGTH
+			var colon = text.indexOf(':', self.offset_);
+			if(colon === -1) {
+				if(responseTextLength - self.offset_ > self.maxLengthLen_) {
+					throw new cw.net.ParseError("length too long");
 				}
-
-				var extractedLengthStr = text.substr(self._offset, colon-self._offset);
-				// Accept only positive integers with no leading zero.
-				// TODO: maybe disable this check for long-time user agents with no problems
-				if(!/^[1-9]\d*$/.test(extractedLengthStr)) {
-					throw new cw.net.ParseError("corrupt length: " + extractedLengthStr);
-				}
-				// TODO: check if `+extractedLengthStr' is faster; use it if it is.
-				var readLength = parseInt(extractedLengthStr, 10);
-				if(readLength > self.MAX_LENGTH) {
-					throw new cw.net.ParseError("length too long: " + readLength);
-				}
-				self._modeOrReadLength = readLength;
-				self._offset += (''+readLength).length + 1; // + 1 to skip over the ":"
-			} else { // mode DATA
-				if(self._offset + self._modeOrReadLength > responseTextLength) {
-					////console.log('Not enough data bytes yet. Break.');
-					break;
-				}
-				var s = text.substr(self._offset, self._modeOrReadLength);
-				self._offset += self._modeOrReadLength;
-				self._modeOrReadLength = 0;
-				strings.push(s);
+				////console.log('No colon yet. Break.')
+				break;
+				// Unlike minerva._protocols, don't eager-fail if there are
+				// non-digits; it's a waste of CPU time. We'll only be collecting
+				// possibly-non-digits for maxLengthLen_ bytes.
 			}
+
+			var extractedLengthStr = text.substr(self.offset_, colon-self.offset_);
+			// Accept only positive integers with no leading zero.
+			// TODO: maybe disable this check for long-time user agents with no problems
+			if(!/^[1-9]\d*$/.test(extractedLengthStr)) {
+				throw new cw.net.ParseError("corrupt length: " + extractedLengthStr);
+			}
+			// TODO: check if `+extractedLengthStr' is faster; use it if it is.
+			var readLength = parseInt(extractedLengthStr, 10);
+			if(readLength > self.maxLength_) {
+				throw new cw.net.ParseError("length too long: " + readLength);
+			}
+			self.modeOrReadLength_ = readLength;
+			self.offset_ += String(readLength).length + 1; // + 1 to skip over the ":"
+		} else { // mode DATA
+			if(self.offset_ + self.modeOrReadLength_ > responseTextLength) {
+				////console.log('Not enough data bytes yet. Break.');
+				break;
+			}
+			var s = text.substr(self.offset_, self.modeOrReadLength_);
+			self.offset_ += self.modeOrReadLength_;
+			self.modeOrReadLength_ = 0;
+			strings.push(s);
 		}
-		if(self._modeOrReadLength === 0) {
-			// Can't ignore anything when still receiving the length
-			self._ignoreUntil = responseTextLength + 1;
-		} else {
-			self._ignoreUntil = self._offset + self._modeOrReadLength;
-		}
-		////console.log('_ignoreUntil now', self._ignoreUntil);
-		return strings;
 	}
+	if(self.modeOrReadLength_ === 0) {
+		// Can't ignore anything when still receiving the length
+		self.ignoreUntil_ = responseTextLength + 1;
+	} else {
+		self.ignoreUntil_ = self.offset_ + self.modeOrReadLength_;
+	}
+	////console.log('ignoreUntil_ now', self.ignoreUntil_);
+	return strings;
+}
 
 
 /**
