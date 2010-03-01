@@ -37,6 +37,8 @@ class Frame(object):
 	different transports require different serializations.
 	"""
 
+	# If you change these, YOU MUST ALSO CHANGE js/cw/net/net.js
+
 	# Most-frequently-used types should be non-negative and single-digit.
 	# num -> (name, minArgs, maxArgs)
 	knownTypes = {

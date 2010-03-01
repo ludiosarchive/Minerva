@@ -928,9 +928,12 @@ cw.net.FrameType = {
 
 	timestamp: 8,
 	reset: 10,
+
 	you_close_it: 11,
 	start_timestamps: 12,
 	stop_timestamps: 13,
+
+	padding: 20,
 
 	tk_stream_attach_failure: 601,
 	tk_acked_unsent_boxes: 602,
