@@ -871,31 +871,31 @@ cw.net.IEndpointLocator = function() {
 
 }
 
-	// XXX TODO: this API feels wrong. What if there are multiple available endpoints
-	// for an EndpointType? Remember: endpoints may change during runtime,
-	// and at initial page load, we may want to connect to everything to see what
-	// we can connect to.
+// XXX TODO: this API feels wrong. What if there are multiple available endpoints
+// for an EndpointType? Remember: endpoints may change during runtime,
+// and at initial page load, we may want to connect to everything to see what
+// we can connect to.
 
-	/**
-	 * @type {cw.net.EndpointType} type The type of endpoint
-	 *
-	 * @return {?Array.<(string|!Object.<string, *>)} The endpoint (with
-	 * 	credentials) that Minerva client should connect to.
-	 *
-	 *	Return an array of [the endpoint URL, credentialsData], or, if no
-	 * 	endpoint is suitable, return `null`.
-	 *
-	 * 	the endpoint URL: If `type` is `cw.net.EndpointType.{HTTP,HTTPS,WS,WSS}`, the
-	 * 	full URL with an appropriate scheme (`http://` or `https://` or `ws://` or `ws://`).
-	 * 	If `type` is `cw.net.EndpointType.TCP`, a URL that looks like "tcp://hostname:port"
-	 * 	(both `hostname` and the `port` number are required.)
-	 *
-	 * 	credentialsData: `Object`, which may be looked at by Minerva server's
-	 * 	firewall. Cannot be an `Array`, or anything but `Object`.
-	 */
-	cw.net.IEndpointLocator.prototype.locate = function(type) {
+/**
+ * @type {cw.net.EndpointType} type The type of endpoint
+ *
+ * @return {?Array.<(string|!Object.<string, *>)} The endpoint (with
+ * 	credentials) that Minerva client should connect to.
+ *
+ *	Return an array of [the endpoint URL, credentialsData], or, if no
+ * 	endpoint is suitable, return `null`.
+ *
+ * 	the endpoint URL: If `type` is `cw.net.EndpointType.{HTTP,HTTPS,WS,WSS}`, the
+ * 	full URL with an appropriate scheme (`http://` or `https://` or `ws://` or `ws://`).
+ * 	If `type` is `cw.net.EndpointType.TCP`, a URL that looks like "tcp://hostname:port"
+ * 	(both `hostname` and the `port` number are required.)
+ *
+ * 	credentialsData: `Object`, which may be looked at by Minerva server's
+ * 	firewall. Cannot be an `Array`, or anything but `Object`.
+ */
+cw.net.IEndpointLocator.prototype.locate = function(type) {
 
-	}
+}
 
 
 // TODO: need some kind of interface to allow applications to control
@@ -981,35 +981,35 @@ cw.net.IMinervaProtocol = function() {
 
 }
 
-	/**
-	 * Called when this stream has just started.
-	 *
-	 * You'll want to keep the stream around with {@code this.stream = stream}.
-	 *
-	 * @type {!cw.net.Stream} stream the Stream that was just started.
-	 */
-	cw.net.IMinervaProtocol.prototype.streamStarted = function(stream) {
+/**
+ * Called when this stream has just started.
+ *
+ * You'll want to keep the stream around with {@code this.stream = stream}.
+ *
+ * @type {!cw.net.Stream} stream the Stream that was just started.
+ */
+cw.net.IMinervaProtocol.prototype.streamStarted = function(stream) {
 
-	}
+}
 
-	/**
-	 * Called when this stream has ended.
-	 *
-	 * @type {!cw.net.WhoReset} whoReset Who reset the stream?
-	 * @type {string} reasonString The reason why stream has reset.
-	 */
-	cw.net.IMinervaProtocol.prototype.streamReset = function(whoReset, reasonString) {
+/**
+ * Called when this stream has ended.
+ *
+ * @type {!cw.net.WhoReset} whoReset Who reset the stream?
+ * @type {string} reasonString The reason why stream has reset.
+ */
+cw.net.IMinervaProtocol.prototype.streamReset = function(whoReset, reasonString) {
 
-	}
+}
 
-	/**
-	 * Called whenever box(es) are received.
-	 *
-	 * @type {!Array.<*>} boxes The received boxes.
-	 */
-	cw.net.IMinervaProtocol.prototype.boxesReceived = function(boxes) {
+/**
+ * Called whenever box(es) are received.
+ *
+ * @type {!Array.<*>} boxes The received boxes.
+ */
+cw.net.IMinervaProtocol.prototype.boxesReceived = function(boxes) {
 
-	}
+}
 
 
 
@@ -1037,37 +1037,37 @@ cw.net.Queue = function() {
 cw.net.IMinervaTransport = function() {
 
 }
-	// lastBoxSent attribute?
+// lastBoxSent attribute?
 
-	/**
-	 * Write boxes in queue `queue` to the peer.
-	 * This never writes boxes that were already written to the peer over this transport
-	 * (because all transports are TCP-reliable).
-	 *
-	 * @type {cw.net.Queue} queue: an L{Queue}
-	 */
-	cw.net.IMinervaTransport.prototype.writeBoxes_ = function(queue) { // No 'start' argument unlike newlink.py
+/**
+ * Write boxes in queue `queue` to the peer.
+ * This never writes boxes that were already written to the peer over this transport
+ * (because all transports are TCP-reliable).
+ *
+ * @type {cw.net.Queue} queue: an L{Queue}
+ */
+cw.net.IMinervaTransport.prototype.writeBoxes_ = function(queue) { // No 'start' argument unlike newlink.py
 
-	}
+}
 
-	/**
-	 * Close this transport. Usually happens if the transport is no longer
-	 * useful.
-	 */
-	cw.net.IMinervaTransport.prototype.closeGently_ = function() {
+/**
+ * Close this transport. Usually happens if the transport is no longer
+ * useful.
+ */
+cw.net.IMinervaTransport.prototype.closeGently_ = function() {
 
-	}
+}
 
-	/**
-	 * The stream that this transport is related to is resetting. Transport
-	 * must notify peer of the reset.
-	 *
-	 * @param reasonString: plain-English reason why the stream is resetting
-	 * @type reasonString: unicode
-	 */
-	cw.net.IMinervaTransport.prototype.reset_ = function(reasonString) {
+/**
+ * The stream that this transport is related to is resetting. Transport
+ * must notify peer of the reset.
+ *
+ * @param reasonString: plain-English reason why the stream is resetting
+ * @type reasonString: unicode
+ */
+cw.net.IMinervaTransport.prototype.reset_ = function(reasonString) {
 
-	}
+}
 
 
 
@@ -1085,57 +1085,57 @@ cw.net.Stream = function(clock, protocol, locator) {
 	this.streamId_ = goog.string.getRandomString() + goog.string.getRandomString(); // usually 25 or 26 characters
 }
 
-	/**
-	 *  Counter to uniquely identify the transports in this Stream
-	 * @type {number}
-	 */
-	cw.net.Stream.prototype.transportCount_ = -1;
+/**
+ *  Counter to uniquely identify the transports in this Stream
+ * @type {number}
+ */
+cw.net.Stream.prototype.transportCount_ = -1;
 
-	/**
-	 * The primary transport (getting S2C boxes)
-	 * @type {!Object}
-	 */
-	cw.net.Stream.prototype.primaryTransport_ = null;
+/**
+ * The primary transport (getting S2C boxes)
+ * @type {!Object}
+ */
+cw.net.Stream.prototype.primaryTransport_ = null;
 
 
-	/**
-	 * Send boxes `boxes` to the peer.
-	 *
-	 * @type {!Array.<*>} boxes Boxes to send.
-	 *
-	 */
-	cw.net.Stream.prototype.sendBoxes_ = function(boxes) {
-		1/0
-	}
+/**
+ * Send boxes `boxes` to the peer.
+ *
+ * @type {!Array.<*>} boxes Boxes to send.
+ *
+ */
+cw.net.Stream.prototype.sendBoxes_ = function(boxes) {
+	1/0
+}
 
-	/**
-	 * Reset (disconnect) with reason `reasonString`.
-	 *
-	 * @type {string} reasonString Reason why resetting the stream
-	 */
-	cw.net.Stream.prototype.reset_ = function(reasonString) {
-		1/0
-	}
+/**
+ * Reset (disconnect) with reason `reasonString`.
+ *
+ * @type {string} reasonString Reason why resetting the stream
+ */
+cw.net.Stream.prototype.reset_ = function(reasonString) {
+	1/0
+}
 
-	/**
-	 * Called by transports to tell me that it has received boxes.
-	 *
-	 * @type {!Object} transport The transport that received these boxes.
-	 * @type {Array.<*>} boxes In-order boxes that transport has received.
-	 */
-	cw.net.Stream.prototype.boxesReceived_ = function(transport, boxes) {
-		1/0
-	}
+/**
+ * Called by transports to tell me that it has received boxes.
+ *
+ * @type {!Object} transport The transport that received these boxes.
+ * @type {Array.<*>} boxes In-order boxes that transport has received.
+ */
+cw.net.Stream.prototype.boxesReceived_ = function(transport, boxes) {
+	1/0
+}
 
-	/**
-	 * Called by transports to tell me that server has received at least some of
-	 * our C2S boxes.
-	 *
-	 * @type {!Array.<*>} sackInfo
-	 */
-	cw.net.Stream.prototype.sackReceived_ = function(sackInfo) {
-		1/0
-	}
+/**
+ * Called by transports to tell me that server has received at least some of
+ * our C2S boxes.
+ *
+ * @type {!Array.<*>} sackInfo
+ */
+cw.net.Stream.prototype.sackReceived_ = function(sackInfo) {
+	1/0
+}
 
-	// notifyFinish?
-	// producers?
+// notifyFinish?
+// producers?
