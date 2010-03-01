@@ -339,52 +339,52 @@ cw.net.IUsableSomething = function() {
 
 }
 
-	/**
-	 * @return {boolean} Whether this object is technically capable of
-	 *    cross-domain requests.
-	 */
-	cw.net.IUsableSomething.prototype.canCrossDomains = function() {
+/**
+ * @return {boolean} Whether this object is technically capable of
+ *    cross-domain requests.
+ */
+cw.net.IUsableSomething.prototype.canCrossDomains = function() {
 
-	}
+}
 
 
-	/**
-	 * Request some URL.
-	 *
-	 * @param {string} verb The HTTP verb: exactly "GET" or exactly "POST".
-	 * @param {string} url The URL to request.
-	 * @param {string=} post The data to POST. Use "" (empty string) if using {@code verb} != "POST".
-	 * @param {function(!cw.net.XHRLike, (number|null), (number|null))|undefined} progressCallback
-	 * 	If not undefined, is a callable function. Whenever data is received, the
-	 * 	function will be called with arguments
-	 *          (self._object, bytes available in responseText, total response size in bytes)
-	 *
-	 *   Either Number argument will be {@code null} if the browser does not provide
-	 *   progress information. {@code UsableXHR} purposely avoids accessing
-	 *   {@code this._object.responseText} to determine progress information.
-	 *
-	 *   Note that (bytes available in responseText [Number]) may suddenly become
-	 *   {@code null} due to a Firefox bug. When this happens, you should check
-	 *   {@code responseText} for new data, just as if you always got {@code null}.
-	 *
-	 *   The callback will be called when the last chunk is received, too.
-	 *
-	 * 	If undefined, {@code progressCallback} will not be called.
-	 *
-	 * @return {goog.async.Deferred} A Deferred that fires with callback or errback.
-	 * It's not safe to make another request until this Deferred fires. Do not rely
-	 * only on {@code progressCallback}.
-	 */
-	cw.net.IUsableSomething.prototype.request = function(verb, url, opt_post, opt_progressCallback) {
+/**
+ * Request some URL.
+ *
+ * @param {string} verb The HTTP verb: exactly "GET" or exactly "POST".
+ * @param {string} url The URL to request.
+ * @param {string=} post The data to POST. Use "" (empty string) if using {@code verb} != "POST".
+ * @param {function(!cw.net.XHRLike, (number|null), (number|null))|undefined} progressCallback
+ * 	If not undefined, is a callable function. Whenever data is received, the
+ * 	function will be called with arguments
+ *          (self._object, bytes available in responseText, total response size in bytes)
+ *
+ *   Either Number argument will be {@code null} if the browser does not provide
+ *   progress information. {@code UsableXHR} purposely avoids accessing
+ *   {@code this._object.responseText} to determine progress information.
+ *
+ *   Note that (bytes available in responseText [Number]) may suddenly become
+ *   {@code null} due to a Firefox bug. When this happens, you should check
+ *   {@code responseText} for new data, just as if you always got {@code null}.
+ *
+ *   The callback will be called when the last chunk is received, too.
+ *
+ * 	If undefined, {@code progressCallback} will not be called.
+ *
+ * @return {goog.async.Deferred} A Deferred that fires with callback or errback.
+ * It's not safe to make another request until this Deferred fires. Do not rely
+ * only on {@code progressCallback}.
+ */
+cw.net.IUsableSomething.prototype.request_ = function(verb, url, opt_post, opt_progressCallback) {
 
-	}
+}
 
-	/**
-	 * Abort the current request. If none is active, or request was already aborted, this is a no-op.
-	 */
-	cw.net.IUsableSomething.prototype.abort_ = function() {
+/**
+ * Abort the current request. If none is active, or request was already aborted, this is a no-op.
+ */
+cw.net.IUsableSomething.prototype.abort_ = function() {
 
-	}
+}
 
 
 /*
@@ -478,7 +478,7 @@ cw.Class.subclass(cw.net, "UsableXDR").methods(
 		self._finishAndReset(null);
 	},
 
-	function request(self, verb, url, /*optional*/ post, /*optional*/ progressCallback) {
+	function request_(self, verb, url, /*optional*/ post, /*optional*/ progressCallback) {
 		if(self._requestActive) {
 			throw new cw.net.RequestStillActive(
 				"Wait for the Deferred to fire before making another request.");
@@ -576,7 +576,7 @@ cw.Class.subclass(cw.net, "UsableXHR").methods(
 	/**
 	 * See cw.net.IUsableSomething.request
 	 */
-	function request(self, verb, url, /*optional*/ post, /*optional*/ progressCallback) {
+	function request_(self, verb, url, /*optional*/ post, /*optional*/ progressCallback) {
 		// TODO: send as few headers possible for each browser. This requires custom
 		// per-browser if/elif'ing
 
