@@ -152,14 +152,12 @@ cw.net.ResponseTextDecoder.prototype.setMaxLength_ = function(maxLength) {
  * @return {Array.<string>} an array of new frames
  */
 cw.net.ResponseTextDecoder.prototype.getNewFrames_ = function(responseTextLength) {
-	var self = this;
-
-	if(responseTextLength !== null && responseTextLength < self.ignoreUntil_) {
+	if(responseTextLength !== null && responseTextLength < this.ignoreUntil_) {
 		// There certainly isn't enough data in L{responseText} yet, so return.
 		return [];
 	}
 
-	var text = self.xObject.responseText;
+	var text = this.xObject.responseText;
 
 	// Users can lie about L{responseTextLength}
 	var reportedLength = responseTextLength;
@@ -171,10 +169,10 @@ cw.net.ResponseTextDecoder.prototype.getNewFrames_ = function(responseTextLength
 
 	var strings = [];
 	for(;;) {
-		if(self.modeOrReadLength_ === 0) { // mode LENGTH
-			var colon = text.indexOf(':', self.offset_);
+		if(this.modeOrReadLength_ === 0) { // mode LENGTH
+			var colon = text.indexOf(':', this.offset_);
 			if(colon === -1) {
-				if(responseTextLength - self.offset_ > self.maxLengthLen_) {
+				if(responseTextLength - this.offset_ > this.maxLengthLen_) {
 					throw new cw.net.ParseError("length too long");
 				}
 				////console.log('No colon yet. Break.')
@@ -184,7 +182,7 @@ cw.net.ResponseTextDecoder.prototype.getNewFrames_ = function(responseTextLength
 				// possibly-non-digits for maxLengthLen_ bytes.
 			}
 
-			var extractedLengthStr = text.substr(self.offset_, colon-self.offset_);
+			var extractedLengthStr = text.substr(this.offset_, colon-this.offset_);
 			// Accept only positive integers with no leading zero.
 			// TODO: maybe disable this check for long-time user agents with no problems
 			if(!/^[1-9]\d*$/.test(extractedLengthStr)) {
@@ -192,29 +190,29 @@ cw.net.ResponseTextDecoder.prototype.getNewFrames_ = function(responseTextLength
 			}
 			// TODO: check if `+extractedLengthStr' is faster; use it if it is.
 			var readLength = parseInt(extractedLengthStr, 10);
-			if(readLength > self.maxLength_) {
+			if(readLength > this.maxLength_) {
 				throw new cw.net.ParseError("length too long: " + readLength);
 			}
-			self.modeOrReadLength_ = readLength;
-			self.offset_ += String(readLength).length + 1; // + 1 to skip over the ":"
+			this.modeOrReadLength_ = readLength;
+			this.offset_ += String(readLength).length + 1; // + 1 to skip over the ":"
 		} else { // mode DATA
-			if(self.offset_ + self.modeOrReadLength_ > responseTextLength) {
+			if(this.offset_ + this.modeOrReadLength_ > responseTextLength) {
 				////console.log('Not enough data bytes yet. Break.');
 				break;
 			}
-			var s = text.substr(self.offset_, self.modeOrReadLength_);
-			self.offset_ += self.modeOrReadLength_;
-			self.modeOrReadLength_ = 0;
+			var s = text.substr(this.offset_, this.modeOrReadLength_);
+			this.offset_ += this.modeOrReadLength_;
+			this.modeOrReadLength_ = 0;
 			strings.push(s);
 		}
 	}
-	if(self.modeOrReadLength_ === 0) {
+	if(this.modeOrReadLength_ === 0) {
 		// Can't ignore anything when still receiving the length
-		self.ignoreUntil_ = responseTextLength + 1;
+		this.ignoreUntil_ = responseTextLength + 1;
 	} else {
-		self.ignoreUntil_ = self.offset_ + self.modeOrReadLength_;
+		this.ignoreUntil_ = this.offset_ + this.modeOrReadLength_;
 	}
-	////console.log('ignoreUntil_ now', self.ignoreUntil_);
+	////console.log('ignoreUntil_ now', this.ignoreUntil_);
 	return strings;
 }
 
@@ -357,7 +355,7 @@ cw.net.IUsableSomething.prototype.canCrossDomains_ = function() {
  * @param {function(!cw.net.XHRLike, (number|null), (number|null))|undefined} progressCallback
  * 	If not undefined, is a callable function. Whenever data is received, the
  * 	function will be called with arguments
- *          (self._object, bytes available in responseText, total response size in bytes)
+ *          (this._object, bytes available in responseText, total response size in bytes)
  *
  *   Either Number argument will be {@code null} if the browser does not provide
  *   progress information. {@code UsableXHR} purposely avoids accessing
@@ -419,10 +417,10 @@ cw.Class.subclass(cw.net, "UsableXDR").methods(
 	 *    XDomainRequest-like object.
 	 */
 	function __init__(self, window, objectFactory) {
-		self._window = window;
-		self._objectFactory = objectFactory;
-		self._requestActive = false;
-		self._noisy = true;
+		this._window = window;
+		this._objectFactory = objectFactory;
+		this._requestActive = false;
+		this._noisy = true;
 	},
 
 	function canCrossDomains_(self) {
@@ -430,7 +428,7 @@ cw.Class.subclass(cw.net, "UsableXDR").methods(
 	},
 
 	function _finishAndReset(self, errorOrNull) {
-		if(!self._requestActive) {
+		if(!this._requestActive) {
 			// Both UsableXDR.abort and _handler_XDR_onload/_handler_XDR_onerror
 			// may call _finishAndReset. Sometimes UsableXHR.abort will beat the
 			// handlers to the punch.
@@ -439,30 +437,30 @@ cw.Class.subclass(cw.net, "UsableXDR").methods(
 			return;
 		}
 		// Change the order of these lines at your own peril...
-		self._requestActive = false;
+		this._requestActive = false;
 		if(errorOrNull === null) {
-			self._requestDoneD.callback(self._object);
+			this._requestDoneD.callback(this._object);
 		} else {
-			self._requestDoneD.errback(errorOrNull);
+			this._requestDoneD.errback(errorOrNull);
 		}
 	},
 
 	function _handler_XDR_onerror(self) {
 		cw.net.logger.fine('_handler_XDR_onerror');
-		self._finishAndReset(new cw.net.NetworkProblem());
+		this._finishAndReset(new cw.net.NetworkProblem());
 	},
 
 	function _handler_XDR_ontimeout(self) {
 		cw.net.logger.fine('_handler_XDR_ontimeout');
 		// Even though our XDR timeout is very high and should never be
 		// reached, we'll treat it the same as an official timeout.
-		self._finishAndReset(new cw.net.Timeout());
+		this._finishAndReset(new cw.net.Timeout());
 	},
 
 	function _handler_XDR_onprogress(self) {
 		cw.net.logger.finest('_handler_XDR_onprogress ' + window.event);
 		try {
-			self._progressCallback(self._object, null, null);
+			this._progressCallback(this._object, null, null);
 		} catch(e) {
 			cw.net.logger.severe('[_handler_XDR_onprogress] Error in _progressCallback', e);
 		}
@@ -471,22 +469,22 @@ cw.Class.subclass(cw.net, "UsableXDR").methods(
 	function _handler_XDR_onload(self) {
 		cw.net.logger.fine('_handler_XDR_onload');
 		try {
-			self._progressCallback(self._object, null, null);
+			this._progressCallback(this._object, null, null);
 		} catch(e) {
 			cw.net.logger.severe('[_handler_XDR_onload] Error in _progressCallback', e);
 		}
-		self._finishAndReset(null);
+		this._finishAndReset(null);
 	},
 
 	function request_(self, verb, url, /*optional*/ post, /*optional*/ progressCallback) {
-		if(self._requestActive) {
+		if(this._requestActive) {
 			throw new cw.net.RequestStillActive(
 				"Wait for the Deferred to fire before making another request.");
 		}
 		// We'll never know the position and totalSize.
-		self._requestDoneD = new goog.async.Deferred();
-		self._progressCallback = progressCallback ? progressCallback : goog.nullFunction;
-		self._requestActive = true;
+		this._requestDoneD = new goog.async.Deferred();
+		this._progressCallback = progressCallback ? progressCallback : goog.nullFunction;
+		this._requestActive = true;
 
 		/**
 		 * IE8 has a lot of problems when reusing an XDomainRequest object.
@@ -502,39 +500,39 @@ cw.Class.subclass(cw.net, "UsableXDR").methods(
 		 *
 		 * So, we make a new XDomainRequest object every time.
 		 *
-		 * When reusing the object, the crash happens at `self._finishAndReset()'
+		 * When reusing the object, the crash happens at `this._finishAndReset()'
 		 * in L{_handler_XDR_onload}. It crashes persist, change code to liberally
 		 * use C{setTimeout(..., 0)}
 		 */
 
-		self._object = self._objectFactory();
-		var x = self._object;
+		this._object = this._objectFactory();
+		var x = this._object;
 
 		x.open(verb, url);
 		x.timeout = 3600*1000; // 1 hour. We'll do our own timeouts.
 
-		x.onerror = goog.bind(self._handler_XDR_onerror, self);
-		x.onprogress = goog.bind(self._handler_XDR_onprogress, self);
-		x.onload = goog.bind(self._handler_XDR_onload, self);
-		x.ontimeout = goog.bind(self._handler_XDR_ontimeout, self);
+		x.onerror = goog.bind(this._handler_XDR_onerror, this);
+		x.onprogress = goog.bind(this._handler_XDR_onprogress, this);
+		x.onload = goog.bind(this._handler_XDR_onload, this);
+		x.ontimeout = goog.bind(this._handler_XDR_ontimeout, this);
 
 		// .send("") for "no content" is what GWT does in
 		// google-web-toolkit/user/src/com/google/gwt/user/client/HTTPRequest.java
 		// , and what goog/net/xhrio.js does.
 		x.send(post ? post : "");
 
-		return self._requestDoneD;
+		return this._requestDoneD;
 	},
 
 	/**
 	 * See cw.net.IUsableSomething.abort
 	 */
 	function abort_(self) {
-		if(self._requestActive) {
+		if(this._requestActive) {
 			// We MUST NOT call .abort twice on the XDR object, or call it
 			// after it's done loading.
-			self._object.abort();
-			self._finishAndReset(new cw.net.RequestAborted());
+			this._object.abort();
+			this._finishAndReset(new cw.net.RequestAborted());
 		}
 	}
 );
@@ -560,17 +558,17 @@ cw.Class.subclass(cw.net, "UsableXHR").methods(
 	 *    some XMLHTTP thing, or XDomainRequest.
 	 */
 	function __init__(self, window, object) {
-		self._window = window;
-		self._object = object;
-		self._requestActive = false;
-		self._noisy = true;
+		this._window = window;
+		this._object = object;
+		this._requestActive = false;
+		this._noisy = true;
 	},
 
 	/**
 	 * See cw.net.IUsableSomething.canCrossDomains_
 	 */
 	function canCrossDomains_(self) {
-		return (typeof self._object.withCredentials === "boolean");
+		return (typeof this._object.withCredentials === "boolean");
 	},
 
 	/**
@@ -580,21 +578,21 @@ cw.Class.subclass(cw.net, "UsableXHR").methods(
 		// TODO: send as few headers possible for each browser. This requires custom
 		// per-browser if/elif'ing
 
-		if(self._requestActive) {
+		if(this._requestActive) {
 			throw new cw.net.RequestStillActive(
 				"Wait for the Deferred to fire before making another request.");
 		}
-		self._position = null;
-		self._totalSize = null;
-		self._requestDoneD = new goog.async.Deferred();
-		self._progressCallback = progressCallback ? progressCallback : goog.nullFunction;
-		self._poller = null;
+		this._position = null;
+		this._totalSize = null;
+		this._requestDoneD = new goog.async.Deferred();
+		this._progressCallback = progressCallback ? progressCallback : goog.nullFunction;
+		this._poller = null;
 
 		// To reuse the XMLHTTP object in IE7, the order must be: open, onreadystatechange, send
 
-		self._requestActive = true;
+		this._requestActive = true;
 
-		var x = self._object;
+		var x = this._object;
 
 		// "Note: You need to add the event listeners before calling open()
 		// on the request.  Otherwise the progress events will not fire."
@@ -607,7 +605,7 @@ cw.Class.subclass(cw.net, "UsableXHR").methods(
 		// if it fires once with good numbers, it will keep firing with good numbers
 		// until the request is over.
 		try {
-			x.onprogress = goog.bind(self._handler_onprogress, self);
+			x.onprogress = goog.bind(this._handler_onprogress, this);
 		} catch(err) {
 			cw.net.logger.info(self + ": failed to attach onprogress event: " + err.message);
 		}
@@ -620,22 +618,22 @@ cw.Class.subclass(cw.net, "UsableXHR").methods(
 		url = url.replace(/#.*/g, "");
 
 		x.open(verb, url, /*async=*/true);
-		x.onreadystatechange = goog.bind(self._handler_onreadystatechange, self);
+		x.onreadystatechange = goog.bind(this._handler_onreadystatechange, this);
 
-		if(goog.userAgent.OPERA && self._progressCallback !== goog.nullFunction) {
+		if(goog.userAgent.OPERA && this._progressCallback !== goog.nullFunction) {
 			// TODO: MUST USE goog.Timer
-			self._poller = self._window.setInterval(goog.bind(self._handler_poll, self), 50);
+			this._poller = this._window.setInterval(goog.bind(this._handler_poll, this), 50);
 		}
 
 		// .send("") for "no content" is what GWT does in
 		// google-web-toolkit/user/src/com/google/gwt/user/client/HTTPRequest.java
 		x.send(post ? post : "");
 
-		return self._requestDoneD;
+		return this._requestDoneD;
 	},
 
 	function _finishAndReset(self, errorOrNull) {
-		if(!self._requestActive) {
+		if(!this._requestActive) {
 			// Both UsableXHR.abort and _handler_onreadystatechange
 			// may call _finishAndReset. Sometimes UsableXHR.abort will beat the
 			// handlers to the punch.
@@ -645,15 +643,15 @@ cw.Class.subclass(cw.net, "UsableXHR").methods(
 			// "Note: No readystatechange event is dispatched."
 			return;
 		}
-		if(self._poller !== null) {
-			self._window.clearInterval(self._poller);
+		if(this._poller !== null) {
+			this._window.clearInterval(this._poller);
 		}
 		// Change the order of these lines at your own peril...
-		self._requestActive = false;
+		this._requestActive = false;
 		if(errorOrNull === null) {
-			self._requestDoneD.callback(self._object);
+			this._requestDoneD.callback(this._object);
 		} else {
-			self._requestDoneD.errback(errorOrNull);
+			this._requestDoneD.errback(errorOrNull);
 		}
 	},
 
@@ -661,15 +659,15 @@ cw.Class.subclass(cw.net, "UsableXHR").methods(
 	 * See cw.net.IUsableSomething.abort
 	 */
 	function abort_(self) {
-		if(self._requestActive) {
+		if(this._requestActive) {
 			// "Calling abort resets the object; the onreadystatechange event handler
 			// is removed, and readyState is changed to 0 (uninitialized)."
 			// - http://msdn.microsoft.com/en-us/library/ms535920%28VS.85%29.aspx
-			self._object.abort();
+			this._object.abort();
 			// We run the risk that the XHR object can't be reused immediately after
 			// we call .abort() on it. If this happens in a major browser, we need
 			// to give on up reusing XMLHttpRequest objects.
-			self._finishAndReset(new cw.net.RequestAborted());
+			this._finishAndReset(new cw.net.RequestAborted());
 		}
 	},
 
@@ -677,9 +675,9 @@ cw.Class.subclass(cw.net, "UsableXHR").methods(
 	 * Only used by Opera, to work around its one-shot readyState 3.
 	 */
 	function _handler_poll(self) {
-		if(self._object.readyState === 3) { // Is this really correct? What about header download?
+		if(this._object.readyState === 3) { // Is this really correct? What about header download?
 			try {
-				self._progressCallback(self._object, null, null);
+				this._progressCallback(this._object, null, null);
 			} catch(e) {
 				cw.net.logger.severe('[_handler_poll] Error in _progressCallback', e);
 			}
@@ -693,7 +691,7 @@ cw.Class.subclass(cw.net, "UsableXHR").methods(
 		// when length is unknown.
 		// In Chrome 3, e.totalSize === -1 when length is unknown.
 		if(e.totalSize !== undefined && e.totalSize < 2147483647 /* 2**31 - 1 */ && e.totalSize >= 0) {
-			self._totalSize = e.totalSize;
+			this._totalSize = e.totalSize;
 		}
 
 		// In Firefox 3.5.3, Safari 4, and Chrome 3.0.195.21, onprogress fires before
@@ -701,15 +699,15 @@ cw.Class.subclass(cw.net, "UsableXHR").methods(
 		// onreadystatechange is fired. Only in Firefox 3.5.3, sometimes onprogress
 		// fires with `undefined' for e.position and e.totalSize. When this happens,
 		// we must call progressCallback because the length of responseText is longer
-		// than the last self._position (though we do not know the new position right now).
+		// than the last this._position (though we do not know the new position right now).
 		// This strange `undefined' event happens once or twice per request.
 		// Firefox 3.0.7 does not seem to have the `undefined' event problem.
 		if(e.position !== undefined) {
-			self._position = e.position;
+			this._position = e.position;
 		} else {
-			// self._position stays the same
+			// this._position stays the same
 			try {
-				self._progressCallback(self._object, null, self._totalSize);
+				this._progressCallback(this._object, null, this._totalSize);
 			} catch(e) {
 				cw.net.logger.severe('[_handler_onprogress] Error in _progressCallback', e);
 			}
@@ -720,11 +718,11 @@ cw.Class.subclass(cw.net, "UsableXHR").methods(
 		// In at least Firefox 3.5 and Chromium 4.0.207.0, onreadystatechange is called
 		// with one argument, a C{readystatechange} event with no useful properties.
 		// TODO: look around in other browsers? maybe (but unlikely) they'll have a "bytes received" property.
-		var readyState = self._object.readyState;
-		cw.net.logger.finest(self + ': readyState: ' + readyState);
+		var readyState = this._object.readyState;
+		cw.net.logger.finest(this + ': readyState: ' + readyState);
 		if(readyState == 3 || readyState == 4) {
 			try {
-				self._progressCallback(self._object, self._position, self._totalSize);
+				this._progressCallback(this._object, this._position, this._totalSize);
 			} catch(e) {
 				cw.net.logger.severe('[_handler_onreadystatechange] Error in _progressCallback', e);
 			}
@@ -739,8 +737,8 @@ cw.Class.subclass(cw.net, "UsableXHR").methods(
 		if(readyState == 4) {
 			// TODO: maybe do this in IE only? // TODO: xhrio does it differently: either null or nullFunction depending on browser
 			// Note: xmlhttp/xhrio might be doing it wrong, because it'll do onreadystatechange = null; if it's using an XMLHttpRequest object (in IE 7+).
-			self._object.onreadystatechange = goog.nullFunction;
-			self._finishAndReset(null);
+			this._object.onreadystatechange = goog.nullFunction;
+			this._finishAndReset(null);
 		}
 	}
 );
