@@ -343,7 +343,7 @@ cw.net.IUsableSomething = function() {
  * @return {boolean} Whether this object is technically capable of
  *    cross-domain requests.
  */
-cw.net.IUsableSomething.prototype.canCrossDomains = function() {
+cw.net.IUsableSomething.prototype.canCrossDomains_ = function() {
 
 }
 
@@ -425,7 +425,7 @@ cw.Class.subclass(cw.net, "UsableXDR").methods(
 		self._noisy = true;
 	},
 
-	function canCrossDomains(self) {
+	function canCrossDomains_(self) {
 		return true;
 	},
 
@@ -567,9 +567,9 @@ cw.Class.subclass(cw.net, "UsableXHR").methods(
 	},
 
 	/**
-	 * See cw.net.IUsableSomething.canCrossDomains
+	 * See cw.net.IUsableSomething.canCrossDomains_
 	 */
-	function canCrossDomains(self) {
+	function canCrossDomains_(self) {
 		return (typeof self._object.withCredentials === "boolean");
 	},
 
