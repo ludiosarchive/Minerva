@@ -144,7 +144,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').metho
 	 */
 	function test_abortDoesntRuinState(self) {
 		self._setupDummies();
-		self.xhdr.abort();
+		self.xhdr.abort_();
 		self._finishRequest();
 
 		self.requestD.addErrback(function(e){cw.net.TestNet.logger.info('Ignoring error in requestD Deferred: ' + e)});
@@ -165,7 +165,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').metho
 	 * The request Deferred errback fires with error L{cw.net.RequestAborted}.
 	 *
 	 * We use a dummy because some browsers finish a request so fast
-	 * after .request(), that .abort() becomes a no-op (notably Opera 9/10, Safari 3)
+	 * after .request(), that .abort_() becomes a no-op (notably Opera 9/10, Safari 3)
 	 */
 	function test_abortReason(self) {
 		self._setupDummies();
@@ -173,7 +173,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').metho
 
 		var d = self.assertFailure(self.requestD, [cw.net.RequestAborted]);
 
-		self.xhdr.abort();
+		self.xhdr.abort_();
 		self._finishRequest();
 
 		return d;
@@ -184,14 +184,14 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').metho
 	 * The C{abort} method of the XHR object is only called once, even if
 	 * C{self.xhdr.abort} is called multiple times.
 	 *
-	 * We use a dummy because calling .abort() multiple times on a browser's
+	 * We use a dummy because calling .abort_() multiple times on a browser's
 	 * XHR object doesn't raise an exception or do anything important. We still
 	 * want to prevent it from happening.
 	 */
 	function test_abortCalledOnlyOnce(self) {
 		self._setupDummies();
-		self.xhdr.abort();
-		self.xhdr.abort();
+		self.xhdr.abort_();
+		self.xhdr.abort_();
 		self.assertEqual(self.mock.log, [['open', 'POST', self.target.getString(), true], ['send', ''], ['abort']]);
 		self.requestD.addErrback(function(e){cw.net.TestNet.logger.info('Ignoring error in requestD Deferred: ' + e)});
 	}
@@ -248,7 +248,7 @@ cw.net.TestNet._BaseUsableXHDRLogicTests.subclass(cw.net.TestNet, 'UsableXHRLogi
 
 		// Abort the request and verify that onreadystatechange was
 		// reset to L{goog.nullFunction}
-		self.xhdr.abort();
+		self.xhdr.abort_();
 		self.mock.readyState = 4;
 		self.mock.responseText = 'aborted';
 		self.mock.onreadystatechange(null);
@@ -397,20 +397,20 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseRealRequestTests').methods(
 
 
 	/**
-	 * C{.abort()} returns undefined.
-	 * Calling C{.abort()} multiple times is okay.
+	 * C{.abort_()} returns undefined.
+	 * Calling C{.abort_()} multiple times is okay.
 	 *
 	 * Note that we can't assert that an aborted request doesn't actually make
 	 * it to the server. This is because some browsers send the XHR requests
-	 * really fast, and are done before you call .abort().
+	 * really fast, and are done before you call .abort_().
 	 */
 	function test_abort(self) {
 		self.target.update_('path', '/@testres_Minerva/404/');
 		var requestD = self.xhdr.request('POST', self.target.getString(), '');
 
-		self.assertIdentical(undefined, self.xhdr.abort());
-		self.assertIdentical(undefined, self.xhdr.abort());
-		self.assertIdentical(undefined, self.xhdr.abort());
+		self.assertIdentical(undefined, self.xhdr.abort_());
+		self.assertIdentical(undefined, self.xhdr.abort_());
+		self.assertIdentical(undefined, self.xhdr.abort_());
 
 		// Note that errback won't always get fired. Sometimes it'll be callback
 		// because browser couldn't abort before the request finished.

@@ -44,28 +44,29 @@ cw.net.ParseError.prototype.name = 'cw.net.ParseError';
 /**
  * A netstrings-like decoder that solves two problems:
  *
- *    - decoding a series of bencode strings from an object with a L{responseText}
- *          that may grow.
+ *    - decoding a series of bencode strings from an object with a
+ * 		L{responseText} that may grow.
  *
- *    - accessing the object's C{responseText} only when necessary to avoid memory-
- *          copying and excessive CPU use in some browsers (Firefox, maybe others).
- *          (This optimization is optional; see L{getNewFrames_} docstring)
+ *    - accessing the object's {@code responseText} only when necessary
+ * 		to avoid memory-copying and excessive CPU use in some browsers
+ * 		(Firefox, maybe others). This optimization is optional; see docstring
+ * 		for {@code getNewFrames_}.
  *
- * In Firefox, accessing an XHR object's C{responseText} or C{responseText.length}
- * repeatedly may cause it to copy all the data in memory, causing fluctuations of
- * ~50-80MB additional memory used.
+ * In Firefox, accessing an XHR object's {@code responseText} or
+ * {@code responseText.length} repeatedly may cause it to copy all the
+ * data in memory, causing memory usage fluctuations of ~50-80MB.
  *
- * This decoder must be manually "pushed" by calling L{getNewFrames_}.
+ * This decoder must be manually "pushed" by calling {@code getNewFrames_}.
  *
  * L{xObject.responseText} is assumed to have unicode/byte equivalence.
  * Non-ASCII characters are forbidden, because of our optimizations,
  * and because of browser bugs related to XHR readyState 3.
  *
- * @param {!cw.net.XHRLike} xObject
- * an L{XMLHttpRequest}or L{XDomainRequest} object or any object with
- * a C{responseText} property (a string).
+ * @param {!cw.net.XHRLike} xObject An XHR-like object with a
+ * 	{@code responseText} property which is a string.
  *
- * @param {number} maxLength is the maximum length of frame to parse (in characters).
+ * @param {number} maxLength The maximum length of frame to parse
+ * 	(in characters, not bytes).
  *
  * @constructor
  */
@@ -103,10 +104,11 @@ cw.net.ResponseTextDecoder.prototype.ignoreUntil_ = 1; // Need to have at least 
  * @type {number}
  * @private
  */
-cw.net.ResponseTextDecoder.prototype.modeOrReadLength_ = 0; // 0 means mode LENGTH, >= 1 means mode DATA
+cw.net.ResponseTextDecoder.prototype.modeOrReadLength_ = 0;
 
 /**
- * The size of the largest string that the decoder will accept.
+ * The size of the largest string that the decoder will accept (in characters,
+ * 	not bytes).
  * @type {number}
  * @private
  */
@@ -117,13 +119,14 @@ cw.net.ResponseTextDecoder.prototype.maxLength_ = 20 * 1024 * 1024;
  * @type {number}
  * @private
  */
-cw.net.ResponseTextDecoder.prototype.maxLengthLen_ = String(cw.net.ResponseTextDecoder.prototype.maxLength_).length;
+cw.net.ResponseTextDecoder.prototype.maxLengthLen_ = String(
+	cw.net.ResponseTextDecoder.prototype.maxLength_).length;
 
 
 /**
- * Set maximum frame length to C{maxLength_}.
+ * Set the maximum length.
  *
- * @param {number} maxLength_
+ * @param {number} maxLength The new maximum length for the decoder.
  */
 cw.net.ResponseTextDecoder.prototype.setMaxLength_ = function(maxLength) {
 	this.maxLength_ = maxLength;
@@ -217,13 +220,18 @@ cw.net.ResponseTextDecoder.prototype.getNewFrames_ = function(responseTextLength
 
 
 /**
- * A string representing the XHR-esque object that was last instantiated.
- * @type {string?}
+ * A string representing the XHR-like object that was last instantiated.
+ * @type {string|null}
  * @private
  */
 cw.net.xhrObjectName_ = null;
 
 
+/**
+ * Get an XMLHttpRequest or an XHR-like XMLHTTP object.
+ *
+ * @return {!(XMLHttpRequest|ActiveXObject)}
+ */
 cw.net.getXHRObject = function() {
 	// Order taken from goog.net.xmlhttp
 	var things = [
@@ -303,7 +311,9 @@ cw.net.Timeout.prototype.name = 'cw.net.Timeout';
 // Safari 4, Chrome 2, Firefox 3.5 have CORS.
 // IE has XDomainRequest
 
-// We might even able to pull the XHR object out of the iframe and kill the iframe. But this needs to be tested.
+// We might even able to pull the XHR object out of the iframe and kill the
+// iframe. But this needs to be tested. (Also it sucks because the browser will
+// have to leave the iframe un-GCed)
 
 
 
@@ -315,6 +325,7 @@ cw.net.Timeout.prototype.name = 'cw.net.Timeout';
 // so that a browser like Chrome doesn't open too many connections to the same subdomain
 // TODO: should we even care about Chrome right now? It'll have WebSockets pretty soon, which
 // don't count towards the connection limit.
+// XXX Yeah, but not everyone will be able to connect with a WebSocket.
 
 
 // It's important to remember that XHR/XMLHTTP will often be
@@ -329,8 +340,8 @@ cw.net.IUsableSomething = function() {
 }
 
 	/**
-	 * @return: C{true} if this object is technically capable of
-	 *    cross-domain requests, C{false} otherwise.
+	 * @return {boolean} Whether this object is technically capable of
+	 *    cross-domain requests.
 	 */
 	cw.net.IUsableSomething.prototype.canCrossDomains = function() {
 
@@ -340,40 +351,38 @@ cw.net.IUsableSomething = function() {
 	/**
 	 * Request some URL.
 	 *
-	 * C{verb} is exactly "GET" or exactly "POST"
-	 * C{url} is a JavaScript string, representing the target URL.
-	 * C{post} is data to POST. Use "" (empty string) if using L{verb} "GET".
+	 * @param {string} verb The HTTP verb: exactly "GET" or exactly "POST".
+	 * @param {string} url The URL to request.
+	 * @param {string=} post The data to POST. Use "" (empty string) if using {@code verb} != "POST".
+	 * @param {function(!cw.net.XHRLike, (number|null), (number|null))|undefined} progressCallback
+	 * 	If not undefined, is a callable function. Whenever data is received, the
+	 * 	function will be called with arguments
+	 *          (self._object, bytes available in responseText, total response size in bytes)
 	 *
-	 * C{progressCallback}, if truthy, is a callable.
-	 *    The callback will be called with arguments
-	 *          (self._object, bytes available in responseText [Number], total response size in bytes [Number])
-	 *    whenever data is received.
+	 *   Either Number argument will be {@code null} if the browser does not provide
+	 *   progress information. {@code UsableXHR} purposely avoids accessing
+	 *   {@code this._object.responseText} to determine progress information.
 	 *
-	 *    Either Number argument will be C{null} if the browser does not provide
-	 *    progress information. L{UsableXHR} purposely avoids accessing
-	 *    C{self._object.responseText} to determine progress information.
+	 *   Note that (bytes available in responseText [Number]) may suddenly become
+	 *   {@code null} due to a Firefox bug. When this happens, you should check
+	 *   {@code responseText} for new data, just as if you always got {@code null}.
 	 *
-	 *    Note that (bytes available in responseText [Number]) may suddenly become
-	 *    C{null} due to a Firefox bug. When this happens, you should check
-	 *    C{responseText} for new data, just as if you always got C{null}.
+	 *   The callback will be called when the last chunk is received, too.
 	 *
-	 *    The callback will be called when the last chunk is received, too.
+	 * 	If undefined, {@code progressCallback} will not be called.
 	 *
-	 * C{progressCallback}, if falsy, will not be called.
-	 *
-	 * Returns an L{goog.async.Deferred} that fires with callback or errback. It's not safe to make
-	 * another request until this Deferred fires. Do not rely only on L{progressCallback}.
+	 * @return {goog.async.Deferred} A Deferred that fires with callback or errback.
+	 * It's not safe to make another request until this Deferred fires. Do not rely
+	 * only on {@code progressCallback}.
 	 */
-	cw.net.IUsableSomething.prototype.request = function() {
+	cw.net.IUsableSomething.prototype.request = function(verb, url, opt_post, opt_progressCallback) {
 
 	}
 
 	/**
 	 * Abort the current request. If none is active, or request was already aborted, this is a no-op.
-	 *
-	 * @return: undefined
 	 */
-	cw.net.IUsableSomething.prototype.abort = function() {
+	cw.net.IUsableSomething.prototype.abort_ = function() {
 
 	}
 
@@ -520,7 +529,7 @@ cw.Class.subclass(cw.net, "UsableXDR").methods(
 	/**
 	 * See cw.net.IUsableSomething.abort
 	 */
-	function abort(self) {
+	function abort_(self) {
 		if(self._requestActive) {
 			// We MUST NOT call .abort twice on the XDR object, or call it
 			// after it's done loading.
@@ -651,7 +660,7 @@ cw.Class.subclass(cw.net, "UsableXHR").methods(
 	/**
 	 * See cw.net.IUsableSomething.abort
 	 */
-	function abort(self) {
+	function abort_(self) {
 		if(self._requestActive) {
 			// "Calling abort resets the object; the onreadystatechange event handler
 			// is removed, and readyState is changed to 0 (uninitialized)."
