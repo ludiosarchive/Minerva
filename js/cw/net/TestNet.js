@@ -102,7 +102,7 @@ cw.Class.subclass(cw.net.TestNet, 'MockXDR').pmethods({
 
 cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'GetXHRObjectTests').methods(
 	/**
-	 * L{cw.net.getXHRObject} works in general.
+	 * {@code cw.net.getXHRObject} works in general.
 	 */
 	function test_getXHRObject(self) {
 		var object = cw.net.getXHRObject();
@@ -112,7 +112,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'GetXHRObjectTests').methods(
 
 
 /**
- * Base class for testing the general logic of L{UsableXHR} xor L{UsableXDR}.
+ * Base class for testing the general logic of {@code UsableXHR} xor {@code UsableXDR}.
  * These tests do not make any real connections.
  */
 cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').methods(
@@ -162,7 +162,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').metho
 
 
 	/**
-	 * The request Deferred errback fires with error L{cw.net.RequestAborted}.
+	 * The request Deferred errback fires with error {@code cw.net.RequestAborted}.
 	 *
 	 * We use a dummy because some browsers finish a request so fast
 	 * after .request_(), that .abort_() becomes a no-op (notably Opera 9/10, Safari 3)
@@ -208,7 +208,7 @@ cw.net.TestNet._BaseUsableXHDRLogicTests.subclass(cw.net.TestNet, 'UsableXHRLogi
 	function _setupDummies(self) {
 		self.target.update_('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestNet.MockXHR();
-		self.xhdr = cw.net.UsableXHR(window, self.mock);
+		self.xhdr = cw.net.UsableXHR(window, function(){return self.mock});
 		self.requestD = self.xhdr.request_('POST', self.target.getString(), '');
 	},
 
@@ -230,7 +230,7 @@ cw.net.TestNet._BaseUsableXHDRLogicTests.subclass(cw.net.TestNet, 'UsableXHRLogi
 		self._setupDummies();
 
 		// Finish the request and verify that onreadystatechange was
-		// reset to L{goog.nullFunction}
+		// reset to {@code goog.nullFunction}
 		self.mock.readyState = 4;
 		self.mock.responseText = 'done';
 		self.mock.onreadystatechange(null);
@@ -247,7 +247,7 @@ cw.net.TestNet._BaseUsableXHDRLogicTests.subclass(cw.net.TestNet, 'UsableXHRLogi
 		self._setupDummies();
 
 		// Abort the request and verify that onreadystatechange was
-		// reset to L{goog.nullFunction}
+		// reset to {@code goog.nullFunction}
 		self.xhdr.abort_();
 		self.mock.readyState = 4;
 		self.mock.responseText = 'aborted';
@@ -262,8 +262,8 @@ cw.net.TestNet._BaseUsableXHDRLogicTests.subclass(cw.net.TestNet, 'UsableXHRLogi
 
 
 /**
- * Run L{UsableXHRLogicTests} except with the XDR object, even if XDomainRequest
- * is not available in this browser.
+ * Similar to {@code UsableXHRLogicTests} except with the XDR object.
+ * This is tested even if XDomainRequest is not available in this browser.
  */
 cw.net.TestNet._BaseUsableXHDRLogicTests.subclass(cw.net.TestNet, 'UsableXDRLogicTests').methods(
 
@@ -308,7 +308,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseRealRequestTests').methods(
 
 	/**
 	 * Make sure the #fragment is never sent as part of an XHR GET request.
-	 * IE6-8 and Opera 10 are buggy. L{UsableXHR} works around it.
+	 * IE6-8 and Opera 10 are buggy. {@code UsableXHR} works around it.
 	 * If it fails to work around it, you'll see {"a": ["0#ignored1"]} instead of {"a": ["0"]}
 	 */
 	function test_fragmentIsIgnoredGET(self) {
@@ -323,7 +323,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseRealRequestTests').methods(
 
 	/**
 	 * Make sure the #fragment is never sent as part of an XHR POST request.
-	 * IE6-8 and Opera 10 are buggy. L{UsableXHR} works around it.
+	 * IE6-8 and Opera 10 are buggy. {@code UsableXHR} works around it.
 	 * If it fails to work around it, you'll see {"a": ["0#ignored2"]} instead of {"a": ["0"]}
 	 */
 	function test_fragmentIsIgnoredPOST(self) {
@@ -466,7 +466,7 @@ cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXHRRealRequ
 
 	function setUp(self) {
 		self.target = new cw.URI.URL(String(window.location));
-		self.xhdr = cw.net.UsableXHR(window, cw.net.getXHRObject());
+		self.xhdr = cw.net.UsableXHR(window, function(){ return cw.net.getXHRObject() });
 	},
 
 
@@ -524,7 +524,7 @@ cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXHRRealRequ
 
 
 /**
- * Run L{UsableXHRRealRequestTests} except with the XDR object, if it's available in this
+ * Run {@code UsableXHRRealRequestTests} except with the XDR object, if it's available in this
  * browser.
  */
 cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXDRRealRequestTests').methods(
@@ -598,7 +598,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XDRErrorsTests').methods(
 
 	/**
 	 * Requesting a page via GET that doesn't send the right Origin headers
-	 * causes a L{NetworkProblem}.
+	 * causes a {@code NetworkProblem}.
 	 */
 	function test_networkProblemGET(self) {
 		self.target.update_('path', '/@testres_Minerva/NoOriginHeader/');
@@ -610,7 +610,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XDRErrorsTests').methods(
 
 	/**
 	 * Requesting a page via GET that doesn't send the right Origin headers
-	 * causes a L{NetworkProblem}.
+	 * causes a {@code NetworkProblem}.
 	 */
 	function test_networkProblemPOST(self) {
 		self.target.update_('path', '/@testres_Minerva/NoOriginHeader/');
@@ -621,7 +621,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XDRErrorsTests').methods(
 
 
 	/**
-	 * Requesting something on 0.0.0.0 causes a L{NetworkProblem}.
+	 * Requesting something on 0.0.0.0 causes a {@code NetworkProblem}.
 	 */
 	function test_networkProblemBadIP(self) {
 		self.target.update_('host', '0.0.0.0');
@@ -648,7 +648,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackTests').method
 	 * is called.
 	 */
 	function test_onreadystatechangeCallsProgress(self) {
-		self.xhr = cw.net.UsableXHR(self.clock, self.mock);
+		self.xhr = cw.net.UsableXHR(self.clock, function(){ return self.mock; });
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
 			calls.push(arguments);
@@ -674,7 +674,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackTests').method
 	 * C{progressCallback} is called with good numbers.
 	 */
 	function test_onprogressFillsNumbers(self) {
-		self.xhr = cw.net.UsableXHR(self.clock, self.mock);
+		self.xhr = cw.net.UsableXHR(self.clock, function(){ return self.mock; });
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
 			calls.push(arguments);
@@ -704,7 +704,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackTests').method
 	 * with (obj, null, lastKnownTotalSize)
 	 */
 	function test_onprogressFirefoxBugWorkaround(self) {
-		self.xhr = cw.net.UsableXHR(self.clock, self.mock);
+		self.xhr = cw.net.UsableXHR(self.clock, function(){ return self.mock; });
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
 			calls.push(arguments);
@@ -732,7 +732,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackTests').method
 	 * Zero is an acceptable totalSize.
 	 */
 	function test_zeroTotalSizeIsOkay(self) {
-		self.xhr = cw.net.UsableXHR(self.clock, self.mock);
+		self.xhr = cw.net.UsableXHR(self.clock, function(){ return self.mock; });
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
 			calls.push(arguments);
@@ -755,7 +755,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackTests').method
 	 * Undefined or negative or large `totalSize's are treated as "unknown totalSize"
 	 */
 	function test_invalidTotalSizes(self) {
-		self.xhr = cw.net.UsableXHR(self.clock, self.mock);
+		self.xhr = cw.net.UsableXHR(self.clock, function(){ return self.mock; });
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
 			calls.push(arguments);
@@ -806,7 +806,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackOperaWorkaroun
 	 * called every 50ms, even if no new data has been received.
 	 */
 	function test_progressCallbackCreatesPoller(self) {
-		self.xhr = cw.net.UsableXHR(self.clock, self.mock);
+		self.xhr = cw.net.UsableXHR(self.clock, function(){ return self.mock; });
 		var calls = []
 		function progressCallback(obj, position, totalSize) {
 			calls.push(arguments);
@@ -830,7 +830,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackOperaWorkaroun
 	 * not 3, progressCallback is not called.
 	 */
 	function test_progressCallbackButNotReadyState3(self) {
-		self.xhr = cw.net.UsableXHR(self.clock, self.mock);
+		self.xhr = cw.net.UsableXHR(self.clock, function(){ return self.mock; });
 		var calls = []
 		function progressCallback(obj, position, totalSize) {
 			calls.push(arguments);
@@ -859,7 +859,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackOperaWorkaroun
 	 * In Opera, if C{progressCallback} is falsy, no setInterval is set.
 	 */
 	function test_noProgressCallbackNoPoller(self) {
-		self.xhr = cw.net.UsableXHR(self.clock, self.mock);
+		self.xhr = cw.net.UsableXHR(self.clock, function(){ return self.mock; });
 		self.xhr.request_('GET', self.target.getString(), '', null);
 		self.assertEqual(0, self.clock._countPendingEvents());
 		self.mock.readyState = 3;

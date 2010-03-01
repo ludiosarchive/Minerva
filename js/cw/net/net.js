@@ -331,9 +331,14 @@ cw.net.Timeout.prototype.name = 'cw.net.Timeout';
 
 
 /**
+ * @param {Window} window} A {@code window}-like object,
+ *	providing method {@code setInterval}.
+ * @param {function():(!cw.net.XHRLike) objectFactory A 0-arg function
+ * 	 that returns an XHR-like object.
+ *
  * @interface
  */
-cw.net.IUsableSomething = function() {
+cw.net.IUsableSomething = function(window, objectFactory) {
 
 }
 
@@ -411,11 +416,7 @@ Disadvantages:
  * @implements {cw.net.IUsableSomething}
  */
 cw.Class.subclass(cw.net, "UsableXDR").methods(
-	/**
-	 * C{window} is a C{window}-like object.
-	 * C{objectFactory} is a function that returns an
-	 *    XDomainRequest-like object.
-	 */
+
 	function __init__(self, window, objectFactory) {
 		this._window = window;
 		this._objectFactory = objectFactory;
@@ -476,14 +477,14 @@ cw.Class.subclass(cw.net, "UsableXDR").methods(
 		this._finishAndReset(null);
 	},
 
-	function request_(self, verb, url, /*optional*/ post, /*optional*/ progressCallback) {
+	function request_(self, verb, url, opt_post, opt_progressCallback) {
 		if(this._requestActive) {
 			throw new cw.net.RequestStillActive(
 				"Wait for the Deferred to fire before making another request.");
 		}
 		// We'll never know the position and totalSize.
 		this._requestDoneD = new goog.async.Deferred();
-		this._progressCallback = progressCallback ? progressCallback : goog.nullFunction;
+		this._progressCallback = opt_progressCallback ? opt_progressCallback : goog.nullFunction;
 		this._requestActive = true;
 
 		/**
@@ -519,7 +520,7 @@ cw.Class.subclass(cw.net, "UsableXDR").methods(
 		// .send("") for "no content" is what GWT does in
 		// google-web-toolkit/user/src/com/google/gwt/user/client/HTTPRequest.java
 		// , and what goog/net/xhrio.js does.
-		x.send(post ? post : "");
+		x.send(opt_post ? opt_post : "");
 
 		return this._requestDoneD;
 	},
@@ -543,7 +544,8 @@ cw.Class.subclass(cw.net, "UsableXDR").methods(
  * An object that can perform XMLHttpRequests requests. IE's XMLHTTP
  * objects are also supported.
  *
- * Implements IUsableSomething.
+ * @constructor
+ * @implements {cw.net.IUsableSomething}.
  *
  * TODO: cancel a request onunload in IE. This might be needed to
  * avoid a memory leak.
@@ -552,29 +554,24 @@ cw.Class.subclass(cw.net, "UsableXDR").methods(
  */
 cw.Class.subclass(cw.net, "UsableXHR").methods(
 
-	/**
-	 * C{window} is a C{window}-like object.
-	 * C{object} is an XHR-like object: either XMLHttpRequest,
-	 *    some XMLHTTP thing, or XDomainRequest.
-	 */
-	function __init__(self, window, object) {
+	function __init__(self, window, objectFactory) {
 		this._window = window;
-		this._object = object;
+		this._objectFactory = objectFactory;
 		this._requestActive = false;
 		this._noisy = true;
 	},
 
 	/**
-	 * See cw.net.IUsableSomething.canCrossDomains_
+	 * {@see cw.net.IUsableSomething.canCrossDomains_}
 	 */
 	function canCrossDomains_(self) {
-		return (typeof this._object.withCredentials === "boolean");
+		return (typeof this._objectFactory().withCredentials === "boolean");
 	},
 
 	/**
-	 * See cw.net.IUsableSomething.request
+	 * {@see cw.net.IUsableSomething.request_}
 	 */
-	function request_(self, verb, url, /*optional*/ post, /*optional*/ progressCallback) {
+	function request_(self, verb, url, opt_post, opt_progressCallback) {
 		// TODO: send as few headers possible for each browser. This requires custom
 		// per-browser if/elif'ing
 
@@ -585,13 +582,14 @@ cw.Class.subclass(cw.net, "UsableXHR").methods(
 		this._position = null;
 		this._totalSize = null;
 		this._requestDoneD = new goog.async.Deferred();
-		this._progressCallback = progressCallback ? progressCallback : goog.nullFunction;
+		this._progressCallback = opt_progressCallback ? opt_progressCallback : goog.nullFunction;
 		this._poller = null;
 
 		// To reuse the XMLHTTP object in IE7, the order must be: open, onreadystatechange, send
 
 		this._requestActive = true;
 
+		this._object = this._objectFactory();
 		var x = this._object;
 
 		// "Note: You need to add the event listeners before calling open()
@@ -627,7 +625,7 @@ cw.Class.subclass(cw.net, "UsableXHR").methods(
 
 		// .send("") for "no content" is what GWT does in
 		// google-web-toolkit/user/src/com/google/gwt/user/client/HTTPRequest.java
-		x.send(post ? post : "");
+		x.send(opt_post ? opt_post : "");
 
 		return this._requestDoneD;
 	},
@@ -754,7 +752,7 @@ cw.Class.subclass(cw.net, "UsableXHR").methods(
  * 	body when the request is complete, or with an error.
  */
 cw.net.simpleRequest = function(verb, url, post) {
-	var xhr = cw.net.UsableXHR(window, cw.net.getXHRObject());
+	var xhr = cw.net.UsableXHR(window, function() { return cw.net.getXHRObject() });
 	var d = xhr.request(verb, url, post);
 	d.addCallback(function(obj){
 		return obj.responseText;
