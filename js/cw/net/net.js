@@ -143,7 +143,8 @@ cw.net.ResponseTextDecoder.prototype.setMaxLength_ = function(maxLength) {
  *    - a frame with size greater than L{maxLength_} is found
  *    - if a corrupt length value is found (though the throwing may be delayed for a few bytes).
  *
- * @param {number|undefined} responseTextLength
+ * @param {number|null} responseTextLength The already-known length of
+ * {@code xObject.responseText}, or {@code null}.
  * 
  * @return {Array.<string>} an array of new frames
  */
