@@ -1,4 +1,3 @@
-goog.require('cw.Class'); // TODO: stop using it
 goog.require('goog.debug.Error');
 goog.require('goog.async.Deferred');
 goog.require('goog.userAgent');
