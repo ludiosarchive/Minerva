@@ -470,48 +470,25 @@ cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXHRRealRequ
 	},
 
 
-	function test_unicodeRainbowSkipFFFE(self) {
-		if(goog.userAgent.WEBKIT && !goog.userAgent.isVersion('530.17')) {
-			throw new cw.UnitTest.SkipTest("Safari < 4 strips U+FEFF. Make a new test for if you care.");
-		}
-		var buffer = [];
-		// could use String.fromCharCode.apply(null, [1, 2, 3, ...])
-		for(var i=1; i < 55295 + 1; i++) { // 55295 is max that works
-			buffer.push(String.fromCharCode(i));
-		}
-		for(var i=57344; i < 65533 + 1; i++) { // 55295 is max that works
-			buffer.push(String.fromCharCode(i));
-		}
-		buffer.push(String.fromCharCode(65535));
-		var expected = buffer.join('');
-		self.target.update_('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-65533,65535-65535');
-		var requestD = self.xhdr.request_('POST', self.target.getString(), '');
-		requestD.addCallback(function(obj){
-			var text = obj.responseText;
-			self._complainAboutMismatches(expected, text);
-			self.assertEqual(expected, text);
-		});
-		return requestD;
-	},
-
 	/**
-	 * Test that all codepoints that are not in the high or low surrogate planes can be received over XHR
+	 * Test that we can get the entire range of unicode characters over XHR, except for
+	 * U+FFFE (U+FFFD'ed in most browsers), and U+FFFF (U+FFFD'ed in Konqueror 4.3.2)
 	 */
-	function test_unicodeRainbowWithFFFE(self) {
+	function test_unicodeRainbowSkipFFFEAndFFFF(self) {
 		if(goog.userAgent.WEBKIT && !goog.userAgent.isVersion('530.17')) {
 			throw new cw.UnitTest.SkipTest("Safari < 4 strips U+FEFF. Make a new test for if you care.");
 		}
+		var i;
 		var buffer = [];
 		// could use String.fromCharCode.apply(null, [1, 2, 3, ...])
-		for(var i=1; i < 55295 + 1; i++) { // 55295 is max that works
+		for(i=1; i < 55295 + 1; i++) { // 55295 is max that works
 			buffer.push(String.fromCharCode(i));
 		}
-		for(var i=57344; i < 65535 + 1; i++) { // 55295 is max that works
+		for(i=57344; i < 65533 + 1; i++) { // 55295 is max that works
 			buffer.push(String.fromCharCode(i));
 		}
 		var expected = buffer.join('');
-		// Note: can't send U+FFFE through Flash (becomes replacement character U+FFFD), but we can send it through XHR
-		self.target.update_('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-65535');
+		self.target.update_('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-65533');
 		var requestD = self.xhdr.request_('POST', self.target.getString(), '');
 		requestD.addCallback(function(obj){
 			var text = obj.responseText;
@@ -557,18 +534,19 @@ cw.net.TestNet._BaseRealRequestTests.subclass(cw.net.TestNet, 'UsableXDRRealRequ
 	// 65528
 
 	function test_unicodeRainbowSkipCodepointsBannedByXDR(self) {
+		var i;
 		var buffer = [];
 		// could use String.fromCharCode.apply(null, [1, 2, 3, ...])
-		for(var i=1; i < 55295 + 1; i++) {
+		for(i=1; i < 55295 + 1; i++) {
 			buffer.push(String.fromCharCode(i));
 		}
-		for(var i=57344; i < 64975 + 1; i++) {
+		for(i=57344; i < 64975 + 1; i++) {
 			buffer.push(String.fromCharCode(i));
 		}
-		for(var i=65008; i < 65519 + 1; i++) {
+		for(i=65008; i < 65519 + 1; i++) {
 			buffer.push(String.fromCharCode(i));
 		}
-		for(var i=65529; i < 65533 + 1; i++) {
+		for(i=65529; i < 65533 + 1; i++) {
 			buffer.push(String.fromCharCode(i));
 		}
 		var expected = buffer.join('');
