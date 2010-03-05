@@ -257,45 +257,45 @@ cw.net.getXHRObject = function() {
 
 
 /**
- * @param {string} msg Reason
+ * @param {string=} opt_msg Reason
  * @constructor
  * @extends {goog.debug.Error}
  */
-cw.net.RequestStillActive = function(msg) {
-	goog.debug.Error.call(this, msg);
+cw.net.RequestStillActive = function(opt_msg) {
+	goog.debug.Error.call(this, opt_msg);
 };
 goog.inherits(cw.net.RequestStillActive, goog.debug.Error);
 cw.net.RequestStillActive.prototype.name = 'cw.net.RequestStillActive';
 
 /**
- * @param {string} msg Reason
+ * @param {string=} opt_msg Reason
  * @constructor
  * @extends {goog.debug.Error}
  */
-cw.net.RequestAborted = function(msg) {
-	goog.debug.Error.call(this, msg);
+cw.net.RequestAborted = function(opt_msg) {
+	goog.debug.Error.call(this, opt_msg);
 };
 goog.inherits(cw.net.RequestAborted, goog.debug.Error);
 cw.net.RequestAborted.prototype.name = 'cw.net.RequestAborted';
 
 /**
- * @param {string} msg Reason
+ * @param {string=} opt_msg Reason
  * @constructor
  * @extends {goog.debug.Error}
  */
-cw.net.NetworkProblem = function(msg) {
-	goog.debug.Error.call(this, msg);
+cw.net.NetworkProblem = function(opt_msg) {
+	goog.debug.Error.call(this, opt_msg);
 };
 goog.inherits(cw.net.NetworkProblem, goog.debug.Error);
 cw.net.NetworkProblem.prototype.name = 'cw.net.NetworkProblem';
 
 /**
- * @param {string} msg Reason
+ * @param {string=} opt_msg Reason
  * @constructor
  * @extends {goog.debug.Error}
  */
-cw.net.Timeout = function(msg) {
-	goog.debug.Error.call(this, msg);
+cw.net.Timeout = function(opt_msg) {
+	goog.debug.Error.call(this, opt_msg);
 };
 goog.inherits(cw.net.Timeout, goog.debug.Error);
 cw.net.Timeout.prototype.name = 'cw.net.Timeout';
