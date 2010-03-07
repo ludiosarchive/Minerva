@@ -205,7 +205,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestResponseTextDecoderNull')
  * behavior, because the decoder wouldn't be running any important logic
  * until it got a complete frame.
  *
- * Because we're passing in null, it doesn't know the length of C{responseText}
+ * Because we're passing in null, it doesn't know the length of {@code responseText}
  * in advance, so it should actually test something usefully.
  */
 cw.net.TestDecoder.TestResponseTextDecoderNull.subclass(
@@ -250,8 +250,9 @@ cw.net.TestDecoder, 'TestResponseTextDecoderNumber').methods(
 );
 
 /**
- * This is a test class that makes sure the decoder state isn't corrupted when it reports
- * a smaller number for L{responseTextLength} than L{responseText.length}.
+ * This is a test class that makes sure the decoder state isn't corrupted when
+ * it reports a smaller number for {@code responseTextLength} than
+ * {@code responseText.length}.
  */
 cw.net.TestDecoder.TestResponseTextDecoderNumber.subclass(
 cw.net.TestDecoder, 'TestResponseTextDecoderNumberMinus1').methods(
@@ -275,8 +276,9 @@ cw.net.TestDecoder, 'TestResponseTextDecoderNumberMinus1').methods(
 
 
 /**
- * This is another test class that makes sure the decoder state isn't corrupted when it reports
- * a smaller number for L{responseTextLength} than L{responseText.length}.
+ * This is another test class that makes sure the decoder state isn't
+ * corrupted when it reports a smaller number for {@code responseTextLength}
+ * than {@code responseText.length}.
  */
 cw.net.TestDecoder.TestResponseTextDecoderNumberMinus1.subclass(
 cw.net.TestDecoder, 'TestResponseTextDecoderNumberMinus2').methods(
@@ -295,7 +297,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestIgnoreResponseTextOptimiz
 	},
 
 	function test_responseTextNotReadIfNoData(self) {
-		// If it tries to substr a L{null}, it will break.
+		// If it tries to substr a `null`, it will break.
 		self.dummy.responseText = null;
 		// But it (hopefully) didn't.
 		var strings = self.decoder.getNewFrames_(0);
@@ -326,7 +328,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestIgnoreResponseTextOptimiz
 
 
 /**
- * Test that the decoder does not break when it gets a too-large L{responseTextLength}.
+ * Test that the decoder does not break when it gets a too-large
+ * {@code responseTextLength}.
  */
 cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestExaggeratedLength').methods(
 
@@ -336,7 +339,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestExaggeratedLength').metho
 	},
 
 	/**
-	 * Ensure that a piece is not delivered if the user lied about L{responseTextLength}
+	 * Ensure that a piece is not delivered if the user lied about {@code responseTextLength}
 	 */
 	function test_lying1(self) {
 		self.dummy.responseText = "10:helloworl";
@@ -344,7 +347,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestExaggeratedLength').metho
 	},
 
 	/**
-	 * Ensure that a piece is not delivered if the user lied about L{responseTextLength}
+	 * Ensure that a piece is not delivered if the user lied about {@code responseTextLength}
 	 */
 	function test_lying2(self) {
 		self.dummy.responseText = "10:helloworl";

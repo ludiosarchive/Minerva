@@ -48,7 +48,7 @@ cw.net.ParseError.prototype.name = 'cw.net.ParseError';
  * A netstrings-like decoder that solves two problems:
  *
  *    - decoding a series of bencode strings from an object with a
- * 		L{responseText} that may grow.
+ * 		{@code responseText} that may grow.
  *
  *    - accessing the object's {@code responseText} only when necessary
  * 		to avoid memory-copying and excessive CPU use in some browsers
@@ -61,7 +61,7 @@ cw.net.ParseError.prototype.name = 'cw.net.ParseError';
  *
  * This decoder must be manually "pushed" by calling {@code getNewFrames_}.
  *
- * L{xObject.responseText} is assumed to have unicode/byte equivalence.
+ * {@code xObject.responseText} is assumed to have unicode/byte equivalence.
  * Non-ASCII characters are forbidden, because of our optimizations,
  * and because of browser bugs related to XHR readyState 3.
  *
@@ -137,17 +137,19 @@ cw.net.ResponseTextDecoder.prototype.setMaxLength_ = function(maxLength) {
 }
 
 /**
- * Check for new data in L{xObject.responseText} and return an array of new frames.
+ * Check for new data in {@code xObject.responseText} and return an array of new frames.
  *
- * If you know how many bytes are available in L{responseText} through a side-channel
- * like an onprogress event, pass a number L{responseTextLength}. Passing a too-low
- * L{responseTextLength} is safe, but will obviously fail to find some data. Pass C{null}
- * for L{responseTextLength} if you do not know how many bytes are in L{responseText}.
+ * If you know how many bytes are available in {@code responseText} through a
+ * side-channel like an onprogress event, pass a number {@code responseTextLength}.
+ * Passing a too-low {@code responseTextLength} is safe, but will obviously
+ * fail to find some data. Pass {@code null} for {@code responseTextLength}
+ * if you do not know how many bytes are in {@code responseText}.
  * See this class' docstring for rationale.
  *
- * L{cw.net.ParseError} will be thrown if:
- *    - a frame with size greater than L{maxLength_} is found
- *    - if a corrupt length value is found (though the throwing may be delayed for a few bytes).
+ * {@code cw.net.ParseError} will be thrown if:
+ *    - a frame with size greater than {@code maxLength_} is found
+ *    - if a corrupt length value is found (though the throwing may be delayed
+ * 		for a few bytes).
  *
  * @param {number|null} responseTextLength The already-known length of
  * {@code xObject.responseText}, or {@code null}.
@@ -156,13 +158,13 @@ cw.net.ResponseTextDecoder.prototype.setMaxLength_ = function(maxLength) {
  */
 cw.net.ResponseTextDecoder.prototype.getNewFrames_ = function(responseTextLength) {
 	if(responseTextLength !== null && responseTextLength < this.ignoreUntil_) {
-		// There certainly isn't enough data in L{responseText} yet, so return.
+		// There certainly isn't enough data in responseText yet, so return.
 		return [];
 	}
 
 	var text = this.xObject.responseText;
 
-	// Users can lie about L{responseTextLength}
+	// Users can lie about responseTextLength
 	var reportedLength = responseTextLength;
 	responseTextLength = text.length;
 	if(reportedLength > responseTextLength) {
@@ -504,8 +506,8 @@ cw.net.UsableXDR.prototype.request_ = function(verb, url, post, progressCallback
 	 * So, we make a new XDomainRequest object every time.
 	 *
 	 * When reusing the object, the crash happens at `this._finishAndReset()'
-	 * in L{_handler_XDR_onload}. It crashes persist, change code to liberally
-	 * use C{setTimeout(..., 0)}
+	 * in {@code _handler_XDR_onload}. It crashes persist, change code to
+	 * liberally use {@code CallQueue.eventually_}
 	 */
 
 	this._object = this._objectFactory();
@@ -713,9 +715,10 @@ cw.net.UsableXHR.prototype._handler_onprogress = function(e) {
 }
 
 cw.net.UsableXHR.prototype._handler_onreadystatechange = function() {
-	// In at least Firefox 3.5 and Chromium 4.0.207.0, onreadystatechange is called
-	// with one argument, a C{readystatechange} event with no useful properties.
-	// TODO: look around in other browsers? maybe (but unlikely) they'll have a "bytes received" property.
+	// In at least Firefox 3.5 and Chromium 4.0.207.0, `onreadystatechange` is called
+	// with one argument, a `readystatechange` event with no useful properties.
+	// TODO: look around in other browsers? maybe (but unlikely) they'll have
+	// 	a "bytes received" property.
 	var readyState = this._object.readyState;
 	cw.net.logger.finest(this + ': readyState: ' + readyState);
 	if(readyState == 3 || readyState == 4) {
@@ -734,7 +737,8 @@ cw.net.UsableXHR.prototype._handler_onreadystatechange = function() {
 
 	if(readyState == 4) {
 		// TODO: maybe do this in IE only? // TODO: xhrio does it differently: either null or nullFunction depending on browser
-		// Note: xmlhttp/xhrio might be doing it wrong, because it'll do onreadystatechange = null; if it's using an XMLHttpRequest object (in IE 7+).
+		// Note: xmlhttp/xhrio might be doing it wrong, because it'll do
+		// onreadystatechange = null; if it's using an XMLHttpRequest object (in IE 7+).
 		this._object.onreadystatechange = goog.nullFunction;
 		this._finishAndReset(null);
 	}
@@ -746,7 +750,8 @@ cw.net.UsableXHR.prototype._handler_onreadystatechange = function() {
  *
  * @param {string} verb The HTTP method: exactly "GET" or exactly "POST"
  * @param {string} url The URL to fetch.
- * @param {string} post The data to POST. Use "" (empty string) if using L{verb} "GET".
+ * @param {string} post The data to POST. Use "" (empty string) if
+ * 	using {@code verb} "GET".
  *
  * @return {!goog.async.Deferred} A Deferred that fires with the response
  * 	body when the request is complete, or with an error.
@@ -881,7 +886,7 @@ cw.net.IEndpointLocator = function() {
 // we can connect to.
 
 /**
- * @type {cw.net.EndpointType} type The type of endpoint
+ * @type {!cw.net.EndpointType} type The type of endpoint
  *
  * @return {?Array.<(string|!Object.<string, *>)} The endpoint (with
  * 	credentials) that Minerva client should connect to.
@@ -980,7 +985,7 @@ cw.net.WhoReset = {
  * are no timeouts in Stream). If you want to end the stream,
  * call stream.reset(u"reason why")
  *
- * I'm analogous to L{twisted.internet.interfaces.IProtocol}
+ * I'm analogous to {@code twisted.internet.interfaces.IProtocol}
  *
  * @interface
  */
@@ -993,7 +998,7 @@ cw.net.IMinervaProtocol = function() {
  *
  * You'll want to keep the stream around with {@code this.stream = stream}.
  *
- * @type {!cw.net.Stream} stream the Stream that was just started.
+ * @param {!cw.net.Stream} stream the Stream that was just started.
  */
 cw.net.IMinervaProtocol.prototype.streamStarted = function(stream) {
 
@@ -1002,8 +1007,8 @@ cw.net.IMinervaProtocol.prototype.streamStarted = function(stream) {
 /**
  * Called when this stream has ended.
  *
- * @type {!cw.net.WhoReset} whoReset Who reset the stream?
- * @type {string} reasonString The reason why stream has reset.
+ * @param {!cw.net.WhoReset} whoReset Who reset the stream?
+ * @param {string} reasonString The reason why stream has reset.
  */
 cw.net.IMinervaProtocol.prototype.streamReset = function(whoReset, reasonString) {
 
@@ -1012,7 +1017,7 @@ cw.net.IMinervaProtocol.prototype.streamReset = function(whoReset, reasonString)
 /**
  * Called whenever box(es) are received.
  *
- * @type {!Array.<*>} boxes The received boxes.
+ * @param {!Array.<*>} boxes The received boxes.
  */
 cw.net.IMinervaProtocol.prototype.boxesReceived = function(boxes) {
 
@@ -1051,7 +1056,7 @@ cw.net.IMinervaTransport = function() {
  * This never writes boxes that were already written to the peer over this transport
  * (because all transports are TCP-reliable).
  *
- * @type {cw.net.Queue} queue: an L{Queue}
+ * @type {!cw.net.Queue} queue
  */
 cw.net.IMinervaTransport.prototype.writeBoxes_ = function(queue) { // No 'start' argument unlike newlink.py
 
@@ -1069,8 +1074,7 @@ cw.net.IMinervaTransport.prototype.closeGently_ = function() {
  * The stream that this transport is related to is resetting. Transport
  * must notify peer of the reset.
  *
- * @param reasonString: plain-English reason why the stream is resetting
- * @type reasonString: unicode
+ * @param {string} reasonString A plain-English reason why the stream is resetting
  */
 cw.net.IMinervaTransport.prototype.reset_ = function(reasonString) {
 
@@ -1079,7 +1083,7 @@ cw.net.IMinervaTransport.prototype.reset_ = function(reasonString) {
 
 
 /**
- * @type {!Object} clock Something that provides IWindowTime.
+ * @type {!Object} clock Something that provides IWindowTime. TODO XXX use CallQueue instead?
  * @type {!Object} protocol
  * @type {!Object} locator
  *
@@ -1100,7 +1104,7 @@ cw.net.Stream.prototype.transportCount_ = -1;
 
 /**
  * The primary transport (getting S2C boxes)
- * @type {!Object}
+ * @type {Object}
  */
 cw.net.Stream.prototype.primaryTransport_ = null;
 
@@ -1108,7 +1112,7 @@ cw.net.Stream.prototype.primaryTransport_ = null;
 /**
  * Send boxes `boxes` to the peer.
  *
- * @type {!Array.<*>} boxes Boxes to send.
+ * @param {!Array.<*>} boxes Boxes to send.
  *
  */
 cw.net.Stream.prototype.sendBoxes_ = function(boxes) {
@@ -1118,7 +1122,7 @@ cw.net.Stream.prototype.sendBoxes_ = function(boxes) {
 /**
  * Reset (disconnect) with reason `reasonString`.
  *
- * @type {string} reasonString Reason why resetting the stream
+ * @param {string} reasonString Reason why resetting the stream
  */
 cw.net.Stream.prototype.reset_ = function(reasonString) {
 	1/0
@@ -1127,8 +1131,8 @@ cw.net.Stream.prototype.reset_ = function(reasonString) {
 /**
  * Called by transports to tell me that it has received boxes.
  *
- * @type {!Object} transport The transport that received these boxes.
- * @type {Array.<*>} boxes In-order boxes that transport has received.
+ * @param {!Object} transport The transport that received these boxes.
+ * @param {Array.<*>} boxes In-order boxes that transport has received.
  */
 cw.net.Stream.prototype.boxesReceived_ = function(transport, boxes) {
 	1/0
@@ -1138,7 +1142,7 @@ cw.net.Stream.prototype.boxesReceived_ = function(transport, boxes) {
  * Called by transports to tell me that server has received at least some of
  * our C2S boxes.
  *
- * @type {!Array.<*>} sackInfo
+ * @param {!Array.<*>} sackInfo
  */
 cw.net.Stream.prototype.sackReceived_ = function(sackInfo) {
 	1/0

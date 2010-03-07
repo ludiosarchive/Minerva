@@ -126,7 +126,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').metho
 	// Subclasses override _finishRequest
 
 	/**
-	 * We can't make another request using this C{self.xhdr}
+	 * We can't make another request using this {@code self.xhdr}
 	 * object until the current request is finished.
 	 */
 	function test_requestStillActive(self) {
@@ -140,7 +140,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').metho
 
 
 	/**
-	 * After aborting, using the same C{self.xhdr} instance to make
+	 * After aborting, using the same {@code self.xhdr} instance to make
 	 * requests still works.
 	 */
 	function test_abortDoesntRuinState(self) {
@@ -182,8 +182,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').metho
 
 
 	/**
-	 * The C{abort} method of the XHR object is only called once, even if
-	 * C{self.xhdr.abort} is called multiple times.
+	 * The {@code abort} method of the XHR object is only called once, even if
+	 * {@code self.xhdr.abort} is called multiple times.
 	 *
 	 * We use a dummy because calling .abort_() multiple times on a browser's
 	 * XHR object doesn't raise an exception or do anything important. We still
@@ -223,7 +223,7 @@ cw.net.TestNet._BaseUsableXHDRLogicTests.subclass(cw.net.TestNet, 'UsableXHRLogi
 	// XHR-specific tests follow
 
 	/**
-	 * The implementation clears the C{onreadystatechange} property
+	 * The implementation clears the {@code onreadystatechange} property
 	 * of the XHR object after the request is _done_. This is necessary to
 	 * avoid memory leaks in IE.
 	 */
@@ -240,7 +240,7 @@ cw.net.TestNet._BaseUsableXHDRLogicTests.subclass(cw.net.TestNet, 'UsableXHRLogi
 
 
 	/**
-	 * The implementations clears the C{onreadystatechange} property
+	 * The implementations clears the {@code onreadystatechange} property
 	 * of the XHR object after the request is _aborted_. This is necessary to
 	 * avoid memory leaks in IE.
 	 */
@@ -398,8 +398,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseRealRequestTests').methods(
 
 
 	/**
-	 * C{.abort_()} returns undefined.
-	 * Calling C{.abort_()} multiple times is okay.
+	 * {@code .abort_()} returns undefined.
+	 * Calling {@code .abort_()} multiple times is okay.
 	 *
 	 * Note that we can't assert that an aborted request doesn't actually make
 	 * it to the server. This is because some browsers send the XHR requests
@@ -623,7 +623,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackTests').method
 	},
 
 	/**
-	 * Test that when onreadystatechange happens, C{progressCallback}
+	 * Test that when onreadystatechange happens, {@code progressCallback}
 	 * is called.
 	 */
 	function test_onreadystatechangeCallsProgress(self) {
@@ -650,7 +650,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackTests').method
 
 	/**
 	 * Test that when onprogress then onreadystatechange happens,
-	 * C{progressCallback} is called with good numbers.
+	 * {@code progressCallback} is called with good numbers.
 	 */
 	function test_onprogressFillsNumbers(self) {
 		self.xhr = new cw.net.UsableXHR(self.clock, function(){ return self.mock; });
@@ -679,7 +679,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackTests').method
 
 	/**
 	 * Test that when onprogress gets a crappy event with
-	 * e.position === undefined, it calls C{progressCallback}
+	 * e.position === undefined, it calls {@code progressCallback}
 	 * with (obj, null, lastKnownTotalSize)
 	 */
 	function test_onprogressFirefoxBugWorkaround(self) {
@@ -781,7 +781,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackOperaWorkaroun
 	},
 
 	/**
-	 * In Opera, if C{progressCallback} is truthy, progressCallback is
+	 * In Opera, if {@code progressCallback} is truthy, progressCallback is
 	 * called every 50ms, even if no new data has been received.
 	 */
 	function test_progressCallbackCreatesPoller(self) {
@@ -805,7 +805,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackOperaWorkaroun
 
 
 	/**
-	 * In Opera, if C{progressCallback} is truthy, but readyState is
+	 * In Opera, if {@code progressCallback} is truthy, but readyState is
 	 * not 3, progressCallback is not called.
 	 */
 	function test_progressCallbackButNotReadyState3(self) {
@@ -835,7 +835,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackOperaWorkaroun
 
 
 	/**
-	 * In Opera, if C{progressCallback} is falsy, no setInterval is set.
+	 * In Opera, if {@code progressCallback} is falsy, no setInterval is set.
 	 */
 	function test_noProgressCallbackNoPoller(self) {
 		self.xhr = new cw.net.UsableXHR(self.clock, function(){ return self.mock; });
@@ -863,7 +863,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XDRProgressCallbackTests').method
 	},
 
 	/**
-	 * Test that when onprogress happens, C{progressCallback}
+	 * Test that when onprogress happens, {@code progressCallback}
 	 * is called.
 	 */
 	function test_onprogressCallsProgress(self) {
@@ -889,7 +889,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XDRProgressCallbackTests').method
 	},
 
 	/**
-	 * Test that when onload happens, C{progressCallback}
+	 * Test that when onload happens, {@code progressCallback}
 	 * is called.
 	 */
 	function test_onloadCallsProgress(self) {
