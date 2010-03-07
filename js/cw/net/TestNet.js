@@ -1,19 +1,19 @@
 /**
- * Tests for cw.net
+ * @fileoverview Tests for cw.net
  */
 
-goog.require('goog.debug');
-goog.require('goog.userAgent');
-goog.require('goog.json.Serializer');
-goog.require('goog.string');
+goog.provide('cw.net.TestNet');
 
 goog.require('cw.UnitTest');
 goog.require('cw.clock');
 goog.require('cw.net');
 goog.require('cw.uri');
 goog.require('cw.Class');
+goog.require('goog.debug');
+goog.require('goog.userAgent');
+goog.require('goog.json.Serializer');
+goog.require('goog.string');
 
-goog.provide('cw.net.TestNet');
 
 // anti-clobbering for JScript
 (function(){

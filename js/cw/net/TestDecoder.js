@@ -1,11 +1,12 @@
 /**
- * Tests for cw.net.ResponseTextDecoder
+ * @fileoverview Tests for cw.net.ResponseTextDecoder
  */
+
+goog.provide('cw.net.TestDecoder');
 
 goog.require('cw.UnitTest');
 goog.require('cw.net');
 
-goog.provide('cw.net.TestDecoder');
 
 // anti-clobbering for JScript
 (function(){

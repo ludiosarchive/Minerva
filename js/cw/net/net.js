@@ -1,11 +1,6 @@
-goog.require('goog.debug.Error');
-goog.require('goog.async.Deferred');
-goog.require('goog.userAgent');
-goog.require('goog.debug.Logger');
-goog.require('goog.json');
-goog.require('goog.string');
-goog.require('goog.Disposable');
-goog.require('cw.externalinterface');
+/**
+ * @fileoverview Minerva client and related functionality
+ */
 
 goog.provide('cw.net');
 goog.provide('cw.net.simpleRequest');
@@ -17,9 +12,18 @@ goog.provide('cw.net.RequestAborted');
 goog.provide('cw.net.NetworkProblem');
 goog.provide('cw.net.Timeout');
 
+goog.require('goog.debug.Error');
+goog.require('goog.async.Deferred');
+goog.require('goog.userAgent');
+goog.require('goog.debug.Logger');
+goog.require('goog.json');
+goog.require('goog.string');
+goog.require('goog.Disposable');
+goog.require('cw.externalinterface');
+
 
 /** @typedef {(XMLHttpRequest|ActiveXObject|XDomainRequest)} */
-cw.net.XHRLike;
+cw.net.XHRLike = goog.typedef;
 
 
 cw.net.logger = goog.debug.Logger.getLogger('cw.net');
@@ -257,45 +261,45 @@ cw.net.getXHRObject = function() {
 
 
 /**
- * @param {string=} opt_msg Reason
+ * @param {string=} msg Reason
  * @constructor
  * @extends {goog.debug.Error}
  */
-cw.net.RequestStillActive = function(opt_msg) {
-	goog.debug.Error.call(this, opt_msg);
+cw.net.RequestStillActive = function(msg) {
+	goog.debug.Error.call(this, msg);
 };
 goog.inherits(cw.net.RequestStillActive, goog.debug.Error);
 cw.net.RequestStillActive.prototype.name = 'cw.net.RequestStillActive';
 
 /**
- * @param {string=} opt_msg Reason
+ * @param {string=} msg Reason
  * @constructor
  * @extends {goog.debug.Error}
  */
-cw.net.RequestAborted = function(opt_msg) {
-	goog.debug.Error.call(this, opt_msg);
+cw.net.RequestAborted = function(msg) {
+	goog.debug.Error.call(this, msg);
 };
 goog.inherits(cw.net.RequestAborted, goog.debug.Error);
 cw.net.RequestAborted.prototype.name = 'cw.net.RequestAborted';
 
 /**
- * @param {string=} opt_msg Reason
+ * @param {string=} msg Reason
  * @constructor
  * @extends {goog.debug.Error}
  */
-cw.net.NetworkProblem = function(opt_msg) {
-	goog.debug.Error.call(this, opt_msg);
+cw.net.NetworkProblem = function(msg) {
+	goog.debug.Error.call(this, msg);
 };
 goog.inherits(cw.net.NetworkProblem, goog.debug.Error);
 cw.net.NetworkProblem.prototype.name = 'cw.net.NetworkProblem';
 
 /**
- * @param {string=} opt_msg Reason
+ * @param {string=} msg Reason
  * @constructor
  * @extends {goog.debug.Error}
  */
-cw.net.Timeout = function(opt_msg) {
-	goog.debug.Error.call(this, opt_msg);
+cw.net.Timeout = function(msg) {
+	goog.debug.Error.call(this, msg);
 };
 goog.inherits(cw.net.Timeout, goog.debug.Error);
 cw.net.Timeout.prototype.name = 'cw.net.Timeout';
@@ -356,7 +360,7 @@ cw.net.IUsableSomething.prototype.canCrossDomains_ = function() {
  * @param {string} verb The HTTP verb: exactly "GET" or exactly "POST".
  * @param {string} url The URL to request.
  * @param {string=} post The data to POST. Use "" (empty string) if using {@code verb} != "POST".
- * @param {function(!cw.net.XHRLike, (number|null), (number|null))|undefined} progressCallback
+ * @param {undefined|function(!cw.net.XHRLike, (number|null), (number|null))} progressCallback
  * 	If not undefined, is a callable function. Whenever data is received, the
  * 	function will be called with arguments
  *          (this._object, bytes available in responseText, total response size in bytes)
@@ -377,7 +381,7 @@ cw.net.IUsableSomething.prototype.canCrossDomains_ = function() {
  * It's not safe to make another request until this Deferred fires. Do not rely
  * only on {@code progressCallback}.
  */
-cw.net.IUsableSomething.prototype.request_ = function(verb, url, opt_post, opt_progressCallback) {
+cw.net.IUsableSomething.prototype.request_ = function(verb, url, post, progressCallback) {
 
 }
 
@@ -475,14 +479,14 @@ cw.net.UsableXDR.prototype._handler_XDR_onload = function() {
 	this._finishAndReset(null);
 }
 
-cw.net.UsableXDR.prototype.request_ = function(verb, url, opt_post, opt_progressCallback) {
+cw.net.UsableXDR.prototype.request_ = function(verb, url, post, progressCallback) {
 	if(this._requestActive) {
 		throw new cw.net.RequestStillActive(
 			"Wait for the Deferred to fire before making another request.");
 	}
 	// We'll never know the position and totalSize.
 	this._requestDoneD = new goog.async.Deferred();
-	this._progressCallback = opt_progressCallback ? opt_progressCallback : goog.nullFunction;
+	this._progressCallback = progressCallback ? progressCallback : goog.nullFunction;
 	this._requestActive = true;
 
 	/**
@@ -518,7 +522,7 @@ cw.net.UsableXDR.prototype.request_ = function(verb, url, opt_post, opt_progress
 	// .send("") for "no content" is what GWT does in
 	// google-web-toolkit/user/src/com/google/gwt/user/client/HTTPRequest.java
 	// , and what goog/net/xhrio.js does.
-	x.send(opt_post ? opt_post : "");
+	x.send(post ? post : "");
 
 	return this._requestDoneD;
 }
@@ -567,7 +571,7 @@ cw.net.UsableXHR.prototype.canCrossDomains_ = function() {
 /**
  * {@see cw.net.IUsableSomething.request_}
  */
-cw.net.UsableXHR.prototype.request_ = function(verb, url, opt_post, opt_progressCallback) {
+cw.net.UsableXHR.prototype.request_ = function(verb, url, post, progressCallback) {
 	// TODO: send as few headers possible for each browser. This requires custom
 	// per-browser if/elif'ing
 
@@ -578,7 +582,7 @@ cw.net.UsableXHR.prototype.request_ = function(verb, url, opt_post, opt_progress
 	this._position = null;
 	this._totalSize = null;
 	this._requestDoneD = new goog.async.Deferred();
-	this._progressCallback = opt_progressCallback ? opt_progressCallback : goog.nullFunction;
+	this._progressCallback = progressCallback ? progressCallback : goog.nullFunction;
 	this._poller = null;
 
 	// To reuse the XMLHTTP object in IE7, the order must be: open, onreadystatechange, send
@@ -621,7 +625,7 @@ cw.net.UsableXHR.prototype.request_ = function(verb, url, opt_post, opt_progress
 
 	// .send("") for "no content" is what GWT does in
 	// google-web-toolkit/user/src/com/google/gwt/user/client/HTTPRequest.java
-	x.send(opt_post ? opt_post : "");
+	x.send(post ? post : "");
 
 	return this._requestDoneD;
 }
