@@ -151,10 +151,10 @@ cw.net.ResponseTextDecoder.prototype.setMaxLength_ = function(maxLength) {
  *    - if a corrupt length value is found (though the throwing may be delayed
  * 		for a few bytes).
  *
- * @param {number|null} responseTextLength The already-known length of
+ * @param {?number} responseTextLength The already-known length of
  * {@code xObject.responseText}, or {@code null}.
  * 
- * @return {Array.<string>} an array of new frames
+ * @return {Array.<string>} an array of new strings
  */
 cw.net.ResponseTextDecoder.prototype.getNewFrames_ = function(responseTextLength) {
 	if(responseTextLength !== null && responseTextLength < this.ignoreUntil_) {
@@ -224,7 +224,7 @@ cw.net.ResponseTextDecoder.prototype.getNewFrames_ = function(responseTextLength
 
 /**
  * A string representing the XHR-like object that was last instantiated.
- * @type {string|null}
+ * @type {?string}
  * @private
  */
 cw.net.xhrObjectName_ = null;
@@ -886,7 +886,7 @@ cw.net.IEndpointLocator = function() {
 // we can connect to.
 
 /**
- * @type {!cw.net.EndpointType} type The type of endpoint
+ * @param {!cw.net.EndpointType} type The type of endpoint
  *
  * @return {?Array.<(string|!Object.<string, *>)} The endpoint (with
  * 	credentials) that Minerva client should connect to.
@@ -1056,7 +1056,7 @@ cw.net.IMinervaTransport = function() {
  * This never writes boxes that were already written to the peer over this transport
  * (because all transports are TCP-reliable).
  *
- * @type {!cw.net.Queue} queue
+ * @param {!cw.net.Queue} queue
  */
 cw.net.IMinervaTransport.prototype.writeBoxes_ = function(queue) { // No 'start' argument unlike newlink.py
 
@@ -1083,11 +1083,11 @@ cw.net.IMinervaTransport.prototype.reset_ = function(reasonString) {
 
 
 /**
- * @type {!Object} clock Something that provides IWindowTime. TODO XXX use CallQueue instead?
- * @type {!Object} protocol
- * @type {!Object} locator
+ * @param {!Object} clock Something that provides IWindowTime. TODO XXX use CallQueue instead?
+ * @param {!Object} protocol
+ * @param {!Object} locator
  *
- * TODO: make Stream a Disposable and add dipose methods?
+ * TODO: make Stream a Disposable and add dispose methods?
  */
 cw.net.Stream = function(clock, protocol, locator) {
 	this.clock_ = clock;
