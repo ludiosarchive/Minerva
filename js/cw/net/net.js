@@ -68,7 +68,7 @@ cw.net.ParseError.prototype.name = 'cw.net.ParseError';
  * @param {!cw.net.XHRLike} xObject An XHR-like object with a
  * 	{@code responseText} property which is a string.
  *
- * @param {number} maxLength The maximum length of frame to parse
+ * @param {number} maxLength The maximum length of string to parse
  * 	(in characters, not bytes).
  *
  * @constructor
@@ -137,7 +137,8 @@ cw.net.ResponseTextDecoder.prototype.setMaxLength_ = function(maxLength) {
 }
 
 /**
- * Check for new data in {@code xObject.responseText} and return an array of new frames.
+ * Check for new data in {@code xObject.responseText} and return an array
+ * of new strings.
  *
  * If you know how many bytes are available in {@code responseText} through a
  * side-channel like an onprogress event, pass a number {@code responseTextLength}.
@@ -147,14 +148,14 @@ cw.net.ResponseTextDecoder.prototype.setMaxLength_ = function(maxLength) {
  * See this class' docstring for rationale.
  *
  * {@code cw.net.ParseError} will be thrown if:
- *    - a frame with size greater than {@code maxLength_} is found
+ *    - a string with character length greater than {@code this.maxLength_} is found.
  *    - if a corrupt length value is found (though the throwing may be delayed
  * 		for a few bytes).
  *
  * @param {?number} responseTextLength The already-known length of
  * {@code xObject.responseText}, or {@code null}.
  * 
- * @return {Array.<string>} an array of new strings
+ * @return {!Array.<string>} an array of new strings
  */
 cw.net.ResponseTextDecoder.prototype.getNewStrings_ = function(responseTextLength) {
 	if(responseTextLength !== null && responseTextLength < this.ignoreUntil_) {
