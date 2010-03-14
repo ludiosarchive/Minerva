@@ -4,9 +4,11 @@
 
 from distutils.core import setup
 
+import minerva 
+
 setup(
 	name='Minerva',
-	version='10.2.23',
+	version=minerva.__version__,
 	description="Minerva",
 	packages=['minerva', 'minerva.sample', 'minerva.flashtest', 'twisted.plugins'],
 	package_data={'minerva': ['flashtest/*.swf', 'flashtest/*.html'],},
