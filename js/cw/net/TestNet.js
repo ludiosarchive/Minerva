@@ -793,7 +793,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackOperaWorkaroun
 		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
 		self.mock.readyState = 3;
 		self.assertIdentical(0, calls.length);
-		self.clock.advance_(100);
+		self.clock.advance_(50);
+		self.clock.advance_(50);
 		// Opera should not know the position
 		self.assertEqual(
 			[
@@ -840,10 +841,10 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackOperaWorkaroun
 	function test_noProgressCallbackNoPoller(self) {
 		self.xhr = new cw.net.UsableXHR(self.clock, function(){ return self.mock; });
 		self.xhr.request_('GET', self.target.getString(), '', null);
-		self.assertEqual(0, self.clock._countPendingEvents());
+		self.assertEqual(0, self.clock.getCallsArray_().length);
 		self.mock.readyState = 3;
 		self.clock.advance_(100);
-		self.assertEqual(0, self.clock._countPendingEvents());
+		self.assertEqual(0, self.clock.getCallsArray_().length);
 	}
 );
 
