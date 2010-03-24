@@ -915,4 +915,21 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XDRProgressCallbackTests').method
 	}
 );
 
+
+
+/**
+ * Tests for {@link cw.net.simpleRequest}
+ */
+cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'SimpleRequestTests').methods(
+	function test_simpleRequest(self) {
+		self.target = new cw.uri.URL(String(window.location));
+		self.target.update_('path', '/@testres_Minerva/SimpleResponse/?a=hello');
+		var d = cw.net.simpleRequest('GET', self.target.getString(), "");
+		d.addCallback(function(response) {
+			self.assertEqual('{"you_sent_args": {"a": ["hello"]}}', response);
+		});
+		return d;
+	}
+);
+
 })(); // end anti-clobbering for JScript
