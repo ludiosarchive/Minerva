@@ -22,7 +22,9 @@ goog.require('goog.Disposable');
 goog.require('cw.externalinterface');
 
 
-/** @typedef {(XMLHttpRequest|ActiveXObject|XDomainRequest)} */
+/**
+ * @type {(XMLHttpRequest|ActiveXObject|XDomainRequest)}
+ */
 cw.net.XHRLike = goog.typedef;
 
 
@@ -339,7 +341,7 @@ cw.net.Timeout.prototype.name = 'cw.net.Timeout';
 /**
  * @param {Window} window} A {@code window}-like object,
  *	providing method {@code setInterval}.
- * @param {function():(!cw.net.XHRLike) objectFactory A 0-arg function
+ * @param {function():!cw.net.XHRLike} objectFactory A 0-arg function
  * 	 that returns an XHR-like object.
  *
  * @interface
@@ -363,7 +365,7 @@ cw.net.IUsableSomething.prototype.canCrossDomains_ = function() {
  * @param {string} verb The HTTP verb: exactly "GET" or exactly "POST".
  * @param {string} url The URL to request.
  * @param {string=} post The data to POST. Use "" (empty string) if using {@code verb} != "POST".
- * @param {undefined|function(!cw.net.XHRLike, (number|null), (number|null))} progressCallback
+ * @param {undefined|function(!cw.net.XHRLike, (number|null), (number|null))=} progressCallback
  * 	If not undefined, is a callable function. Whenever data is received, the
  * 	function will be called with arguments
  *          (this._object, bytes available in responseText, total response size in bytes)
@@ -685,14 +687,14 @@ cw.net.UsableXHR.prototype._handler_poll = function() {
 	}
 }
 
-cw.net.UsableXHR.prototype._handler_onprogress = function(e) {
-	cw.net.logger.finest('_handler_onprogress: ' + goog.json.serialize(e));
+cw.net.UsableXHR.prototype._handler_onprogress = function(ev) {
+	cw.net.logger.finest('_handler_onprogress: ' + goog.json.serialize(ev));
 
 	// In Safari 4.0.3 and Firefox 3.5.2/3.0.7, e.totalSize === 4294967295
 	// when length is unknown.
 	// In Chrome 3, e.totalSize === -1 when length is unknown.
-	if(e.totalSize !== undefined && e.totalSize < 2147483647 /* 2**31 - 1 */ && e.totalSize >= 0) {
-		this._totalSize = e.totalSize;
+	if(ev.totalSize !== undefined && ev.totalSize < 2147483647 /* 2**31 - 1 */ && ev.totalSize >= 0) {
+		this._totalSize = ev.totalSize;
 	}
 
 	// In Firefox 3.5.3, Safari 4, and Chrome 3.0.195.21, onprogress fires before
@@ -703,8 +705,8 @@ cw.net.UsableXHR.prototype._handler_onprogress = function(e) {
 	// than the last this._position (though we do not know the new position right now).
 	// This strange `undefined' event happens once or twice per request.
 	// Firefox 3.0.7 does not seem to have the `undefined' event problem.
-	if(e.position !== undefined) {
-		this._position = e.position;
+	if(ev.position !== undefined) {
+		this._position = ev.position;
 	} else {
 		// this._position stays the same
 		try {
@@ -758,8 +760,8 @@ cw.net.UsableXHR.prototype._handler_onreadystatechange = function() {
  * 	body when the request is complete, or with an error.
  */
 cw.net.simpleRequest = function(verb, url, post) {
-	var xhr = cw.net.UsableXHR(window, function() { return cw.net.getXHRObject() });
-	var d = xhr.request(verb, url, post);
+	var xhr = new cw.net.UsableXHR(window, function() { return cw.net.getXHRObject() });
+	var d = xhr.request_(verb, url, post);
 	d.addCallback(function(obj){
 		return obj.responseText;
 	});
@@ -811,7 +813,7 @@ goog.inherits(cw.net.FlashSocket, goog.Disposable);
 
 /**
  * @param {string} host Hostname to connect to
- * @param {number} host Port to connect to
+ * @param {number} port Port to connect to
  * //NOT IMPLEMENTED @param {number} timeout Flash-level timeout: "Indicates the number of milliseconds to wait for a connection."
  */
 cw.net.FlashSocket.prototype.connect_ = function(host, port) { // , timeout
@@ -826,8 +828,9 @@ cw.net.FlashSocket.prototype.writeSerializedFrames_ = function(string) {
 
 
 cw.net.FlashSocket.prototype.close_ = function() {
-	return eval(this.bridge_.CallFunction(cw.externalinterface.request('__FC_close', this.id_)));
+	var ret = eval(this.bridge_.CallFunction(cw.externalinterface.request('__FC_close', this.id_)));
 	this.dispose();
+	return ret;
 }
 
 /**
@@ -889,7 +892,7 @@ cw.net.IEndpointLocator = function() {
 /**
  * @param {!cw.net.EndpointType} type The type of endpoint
  *
- * @return {?Array.<(string|!Object.<string, *>)} The endpoint (with
+ * @return {?Array.<!(string|Object)>} The endpoint (with
  * 	credentials) that Minerva client should connect to.
  *
  *	Return an array of [the endpoint URL, credentialsData], or, if no
@@ -1087,6 +1090,8 @@ cw.net.IMinervaTransport.prototype.reset_ = function(reasonString) {
  * @param {!Object} clock Something that provides IWindowTime. TODO XXX use CallQueue instead?
  * @param {!Object} protocol
  * @param {!Object} locator
+ *
+ * @constructor
  *
  * TODO: make Stream a Disposable and add dispose methods?
  */
