@@ -214,7 +214,6 @@ GET.
 
 
 
-
 class DemoProtocol(BasicMinervaProtocol):
 
 	def __init__(self, clock):
