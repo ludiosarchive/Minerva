@@ -865,9 +865,9 @@ cw.net.FlashSocket.prototype.close_ = function() {
  * @protected
  */
 cw.net.FlashSocket.prototype.disposeInternal = function() {
+	cw.net.FlashSocket.superClass_.disposeInternal.call(this);
 	delete cw.net.FlashSocket.instances_[this.id_];
 	delete this.bridge_;
-	cw.net.FlashSocket.superClass_.disposeInternal.call(this);
 };
 
 
