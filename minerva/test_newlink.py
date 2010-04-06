@@ -1376,8 +1376,16 @@ class _BaseHelpers(object):
 		self.t = DummyTCPTransport()
 		firewall = DummyFirewall(self._clock, rejectAll, firewallActionTime)
 		factory = SocketFace(self._reactor, None, self.streamTracker, firewall)
+
+		class CustomTransport(DummyTCPTransport):
+			def write(self2, data):
+				frames, code = _strictGetNewFrames(self.parser, data)
+				self.gotFrames.extend(simplejson.loads(f) for f in frames)
+
+		self.t = CustomTransport()
 		self.transport = factory.buildProtocol(addr=None)
 		self.transport.makeConnection(self.t)
+
 		self._sendModeInitializer()
 
 
@@ -1685,26 +1693,29 @@ class _BaseSocketTransportTests(_BaseHelpers):
 	def test_frameCorruptionCallsTransportOffline(self):
 		"""
 		If client sends a corrupt frame (or corrupt JSON inside that frame)
-		on a transport that is attached to a Stream,
-		streamObj.transportOffline(transport) is called.
+		on a transport that is attached to a Stream, the transport is killed
+		with either C{tk_frame_corruption} or C{tk_intraframe_corruption},
+		and  streamObj.transportOffline(transport) is called.
 
 		This test was designed for Bencode, but it works for Int32 as well.
 		"""
-		for test in ('frame-corruption', 'intraframe-corruption'):
+		for corruptionType in (Fn.tk_frame_corruption, Fn.tk_intraframe_corruption):
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0]))
+			self._parseFrames()
+
 			stream = self.streamTracker.getStream('x'*26)
 
-			self._parseFrames()
 			self.aE([], self.gotFrames.getNew())
 			self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.getNew())
 
 			toSend = {
-				'frame-corruption': '1:xxxxxxxx',
-				'intraframe-corruption': self.parser.encode('{')}
-			self.transport.dataReceived(toSend[test])
+				Fn.tk_frame_corruption: '1:xxxxxxxx',
+				Fn.tk_intraframe_corruption: self.parser.encode('{')}
+			self.transport.dataReceived(toSend[corruptionType])
+			self._parseFrames()
 
-			self.aE([], self.gotFrames.getNew())
+			self.aE([[corruptionType], [Fn.you_close_it]], self.gotFrames.getNew())
 			self.aE([['transportOffline', self.transport]], stream.getNew())
 
 			self._resetStreamTracker()
