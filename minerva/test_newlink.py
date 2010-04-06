@@ -1989,13 +1989,13 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		self._parseFrames()
 		self.aE([], self.gotFrames)
-		self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.log)
+		self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.getNew())
 
 		self.transport.connectionLost(failure.Failure(ValueError(
 			"Just a made-up error in test_connectionLostWithStream")))
 
 		self.aE([], self.gotFrames)
-		self.aE([['notifyFinish'], ['transportOnline', self.transport], ['transportOffline', self.transport]], stream.log)
+		self.aE([['transportOffline', self.transport]], stream.getNew())
 
 
 	def test_gimmeBoxes(self):
@@ -2008,7 +2008,11 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self._parseFrames()
 			assert [] == self.gotFrames, self.gotFrames
 
-			self.aE([['notifyFinish'], ['transportOnline', self.transport], ['subscribeToBoxes', self.transport, succeedsTransport]], stream.log)
+			self.aE([
+				['notifyFinish'],
+				['transportOnline', self.transport],
+				['subscribeToBoxes', self.transport, succeedsTransport],
+			], stream.getNew())
 			self._resetStreamTracker()
 			self._reset()
 
@@ -2026,7 +2030,11 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self._parseFrames()
 			assert [] == self.gotFrames, self.gotFrames
 
-			self.aE([['notifyFinish'], ['transportOnline', self.transport], ['subscribeToBoxes', self.transport, succeedsTransport]], stream.log)
+			self.aE([
+				['notifyFinish'],
+				['transportOnline', self.transport],
+				['subscribeToBoxes', self.transport, succeedsTransport],
+			], stream.getNew())
 			self._resetStreamTracker()
 			self._reset()
 
@@ -2048,7 +2056,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				['notifyFinish'],
 				['transportOnline', self.transport],
 				['transportOffline', self.transport],
-			], stream.log)
+			], stream.getNew())
 			self._resetStreamTracker()
 			self._reset()
 
@@ -2064,31 +2072,28 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		stream = self.streamTracker.getStream('x'*26)
 
-		self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.log)
+		self.aE([
+			['notifyFinish'],
+			['transportOnline', self.transport]
+		], stream.getNew())
 		self._parseFrames()
 		self.aE([], self.gotFrames)
 
 		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"]}]]))
 
 		self.aE([
-			['notifyFinish'],
-			['transportOnline', self.transport],
 			['boxesReceived', self.transport, [(0, ["box0"])], expectedMemorySize],
 			['getSACK']],
-		stream.log)
+		stream.getNew())
 		self._parseFrames()
 		self.aE([[Fn.sack, 0, []]], self.gotFrames)
 
 		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"2": ["box2"]}]]))
 
 		self.aE([
-			['notifyFinish'],
-			['transportOnline', self.transport],
-			['boxesReceived', self.transport, [(0, ["box0"])], expectedMemorySize],
-			['getSACK'],
 			['boxesReceived', self.transport, [(2, ["box2"])], expectedMemorySize],
 			['getSACK']],
-		stream.log)
+		stream.getNew())
 		self._parseFrames()
 		self.aE([[Fn.sack, 0, []], [Fn.sack, 0, [2]]], self.gotFrames)
 
@@ -2113,7 +2118,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			['boxesReceived', self.transport, [(0, ["box0"])], expectedMemorySize], # TODO: maybe coalesce boxesReceived funcalls in the future
 			['boxesReceived', self.transport, [(2, ["box2"])], expectedMemorySize],
 			['getSACK']],
-		stream.log)
+		stream.getNew())
 		self._parseFrames()
 		self.aE([[Fn.sack, 0, [2]]], self.gotFrames)
 
@@ -2149,7 +2154,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			['notifyFinish'],
 			['transportOnline', self.transport],
 			['sackReceived', (0, [])],
-		], stream.log)
+		], stream.getNew())
 
 
 	def test_sackFrameWithSACKValid(self):
@@ -2168,7 +2173,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			['notifyFinish'],
 			['transportOnline', self.transport],
 			['sackReceived', (0, [2])],
-		], stream.log)
+		], stream.getNew())
 
 
 	def test_sackedUnsentBoxes(self):
@@ -2185,7 +2190,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			['transportOnline', self.transport],
 			['sackReceived', (1, [])],
 			['transportOffline', self.transport],
-		], stream.log)
+		], stream.getNew())
 
 
 	def test_sackFrameInvalidACKNumber(self):
@@ -2204,7 +2209,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				['notifyFinish'],
 				['transportOnline', self.transport],
 				['transportOffline', self.transport],
-			], stream.log)
+			], stream.getNew())
 
 			self._resetStreamTracker()
 			self._reset()
@@ -2231,7 +2236,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				['notifyFinish'],
 				['transportOnline', self.transport],
 				['transportOffline', self.transport],
-			], stream.log)
+			], stream.getNew())
 
 			self._resetStreamTracker()
 			self._reset()
@@ -2259,7 +2264,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				['notifyFinish'],
 				['transportOnline', self.transport],
 				['transportOffline', self.transport],
-			], stream.log)
+			], stream.getNew())
 
 			self._resetStreamTracker()
 			self._reset()
@@ -2283,7 +2288,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 					['transportOnline', self.transport],
 					['resetFromClient', reason, True],
 					['transportOffline', self.transport],
-				], stream.log)
+				], stream.getNew())
 
 				self._resetStreamTracker()
 				self._reset()
@@ -2328,9 +2333,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		stream = self.streamTracker.getStream('x'*26)
 
-		self.aE([
-			['notifyFinish'],
-		], stream.log)
+		self.aE([['notifyFinish']], stream.getNew())
 
 
 	def test_nothingHappensIfAuthedAfterTransportTerminated(self):
@@ -2365,16 +2368,12 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 				stream = self.streamTracker.getStream('x'*26)
 
-				self.aE([
-					['notifyFinish'],
-				], stream.log)
+				self.aE([['notifyFinish']], stream.getNew())
 
 				self._clock.advance(1.0)
 
 				self.aE(expectedFrames, self.gotFrames)
-				self.aE([
-					['notifyFinish'],
-				], stream.log)
+				self.aE([], stream.getNew())
 
 
 
@@ -2438,9 +2437,9 @@ class TransportProducerTests(unittest.TestCase):
 			self.transport.pauseProducing()
 			self.transport.resumeProducing()
 			self.transport.resumeProducing()
-			self.aE(
-				[['pauseProducing'], ['pauseProducing'], ['resumeProducing'], ['resumeProducing']],
-				producer1.log)
+			self.aE([
+				['pauseProducing'], ['pauseProducing'], ['resumeProducing'], ['resumeProducing']
+			], producer1.getNew())
 
 			# Unregister the streaming producer
 			self.transport.unregisterProducer()
@@ -2470,7 +2469,7 @@ class TransportProducerTests(unittest.TestCase):
 		orig = getState(self.transport)
 		self.transport.stopProducing()
 		self.aE(orig, getState(self.transport))
-		self.aE(	[], producer1.log)
+		self.aE(	[], producer1.getNew())
 
 
 	def test_transportPausedRegisterStreamingProducer(self):
@@ -2483,7 +2482,7 @@ class TransportProducerTests(unittest.TestCase):
 
 		producer1 = MockProducer()
 		self.transport.registerProducer(producer1, streaming=True)
-		self.aE([['pauseProducing']], producer1.log)
+		self.aE([['pauseProducing']], producer1.getNew())
 
 
 	def test_transportPausedRegisterPullProducer(self):
@@ -2496,12 +2495,13 @@ class TransportProducerTests(unittest.TestCase):
 
 		producer1 = MockProducer()
 		self.transport.registerProducer(producer1, streaming=False)
-		self.aE([], producer1.log)
+		self.aE([], producer1.getNew())
 
 
 	def test_cannotRegisterProducerIfRegistered(self):
 		"""
-		If a producer is already registered, registering any producer raises RuntimeError.
+		If a producer is already registered, registering any producer
+		raises L{RuntimeError}.
 		"""
 		producer1 = MockProducer()
 		self.transport.registerProducer(producer1, streaming=True)
@@ -2892,7 +2892,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			], parser0.gotFrames)
 
 			proto = list(self.protocolFactory.instances)[0]
-			self.aE([["streamReset", WhoReset.server_app, u'reset for testing in MockMinervaProtocol._callStuff']], proto.log[1:])
+			self.aE([
+				["streamReset", WhoReset.server_app, u'reset for testing in MockMinervaProtocol._callStuff']
+			], proto.getNew()[1:])
 
 
 	def test_sendBoxesUnderneathStreamStartedCall(self):# keywords: reentrant
@@ -2932,9 +2934,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			proto = list(self.protocolFactory.instances)[0]
 			if clientResetsImmediately:
-				self.aE([["streamReset", WhoReset.client_app, u'']], proto.log[1:])
+				self.aE([["streamReset", WhoReset.client_app, u'']], proto.getNew()[1:])
 			else:
-				self.aE([], proto.log[1:])
+				self.aE([], proto.getNew()[1:])
 
 
 	def test_sendBoxesAndResetUnderneathBoxesReceivedCall(self): # keywords: reentrant
@@ -2974,7 +2976,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self.aE([
 				["boxesReceived", [["box0"], ["box1"]]],
 				["streamReset", WhoReset.server_app, u'reset for testing in MockMinervaProtocol._callStuff']
-			], proto.log[1:])
+			], proto.getNew()[1:])
 
 
 	def test_sendBoxesUnderneathBoxesReceivedCall(self): # keywords: reentrant
@@ -3019,11 +3021,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				self.aE([
 					["boxesReceived", [["box0"], ["box1"]]],
 					["streamReset", WhoReset.client_app, u'']
-				], proto.log[1:])
+				], proto.getNew()[1:])
 			else:
 				self.aE([
 					["boxesReceived", [["box0"], ["box1"]]],
-				], proto.log[1:])
+				], proto.getNew()[1:])
 
 
 	def test_serverResetsUnderneathBoxesReceivedCall(self): # keywords: reentrant
@@ -3062,7 +3064,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self.aE([
 				["boxesReceived", [["box0"], ["box1"]]],
 				["streamReset", WhoReset.server_app, u'reset for testing in MockMinervaProtocol._callStuff']
-			], proto.log[1:])
+			], proto.getNew()[1:])
 
 
 # TODO: integration test that uses a real firewall (we had a regression based on this)
