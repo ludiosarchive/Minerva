@@ -33,6 +33,21 @@ class _MockMixin(object):
 
 
 
+class DumbLog(_MockMixin):
+
+	def __init__(self):
+		self.log = []
+
+
+	def append(self, item):
+		return self.log.append(item)
+
+
+	def extend(self, items):
+		return self.log.extend(items)
+
+
+
 class FakeReactor(_MockMixin):
 	# TODO	: implements() IReactorCore interface? or whatever addSystemEventTrigger is part of?
 
