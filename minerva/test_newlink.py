@@ -147,9 +147,7 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t)
 		i = list(factory.instances)[0]
 
-		self.aE([
-			['streamStarted', s],
-		], i.log)
+		self.aE([['streamStarted', s]], i.getNew())
 
 
 	def test_boxesReceived(self):
@@ -164,15 +162,10 @@ class StreamTests(unittest.TestCase):
 
 		s.boxesReceived(t, [(1, ['box1'])], 3)
 		i = list(factory.instances)[0]
-		self.aE([
-			['streamStarted', s],
-		], i.log)
+		self.aE([['streamStarted', s]], i.getNew())
 
 		s.boxesReceived(t, [(0, ['box0'])], 3)
-		self.aE([
-			['streamStarted', s],
-			['boxesReceived', [['box0'], ['box1']]],
-		], i.log)
+		self.aE([['boxesReceived', [['box0'], ['box1']]]], i.getNew())
 
 
 	def test_exhaustedIncomingResetsBecauseTooManyBoxes(self):
@@ -192,7 +185,7 @@ class StreamTests(unittest.TestCase):
 		# box #0 is never given, so it cannot deliver any of them
 
 		s.boxesReceived(t, manyBoxes, 1) # wow, 5001 boxes take just one byte
-		self.aE([['writeReset', u'resources exhausted', False]], t.log)
+		self.aE([['writeReset', u'resources exhausted', False]], t.getNew())
 
 
 	def test_exhaustedIncomingResetsBecauseTooManyBytes(self):
@@ -211,7 +204,7 @@ class StreamTests(unittest.TestCase):
 		# box #0 is never given, so it cannot deliver any of them
 
 		s.boxesReceived(t, notManyBoxes, 4*1024*1024 + 1)
-		self.aE([['writeReset', u'resources exhausted', False]], t.log)
+		self.aE([['writeReset', u'resources exhausted', False]], t.getNew())
 
 
 	def test_exhaustedIncomingTooManyBoxesButResetsWithApplicationReason(self): # keywords: reentrant
@@ -238,7 +231,7 @@ class StreamTests(unittest.TestCase):
 		assert len(manyBoxes) == 5001 + 1
 
 		s.boxesReceived(t, manyBoxes, 4*1024*1024 + 1)
-		self.aE([['writeReset', u'reset for testing in MockMinervaProtocol._callStuff', True]], t.log)
+		self.aE([['writeReset', u'reset for testing in MockMinervaProtocol._callStuff', True]], t.getNew())
 
 
 	def test_exhaustedIncomingTooManyBytesButResetsWithApplicationReason(self): # keywords: reentrant
@@ -262,7 +255,7 @@ class StreamTests(unittest.TestCase):
 		notManyBoxes = [(0, ['box0']), (2, 'x')]
 
 		s.boxesReceived(t, notManyBoxes, 4*1024*1024 + 1)
-		self.aE([['writeReset', u'reset for testing in MockMinervaProtocol._callStuff', True]], t.log)
+		self.aE([['writeReset', u'reset for testing in MockMinervaProtocol._callStuff', True]], t.getNew())
 
 
 	def test_sendBoxesAndActiveStreams(self):
@@ -284,14 +277,12 @@ class StreamTests(unittest.TestCase):
 			s.sendBoxes([['box0'], ['box1']])
 
 			# Boxes don't reach the transport because the transport isn't primary yet
-			self.aE([], t1.log)
+			self.aE([], t1.getNew())
 
 			# Make it primary
 			s.subscribeToBoxes(t1, succeedsTransport=None)
 
-			self.aE([
-				['writeBoxes', s.queue, None],
-			], t1.log)
+			self.aE([['writeBoxes', s.queue, None]], t1.getNew())
 
 			# Now connect a new transport
 			t2 = DummySocketLikeTransport()
@@ -299,23 +290,14 @@ class StreamTests(unittest.TestCase):
 
 			s.sendBoxes([['box2'], ['box3']])
 			# box2 and box3 still went to the old transport because t2 isn't the primary transport
-			self.aE([
-				['writeBoxes', s.queue, None],
-				['writeBoxes', s.queue, None],
-			], t1.log)
-			self.aE([], t2.log)
+			self.aE([['writeBoxes', s.queue, None]], t1.getNew())
+			self.aE([], t2.getNew())
 
 			# Now make t2 primary
 			s.subscribeToBoxes(t2, succeedsTransport=succeedsTransportArgFor2ndTransport)
 
-			self.aE([
-				['writeBoxes', s.queue, None],
-				['writeBoxes', s.queue, None],
-				['closeGently'],
-			], t1.log)
-			self.aE([
-				['writeBoxes', s.queue, None],
-			], t2.log)
+			self.aE([['closeGently']], t1.getNew())
+			self.aE([['writeBoxes', s.queue, None]], t2.getNew())
 
 			# Just to exercise transportOffline
 			s.transportOffline(t1)
@@ -345,14 +327,12 @@ class StreamTests(unittest.TestCase):
 		s.sendBoxes([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
 
 		# Boxes don't reach the transport because the transport isn't primary yet
-		self.aE([], t1.log)
+		self.aE([], t1.getNew())
 
 		# Make it primary
 		s.subscribeToBoxes(t1, succeedsTransport=None)
 
-		self.aE([
-			['writeBoxes', s.queue, None],
-		], t1.log)
+		self.aE([['writeBoxes', s.queue, None]], t1.getNew())
 
 		# Now connect a new transport and make it primary
 		t2 = DummySocketLikeTransport()
@@ -360,18 +340,13 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t2)
 		s.subscribeToBoxes(t2, succeedsTransport=30)
 
-		self.aE([
-			['writeBoxes', s.queue, None],
-			['closeGently'],
-		], t1.log)
+		self.aE([['closeGently']], t1.getNew())
 		# Because there are no new boxes yet, writeBoxes should not be called yet
-		self.aE([], t2.log)
+		self.aE([], t2.getNew())
 
 		s.sendBoxes([['box5'], ['box6']])
 
-		self.aE([
-			['writeBoxes', s.queue, 5],
-		], t2.log)
+		self.aE([['writeBoxes', s.queue, 5]], t2.getNew())
 
 
 		# Oh no... client actually lost box3 and box4, and it sends a correct SACK.
@@ -379,10 +354,7 @@ class StreamTests(unittest.TestCase):
 
 		s.sackReceived((2, []))
 		assert len(s.queue) == 4, s.queue # box3, box4, box5, box6
-		self.aE([
-			['writeBoxes', s.queue, 5],
-			['writeBoxes', s.queue, None],
-		], t2.log)
+		self.aE([['writeBoxes', s.queue, None]], t2.getNew())
 
 		# Just to exercise transportOffline
 		s.transportOffline(t1)
@@ -401,7 +373,7 @@ class StreamTests(unittest.TestCase):
 		s.sendBoxes([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
 
 		# Boxes don't reach the transport because the transport isn't primary yet
-		self.aE([], t1.log)
+		self.aE([], t1.getNew())
 
 		t1.pauseProducing() # just a trick to make t1.writeBoxes `return' early when called
 
@@ -409,9 +381,7 @@ class StreamTests(unittest.TestCase):
 		s.subscribeToBoxes(t1, succeedsTransport=None)
 
 		# It was called, though it never actually writes to the wire.
-		self.aE([
-			['writeBoxes', s.queue, None],
-		], t1.log)
+		self.aE([['writeBoxes', s.queue, None]], t1.getNew())
 		assert t1.lastBoxSent == -1
 
 		# Now connect a new transport and make it primary
@@ -420,14 +390,9 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t2)
 		s.subscribeToBoxes(t2, succeedsTransport=30)
 
-		self.aE([
-			['writeBoxes', s.queue, None],
-			['closeGently'],
-		], t1.log)
+		self.aE([['closeGently']], t1.getNew())
 		# Because nothing was really written to the first transport, this should already have a write.
-		self.aE([
-			['writeBoxes', s.queue, None],
-		], t2.log)
+		self.aE([['writeBoxes', s.queue, None]], t2.getNew())
 
 		s.sendBoxes([['box5'], ['box6']])
 
@@ -456,14 +421,12 @@ class StreamTests(unittest.TestCase):
 			s.sendBoxes([['box0'], ['box1']])
 
 			# Boxes don't reach the transport because the transport isn't primary yet
-			self.aE([], t1.log)
+			self.aE([], t1.getNew())
 
 			# Make it primary
 			s.subscribeToBoxes(t1, succeedsTransport=9999)
 
-			self.aE([
-				['writeBoxes', s.queue, None],
-			], t1.log)
+			self.aE([['writeBoxes', s.queue, None]], t1.getNew())
 
 
 	def test_getSACK(self):
@@ -552,8 +515,8 @@ class StreamTests(unittest.TestCase):
 		self.aE(False, s.disconnected)
 		s.reset(u'the reason')
 		self.aE(True, s.disconnected)
-		self.aE([["writeReset", u'the reason', True]], t1.log)
-		self.aE([["writeReset", u'the reason', True]], t2.log)
+		self.aE([["writeReset", u'the reason', True]], t1.getNew())
+		self.aE([["writeReset", u'the reason', True]], t2.getNew())
 
 
 	def test_internalResetCallsAllTransports(self):
@@ -571,8 +534,8 @@ class StreamTests(unittest.TestCase):
 		self.aE(False, s.disconnected)
 		s._internalReset(u'the reason')
 		self.aE(True, s.disconnected)
-		self.aE([["writeReset", u'the reason', False]], t1.log)
-		self.aE([["writeReset", u'the reason', False]], t2.log)
+		self.aE([["writeReset", u'the reason', False]], t1.getNew())
+		self.aE([["writeReset", u'the reason', False]], t2.getNew())
 
 
 	def test_cannotResetDisconnectedStream(self):
@@ -625,11 +588,11 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t1)
 		s.subscribeToBoxes(t1, None)
 		s.sendBoxes([['box0']])
-		self.aE([['writeBoxes', s.queue, None]], t1.log)
+		self.aE([['writeBoxes', s.queue, None]], t1.getNew())
 		s.sendBoxes([])
-		self.aE([['writeBoxes', s.queue, None]], t1.log)
+		self.aE([], t1.getNew())
 		s.sendBoxes(None) # implementation detail, hopefully no one relies on this
-		self.aE([['writeBoxes', s.queue, None]], t1.log)
+		self.aE([], t1.getNew())
 
 
 	def test_resetFromClient(self):
@@ -651,10 +614,10 @@ class StreamTests(unittest.TestCase):
 
 			i = list(factory.instances)[0]
 			who = WhoReset.client_app if applicationLevel else WhoReset.client_minerva
-			self.aE([["streamStarted", s], ["streamReset", who, u'the reason\uffff']], i.log)
+			self.aE([["streamStarted", s], ["streamReset", who, u'the reason\uffff']], i.getNew())
 
-			self.aE([["closeGently"]], t1.log)
-			self.aE([["closeGently"]], t2.log)
+			self.aE([["closeGently"]], t1.getNew())
+			self.aE([["closeGently"]], t2.getNew())
 
 
 	def test_registerUnregisterProducerWithNoActiveTransport(self):
@@ -706,7 +669,7 @@ class StreamTests(unittest.TestCase):
 			s.resumeProducing()
 			self.aE(
 				[['pauseProducing'], ['pauseProducing'], ['resumeProducing'], ['resumeProducing']],
-				producer1.log)
+				producer1.getNew())
 
 			# Unregister the streaming producer
 			s.unregisterProducer()
@@ -730,20 +693,20 @@ class StreamTests(unittest.TestCase):
 
 		producer1 = MockProducer()
 		s.registerProducer(producer1, streaming=True)
-		self.aE([['pauseProducing']], producer1.log)
+		self.aE([['pauseProducing']], producer1.getNew())
 
 		# ... and it still happens if a completely new producer is registered
 		s.unregisterProducer()
 		producer2 = MockProducer()
 		s.registerProducer(producer2, streaming=True)
-		self.aE([['pauseProducing']], producer2.log)
+		self.aE([['pauseProducing']], producer2.getNew())
 
 		# ... stops happening (for push producers) if the Stream is unpaused
 		s.resumeProducing()
 		s.unregisterProducer()
 		producer3 = MockProducer()
 		s.registerProducer(producer3, streaming=True)
-		self.aE([], producer3.log)
+		self.aE([], producer3.getNew())
 
 
 	def test_pausedStreamDoesNotPauseNewPullProducer(self):
@@ -759,7 +722,7 @@ class StreamTests(unittest.TestCase):
 		s.unregisterProducer()
 		pullProducer = MockProducer()
 		s.registerProducer(pullProducer, streaming=False)
-		self.aE([], pullProducer.log)
+		self.aE([], pullProducer.getNew())
 
 
 	def test_lackOfPrimaryTransportPausesPushProducer(self):
@@ -775,23 +738,16 @@ class StreamTests(unittest.TestCase):
 		s.registerProducer(producer1, streaming=True)
 		self.aE([
 			['pauseProducing'],
-		], producer1.log)
+		], producer1.getNew())
 
 		s.transportOnline(t1)
 		s.subscribeToBoxes(t1, succeedsTransport=None)
 
-		self.aE([
-			['pauseProducing'],
-			['resumeProducing'],
-		], producer1.log)
+		self.aE([['resumeProducing']], producer1.getNew())
 
 		s.transportOffline(t1)
 
-		self.aE([
-			['pauseProducing'],
-			['resumeProducing'],
-			['pauseProducing'],
-		], producer1.log)
+		self.aE([['pauseProducing']], producer1.getNew())
 
 
 	def test_lackOfPrimaryTransportPausesPushProducer2(self):
@@ -814,13 +770,13 @@ class StreamTests(unittest.TestCase):
 
 		# Push producer
 		s.registerProducer(producer1, streaming=True)
-		self.aE([['pauseProducing']], producer1.log)
+		self.aE([['pauseProducing']], producer1.getNew())
 
 		s.unregisterProducer()
 		# Pull producer
 		producer2 = MockProducer()
 		s.registerProducer(producer2, streaming=False)
-		self.aE([], producer2.log)
+		self.aE([], producer2.getNew())
 
 
 	def test_newPrimaryTransportDoesNotPauseProducer(self):
@@ -842,7 +798,7 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t2)
 		s.subscribeToBoxes(t2, succeedsTransport=None)
 
-		self.aE([], producer1.log)
+		self.aE([], producer1.getNew())
 
 
 	def test_newPrimaryTransportResumesIfNecessary(self):
@@ -859,13 +815,13 @@ class StreamTests(unittest.TestCase):
 		s.registerProducer(producer1, streaming=True)
 		s.pauseProducing() # pretend that primary transport t1 called this
 
-		self.aE([['pauseProducing']], producer1.log)
+		self.aE([['pauseProducing']], producer1.getNew())
 
 		t2 = DummySocketLikeTransport()
 		s.transportOnline(t2)
 		s.subscribeToBoxes(t2, succeedsTransport=None)
 
-		self.aE([['pauseProducing'], ['resumeProducing']], producer1.log)
+		self.aE([['resumeProducing']], producer1.getNew())
 
 
 	def test_newPrimaryTransportResumesAndLeavesGoodState(self):
@@ -882,27 +838,27 @@ class StreamTests(unittest.TestCase):
 		producer1 = MockProducer()
 		s.registerProducer(producer1, streaming=True)
 
-		self.aE([], producer1.log)
+		self.aE([], producer1.getNew())
 
 		s.pauseProducing() # pretend that t1 called this
 
-		self.aE([['pauseProducing']], producer1.log)
+		self.aE([['pauseProducing']], producer1.getNew())
 
 		t2 = DummySocketLikeTransport()
 		s.transportOnline(t2)
 		s.subscribeToBoxes(t2, succeedsTransport=None)
 
-		self.aE([['registerProducer', s, True], ['unregisterProducer'], ['closeGently']], t1.log)
-		self.aE([['registerProducer', s, True]], t2.log)
-		self.aE([['pauseProducing'], ['resumeProducing']], producer1.log)
+		self.aE([['registerProducer', s, True], ['unregisterProducer'], ['closeGently']], t1.getNew())
+		self.aE([['registerProducer', s, True]], t2.getNew())
+		self.aE([['resumeProducing']], producer1.getNew())
 
 		t3 = DummySocketLikeTransport()
 		s.transportOnline(t3)
 		s.subscribeToBoxes(t3, succeedsTransport=None)
 
-		self.aE([['registerProducer', s, True], ['unregisterProducer'], ['closeGently']], t2.log)
-		self.aE([['registerProducer', s, True]], t3.log)
-		self.aE([['pauseProducing'], ['resumeProducing']], producer1.log)
+		self.aE([['unregisterProducer'], ['closeGently']], t2.getNew())
+		self.aE([['registerProducer', s, True]], t3.getNew())
+		self.aE([], producer1.getNew())
 
 
 	def test_lackOfTransportsIgnoresPullProducer(self):
@@ -920,7 +876,7 @@ class StreamTests(unittest.TestCase):
 
 		s.transportOffline(t1)
 
-		self.aE([], producer1.log)
+		self.aE([], producer1.getNew())
 
 
 	def test_transportOfflineOnlyPausesIfTransportIsPrimary(self):
@@ -936,7 +892,7 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t2)
 		s.transportOffline(t2)
 
-		self.aE([], producer1.log)
+		self.aE([], producer1.getNew())
 
 
 	def test_registerUnregisterPushProducerThenSubscribe(self):
@@ -966,25 +922,16 @@ class StreamTests(unittest.TestCase):
 			s.transportOnline(t1)
 			s.subscribeToBoxes(t1, succeedsTransport=None)
 
-			self.aE([
-				['registerProducer', s, streaming],
-			], t1.log)
+			self.aE([['registerProducer', s, streaming]], t1.getNew())
 
 			s.unregisterProducer()
 
-			self.aE([
-				['registerProducer', s, streaming],
-				['unregisterProducer'],
-			], t1.log)
+			self.aE([['unregisterProducer']], t1.getNew())
 
 			# Now attach again
 			s.registerProducer(producer1, streaming=streaming)
 
-			self.aE([
-				['registerProducer', s, streaming],
-				['unregisterProducer'],
-				['registerProducer', s, streaming],
-			], t1.log)
+			self.aE([['registerProducer', s, streaming]], t1.getNew())
 
 
 	def test_producerRegstrationWithNewActiveS2CTransport(self):
@@ -1008,11 +955,11 @@ class StreamTests(unittest.TestCase):
 				['registerProducer', s, streaming],
 				['unregisterProducer'],
 				['closeGently'],
-			], t1.log)
+			], t1.getNew())
 
 			self.aE([
 				['registerProducer', s, streaming],
-			], t2.log)
+			], t2.getNew())
 
 
 	def test_transportOfflineEffectOnTransports(self):
@@ -1030,13 +977,13 @@ class StreamTests(unittest.TestCase):
 		producer2 = MockProducer()
 		s.registerProducer(producer2, streaming=True)
 
-		self.aE([['registerProducer', s, True], ['unregisterProducer']], t1.log)
+		self.aE([['registerProducer', s, True], ['unregisterProducer']], t1.getNew())
 
 		t2 = DummySocketLikeTransport() # not the primary transport
 		s.transportOnline(t2) # not primary yet
-		self.aE([], t2.log)
+		self.aE([], t2.getNew())
 		s.subscribeToBoxes(t2, succeedsTransport=None)
-		self.aE([['registerProducer', s, True]], t2.log)
+		self.aE([['registerProducer', s, True]], t2.getNew())
 
 
 
@@ -1058,7 +1005,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		st = StreamTracker(reactor, None, None)
 		o = MockObserver()
 		st.observeStreams(o)
-		self.aE([], o.log)
+		self.aE([], o.getNew())
 
 
 	def test_observeStreamsTwiceOkay(self):
@@ -1072,7 +1019,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		st.observeStreams(o)
 		st.observeStreams(o)
 		stream = st.buildStream('some fake id')
-		self.aE([['streamUp', stream]], o.log)
+		self.aE([['streamUp', stream]], o.getNew())
 
 
 	def test_observeAndUnobserve(self):
@@ -1084,12 +1031,12 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		o = MockObserver()
 		st.observeStreams(o)
 		stream = st.buildStream('some fake id')
-		self.aE([['streamUp', stream]], o.log)
+		self.aE([['streamUp', stream]], o.getNew())
 
 		st.unobserveStreams(o)
 		# Since it's not observing, it shouldn't get any notification of this new Stream
 		_anotherStream = st.buildStream('another fake id')
-		self.aE([['streamUp', stream]], o.log) # same as before
+		self.aE([], o.getNew())
 
 
 	def test_unobserveUnknownRaisesError(self):
@@ -1133,7 +1080,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		stream = st.buildStream('some fake id')
 
 		for o in observers:
-			self.aE([['streamUp', stream]], o.log)
+			self.aE([['streamUp', stream]], o.getNew())
 
 
 	def test_unobserveRemovesCorrectObserver(self):
@@ -1167,10 +1114,10 @@ class StreamTrackerObserverTests(unittest.TestCase):
 
 		# 2000 observers got the message
 		for o in irrelevantObservers:
-			self.aE([['streamUp', stream]], o.log)
+			self.aE([['streamUp', stream]], o.getNew())
 
 		# the one that was removed did not
-		self.aE([], toRemove.log)
+		self.aE([], toRemove.getNew())
 
 
 	def test_streamDown_calledWhenStreamDone(self):
@@ -1182,10 +1129,10 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		o = MockObserver()
 		st.observeStreams(o)
 		stream = st.buildStream('some fake id')
-		self.aE([['streamUp', stream]], o.log)
+		self.aE([['streamUp', stream]], o.getNew())
 
 		stream._pretendFinish()
-		self.aE([['streamUp', stream], ['streamDown', stream]], o.log)
+		self.aE([['streamDown', stream]], o.getNew())
 
 
 	def test_brokenObserverExceptionBubblesUp(self):
@@ -1748,7 +1695,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 			self._parseFrames()
 			self.aE([], self.gotFrames)
-			self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.log)
+			self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.getNew())
 
 			toSend = {
 				'frame-corruption': '1:xxxxxxxx',
@@ -1756,7 +1703,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self.transport.dataReceived(toSend[test])
 
 			self.aE([], self.gotFrames)
-			self.aE([['notifyFinish'], ['transportOnline', self.transport], ['transportOffline', self.transport]], stream.log)
+			self.aE([['transportOffline', self.transport]], stream.getNew())
 
 			self._resetStreamTracker()
 			self._reset()
