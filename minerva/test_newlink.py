@@ -35,12 +35,18 @@ from minerva.test_decoders import diceString
 
 Fn = Frame.names
 
-nan = simplejson.loads('NaN') # this always works, but float('nan') => 0 in Python ICC builds (maybe only with floating point optimizations?)
+# simplejson.loads('NaN') always works, but float('nan') => 0
+# in Python ICC builds with floating point optimizations
+nan = simplejson.loads('NaN')
 inf = simplejson.loads('Infinity')
 neginf = simplejson.loads('-Infinity')
 
 
 def _strictGetNewFrames(parser, data):
+	"""
+	Wrapper function for L{parser.getNewFrames} that checks the code
+	and throws an error if C{code != OK}.
+	"""
 	out, code = parser.getNewFrames(data)
 	if code != OK:
 		raise RuntimeError("Parse error; code was %r" % (code,))
@@ -48,8 +54,11 @@ def _strictGetNewFrames(parser, data):
 
 
 class FrameTests(unittest.TestCase):
-
+	"""
+	Tests for L{newlink.Frame}
+	"""
 	def test_ok(self):
+		# No exception raised
 		f = Frame([Fn.box, ["box_payload"]])
 		self.aE('box', f.getType())
 
@@ -80,7 +89,9 @@ class FrameTests(unittest.TestCase):
 
 
 class StreamTests(unittest.TestCase):
-
+	"""
+	Tests for L{newlink.Stream}
+	"""
 	def test_implements(self):
 		s = Stream(None, 'some fake id', None)
 		verify.verifyObject(ISimpleConsumer, s)
@@ -982,7 +993,8 @@ class StreamTests(unittest.TestCase):
 
 
 
-class StreamTrackerWithMockStream(StreamTracker): # Need to use a subclass to avoid __slots__ problem
+# Need to use a subclass to avoid __slots__ problem
+class StreamTrackerWithMockStream(StreamTracker):
 	stream = MockStream
 
 
