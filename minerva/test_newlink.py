@@ -2714,9 +2714,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		transport0.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"]}]]))
 		self.aE([[Fn.sack, 0, []]], parser0.gotFrames.getNew())
 
+		# 0 was already received, 1 was not.
 		transport0.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"], "1": ["box1"]}]]))
 		self.aE([[Fn.sack, 1, []]], parser0.gotFrames.getNew())
 
+		# 0 and 1 were already received, 2 was not.
 		transport0.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"], "1": ["box1"], "2": ["box2"]}]]))
 		self.aE([[Fn.sack, 2, []]], parser0.gotFrames.getNew())
 
@@ -2742,7 +2744,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		stream = self.streamTracker.getStream('x'*26)
 
-		transport0.dataReceived(self.serializeFrames([[Fn.reset, "reason", True], [Fn.reset, "x", False], [9999, "whatever"]]))
+		transport0.dataReceived(self.serializeFrames([
+			[Fn.reset, "reason", True], [Fn.reset, "x", False], [9999, "whatever"]]))
 
 		self.aE([[Fn.you_close_it]], parser0.gotFrames.getNew())
 
@@ -2759,7 +2762,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		transport0, parser0 = self._makeTransport()
 		frame0 = self._makeValidHelloFrame()
 
-		frames = [frame0, [Fn.gimme_boxes, None], [Fn.boxes, {"0": ["box0"], "1": ["box1"]}], [Fn.reset, u'', True]]
+		frames = [
+			frame0,
+			[Fn.gimme_boxes, None],
+			[Fn.boxes, {"0": ["box0"], "1": ["box1"]}], [Fn.reset, u'', True]
+		]
 		transport0.dataReceived(self.serializeFrames(frames))
 
 		self.aE([[Fn.sack, 1, []], [Fn.you_close_it]], parser0.gotFrames.getNew())
@@ -2820,11 +2827,14 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			frames = [frame0, [Fn.gimme_boxes, None]]
 			if clientResetsImmediately:
-				frames.append([Fn.reset, u'', True]) # Surprise! Client wants to reset very immediately too.
+				# Surprise! Client wants to reset very immediately too.
+				frames.append([Fn.reset, u'', True])
 			transport0.dataReceived(self.serializeFrames(frames))
 
-			# In the implementation, streamStarted is called when the first transport attaches (i.e. before gimme_boxes).
-			# If the protocol calls sendBoxes and then reset, the boxes always get lost because no transport was primary.
+			# In the implementation, streamStarted is called when the
+			# first transport attaches (i.e. before gimme_boxes).
+			# If the protocol calls sendBoxes and then reset, the boxes
+			# always get lost because no transport was primary.
 
 			self.aE([
 #				[Fn.seqnum, 0],
@@ -2861,7 +2871,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			frames = [frame0, [Fn.gimme_boxes, None]]
 			if clientResetsImmediately:
-				frames.append([Fn.reset, u'', True]) # Surprise! Client wants to reset very immediately too.
+				# Surprise! Client wants to reset very immediately too.
+				frames.append([Fn.reset, u'', True])
 			transport0.dataReceived(self.serializeFrames(frames))
 
 			expected = [
@@ -2901,9 +2912,14 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			transport0, parser0 = self._makeTransport()
 			frame0 = self._makeValidHelloFrame()
 
-			frames = [frame0, [Fn.gimme_boxes, None], [Fn.boxes, {"0": ["box0"], "1": ["box1"]}]]
+			frames = [
+				frame0,
+				[Fn.gimme_boxes, None],
+				[Fn.boxes, {"0": ["box0"], "1": ["box1"]}]
+			]
 			if clientResetsImmediately:
-				frames.append([Fn.reset, u'', True]) # Surprise! Client wants to reset very immediately too.
+				# Surprise! Client wants to reset very immediately too.
+				frames.append([Fn.reset, u'', True])
 			transport0.dataReceived(self.serializeFrames(frames))
 
 			self.aE([
@@ -2941,10 +2957,14 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			transport0, parser0 = self._makeTransport()
 			frame0 = self._makeValidHelloFrame()
 
-			frames = [frame0, [Fn.gimme_boxes, None], [Fn.boxes, {"0": ["box0"], "1": ["box1"]}]]
+			frames = [
+				frame0,
+				[Fn.gimme_boxes, None],
+				[Fn.boxes, {"0": ["box0"], "1": ["box1"]}]
+			]
 			if clientResetsImmediately:
-				frames.append([Fn.reset, u'', True])
 				# Surprise! Client wants to reset very immediately too.
+				frames.append([Fn.reset, u'', True])
 			transport0.dataReceived(self.serializeFrames(frames))
 
 			expected = [
@@ -2990,7 +3010,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			transport0, parser0 = self._makeTransport()
 			frame0 = self._makeValidHelloFrame()
 
-			frames = [frame0, [Fn.gimme_boxes, None], [Fn.boxes, {"0": ["box0"], "1": ["box1"]}], [Fn.boxes, {"2": ["box2"]}]]
+			frames = [
+				frame0,
+				[Fn.gimme_boxes, None],
+				[Fn.boxes, {"0": ["box0"], "1": ["box1"]}], [Fn.boxes, {"2": ["box2"]}]
+			]
 			if clientResetsImmediately:
 				# Surprise! Client wants to reset very immediately too. But this is completely ignored.
 				frames.append([Fn.reset, u"client's reason", True])
