@@ -1395,21 +1395,6 @@ class _BaseHelpers(object):
 		return frame
 
 
-	def _parseFrames(self, transport=None):
-		"""
-		Feed the received bytes into the parser, and append complete
-		frames to self.gotFrames
-
-		If a partial Minerva frame is at the end of the DummyTCPTransport buffer,
-		calling this WILL LOSE the partial frame.
-		"""
-		if transport is None:
-			transport = self.t
-		frames, code = _strictGetNewFrames(self.parser, transport.value())
-		self.gotFrames.extend(simplejson.loads(f) for f in frames)
-		transport.clear()
-
-
 
 # TODO: generalize many of these tests and test them for the HTTP face as well.
 
@@ -1441,7 +1426,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1']])
 		self.transport.writeBoxes(q, start=None)
-		self._parseFrames()
 		self.aE([
 			[Fn.seqnum, 0],
 			[Fn.box, ['box0']],
@@ -1459,7 +1443,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1'], ['box2']])
 		self.transport.writeBoxes(q, start=1)
-		self._parseFrames()
 		self.aE([
 			[Fn.seqnum, 1],
 			[Fn.box, ['box1']],
@@ -1484,7 +1467,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		box1 = ['c'*int(0.6*1024*1024)]
 		q.extend([box0, box1])
 		self.transport.writeBoxes(q, start=None)
-		self._parseFrames()
 		self.aE([
 			[Fn.seqnum, 0],
 			[Fn.box, box0],
@@ -1503,12 +1485,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		q.extend([['box0'], ['box1']])
 		self.transport.writeBoxes(q, start=None)
 		self.transport.writeBoxes(q, start=None)
-		self._parseFrames()
 		self.aE([[Fn.seqnum, 0], [Fn.box, ['box0']], [Fn.box, ['box1']]], self.gotFrames.getNew())
 
 		q.extend([['box2']])
 		self.transport.writeBoxes(q, start=None)
-		self._parseFrames()
 		self.aE([[Fn.box, ['box2']]], self.gotFrames.getNew())
 
 
@@ -1530,7 +1510,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.transport.writeBoxes(q, start=3) # doing it again is pretty much a no-op
 		self.transport.writeBoxes(q, start=None)
 		self.transport.writeBoxes(q, start=None) # doing it again is pretty much a no-op
-		self._parseFrames()
 		self.aE([
 			[Fn.seqnum, 3],
 			[Fn.box, ['box3']],
@@ -1558,7 +1537,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.transport.writeBoxes(q, start=3) # doing it again is pretty much a no-op
 		self.transport.writeBoxes(q, start=1)
 		self.transport.writeBoxes(q, start=1) # doing it again is pretty much a no-op
-		self._parseFrames()
 		self.aE([
 			[Fn.seqnum, 3],
 			[Fn.box, ['box3']],
@@ -1602,7 +1580,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frames or something), it will silently ignore any data it receives.
 		"""
 		self.transport.dataReceived(self.serializeFrames([[9999]]))
-		self._parseFrames()
 		self.aE([], self.gotFrames.getNew())
 		self.aE(False, self.t.disconnecting)
 
@@ -1611,7 +1588,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		self.transport.dataReceived(self.serializeFrames([[9999]]))
-		self._parseFrames()
 		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
 		self._testExtraDataReceivedIgnored()
 
@@ -1633,7 +1609,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0]))
 			self.transport.dataReceived(self.serializeFrames([[frameType]]))
-			self._parseFrames()
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
 			self._testExtraDataReceivedIgnored()
 
@@ -1647,7 +1622,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		# a completely valid frame
 		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"]}]]))
-		self._parseFrames()
 		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
 
 
@@ -1659,7 +1633,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		This test was designed for Bencode, but it works for Int32 as well.
 		"""
 		self.transport.dataReceived('1:xxxxxxxx')
-		self._parseFrames()
 		self.aE([[Fn.tk_frame_corruption], [Fn.you_close_it]], self.gotFrames.getNew())
 		self._testExtraDataReceivedIgnored()
 
@@ -1673,7 +1646,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		# TODO: no early detection of "too long" for WebSocket or HTTP. Only run for Bencode and int32?
 		self.transport.dataReceived('%d:' % (1024*1024 + 1,))
-		self._parseFrames()
 		self.aE([[Fn.tk_frame_corruption], [Fn.you_close_it]], self.gotFrames.getNew())
 		self._testExtraDataReceivedIgnored()
 
@@ -1685,7 +1657,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		C{tk_intraframe_corruption}.
 		"""
 		self.transport.dataReceived(self.parser.encode('{')) # incomplete JSON
-		self._parseFrames()
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], self.gotFrames.getNew())
 		self._testExtraDataReceivedIgnored()
 
@@ -1702,7 +1673,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		for corruptionType in (Fn.tk_frame_corruption, Fn.tk_intraframe_corruption):
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0]))
-			self._parseFrames()
 
 			stream = self.streamTracker.getStream('x'*26)
 
@@ -1713,7 +1683,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				Fn.tk_frame_corruption: '1:xxxxxxxx',
 				Fn.tk_intraframe_corruption: self.parser.encode('{')}
 			self.transport.dataReceived(toSend[corruptionType])
-			self._parseFrames()
 
 			self.aE([[corruptionType], [Fn.you_close_it]], self.gotFrames.getNew())
 			self.aE([['transportOffline', self.transport]], stream.getNew())
@@ -1725,7 +1694,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 	def test_intraFrameCorruptionTrailingGarbage(self):
 		self.transport.dataReceived(self.parser.encode('{}x')) # complete JSON but with trailing garbage
 
-		self._parseFrames()
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], self.gotFrames.getNew())
 		self._testExtraDataReceivedIgnored()
 
@@ -1736,7 +1704,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		If this test fails, you need to install the patched simplejson."""
 		nestingLimit = 32
 		self.transport.dataReceived(self.serializeFrames([eval('{"":' * nestingLimit + '1' + '}' * nestingLimit)]))
-		self._parseFrames()
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], self.gotFrames.getNew())
 		self._testExtraDataReceivedIgnored()
 
@@ -1747,7 +1714,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		If this test fails, you need to install the patched simplejson."""
 		nestingLimit = 32
 		self.transport.dataReceived(self.serializeFrames([eval('[' * nestingLimit + '1' + ']' * nestingLimit)]))
-		self._parseFrames()
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], self.gotFrames.getNew())
 		self._testExtraDataReceivedIgnored()
 
@@ -1762,7 +1728,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self.transport.dataReceived(self.serializeFrames([frame0]))
 			self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": [bad]}]]))
 
-			self._parseFrames()
 			self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], self.gotFrames.getNew())
 
 			self._resetStreamTracker()
@@ -1772,7 +1737,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 	def test_validHello(self):
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
-		self._parseFrames()
 		self.aE([], self.gotFrames.getNew())
 
 
@@ -1780,7 +1744,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		helloData = dict(n=0, w=2, v=2, i='\x7f'*20, r=2**30, m=2**30, c={'not_looked_at': True})
 		frame0 = [Fn.hello, helloData]
 		self.transport.dataReceived(self.serializeFrames([frame0]))
-		self._parseFrames()
 		self.aE([], self.gotFrames.getNew())
 
 
@@ -1792,7 +1755,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		self.transport.dataReceived(self.serializeFrames([frame0]))
-		self._parseFrames()
 		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
 
 
@@ -1804,7 +1766,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0, frame0]))
-		self._parseFrames()
 		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
 
 
@@ -1816,7 +1777,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			helloData = dict(n=n, w=2, v=2, i='\x00'*26, r=2**30, m=2**30)
 			frame0 = [Fn.hello, helloData]
 			self.transport.dataReceived(self.serializeFrames([frame0]))
-			self._parseFrames()
 			self.aE([], self.gotFrames.getNew())
 			self._reset()
 
@@ -1829,7 +1789,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		helloData = dict(n=0, v=2, i='\x00'*26, r=2**30, m=2**30)
 		frame0 = [Fn.hello, helloData]
 		self.transport.dataReceived(self.serializeFrames([frame0]))
-		self._parseFrames()
 		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], self.gotFrames.getNew())
 		self._testExtraDataReceivedIgnored()
 
@@ -1842,7 +1801,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		helloData = dict(n=0, w=0, v=2, i='\x00'*26, r=2**30, m=2**30)
 		frame0 = [Fn.hello, helloData]
 		self.transport.dataReceived(self.serializeFrames([frame0]))
-		self._parseFrames()
 		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], self.gotFrames.getNew())
 		self._testExtraDataReceivedIgnored()
 
@@ -1855,7 +1813,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self._reset(rejectAll=True)
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
-		self._parseFrames()
 		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], self.gotFrames.getNew())
 		self._testExtraDataReceivedIgnored()
 
@@ -1873,7 +1830,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		def act():
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0]))
-			self._parseFrames()
 			self.aE([], self.gotFrames.getNew())
 		act()
 
@@ -1893,7 +1849,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		for bad in genericBad:
 			self.transport.dataReceived(self.serializeFrames([[Fn.hello, bad]]))
-			self._parseFrames()
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
 			self._testExtraDataReceivedIgnored()
 			
@@ -1948,7 +1903,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				##print badHello
 
 				self.transport.dataReceived(self.serializeFrames([badHello]))
-				self._parseFrames()
 				self.aE(
 					[[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]],
 					self.gotFrames.getNew())
@@ -1972,21 +1926,18 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_closeGently(self):
 		self.transport.closeGently()
-		self._parseFrames()
 		self.aE([[Fn.you_close_it]], self.gotFrames.getNew())
 		self._testExtraDataReceivedIgnored()
 
 
 	def test_writeReset(self):
 		self.transport.writeReset(u"the reason\u2000", applicationLevel=True)
-		self._parseFrames()
 		self.aE([[Fn.reset, u"the reason\u2000", True], [Fn.you_close_it]], self.gotFrames.getNew())
 		self._testExtraDataReceivedIgnored()
 
 
 	def test_writeResetNotApplicationLevel(self):
 		self.transport.writeReset(u"the reason\u2000", applicationLevel=False)
-		self._parseFrames()
 		self.aE([[Fn.reset, u"the reason\u2000", False], [Fn.you_close_it]], self.gotFrames.getNew())
 		self._testExtraDataReceivedIgnored()
 
@@ -2000,7 +1951,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		stream = self.streamTracker.getStream('x'*26)
 
-		self._parseFrames()
 		self.aE([], self.gotFrames.getNew())
 		self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.getNew())
 
@@ -2018,7 +1968,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self.transport.dataReceived(self.serializeFrames([[Fn.gimme_boxes, succeedsTransport]]))
 			stream = self.streamTracker.getStream('x'*26)
 
-			self._parseFrames()
 			assert [] == self.gotFrames.getNew(), self.gotFrames.log
 
 			self.aE([
@@ -2040,7 +1989,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self.transport.dataReceived(self.serializeFrames([frame0, [Fn.gimme_boxes, succeedsTransport]]))
 			stream = self.streamTracker.getStream('x'*26)
 
-			self._parseFrames()
 			assert [] == self.gotFrames.getNew(), self.gotFrames.log
 
 			self.aE([
@@ -2062,7 +2010,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self.transport.dataReceived(self.serializeFrames([frame0, [Fn.gimme_boxes, succeedsTransport]]))
 			stream = self.streamTracker.getStream('x'*26)
 
-			self._parseFrames()
 			self.aE(	[[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
 
 			self.aE([
@@ -2089,7 +2036,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			['notifyFinish'],
 			['transportOnline', self.transport]
 		], stream.getNew())
-		self._parseFrames()
 		self.aE([], self.gotFrames.getNew())
 
 		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"]}]]))
@@ -2098,7 +2044,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			['boxesReceived', self.transport, [(0, ["box0"])], expectedMemorySize],
 			['getSACK']
 		], stream.getNew())
-		self._parseFrames()
 		self.aE([[Fn.sack, 0, []]], self.gotFrames.getNew())
 
 		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"2": ["box2"]}]]))
@@ -2107,7 +2052,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			['boxesReceived', self.transport, [(2, ["box2"])], expectedMemorySize],
 			['getSACK']
 		], stream.getNew())
-		self._parseFrames()
 		self.aE([[Fn.sack, 0, [2]]], self.gotFrames.getNew())
 
 
@@ -2132,7 +2076,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			['boxesReceived', self.transport, [(2, ["box2"])], expectedMemorySize],
 			['getSACK']],
 		stream.getNew())
-		self._parseFrames()
 		self.aE([[Fn.sack, 0, [2]]], self.gotFrames.getNew())
 
 
@@ -2147,7 +2090,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			stream = self.streamTracker.getStream('x'*26)
 
 			self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {invalidKey: ["box0"]}]]))
-			self._parseFrames()
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
 
 			self._resetStreamTracker()
@@ -2161,7 +2103,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		stream.queue.append(["box0"])
 
 		self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, []]]))
-		self._parseFrames()
 		self.aE([], self.gotFrames.getNew())
 		self.aE([
 			['notifyFinish'],
@@ -2180,7 +2121,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		stream.queue.extend([["box0"], ["box1"], ["box2"]])
 
 		self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, [2]]]))
-		self._parseFrames()
 		self.aE([], self.gotFrames.getNew())
 		self.aE([
 			['notifyFinish'],
@@ -2196,7 +2136,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		stream.queue.append(["box0"])
 
 		self.transport.dataReceived(self.serializeFrames([[Fn.sack, 1, []]]))
-		self._parseFrames()
 		self.aE([[Fn.tk_acked_unsent_boxes], [Fn.you_close_it]], self.gotFrames.getNew())
 		self.aE([
 			['notifyFinish'],
@@ -2216,7 +2155,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			stream.queue.extend([["box0"], ["box1"], ["box2"]])
 
 			self.transport.dataReceived(self.serializeFrames([[Fn.sack, num, []]]))
-			self._parseFrames()
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
 			self.aE([
 				['notifyFinish'],
@@ -2243,7 +2181,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			stream.queue.extend([["box0"], ["box1"], ["box2"]])
 
 			self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, badObj]]))
-			self._parseFrames()
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
 			self.aE([
 				['notifyFinish'],
@@ -2271,7 +2208,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			stream.queue.extend([["box0"], ["box1"], ["box2"]])
 
 			self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, [1, badNum]]])) # the 1 is valid number, badNum is not
-			self._parseFrames()
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
 			self.aE([
 				['notifyFinish'],
@@ -2313,7 +2249,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0]))
 			self.transport.dataReceived(self.serializeFrames([[Fn.reset, reasonString, True]]))
-			self._parseFrames()
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
 
 			self._reset()
@@ -2325,7 +2260,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0]))
 			self.transport.dataReceived(self.serializeFrames([[Fn.reset, u'the reason\uffff', applicationLevel]]))
-			self._parseFrames()
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
 
 			self._reset()
@@ -2340,7 +2274,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
-		self._parseFrames()
 		self.aE([], self.gotFrames.getNew())
 		self.transport.connectionLost(ValueError("testing"))
 
@@ -2367,7 +2300,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 				frame0 = self._makeValidHelloFrame()
 				self.transport.dataReceived(self.serializeFrames([frame0]))
-				self._parseFrames()
 				self.aE([], self.gotFrames.getNew())
 				if terminationMethod == 'bad_frame':
 					self.transport.dataReceived(self.serializeFrames([9999]))
@@ -2375,7 +2307,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 					self.transport.connectionLost(ValueError("testing"))
 				else:
 					1/0
-				self._parseFrames()
 
 				self.aE(expectedFrames, self.gotFrames.getNew())
 
