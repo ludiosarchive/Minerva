@@ -10,9 +10,11 @@ from twisted.trial import unittest
 from twisted.python import failure
 from twisted.web import server, resource, http
 from twisted.internet import protocol, defer, address, interfaces, task
-from twisted.internet.interfaces import IPushProducer, IPullProducer, IProtocol, IProtocolFactory
+from twisted.internet.interfaces import (
+	IPushProducer, IPullProducer, IProtocol, IProtocolFactory)
 
-from minerva.decoders import OK, BencodeStringDecoder, Int32StringDecoder, strictDecodeOne
+from minerva.decoders import (
+	OK, BencodeStringDecoder, Int32StringDecoder, strictDecodeOne)
 from minerva import abstract
 from minerva.helpers import todo
 
@@ -26,9 +28,8 @@ from minerva.newlink import (
 from minerva.mocks import (
 	FakeReactor, DummyChannel, DummyRequest, MockProducer,
 	MockStream, MockMinervaProtocol, MockMinervaProtocolFactory,
-	DummySocketLikeTransport, MockObserver,
-	BrokenOnPurposeError, BrokenMockObserver, DummyStreamTracker,
-	DummyFirewall, DummyTCPTransport
+	DummySocketLikeTransport, MockObserver, BrokenOnPurposeError,
+	BrokenMockObserver, DummyStreamTracker, DummyFirewall, DummyTCPTransport
 )
 
 from minerva.test_decoders import diceString
@@ -175,7 +176,9 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_exhaustedIncomingResetsBecauseTooManyBoxes(self):
-		"""If too many boxes are stuck in Incoming, the Stream is reset"""
+		"""
+		If too many boxes are stuck in Incoming, the Stream is reset.
+		"""
 		factory = MockMinervaProtocolFactory()
 		s = Stream(None, 'some fake id', factory)
 		t = DummySocketLikeTransport()
@@ -193,13 +196,16 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_exhaustedIncomingResetsBecauseTooManyBytes(self):
-		"""If too many (estimated) bytes are in Incoming, the Stream is reset"""
+		"""
+		If too many (estimated) bytes are in Incoming, the Stream is reset.
+		"""
 		factory = MockMinervaProtocolFactory()
 		s = Stream(None, 'some fake id', factory)
 		t = DummySocketLikeTransport()
 		s.transportOnline(t)
 
-		# we don't actually need to make this box big; we can lie to the Stream about how big it is
+		# We don't actually need to make this box big because below, we
+		# lie to the Stream about how big it is.
 		notManyBoxes = [(1, 'x')]
 
 		# box #0 is never given, so it cannot deliver any of them
@@ -385,8 +391,8 @@ class StreamTests(unittest.TestCase):
 
 	def test_sendBoxesConnectionInterleavingWithOldPrimaryNeverSentBoxes(self):
 		"""
-		Similar to test_sendBoxesConnectionInterleaving, except the old primary transport
-		never wrote any boxes, which means its lastBoxSent == -1
+		Similar to test_sendBoxesConnectionInterleaving, except the old
+		primary transport never wrote any boxes, which means its lastBoxSent == -1
 		"""
 		s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
 		t1 = DummySocketLikeTransport()
@@ -432,9 +438,9 @@ class StreamTests(unittest.TestCase):
 
 	def test_subscribeToBoxesSucceedsTransportButNoPrimaryTransport(self):
 		"""
-		If a transport calls Stream.subscribeToBoxes with a `succeedsTransport`
-		argument even though there is no primary transport, the `succeedsTransport`
-		argument is ignored.
+		If a transport calls Stream.subscribeToBoxes with a
+		C{succeedsTransport} argument even though there is no primary
+		transport, the C{succeedsTransport} argument is ignored.
 		"""
 		for connectIrrelevantTransport in (True, False):
 
@@ -476,7 +482,9 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_noLongerVirgin(self):
-		"""Stream is no longer a virgin after a transport is attached to it"""
+		"""
+		After the first transport is attached to a Stream, it is no longer a virgin.
+		"""
 		s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
 
 		self.aI(True, s. virgin)
@@ -510,7 +518,10 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_transportOfflineUnknownTransport(self):
-		"""transportOffline(some transport that was never registered) raises RuntimeError"""
+		"""
+		transportOffline(some transport that was never registered) raises
+		L{RuntimeError}
+		"""
 		clock = task.Clock()
 		s = Stream(clock, 'some fake id', MockMinervaProtocolFactory())
 		t = DummySocketLikeTransport()
@@ -529,7 +540,10 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_resetCallsAllTransports(self):
-		"""When Stream.reset is called, a reset frame goes out to all connected transports."""
+		"""
+		When L{Stream.reset} is called, all connected transports are told
+		to write a reset frame.
+		"""
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1)
 		t2 = DummySocketLikeTransport()
@@ -543,8 +557,11 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_internalResetCallsAllTransports(self):
-		"""When Stream._internalReset is called, a reset frame goes out to all connected transports.
-		TODO: Maybe don't test private methods? But heck, everything is really private.
+		"""
+		When L{Stream._internalReset} is called, a reset frame goes out
+		to all connected transports.
+		TODO: Perhaps test this in a more indirect way that doesn't involve
+		calling a "really private" method.
 		"""
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1)
@@ -559,8 +576,10 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_cannotResetDisconnectedStream(self):
-		"""Trying to reset a disconnected Stream raises RuntimeError"""
-
+		"""
+		Calling L{Stream.reset} on a disconnected Stream raises
+		L{RuntimeError}.
+		"""
 		# original reset caused by "application code"
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1)
@@ -577,7 +596,10 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_cannotSendBoxesDisconnectedStream(self):
-		"""Trying to sendBoxes on a disconnected Stream raises RuntimeError"""
+		"""
+		Calling L{Stream.sendBoxes} on a disconnected Stream raises
+		L{RuntimeError}.
+		"""
 		# original reset caused by "application code"
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1)
@@ -594,8 +616,10 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_ignoreCallToSendBoxesZeroBoxes(self):
-		"""When Stream.sendBoxes is called with a falsy value (such as an empty list),
-		it doesn't call any transports."""
+		"""
+		When L{Stream.sendBoxes} is called with a falsy value (such as an
+		empty list), it does not call any transports.
+		"""
 		# original reset caused by "application code"
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1)
@@ -610,8 +634,10 @@ class StreamTests(unittest.TestCase):
 
 	def test_resetFromClient(self):
 		"""
-		If a transport says it has received a reset frame, streamReset is called on the protocol,
-		and all the transports for the stream are closed.
+		If L{Stream.resetFromClient} is called (which is normally done by a
+		transport that receives a reset frame from a client), it calls
+		C{streamReset} on the protocol, and all of the L{Stream}'s
+		transports are closed gently.
 		"""
 		for applicationLevel in (True, False):
 			factory, clock, s, t1 = self._makeStuff()
@@ -671,8 +697,9 @@ class StreamTests(unittest.TestCase):
 			producer1 = MockProducer()
 			s.registerProducer(producer1, streaming=streaming)
 
-			# pauseProducing/resumeProducing calls are sent directly to producer (even when it is a pull producer),
-			# without much thinking
+			# pauseProducing/resumeProducing calls are sent directly to
+			# producer, even when it is a pull producer. We trust
+			# Twisted to not make invalid calls on pull producers.
 			s.pauseProducing()
 			s.pauseProducing()
 			s.resumeProducing()
@@ -688,7 +715,10 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_pausedStreamPausesNewPushProducer(self):
-		"""If Stream was already paused, new push producers are paused when registered."""
+		"""
+		If L{Stream} was already paused, new push producers are paused
+		when registered.
+		"""
 		factory, clock, s, t1 = self._makeStuff()
 
 		# Need to do this to have at least one connected transport,
@@ -716,13 +746,16 @@ class StreamTests(unittest.TestCase):
 		self.aE([], producer3.log)
 
 
-	def test_pausedStreamDoesNotPausesNewPullProducer(self):
+	def test_pausedStreamDoesNotPauseNewPullProducer(self):
+		"""
+		If L{Stream} was already paused, new pull producers are *not*
+		paused (because pull producers cannot be paused).
+		"""
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1)
 		s.subscribeToBoxes(t1, succeedsTransport=None)
 		s.pauseProducing()
 
-		# pull producers are not pauseProducing'ed, since they're effectively paused by default
 		s.unregisterProducer()
 		pullProducer = MockProducer()
 		s.registerProducer(pullProducer, streaming=False)
@@ -730,7 +763,12 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_lackOfPrimaryTransportPausesPushProducer(self):
-		"""When a stream has no primary transport attached, the push producer is paused."""
+		"""
+		If L{Stream} has no primary transport attached, a newly-registered
+		push producer is paused. After a primary transport attaches to
+		L{Stream}, the push producer is resumed. After it goes offline,
+		the push producer is paused again.
+		"""
 		factory, clock, s, t1 = self._makeStuff()
 
 		producer1 = MockProducer()
@@ -758,8 +796,10 @@ class StreamTests(unittest.TestCase):
 
 	def test_lackOfPrimaryTransportPausesPushProducer2(self):
 		"""
-		If a producer is attached after the primary transport went offline,
-		producer is paused.
+		If L{Stream} has no primary transport attached (but one was
+		attached before), a newly-registered push producer is paused.
+		A newly-registered pull producer is not paused (because pull
+		producers cannot be paused).
 		"""
 		factory, clock, s, t1 = self._makeStuff()
 
@@ -783,11 +823,12 @@ class StreamTests(unittest.TestCase):
 		self.aE([], producer2.log)
 
 
-
 	def test_newPrimaryTransportDoesNotPauseProducer(self):
 		"""
-		Stream's producer is not paused when a primary transport replaces
-		another primary transport.
+		If L{Stream} has a push producer registered, and a primary
+		transport replaces the previous primary transport, L{Stream}
+		does not call C{pauseProducing} on the Minerva protocol
+		during this replacement.
 		"""
 		factory, clock, s, t1 = self._makeStuff()
 
@@ -865,7 +906,10 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_lackOfTransportsIgnoresPullProducer(self):
-		"""When a stream has no transports attached, the pull producer is untouched."""
+		"""
+		When a stream has no transports attached, the pull producer is
+		untouched.
+		"""
 		factory, clock, s, t1 = self._makeStuff()
 
 		producer1 = MockProducer()
@@ -896,8 +940,10 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_registerUnregisterPushProducerThenSubscribe(self):
-		"""Regression test for a mistake in the code, where code forgot to check
-		for non-None self._producer"""
+		"""
+		Regression test for a mistake in the code, where code forgot to check
+		for non-C{None} C{self._producer}.
+		"""
 		factory, clock, s, t1 = self._makeStuff()
 
 		producer1 = MockProducer()
@@ -949,7 +995,8 @@ class StreamTests(unittest.TestCase):
 
 			s.registerProducer(producer1, streaming=streaming)
 
-			# Stream already has a producer before transport attaches and becomes primary
+			# Stream already has a producer before transport attaches
+			# and becomes primary
 			s.transportOnline(t1)
 			s.subscribeToBoxes(t1, succeedsTransport=None)
 
@@ -1000,9 +1047,13 @@ class StreamTrackerWithMockStream(StreamTracker):
 
 
 class StreamTrackerObserverTests(unittest.TestCase):
-
+	"""
+	Tests for L{newlink.StreamTracker}'s L{Stream}-observing features.
+	"""
 	def test_observeStreams(self):
-		"""observeStreams works and doesn't actually call anything on the observer yet."""
+		"""
+		observeStreams works and doesn't actually call anything on the observer yet.
+		"""
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, None, None)
 		o = MockObserver()
@@ -1042,7 +1093,10 @@ class StreamTrackerObserverTests(unittest.TestCase):
 
 
 	def test_unobserveUnknownRaisesError(self):
-		"""unobserveStreams raises L{RuntimeError} if unobserving an unknown observer"""
+		"""
+		unobserveStreams raises L{RuntimeError} if unobserving an unknown
+		observer.
+		"""
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, None, None)
 		o = MockObserver()
@@ -1050,7 +1104,9 @@ class StreamTrackerObserverTests(unittest.TestCase):
 
 
 	def test_unobserveTwiceRaisesError(self):
-		"""calling unobserveStreams for same observer raises L{RuntimeError}"""
+		"""
+		calling unobserveStreams for same observer raises L{RuntimeError}
+		"""
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, None, None)
 		o = MockObserver()
@@ -1060,7 +1116,9 @@ class StreamTrackerObserverTests(unittest.TestCase):
 
 
 	def test_manyObservers(self):
-		"""still works when there are many observers"""
+		"""
+		still works when there are many observers
+		"""
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, None, None)
 
@@ -1157,9 +1215,12 @@ class StreamTrackerObserverTests(unittest.TestCase):
 
 
 class StreamTrackerTests(unittest.TestCase):
-
+	"""
+	Tests for L{newlink.StreamTracker}
+	"""
 	def test_buildStream(self):
-		"""buildStream returns an instance of L{Stream}"""
+		"""
+		buildStream returns an instance of L{Stream}"""
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, None, None)
 		stream = st.buildStream('some fake id')
@@ -1167,7 +1228,10 @@ class StreamTrackerTests(unittest.TestCase):
 
 
 	def test_buildStreamCannotBuildWithSameId(self):
-		"""buildStream raises an error when trying to build a stream with an already-existing id"""
+		"""
+		buildStream raises an error when trying to build a stream with an
+		already-existing id
+		"""
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, None, None)
 		id = 'some fake id'
@@ -1178,9 +1242,9 @@ class StreamTrackerTests(unittest.TestCase):
 
 	def test_antiACAImplementation(self):
 		"""
-		Verify that the implementation appears to have some protection against ACA. This
-		is kind of a bad test. If we had a generator that made short hash()-colliding strings,
-		we could make a better test.
+		Verify that the implementation appears to have some protection
+		against ACA. This is kind of a bad test. If we had a generator that
+		made short hash()-colliding strings, we could make a better test.
 		"""
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, None, None)
@@ -1196,7 +1260,6 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 	Test the very initial stage of the communication, where the
 	mode is selected.
 	"""
-
 	def setUp(self):
 		self._clock = task.Clock()
 		self.protocolFactory = MockMinervaProtocolFactory()
@@ -1206,15 +1269,17 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 	def _resetConnection(self):
 		reactor = FakeReactor()
 		self.t = DummyTCPTransport()
-		self.face = SocketFace(reactor, None, self.streamTracker, DummyFirewall(self._clock, rejectAll=False), policyString='<nonsense-policy/>')
+		firewall = DummyFirewall(self._clock, rejectAll=False)
+		self.face = SocketFace(reactor, None, self.streamTracker, firewall,
+			policyString='<nonsense-policy/>')
 		self.transport = self.face.buildProtocol(addr=None)
 		self.transport.makeConnection(self.t)
 
 
 	def test_unknownModeCausesClose(self):
 		"""
-		If we send a bunch of nonsense during the mode-detection stage, the SocketTransport
-		disconnects us, without writing anything.
+		If we send a bunch of nonsense during the mode-detection stage,
+		the SocketTransport disconnects us, without writing anything.
 		"""
 		toSend = ' ' * 512
 		for packetSize in [1, 2, 200, 511, 512]:
@@ -1224,7 +1289,8 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 				self.transport.dataReceived(s)
 			self.aE('', self.t.value())
 			self.aE(True, self.t.disconnecting)
-			self.aE(True, self.t.aborted) # In the real world, this implies a TCP RST sent to the peer.
+			# In the real world, this implies a TCP RST sent to the peer.
+			self.aE(True, self.t.aborted)
 
 
 	def test_modeBencode(self):
@@ -1274,9 +1340,10 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			self._resetConnection()
 			resetParser()
 
-			# Send some helloData that errors with tk_stream_attach_failure. We do this just so
-			# we know we're getting frames correctly. This error is a good one to test for, unlike
-			# any "frame corruption" error, to distinguish things properly.
+			# Send some helloData that errors with tk_stream_attach_failure.
+			# We do this just so we know we're getting frames correctly.
+			# This error is a good one to test for, unlike any "frame
+			# corruption" error, to distinguish things properly.
 			helloData = dict(n=0, v=2, i='\x00'*26, r=2**30, m=2**30)
 			frame0 = [Fn.hello, helloData]
 			toSend = '<int32/>\n' + serializeFrames([frame0])
@@ -1360,7 +1427,8 @@ class _BaseHelpers(object):
 	def _reset(self, rejectAll=False, firewallActionTime=0):
 		self._resetParser()
 		self.t = DummyTCPTransport()
-		factory = SocketFace(self._reactor, None, self.streamTracker, DummyFirewall(self._clock, rejectAll, firewallActionTime))
+		firewall = DummyFirewall(self._clock, rejectAll, firewallActionTime)
+		factory = SocketFace(self._reactor, None, self.streamTracker, firewall)
 		self.transport = factory.buildProtocol(addr=None)
 		self.transport.makeConnection(self.t)
 		self._sendModeInitializer()
@@ -1410,8 +1478,8 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_writeBoxesStartNone(self):
 		"""
-		Calling writeBoxes(queue, start=None) on a transport actually results in all
-		boxes in queue being written
+		Calling writeBoxes(queue, start=None) on a transport actually
+		results in all boxes in queue being written
 		"""
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
@@ -1428,8 +1496,8 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_writeBoxesStart1(self):
 		"""
-		Calling writeBoxes(queue, start=1) on a transport actually results in
-		(box 1 and later) in queue being written
+		Calling writeBoxes(queue, start=1) on a transport actually results
+		in (box 1 and later) in queue being written
 		"""
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
@@ -1523,7 +1591,8 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_writeBoxesConnectionInterleavingSupportStart1(self):
 		"""
-		Same as L{test_writeBoxesConnectionInterleavingSupport} but start=1 instead of None
+		Same as L{test_writeBoxesConnectionInterleavingSupport} but start=1
+		instead of C{None}
 		"""
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
@@ -1562,16 +1631,17 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_resumeProducingWhenStreamNotFoundYet(self):
 		"""
-		Twisted will call resumeProducing whenever it feels like it, and we have to
-		be prepared for it, even if we haven't found the _stream yet.
+		Twisted will call resumeProducing whenever it feels like it, and
+		we have to be prepared for it, even if we haven't found the
+		_stream yet.
 		"""
 		self.transport.resumeProducing()
 
 
 	def _testExtraDataReceivedIgnored(self):
 		"""
-		If the Minerva transport is shutting down (because it received bad frames or something),
-		it will silently ignore any data it receives.
+		If the Minerva transport is shutting down (because it received bad
+		frames or something), it will silently ignore any data it receives.
 		"""
 		existingFrames = self.gotFrames[:]
 		self.transport.dataReceived(self.serializeFrames([[9999]]))
@@ -1580,7 +1650,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.aE(False, self.t.disconnecting)
 
 
-	def test_invalidFrameType(self):
+	def test_unknownFrameType(self):
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		self.transport.dataReceived(self.serializeFrames([[9999]]))
@@ -1589,8 +1659,12 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self._testExtraDataReceivedIgnored()
 
 
-	def test_unacceptableFrameType(self):
-		"""A valid frame type, but server can't accept it."""
+	def test_knownButInvalidFrameType(self):
+		"""
+		If client sends a known frame type, but the server cannot accept
+		this frame type, the transport is killed with
+		C{tk_invalid_frame_type_or_arguments}.
+		"""
 		for frameType in [
 		Fn.tk_brb,
 		Fn.tk_intraframe_corruption,
@@ -1610,7 +1684,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_firstFrameMustBeHello(self):
-		"""If hello isn't the first frame received, transport errors with tk_invalid_frame_type_or_arguments"""
+		"""
+		If the first frame has any frame type but `hello`, the transport
+		is killed with C{tk_invalid_frame_type_or_arguments}.
+		"""
 		# a completely valid frame
 		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"]}]]))
 		self._parseFrames()
@@ -1619,6 +1696,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_frameCorruption(self):
 		"""
+		If a corrupted frame is received, the transport is killed with
+		C{tk_invalid_frame_type_or_arguments}.
+
 		This test was designed for Bencode, but it works for Int32 as well.
 		"""
 		self.transport.dataReceived('1:xxxxxxxx')
@@ -1627,28 +1707,11 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self._testExtraDataReceivedIgnored()
 
 
-	def test_frameCorruptionCallsTransportOffline(self):
-		"""If client sends a corrupt frame on a Minerva transport that is attached to a Stream,
-		streamObj.transportOffline(transport) is called.
-		
-		This test was designed for Bencode, but it works for Int32 as well.
-		"""
-		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
-		stream = self.streamTracker.getStream('x'*26)
-
-		self._parseFrames()
-		self.aE([], self.gotFrames)
-		self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.log)
-
-		self.transport.dataReceived('1:xxxxxxxx')
-
-		self.aE([], self.gotFrames)
-		self.aE([['notifyFinish'], ['transportOnline', self.transport], ['transportOffline', self.transport]], stream.log)
-
-
 	def test_frameTooLong(self):
 		"""
+		If a client send a frame that is too long, the transport is killed
+		with C{tk_frame_corruption}.
+
 		This test was designed for Bencode, but it works for Int32 as well.
 		"""
 		# TODO: no early detection of "too long" for WebSocket or HTTP. Only run for Bencode and int32?
@@ -1659,28 +1722,44 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_intraFrameCorruption(self):
+		"""
+		If a client sends a valid frame but the JSON inside the frame
+		cannot be decoded, the transport is killed with
+		C{tk_intraframe_corruption}.
+		"""
 		self.transport.dataReceived(self.parser.encode('{')) # incomplete JSON
 		self._parseFrames()
 		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], self.gotFrames)
 		self._testExtraDataReceivedIgnored()
 
 
-	def test_intraFrameCorruptionCallsTransportOffline(self):
-		"""If client sends corrupt JSON on a Minerva transport that is attached to a Stream,
-		streamObj.transportOffline(transport) is called.
+	def test_frameCorruptionCallsTransportOffline(self):
 		"""
-		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
-		stream = self.streamTracker.getStream('x'*26)
+		If client sends a corrupt frame (or corrupt JSON inside that frame)
+		on a transport that is attached to a Stream,
+		streamObj.transportOffline(transport) is called.
 
-		self._parseFrames()
-		self.aE([], self.gotFrames)
-		self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.log)
+		This test was designed for Bencode, but it works for Int32 as well.
+		"""
+		for test in ('frame-corruption', 'intraframe-corruption'):
+			frame0 = self._makeValidHelloFrame()
+			self.transport.dataReceived(self.serializeFrames([frame0]))
+			stream = self.streamTracker.getStream('x'*26)
 
-		self.transport.dataReceived(self.parser.encode('{'))
+			self._parseFrames()
+			self.aE([], self.gotFrames)
+			self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.log)
 
-		self.aE([], self.gotFrames)
-		self.aE([['notifyFinish'], ['transportOnline', self.transport], ['transportOffline', self.transport]], stream.log)
+			toSend = {
+				'frame-corruption': '1:xxxxxxxx',
+				'intraframe-corruption': self.parser.encode('{')}
+			self.transport.dataReceived(toSend[test])
+
+			self.aE([], self.gotFrames)
+			self.aE([['notifyFinish'], ['transportOnline', self.transport], ['transportOffline', self.transport]], stream.log)
+
+			self._resetStreamTracker()
+			self._reset()
 
 
 	def test_intraFrameCorruptionTrailingGarbage(self):
@@ -1714,7 +1793,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_nan_inf_neginf_areForbidden(self):
-		"""Minerva servers treats NaN, Infinity, or -Infinity in the JSON the same as intraframe corruption."""
+		"""
+		Minerva transports treat NaN, Infinity, and -Infinity inside the
+		JSON as intraframe corruption.
+		"""
 		for bad in [nan, inf, neginf]:
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0]))
@@ -1756,8 +1838,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_validHelloButSentTwiceAtSameTime(self):
 		"""
-		Client can only send hello frame once (even if both arrive in the same dataReceived call).
-		If they send it more than once, they get tk_invalid_frame_type_or_arguments
+		Client can only send hello frame once (even if both arrive in the
+		same dataReceived call). If they send it more than once, they get
+		C{tk_invalid_frame_type_or_arguments}.
 		"""
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0, frame0]))
@@ -1766,7 +1849,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_connectionNumberDoesntMatter(self):
-		"""Connection number can be anywhere between 0 <= n <= 2**64"""
+		"""
+		Connection number can be anywhere between 0 <= n <= 2**64
+		"""
 		for n in [1, 1000, 10000, 12378912, 1283718237, 2**63]:
 			helloData = dict(n=n, w=2, v=2, i='\x00'*26, r=2**30, m=2**30)
 			frame0 = [Fn.hello, helloData]
@@ -1777,7 +1862,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_validHelloButNoSuchStream(self):
-		"""test that we get error 'tk_stream_attach_failure' if no such stream"""
+		"""
+		If client sends a hello frame with a streamId that server doesn't
+		know about, the transport is killed with C{tk_stream_attach_failure}.
+		"""
 		helloData = dict(n=0, v=2, i='\x00'*26, r=2**30, m=2**30)
 		frame0 = [Fn.hello, helloData]
 		self.transport.dataReceived(self.serializeFrames([frame0]))
@@ -1787,7 +1875,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_validHelloButNoSuchStreamExplicitW(self):
-		"""Same test as test_validHelloButNoSuchStream but with explicit w=0"""
+		"""
+		The same as L{test_validHelloButNoSuchStream}, but with an explicit
+		w=0 in the hello frame.
+		"""
 		helloData = dict(n=0, w=0, v=2, i='\x00'*26, r=2**30, m=2**30)
 		frame0 = [Fn.hello, helloData]
 		self.transport.dataReceived(self.serializeFrames([frame0]))
@@ -1797,7 +1888,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_validHelloButFirewallRejectedTransport(self):
-		"""If firewall rejects our transport, we get a tk_stream_attach_failure"""
+		"""
+		If the Minerva firewall rejects the transport, the transport is
+		killed with C{tk_stream_attach_failure}.
+		"""
 		self._reset(rejectAll=True)
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
@@ -1808,8 +1902,13 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_newStreamMoreThanOnceOk(self):
 		"""
-		Because the response to a request with w=2 (request new stream) might get lost in transit,
-		we silently ignore the w=2 if the Stream is already created.
+		If a hello frame includes w=2 (indicating "new stream"), but the
+		stream with corresponding streamId already exists, the transport
+		treats the hello frame as if it did not include w=2 (i.e., everything
+		works just fine).
+
+		We do this because the response to a request with w=2 might get
+		lost in transit.
 		"""
 		def act():
 			frame0 = self._makeValidHelloFrame()
@@ -1856,12 +1955,16 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		DeleteProperty = object()
 
-		genericBad = [-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"], {}, True, False, None, DeleteProperty]
+		genericBad = [
+			-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"],
+			{}, True, False, None, DeleteProperty]
 
 		badMutations = dict(
 			n=genericBad,
 			v=[0, 1, "1", 1.001] + genericBad,
-			i=['', '\x00', 'x'*1, u'\ucccc'*25, u'\ucccc'*8, u'\x80'*25, 'x'*19, 'x'*31, 'x'*3000] + genericBad, # 19 is below limit, 31 is over limit
+			i=[
+				'', '\x00', 'x'*1, u'\ucccc'*25, u'\ucccc'*8,
+				u'\x80'*25, 'x'*19, 'x'*31, 'x'*3000] + genericBad, # 19 is below limit, 31 is over limit
 			#r=genericBad, # TODO: test for HTTP
 			#m=genericBad, # TODO: test for HTTP
 			c=listWithout(genericBad, [{}]),
@@ -1878,7 +1981,8 @@ class _BaseSocketTransportTests(_BaseHelpers):
 					try:
 						del badHello[1][mutateProperty]
 					except KeyError:
-						 # If it wasn't there in the first place, deleting it from badHello can't cause an error later
+						 # If it wasn't there in the first place, deleting
+						 # it from badHello can't cause an error later
 						continue
 
 				##print badHello
@@ -1900,7 +2004,8 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_noDelayEnabled(self):
 		"""
-		When a Minerva transport is created, its underlying TCP transport has TCP_NODELAY enabled.
+		When a Minerva transport is created, its underlying TCP transport
+		has TCP_NODELAY enabled.
 		"""
 		self.aE(True, self.transport.writable.noDelayEnabled)
 
@@ -1927,8 +2032,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_connectionLostWithStream(self):
-		"""If client closes connection on a Minerva transport that is attached to a Stream,
-		streamObj.transportOffline(transport) is called."""
+		"""
+		If client closes connection on a Minerva transport that is
+		attached to a Stream, streamObj.transportOffline(transport) is called.
+		"""
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		stream = self.streamTracker.getStream('x'*26)
@@ -1937,7 +2044,8 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.aE([], self.gotFrames)
 		self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.log)
 
-		self.transport.connectionLost(failure.Failure(ValueError("Just a made-up error in test_connectionLostWithStream")))
+		self.transport.connectionLost(failure.Failure(ValueError(
+			"Just a made-up error in test_connectionLostWithStream")))
 
 		self.aE([], self.gotFrames)
 		self.aE([['notifyFinish'], ['transportOnline', self.transport], ['transportOffline', self.transport]], stream.log)
@@ -1959,7 +2067,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_gimmeBoxesRightAfterHello(self):
-		"""Same as test_gimmeBoxes, but frames hello and gimme_boxes arrive at the same time."""
+		"""
+		Same as L{test_gimmeBoxes}, but frames hello and gimme_boxes
+		arrive at the same time.
+		"""
 		for succeedsTransport in [None, 0, 3]:
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0, [Fn.gimme_boxes, succeedsTransport]]))
@@ -1974,8 +2085,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_gimmeBoxesSucceedsTransportInvalidNumber(self):
-		"""If client sends a too-low or too-high transport number (or a wrong type)
-		in the gimme_boxes frame, the transport is killed."""
+		"""
+		If client sends a too-low or too-high transport number (or a wrong
+		type) in the gimme_boxes frame, the transport is killed.
+		"""
 		for succeedsTransport in [-1, -2**32, -0.5, 2**64+1, "4", True, False, [], {}]:
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0, [Fn.gimme_boxes, succeedsTransport]]))
@@ -1994,8 +2107,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_boxes(self):
-		"""If client writes boxes to the transport, those boxes are delivered to Stream,
-		and a SACK is written out to the transport."""
+		"""
+		If client writes boxes to the transport, those boxes are delivered
+		to the Stream, and a SACK is written out to the transport.
+		"""
 		expectedMemorySize = len('[0, {"0": ["box0"]}]')
 
 		frame0 = self._makeValidHelloFrame()
@@ -2032,8 +2147,11 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_boxesSameTimeOneSack(self):
-		"""If client writes multiple box/boxes frames and they arrive at the same time,
-		those boxes are delivered to Stream, and just *one* SACK is written out to the transport."""
+		"""
+		If client writes multiple box/boxes frames and they arrive at the
+		same time, those boxes are delivered to Stream, and just *one*
+		SACK is written out to the transport.
+		"""
 		expectedMemorySize = len('[0, {"0": ["box0"]}]')
 
 		frame0 = self._makeValidHelloFrame()
@@ -2088,7 +2206,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_sackFrameWithSACKValid(self):
-		"""Actually test the SACK numbers"""
+		"""
+		Actually test the SACK numbers
+		"""
 		frame0 = self._makeValidHelloFrame()
 		self.transport.dataReceived(self.serializeFrames([frame0]))
 		stream = self.streamTracker.getStream('x'*26)
@@ -2144,7 +2264,13 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_sackFrameInvalidSecondArgumentType(self):
-		badObjects = [-2**65, -1, -0.5, 0.5, 2**64+1, "", "something", {}, True, False, None]
+		"""
+		If client sends a SACK frame whose [2]th item is not a list, the
+		transport is killed with C{tk_invalid_frame_type_or_arguments}.
+		"""
+		badObjects = [
+			-2**65, -1, -0.5, 0.5, 2**64+1, "", "something",
+			{}, True, False, None]
 		for badObj in badObjects:
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0]))
@@ -2165,14 +2291,21 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_sackFrameInvalidSACKNumber(self):
-		badNumbers = [-2**65, -1, -0.5, 0.5, 2**64+1, "", ["something"], "something", [], {}, True, False, None]
-		for num in badNumbers:
+		"""
+		If client sends a SACK frame whose [2]th item is a list, but the
+		list includes an item that is not a non-negative integer, the
+		transport is killed with C{tk_invalid_frame_type_or_arguments}.
+		"""
+		badNumbers = [
+			-2**65, -1, -0.5, 0.5, 2**64+1, "", ["something"],
+			"something", [], {}, True, False, None]
+		for badNum in badNumbers:
 			frame0 = self._makeValidHelloFrame()
 			self.transport.dataReceived(self.serializeFrames([frame0]))
 			stream = self.streamTracker.getStream('x'*26)
 			stream.queue.extend([["box0"], ["box1"], ["box2"]])
 
-			self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, [1, num]]])) # 1 is valid, num is not
+			self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, [1, badNum]]])) # the 1 is valid number, badNum is not
 			self._parseFrames()
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames)
 			self.aE([
@@ -2187,7 +2320,8 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_resetValid(self):
 		"""
-		Valid reset frames call Stream.resetFromClient
+		If client sends a valid reset frame, the transport calls
+		L{Stream.resetFromClient}.
 		"""
 		for applicationLevel in (True, False):
 			for reason in (u'the reason \uffff', 'simplejson decodes this reason to str, not unicode'):
@@ -2254,7 +2388,8 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_nothingHappensIfAuthedAfterTransportTerminated(self):
 		"""
-		If the transport is authenticated after it is already terminated, nothing happens.
+		If the transport is authenticated after it is already terminated,
+		nothing happens.
 		"""
 		expected = {}
 		expected['bad_frame'] = [[603], [11]]
@@ -2321,7 +2456,9 @@ class SocketTransportTestsWithInt32(_BaseSocketTransportTests, unittest.TestCase
 
 
 class TransportProducerTests(unittest.TestCase):
-
+	"""
+	Tests for L{newlink.SocketTransport}'s producer logic.
+	"""
 	def setUp(self):
 		reactor = FakeReactor()
 		clock = task.Clock()
@@ -2366,7 +2503,7 @@ class TransportProducerTests(unittest.TestCase):
 
 	def test_stopProducingIgnored(self):
 		"""
-		stopProducing does nothing. This test kind of sucks.
+		Verify that stopProducing does nothing at all. This test kind of sucks.
 		"""
 		def getState(transport):
 			return dict(
@@ -2405,7 +2542,8 @@ class TransportProducerTests(unittest.TestCase):
 	def test_transportPausedRegisterPullProducer(self):
 		"""
 		See docstring for L{test_transportPausedRegisterStreamingProducer}.
-		Pull producers don't need to be paused, so the producer is left untouched.
+		Pull producers don't need to be paused, so the producer is left
+		untouched.
 		"""
 		self.transport.pauseProducing()
 
@@ -2429,7 +2567,9 @@ class TransportProducerTests(unittest.TestCase):
 
 
 class SocketFaceTests(unittest.TestCase):
-
+	"""
+	Tests for L{newlink.SocketFace}
+	"""
 	def test_policyStringOkay(self):
 		face = SocketFace(FakeReactor(), clock=None, streamTracker=None, firewall=DummyFirewall())
 		face.setPolicyString('okay')
@@ -2448,14 +2588,18 @@ class SocketFaceTests(unittest.TestCase):
 
 
 class BasicMinervaProtocolTests(unittest.TestCase):
-
+	"""
+	Tests for {newlink.BasicMinervaProtocol}
+	"""
 	def test_implements(self):
 		verify.verifyObject(IMinervaProtocol, BasicMinervaProtocol())
 
 
 
 class BasicMinervaFactoryTests(unittest.TestCase):
-
+	"""
+	Tests for {newlink.BasicMinervaFactory}
+	"""
 	def test_implements(self):
 		verify.verifyObject(IMinervaFactory, BasicMinervaFactory())
 
@@ -2540,7 +2684,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		proto = list(self.protocolFactory.instances)[0]
 
 
-		# Send two boxes; make sure we got SACK; make sure the protocol gots box0
+		# Send two boxes; make sure we got SACK; make sure the protocol
+		# gots box0
 
 		transport0.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"], "2": ["box2"]}]]))
 
@@ -2548,7 +2693,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self.aE([["streamStarted", stream], ["boxesReceived", [["box0"]]]], proto.getNew())
 
 
-		# Send box1 and box3; make sure the protocol gets boxes 1, 2, 3; make sure we got SACK
+		# Send box1 and box3; make sure the protocol gets boxes 1, 2, 3;
+		# make sure we got SACK
 
 		transport0.dataReceived(self.serializeFrames([[Fn.boxes, {"1": ["box1"], "3": ["box3"]}]]))
 
@@ -2563,7 +2709,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self.aE([[Fn.sack, 0, [2]], [Fn.sack, 3, []], [Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], parser0.gotFrames)
 
 
-		# Don't ACK those boxes; connect a new transport; make sure we get those S2C boxes again; make sure transport0 is terminating
+		# Don't ACK those boxes; connect a new transport; make sure we get
+		# those S2C boxes again; make sure transport0 is terminating
 
 		transport1, parser1 = self._makeTransport()
 
@@ -2579,7 +2726,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self.aE([[Fn.sack, 0, [2]], [Fn.sack, 3, []], [Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]], [Fn.you_close_it]], parser0.gotFrames)
 
 
-		# Finally ACK those boxes; connect a new transport; make sure those S2C boxes are *not* received; make sure transport1 is terminating;
+		# Finally ACK those boxes; connect a new transport; make sure
+		# those S2C boxes are *not* received; make sure transport1 is
+		# terminating;
 
 		transport1.dataReceived(self.serializeFrames([[Fn.sack, 1, []]]))
 
@@ -2594,8 +2743,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]], [Fn.you_close_it]], parser1.gotFrames)
 
 
-		# Send a reset over transport2; make sure transport2 is terminating; make sure MinervaProtocol gets it;
-		# make sure transport0 and transport1 are untouched
+		# Send a reset over transport2; make sure transport2 is
+		# terminating; make sure MinervaProtocol gets it; make sure
+		# transport0 and transport1 are untouched
 
 		transport2.dataReceived(self.serializeFrames([[Fn.reset, u"testing", True]]))
 
@@ -2629,9 +2779,10 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], parser0.gotFrames)
 
 
-		# Connect a new transport that sends gimme_boxes with argument to succeed transport #0;
-		# make sure s2cbox0 and s2cbox1 are not written to it (because pretendAcked is in action);
-		# make sure transport0 is terminating
+		# Connect a new transport that sends gimme_boxes with argument
+		# to succeed transport #0; make sure s2cbox0 and s2cbox1 are not
+		# written to it (because pretendAcked is in action); make sure
+		# transport0 is terminating
 
 		transport1, parser1 = self._makeTransport()
 
@@ -2655,8 +2806,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 	def test_clientSendsAlreadyReceivedBoxes(self):
 		"""
-		Stream ignores boxes that were already received, and calls boxesReceived on
-		the protocol correctly.
+		Stream ignores boxes that were already received, and calls
+		boxesReceived on the protocol correctly.
 		"""
 		transport0, parser0 = self._makeTransport()
 
@@ -2688,7 +2839,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 	def test_resetAsFirstFrame(self):
 		"""
-		Test that things work when client's first frame after Fn.hello frame is a reset frame.
+		Test that things work when client's first frame after Fn.hello
+			frame is a reset frame.
 		Test that all frames after the first reset frame are ignored.
 		Test that protocol gets information from the first reset frame.
 		"""
@@ -2709,8 +2861,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 	def test_boxThenResetWritesSACK(self):
 		"""
-		If client sends boxes and a reset frame, the boxes are Fn.sack'ed before the transport is terminated.
-		Also test that the protocol gets the right calls.
+		If client sends boxes and a reset frame, the boxes are Fn.sack'ed
+		before the transport is terminated. Also test that the protocol
+		gets the right calls.
 		"""
 		transport0, parser0 = self._makeTransport()
 		frame0 = self._makeValidHelloFrame()
@@ -2729,10 +2882,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 	def test_simultaneousReset(self):
 		"""
-		If client sends a reset frame on multiple transports, both transports are terminated,
-		and protocol gets just 1 streamReset call.
+		If client sends a reset frame on multiple transports, both
+		transports are terminated, and protocol gets just 1 streamReset call.
 
-		Note: nothing special in the code makes this work, this test is a sanity check.
+		Note: nothing special in the code makes this work, this test is a
+		sanity check.
 		"""
 		transport0, parser0 = self._makeTransport()
 
@@ -2758,8 +2912,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 	def test_sendBoxesAndResetUnderneathStreamStartedCall(self): # keywords: reentrant
 		"""
-		If Stream.sendBoxes and Stream.reset are called underneath a call to protocol's streamStarted,
-		everything works as usual.
+		If Stream.sendBoxes and Stream.reset are called underneath a call
+		to protocol's streamStarted, everything works as usual.
 		"""
 		class MyFactory(MockMinervaProtocolFactory):
 			def buildProtocol(self):
@@ -2768,7 +2922,6 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				return obj
 
 		for clientResetsImmediately in (True, False):
-
 			self._resetStreamTracker(protocolFactoryClass=MyFactory)
 
 			transport0, parser0 = self._makeTransport()
@@ -2797,8 +2950,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 	def test_sendBoxesUnderneathStreamStartedCall(self):# keywords: reentrant
 		"""
-		If Stream.sendBoxes is called underneath a call to protocol's streamStarted,
-		everything works as usual.
+		If Stream.sendBoxes is called underneath a call to protocol's
+		streamStarted, everything works as usual.
 		"""
 		class MyFactory(MockMinervaProtocolFactory):
 			def buildProtocol(self):
@@ -2839,8 +2992,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 	def test_sendBoxesAndResetUnderneathBoxesReceivedCall(self): # keywords: reentrant
 		"""
-		If Stream.sendBoxes and Stream.reset are called underneath a call to protocol's boxesReceived,
-		everything works as usual.
+		If Stream.sendBoxes and Stream.reset are called underneath a call
+		to protocol's boxesReceived, everything works as usual.
 		"""
 		class MyFactory(MockMinervaProtocolFactory):
 			def buildProtocol(self):
@@ -2879,8 +3032,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 	def test_sendBoxesUnderneathBoxesReceivedCall(self): # keywords: reentrant
 		"""
-		If Stream.sendBoxes is called underneath a call to protocol's boxesReceived,
-		everything works as usual.
+		If Stream.sendBoxes is called underneath a call to protocol's
+		boxesReceived, everything works as usual.
 		"""
 		class MyFactory(MockMinervaProtocolFactory):
 			def buildProtocol(self):
@@ -2897,7 +3050,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			frames = [frame0, [Fn.gimme_boxes, None], [Fn.boxes, {"0": ["box0"], "1": ["box1"]}]]
 			if clientResetsImmediately:
-				frames.append([Fn.reset, u'', True]) # Surprise! Client wants to reset very immediately too.
+				frames.append([Fn.reset, u'', True])
+				# Surprise! Client wants to reset very immediately too.
 			transport0.dataReceived(self.serializeFrames(frames))
 
 			expected = [
@@ -2927,8 +3081,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 	def test_serverResetsUnderneathBoxesReceivedCall(self): # keywords: reentrant
 		"""
-		If client sends boxes that cause server to reset Stream, then a reset frame,
-		the C2S boxes are Fn.sack'ed before the transport is terminated.
+		If client sends boxes that cause server to reset Stream, then a
+		reset frame, the C2S boxes are Fn.sack'ed before the transport is
+		terminated.
 		"""
 		class MyFactory(MockMinervaProtocolFactory):
 			def buildProtocol(self):
@@ -2944,7 +3099,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			frames = [frame0, [Fn.gimme_boxes, None], [Fn.boxes, {"0": ["box0"], "1": ["box1"]}], [Fn.boxes, {"2": ["box2"]}]]
 			if clientResetsImmediately:
-				frames.append([Fn.reset, u"client's reason", True]) # Surprise! Client wants to reset very immediately too. But this is completely ignored.
+				# Surprise! Client wants to reset very immediately too. But this is completely ignored.
+				frames.append([Fn.reset, u"client's reason", True])
 			transport0.dataReceived(self.serializeFrames(frames))
 
 			expected = [
