@@ -1602,14 +1602,17 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		this frame type, the transport is killed with
 		C{tk_invalid_frame_type_or_arguments}.
 		"""
-		for frameType in [
-		Fn.tk_brb,
-		Fn.tk_intraframe_corruption,
-		Fn.tk_frame_corruption,
-		Fn.tk_invalid_frame_type_or_arguments,
-		Fn.tk_acked_unsent_boxes,
-		Fn.tk_stream_attach_failure,
-		Fn.you_close_it]: # TODO: allow you_close_it for HTTP
+		types = [
+			Fn.tk_brb,
+			Fn.tk_intraframe_corruption,
+			Fn.tk_frame_corruption,
+			Fn.tk_invalid_frame_type_or_arguments,
+			Fn.tk_acked_unsent_boxes,
+			Fn.tk_stream_attach_failure,
+			Fn.you_close_it, # TODO: allow you_close_it for HTTP
+		]
+
+		for frameType in types:
 			transport = self._makeTransport()
 			frame0 = self._makeValidHelloFrame()
 			transport.sendFrames([frame0])
