@@ -1259,14 +1259,15 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			self.aE(True, self.tcpTransport.aborted)
 
 
-	def test_modeBencode(self):
-		def serializeFrames(frames):
-			toSend = ''
-			for frame in frames:
-				bytes = simplejson.dumps(frame)
-				toSend += self.parser.encode(bytes)
-			return toSend
+	def _serializeFrames(self, frames):
+		toSend = ''
+		for frame in frames:
+			bytes = simplejson.dumps(frame)
+			toSend += self.parser.encode(bytes)
+		return toSend
 
+
+	def test_modeBencode(self):
 		def resetParser():
 			self.parser = BencodeStringDecoder(maxLength=1024*1024)
 
@@ -1279,7 +1280,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			# any "frame corruption" error, to distinguish things properly.
 			helloData = dict(n=0, v=2, i='\x00'*26, r=2**30, m=2**30)
 			frame0 = [Fn.hello, helloData]
-			toSend = '<bencode/>\n' + serializeFrames([frame0])
+			toSend = '<bencode/>\n' + self._serializeFrames([frame0])
 			
 			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
@@ -1290,13 +1291,6 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 
 	# copy/paste from test_modeBencode
 	def test_modeInt32(self):
-		def serializeFrames(frames):
-			toSend = ''
-			for frame in frames:
-				bytes = simplejson.dumps(frame)
-				toSend += self.parser.encode(bytes)
-			return toSend
-
 		def resetParser():
 			self.parser = Int32StringDecoder(maxLength=1024*1024)
 
@@ -1310,7 +1304,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			# corruption" error, to distinguish things properly.
 			helloData = dict(n=0, v=2, i='\x00'*26, r=2**30, m=2**30)
 			frame0 = [Fn.hello, helloData]
-			toSend = '<int32/>\n' + serializeFrames([frame0])
+			toSend = '<int32/>\n' + self._serializeFrames([frame0])
 
 			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
