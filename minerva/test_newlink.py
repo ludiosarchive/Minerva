@@ -14,7 +14,7 @@ from twisted.internet.interfaces import (
 	IPushProducer, IPullProducer, IProtocol, IProtocolFactory)
 
 from minerva.decoders import (
-	OK, BencodeStringDecoder, Int32StringDecoder, strictDecodeOne)
+	BencodeStringDecoder, Int32StringDecoder, strictDecodeOne)
 from minerva import abstract
 from minerva.helpers import todo
 
@@ -27,9 +27,11 @@ from minerva.newlink import (
 
 from minerva.mocks import (
 	FakeReactor, DummyChannel, DummyRequest, MockProducer, DumbLog,
+	JSONDecodingTcpTransport,
 	MockStream, MockMinervaProtocol, MockMinervaProtocolFactory,
 	DummySocketLikeTransport, MockObserver, BrokenOnPurposeError,
-	BrokenMockObserver, DummyStreamTracker, DummyFirewall, DummyTCPTransport
+	BrokenMockObserver, DummyStreamTracker, DummyFirewall, DummyTCPTransport,
+	strictGetNewFrames
 )
 
 from minerva.test_decoders import diceString
@@ -43,15 +45,32 @@ inf = simplejson.loads('Infinity')
 neginf = simplejson.loads('-Infinity')
 
 
-def _strictGetNewFrames(parser, data):
-	"""
-	Wrapper function for L{parser.getNewFrames} that checks the code
-	and throws an error if C{code != OK}.
-	"""
-	out, code = parser.getNewFrames(data)
-	if code != OK:
-		raise RuntimeError("Parse error; code was %r" % (code,))
-	return out, code
+class SlotlessSocketTransport(SocketTransport):
+	# No __slots__ so that .getNew can be assigned on it
+	pass
+
+
+
+class SlotlessSocketFace(SocketFace):
+	protocol = SlotlessSocketTransport
+
+
+
+def _makeTransportWithDecoder(parser, faceFactory):
+	tcpTransport = JSONDecodingTcpTransport(parser)
+	transport = faceFactory.buildProtocol(addr=None)
+	transport.getNew = tcpTransport.getNew
+
+	def sendFrames(frames):
+		toSend = ''
+		for frame in frames:
+			bytes = simplejson.dumps(frame)
+			toSend += parser.encode(bytes)
+		transport.dataReceived(toSend)
+
+	transport.sendFrames = sendFrames
+	transport.makeConnection(tcpTransport)
+	return transport
 
 
 class FrameTests(unittest.TestCase):
@@ -1215,12 +1234,12 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 
 	def _resetConnection(self):
 		reactor = FakeReactor()
-		self.t = DummyTCPTransport()
+		self.tcpTransport = DummyTCPTransport()
 		firewall = DummyFirewall(self._clock, rejectAll=False)
 		self.face = SocketFace(reactor, None, self.streamTracker, firewall,
 			policyString='<nonsense-policy/>')
 		self.transport = self.face.buildProtocol(addr=None)
-		self.transport.makeConnection(self.t)
+		self.transport.makeConnection(self.tcpTransport)
 
 
 	def test_unknownModeCausesClose(self):
@@ -1231,13 +1250,13 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 		toSend = ' ' * 512
 		for packetSize in [1, 2, 200, 511, 512]:
 			self._resetConnection()
-			assert self.t.disconnecting == False
+			assert self.tcpTransport.disconnecting == False
 			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
-			self.aE('', self.t.value())
-			self.aE(True, self.t.disconnecting)
+			self.aE('', self.tcpTransport.value())
+			self.aE(True, self.tcpTransport.disconnecting)
 			# In the real world, this implies a TCP RST sent to the peer.
-			self.aE(True, self.t.aborted)
+			self.aE(True, self.tcpTransport.aborted)
 
 
 	def test_modeBencode(self):
@@ -1249,7 +1268,6 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			return toSend
 
 		def resetParser():
-			self.gotFrames = DumbLog()
 			self.parser = BencodeStringDecoder(maxLength=1024*1024)
 
 		for packetSize in range(1, 20):
@@ -1265,7 +1283,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			
 			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
-			frames, code = _strictGetNewFrames(self.parser, self.t.value())
+			frames, code = strictGetNewFrames(self.parser, self.tcpTransport.value())
 			decodedFrames = [strictDecodeOne(f) for f in frames]
 			self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], decodedFrames)
 
@@ -1280,7 +1298,6 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			return toSend
 
 		def resetParser():
-			self.gotFrames = DumbLog()
 			self.parser = Int32StringDecoder(maxLength=1024*1024)
 
 		for packetSize in range(1, 20):
@@ -1297,7 +1314,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 
 			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
-			frames, code = _strictGetNewFrames(self.parser, self.t.value())
+			frames, code = strictGetNewFrames(self.parser, self.tcpTransport.value())
 			decodedFrames = [strictDecodeOne(f) for f in frames]
 			self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], decodedFrames)
 
@@ -1308,8 +1325,8 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			self._resetConnection()
 			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
-			self.aE('<nonsense-policy/>\x00', self.t.value())
-			self.aE(False, self.t.disconnecting)
+			self.aE('<nonsense-policy/>\x00', self.tcpTransport.value())
+			self.aE(False, self.tcpTransport.disconnecting)
 
 
 	def test_modePolicyFilePlusGarbage(self):
@@ -1322,8 +1339,8 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			self._resetConnection()
 			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
-			self.aE('<nonsense-policy/>\x00', self.t.value())
-			self.aE(False, self.t.disconnecting)
+			self.aE('<nonsense-policy/>\x00', self.tcpTransport.value())
+			self.aE(False, self.tcpTransport.disconnecting)
 
 
 
@@ -1351,14 +1368,6 @@ class TransportIsHttpTests(unittest.TestCase):
 
 class _BaseHelpers(object):
 
-	def serializeFrames(self, frames):
-		toSend = ''
-		for frame in frames:
-			bytes = simplejson.dumps(frame)
-			toSend += self.parser.encode(bytes)
-		return toSend
-
-
 	def _resetStreamTracker(self):
 		self._clock = task.Clock()
 		self.protocolFactory = MockMinervaProtocolFactory()
@@ -1368,25 +1377,16 @@ class _BaseHelpers(object):
 	def setUp(self):
 		self._reactor = FakeReactor()
 		self._resetStreamTracker()
-		self._reset()
 
 
-	def _reset(self, rejectAll=False, firewallActionTime=0):
-		self._resetParser()
-		self.t = DummyTCPTransport()
+	def _makeTransport(self, rejectAll=False, firewallActionTime=0):
 		firewall = DummyFirewall(self._clock, rejectAll, firewallActionTime)
-		factory = SocketFace(self._reactor, None, self.streamTracker, firewall)
+		faceFactory = SlotlessSocketFace(self._reactor, None, self.streamTracker, firewall)
 
-		class CustomTransport(DummyTCPTransport):
-			def write(self2, data):
-				frames, code = _strictGetNewFrames(self.parser, data)
-				self.gotFrames.extend(simplejson.loads(f) for f in frames)
-
-		self.t = CustomTransport()
-		self.transport = factory.buildProtocol(addr=None)
-		self.transport.makeConnection(self.t)
-
-		self._sendModeInitializer()
+		parser = self._makeParser()
+		transport = _makeTransportWithDecoder(parser, faceFactory)
+		transport.dataReceived(self._getModeInitializer())
+		return transport
 
 
 	def _makeValidHelloFrame(self):
@@ -1401,15 +1401,16 @@ class _BaseHelpers(object):
 class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_implements(self):
-		##verify.verifyObject(IProtocol, self.transport) # lacks connectionMade
-		verify.verifyObject(IPushProducer, self.transport)
-		verify.verifyObject(IPullProducer, self.transport)
-		verify.verifyObject(IMinervaTransport, self.transport)
+		transport = self._makeTransport()
+		##verify.verifyObject(IProtocol, transport) # lacks connectionMade
+		verify.verifyObject(IPushProducer, transport)
+		verify.verifyObject(IPullProducer, transport)
+		verify.verifyObject(IMinervaTransport, transport)
 
 
 	def test_repr(self):
-		r = repr(self.transport)
-		self.assertIn('<SocketTransport', r)
+		transport = self._makeTransport()
+		r = repr(transport)
 		self.assertIn('terminating=False', r)
 		self.assertIn('stream=None', r)
 		self.assertIn('paused=False', r)
@@ -1422,15 +1423,16 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		results in all boxes in queue being written
 		"""
 		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1']])
-		self.transport.writeBoxes(q, start=None)
+		transport.writeBoxes(q, start=None)
 		self.aE([
 			[Fn.seqnum, 0],
 			[Fn.box, ['box0']],
 			[Fn.box, ['box1']],
-		], self.gotFrames.getNew())
+		], transport.getNew())
 
 
 	def test_writeBoxesStart1(self):
@@ -1438,16 +1440,17 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		Calling writeBoxes(queue, start=1) on a transport actually results
 		in (box 1 and later) in queue being written
 		"""
+		transport = self._makeTransport()
 		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
+		transport.sendFrames([frame0])
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1'], ['box2']])
-		self.transport.writeBoxes(q, start=1)
+		transport.writeBoxes(q, start=1)
 		self.aE([
 			[Fn.seqnum, 1],
 			[Fn.box, ['box1']],
 			[Fn.box, ['box2']],
-		], self.gotFrames.getNew())
+		], transport.getNew())
 
 
 	# TODO: once abstract.Queue supports SACK, add a test that really uses SACK here
@@ -1461,17 +1464,18 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			`if len(toSend) > 1024 * 1024:' branch.
 		"""
 		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
 		q = abstract.Queue()
 		box0 = ['b'*int(0.6*1024*1024)]
 		box1 = ['c'*int(0.6*1024*1024)]
 		q.extend([box0, box1])
-		self.transport.writeBoxes(q, start=None)
+		transport.writeBoxes(q, start=None)
 		self.aE([
 			[Fn.seqnum, 0],
 			[Fn.box, box0],
 			[Fn.box, box1],
-		], self.gotFrames.getNew())
+		], transport.getNew())
 
 
 	def test_writeBoxesSentOnlyOnce(self):
@@ -1480,16 +1484,17 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		are not double-sent even if they are still in the queue.
 		"""
 		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1']])
-		self.transport.writeBoxes(q, start=None)
-		self.transport.writeBoxes(q, start=None)
-		self.aE([[Fn.seqnum, 0], [Fn.box, ['box0']], [Fn.box, ['box1']]], self.gotFrames.getNew())
+		transport.writeBoxes(q, start=None)
+		transport.writeBoxes(q, start=None)
+		self.aE([[Fn.seqnum, 0], [Fn.box, ['box0']], [Fn.box, ['box1']]], transport.getNew())
 
 		q.extend([['box2']])
-		self.transport.writeBoxes(q, start=None)
-		self.aE([[Fn.box, ['box2']]], self.gotFrames.getNew())
+		transport.writeBoxes(q, start=None)
+		self.aE([[Fn.box, ['box2']]], transport.getNew())
 
 
 	def test_writeBoxesConnectionInterleavingSupport(self):
@@ -1502,14 +1507,15 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		See also L{StreamTests.test_sendBoxesConnectionInterleaving}
 		"""
 		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
 
-		self.transport.writeBoxes(q, start=3)
-		self.transport.writeBoxes(q, start=3) # doing it again is pretty much a no-op
-		self.transport.writeBoxes(q, start=None)
-		self.transport.writeBoxes(q, start=None) # doing it again is pretty much a no-op
+		transport.writeBoxes(q, start=3)
+		transport.writeBoxes(q, start=3) # doing it again is pretty much a no-op
+		transport.writeBoxes(q, start=None)
+		transport.writeBoxes(q, start=None) # doing it again is pretty much a no-op
 		self.aE([
 			[Fn.seqnum, 3],
 			[Fn.box, ['box3']],
@@ -1520,7 +1526,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			[Fn.box, ['box2']],
 			[Fn.box, ['box3']],
 			[Fn.box, ['box4']],
-		], self.gotFrames.getNew())
+		], transport.getNew())
 
 
 	def test_writeBoxesConnectionInterleavingSupportStart1(self):
@@ -1529,14 +1535,15 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		instead of C{None}
 		"""
 		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
 
-		self.transport.writeBoxes(q, start=3)
-		self.transport.writeBoxes(q, start=3) # doing it again is pretty much a no-op
-		self.transport.writeBoxes(q, start=1)
-		self.transport.writeBoxes(q, start=1) # doing it again is pretty much a no-op
+		transport.writeBoxes(q, start=3)
+		transport.writeBoxes(q, start=3) # doing it again is pretty much a no-op
+		transport.writeBoxes(q, start=1)
+		transport.writeBoxes(q, start=1) # doing it again is pretty much a no-op
 		self.aE([
 			[Fn.seqnum, 3],
 			[Fn.box, ['box3']],
@@ -1546,7 +1553,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			[Fn.box, ['box2']],
 			[Fn.box, ['box3']],
 			[Fn.box, ['box4']],
-		], self.gotFrames.getNew())
+		], transport.getNew())
 
 
 	def test_pauseProducingWhenStreamNotFoundYet(self):
@@ -1555,7 +1562,8 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		be prepared for it, even if we haven't found the _stream yet.
 		"""
 		# no error
-		self.transport.pauseProducing()
+		transport = self._makeTransport()
+		transport.pauseProducing()
 
 		# test_transportPausedRegisterStreamingProducer tests
 		# that a producer registered with a Minerva transport is actually paused
@@ -1568,28 +1576,30 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		we have to be prepared for it, even if we haven't found the
 		_stream yet.
 		"""
-		self.transport.resumeProducing()
+		transport = self._makeTransport()
+		transport.resumeProducing()
 
 
-	def _testExtraDataReceivedIgnored(self):
+	def _testExtraDataReceivedIgnored(self, transport):
 		"""
-		Write an invalid frame to C{self.transport}. Assert that we don't
+		Write an invalid frame to C{transport}. Assert that we don't
 		get a reply, and that the underlying TCP transport isn't disconnecting.
 
 		If the Minerva transport is shutting down (because it received bad
 		frames or something), it will silently ignore any data it receives.
 		"""
-		self.transport.dataReceived(self.serializeFrames([[9999]]))
-		self.aE([], self.gotFrames.getNew())
-		self.aE(False, self.t.disconnecting)
+		transport.sendFrames([[9999]])
+		self.aE([], transport.getNew())
+		self.aE(False, transport.writable.disconnecting)
 
 
 	def test_unknownFrameType(self):
+		transport = self._makeTransport()
 		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
-		self.transport.dataReceived(self.serializeFrames([[9999]]))
-		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
-		self._testExtraDataReceivedIgnored()
+		transport.sendFrames([frame0])
+		transport.sendFrames([[9999]])
+		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
+		self._testExtraDataReceivedIgnored(transport)
 
 
 	def test_knownButInvalidFrameType(self):
@@ -1606,13 +1616,12 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		Fn.tk_acked_unsent_boxes,
 		Fn.tk_stream_attach_failure,
 		Fn.you_close_it]: # TODO: allow you_close_it for HTTP
+			transport = self._makeTransport()
 			frame0 = self._makeValidHelloFrame()
-			self.transport.dataReceived(self.serializeFrames([frame0]))
-			self.transport.dataReceived(self.serializeFrames([[frameType]]))
-			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
-			self._testExtraDataReceivedIgnored()
-
-			self._reset()
+			transport.sendFrames([frame0])
+			transport.sendFrames([[frameType]])
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
+			self._testExtraDataReceivedIgnored(transport)
 
 
 	def test_firstFrameMustBeHello(self):
@@ -1620,9 +1629,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		If the first frame has any frame type but `hello`, the transport
 		is killed with C{tk_invalid_frame_type_or_arguments}.
 		"""
+		transport = self._makeTransport()
 		# a completely valid frame
-		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"]}]]))
-		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
+		transport.sendFrames([[Fn.boxes, {"0": ["box0"]}]])
+		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
 
 
 	def test_frameCorruption(self):
@@ -1632,9 +1642,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		This test was designed for Bencode, but it works for Int32 as well.
 		"""
-		self.transport.dataReceived('1:xxxxxxxx')
-		self.aE([[Fn.tk_frame_corruption], [Fn.you_close_it]], self.gotFrames.getNew())
-		self._testExtraDataReceivedIgnored()
+		transport = self._makeTransport()
+		transport.dataReceived('1:xxxxxxxx')
+		self.aE([[Fn.tk_frame_corruption], [Fn.you_close_it]], transport.getNew())
+		self._testExtraDataReceivedIgnored(transport)
 
 
 	def test_frameTooLong(self):
@@ -1645,9 +1656,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		This test was designed for Bencode, but it works for Int32 as well.
 		"""
 		# TODO: no early detection of "too long" for WebSocket or HTTP. Only run for Bencode and int32?
-		self.transport.dataReceived('%d:' % (1024*1024 + 1,))
-		self.aE([[Fn.tk_frame_corruption], [Fn.you_close_it]], self.gotFrames.getNew())
-		self._testExtraDataReceivedIgnored()
+		transport = self._makeTransport()
+		transport.dataReceived('%d:' % (1024*1024 + 1,))
+		self.aE([[Fn.tk_frame_corruption], [Fn.you_close_it]], transport.getNew())
+		self._testExtraDataReceivedIgnored(transport)
 
 
 	def test_intraFrameCorruption(self):
@@ -1656,9 +1668,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		cannot be decoded, the transport is killed with
 		C{tk_intraframe_corruption}.
 		"""
-		self.transport.dataReceived(self.parser.encode('{')) # incomplete JSON
-		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], self.gotFrames.getNew())
-		self._testExtraDataReceivedIgnored()
+		transport = self._makeTransport()
+		transport.dataReceived(self._makeParser().encode('{')) # incomplete JSON
+		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], transport.getNew())
+		self._testExtraDataReceivedIgnored(transport)
 
 
 	def test_frameCorruptionCallsTransportOffline(self):
@@ -1672,30 +1685,31 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		for corruptionType in (Fn.tk_frame_corruption, Fn.tk_intraframe_corruption):
 			frame0 = self._makeValidHelloFrame()
-			self.transport.dataReceived(self.serializeFrames([frame0]))
+			transport = self._makeTransport()
+			transport.sendFrames([frame0])
 
 			stream = self.streamTracker.getStream('x'*26)
 
-			self.aE([], self.gotFrames.getNew())
-			self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.getNew())
+			self.aE([], transport.getNew())
+			self.aE([['notifyFinish'], ['transportOnline', transport]], stream.getNew())
 
 			toSend = {
 				Fn.tk_frame_corruption: '1:xxxxxxxx',
-				Fn.tk_intraframe_corruption: self.parser.encode('{')}
-			self.transport.dataReceived(toSend[corruptionType])
+				Fn.tk_intraframe_corruption: self._makeParser().encode('{')}
+			transport.dataReceived(toSend[corruptionType])
 
-			self.aE([[corruptionType], [Fn.you_close_it]], self.gotFrames.getNew())
-			self.aE([['transportOffline', self.transport]], stream.getNew())
+			self.aE([[corruptionType], [Fn.you_close_it]], transport.getNew())
+			self.aE([['transportOffline', transport]], stream.getNew())
 
 			self._resetStreamTracker()
-			self._reset()
 
 
 	def test_intraFrameCorruptionTrailingGarbage(self):
-		self.transport.dataReceived(self.parser.encode('{}x')) # complete JSON but with trailing garbage
+		transport = self._makeTransport()
+		transport.dataReceived(self._makeParser().encode('{}x')) # complete JSON but with trailing garbage
 
-		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], self.gotFrames.getNew())
-		self._testExtraDataReceivedIgnored()
+		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], transport.getNew())
+		self._testExtraDataReceivedIgnored(transport)
 
 
 	def test_intraFrameCorruptionTooMuchNestingObject(self):
@@ -1703,9 +1717,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		Server thinks too much nesting is equivalent to intra-frame JSON corruption.
 		If this test fails, you need to install the patched simplejson."""
 		nestingLimit = 32
-		self.transport.dataReceived(self.serializeFrames([eval('{"":' * nestingLimit + '1' + '}' * nestingLimit)]))
-		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], self.gotFrames.getNew())
-		self._testExtraDataReceivedIgnored()
+		transport = self._makeTransport()
+		transport.sendFrames([eval('{"":' * nestingLimit + '1' + '}' * nestingLimit)])
+		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], transport.getNew())
+		self._testExtraDataReceivedIgnored(transport)
 
 
 	def test_intraFrameCorruptionTooMuchNestingArray(self):
@@ -1713,9 +1728,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		Server thinks too much nesting is equivalent to intra-frame JSON corruption
 		If this test fails, you need to install the patched simplejson."""
 		nestingLimit = 32
-		self.transport.dataReceived(self.serializeFrames([eval('[' * nestingLimit + '1' + ']' * nestingLimit)]))
-		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], self.gotFrames.getNew())
-		self._testExtraDataReceivedIgnored()
+		transport = self._makeTransport()
+		transport.sendFrames([eval('[' * nestingLimit + '1' + ']' * nestingLimit)])
+		self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], transport.getNew())
+		self._testExtraDataReceivedIgnored(transport)
 
 
 	def test_nan_inf_neginf_areForbidden(self):
@@ -1725,26 +1741,28 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		for bad in [nan, inf, neginf]:
 			frame0 = self._makeValidHelloFrame()
-			self.transport.dataReceived(self.serializeFrames([frame0]))
-			self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": [bad]}]]))
+			transport = self._makeTransport()
+			transport.sendFrames([frame0])
+			transport.sendFrames([[Fn.boxes, {"0": [bad]}]])
 
-			self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], self.gotFrames.getNew())
+			self.aE([[Fn.tk_intraframe_corruption], [Fn.you_close_it]], transport.getNew())
 
 			self._resetStreamTracker()
-			self._reset()
 
 
 	def test_validHello(self):
 		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
-		self.aE([], self.gotFrames.getNew())
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
+		self.aE([], transport.getNew())
 
 
 	def test_validHelloWithCredentials(self):
 		helloData = dict(n=0, w=2, v=2, i='\x7f'*20, r=2**30, m=2**30, c={'not_looked_at': True})
 		frame0 = [Fn.hello, helloData]
-		self.transport.dataReceived(self.serializeFrames([frame0]))
-		self.aE([], self.gotFrames.getNew())
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
+		self.aE([], transport.getNew())
 
 
 	def test_validHelloButSentTwice(self):
@@ -1753,9 +1771,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		tk_invalid_frame_type_or_arguments
 		"""
 		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
-		self.transport.dataReceived(self.serializeFrames([frame0]))
-		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
+		transport.sendFrames([frame0])
+		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
 
 
 	def test_validHelloButSentTwiceAtSameTime(self):
@@ -1765,8 +1784,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		C{tk_invalid_frame_type_or_arguments}.
 		"""
 		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0, frame0]))
-		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
+		transport = self._makeTransport()
+		transport.sendFrames([frame0, frame0])
+		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
 
 
 	def test_connectionNumberDoesntMatter(self):
@@ -1776,9 +1796,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		for n in [1, 1000, 10000, 12378912, 1283718237, 2**63]:
 			helloData = dict(n=n, w=2, v=2, i='\x00'*26, r=2**30, m=2**30)
 			frame0 = [Fn.hello, helloData]
-			self.transport.dataReceived(self.serializeFrames([frame0]))
-			self.aE([], self.gotFrames.getNew())
-			self._reset()
+			transport = self._makeTransport()
+			transport.sendFrames([frame0])
+			self.aE([], transport.getNew())
 
 
 	def test_validHelloButNoSuchStream(self):
@@ -1788,9 +1808,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		helloData = dict(n=0, v=2, i='\x00'*26, r=2**30, m=2**30)
 		frame0 = [Fn.hello, helloData]
-		self.transport.dataReceived(self.serializeFrames([frame0]))
-		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], self.gotFrames.getNew())
-		self._testExtraDataReceivedIgnored()
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
+		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], transport.getNew())
+		self._testExtraDataReceivedIgnored(transport)
 
 
 	def test_validHelloButNoSuchStreamExplicitW(self):
@@ -1800,9 +1821,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		helloData = dict(n=0, w=0, v=2, i='\x00'*26, r=2**30, m=2**30)
 		frame0 = [Fn.hello, helloData]
-		self.transport.dataReceived(self.serializeFrames([frame0]))
-		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], self.gotFrames.getNew())
-		self._testExtraDataReceivedIgnored()
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
+		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], transport.getNew())
+		self._testExtraDataReceivedIgnored(transport)
 
 
 	def test_validHelloButFirewallRejectedTransport(self):
@@ -1810,11 +1832,11 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		If the Minerva firewall rejects the transport, the transport is
 		killed with C{tk_stream_attach_failure}.
 		"""
-		self._reset(rejectAll=True)
 		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
-		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], self.gotFrames.getNew())
-		self._testExtraDataReceivedIgnored()
+		transport = self._makeTransport(rejectAll=True)
+		transport.sendFrames([frame0])
+		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], transport.getNew())
+		self._testExtraDataReceivedIgnored(transport)
 
 
 	def test_newStreamMoreThanOnceOk(self):
@@ -1829,11 +1851,11 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		def act():
 			frame0 = self._makeValidHelloFrame()
-			self.transport.dataReceived(self.serializeFrames([frame0]))
-			self.aE([], self.gotFrames.getNew())
+			transport = self._makeTransport()
+			transport.sendFrames([frame0])
+			self.aE([], transport.getNew())
 		act()
 
-		self._reset()
 		# sanity check, make sure streamTracker still knows about stream '\x00'*16
 		assert self.streamTracker.countStreams() == 1
 
@@ -1848,11 +1870,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		genericBad = [-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"], True, False, None]
 
 		for bad in genericBad:
-			self.transport.dataReceived(self.serializeFrames([[Fn.hello, bad]]))
-			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
-			self._testExtraDataReceivedIgnored()
-			
-			self._reset()
+			transport = self._makeTransport()
+			transport.sendFrames([[Fn.hello, bad]])
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
+			self._testExtraDataReceivedIgnored(transport)
 
 
 	def test_invalidHelloKeys(self):
@@ -1902,13 +1923,13 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 				##print badHello
 
-				self.transport.dataReceived(self.serializeFrames([badHello]))
-				self.aE(
-					[[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]],
-					self.gotFrames.getNew())
-				##print self.gotFrames
-				self._testExtraDataReceivedIgnored()
-				self._reset()
+				transport = self._makeTransport()
+				transport.sendFrames([badHello])
+				self.aE([
+					[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]
+				], transport.getNew())
+				##print self.decodingTcpTransport
+				self._testExtraDataReceivedIgnored(transport)
 
 				ran += 1
 
@@ -1921,25 +1942,29 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		When a Minerva transport is created, its underlying TCP transport
 		has TCP_NODELAY enabled.
 		"""
-		self.aE(True, self.transport.writable.noDelayEnabled)
+		transport = self._makeTransport()
+		self.aE(True, transport.writable.noDelayEnabled)
 
 
 	def test_closeGently(self):
-		self.transport.closeGently()
-		self.aE([[Fn.you_close_it]], self.gotFrames.getNew())
-		self._testExtraDataReceivedIgnored()
+		transport = self._makeTransport()
+		transport.closeGently()
+		self.aE([[Fn.you_close_it]], transport.getNew())
+		self._testExtraDataReceivedIgnored(transport)
 
 
 	def test_writeReset(self):
-		self.transport.writeReset(u"the reason\u2000", applicationLevel=True)
-		self.aE([[Fn.reset, u"the reason\u2000", True], [Fn.you_close_it]], self.gotFrames.getNew())
-		self._testExtraDataReceivedIgnored()
+		transport = self._makeTransport()
+		transport.writeReset(u"the reason\u2000", applicationLevel=True)
+		self.aE([[Fn.reset, u"the reason\u2000", True], [Fn.you_close_it]], transport.getNew())
+		self._testExtraDataReceivedIgnored(transport)
 
 
 	def test_writeResetNotApplicationLevel(self):
-		self.transport.writeReset(u"the reason\u2000", applicationLevel=False)
-		self.aE([[Fn.reset, u"the reason\u2000", False], [Fn.you_close_it]], self.gotFrames.getNew())
-		self._testExtraDataReceivedIgnored()
+		transport = self._makeTransport()
+		transport.writeReset(u"the reason\u2000", applicationLevel=False)
+		self.aE([[Fn.reset, u"the reason\u2000", False], [Fn.you_close_it]], transport.getNew())
+		self._testExtraDataReceivedIgnored(transport)
 
 
 	def test_connectionLostWithStream(self):
@@ -1948,35 +1973,36 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		attached to a Stream, streamObj.transportOffline(transport) is called.
 		"""
 		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
 
-		self.aE([], self.gotFrames.getNew())
-		self.aE([['notifyFinish'], ['transportOnline', self.transport]], stream.getNew())
+		self.aE([], transport.getNew())
+		self.aE([['notifyFinish'], ['transportOnline', transport]], stream.getNew())
 
-		self.transport.connectionLost(failure.Failure(ValueError(
+		transport.connectionLost(failure.Failure(ValueError(
 			"Just a made-up error in test_connectionLostWithStream")))
 
-		self.aE([], self.gotFrames.getNew())
-		self.aE([['transportOffline', self.transport]], stream.getNew())
+		self.aE([], transport.getNew())
+		self.aE([['transportOffline', transport]], stream.getNew())
 
 
 	def test_gimmeBoxes(self):
 		for succeedsTransport in [None, 0, 3]:
 			frame0 = self._makeValidHelloFrame()
-			self.transport.dataReceived(self.serializeFrames([frame0]))
-			self.transport.dataReceived(self.serializeFrames([[Fn.gimme_boxes, succeedsTransport]]))
+			transport = self._makeTransport()
+			transport.sendFrames([frame0])
+			transport.sendFrames([[Fn.gimme_boxes, succeedsTransport]])
 			stream = self.streamTracker.getStream('x'*26)
 
-			assert [] == self.gotFrames.getNew(), self.gotFrames.log
+			assert [] == transport.getNew(), self.decodingTcpTransport.log
 
 			self.aE([
 				['notifyFinish'],
-				['transportOnline', self.transport],
-				['subscribeToBoxes', self.transport, succeedsTransport],
+				['transportOnline', transport],
+				['subscribeToBoxes', transport, succeedsTransport],
 			], stream.getNew())
 			self._resetStreamTracker()
-			self._reset()
 
 
 	def test_gimmeBoxesRightAfterHello(self):
@@ -1985,19 +2011,19 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		arrive at the same time.
 		"""
 		for succeedsTransport in [None, 0, 3]:
+			transport = self._makeTransport()
 			frame0 = self._makeValidHelloFrame()
-			self.transport.dataReceived(self.serializeFrames([frame0, [Fn.gimme_boxes, succeedsTransport]]))
+			transport.sendFrames([frame0, [Fn.gimme_boxes, succeedsTransport]])
 			stream = self.streamTracker.getStream('x'*26)
 
-			assert [] == self.gotFrames.getNew(), self.gotFrames.log
+			assert [] == transport.getNew(), self.decodingTcpTransport.log
 
 			self.aE([
 				['notifyFinish'],
-				['transportOnline', self.transport],
-				['subscribeToBoxes', self.transport, succeedsTransport],
+				['transportOnline', transport],
+				['subscribeToBoxes', transport, succeedsTransport],
 			], stream.getNew())
 			self._resetStreamTracker()
-			self._reset()
 
 
 	def test_gimmeBoxesSucceedsTransportInvalidNumber(self):
@@ -2007,18 +2033,18 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		for succeedsTransport in [-1, -2**32, -0.5, 2**64+1, "4", True, False, [], {}]:
 			frame0 = self._makeValidHelloFrame()
-			self.transport.dataReceived(self.serializeFrames([frame0, [Fn.gimme_boxes, succeedsTransport]]))
+			transport = self._makeTransport()
+			transport.sendFrames([frame0, [Fn.gimme_boxes, succeedsTransport]])
 			stream = self.streamTracker.getStream('x'*26)
 
-			self.aE(	[[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
+			self.aE(	[[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
 
 			self.aE([
 				['notifyFinish'],
-				['transportOnline', self.transport],
-				['transportOffline', self.transport],
+				['transportOnline', transport],
+				['transportOffline', transport],
 			], stream.getNew())
 			self._resetStreamTracker()
-			self._reset()
 
 
 	def test_boxes(self):
@@ -2029,30 +2055,31 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		expectedMemorySize = len('[0, {"0": ["box0"]}]')
 
 		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
 
 		self.aE([
 			['notifyFinish'],
-			['transportOnline', self.transport]
+			['transportOnline', transport]
 		], stream.getNew())
-		self.aE([], self.gotFrames.getNew())
+		self.aE([], transport.getNew())
 
-		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"]}]]))
+		transport.sendFrames([[Fn.boxes, {"0": ["box0"]}]])
 
 		self.aE([
-			['boxesReceived', self.transport, [(0, ["box0"])], expectedMemorySize],
+			['boxesReceived', transport, [(0, ["box0"])], expectedMemorySize],
 			['getSACK']
 		], stream.getNew())
-		self.aE([[Fn.sack, 0, []]], self.gotFrames.getNew())
+		self.aE([[Fn.sack, 0, []]], transport.getNew())
 
-		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"2": ["box2"]}]]))
+		transport.sendFrames([[Fn.boxes, {"2": ["box2"]}]])
 
 		self.aE([
-			['boxesReceived', self.transport, [(2, ["box2"])], expectedMemorySize],
+			['boxesReceived', transport, [(2, ["box2"])], expectedMemorySize],
 			['getSACK']
 		], stream.getNew())
-		self.aE([[Fn.sack, 0, [2]]], self.gotFrames.getNew())
+		self.aE([[Fn.sack, 0, [2]]], transport.getNew())
 
 
 	def test_boxesSameTimeOneSack(self):
@@ -2064,19 +2091,20 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		expectedMemorySize = len('[0, {"0": ["box0"]}]')
 
 		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
 
-		self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"]}], [Fn.boxes, {"2": ["box2"]}]]))
+		transport.sendFrames([[Fn.boxes, {"0": ["box0"]}], [Fn.boxes, {"2": ["box2"]}]])
 
 		self.aE([
 			['notifyFinish'],
-			['transportOnline', self.transport],
-			['boxesReceived', self.transport, [(0, ["box0"])], expectedMemorySize], # TODO: maybe coalesce boxesReceived funcalls in the future
-			['boxesReceived', self.transport, [(2, ["box2"])], expectedMemorySize],
+			['transportOnline', transport],
+			['boxesReceived', transport, [(0, ["box0"])], expectedMemorySize], # TODO: maybe coalesce boxesReceived funcalls in the future
+			['boxesReceived', transport, [(2, ["box2"])], expectedMemorySize],
 			['getSACK']],
 		stream.getNew())
-		self.aE([[Fn.sack, 0, [2]]], self.gotFrames.getNew())
+		self.aE([[Fn.sack, 0, [2]]], transport.getNew())
 
 
 	def test_boxesFrameWithInvalidKeys(self):
@@ -2086,27 +2114,28 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		for invalidKey in ["-1", "asdf", "", "nan", "Infinity", str(2**64+1)]:
 			frame0 = self._makeValidHelloFrame()
-			self.transport.dataReceived(self.serializeFrames([frame0]))
+			transport = self._makeTransport()
+			transport.sendFrames([frame0])
 			stream = self.streamTracker.getStream('x'*26)
 
-			self.transport.dataReceived(self.serializeFrames([[Fn.boxes, {invalidKey: ["box0"]}]]))
-			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
+			transport.sendFrames([[Fn.boxes, {invalidKey: ["box0"]}]])
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
 
 			self._resetStreamTracker()
-			self._reset()
 
 
 	def test_sackFrameValid(self):
 		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
 		stream.queue.append(["box0"])
 
-		self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, []]]))
-		self.aE([], self.gotFrames.getNew())
+		transport.sendFrames([[Fn.sack, 0, []]])
+		self.aE([], transport.getNew())
 		self.aE([
 			['notifyFinish'],
-			['transportOnline', self.transport],
+			['transportOnline', transport],
 			['sackReceived', (0, [])],
 		], stream.getNew())
 
@@ -2116,32 +2145,34 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		Actually test the SACK numbers
 		"""
 		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
 		stream.queue.extend([["box0"], ["box1"], ["box2"]])
 
-		self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, [2]]]))
-		self.aE([], self.gotFrames.getNew())
+		transport.sendFrames([[Fn.sack, 0, [2]]])
+		self.aE([], transport.getNew())
 		self.aE([
 			['notifyFinish'],
-			['transportOnline', self.transport],
+			['transportOnline', transport],
 			['sackReceived', (0, [2])],
 		], stream.getNew())
 
 
 	def test_sackedUnsentBoxes(self):
 		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
 		stream.queue.append(["box0"])
 
-		self.transport.dataReceived(self.serializeFrames([[Fn.sack, 1, []]]))
-		self.aE([[Fn.tk_acked_unsent_boxes], [Fn.you_close_it]], self.gotFrames.getNew())
+		transport.sendFrames([[Fn.sack, 1, []]])
+		self.aE([[Fn.tk_acked_unsent_boxes], [Fn.you_close_it]], transport.getNew())
 		self.aE([
 			['notifyFinish'],
-			['transportOnline', self.transport],
+			['transportOnline', transport],
 			['sackReceived', (1, [])],
-			['transportOffline', self.transport],
+			['transportOffline', transport],
 		], stream.getNew())
 
 
@@ -2150,20 +2181,20 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		badNumbers = [-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"], "something", {}, True, False, None]
 		for num in badNumbers:
 			frame0 = self._makeValidHelloFrame()
-			self.transport.dataReceived(self.serializeFrames([frame0]))
+			transport = self._makeTransport()
+			transport.sendFrames([frame0])
 			stream = self.streamTracker.getStream('x'*26)
 			stream.queue.extend([["box0"], ["box1"], ["box2"]])
 
-			self.transport.dataReceived(self.serializeFrames([[Fn.sack, num, []]]))
-			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
+			transport.sendFrames([[Fn.sack, num, []]])
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
 			self.aE([
 				['notifyFinish'],
-				['transportOnline', self.transport],
-				['transportOffline', self.transport],
+				['transportOnline', transport],
+				['transportOffline', transport],
 			], stream.getNew())
 
 			self._resetStreamTracker()
-			self._reset()
 
 
 	def test_sackFrameInvalidSecondArgumentType(self):
@@ -2176,20 +2207,20 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			{}, True, False, None]
 		for badObj in badObjects:
 			frame0 = self._makeValidHelloFrame()
-			self.transport.dataReceived(self.serializeFrames([frame0]))
+			transport = self._makeTransport()
+			transport.sendFrames([frame0])
 			stream = self.streamTracker.getStream('x'*26)
 			stream.queue.extend([["box0"], ["box1"], ["box2"]])
 
-			self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, badObj]]))
-			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
+			transport.sendFrames([[Fn.sack, 0, badObj]])
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
 			self.aE([
 				['notifyFinish'],
-				['transportOnline', self.transport],
-				['transportOffline', self.transport],
+				['transportOnline', transport],
+				['transportOffline', transport],
 			], stream.getNew())
 
 			self._resetStreamTracker()
-			self._reset()
 
 
 	def test_sackFrameInvalidSACKNumber(self):
@@ -2203,20 +2234,20 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			"something", [], {}, True, False, None]
 		for badNum in badNumbers:
 			frame0 = self._makeValidHelloFrame()
-			self.transport.dataReceived(self.serializeFrames([frame0]))
+			transport = self._makeTransport()
+			transport.sendFrames([frame0])
 			stream = self.streamTracker.getStream('x'*26)
 			stream.queue.extend([["box0"], ["box1"], ["box2"]])
 
-			self.transport.dataReceived(self.serializeFrames([[Fn.sack, 0, [1, badNum]]])) # the 1 is valid number, badNum is not
-			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
+			transport.sendFrames([[Fn.sack, 0, [1, badNum]]]) # the 1 is valid number, badNum is not
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
 			self.aE([
 				['notifyFinish'],
-				['transportOnline', self.transport],
-				['transportOffline', self.transport],
+				['transportOnline', transport],
+				['transportOffline', transport],
 			], stream.getNew())
 
 			self._resetStreamTracker()
-			self._reset()
 
 
 	def test_resetValid(self):
@@ -2227,42 +2258,40 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		for applicationLevel in (True, False):
 			for reason in (u'the reason \uffff', 'simplejson decodes this reason to str, not unicode'):
 				frame0 = self._makeValidHelloFrame()
-				self.transport.dataReceived(self.serializeFrames([frame0]))
+				transport = self._makeTransport()
+				transport.sendFrames([frame0])
 				stream = self.streamTracker.getStream('x'*26)
 
-				self.transport.dataReceived(self.serializeFrames([[Fn.reset, reason, True]]))
+				transport.sendFrames([[Fn.reset, reason, True]])
 
 				self.aE([
 					['notifyFinish'],
-					['transportOnline', self.transport],
+					['transportOnline', transport],
 					['resetFromClient', reason, True],
-					['transportOffline', self.transport],
+					['transportOffline', transport],
 				], stream.getNew())
 
 				self._resetStreamTracker()
-				self._reset()
 
 
 	def test_resetInvalidReasonString(self):
 		badReasonStrings = [-2**65, -1, -0.5, 0.5, 2**64+1, ["something"], [], {}, True, False, None]
 		for reasonString in badReasonStrings:
 			frame0 = self._makeValidHelloFrame()
-			self.transport.dataReceived(self.serializeFrames([frame0]))
-			self.transport.dataReceived(self.serializeFrames([[Fn.reset, reasonString, True]]))
-			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
-
-			self._reset()
+			transport = self._makeTransport()
+			transport.sendFrames([frame0])
+			transport.sendFrames([[Fn.reset, reasonString, True]])
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
 
 
 	def test_resetInvalidApplicationLevel(self):
 		badApplicationLevels = [-2**65, -1, -0.5, 0, 1, 0.5, 2**64+1, "", ["something"], "something", [], {}, None]
 		for applicationLevel in badApplicationLevels:
 			frame0 = self._makeValidHelloFrame()
-			self.transport.dataReceived(self.serializeFrames([frame0]))
-			self.transport.dataReceived(self.serializeFrames([[Fn.reset, u'the reason\uffff', applicationLevel]]))
-			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], self.gotFrames.getNew())
-
-			self._reset()
+			transport = self._makeTransport()
+			transport.sendFrames([frame0])
+			transport.sendFrames([[Fn.reset, u'the reason\uffff', applicationLevel]])
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
 
 
 	def test_transportOfflineNotCalledIfNeverAuthed(self):
@@ -2270,12 +2299,11 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		A regression test: make sure SocketTransport only calls transportOffline
 		if it called transportOnline.
 		"""
-		self._reset(rejectAll=False, firewallActionTime=1.0)
-
 		frame0 = self._makeValidHelloFrame()
-		self.transport.dataReceived(self.serializeFrames([frame0]))
-		self.aE([], self.gotFrames.getNew())
-		self.transport.connectionLost(ValueError("testing"))
+		transport = self._makeTransport(rejectAll=False, firewallActionTime=1.0)
+		transport.sendFrames([frame0])
+		self.aE([], transport.getNew())
+		transport.connectionLost(ValueError("testing"))
 
 		stream = self.streamTracker.getStream('x'*26)
 
@@ -2296,19 +2324,19 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				expectedFrames = expected[terminationMethod]
 
 				self._resetStreamTracker()
-				self._reset(rejectAll=rejectAll, firewallActionTime=1.0)
 
 				frame0 = self._makeValidHelloFrame()
-				self.transport.dataReceived(self.serializeFrames([frame0]))
-				self.aE([], self.gotFrames.getNew())
+				transport = self._makeTransport(rejectAll=rejectAll, firewallActionTime=1.0)
+				transport.sendFrames([frame0])
+				self.aE([], transport.getNew())
 				if terminationMethod == 'bad_frame':
-					self.transport.dataReceived(self.serializeFrames([9999]))
+					transport.sendFrames([9999])
 				elif terminationMethod == 'client_closed':
-					self.transport.connectionLost(ValueError("testing"))
+					transport.connectionLost(ValueError("testing"))
 				else:
 					1/0
 
-				self.aE(expectedFrames, self.gotFrames.getNew())
+				self.aE(expectedFrames, transport.getNew())
 
 				stream = self.streamTracker.getStream('x'*26)
 
@@ -2316,32 +2344,30 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 				self._clock.advance(1.0)
 
-				self.aE([], self.gotFrames.getNew())
+				self.aE([], transport.getNew())
 				self.aE([], stream.getNew())
 
 
 
 class SocketTransportTestsWithBencode(_BaseSocketTransportTests, unittest.TestCase):
 
-	def _resetParser(self):
-		self.gotFrames = DumbLog()
-		self.parser = BencodeStringDecoder(maxLength=1024*1024)
+	def _makeParser(self):
+		return BencodeStringDecoder(maxLength=1024*1024)
 
 
-	def _sendModeInitializer(self):
-		self.transport.dataReceived('<bencode/>\n')
+	def _getModeInitializer(self):
+		return '<bencode/>\n'
 
 
 
 class SocketTransportTestsWithInt32(_BaseSocketTransportTests, unittest.TestCase):
 
-	def _resetParser(self):
-		self.gotFrames = DumbLog()
-		self.parser = Int32StringDecoder(maxLength=1024*1024)
+	def _makeParser(self):
+		return Int32StringDecoder(maxLength=1024*1024)
 
 
-	def _sendModeInitializer(self):
-		self.transport.dataReceived('<int32/>\n')
+	def _getModeInitializer(self):
+		return '<int32/>\n'
 
 
 
@@ -2359,8 +2385,8 @@ class TransportProducerTests(unittest.TestCase):
 		factory = SocketFace(reactor, clock, self.tracker, DummyFirewall(clock, rejectAll=False), None)
 		self.transport = factory.buildProtocol(addr=None)
 
-		self.t = DummyTCPTransport()
-		self.transport.makeConnection(self.t)
+		self.tcpTransport = DummyTCPTransport()
+		self.transport.makeConnection(self.tcpTransport)
 
 
 	def test_transport(self):
@@ -2372,8 +2398,8 @@ class TransportProducerTests(unittest.TestCase):
 			producer1 = MockProducer()
 			self.transport.registerProducer(producer1, streaming=streaming)
 			# The Minerva transport is registered, not the producer itself
-			self.aI(self.t.producer, self.transport)
-			self.aI(self.t.streaming, streaming)
+			self.aI(self.tcpTransport.producer, self.transport)
+			self.aI(self.tcpTransport.streaming, streaming)
 
 			# pauseProducing/resumeProducing calls are sent directly to producer (even when it is a pull producer),
 			# without much thinking
@@ -2514,31 +2540,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 	"""
 	Test SocketFace/SocketTransport/StreamTracker/Stream integration.
 	"""
-	def serializeFrames(self, frames):
-		toSend = ''
-		for frame in frames:
-			bytes = simplejson.dumps(frame)
-			toSend += Int32StringDecoder.encode(bytes)
-		return toSend
-
-
 	def _makeTransport(self):
-		class MyInt32StringDecoder(Int32StringDecoder):
-			# Notice the lack of __slots__
-			pass
-		parser = MyInt32StringDecoder(maxLength=1024*1024)
-		parser.gotFrames = DumbLog()
-
-		class CustomTransport(DummyTCPTransport):
-			def write(self2, data):
-				frames, code = _strictGetNewFrames(parser, data)
-				parser.gotFrames.extend(simplejson.loads(f) for f in frames)
-
-		tcpTransport = CustomTransport()
-		transport = self.faceFactory.buildProtocol(addr=None)
-		transport.makeConnection(tcpTransport)
+		parser = Int32StringDecoder(maxLength=1024*1024)
+		transport = _makeTransportWithDecoder(parser, self.faceFactory)
 		transport.dataReceived('<int32/>\n')
-		return transport, parser
+		return transport
 
 
 	# We use the real StreamTracker
@@ -2546,7 +2552,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		clock = task.Clock()
 		self.protocolFactory = protocolFactoryClass()
 		self.streamTracker = StreamTracker(self._reactor, clock, self.protocolFactory)
-		self.faceFactory = SocketFace(self._reactor, None, self.streamTracker, DummyFirewall(clock, rejectAll=False))
+
+		self.faceFactory = SlotlessSocketFace(
+			self._reactor, None, self.streamTracker, DummyFirewall(clock, rejectAll=False))
 
 
 	def setUp(self):
@@ -2563,14 +2571,14 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 	def test_boxSendingAndNewTransport(self):
 		# Send a hello frame and subscribe to boxes
 
-		transport0, parser0 = self._makeTransport()
+		transport0 = self._makeTransport()
 
 		frame0 = self._makeValidHelloFrame()
-		transport0.dataReceived(self.serializeFrames([frame0]))
-		transport0.dataReceived(self.serializeFrames([[Fn.gimme_boxes, None]]))
+		transport0.sendFrames([frame0])
+		transport0.sendFrames([[Fn.gimme_boxes, None]])
 		stream = self.streamTracker.getStream('x'*26)
 
-		self.aE([], parser0.gotFrames.getNew())
+		self.aE([], transport0.getNew())
 
 		proto = list(self.protocolFactory.instances)[0]
 
@@ -2578,18 +2586,18 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		# Send two boxes; make sure we got SACK; make sure the protocol
 		# gots box0
 
-		transport0.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"], "2": ["box2"]}]]))
+		transport0.sendFrames([[Fn.boxes, {"0": ["box0"], "2": ["box2"]}]])
 
-		self.aE([[Fn.sack, 0, [2]]], parser0.gotFrames.getNew())
+		self.aE([[Fn.sack, 0, [2]]], transport0.getNew())
 		self.aE([["streamStarted", stream], ["boxesReceived", [["box0"]]]], proto.getNew())
 
 
 		# Send box1 and box3; make sure the protocol gets boxes 1, 2, 3;
 		# make sure we got SACK
 
-		transport0.dataReceived(self.serializeFrames([[Fn.boxes, {"1": ["box1"], "3": ["box3"]}]]))
+		transport0.sendFrames([[Fn.boxes, {"1": ["box1"], "3": ["box3"]}]])
 
-		self.aE([[Fn.sack, 3, []]], parser0.gotFrames.getNew())
+		self.aE([[Fn.sack, 3, []]], transport0.getNew())
 		self.aE([["boxesReceived", [["box1"], ["box2"], ["box3"]]]], proto.getNew())
 
 
@@ -2597,68 +2605,68 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		stream.sendBoxes([["s2cbox0"], ["s2cbox1"]])
 
-		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], parser0.gotFrames.getNew())
+		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], transport0.getNew())
 
 
 		# Don't ACK those boxes; connect a new transport; make sure we get
 		# those S2C boxes again; make sure transport0 is terminating
 
-		transport1, parser1 = self._makeTransport()
+		transport1 = self._makeTransport()
 
 		frame0 = self._makeValidHelloFrame() # TODO: increment transportNumber?
-		transport1.dataReceived(self.serializeFrames([frame0]))
+		transport1.sendFrames([frame0])
 
-		self.aE([], parser1.gotFrames.getNew())
+		self.aE([], transport1.getNew())
 
-		transport1.dataReceived(self.serializeFrames([[Fn.gimme_boxes, None]]))
+		transport1.sendFrames([[Fn.gimme_boxes, None]])
 
-		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], parser1.gotFrames.getNew())
+		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], transport1.getNew())
 
-		self.aE([[Fn.you_close_it]], parser0.gotFrames.getNew())
+		self.aE([[Fn.you_close_it]], transport0.getNew())
 
 
 		# Finally ACK those boxes; connect a new transport; make sure
 		# those S2C boxes are *not* received; make sure transport1 is
 		# terminating;
 
-		transport1.dataReceived(self.serializeFrames([[Fn.sack, 1, []]]))
+		transport1.sendFrames([[Fn.sack, 1, []]])
 
-		transport2, parser2 = self._makeTransport()
+		transport2 = self._makeTransport()
 
 		frame0 = self._makeValidHelloFrame() # TODO: increment transportNumber?
-		transport2.dataReceived(self.serializeFrames([frame0]))
-		transport2.dataReceived(self.serializeFrames([[Fn.gimme_boxes, None]]))
+		transport2.sendFrames([frame0])
+		transport2.sendFrames([[Fn.gimme_boxes, None]])
 
-		self.aE([], parser2.gotFrames.getNew())
+		self.aE([], transport2.getNew())
 
-		self.aE([[Fn.you_close_it]], parser1.gotFrames.getNew())
+		self.aE([[Fn.you_close_it]], transport1.getNew())
 
 
 		# Send a reset over transport2; make sure transport2 is
 		# terminating; make sure MinervaProtocol gets it; make sure
 		# transport0 and transport1 are untouched
 
-		transport2.dataReceived(self.serializeFrames([[Fn.reset, u"testing", True]]))
+		transport2.sendFrames([[Fn.reset, u"testing", True]])
 
-		self.aE([[Fn.you_close_it]], parser2.gotFrames.getNew())
+		self.aE([[Fn.you_close_it]], transport2.getNew())
 
 		self.aE([["streamReset", WhoReset.client_app, u"testing"]], proto.getNew())
 
-		self.aE([], parser0.gotFrames.getNew())
-		self.aE([], parser1.gotFrames.getNew())
+		self.aE([], transport0.getNew())
+		self.aE([], transport1.getNew())
 
 
 	def test_boxSendingAndNewTransportWithSucceedsTransport(self):
 		# Send a hello frame and subscribe to boxes
 
-		transport0, parser0 = self._makeTransport()
+		transport0 = self._makeTransport()
 
 		frame0 = self._makeValidHelloFrame()
-		transport0.dataReceived(self.serializeFrames([frame0]))
-		transport0.dataReceived(self.serializeFrames([[Fn.gimme_boxes, None]]))
+		transport0.sendFrames([frame0])
+		transport0.sendFrames([[Fn.gimme_boxes, None]])
 		stream = self.streamTracker.getStream('x'*26)
 
-		self.aE([], parser0.gotFrames.getNew())
+		self.aE([], transport0.getNew())
 
 		proto = list(self.protocolFactory.instances)[0]
 
@@ -2667,7 +2675,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		stream.sendBoxes([["s2cbox0"], ["s2cbox1"]])
 
-		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], parser0.gotFrames.getNew())
+		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], transport0.getNew())
 
 
 		# Connect a new transport that sends gimme_boxes with argument
@@ -2675,24 +2683,24 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		# written to it (because pretendAcked is in action); make sure
 		# transport0 is terminating
 
-		transport1, parser1 = self._makeTransport()
+		transport1 = self._makeTransport()
 
 		newHello = self._makeValidHelloFrame()
 		newHello[1]['n'] = 1
 
-		transport1.dataReceived(self.serializeFrames([newHello]))
-		transport1.dataReceived(self.serializeFrames([[Fn.gimme_boxes, 0]])) # succeeds transport0
+		transport1.sendFrames([newHello])
+		transport1.sendFrames([[Fn.gimme_boxes, 0]]) # succeeds transport0
 
-		self.aE([], parser1.gotFrames.getNew())
+		self.aE([], transport1.getNew())
 
-		self.aE([[Fn.you_close_it]], parser0.gotFrames.getNew())
+		self.aE([[Fn.you_close_it]], transport0.getNew())
 
 
 		# Send another box S2C and make sure it is written to transport1
 
 		stream.sendBoxes([["s2cbox2"]])
 
-		self.aE([[Fn.seqnum, 2], [Fn.box, ["s2cbox2"]]], parser1.gotFrames.getNew())
+		self.aE([[Fn.seqnum, 2], [Fn.box, ["s2cbox2"]]], transport1.getNew())
 
 
 	def test_clientSendsAlreadyReceivedBoxes(self):
@@ -2700,27 +2708,27 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		Stream ignores boxes that were already received, and calls
 		boxesReceived on the protocol correctly.
 		"""
-		transport0, parser0 = self._makeTransport()
+		transport0 = self._makeTransport()
 
 		frame0 = self._makeValidHelloFrame()
-		transport0.dataReceived(self.serializeFrames([frame0]))
-		transport0.dataReceived(self.serializeFrames([[Fn.gimme_boxes, None]]))
+		transport0.sendFrames([frame0])
+		transport0.sendFrames([[Fn.gimme_boxes, None]])
 		stream = self.streamTracker.getStream('x'*26)
 
-		self.aE([], parser0.gotFrames.getNew())
+		self.aE([], transport0.getNew())
 
 		proto = list(self.protocolFactory.instances)[0]
 
-		transport0.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"]}]]))
-		self.aE([[Fn.sack, 0, []]], parser0.gotFrames.getNew())
+		transport0.sendFrames([[Fn.boxes, {"0": ["box0"]}]])
+		self.aE([[Fn.sack, 0, []]], transport0.getNew())
 
 		# 0 was already received, 1 was not.
-		transport0.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"], "1": ["box1"]}]]))
-		self.aE([[Fn.sack, 1, []]], parser0.gotFrames.getNew())
+		transport0.sendFrames([[Fn.boxes, {"0": ["box0"], "1": ["box1"]}]])
+		self.aE([[Fn.sack, 1, []]], transport0.getNew())
 
 		# 0 and 1 were already received, 2 was not.
-		transport0.dataReceived(self.serializeFrames([[Fn.boxes, {"0": ["box0"], "1": ["box1"], "2": ["box2"]}]]))
-		self.aE([[Fn.sack, 2, []]], parser0.gotFrames.getNew())
+		transport0.sendFrames([[Fn.boxes, {"0": ["box0"], "1": ["box1"], "2": ["box2"]}]])
+		self.aE([[Fn.sack, 2, []]], transport0.getNew())
 
 		self.aE([
 			['streamStarted', stream],
@@ -2737,17 +2745,17 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		Test that all frames after the first reset frame are ignored.
 		Test that protocol gets information from the first reset frame.
 		"""
-		transport0, parser0 = self._makeTransport()
+		transport0 = self._makeTransport()
 
-		transport0.dataReceived(self.serializeFrames([self._makeValidHelloFrame()]))
-		self.aE([], parser0.gotFrames.getNew())
+		transport0.sendFrames([self._makeValidHelloFrame()])
+		self.aE([], transport0.getNew())
 
 		stream = self.streamTracker.getStream('x'*26)
 
-		transport0.dataReceived(self.serializeFrames([
-			[Fn.reset, "reason", True], [Fn.reset, "x", False], [9999, "whatever"]]))
+		transport0.sendFrames([
+			[Fn.reset, "reason", True], [Fn.reset, "x", False], [9999, "whatever"]])
 
-		self.aE([[Fn.you_close_it]], parser0.gotFrames.getNew())
+		self.aE([[Fn.you_close_it]], transport0.getNew())
 
 		proto = list(self.protocolFactory.instances)[0]
 		self.aE([["streamStarted", stream], ["streamReset", WhoReset.client_app, "reason"]], proto.getNew())
@@ -2759,7 +2767,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		before the transport is terminated. Also test that the protocol
 		gets the right calls.
 		"""
-		transport0, parser0 = self._makeTransport()
+		transport0 = self._makeTransport()
 		frame0 = self._makeValidHelloFrame()
 
 		frames = [
@@ -2767,9 +2775,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			[Fn.gimme_boxes, None],
 			[Fn.boxes, {"0": ["box0"], "1": ["box1"]}], [Fn.reset, u'', True]
 		]
-		transport0.dataReceived(self.serializeFrames(frames))
+		transport0.sendFrames(frames)
 
-		self.aE([[Fn.sack, 1, []], [Fn.you_close_it]], parser0.gotFrames.getNew())
+		self.aE([[Fn.sack, 1, []], [Fn.you_close_it]], transport0.getNew())
 
 		proto = list(self.protocolFactory.instances)[0]
 		self.aE([
@@ -2786,23 +2794,23 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		Note: nothing special in the code makes this work, this test is a
 		sanity check.
 		"""
-		transport0, parser0 = self._makeTransport()
+		transport0 = self._makeTransport()
 
-		transport0.dataReceived(self.serializeFrames([self._makeValidHelloFrame()]))
-		self.aE([], parser0.gotFrames.getNew())
+		transport0.sendFrames([self._makeValidHelloFrame()])
+		self.aE([], transport0.getNew())
 
 		stream = self.streamTracker.getStream('x'*26)
 
-		transport1, parser1 = self._makeTransport()
+		transport1 = self._makeTransport()
 
-		transport1.dataReceived(self.serializeFrames([self._makeValidHelloFrame()]))
-		self.aE([], parser1.gotFrames.getNew())
+		transport1.sendFrames([self._makeValidHelloFrame()])
+		self.aE([], transport1.getNew())
 
-		transport0.dataReceived(self.serializeFrames([[Fn.reset, "reason", True]]))
-		transport1.dataReceived(self.serializeFrames([[Fn.reset, "reason", False]]))
+		transport0.sendFrames([[Fn.reset, "reason", True]])
+		transport1.sendFrames([[Fn.reset, "reason", False]])
 
-		self.aE([[Fn.you_close_it]], parser0.gotFrames.getNew())
-		self.aE([[Fn.you_close_it]], parser1.gotFrames.getNew())
+		self.aE([[Fn.you_close_it]], transport0.getNew())
+		self.aE([[Fn.you_close_it]], transport1.getNew())
 
 		proto = list(self.protocolFactory.instances)[0]
 		self.aE([["streamStarted", stream], ["streamReset", WhoReset.client_app, "reason"]], proto.getNew())
@@ -2822,14 +2830,14 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		for clientResetsImmediately in (True, False):
 			self._resetStreamTracker(protocolFactoryClass=MyFactory)
 
-			transport0, parser0 = self._makeTransport()
+			transport0 = self._makeTransport()
 			frame0 = self._makeValidHelloFrame()
 
 			frames = [frame0, [Fn.gimme_boxes, None]]
 			if clientResetsImmediately:
 				# Surprise! Client wants to reset very immediately too.
 				frames.append([Fn.reset, u'', True])
-			transport0.dataReceived(self.serializeFrames(frames))
+			transport0.sendFrames(frames)
 
 			# In the implementation, streamStarted is called when the
 			# first transport attaches (i.e. before gimme_boxes).
@@ -2843,7 +2851,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 #				[Fn.box, ["s2cbox2"]],
 				[Fn.reset, u'reset for testing in MockMinervaProtocol._callStuff', True],
 				[Fn.you_close_it]
-			], parser0.gotFrames.getNew())
+			], transport0.getNew())
 
 			proto = list(self.protocolFactory.instances)[0]
 			self.aE([
@@ -2866,14 +2874,14 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			self._resetStreamTracker(protocolFactoryClass=MyFactory)
 
-			transport0, parser0 = self._makeTransport()
+			transport0 = self._makeTransport()
 			frame0 = self._makeValidHelloFrame()
 
 			frames = [frame0, [Fn.gimme_boxes, None]]
 			if clientResetsImmediately:
 				# Surprise! Client wants to reset very immediately too.
 				frames.append([Fn.reset, u'', True])
-			transport0.dataReceived(self.serializeFrames(frames))
+			transport0.sendFrames(frames)
 
 			expected = [
 				[Fn.seqnum, 0],
@@ -2885,7 +2893,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			if clientResetsImmediately:
 				expected.append([Fn.you_close_it])
 
-			self.aE(expected, parser0.gotFrames.getNew())
+			self.aE(expected, transport0.getNew())
 
 			proto = list(self.protocolFactory.instances)[0]
 			if clientResetsImmediately:
@@ -2909,7 +2917,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			self._resetStreamTracker(protocolFactoryClass=MyFactory)
 
-			transport0, parser0 = self._makeTransport()
+			transport0 = self._makeTransport()
 			frame0 = self._makeValidHelloFrame()
 
 			frames = [
@@ -2920,7 +2928,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			if clientResetsImmediately:
 				# Surprise! Client wants to reset very immediately too.
 				frames.append([Fn.reset, u'', True])
-			transport0.dataReceived(self.serializeFrames(frames))
+			transport0.sendFrames(frames)
 
 			self.aE([
 				[Fn.sack, 1, []],
@@ -2930,7 +2938,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				[Fn.box, ["s2cbox2"]],
 				[Fn.reset, u'reset for testing in MockMinervaProtocol._callStuff', True],
 				[Fn.you_close_it]
-			], parser0.gotFrames.getNew())
+			], transport0.getNew())
 
 			proto = list(self.protocolFactory.instances)[0]
 			self.aE([
@@ -2954,7 +2962,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			self._resetStreamTracker(protocolFactoryClass=MyFactory)
 
-			transport0, parser0 = self._makeTransport()
+			transport0 = self._makeTransport()
 			frame0 = self._makeValidHelloFrame()
 
 			frames = [
@@ -2965,7 +2973,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			if clientResetsImmediately:
 				# Surprise! Client wants to reset very immediately too.
 				frames.append([Fn.reset, u'', True])
-			transport0.dataReceived(self.serializeFrames(frames))
+			transport0.sendFrames(frames)
 
 			expected = [
 				[Fn.sack, 1, []],
@@ -2978,7 +2986,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			if clientResetsImmediately:
 				expected.append([Fn.you_close_it])
 
-			self.aE(expected, parser0.gotFrames.getNew())
+			self.aE(expected, transport0.getNew())
 
 			proto = list(self.protocolFactory.instances)[0]
 			if clientResetsImmediately:
@@ -3007,7 +3015,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		for clientResetsImmediately in (True, False):
 			self._resetStreamTracker(protocolFactoryClass=MyFactory)
 
-			transport0, parser0 = self._makeTransport()
+			transport0 = self._makeTransport()
 			frame0 = self._makeValidHelloFrame()
 
 			frames = [
@@ -3018,7 +3026,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			if clientResetsImmediately:
 				# Surprise! Client wants to reset very immediately too. But this is completely ignored.
 				frames.append([Fn.reset, u"client's reason", True])
-			transport0.dataReceived(self.serializeFrames(frames))
+			transport0.sendFrames(frames)
 
 			expected = [
 				[Fn.sack, 1, []],
@@ -3026,7 +3034,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				[Fn.you_close_it],
 			]
 
-			self.aE(expected, parser0.gotFrames.getNew())
+			self.aE(expected, transport0.getNew())
 
 			proto = list(self.protocolFactory.instances)[0]
 			self.aE([

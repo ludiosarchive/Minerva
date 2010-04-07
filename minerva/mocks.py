@@ -1,3 +1,4 @@
+import simplejson
 from zope.interface import implements
 
 from twisted.internet import protocol, defer, address, interfaces, task
@@ -7,11 +8,9 @@ from twisted.test.proto_helpers import StringTransport
 #from twisted.internet.test.test_base import FakeReactor as _TwistedFakeReactor
 
 from minerva import abstract
-
 from minerva.newlink import (
-	NoSuchStream, IMinervaProtocol, IMinervaFactory, StreamAlreadyExists
-)
-
+	NoSuchStream, IMinervaProtocol, IMinervaFactory, StreamAlreadyExists)
+from minerva.decoders import OK
 from minerva.website import RejectTransport
 
 # The use of "mock" and "dummy" in this file is totally inconsistent.
@@ -74,6 +73,34 @@ class DummyTCPTransport(StringTransport):
 		Real twisted code doesn't set <streamingTransportVar> = None
 		"""
 		self.producer = None
+
+
+
+def strictGetNewFrames(parser, data):
+	"""
+	Wrapper function for L{parser.getNewFrames} that checks the code
+	and throws an error if C{code != OK}.
+	"""
+	out, code = parser.getNewFrames(data)
+	if code != OK:
+		raise RuntimeError("Parse error; code was %r" % (code,))
+	return out, code
+
+
+
+class JSONDecodingTcpTransport(DummyTCPTransport, _MockMixin):
+	"""
+	A TCP transport that first decodes bytes with a parser,
+	then decodes the frames with simplejson.
+	"""
+	def __init__(self, parser):
+		self.parser = parser
+		self.log = []
+
+
+	def write(self, data):
+		frames, code = strictGetNewFrames(self.parser, data)
+		self.log.extend(simplejson.loads(f) for f in frames)
 
 
 
