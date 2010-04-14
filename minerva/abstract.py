@@ -432,23 +432,27 @@ secureRandom = _theRandomFactory.secureRandom
 
 def getSizeOfRecursive(obj, _alreadySeen=None):
 	"""
-	Get the size of object C{obj} using C{sys.getsizeof}
-	on the object itself and all of its children. If the same
-	object appears more than once inside C{obj}, it is counted
-	only once.
+	Get the size of object C{obj} using C{sys.getsizeof} on the object itself
+	and all of its children recursively. If the same object appears more
+	than once inside C{obj}, it is counted only once.
 
-	This only works properly if C{obj} is a str, unicode, list,
-	dict, set, bool, NoneType, int, complex, float, long, or any
-	nested combination of the above.
+	This only works properly if C{obj} is a str, unicode, list, dict, set,
+	bool, NoneType, int, complex, float, long, or any nested combination
+	of the above. C{obj} is allowed to have circular references.
 
 	This is particularly useful for getting a good estimate of how much
 	memory a JSON-decoded object is using after receiving it.
 
-	We observed that sys.getsizeof([1]*10000000) returns
-	40000032, which is almost exactly the amount of additional
-	memory used by the object. sys.getsizeof(1) returns 12,
-	but all of the items in the list are really pointing to the same
-	object.
+	Design notes: sys.getsizeof seems to return very accurate numbers,
+	but does not recurse into the object's children. As we recurse into
+	the children, we keep track of objects we've already counted for two
+	reasons:
+		- If we've already counted the object's memory usage, we don't
+		want to count it again.
+		- As a bonus, we handle circular references gracefully.
+
+	This function assumes that containers do not modify their children as
+	they are traversed.
 	"""
 	if _alreadySeen is None:
 		_alreadySeen = set()
@@ -474,9 +478,6 @@ def getSizeOfRecursive(obj, _alreadySeen=None):
 					total += getSizeOfRecursive(item, _alreadySeen)
 
 	return total
-
-# TODO: make sure above is optimized for [big_same_object, big_same_object]
-#	(Don't descend multiple times into the same thing)
 
 
 from pypycpyo import optimizer
