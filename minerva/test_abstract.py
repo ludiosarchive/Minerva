@@ -634,17 +634,25 @@ class GetSizeOfRecursiveTests(unittest.TestCase):
 		For objects with no children,
 			abstract.getSizeOfRecursive(obj) == sys.getsizeof(obj)
 		"""
-		self.assertEqual(abstract.getSizeOfRecursive([]), sys.getsizeof([]))
-		self.assertEqual(abstract.getSizeOfRecursive({}), sys.getsizeof({}))
-		self.assertEqual(abstract.getSizeOfRecursive(1), sys.getsizeof(1))
+		s = sys.getsizeof
+		self.assertEqual(abstract.getSizeOfRecursive([]), s([]))
+		self.assertEqual(abstract.getSizeOfRecursive({}), s({}))
+		self.assertEqual(abstract.getSizeOfRecursive(1), s(1))
 
 
 	def test_getSizeOfRecursiveWithLists(self):
-		self.assertEqual(abstract.getSizeOfRecursive([1]), sys.getsizeof([1]) + sys.getsizeof(1))
-		self.assertEqual(abstract.getSizeOfRecursive([1,1,1,1]), sys.getsizeof([1,1,1,1]) + sys.getsizeof(1))
+		s = sys.getsizeof
+		self.assertEqual(abstract.getSizeOfRecursive([1]), s([1]) + s(1))
+		self.assertEqual(abstract.getSizeOfRecursive([1,1,1,1]), s([1,1,1,1]) + s(1))
 
 
 	def test_getSizeOfRecursiveWithDicts(self):
+		s = sys.getsizeof
+
 		self.assertEqual(
 			abstract.getSizeOfRecursive({"a": "bee"}),
-			sys.getsizeof({"a": "bee"}) + sys.getsizeof("a") + sys.getsizeof("bee"))
+			s({"a": "bee"}) + s("a") + s("bee"))
+
+		self.assertEqual(
+			abstract.getSizeOfRecursive({"a": "bee", "2": ["bee", "a"]}),
+			s({"a": "bee", "2": None}) + s("a") + s("bee") + s("2") + s([None, None]))

@@ -442,6 +442,9 @@ def getSizeOfRecursive(obj, _alreadySeen=None):
 	dict, set, bool, NoneType, int, complex, float, long, or any
 	nested combination of the above.
 
+	This is particularly useful for getting a good estimate of how much
+	memory a JSON-decoded object is using after receiving it.
+
 	We observed that sys.getsizeof([1]*10000000) returns
 	40000032, which is almost exactly the amount of additional
 	memory used by the object. sys.getsizeof(1) returns 12,
