@@ -597,8 +597,6 @@ class RandomFactoryTests(unittest.TestCase):
 
 
 
-# TODO: reorder the arguments in the assertEqual statements
-# TODO: use aE instead of assertEqual for consistency
 class GetSizeOfRecursiveTests(unittest.TestCase):
 
 	def test_childlessObjects(self):
@@ -607,27 +605,27 @@ class GetSizeOfRecursiveTests(unittest.TestCase):
 			abstract.getSizeOfRecursive(obj) == sys.getsizeof(obj)
 		"""
 		s = sys.getsizeof
-		self.assertEqual(abstract.getSizeOfRecursive([]), s([]))
-		self.assertEqual(abstract.getSizeOfRecursive({}), s({}))
-		self.assertEqual(abstract.getSizeOfRecursive(1), s(1))
+		self.aE(s([]), abstract.getSizeOfRecursive([]))
+		self.aE(s({}), abstract.getSizeOfRecursive({}))
+		self.aE(s(1), abstract.getSizeOfRecursive(1))
 
 
 	def test_listObjects(self):
 		s = sys.getsizeof
-		self.assertEqual(abstract.getSizeOfRecursive([1]), s([1]) + s(1))
-		self.assertEqual(abstract.getSizeOfRecursive([1,1,1,1]), s([1,1,1,1]) + s(1))
+		self.aE(s([1]) + s(1), abstract.getSizeOfRecursive([1]))
+		self.aE(s([1,1,1,1]) + s(1), abstract.getSizeOfRecursive([1,1,1,1]))
 
 
 	def test_dictObjects(self):
 		s = sys.getsizeof
 
-		self.assertEqual(
-			abstract.getSizeOfRecursive({"a": "bee"}),
-			s({"a": "bee"}) + s("a") + s("bee"))
+		self.aE(
+			s({"a": "bee"}) + s("a") + s("bee"),
+			abstract.getSizeOfRecursive({"a": "bee"}))
 
-		self.assertEqual(
-			abstract.getSizeOfRecursive({"a": "bee", "2": ["bee", "a"]}),
-			s({"a": "bee", "2": None}) + s("a") + s("bee") + s("2") + s([None, None]))
+		self.aE(
+			s({"a": "bee", "2": None}) + s("a") + s("bee") + s("2") + s([None, None]),
+			abstract.getSizeOfRecursive({"a": "bee", "2": ["bee", "a"]}))
 
 
 	def test_circularList(self):
@@ -639,7 +637,7 @@ class GetSizeOfRecursiveTests(unittest.TestCase):
 		n = []
 		n.append(None)
 
-		self.assertEqual(abstract.getSizeOfRecursive(c), s(n))
+		self.aE(s(n), abstract.getSizeOfRecursive(c))
 
 
 	def test_circularDict(self):
@@ -651,4 +649,4 @@ class GetSizeOfRecursiveTests(unittest.TestCase):
 		n = {}
 		n['key'] = None
 
-		self.assertEqual(abstract.getSizeOfRecursive(c), s(n) + s('key'))
+		self.aE(s(n) + s('key'), abstract.getSizeOfRecursive(c))
