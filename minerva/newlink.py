@@ -1237,20 +1237,22 @@ class SocketTransport(object):
 				self._stream.subscribeToBoxes(self, succeedsTransport)
 
 			elif frameType == Fn_boxes:
-				seqNumStrToBoxDict = frameObj[1]
+				boxes = frameObj[1]
 				# This is an estimate. [1,1,1,1,1,1] might take more memory
 				# than a string "1.1.1.1.1.1.1"
-				memorySizeOfBoxes = len(frameString) # TODO XXX ARGH WRONG (for http) because already decoded
-				boxes = []
-				for seqNumStr, box in seqNumStrToBoxDict.iteritems():
+				# Validate the boxes
+				for thing in boxes:
+					if len(thing) != 2:
+						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+					seqNum, box = thing
 					try:
 					 	# This is probably enough to stop an ACA on 64-bit
 					 	# Python, but maybe worry about 32-bit Python too?
-						seqNum = abstract.ensureNonNegIntLimit(abstract.strToNonNeg(seqNumStr), 2**64)
-					except ValueError:
+						seqNum = abstract.ensureNonNegIntLimit(seqNum, 2**64)
+					except (TypeError, ValueError):
 						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
-					boxes.append((seqNum, box))
 				self._sackDirty = True
+				memorySizeOfBoxes = len(frameString) # TODO XXX ARGH WRONG (for http) because already decoded
 				self._stream.boxesReceived(self, boxes, memorySizeOfBoxes)
 				# Remember that a lot can happen underneath that boxesReceived call,
 				# including a call to our own `reset` or `closeGently` or `writeBoxes`.

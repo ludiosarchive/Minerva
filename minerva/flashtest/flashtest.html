@@ -112,8 +112,10 @@ function connect(bridge) {
 				'r': 9999999, 'm': 3600};
 			var helloFrame = [cw.net.FrameType.hello, helloData];
 			var gimmeFrame = [cw.net.FrameType.gimme_boxes, null];
-			// If the server receives this more than once, it is subsequently ignored because the box # is always 0, and box 0 was already received. 
-			var boxesFrame = [cw.net.FrameType.boxes, {"0": ['send_demo']}];
+			// If the server receives this more than once, it is
+			// subsequently ignored because the box # is always 0,
+			// and box 0 was already received.
+			var boxesFrame = [cw.net.FrameType.boxes, [[0, ['send_demo']]]];
 
 			var frames = [ser(helloFrame), ser(gimmeFrame), ser(boxesFrame)];
 			for(i=0; i < frames.length; i++) {
