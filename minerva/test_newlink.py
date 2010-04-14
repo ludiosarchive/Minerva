@@ -110,6 +110,16 @@ class FrameTests(unittest.TestCase):
 
 
 
+class FakeBigString(str):
+	__slots__ = ()
+
+	def __sizeof__(self):
+		# Magic! The size of the string seems to be the int(...)
+		# of the string!
+		return int(self)
+
+
+
 class StreamTests(unittest.TestCase):
 	"""
 	Tests for L{newlink.Stream}
@@ -181,11 +191,11 @@ class StreamTests(unittest.TestCase):
 		t = DummySocketLikeTransport()
 		s.transportOnline(t)
 
-		s.boxesReceived(t, [(1, ['box1'])], 3)
+		s.boxesReceived(t, [(1, ['box1'])])
 		i = list(factory.instances)[0]
 		self.aE([['streamStarted', s]], i.getNew())
 
-		s.boxesReceived(t, [(0, ['box0'])], 3)
+		s.boxesReceived(t, [(0, ['box0'])])
 		self.aE([['boxesReceived', [['box0'], ['box1']]]], i.getNew())
 
 
@@ -205,7 +215,7 @@ class StreamTests(unittest.TestCase):
 
 		# box #0 is never given, so it cannot deliver any of them
 
-		s.boxesReceived(t, manyBoxes, 1) # wow, 5001 boxes take just one byte
+		s.boxesReceived(t, manyBoxes)
 		self.aE([['writeReset', u'resources exhausted', False]], t.getNew())
 
 
@@ -218,13 +228,11 @@ class StreamTests(unittest.TestCase):
 		t = DummySocketLikeTransport()
 		s.transportOnline(t)
 
-		# We don't actually need to make this box big because below, we
-		# lie to the Stream about how big it is.
-		notManyBoxes = [(1, 'x')]
+		notManyBoxes = [(1, FakeBigString(str(4*1024*1024 + 1)))]
 
 		# box #0 is never given, so it cannot deliver any of them
 
-		s.boxesReceived(t, notManyBoxes, 4*1024*1024 + 1)
+		s.boxesReceived(t, notManyBoxes)
 		self.aE([['writeReset', u'resources exhausted', False]], t.getNew())
 
 
@@ -251,7 +259,7 @@ class StreamTests(unittest.TestCase):
 			manyBoxes.append((n, 'box'))
 		assert len(manyBoxes) == 5001 + 1
 
-		s.boxesReceived(t, manyBoxes, 4*1024*1024 + 1)
+		s.boxesReceived(t, manyBoxes)
 		self.aE([['writeReset', u'reset for testing in MockMinervaProtocol._callStuff', True]], t.getNew())
 
 
@@ -273,9 +281,9 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t)
 
 		# we don't actually need to make box #2 big; we can lie to the Stream about how big it is
-		notManyBoxes = [(0, ['box0']), (2, 'x')]
+		notManyBoxes = [(0, ['box0']), (2, FakeBigString(str(4*1024*1024 + 1)))]
 
-		s.boxesReceived(t, notManyBoxes, 4*1024*1024 + 1)
+		s.boxesReceived(t, notManyBoxes)
 		self.aE([['writeReset', u'reset for testing in MockMinervaProtocol._callStuff', True]], t.getNew())
 
 
@@ -457,11 +465,11 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t)
 		
 		self.aE((-1, []), s.getSACK())
-		s.boxesReceived(t, [(0, ['box'])], 3)
+		s.boxesReceived(t, [(0, ['box'])])
 		self.aE((0, []), s.getSACK())
-		s.boxesReceived(t, [(4, ['box'])], 3)
+		s.boxesReceived(t, [(4, ['box'])])
 		self.aE((0, [4]), s.getSACK())
-		s.boxesReceived(t, [(5, ['box'])], 3)
+		s.boxesReceived(t, [(5, ['box'])])
 		self.aE((0, [4, 5]), s.getSACK())
 
 
@@ -2051,8 +2059,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		If client writes boxes to the transport, those boxes are delivered
 		to the Stream, and a SACK is written out to the transport.
 		"""
-		expectedMemorySize = len('[0, [[0, ["box0"]]]]')
-
 		frame0 = self._makeValidHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
@@ -2067,7 +2073,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport.sendFrames([[Fn.boxes, [[0, ["box0"]]]]])
 
 		self.aE([
-			['boxesReceived', transport, [[0, ["box0"]]], expectedMemorySize],
+			['boxesReceived', transport, [[0, ["box0"]]]],
 			['getSACK']
 		], stream.getNew())
 		self.aE([[Fn.sack, 0, []]], transport.getNew())
@@ -2075,7 +2081,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport.sendFrames([[Fn.boxes, [[2, ["box2"]]]]])
 
 		self.aE([
-			['boxesReceived', transport, [[2, ["box2"]]], expectedMemorySize],
+			['boxesReceived', transport, [[2, ["box2"]]]],
 			['getSACK']
 		], stream.getNew())
 		self.aE([[Fn.sack, 0, [2]]], transport.getNew())
@@ -2087,8 +2093,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		same time, those boxes are delivered to Stream, and just *one*
 		SACK is written out to the transport.
 		"""
-		expectedMemorySize = len('[0, [[0, ["box0"]]]]')
-
 		frame0 = self._makeValidHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
@@ -2099,8 +2103,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.aE([
 			['notifyFinish'],
 			['transportOnline', transport],
-			['boxesReceived', transport, [[0, ["box0"]]], expectedMemorySize], # TODO: maybe coalesce boxesReceived funcalls in the future
-			['boxesReceived', transport, [[2, ["box2"]]], expectedMemorySize],
+			# TODO: maybe coalesce boxesReceived funcalls in the future
+			['boxesReceived', transport, [[0, ["box0"]]]],
+			['boxesReceived', transport, [[2, ["box2"]]]],
 			['getSACK']],
 		stream.getNew())
 		self.aE([[Fn.sack, 0, [2]]], transport.getNew())
@@ -3131,13 +3136,21 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			["notifyFinish"],
 			["transportOnline", transport],
 			["subscribeToBoxes", transport, None],
-			["boxesReceived", transport, [[0, ['box0']], [1, ['box1']]], 2],
-			["boxesReceived", transport, [[2, ['box2']]], 2],
+			["boxesReceived", transport, [[0, ['box0']], [1, ['box1']]]],
+			["boxesReceived", transport, [[2, ['box2']]]],
 			["getSACK"],
 		], stream.getNew())
 
+	# TODO: test that request is closed after SACK or boxes written to it,
+	# if readOnlyOnce == True
+
+	# TODO: test that \r\n instead of \n separator works
+
+	# TODO: test maxOpenTime
+
 	# TODO: test numPaddingBytes
 
+	# TODO: test maxReceiveBytes
 
 
 # TODO: integration test that uses a real firewall (we had a regression based on this)

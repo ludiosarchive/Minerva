@@ -79,7 +79,7 @@ class Frame(object):
 	for num, (name, minArgs, maxArgs) in knownTypes.iteritems():
 		setattr(names, name, num)
 
-	__slots__ = ('contents', 'type')
+	__slots__ = ('contents', 'type', '_cachedSize')
 
 	def __init__(self, contents):
 		"""
@@ -429,13 +429,13 @@ class Stream(object):
 			del self._protocol
 
 
-	def boxesReceived(self, transport, boxes, memorySizeOfBoxes):
+	def boxesReceived(self, transport, boxes):
 		"""
 		Private. Do not call this.
 
 		Called by a transport to tell me that it has received boxes L{boxes}.
 		"""
-		self._incoming.give(boxes, memorySizeOfBoxes)
+		self._incoming.give(boxes)
 		items = self._incoming.getDeliverableItems()
 		if items:
 			self._protocol.boxesReceived(items)
@@ -444,7 +444,7 @@ class Stream(object):
 		# Note: Underneath the boxesReceived call (above), someone may have reset the Stream!
 		# This is why we check for `not self.disconnected`.
 		if not self.disconnected and \
-		(self._incoming.getUndeliveredCount() > self.maxUndeliveredBoxes or \
+		(self._incoming.getUndeliverableCount() > self.maxUndeliveredBoxes or \
 		self._incoming.getMaxConsumption() > self.maxUndeliveredBytes):
 			self._internalReset(u'resources exhausted')
 
@@ -1266,10 +1266,7 @@ class SocketTransport(object):
 					except (TypeError, ValueError):
 						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 				self._sackDirty = True
-				# This is an estimate. [1,1,1,1,1,1] might take more memory
-				# than a string "1.1.1.1.1.1.1"
-				memorySizeOfBoxes = len(frameString) # TODO XXX ARGH WRONG (for http) because already decoded
-				self._stream.boxesReceived(self, boxes, memorySizeOfBoxes)
+				self._stream.boxesReceived(self, boxes)
 				# Remember that a lot can happen underneath that boxesReceived call,
 				# including a call to our own `reset` or `closeGently` or `writeBoxes`.
 

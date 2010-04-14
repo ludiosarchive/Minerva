@@ -215,11 +215,11 @@ class Incoming(object):
 
 	One use case is ensuring that boxes are delivered to the Stream reliably
 	and in-order. Caller is responsible for protecting against resource
-	exhaustion attacks by providing reasonably correct C{howMuch} numbers to
-	L{give}, calling L{getUndeliveredCount} or L{getMaxConsumption}, and
-	destroying the Stream if the numbers are too high.
+	exhaustion attacks by calling L{getUndeliverableCount} or
+	L{getMaxConsumption}, and destroying the Stream if the numbers are too
+	high.
 	"""
-	__slots__ = ('_lastAck', '_cached', '_deliverable', '_consumption')
+	__slots__ = ('_lastAck', '_cached', '_deliverable', '_objSizeCache')
 
 	def __init__(self):
 		self._lastAck = -1
@@ -229,21 +229,12 @@ class Incoming(object):
 		self._cached = {}
 		
 		self._deliverable = deque()
-		self._consumption = {}
+		self._objSizeCache = {}
 
 
-	# Because our Minerva protocol can receive many boxes in one frame,
-	# we don't really know how much memory each box takes up (unless
-	# we do a deep traversal of every object in each box).
-
-	# But we do know approximately how many bytes (box1, box2, box3, ...)
-	# will take in memory, because we know the byte length of the frame
-	# the boxes came in.
-
-	# So, we have the last argument here to "teach" Incoming.
-	def give(self, numAndItemSeq, howMuch):
+	def give(self, numAndItemSeq):
 		"""
-		@param numAndItemSeq: a sequence of optionally-sorted (seqNum, box).
+		@param numAndItemSeq: a sequence of optionally-sorted (seqNum, object).
 			C{seqNum} may be an C{int}, C{long}, or C{float}.
 
 		@param howMuch: how much memory the boxes in
@@ -270,26 +261,23 @@ class Incoming(object):
 			self._cached[num] = item
 
 			# Step 3: for everything that can be delivered, move from _cached to _deliverable.
-			# Remove keys from _consumption at the same time.
+			# Remove keys from _objSizeCache at the same time.
 
 			# TODO	: need to handle MemoryErrors? Probably not.
 			while self._lastAck + 1 in self._cached:
 				_lastAckP1 = self._lastAck + 1
 				self._deliverable.append(self._cached[_lastAckP1])
 				del self._cached[_lastAckP1]
-				if _lastAckP1 in self._consumption:
-					del self._consumption[_lastAckP1]
+				if _lastAckP1 in self._objSizeCache:
+					del self._objSizeCache[_lastAckP1]
 				self._lastAck = _lastAckP1
 
-		# Do this after the above, to avoid writing to _consumption in the
-		# most common case (where all given boxes are moved to _deliverable immediately)
-		
-		# Save some memory by not creating many tuple objects
-		_sameTuple = (howMuch, seqNums)
-		for n in seqNums:
-			if n in self._cached:
-				# Note that this may be overriding an existing key
-				self._consumption[n] = _sameTuple
+		# Do this after the above, to avoid getting the memory sizes of
+		# frames in most common case (where all given boxes are moved
+		# to _deliverable immediately)
+
+		for num, item in self._cached.iteritems():
+			self._objSizeCache[num] = getSizeOfRecursive(item)
 
 		return alreadyGiven
 
@@ -318,10 +306,13 @@ class Incoming(object):
 		return (self._lastAck, sackNumbers)
 
 
-	def getUndeliveredCount(self):
+	def getUndeliverableCount(self):
 		"""
 		@rtype: L{int}
-		@return: number of items that cannot be delivered yet
+		@return: the number of undeliverable items.
+
+		This does not count items that are already deliverable, but not yet
+		retrieved with L{getDeliverableItems}.
 		"""
 		return len(self._cached)
 
@@ -329,20 +320,16 @@ class Incoming(object):
 	def getMaxConsumption(self):
 		"""
 		@rtype: L{int}
-		@return: maximum possible consumption of the undelivered boxes.
+		@return: maximum possible consumption of the undeliverable items.
 
-		This excludes items that are already deliverable, but not yet
-		retrieved with L{getDeliverableItems}
+		This does not count items that are already deliverable, but not yet
+		retrieved with L{getDeliverableItems}.
+
+		Keep in mind that if undeliverable items have children that point
+		to the same object, this may overreport how much memory is really
+		being consumed.
 		"""
-		consumed = 0
-		alreadyIncluded = set()
-		for n in self._cached:
-			if n not in alreadyIncluded:
-				howMuch, seqNums = self._consumption[n]
-				consumed += howMuch
-				alreadyIncluded.update(seqNums)
-
-		return consumed
+		return sum(self._objSizeCache.itervalues())
 
 
 

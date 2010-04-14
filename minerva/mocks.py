@@ -244,9 +244,9 @@ class MockStream(_MockMixin):
 			t.closeGently()
 
 
-	def boxesReceived(self, transport, boxes, memorySizeOfBoxes):
-		self.log.append(['boxesReceived', transport, boxes, memorySizeOfBoxes])
-		self._incoming.give(boxes, memorySizeOfBoxes)
+	def boxesReceived(self, transport, boxes):
+		self.log.append(['boxesReceived', transport, boxes])
+		self._incoming.give(boxes)
 
 
 	def sackReceived(self, sackInfo):
