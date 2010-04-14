@@ -2,6 +2,7 @@ from twisted.trial import unittest
 
 from minerva.helpers import todo
 
+import sys
 import abstract
 
 
@@ -623,3 +624,27 @@ class RandomFactoryTests(unittest.TestCase):
 		self.aR(ValueError, lambda: rf.secureRandom(-0.5))
 		self.aR(ValueError, lambda: rf.secureRandom(0.5))
 		self.aR(ValueError, lambda: rf.secureRandom(0.999999))
+
+
+
+class GetSizeOfRecursiveTests(unittest.TestCase):
+
+	def test_getSizeOfRecursiveEqual(self):
+		"""
+		For objects with no children,
+			abstract.getSizeOfRecursive(obj) == sys.getsizeof(obj)
+		"""
+		self.assertEqual(abstract.getSizeOfRecursive([]), sys.getsizeof([]))
+		self.assertEqual(abstract.getSizeOfRecursive({}), sys.getsizeof({}))
+		self.assertEqual(abstract.getSizeOfRecursive(1), sys.getsizeof(1))
+
+
+	def test_getSizeOfRecursiveWithLists(self):
+		self.assertEqual(abstract.getSizeOfRecursive([1]), sys.getsizeof([1]) + sys.getsizeof(1))
+		self.assertEqual(abstract.getSizeOfRecursive([1,1,1,1]), sys.getsizeof([1,1,1,1]) + sys.getsizeof(1))
+
+
+	def test_getSizeOfRecursiveWithDicts(self):
+		self.assertEqual(
+			abstract.getSizeOfRecursive({"a": "bee"}),
+			sys.getsizeof({"a": "bee"}) + sys.getsizeof("a") + sys.getsizeof("bee"))

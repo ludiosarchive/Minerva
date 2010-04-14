@@ -1,7 +1,5 @@
-from pypycpyo import mutables
-id = mutables.ReservedForLocals
-
 import os
+from sys import getsizeof
 import re
 import warnings
 from collections import deque
@@ -285,7 +283,7 @@ class Incoming(object):
 		# Do this after the above, to avoid writing to _consumption in the
 		# most common case (where all given boxes are moved to _deliverable immediately)
 		
-		# Same some memory by not creating many tuple objects
+		# Save some memory by not creating many tuple objects
 		_sameTuple = (howMuch, seqNums)
 		for n in seqNums:
 			if n in self._cached:
@@ -429,6 +427,56 @@ class RandomFactory(object):
 
 _theRandomFactory = RandomFactory(bufferSize=4096*8)
 secureRandom = _theRandomFactory.secureRandom
+
+
+def getSizeOfRecursive(obj, _alreadySeen=None):
+	"""
+	Get the size of object C{obj} using C{sys.getsizeof}
+	on the object itself and all of its children. If the same
+	object appears more than once inside C{obj}, it is counted
+	only once.
+
+	C{obj} must not have circular references.
+
+	This only works properly if C{obj} is a str, unicode, list,
+	dict, set, bool, NoneType, int, complex, float, long, or any
+	nested combination of the above.
+
+	We observed that sys.getsizeof([1]*10000000) returns
+	40000032, which is almost exactly the amount of additional
+	memory used by the object. sys.getsizeof(1) returns 12,
+	but all of the items in the list are really pointing to the same
+	object.
+	"""
+	if _alreadySeen is None:
+		_alreadySeen = set()
+
+	total = getsizeof(obj)
+	_alreadySeen.add(id(obj))
+
+	if isinstance(obj, dict):
+		# We want to count the memory usage of both the keys and values.
+		for k, v in obj.iteritems():
+			if not id(k) in _alreadySeen:
+				total += getSizeOfRecursive(k, _alreadySeen)
+			if not id(v) in _alreadySeen:
+				total += getSizeOfRecursive(v, _alreadySeen)
+	else:
+		try:
+			iterator = obj.__iter__()
+		except (TypeError, AttributeError):
+			pass
+		else:
+			for item in iterator:
+				if not id(item) in _alreadySeen:
+					total += getSizeOfRecursive(item, _alreadySeen)
+
+	return total
+
+# TODO: make sure above is optimized for [big_same_object, big_same_object]
+#	(Don't descend multiple times into the same thing)
+
+# TOOD: make it work even with circular references
 
 
 from pypycpyo import optimizer

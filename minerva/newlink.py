@@ -1238,6 +1238,8 @@ class SocketTransport(object):
 
 			elif frameType == Fn_boxes:
 				seqNumStrToBoxDict = frameObj[1]
+				# This is an estimate. [1,1,1,1,1,1] might take more memory
+				# than a string "1.1.1.1.1.1.1"
 				memorySizeOfBoxes = len(frameString) # TODO XXX ARGH WRONG (for http) because already decoded
 				boxes = []
 				for seqNumStr, box in seqNumStrToBoxDict.iteritems():
