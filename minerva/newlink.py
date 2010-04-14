@@ -125,7 +125,13 @@ Fn_hello = Fn.hello
 Fn_gimme_boxes = Fn.gimme_boxes
 Fn_reset = Fn.reset
 Fn_you_close_it = Fn.you_close_it
+Fn_start_timestamps = Fn.start_timestamps
+Fn_stop_timestamps = Fn.stop_timestamps
+Fn_tk_frame_corruption = Fn.tk_frame_corruption
+Fn_tk_intraframe_corruption = Fn.tk_intraframe_corruption
+Fn_tk_stream_attach_failure = Fn.tk_stream_attach_failure
 Fn_tk_invalid_frame_type_or_arguments = Fn.tk_invalid_frame_type_or_arguments
+Fn_tk_acked_unsent_boxes = Fn.tk_acked_unsent_boxes
 
 
 
@@ -1177,7 +1183,7 @@ class SocketTransport(object):
 			f.trap(RejectTransport)
 			if self._terminating:
 				return
-			self._closeWith(Fn.tk_stream_attach_failure)
+			self._closeWith(Fn_tk_stream_attach_failure)
 
 		d.addCallbacks(cbAuthOkay, cbAuthFailed)
 		d.addErrback(log.err)
@@ -1201,14 +1207,14 @@ class SocketTransport(object):
 				try:
 					frameObj, position = decoders.strictDecoder.raw_decode(frameString)
 					if position != len(frameString):
-						return self._closeWith(Fn.tk_intraframe_corruption)
+						return self._closeWith(Fn_tk_intraframe_corruption)
 				except (simplejson.decoder.JSONDecodeError, decoders.ParseError):
-					return self._closeWith(Fn.tk_intraframe_corruption)
+					return self._closeWith(Fn_tk_intraframe_corruption)
 
 			try:
 				frame = Frame(frameObj)
 			except BadFrame:
-				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+				return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 
 			# Below, we can assume that the frame has the minimum/maximum
 			# allowed number of arguments for the frame type.
@@ -1217,20 +1223,20 @@ class SocketTransport(object):
 
 			# We demand a 'hello' frame before any other type of frame
 			if not self._gotHello and frameType != Fn_hello:
-				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+				return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 
 
 			if frameType == Fn_hello:
 				# We only allow one 'hello' per connection
 				if self._gotHello:
-					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 				self._gotHello = True
 				try:
 					self._handleHelloFrame(frame)
 				except InvalidHello:
-					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 				except NoSuchStream:
-					return self._closeWith(Fn.tk_stream_attach_failure)
+					return self._closeWith(Fn_tk_stream_attach_failure)
 			
 			elif frameType == Fn_gimme_boxes:
 				succeedsTransport = frameObj[1]
@@ -1238,17 +1244,17 @@ class SocketTransport(object):
 					try:
 						succeedsTransport = abstract.ensureNonNegIntLimit(frameObj[1], 2**64)
 					except (TypeError, ValueError):
-						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 				self._stream.subscribeToBoxes(self, succeedsTransport)
 
 			elif frameType == Fn_boxes:
 				boxes = frameObj[1]
 				if not isinstance(boxes, list):
-					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 				# Validate the boxes
 				for thing in boxes:
 					if not isinstance(thing, list) or len(thing) != 2:
-						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 					seqNum, box = thing
 					try:
 						# This is probably enough to stop an ACA on 64-bit
@@ -1258,7 +1264,7 @@ class SocketTransport(object):
 						# and therefore Stream an int/long/float seqNum.
 						abstract.ensureNonNegIntLimit(seqNum, 2**64)
 					except (TypeError, ValueError):
-						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 				self._sackDirty = True
 				# This is an estimate. [1,1,1,1,1,1] might take more memory
 				# than a string "1.1.1.1.1.1.1"
@@ -1276,7 +1282,7 @@ class SocketTransport(object):
 			elif frameType == Fn_reset:
 				reasonString, applicationLevel = frameObj[1:]
 				if not isinstance(reasonString, basestring) or not isinstance(applicationLevel, bool):
-					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 				self._stream.resetFromClient(reasonString, applicationLevel)
 
 			elif frameType == Fn_sack:
@@ -1284,30 +1290,30 @@ class SocketTransport(object):
 				try:
 					abstract.ensureNonNegIntLimit(ackNumber, 2**64) # okay to ignore return value here
 				except (TypeError, ValueError):
-					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 
 				if not isinstance(sackList, list):
-					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 
 				for obj in sackList:
 					try:
 						abstract.ensureNonNegIntLimit(obj, 2**64) # okay to ignore return value here
 					except (TypeError, ValueError):
-						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 
 				try:
 					self._stream.sackReceived((ackNumber, sackList))
 				except abstract.InvalidSACK:
-					return self._closeWith(Fn.tk_acked_unsent_boxes)
+					return self._closeWith(Fn_tk_acked_unsent_boxes)
 
-			elif frameType == Fn.start_timestamps:
+			elif frameType == Fn_start_timestamps:
 				1/0
 
-			elif frameType == Fn.stop_timestamps:
+			elif frameType == Fn_stop_timestamps:
 				1/0
 				
 			else:
-				return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
+				return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 
 		# The _sackDirty behavior in this class reduces the number of Fn.sack frames
 		# that are written out, while making sure that Fn.sack frames are not "held up"
@@ -1379,9 +1385,9 @@ class SocketTransport(object):
 				##print out
 				self._framesReceived(out, alreadyDecoded=self._parser.decodesJson)
 			elif code in (decoders.TOO_LONG, decoders.FRAME_CORRUPTION):
-				self._closeWith(Fn.tk_frame_corruption)
+				self._closeWith(Fn_tk_frame_corruption)
 			elif code == decoders.INTRAFRAME_CORRUPTION:
-				self._closeWith(Fn.tk_intraframe_corruption)
+				self._closeWith(Fn_tk_intraframe_corruption)
 			else:
 				raise RuntimeError("Got unknown code from parser %r: %r" % (self._parser, code))
 		else:
