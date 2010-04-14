@@ -637,7 +637,7 @@ class RandomFactoryTests(unittest.TestCase):
 
 class GetSizeOfRecursiveTests(unittest.TestCase):
 
-	def test_getSizeOfRecursiveEqual(self):
+	def test_childlessObjects(self):
 		"""
 		For objects with no children,
 			abstract.getSizeOfRecursive(obj) == sys.getsizeof(obj)
@@ -648,13 +648,13 @@ class GetSizeOfRecursiveTests(unittest.TestCase):
 		self.assertEqual(abstract.getSizeOfRecursive(1), s(1))
 
 
-	def test_getSizeOfRecursiveWithLists(self):
+	def test_listObjects(self):
 		s = sys.getsizeof
 		self.assertEqual(abstract.getSizeOfRecursive([1]), s([1]) + s(1))
 		self.assertEqual(abstract.getSizeOfRecursive([1,1,1,1]), s([1,1,1,1]) + s(1))
 
 
-	def test_getSizeOfRecursiveWithDicts(self):
+	def test_dictObjects(self):
 		s = sys.getsizeof
 
 		self.assertEqual(
@@ -664,3 +664,27 @@ class GetSizeOfRecursiveTests(unittest.TestCase):
 		self.assertEqual(
 			abstract.getSizeOfRecursive({"a": "bee", "2": ["bee", "a"]}),
 			s({"a": "bee", "2": None}) + s("a") + s("bee") + s("2") + s([None, None]))
+
+
+	def test_circularList(self):
+		s = sys.getsizeof
+
+		c = []
+		c.append(c)
+
+		n = []
+		n.append(None)
+
+		self.assertEqual(abstract.getSizeOfRecursive(c), s(n))
+
+
+	def test_circularDict(self):
+		s = sys.getsizeof
+
+		c = {}
+		c['key'] = c
+
+		n = {}
+		n['key'] = None
+
+		self.assertEqual(abstract.getSizeOfRecursive(c), s(n) + s('key'))

@@ -437,8 +437,6 @@ def getSizeOfRecursive(obj, _alreadySeen=None):
 	object appears more than once inside C{obj}, it is counted
 	only once.
 
-	C{obj} must not have circular references.
-
 	This only works properly if C{obj} is a str, unicode, list,
 	dict, set, bool, NoneType, int, complex, float, long, or any
 	nested combination of the above.
@@ -459,7 +457,7 @@ def getSizeOfRecursive(obj, _alreadySeen=None):
 	_alreadySeen.add(id(obj))
 
 	if isinstance(obj, dict):
-		# We want to count the memory usage of both the keys and values.
+		# Count the memory usage of both the keys and values.
 		for k, v in obj.iteritems():
 			if not id(k) in _alreadySeen:
 				total += getSizeOfRecursive(k, _alreadySeen)
@@ -479,8 +477,6 @@ def getSizeOfRecursive(obj, _alreadySeen=None):
 
 # TODO: make sure above is optimized for [big_same_object, big_same_object]
 #	(Don't descend multiple times into the same thing)
-
-# TOOD: make it work even with circular references
 
 
 from pypycpyo import optimizer
