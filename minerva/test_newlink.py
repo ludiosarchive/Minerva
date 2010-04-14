@@ -2106,6 +2106,38 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.aE([[Fn.sack, 0, [2]]], transport.getNew())
 
 
+	def test_boxesFrameWithInvalidBoxes(self):
+		"""
+		If the [1]th argument of the boxes frame is not a list, the client
+		gets C{tk_invalid_frame_type_or_arguments}.
+		"""
+		for boxes in [-1, -2**32, -0.5, 2**64+1, "4", True, False, None, {}]:
+			frame0 = self._makeValidHelloFrame()
+			transport = self._makeTransport()
+			transport.sendFrames([frame0, [Fn.boxes, boxes]])
+			stream = self.streamTracker.getStream('x'*26)
+
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
+
+			self._resetStreamTracker()
+
+
+	def test_boxesFrameWithInvalidBox(self):
+		"""
+		If the boxes list contains a non-list or non-length-2 object, the client
+		gets C{tk_invalid_frame_type_or_arguments}.
+		"""
+		for box in [-1, -2**32, -0.5, 2**64+1, "4", True, False, None, {}, {1: 2, 3: 4}]:
+			frame0 = self._makeValidHelloFrame()
+			transport = self._makeTransport()
+			transport.sendFrames([frame0, [Fn.boxes, [box]]])
+			stream = self.streamTracker.getStream('x'*26)
+
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
+
+			self._resetStreamTracker()
+
+
 	def test_boxesFrameWithInvalidSeqNums(self):
 		"""
 		Only integers in inclusive range (0, 2**64) are allowed in

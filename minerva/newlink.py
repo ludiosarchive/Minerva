@@ -43,6 +43,10 @@ class Frame(object):
 	# Most-frequently-used types should be non-negative and single-digit.
 	# num -> (name, minArgs, maxArgs)
 	knownTypes = {
+		# You may be tempted to make boxes take any number of arguments
+		# instead of having the boxes in the [1]th item, to make the frame
+		# "flatter". Don't. It'll be harder to iterate over, and you'll probably
+		# end up doing more writes to memory.
 		0: ('boxes', 1, 1),
 		1: ('box', 1, 1),
 		2: ('seqnum', 1, 1),
@@ -121,6 +125,7 @@ Fn_hello = Fn.hello
 Fn_gimme_boxes = Fn.gimme_boxes
 Fn_reset = Fn.reset
 Fn_you_close_it = Fn.you_close_it
+Fn_tk_invalid_frame_type_or_arguments = Fn.tk_invalid_frame_type_or_arguments
 
 
 
@@ -1238,20 +1243,25 @@ class SocketTransport(object):
 
 			elif frameType == Fn_boxes:
 				boxes = frameObj[1]
-				# This is an estimate. [1,1,1,1,1,1] might take more memory
-				# than a string "1.1.1.1.1.1.1"
+				if not isinstance(boxes, list):
+					return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 				# Validate the boxes
 				for thing in boxes:
-					if len(thing) != 2:
+					if not isinstance(thing, list) or len(thing) != 2:
 						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 					seqNum, box = thing
 					try:
-					 	# This is probably enough to stop an ACA on 64-bit
-					 	# Python, but maybe worry about 32-bit Python too?
-						seqNum = abstract.ensureNonNegIntLimit(seqNum, 2**64)
+						# This is probably enough to stop an ACA on 64-bit
+						# Python, but maybe worry about 32-bit Python too?
+						#
+						# We ignore the return value; it's okay to give Incoming
+						# and therefore Stream an int/long/float seqNum.
+						abstract.ensureNonNegIntLimit(seqNum, 2**64)
 					except (TypeError, ValueError):
 						return self._closeWith(Fn.tk_invalid_frame_type_or_arguments)
 				self._sackDirty = True
+				# This is an estimate. [1,1,1,1,1,1] might take more memory
+				# than a string "1.1.1.1.1.1.1"
 				memorySizeOfBoxes = len(frameString) # TODO XXX ARGH WRONG (for http) because already decoded
 				self._stream.boxesReceived(self, boxes, memorySizeOfBoxes)
 				# Remember that a lot can happen underneath that boxesReceived call,

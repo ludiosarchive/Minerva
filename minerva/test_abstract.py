@@ -369,6 +369,14 @@ class TestIncoming(unittest.TestCase):
 		self.aE(0, i.getUndeliveredCount())
 
 
+	def test_hashFloatEqualsHashInt(self):
+		"""
+		L{Incoming} relies on this property of Python.
+		"""
+		self.assertEqual(hash(-1.0), hash(-1))
+		self.assertEqual(hash(5.0), hash(5))
+
+
 
 class TestIncomingConsumption(unittest.TestCase):
 	"""Tests for L{minerva.abstract.Incoming}'s memory-consumption-prevention"""

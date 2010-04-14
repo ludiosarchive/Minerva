@@ -244,6 +244,7 @@ class Incoming(object):
 	def give(self, numAndItemSeq, howMuch):
 		"""
 		@param numAndItemSeq: a sequence of optionally-sorted (seqNum, box).
+			C{seqNum} may be an C{int}, C{long}, or C{float}.
 
 		@param howMuch: how much memory the boxes in
 			C{numAndItemSeq} use.
