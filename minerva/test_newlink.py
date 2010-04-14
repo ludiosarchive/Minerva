@@ -14,7 +14,8 @@ from twisted.internet.interfaces import (
 	IPushProducer, IPullProducer, IProtocol, IProtocolFactory)
 
 from minerva.decoders import (
-	BencodeStringDecoder, Int32StringDecoder, strictDecodeOne)
+	BencodeStringDecoder, Int32StringDecoder, DelimitedJSONDecoder,
+	strictDecodeOne)
 from minerva import abstract
 from minerva.helpers import todo
 
@@ -22,7 +23,8 @@ from minerva.newlink import (
 	Frame, Stream, StreamTracker, NoSuchStream, WhoReset,
 	StreamAlreadyExists, BadFrame, ISimpleConsumer, IMinervaProtocol,
 	IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
-	IMinervaTransport, SocketTransport, SocketFace
+	IMinervaTransport, SocketTransport, SocketFace, HttpFace,
+	FORMAT_XHR, FORMAT_HTMLFILE
 )
 
 from minerva.mocks import (
@@ -3018,7 +3020,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			frames = [
 				frame0,
 				[Fn.gimme_boxes, None],
-				[Fn.boxes, {"0": ["box0"], "1": ["box1"]}], [Fn.boxes, {"2": ["box2"]}]
+				[Fn.boxes, {"0": ["box0"], "1": ["box1"]}],
+				[Fn.boxes, {"2": ["box2"]}],
 			]
 			if clientResetsImmediately:
 				# Surprise! Client wants to reset very immediately too. But this is completely ignored.
@@ -3038,6 +3041,70 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				["boxesReceived", [["box0"], ["box1"]]],
 				["streamReset", WhoReset.server_app, u'reset for testing in MockMinervaProtocol._callStuff']
 			], proto.getNew()[1:])
+
+
+
+class HttpTests(_BaseHelpers, unittest.TestCase):
+	# Inherit setUp, _resetStreamTracker
+
+	def _makeResource(self, rejectAll=False, firewallActionTime=0):
+		firewall = DummyFirewall(self._clock, rejectAll, firewallActionTime)
+		resource = HttpFace(self._clock, self.streamTracker, firewall)
+		return resource
+
+#		parser = self._makeParser()
+#		transport = _makeTransportWithDecoder(parser, faceFactory)
+#		transport.dataReceived(self._getModeInitializer())
+#		return transport
+
+
+	def _makeValidHttpHelloFrame(self):
+		helloData = dict(n=0, w=2, v=2, i='x'*26, r=2**30, m=2**30, t=FORMAT_XHR, o=2)
+		frame = [Fn.hello, helloData]
+		return frame
+
+
+	def test_httpBodyFramesPassedToProtocol(self):
+		"""
+		Frames in the body of the HTTP POST request are passed to the
+		Stream.
+		"""
+		resource = self._makeResource()
+		request = DummyRequest(postpath=[])
+		request.method = "POST"
+
+		frame0 = self._makeValidHttpHelloFrame()
+		frames = [
+			frame0,
+			[Fn.gimme_boxes, None],
+			[Fn.boxes, {"0": ["box0"], "1": ["box1"]}],
+			[Fn.boxes, {"2": ["box2"]}],
+		]
+
+		# TODO: test without the trailing \n
+		request.content = StringIO('\n'.join(simplejson.dumps(f) for f in frames) + '\n')
+
+		out = resource.render(request)
+		self.assertEqual(server.NOT_DONE_YET, out)
+
+		encode = DelimitedJSONDecoder.encode
+		self.assertEqual(['for(;;);\n', encode([Fn.sack, 2, []])], request.written)
+
+		stream = self.streamTracker.getStream('x'*26)
+		# eecch
+		transport = list(stream._transports)[0]
+
+		self.aE([
+			["notifyFinish"],
+			["transportOnline", transport],
+			["subscribeToBoxes", transport, None],
+			["boxesReceived", transport, [(1, ['box1']), (0, ['box0'])], 2],
+			["boxesReceived", transport, [(2, ['box2'])], 2],
+			["getSACK"],
+		], stream.getNew())
+
+	# TODO: test numPaddingBytes
+
 
 
 # TODO: integration test that uses a real firewall (we had a regression based on this)

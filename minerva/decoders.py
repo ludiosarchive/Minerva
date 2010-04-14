@@ -49,6 +49,9 @@ class NetStringDecoder(object):
 			excessive .find()  
 	"""
 
+	# Does this decoder also decode the JSON inside every frame?
+	decodesJson = False
+
 	noisy = False
 
 	__slots__ = (
@@ -168,7 +171,10 @@ class NetStringDecoder(object):
 
 
 class BencodeStringDecoder(NetStringDecoder):
-
+	"""
+	Like L{NetStringDecoder}, but without the trailing comma
+	after every string.
+	"""
 	__slots__ = ()
 
 	@classmethod
@@ -222,6 +228,7 @@ class DelimitedJSONDecoder(object):
 	delimiter = '\n' # MUST be 1 byte. Do not change this after any data has been received.
 
 	__slots__ = ('maxLength', 'lastJsonError', '_buffer')
+	decodesJson = True
 
 	def __init__(self, maxLength):
 		self.maxLength = maxLength
@@ -291,6 +298,7 @@ class IntNStringDecoder(object):
 	"""
 
 	__slots__ = ('maxLength', '_buffer')
+	decodesJson = False
 
 	def __init__(self, maxLength):
 		self.maxLength = maxLength
@@ -381,6 +389,8 @@ class ScriptDecoder(object): # XXX remove this or fix manyDataCallback design
 	startText = '<script>f('
 	endText = ')</script>'
 	_buffer = ''
+
+	decodesJson = False
 
 	@classmethod
 	def encode(cls, s):

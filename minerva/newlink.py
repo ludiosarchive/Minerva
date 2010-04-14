@@ -17,6 +17,7 @@ from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.interfaces import IPushProducer, IPullProducer, IProtocol, IProtocolFactory
 from twisted.python.failure import Failure
 from twisted.web import resource, http
+from twisted.web.server import NOT_DONE_YET
 
 _postImportVars = vars().keys()
 
@@ -1121,6 +1122,8 @@ class SocketTransport(object):
 					numPaddingBytes = abstract.ensureNonNegIntLimit(helloData['p'], 16*1024) # e: ValueError, TypeError
 				except (TypeError, ValueError):
 					raise InvalidHello
+			else:
+				numPaddingBytes = 0
 
 			try:
 				maxReceiveBytes = abstract.ensureNonNegIntLimit(helloData['r'], 2**64) # e: ValueError, TypeError
@@ -1175,23 +1178,27 @@ class SocketTransport(object):
 		d.addErrback(log.err)
 
 
-	def _framesReceived(self, frames):
+	def _framesReceived(self, frames, alreadyDecoded):
 		# TODO: don't call transport.write() more than once for a _framesReceived() call.
 		# Twisted doesn't actually send multiple TCP packets when .write() is called twice
 		# on the same socket during one reactor tick, but for HTTP transports, multiple
 		# chunks will be written out. Multiple chunks waste bytes.
 		assert self._sackDirty is False
-		for frameString in frames:
-			assert isinstance(frameString, str)
+		for frameString in frames: # possibly not a string if alreadyDecoded
 			if self._terminating:
 				break
 
-			try:
-				frameObj, position = decoders.strictDecoder.raw_decode(frameString)
-				if position != len(frameString):
+			if alreadyDecoded:
+				frameObj = frameString
+			else:
+				assert isinstance(frameString, str), type(frameString)
+
+				try:
+					frameObj, position = decoders.strictDecoder.raw_decode(frameString)
+					if position != len(frameString):
+						return self._closeWith(Fn.tk_intraframe_corruption)
+				except (simplejson.decoder.JSONDecodeError, decoders.ParseError):
 					return self._closeWith(Fn.tk_intraframe_corruption)
-			except (simplejson.decoder.JSONDecodeError, decoders.ParseError):
-				return self._closeWith(Fn.tk_intraframe_corruption)
 
 			try:
 				frame = Frame(frameObj)
@@ -1231,7 +1238,7 @@ class SocketTransport(object):
 
 			elif frameType == Fn_boxes:
 				seqNumStrToBoxDict = frameObj[1]
-				memorySizeOfBoxes = len(frameString)
+				memorySizeOfBoxes = len(frameString) # TODO XXX ARGH WRONG (for http) because already decoded
 				boxes = []
 				for seqNumStr, box in seqNumStrToBoxDict.iteritems():
 					try:
@@ -1352,18 +1359,19 @@ class SocketTransport(object):
 		else:
 			frameData = data
 
-		if self._mode in (BENCODE, INT32):
+		if self._mode in (BENCODE, INT32, HTTP):
 			out, code = self._parser.getNewFrames(frameData)
 			if code == decoders.OK:
-				self._framesReceived(out)
+				##print out
+				self._framesReceived(out, alreadyDecoded=self._parser.decodesJson)
 			elif code in (decoders.TOO_LONG, decoders.FRAME_CORRUPTION):
 				self._closeWith(Fn.tk_frame_corruption)
 			elif code == decoders.INTRAFRAME_CORRUPTION:
 				self._closeWith(Fn.tk_intraframe_corruption)
 			else:
 				raise RuntimeError("Got unknown code from parser %r: %r" % (self._parser, code))
-		else: # Don't need to handle HTTP here because HttpFace calls _framesReceived
-			1/0
+		else:
+			assert 0, self._mode
 
 
 	# called by Stream instances
@@ -1438,15 +1446,6 @@ class SocketTransport(object):
 			log.msg("Unusual: found a CRLF in POST body for "
 				"%r from %r" % (request, request.client))
 
-		decoder = decoders.DelimitedJSONDecoder(maxLength=self.maxLength)
-		frames, code = decoder.getNewFrames(body)
-		if code == decoders.OK:
-			queuedFrame = None
-		elif code in (decoders.TOO_LONG, decoders.FRAME_CORRUPTION):
-			queuedFrame = [Fn.tk_frame_corruption]
-		elif code == decoders.INTRAFRAME_CORRUPTION:
-			queuedFrame = [Fn.tk_intraframe_corruption]
-
 		headers = request.responseHeaders._rawHeaders
 
 		# Headers taken from the ones gmail sends
@@ -1462,11 +1461,14 @@ class SocketTransport(object):
 		# http://code.google.com/p/doctype/wiki/ArticleScriptInclusion
 		request.write('for(;;);\n')
 
+		self.dataReceived(body)
+
 
 	# Called by HttpFace
 	def requestStarted(self, request):
-		assert self._mode == UNKNOWN
+		assert self._mode == UNKNOWN, self._mode
 		self._mode = HTTP
+		self._parser = decoders.DelimitedJSONDecoder(maxLength=self.maxLength)
 		self.writable = request
 		self._handleRequestBody()
 
@@ -1557,6 +1559,7 @@ class SocketFace(protocol.ServerFactory):
 class HttpFace(resource.Resource):
 	__slots__ = ('_clock', 'streamTracker', 'firewall')
 	isLeaf = True
+	protocol = SocketTransport
 
 	def __init__(self, clock, streamTracker, firewall):
 		resource.Resource.__init__(self)
@@ -1567,13 +1570,16 @@ class HttpFace(resource.Resource):
 
 	def render_GET(self, request):
 		1/0
+		return NOT_DONE_YET
 
 
 	def render_POST(self, request):
-		t = SocketTransport()
+		t = self.protocol()
+		t.factory = self
 		d = request.notifyFinish()
 		d.addErrback(t.requestAborted)
 		t.requestStarted(request)
+		return NOT_DONE_YET
 
 
 
