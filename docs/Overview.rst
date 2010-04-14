@@ -625,7 +625,7 @@ do, in order of priority:
 4.	On Linux, you should raise ``/proc/sys/fs/file-max`` (default is 70K-100K). This hint
 	comes from [#]_::
 
-		sudo echo -n 300000 > /proc/sys/net/core/somaxconn
+		sudo echo -n 300000 > /proc/sys/fs/file-max
 
 5.	If using the epoll reactor (or libevent reactor in epoll mode), you may need to raise
 	the epoll ``max_user_watches`` limit, in ``/proc/sys/fs/epoll/max_user_watches``.
