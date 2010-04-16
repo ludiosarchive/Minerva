@@ -3103,48 +3103,79 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 
 	def test_httpBodyFramesPassedToProtocol(self):
-		"""
+		r"""
 		Frames in the body of the HTTP POST request are passed to the
-		Stream.
+		Stream. This happens even if the delimiter is \r\n instead of \n,
+		and even if the last delimiter is missing.
+		"""
+		for separator in ('\n', '\r\n'):
+			for missingLastSep in (False, True):
+				##print "missingLastSep: %r" % missingLastSep, "separator: %r" % separator
+				resource = self._makeResource()
+				request = DummyRequest(postpath=[])
+				request.method = 'POST'
+
+				frame0 = self._makeValidHttpHelloFrame()
+				frames = [
+					frame0,
+					[Fn.gimme_boxes, None],
+					[Fn.boxes, [[0, ["box0"]], [1, ["box1"]]]],
+					[Fn.boxes, [[2, ["box2"]]]],
+				]
+
+				# TODO: test without the trailing \n
+				request.content = StringIO(
+					separator.join(simplejson.dumps(f) for f in frames) +
+					(separator if not missingLastSep else ''))
+
+				out = resource.render(request)
+				self.assertEqual(server.NOT_DONE_YET, out)
+
+				encode = DelimitedJSONDecoder.encode
+				self.assertEqual(['for(;;);\n', encode([Fn.sack, 2, []])], request.written)
+
+				stream = self.streamTracker.getStream('x'*26)
+				# eecch
+				transport = list(stream._transports)[0]
+
+				self.aE([
+					["notifyFinish"],
+					["transportOnline", transport],
+					["subscribeToBoxes", transport, None],
+					["boxesReceived", transport, [[0, ['box0']], [1, ['box1']]]],
+					["boxesReceived", transport, [[2, ['box2']]]],
+					["getSACK"],
+				], stream.getNew())
+
+				self._resetStreamTracker()
+
+
+	def test_responseHasGoodHttpHeaders(self):
+		"""
+		The HTTP response sent to the client has HTTP headers that prevent
+		caching, and headers that work around bugs in browsers and
+		anti-virus products.
 		"""
 		resource = self._makeResource()
 		request = DummyRequest(postpath=[])
-		request.method = "POST"
-
-		frame0 = self._makeValidHttpHelloFrame()
-		frames = [
-			frame0,
-			[Fn.gimme_boxes, None],
-			[Fn.boxes, [[0, ["box0"]], [1, ["box1"]]]],
-			[Fn.boxes, [[2, ["box2"]]]],
-		]
-
-		# TODO: test without the trailing \n
-		request.content = StringIO('\n'.join(simplejson.dumps(f) for f in frames) + '\n')
-
+		request.method = 'POST'
+		request.content = StringIO('')
 		out = resource.render(request)
-		self.assertEqual(server.NOT_DONE_YET, out)
+		headers = dict(request.responseHeaders.getAllRawHeaders())
+		self.assertEqual(['no-cache'], headers['Pragma'])
+		self.assertEqual(['no-cache, no-store, max-age=0, must-revalidate'], headers['Cache-Control'])
+		self.assertEqual(['Fri, 01 Jan 1990 00:00:00 GMT'], headers['Expires'])
 
-		encode = DelimitedJSONDecoder.encode
-		self.assertEqual(['for(;;);\n', encode([Fn.sack, 2, []])], request.written)
+		# Possibly prevents initial buffering of streaming responses in WebKit browsers
+		self.assertEqual(['text/plain'], headers['Content-Type'])
 
-		stream = self.streamTracker.getStream('x'*26)
-		# eecch
-		transport = list(stream._transports)[0]
+		# Possibly prevents Avast from doing response buffering
+		self.assertEqual(1, len(headers['Server']))
+		self.assert_(headers['Server'][0].startswith('DWR-Reverse-Ajax'), headers['Server'])
 
-		self.aE([
-			["notifyFinish"],
-			["transportOnline", transport],
-			["subscribeToBoxes", transport, None],
-			["boxesReceived", transport, [[0, ['box0']], [1, ['box1']]]],
-			["boxesReceived", transport, [[2, ['box2']]]],
-			["getSACK"],
-		], stream.getNew())
 
 	# TODO: test that request is closed after SACK or boxes written to it,
 	# if readOnlyOnce == True
-
-	# TODO: test that \r\n instead of \n separator works
 
 	# TODO: test maxOpenTime
 

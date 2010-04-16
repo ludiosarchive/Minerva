@@ -1457,7 +1457,7 @@ class SocketTransport(object):
 		# Proxies *might* strip whitespace around the request body, so add
 		# a newline if necessary.
 		if body and body[-1] != '\n':
-			body += "\n"
+			body += '\n'
 
 		if '\r\n' in body:
 			log.msg("Unusual: found a CRLF in POST body for "
@@ -1474,6 +1474,12 @@ class SocketTransport(object):
 		# "application/x-javascript" when returning script content to an XHR for progressive handling."
 		# - http://www.kylescholz.com/blog/2010/01/progressive_xmlhttprequest_1.html
 		headers['content-type'] = ['text/plain']
+
+		# This is rumored to prevent Avast from buffering a streaming HTTP
+		# response. "Z/1" is our actual server name.
+		# Someone confirmed this hack works on 2010-04-09:
+		# http://groups.google.com/group/meteorserver/browse_thread/thread/85958fd268225911
+		headers['server'] = ['DWR-Reverse-Ajax Z/1']
 
 		# http://code.google.com/p/doctype/wiki/ArticleScriptInclusion
 		request.write('for(;;);\n')
