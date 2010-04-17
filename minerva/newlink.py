@@ -939,7 +939,7 @@ def helloDataToHello(helloData, isHttp):
 			helloData[Hello_transportNumber], 2**64) # e: ValueError, TypeError
 		obj.protocolVersion = helloData[Hello_protocolVersion]
 		# Rules for streamId: must be 20-30 inclusive bytes, must not
-		# contain characters > 127
+		# contain codepoints > 127
 		obj.streamId = helloData[Hello_streamId]
 		# ,str is appropriate only because simplejson returns str when possible
 		if not isinstance(obj.streamId, str) or not 20 <= len(obj.streamId) <= 30:
