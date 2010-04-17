@@ -964,7 +964,6 @@ cw.net.FrameType = {
 
 	sack: 4,
 	hello: 5,
-	gimme_boxes: 6,
 
 	timestamp: 8,
 	reset: 10,

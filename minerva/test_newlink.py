@@ -1393,8 +1393,10 @@ class _BaseHelpers(object):
 		return transport
 
 
-	def _makeValidHelloFrame(self):
+	def _makeValidHelloFrame(self, gimmeSucceedsTransport=()):
 		helloData = dict(n=0, w=2, v=2, i='x'*26, r=2**30, m=2**30)
+		if gimmeSucceedsTransport != ():
+			helloData['g'] = gimmeSucceedsTransport
 		frame = [Fn.hello, helloData]
 		return frame
 
@@ -1994,33 +1996,16 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.aE([['transportOffline', transport]], stream.getNew())
 
 
-	def test_gimmeBoxes(self):
+	def test_gimmeBoxesCausesSubscription(self):
+		"""
+		If the hello frame contains a 'g', it means "gimme boxes", so the
+		Minerva transport should call Stream.subscribeToBoxes.
+		"""
 		for succeedsTransport in [None, 0, 3]:
-			frame0 = self._makeValidHelloFrame()
+			frame0 = self._makeValidHelloFrame(
+				gimmeSucceedsTransport=succeedsTransport)
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
-			transport.sendFrames([[Fn.gimme_boxes, succeedsTransport]])
-			stream = self.streamTracker.getStream('x'*26)
-
-			assert [] == transport.getNew(), self.decodingTcpTransport.log
-
-			self.aE([
-				['notifyFinish'],
-				['transportOnline', transport],
-				['subscribeToBoxes', transport, succeedsTransport],
-			], stream.getNew())
-			self._resetStreamTracker()
-
-
-	def test_gimmeBoxesRightAfterHello(self):
-		"""
-		Same as L{test_gimmeBoxes}, but frames hello and gimme_boxes
-		arrive at the same time.
-		"""
-		for succeedsTransport in [None, 0, 3]:
-			transport = self._makeTransport()
-			frame0 = self._makeValidHelloFrame()
-			transport.sendFrames([frame0, [Fn.gimme_boxes, succeedsTransport]])
 			stream = self.streamTracker.getStream('x'*26)
 
 			assert [] == transport.getNew(), self.decodingTcpTransport.log
@@ -2036,21 +2021,19 @@ class _BaseSocketTransportTests(_BaseHelpers):
 	def test_gimmeBoxesSucceedsTransportInvalidNumber(self):
 		"""
 		If client sends a too-low or too-high transport number (or a wrong
-		type) in the gimme_boxes frame, the transport is killed.
+		type) for the 'g' argument in the hello frame, the transport is killed.
+		In this case, the stream is never registered with the streamTracker.
 		"""
 		for succeedsTransport in [-1, -2**32, -0.5, 2**64+1, "4", True, False, [], {}]:
-			frame0 = self._makeValidHelloFrame()
+			frame0 = self._makeValidHelloFrame(
+				gimmeSucceedsTransport=succeedsTransport)
 			transport = self._makeTransport()
-			transport.sendFrames([frame0, [Fn.gimme_boxes, succeedsTransport]])
-			stream = self.streamTracker.getStream('x'*26)
+			transport.sendFrames([frame0])
 
-			self.aE(	[[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
 
-			self.aE([
-				['notifyFinish'],
-				['transportOnline', transport],
-				['transportOffline', transport],
-			], stream.getNew())
+			self.assertRaises(NoSuchStream, lambda: self.streamTracker.getStream('x'*26))
+
 			self._resetStreamTracker()
 
 
@@ -2476,7 +2459,7 @@ class TransportProducerTests(unittest.TestCase):
 		orig = getState(self.transport)
 		self.transport.stopProducing()
 		self.aE(orig, getState(self.transport))
-		self.aE(	[], producer1.getNew())
+		self.aE([], producer1.getNew())
 
 
 	def test_transportPausedRegisterStreamingProducer(self):
@@ -2599,8 +2582,10 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self._resetStreamTracker()
 
 
-	def _makeValidHelloFrame(self):
+	def _makeValidHelloFrame(self, gimmeSucceedsTransport=()):
 		helloData = dict(n=0, w=2, v=2, i='x'*26, r=2**30, m=2**30)
+		if gimmeSucceedsTransport != ():
+			helloData['g'] = gimmeSucceedsTransport
 		frame = [Fn.hello, helloData]
 		return frame
 
@@ -2610,9 +2595,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport0 = self._makeTransport()
 
-		frame0 = self._makeValidHelloFrame()
+		frame0 = self._makeValidHelloFrame(gimmeSucceedsTransport=None)
 		transport0.sendFrames([frame0])
-		transport0.sendFrames([[Fn.gimme_boxes, None]])
 		stream = self.streamTracker.getStream('x'*26)
 
 		self.aE([], transport0.getNew())
@@ -2650,12 +2634,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport1 = self._makeTransport()
 
-		frame0 = self._makeValidHelloFrame() # TODO: increment transportNumber?
+		frame0 = self._makeValidHelloFrame(gimmeSucceedsTransport=None) # TODO: increment transportNumber?
 		transport1.sendFrames([frame0])
-
-		self.aE([], transport1.getNew())
-
-		transport1.sendFrames([[Fn.gimme_boxes, None]])
 
 		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], transport1.getNew())
 
@@ -2670,9 +2650,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport2 = self._makeTransport()
 
-		frame0 = self._makeValidHelloFrame() # TODO: increment transportNumber?
+		frame0 = self._makeValidHelloFrame(gimmeSucceedsTransport=None) # TODO: increment transportNumber?
 		transport2.sendFrames([frame0])
-		transport2.sendFrames([[Fn.gimme_boxes, None]])
 
 		self.aE([], transport2.getNew())
 
@@ -2698,9 +2677,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport0 = self._makeTransport()
 
-		frame0 = self._makeValidHelloFrame()
+		frame0 = self._makeValidHelloFrame(gimmeSucceedsTransport=None)
 		transport0.sendFrames([frame0])
-		transport0.sendFrames([[Fn.gimme_boxes, None]])
 		stream = self.streamTracker.getStream('x'*26)
 
 		self.aE([], transport0.getNew())
@@ -2715,18 +2693,17 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], transport0.getNew())
 
 
-		# Connect a new transport that sends gimme_boxes with argument
-		# to succeed transport #0; make sure s2cbox0 and s2cbox1 are not
-		# written to it (because pretendAcked is in action); make sure
-		# transport0 is terminating
+		# Connect a new transport that sends 'g' argument to subscribe to
+		# boxes and succeed transport #0;
+		# Make sure s2cbox0 and s2cbox1 are not written to it (because
+		# pretendAcked is in action); make sure transport0 is terminating.
 
 		transport1 = self._makeTransport()
 
-		newHello = self._makeValidHelloFrame()
+		newHello = self._makeValidHelloFrame(gimmeSucceedsTransport=0) # succeeds transport0
 		newHello[1]['n'] = 1
 
 		transport1.sendFrames([newHello])
-		transport1.sendFrames([[Fn.gimme_boxes, 0]]) # succeeds transport0
 
 		self.aE([], transport1.getNew())
 
@@ -2747,9 +2724,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		"""
 		transport0 = self._makeTransport()
 
-		frame0 = self._makeValidHelloFrame()
+		frame0 = self._makeValidHelloFrame(gimmeSucceedsTransport=None)
 		transport0.sendFrames([frame0])
-		transport0.sendFrames([[Fn.gimme_boxes, None]])
 		stream = self.streamTracker.getStream('x'*26)
 
 		self.aE([], transport0.getNew())
@@ -2805,11 +2781,10 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		gets the right calls.
 		"""
 		transport0 = self._makeTransport()
-		frame0 = self._makeValidHelloFrame()
+		frame0 = self._makeValidHelloFrame(gimmeSucceedsTransport=None)
 
 		frames = [
 			frame0,
-			[Fn.gimme_boxes, None],
 			[Fn.boxes, [[0, ["box0"]], [1, ["box1"]]]], [Fn.reset, u'', True]
 		]
 		transport0.sendFrames(frames)
@@ -2868,18 +2843,20 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self._resetStreamTracker(protocolFactoryClass=MyFactory)
 
 			transport0 = self._makeTransport()
-			frame0 = self._makeValidHelloFrame()
+			frame0 = self._makeValidHelloFrame(gimmeSucceedsTransport=None)
 
-			frames = [frame0, [Fn.gimme_boxes, None]]
+			frames = [frame0]
 			if clientResetsImmediately:
 				# Surprise! Client wants to reset very immediately too.
 				frames.append([Fn.reset, u'', True])
 			transport0.sendFrames(frames)
 
-			# In the implementation, streamStarted is called when the
-			# first transport attaches (i.e. before gimme_boxes).
-			# If the protocol calls sendBoxes and then reset, the boxes
-			# always get lost because no transport was primary.
+			# The server-side (mock) protocol calls sendBoxes and then reset,
+			# but the boxes it sends are always lost because of an implementation
+			# detail: SocketTransport calls Stream.transportOnline, lets things
+			# happen, then calls Stream.subscribeToBoxes only if the SocketTransport
+			# is not terminating. Because it is terminating, the transport never
+			# becomes primary and therefore the S2C boxes are lost.
 
 			self.aE([
 #				[Fn.seqnum, 0],
@@ -2912,9 +2889,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self._resetStreamTracker(protocolFactoryClass=MyFactory)
 
 			transport0 = self._makeTransport()
-			frame0 = self._makeValidHelloFrame()
+			frame0 = self._makeValidHelloFrame(gimmeSucceedsTransport=None)
 
-			frames = [frame0, [Fn.gimme_boxes, None]]
+			frames = [frame0]
 			if clientResetsImmediately:
 				# Surprise! Client wants to reset very immediately too.
 				frames.append([Fn.reset, u'', True])
@@ -2955,11 +2932,10 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self._resetStreamTracker(protocolFactoryClass=MyFactory)
 
 			transport0 = self._makeTransport()
-			frame0 = self._makeValidHelloFrame()
+			frame0 = self._makeValidHelloFrame(gimmeSucceedsTransport=None)
 
 			frames = [
 				frame0,
-				[Fn.gimme_boxes, None],
 				[Fn.boxes, [[0, ["box0"]], [1, ["box1"]]]]
 			]
 			if clientResetsImmediately:
@@ -3000,11 +2976,10 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self._resetStreamTracker(protocolFactoryClass=MyFactory)
 
 			transport0 = self._makeTransport()
-			frame0 = self._makeValidHelloFrame()
+			frame0 = self._makeValidHelloFrame(gimmeSucceedsTransport=None)
 
 			frames = [
 				frame0,
-				[Fn.gimme_boxes, None],
 				[Fn.boxes, [[0, ["box0"]], [1, ["box1"]]]]
 			]
 			if clientResetsImmediately:
@@ -3053,11 +3028,10 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self._resetStreamTracker(protocolFactoryClass=MyFactory)
 
 			transport0 = self._makeTransport()
-			frame0 = self._makeValidHelloFrame()
+			frame0 = self._makeValidHelloFrame(gimmeSucceedsTransport=None)
 
 			frames = [
 				frame0,
-				[Fn.gimme_boxes, None],
 				[Fn.boxes, [[0, ["box0"]], [1, ["box1"]]]],
 				[Fn.boxes, [[2, ["box2"]]]],
 			]
@@ -3096,8 +3070,10 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 #		return transport
 
 
-	def _makeValidHttpHelloFrame(self):
+	def _makeValidHttpHelloFrame(self, gimmeSucceedsTransport=()):
 		helloData = dict(n=0, w=2, v=2, i='x'*26, r=2**30, m=2**30, t=FORMAT_XHR, o=2)
+		if gimmeSucceedsTransport != ():
+			helloData['g'] = gimmeSucceedsTransport
 		frame = [Fn.hello, helloData]
 		return frame
 
@@ -3115,10 +3091,9 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				request = DummyRequest(postpath=[])
 				request.method = 'POST'
 
-				frame0 = self._makeValidHttpHelloFrame()
+				frame0 = self._makeValidHttpHelloFrame(gimmeSucceedsTransport=None)
 				frames = [
 					frame0,
-					[Fn.gimme_boxes, None],
 					[Fn.boxes, [[0, ["box0"]], [1, ["box1"]]]],
 					[Fn.boxes, [[2, ["box2"]]]],
 				]

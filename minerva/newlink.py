@@ -53,7 +53,6 @@ class Frame(object):
 
 		4: ('sack', 2, 2),
 		5: ('hello', 1, 1),
-		6: ('gimme_boxes', 1, 1),
 
 		8: ('timestamp', 1, 1),
 		10: ('reset', 2, 2), # reset really means "Stream is dead to me. Also, transport kill because stream is dead."
@@ -1105,6 +1104,17 @@ class SocketTransport(object):
 		if protocolVersion != 2:
 			raise InvalidHello
 
+		# If no 'g', client doesn't want to receive boxes over this transport.
+		gimmeBoxes = 'g' in helloData
+		if gimmeBoxes:
+			succeedsTransport = helloData['g']
+			# If None, this transport does not succeed any transport.
+			if succeedsTransport is not None:
+				try:
+					succeedsTransport = abstract.ensureNonNegIntLimit(succeedsTransport, 2**64)
+				except (TypeError, ValueError):
+					raise InvalidHello
+
 		if self._mode == HTTP:
 			try:
 				httpFormat = helloData['t']
@@ -1167,6 +1177,10 @@ class SocketTransport(object):
 			# Remember, a lot of stuff can happen underneath that
 			# transportOnline call because it may construct a MinervaProtocol,
 			# which may even call reset.
+			# TODO: more test cases for re-entrant stuff, or remove
+			# `subscribeToBoxes` and make it part of `transportOnline`.
+			if gimmeBoxes and not self._terminating:
+				self._stream.subscribeToBoxes(self, succeedsTransport)
 
 		def cbAuthFailed(f):
 			f.trap(RejectTransport)
@@ -1226,15 +1240,6 @@ class SocketTransport(object):
 					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 				except NoSuchStream:
 					return self._closeWith(Fn_tk_stream_attach_failure)
-			
-			elif frameType == Fn_gimme_boxes:
-				succeedsTransport = frameObj[1]
-				if succeedsTransport is not None:
-					try:
-						succeedsTransport = abstract.ensureNonNegIntLimit(frameObj[1], 2**64)
-					except (TypeError, ValueError):
-						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-				self._stream.subscribeToBoxes(self, succeedsTransport)
 
 			elif frameType == Fn_boxes:
 				boxes = frameObj[1]

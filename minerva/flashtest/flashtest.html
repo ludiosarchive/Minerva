@@ -106,18 +106,18 @@ function connect(bridge) {
 
 			var uaId = cw.whoami.getUaId();
 			var transportNumber = ++transportCount;
+			// TODO: use constant names instead of these single-letter strings
 			var helloData = {
 				'n': transportNumber, 'v': 2, 'w': transportNumber == 0 ? 2 : 0, 'i': streamId,
 				'c': {'uaId': uaId, 'csrf': window.CSRF_TOKEN},
-				'r': 9999999, 'm': 3600};
+				'r': 9999999, 'm': 3600, 'g': null};
 			var helloFrame = [cw.net.FrameType.hello, helloData];
-			var gimmeFrame = [cw.net.FrameType.gimme_boxes, null];
 			// If the server receives this more than once, it is
 			// subsequently ignored because the box # is always 0,
 			// and box 0 was already received.
 			var boxesFrame = [cw.net.FrameType.boxes, [[0, ['send_demo']]]];
 
-			var frames = [ser(helloFrame), ser(gimmeFrame), ser(boxesFrame)];
+			var frames = [ser(helloFrame), ser(boxesFrame)];
 			for(i=0; i < frames.length; i++) {
 				logger.info('Sending: ' + frames[i]);
 			}
