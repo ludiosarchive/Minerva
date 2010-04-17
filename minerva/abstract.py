@@ -467,5 +467,22 @@ def getSizeOfRecursive(obj, _alreadySeen=None):
 	return total
 
 
+class Constant(object):
+	"""
+	Represents a constant. Don't set name after you
+	initialize it.
+	"""
+	__slots__ = ('name',)
+
+	def __init__(self, name):
+		assert isinstance(name, str)
+		self.name = name
+
+
+	def __repr__(self):
+		return '<Constant %s>' % self.name
+
+
+
 from pypycpyo import optimizer
 optimizer.bind_all_many(vars(), _postImportVars)

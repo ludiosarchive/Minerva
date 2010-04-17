@@ -73,6 +73,9 @@ class SlotlessSocketFace(SocketFace):
 
 
 
+DeleteProperty = abstract.Constant("DeleteProperty")
+
+
 def _makeHelloFrame(extra={}):
 	_extra = {
 		Hello_transportNumber: 0,
@@ -82,7 +85,7 @@ def _makeHelloFrame(extra={}):
 		Hello_maxReceiveBytes: 2**30,
 		Hello_maxOpenTime: 2**30}
 	for k, v in extra.iteritems():
-		if v == () and k in _extra:
+		if v == DeleteProperty and k in _extra:
 			del _extra[k]
 		else:
 			_extra[k] = v
@@ -95,7 +98,7 @@ def _makeHelloFrameHttp(extra={}):
 		Hello_httpFormat: FORMAT_XHR,
 		Hello_readOnlyOnce: 2}
 	for k, v in extra.iteritems():
-		if v == () and k in _extra:
+		if v == DeleteProperty and k in _extra:
 			del _extra[k]
 		else:
 			_extra[k] = v
@@ -1332,7 +1335,8 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			# Send some helloData that errors with tk_stream_attach_failure. We do this just so
 			# we know we're getting frames correctly. This error is a good one to test for, unlike
 			# any "frame corruption" error, to distinguish things properly.
-			frame0 = _makeHelloFrame({Hello_streamId: '\x00'*26, Hello_requestNewStream: ()})
+			frame0 = _makeHelloFrame(
+				{Hello_streamId: '\x00'*26, Hello_requestNewStream: DeleteProperty})
 			toSend = '<bencode/>\n' + self._serializeFrames([frame0])
 			
 			for s in diceString(toSend, packetSize):
@@ -1355,7 +1359,8 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			# We do this just so we know we're getting frames correctly.
 			# This error is a good one to test for, unlike any "frame
 			# corruption" error, to distinguish things properly.
-			frame0 = _makeHelloFrame({Hello_streamId: '\x00'*26, Hello_requestNewStream: ()})
+			frame0 = _makeHelloFrame(
+				{Hello_streamId: '\x00'*26, Hello_requestNewStream: DeleteProperty})
 			toSend = '<int32/>\n' + self._serializeFrames([frame0])
 
 			for s in diceString(toSend, packetSize):
@@ -1794,15 +1799,18 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_validHello(self):
-		frame0 = _makeHelloFrame()
-		transport = self._makeTransport()
-		transport.sendFrames([frame0])
-		self.aE([], transport.getNew())
+		for streamId in ('\x00'*20, '\x7f'*20):
+			frame0 = _makeHelloFrame()
+			transport = self._makeTransport()
+			transport.sendFrames([frame0])
+			self.aE([], transport.getNew())
+
+			self._resetStreamTracker()
 
 
 	def test_validHelloWithCredentials(self):
 		frame0 = _makeHelloFrame(
-			{Hello_streamId: '\x7f'*20, Hello_credentialsData: {'not_looked_at': True}})
+			{Hello_credentialsData: {'not_looked_at': True}})
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		self.aE([], transport.getNew())
@@ -1832,13 +1840,12 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
 
 
-	def test_connectionNumberDoesntMatter(self):
+	def test_transportNumberDoesntMatter(self):
 		"""
-		Connection number can be anywhere between 0 <= n <= 2**64
+		transportNumber can be 0 <= transportNumber <= 2**64
 		"""
 		for n in [1, 1000, 10000, 12378912, 1283718237, 2**63]:
-			helloData = dict(n=n, w=2, v=2, i='\x00'*26, r=2**30, m=2**30)
-			frame0 = [Fn.hello, helloData]
+			frame0 = _makeHelloFrame({Hello_transportNumber: n})
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
 			self.aE([], transport.getNew())
@@ -1849,25 +1856,14 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		If client sends a hello frame with a streamId that server doesn't
 		know about, the transport is killed with C{tk_stream_attach_failure}.
 		"""
-		helloData = dict(n=0, v=2, i='\x00'*26, r=2**30, m=2**30)
-		frame0 = [Fn.hello, helloData]
-		transport = self._makeTransport()
-		transport.sendFrames([frame0])
-		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], transport.getNew())
-		self._testExtraDataReceivedIgnored(transport)
+		for requestNewStream in (DeleteProperty, 0, -1, 999):
+			frame0 = _makeHelloFrame({Hello_requestNewStream: requestNewStream})
+			transport = self._makeTransport()
+			transport.sendFrames([frame0])
+			self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], transport.getNew())
+			self._testExtraDataReceivedIgnored(transport)
 
-
-	def test_validHelloButNoSuchStreamExplicitW(self):
-		"""
-		The same as L{test_validHelloButNoSuchStream}, but with an explicit
-		w=0 in the hello frame.
-		"""
-		helloData = dict(n=0, w=0, v=2, i='\x00'*26, r=2**30, m=2**30)
-		frame0 = [Fn.hello, helloData]
-		transport = self._makeTransport()
-		transport.sendFrames([frame0])
-		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], transport.getNew())
-		self._testExtraDataReceivedIgnored(transport)
+			self._resetStreamTracker()
 
 
 	def test_validHelloButFirewallRejectedTransport(self):
@@ -1884,13 +1880,13 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_newStreamMoreThanOnceOk(self):
 		"""
-		If a hello frame includes w=2 (indicating "new stream"), but the
+		If a hello frame includes Hello_requestNewStream=2, but the
 		stream with corresponding streamId already exists, the transport
-		treats the hello frame as if it did not include w=2 (i.e., everything
-		works just fine).
+		treats the hello frame just as if it did not include
+		Hello_requestNewStream=2
 
-		We do this because the response to a request with w=2 might get
-		lost in transit.
+		We do this because the response to a request with
+		Hello_requestNewStream=2 might get lost in transit.
 		"""
 		def act():
 			frame0 = _makeHelloFrame()
@@ -1932,22 +1928,20 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		goodHello = _makeHelloFrame()
 
-		DeleteProperty = object()
-
 		genericBad = [
 			-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"],
 			{}, True, False, None, DeleteProperty]
 
-		badMutations = dict(
-			n=genericBad,
-			v=[0, 1, "1", 1.001] + genericBad,
-			i=[
+		badMutations = {
+			Hello_transportNumber: genericBad,
+			Hello_protocolVersion: [0, 1, "1", 1.001] + genericBad,
+			Hello_streamId: [
 				'', '\x00', 'x'*1, u'\ucccc'*25, u'\ucccc'*8,
 				u'\x80'*25, 'x'*19, 'x'*31, 'x'*3000] + genericBad, # 19 is below limit, 31 is over limit
-			#r=genericBad, # TODO: test for HTTP
-			#m=genericBad, # TODO: test for HTTP
-			c=listWithout(genericBad, [{}]),
-		)
+			#Hello_maxReceiveBytes: genericBad, # TODO: test for HTTP
+			#Hello_maxOpenTime: genericBad, # TODO: test for HTTP
+			Hello_credentialsData: listWithout(genericBad, [{}]),
+		}
 
 		ran = 0
 
@@ -2726,9 +2720,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport1 = self._makeTransport()
 
-		newHello = _makeHelloFrame({Hello_succeedsTransport: 0}) # succeeds transport0
-		newHello[1]['n'] = 1
-
+		newHello = _makeHelloFrame(
+			{Hello_transportNumber: 1, Hello_succeedsTransport: 0})
 		transport1.sendFrames([newHello])
 
 		self.aE([], transport1.getNew())
