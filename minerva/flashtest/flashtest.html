@@ -52,6 +52,7 @@ goog.require('goog.json.Serializer');
 goog.require('swfobject');
 goog.require('cw.net.FrameType');
 goog.require('cw.net.FlashSocket');
+goog.require('cw.net.HelloProperty');
 goog.require('cw.whoami');
 """) }}
 </script>
@@ -107,10 +108,16 @@ function connect(bridge) {
 			var uaId = cw.whoami.getUaId();
 			var transportNumber = ++transportCount;
 			// TODO: use constant names instead of these single-letter strings
-			var helloData = {
-				'n': transportNumber, 'v': 2, 'w': transportNumber == 0 ? 2 : 0, 'i': streamId,
-				'c': {'uaId': uaId, 'csrf': window.CSRF_TOKEN},
-				'r': 9999999, 'm': 3600, 'g': null};
+			var hp = cw.net.HelloProperty;
+			var helloData = {};
+			helloData[hp.transportNumber] = transportNumber;
+			helloData[hp.protocolVersion] = 2;
+			helloData[hp.requestNewStream] = transportNumber == 0 ? 2 : 0;
+			helloData[hp.streamId] = streamId;
+			helloData[hp.credentialsData] = {'uaId': uaId, 'csrf': window.CSRF_TOKEN};
+			helloData[hp.maxReceiveBytes] = 9999999;
+			helloData[hp.maxOpenTime] = 3600;
+			helloData[hp.succeedsTransport] = null;
 			var helloFrame = [cw.net.FrameType.hello, helloData];
 			// If the server receives this more than once, it is
 			// subsequently ignored because the box # is always 0,

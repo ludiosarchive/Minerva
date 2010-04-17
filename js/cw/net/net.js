@@ -5,6 +5,7 @@
 goog.provide('cw.net');
 goog.provide('cw.net.simpleRequest');
 goog.provide('cw.net.FrameType');
+goog.provide('cw.net.HelloProperty');
 goog.provide('cw.net.FlashSocket');
 goog.provide('cw.net.ParseError');
 goog.provide('cw.net.RequestStillActive');
