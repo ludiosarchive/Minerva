@@ -134,8 +134,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseUsableXHDRLogicTests').metho
 		self.assertThrows(
 			cw.net.RequestStillActive,
 			function() { self.xhdr.request_('GET', self.target.getString()) },
-			"Wait for the Deferred to fire before making another request."
-		);
+			"Wait for the Deferred to fire before making another request.");
 	},
 
 
@@ -354,13 +353,10 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseRealRequestTests').methods(
 		});
 
 		d.addCallback(function(){
-			self.assertEqual(
-				[
-					'{"you_sent_args": {"b": ["0"]}}',
-					'{"you_sent_args": {"b": ["1"]}}'
-				],
-				responses
-			);
+			self.assertEqual([
+				'{"you_sent_args": {"b": ["0"]}}',
+				'{"you_sent_args": {"b": ["1"]}}'
+			], responses);
 		})
 
 		return d;
@@ -384,13 +380,10 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, '_BaseRealRequestTests').methods(
 		});
 
 		d.addCallback(function(){
-			self.assertEqual(
-				[
-					'{"you_posted_utf8": "A"}',
-					'{"you_posted_utf8": "B"}'
-				],
-				responses
-			);
+			self.assertEqual([
+				'{"you_posted_utf8": "A"}',
+				'{"you_posted_utf8": "B"}'
+			], responses);
 		})
 
 		return d;
@@ -639,13 +632,11 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackTests').method
 		self.mock.onreadystatechange(null);
 		self.mock.onreadystatechange(null);
 
-		self.assertEqual(
-			[
-				[self.mock, null, null],
-				[self.mock, null, null],
-				[self.mock, null, null]
-			], calls
-		);
+		self.assertEqual([
+			[self.mock, null, null],
+			[self.mock, null, null],
+			[self.mock, null, null]
+		], calls);
 	},
 
 	/**
@@ -668,13 +659,11 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackTests').method
 		self.mock.onprogress({position: 3, totalSize: 10});
 		self.mock.onreadystatechange(null);
 
-		self.assertEqual(
-			[
-				[self.mock, 1, 10],
-				[self.mock, 2, 10],
-				[self.mock, 3, 10]
-			], calls
-		);
+		self.assertEqual([
+			[self.mock, 1, 10],
+			[self.mock, 2, 10],
+			[self.mock, 3, 10]
+		], calls);
 	},
 
 	/**
@@ -697,13 +686,11 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackTests').method
 		self.mock.onprogress({position: 5, totalSize: 10});
 		self.mock.onreadystatechange(null);
 
-		self.assertEqual(
-			[
-				[self.mock, 1, 10],
-				[self.mock, null, 10],
-				[self.mock, 5, 10]
-			], calls
-		);
+		self.assertEqual([
+			[self.mock, 1, 10],
+			[self.mock, null, 10],
+			[self.mock, 5, 10]
+		], calls);
 	},
 
 
@@ -722,11 +709,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackTests').method
 		self.mock.onprogress({position: 0, totalSize: 0});
 		self.mock.onreadystatechange(null);
 
-		self.assertEqual(
-			[
-				[self.mock, 0, 0]
-			], calls
-		);
+		self.assertEqual([
+			[self.mock, 0, 0]
+		], calls);
 	},
 
 
@@ -752,15 +737,13 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackTests').method
 		self.mock.onprogress({position: 4, totalSize: 2147483647 + 1}); // 2**31 + 1
 		self.mock.onreadystatechange(null);
 
-		self.assertEqual(
-			[
-				[self.mock, null, null],
-				[self.mock, 1, null],
-				[self.mock, 2, null],
-				[self.mock, 3, null],
-				[self.mock, 4, null]
-			], calls
-		);
+		self.assertEqual([
+			[self.mock, null, null],
+			[self.mock, 1, null],
+			[self.mock, 2, null],
+			[self.mock, 3, null],
+			[self.mock, 4, null]
+		], calls);
 	}
 );
 
@@ -796,12 +779,10 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XHRProgressCallbackOperaWorkaroun
 		self.clock.advance_(50);
 		self.clock.advance_(50);
 		// Opera should not know the position
-		self.assertEqual(
-			[
-				[self.mock, null, null],
-				[self.mock, null, null]
-			], calls
-		);
+		self.assertEqual([
+			[self.mock, null, null],
+			[self.mock, null, null]
+		], calls);
 	},
 
 
@@ -880,13 +861,11 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XDRProgressCallbackTests').method
 		self.mock.onprogress();
 		self.mock.onprogress();
 
-		self.assertEqual(
-			[
-				[self.mock, null, null],
-				[self.mock, null, null],
-				[self.mock, null, null]
-			], calls
-		);
+		self.assertEqual([
+			[self.mock, null, null],
+			[self.mock, null, null],
+			[self.mock, null, null]
+		], calls);
 	},
 
 	/**
@@ -906,13 +885,11 @@ cw.UnitTest.TestCase.subclass(cw.net.TestNet, 'XDRProgressCallbackTests').method
 		self.mock.onprogress();
 		self.mock.onload();
 
-		self.assertEqual(
-			[
-				[self.mock, null, null],
-				[self.mock, null, null],
-				[self.mock, null, null]
-			], calls
-		);
+		self.assertEqual([
+			[self.mock, null, null],
+			[self.mock, null, null],
+			[self.mock, null, null]
+		], calls);
 	}
 );
 
