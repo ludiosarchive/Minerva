@@ -953,7 +953,7 @@ cw.net.protocolVersion_ = 2;
 
 
 /**
- * Frame types. Copied from minerva/newlink.py
+ * Frame types. Keep in sync with minerva/newlink.py
  * 
  * @enum {number}
  */
@@ -980,6 +980,27 @@ cw.net.FrameType = {
 	tk_frame_corruption: 610,
 	tk_intraframe_corruption: 611,
 	tk_brb: 650
+}
+
+
+/**
+ * Hello frame properties. Keep in sync with minerva/newlink.py
+ *
+ * @enum {string}
+ */
+cw.net.HelloProperty = {
+	transportNumber: 'n',
+	protocolVersion: 'v',
+	httpFormat: 't',
+	requestNewStream: 'w',
+	streamId: 'i',
+	credentialsData: 'c',
+	needPaddingBytes: 'p',
+	maxReceiveBytes: 'r',
+	maxOpenTime: 'm',
+	readOnlyOnce: 'o',
+	useMyTcpAcks: 'a',
+	succeedsTransport: 'g'
 }
 
 
