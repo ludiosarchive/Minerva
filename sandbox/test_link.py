@@ -1,3 +1,8 @@
+"""
+Tests for what was minerva.link; now completely obsolete. See the docstring
+for link.py.
+"""
+
 from cStringIO import StringIO
 from zope.interface import implements
 
@@ -1017,4 +1022,3 @@ class TestHTTPFacePOSTWithBrokenJSONEncoder(TestHTTPFacePOST):
 		# We don't seek to 0 because HTTPFace might have to handle that case.
 
 		return upload
-

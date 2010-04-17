@@ -1,3 +1,14 @@
+"""
+This is a messy initial version of the Minerva server, started back when I
+still couldn't fit the entire problem into my head. I was still too focused on
+HTTP, thinking about what browsers do.
+
+The protocol in this file is plain broken. I started a rewrite on 2009-10-18
+with a focus on getting the socket transport right first.
+
+-ivank, 2010-04-17
+"""
+
 from pypycpyo import mutables
 id = mutables.ReservedForLocals
 

@@ -1,4 +1,9 @@
 """
+This is a Python client for the now-obsolete minerva.link; this file is
+obsolete as well.
+
+Original docstring follows:
+
 A pure-Python client that can connect to Minerva using any of its transports.
 
 Useful for manual testing (Wireshark, etc), automated testing, and various experiments.

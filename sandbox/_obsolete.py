@@ -1,3 +1,10 @@
+"""
+This was some crazy stuff to represent actual user agents as objects.
+It was written back when minerva.link was around; it is completely
+obsolete.
+"""
+
+
 from minerva import link
 
 
