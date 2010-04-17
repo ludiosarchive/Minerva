@@ -1,23 +1,21 @@
 import simplejson
-import base64
 import copy
-
 from cStringIO import StringIO
-
 from zope.interface import verify
 from twisted.trial import unittest
-
 from twisted.python import failure
-from twisted.web import server, resource, http
-from twisted.internet import protocol, defer, address, interfaces, task
+from twisted.web import server, http
+from twisted.internet import defer, task
 from twisted.internet.interfaces import (
 	IPushProducer, IPullProducer, IProtocol, IProtocolFactory)
+
+from minerva import abstract
+from minerva.helpers import todo
+from minerva.test_decoders import diceString
 
 from minerva.decoders import (
 	BencodeStringDecoder, Int32StringDecoder, DelimitedJSONDecoder,
 	strictDecodeOne)
-from minerva import abstract
-from minerva.helpers import todo
 
 from minerva.newlink import (
 	Frame, Stream, StreamTracker, NoSuchStream, WhoReset,
@@ -43,15 +41,12 @@ from minerva.newlink import (
 )
 
 from minerva.mocks import (
-	FakeReactor, DummyChannel, DummyRequest, MockProducer, DumbLog,
-	JSONDecodingTcpTransport,
-	MockStream, MockMinervaProtocol, MockMinervaProtocolFactory,
-	DummySocketLikeTransport, MockObserver, BrokenOnPurposeError,
-	BrokenMockObserver, DummyStreamTracker, DummyFirewall, DummyTCPTransport,
-	strictGetNewFrames
+	FakeReactor, DummyChannel, DummyRequest, MockProducer,
+	JSONDecodingTcpTransport, MockStream, MockMinervaProtocol,
+	MockMinervaProtocolFactory, DummySocketLikeTransport, MockObserver,
+	BrokenOnPurposeError, BrokenMockObserver, DummyStreamTracker,
+	DummyFirewall, DummyTCPTransport, strictGetNewFrames
 )
-
-from minerva.test_decoders import diceString
 
 Fn = Frame.names
 
@@ -2166,7 +2161,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			frame0 = _makeHelloFrame()
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
-			stream = self.streamTracker.getStream('x'*26)
+			try:
+				self.streamTracker.getStream('x'*26)
+			except NoSuchStream:
+				self.fail("No stream created?")
 
 			transport.sendFrames([[Fn.boxes, [[invalidSeqNum, ["box0"]]]]])
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
@@ -2695,7 +2693,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 
 	def test_boxSendingAndNewTransportWithSucceedsTransport(self):
-		# Send a hello frame and subscribe to boxes
+		# Send a hello frame that subscribe to boxes
 
 		transport0 = self._makeTransport()
 
@@ -3157,7 +3155,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		request = DummyRequest(postpath=[])
 		request.method = 'POST'
 		request.content = StringIO('')
-		out = resource.render(request)
+		resource.render(request)
 		headers = dict(request.responseHeaders.getAllRawHeaders())
 		self.assertEqual(['no-cache'], headers['Pragma'])
 		self.assertEqual(['no-cache, no-store, max-age=0, must-revalidate'], headers['Cache-Control'])
