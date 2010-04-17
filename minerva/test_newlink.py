@@ -3179,7 +3179,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 	# TODO: test maxReceiveBytes
 
 
-# TODO: integration test that uses a real firewall (we had a regression based on this)
+# TODO: integration test that uses a real Minerva firewall (we had a regression based on this)
 
 # TODO: test_pushProducerOnQueuedRequest
 	# verify that attaching a push producer to a queued Request does not result in multiple pauseProducing calls
