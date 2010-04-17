@@ -1479,6 +1479,8 @@ class SocketTransport(object):
 		# response. "Z/1" is our actual server name.
 		# Someone confirmed this hack works on 2010-04-09:
 		# http://groups.google.com/group/meteorserver/browse_thread/thread/85958fd268225911
+		# TODO: Lightstreamer + latest Avast manages to stream just fine
+		# with a Server: Lightstreamer[...] header, remove this if it's unnecesary.
 		headers['server'] = ['DWR-Reverse-Ajax Z/1']
 
 		# http://code.google.com/p/doctype/wiki/ArticleScriptInclusion
