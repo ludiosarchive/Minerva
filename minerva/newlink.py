@@ -9,11 +9,9 @@ import traceback
 from zope.interface import Interface, Attribute, implements
 from twisted.python import log
 from twisted.internet import protocol, defer
-from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.interfaces import (
 	IPushProducer, IPullProducer, IProtocol, IProtocolFactory)
-from twisted.python.failure import Failure
-from twisted.web import resource, http
+from twisted.web import resource
 from twisted.web.server import NOT_DONE_YET
 
 from minerva import decoders
