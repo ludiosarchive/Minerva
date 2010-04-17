@@ -313,16 +313,16 @@ class MockStream(_MockMixin):
 class MockMinervaProtocol(_MockMixin):
 	implements(IMinervaProtocol)
 
-	def __init__(self, when=(), what=()):
-		self._when = when
-		self._what = what
+	def __init__(self, callFrom=(), callWhat=()):
+		self._callFrom = callFrom
+		self._callWhat = callWhat
 
 
 	def _callStuff(self):
-		if 'sendBoxes' in self._what:
+		if 'sendBoxes' in self._callWhat:
 			self.stream.sendBoxes([["s2cbox0"], ["s2cbox1"]])
 			self.stream.sendBoxes([["s2cbox2"]])
-		if 'reset' in self._what:
+		if 'reset' in self._callWhat:
 			self.stream.reset(u'reset for testing in MockMinervaProtocol._callStuff')
 
 
@@ -331,7 +331,7 @@ class MockMinervaProtocol(_MockMixin):
 		self.log = []
 		self.log.append(['streamStarted', stream])
 		self.stream = stream
-		if 'streamStarted' in self._when:
+		if 'streamStarted' in self._callFrom:
 			self._callStuff()
 
 
@@ -341,7 +341,7 @@ class MockMinervaProtocol(_MockMixin):
 
 	def boxesReceived(self, boxes):
 		self.log.append(['boxesReceived', boxes])
-		if 'boxesReceived' in self._when:
+		if 'boxesReceived' in self._callFrom:
 			self._callStuff()
 
 

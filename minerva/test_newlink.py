@@ -244,7 +244,7 @@ class StreamTests(unittest.TestCase):
 		"""
 		class MyFactory(MockMinervaProtocolFactory):
 			def buildProtocol(self):
-				obj = self.protocol(when=['boxesReceived'], what=['reset'])
+				obj = self.protocol(callFrom=('boxesReceived',), callWhat=('reset',))
 				obj.factory = self
 				return obj
 
@@ -271,7 +271,7 @@ class StreamTests(unittest.TestCase):
 		"""
 		class MyFactory(MockMinervaProtocolFactory):
 			def buildProtocol(self):
-				obj = self.protocol(when=['boxesReceived'], what=['reset'])
+				obj = self.protocol(callFrom=('boxesReceived',), callWhat=('reset',))
 				obj.factory = self
 				return obj
 
@@ -2835,7 +2835,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		"""
 		class MyFactory(MockMinervaProtocolFactory):
 			def buildProtocol(self):
-				obj = self.protocol(when=('streamStarted',), what=('sendBoxes', 'reset'))
+				obj = self.protocol(callFrom=('streamStarted',), callWhat=('sendBoxes', 'reset'))
 				obj.factory = self
 				return obj
 
@@ -2880,7 +2880,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		"""
 		class MyFactory(MockMinervaProtocolFactory):
 			def buildProtocol(self):
-				obj = self.protocol(when=('streamStarted',), what=('sendBoxes',))
+				obj = self.protocol(callFrom=('streamStarted',), callWhat=('sendBoxes',))
 				obj.factory = self
 				return obj
 
@@ -2923,7 +2923,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		"""
 		class MyFactory(MockMinervaProtocolFactory):
 			def buildProtocol(self):
-				obj = self.protocol(when=('boxesReceived',), what=('sendBoxes', 'reset'))
+				obj = self.protocol(callFrom=('boxesReceived',), callWhat=('sendBoxes', 'reset'))
 				obj.factory = self
 				return obj
 
@@ -2967,7 +2967,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		"""
 		class MyFactory(MockMinervaProtocolFactory):
 			def buildProtocol(self):
-				obj = self.protocol(when=('boxesReceived',), what=('sendBoxes',))
+				obj = self.protocol(callFrom=('boxesReceived',), callWhat=('sendBoxes',))
 				obj.factory = self
 				return obj
 
@@ -3020,7 +3020,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		"""
 		class MyFactory(MockMinervaProtocolFactory):
 			def buildProtocol(self):
-				obj = self.protocol(when=('boxesReceived',), what=('reset',))
+				obj = self.protocol(callFrom=('boxesReceived',), callWhat=('reset',))
 				obj.factory = self
 				return obj
 
