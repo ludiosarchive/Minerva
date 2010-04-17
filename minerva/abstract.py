@@ -34,7 +34,6 @@ def strToNonNeg(value):
 	raise ValueError("could not decode to non-negative integer: %r" % (value,))
 
 
-
 def ensureInt(value):
 	"""
 	Convert C{value} from a L{float} to an equivalent L{int}/L{long} if
@@ -49,7 +48,6 @@ def ensureInt(value):
 	if inted != value:
 		raise ValueError("%r cannot be converted to identical integer" % (value,))
 	return inted
-
 
 
 def ensureNonNegInt(value):
@@ -74,7 +72,6 @@ def ensureNonNegInt(value):
 		raise TypeError("%r is not an int/long/float" % (value,))
 
 
-
 def ensureNonNegIntLimit(value, limit):
 	"""
 	Check that C{value} is non-negative and C{<= limit} and
@@ -89,7 +86,6 @@ def ensureNonNegIntLimit(value, limit):
 	if v > limit:
 		raise ValueError("%r is > limit %r" % (value, limit))
 	return v
-
 
 
 def ensureBool(value):
@@ -110,7 +106,6 @@ def ensureBool(value):
 		return False
 	else:
 		raise ValueError("%r is not bool-equivalent to True or False" % (value,))
-
 
 
 class InvalidSACK(Exception):
@@ -432,6 +427,7 @@ class RandomFactory(object):
 		out = self._buffer[self._position:self._position+nbytes]
 		self._position += nbytes
 		return out
+
 
 
 _theRandomFactory = RandomFactory(bufferSize=4096*8)
