@@ -41,8 +41,7 @@ class Index(BetterResource):
 			expandScript=_expandScript,
 			getTestPageCSS=getTestPageCSS,
 			token=token,
-			dumps=simplejson.dumps,
-		)
+			dumps=simplejson.dumps)
 		rendered = self._jinja2Env.from_string(template).render(dictionary)
 		return rendered.encode('utf-8')
 

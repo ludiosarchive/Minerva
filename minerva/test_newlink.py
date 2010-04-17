@@ -2473,8 +2473,7 @@ class TransportProducerTests(unittest.TestCase):
 			return dict(
 				_paused=transport._paused,
 				_producer=transport._producer,
-				_stream=transport._stream,
-			)
+				_stream=transport._stream)
 
 		# stopProducing without a producer registered does nothing
 		orig = getState(self.transport)

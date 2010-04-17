@@ -329,8 +329,7 @@ def makeLayeredFirewall(csrfStopper, uaToStreams):
 	layeredTransportFirewall = \
 		AntiHijackTransportFirewall(
 			CsrfTransportFirewall(NoopTransportFirewall(), csrfStopper),
-			uaToStreams
-		)
+			uaToStreams)
 
 	return layeredTransportFirewall
 
