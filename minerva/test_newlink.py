@@ -74,7 +74,7 @@ class SlotlessSocketFace(SocketFace):
 
 
 def _makeHelloFrame(extra={}):
-	helloData = {
+	_extra = {
 		Hello_transportNumber: 0,
 		Hello_requestNewStream: 2,
 		Hello_protocolVersion: 2,
@@ -82,8 +82,11 @@ def _makeHelloFrame(extra={}):
 		Hello_maxReceiveBytes: 2**30,
 		Hello_maxOpenTime: 2**30}
 	for k, v in extra.iteritems():
-		helloData[k] = v
-	frame = [Fn.hello, helloData]
+		if v == () and k in _extra:
+			del _extra[k]
+		else:
+			_extra[k] = v
+	frame = [Fn.hello, _extra]
 	return frame
 
 
@@ -92,7 +95,10 @@ def _makeHelloFrameHttp(extra={}):
 		Hello_httpFormat: FORMAT_XHR,
 		Hello_readOnlyOnce: 2}
 	for k, v in extra.iteritems():
-		_extra[k] = v
+		if v == () and k in _extra:
+			del _extra[k]
+		else:
+			_extra[k] = v
 	return  _makeHelloFrame(_extra)
 
 
@@ -1326,8 +1332,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			# Send some helloData that errors with tk_stream_attach_failure. We do this just so
 			# we know we're getting frames correctly. This error is a good one to test for, unlike
 			# any "frame corruption" error, to distinguish things properly.
-			helloData = dict(n=0, v=2, i='\x00'*26, r=2**30, m=2**30)
-			frame0 = [Fn.hello, helloData]
+			frame0 = _makeHelloFrame({Hello_streamId: '\x00'*26, Hello_requestNewStream: ()})
 			toSend = '<bencode/>\n' + self._serializeFrames([frame0])
 			
 			for s in diceString(toSend, packetSize):
@@ -1350,8 +1355,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			# We do this just so we know we're getting frames correctly.
 			# This error is a good one to test for, unlike any "frame
 			# corruption" error, to distinguish things properly.
-			helloData = dict(n=0, v=2, i='\x00'*26, r=2**30, m=2**30)
-			frame0 = [Fn.hello, helloData]
+			frame0 = _makeHelloFrame({Hello_streamId: '\x00'*26, Hello_requestNewStream: ()})
 			toSend = '<int32/>\n' + self._serializeFrames([frame0])
 
 			for s in diceString(toSend, packetSize):
@@ -1797,8 +1801,8 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_validHelloWithCredentials(self):
-		helloData = dict(n=0, w=2, v=2, i='\x7f'*20, r=2**30, m=2**30, c={'not_looked_at': True})
-		frame0 = [Fn.hello, helloData]
+		frame0 = _makeHelloFrame(
+			{Hello_streamId: '\x7f'*20, Hello_credentialsData: {'not_looked_at': True}})
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		self.aE([], transport.getNew())
