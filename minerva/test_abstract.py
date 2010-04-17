@@ -113,6 +113,24 @@ class TestEnsureNonNegIntLimit(unittest.TestCase):
 
 
 
+class TestEnsureBool(unittest.TestCase):
+
+	def test_True(self):
+		for t in (1, 1.0, True):
+			self.aE(True, abstract.ensureBool(t))
+
+
+	def test_False(self):
+		for f in (0, 0.0, -0, -0.0, False):
+			self.aE(False, abstract.ensureBool(f))
+
+
+	def test_ValueError(self):
+		for e in (-0.5, -1.00001, 1.0001, [], {}, set(), float('nan'), float('inf')):
+			self.aR(ValueError, lambda: abstract.ensureBool(e))
+
+
+
 class TestQueue(unittest.TestCase):
 	"""Tests for minerva.abstract.Queue"""
 

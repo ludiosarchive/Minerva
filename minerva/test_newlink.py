@@ -34,10 +34,10 @@ from minerva.newlink import (
 	Hello_requestNewStream,
 	Hello_streamId,
 	Hello_credentialsData,
+	Hello_streamingResponse,
 	Hello_needPaddingBytes,
 	Hello_maxReceiveBytes,
 	Hello_maxOpenTime,
-	Hello_readOnlyOnce,
 	Hello_useMyTcpAcks,
 	Hello_succeedsTransport,
 )
@@ -79,9 +79,10 @@ DeleteProperty = abstract.Constant("DeleteProperty")
 def _makeHelloFrame(extra={}):
 	_extra = {
 		Hello_transportNumber: 0,
-		Hello_requestNewStream: 2,
+		Hello_requestNewStream: 1,
 		Hello_protocolVersion: 2,
 		Hello_streamId: 'x'*26,
+		Hello_streamingResponse: 1,
 		Hello_maxReceiveBytes: 2**30,
 		Hello_maxOpenTime: 2**30}
 	for k, v in extra.iteritems():
@@ -96,7 +97,7 @@ def _makeHelloFrame(extra={}):
 def _makeHelloFrameHttp(extra={}):
 	_extra = {
 		Hello_httpFormat: FORMAT_XHR,
-		Hello_readOnlyOnce: 2}
+		Hello_streamingResponse: 0}
 	for k, v in extra.iteritems():
 		if v == DeleteProperty and k in _extra:
 			del _extra[k]
@@ -1856,7 +1857,8 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		If client sends a hello frame with a streamId that server doesn't
 		know about, the transport is killed with C{tk_stream_attach_failure}.
 		"""
-		for requestNewStream in (DeleteProperty, 0, -1, 999):
+		for requestNewStream in (DeleteProperty, 0, 0.0, -0, -0.0, False):
+			##print requestNewStream
 			frame0 = _makeHelloFrame({Hello_requestNewStream: requestNewStream})
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
@@ -1880,13 +1882,13 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_newStreamMoreThanOnceOk(self):
 		"""
-		If a hello frame includes Hello_requestNewStream=2, but the
+		If a hello frame includes Hello_requestNewStream=1, but the
 		stream with corresponding streamId already exists, the transport
 		treats the hello frame just as if it did not include
-		Hello_requestNewStream=2
+		Hello_requestNewStream=1
 
 		We do this because the response to a request with
-		Hello_requestNewStream=2 might get lost in transit.
+		Hello_requestNewStream=1 might get lost in transit.
 		"""
 		def act():
 			frame0 = _makeHelloFrame()
@@ -3170,7 +3172,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 
 	# TODO: test that request is closed after SACK or boxes written to it,
-	# if readOnlyOnce == True
+	# if streamingResponse == False
 
 	# TODO: test maxOpenTime
 

@@ -112,9 +112,10 @@ function connect(bridge) {
 			var helloData = {};
 			helloData[hp.transportNumber] = transportNumber;
 			helloData[hp.protocolVersion] = 2;
-			helloData[hp.requestNewStream] = transportNumber == 0 ? 2 : 0;
+			helloData[hp.requestNewStream] = transportNumber == 0 ? 1 : 0;
 			helloData[hp.streamId] = streamId;
 			helloData[hp.credentialsData] = {'uaId': uaId, 'csrf': window.CSRF_TOKEN};
+			helloData[hp.streamingResponse] = 1;
 			helloData[hp.maxReceiveBytes] = 9999999;
 			helloData[hp.maxOpenTime] = 3600;
 			helloData[hp.succeedsTransport] = null;

@@ -4,12 +4,6 @@ You really want to read docs/Overview.rst to understand the code in this file.
 See minerva/sample/demo.py for an idea of how to use the classes below.
 """
 
-from minerva import decoders
-from minerva.website import RejectTransport
-from minerva.interfaces import ISimpleConsumer
-from minerva.abstract import (
-	Queue, Incoming, InvalidSACK, secureRandom, ensureNonNegIntLimit)
-
 import simplejson
 import traceback
 from zope.interface import Interface, Attribute, implements
@@ -21,6 +15,13 @@ from twisted.internet.interfaces import (
 from twisted.python.failure import Failure
 from twisted.web import resource, http
 from twisted.web.server import NOT_DONE_YET
+
+from minerva import decoders
+from minerva.website import RejectTransport
+from minerva.interfaces import ISimpleConsumer
+from minerva.abstract import (
+	Queue, Incoming, InvalidSACK, secureRandom, ensureNonNegIntLimit,
+	ensureBool)
 
 _postImportVars = vars().keys()
 
@@ -133,10 +134,10 @@ Hello_httpFormat = 't'
 Hello_requestNewStream = 'w'
 Hello_streamId = 'i'
 Hello_credentialsData = 'c'
+Hello_streamingResponse = 's'
 Hello_needPaddingBytes = 'p'
 Hello_maxReceiveBytes = 'r'
 Hello_maxOpenTime = 'm'
-Hello_readOnlyOnce = 'o'
 Hello_useMyTcpAcks = 'a'
 Hello_succeedsTransport = 'g'
 
@@ -900,7 +901,7 @@ class Hello(object):
 	__slots__ = (
 		'credentialsData', 'requestNewStream', 'transportNumber',
 		'protocolVersion', 'streamId', 'wantsBoxes', 'succeedsTransport',
-		'httpFormat', 'readOnlyOnce', 'needPaddingBytes', 'maxReceiveBytes',
+		'httpFormat', 'streamingResponse', 'needPaddingBytes', 'maxReceiveBytes',
 		'maxOpenTime')
 
 
@@ -911,13 +912,6 @@ def helloDataToHello(helloData, isHttp):
 	must be truthy if helloData was received over an HTTP transport. If there
 	are any problems with helloData, this raises L{InvalidHello}.
 	"""
-
-	# Note: the hello frame uses `2` (or `2.0`) to represent `True` in several
-	# places, and is also the minimum protocol version. We use a number
-	# to reduce the number of bytes the client must send. We also don't
-	# want to accept multiple forms (both 1 and True). In Python, 1 == True.
-	# That is why we use `2` instead of `1`.
-
 	if not isinstance(helloData, dict):
 		raise InvalidHello
 
@@ -930,24 +924,29 @@ def helloDataToHello(helloData, isHttp):
 	if not isinstance(obj.credentialsData, dict):
 		raise InvalidHello
 
-	# requestNewStream is always optional. If missing or not == 2, the
-	# transport is intended to attach to an existing stream.
-	obj.requestNewStream = helloData[Hello_requestNewStream] == 2 if \
-		Hello_requestNewStream in helloData else False
-
 	try:
 		# Any line here can raise KeyError; additional exceptions marked with 'e:'
 
-		obj.transportNumber = ensureNonNegIntLimit(
-			helloData[Hello_transportNumber], 2**64) # e: ValueError, TypeError
+		# requestNewStream is always optional. If missing or False/0, transport
+		# is intended to attach to an existing stream.
+		obj.requestNewStream = ensureBool( # e: ValueError
+			helloData[Hello_requestNewStream]) if \
+			Hello_requestNewStream in helloData else False
+
+		obj.transportNumber = ensureNonNegIntLimit( # e: ValueError, TypeError
+			helloData[Hello_transportNumber], 2**64)
+
 		obj.protocolVersion = helloData[Hello_protocolVersion]
+
+		obj.streamingResponse = ensureBool( # e: ValueError
+			helloData[Hello_streamingResponse])
+
 		# Rules for streamId: must be 20-30 inclusive bytes, must not
 		# contain codepoints > 127
 		obj.streamId = helloData[Hello_streamId]
 		# ,str is appropriate only because simplejson returns str when possible
 		if not isinstance(obj.streamId, str) or not 20 <= len(obj.streamId) <= 30:
 			raise InvalidHello
-		# No maxReceiveBytes or maxOpenTime for non-HTTP
 	except (KeyError, TypeError, ValueError):
 		raise InvalidHello
 
@@ -975,10 +974,6 @@ def helloDataToHello(helloData, isHttp):
 			raise InvalidHello
 		if not obj.httpFormat in (FORMAT_XHR, FORMAT_HTMLFILE):
 			raise InvalidHello
-
-		# readOnlyOnce is always optional. If missing, False.
-		obj.readOnlyOnce = helloData[Hello_readOnlyOnce] == 2 if \
-			Hello_readOnlyOnce in helloData else False
 
 		# needPaddingBytes is always optional. If missing, 0.
 		if Hello_needPaddingBytes in helloData:
@@ -1028,7 +1023,7 @@ class SocketTransport(object):
 		'connected', '_gotHello', '_terminating', '_sackDirty', '_paused',
 		'_stream', '_producer', '_parser', 'streamId', 'credentialsData',
 		'transportNumber', 'factory', 'transport', '_maxReceiveBytes',
-		'_maxOpenTime', '_readOnlyOnce', '_needPaddingBytes')
+		'_maxOpenTime', '_streamingResponse', '_needPaddingBytes')
 	# TODO: last 4 attributes above only for an HTTPSocketTransport, to save memory
 
 	maxLength = 1024*1024
@@ -1077,7 +1072,7 @@ class SocketTransport(object):
 
 
 	def _closeWith(self, errorType, *args):
-		assert not self._terminating
+		assert not self._terminating, self
 		# TODO: sack before closing
 		invalidArgsFrameObj = [errorType]
 		invalidArgsFrameObj.extend(args)
@@ -1100,7 +1095,7 @@ class SocketTransport(object):
 		"""
 		@see L{IMinervaTransport.closeGently}
 		"""
-		assert not self._terminating
+		assert not self._terminating, self
 
 		if self._sackDirty:
 			self._sackDirty = False
@@ -1124,7 +1119,7 @@ class SocketTransport(object):
 		"""
 		@see L{IMinervaTransport.writeReset}
 		"""
-		assert not self._terminating
+		assert not self._terminating, self
 
 		if self._sackDirty:
 			self._sackDirty = False
@@ -1154,7 +1149,7 @@ class SocketTransport(object):
 		##print;print;traceback.print_stack()
 
 		# If the transport is terminating, it should have already called Stream.transportOffline(self)
-		assert not self._terminating
+		assert not self._terminating, self
 		assert self._gotHello
 
 		# See test_writeBoxesConnectionInterleavingSupport
@@ -1190,7 +1185,7 @@ class SocketTransport(object):
 
 
 	def _getSACKBytes(self):
-		assert not self._terminating
+		assert not self._terminating, self
 		sackFrame = (Fn_sack,) + self._stream.getSACK()
 		return self._encodeFrame(sackFrame)
 
@@ -1202,9 +1197,9 @@ class SocketTransport(object):
 		self.streamId = hello.streamId
 		self.credentialsData = hello.credentialsData
 		self.transportNumber = hello.transportNumber
+		self._streamingResponse = hello.streamingResponse
 
 		if self._mode == HTTP:
-			self._readOnlyOnce = hello.readOnlyOnce
 			self._needPaddingBytes = hello.needPaddingBytes
 			self._maxReceiveBytes = hello.maxReceiveBytes
 			self._maxOpenTime = hello.maxOpenTime

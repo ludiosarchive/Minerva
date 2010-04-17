@@ -996,10 +996,10 @@ cw.net.HelloProperty = {
 	requestNewStream: 'w',
 	streamId: 'i',
 	credentialsData: 'c',
+	streamingResponse: 's',
 	needPaddingBytes: 'p',
 	maxReceiveBytes: 'r',
 	maxOpenTime: 'm',
-	readOnlyOnce: 'o',
 	useMyTcpAcks: 'a',
 	succeedsTransport: 'g'
 }

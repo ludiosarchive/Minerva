@@ -92,6 +92,27 @@ def ensureNonNegIntLimit(value, limit):
 
 
 
+def ensureBool(value):
+	"""
+	Convert 1.0, 1, and True to True.
+	Convert 0.0, 0, -0.0, -0, and False to False.
+	For all other values, raise L{ValueError}.
+
+	@rtype: L{bool}
+	@return: non-number equivalent of C{value}
+
+	This is useful when getting JSON-decoded values from a peer, and you
+	do not want to keep their bool-equivalent numbers around in memory.
+	"""
+	if value == True:
+		return True
+	elif value == False:
+		return False
+	else:
+		raise ValueError("%r is not bool-equivalent to True or False" % (value,))
+
+
+
 class InvalidSACK(Exception):
 	"""
 	Could not delete up to a certain seqNum, because that seqNum
