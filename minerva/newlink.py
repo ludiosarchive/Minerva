@@ -892,6 +892,112 @@ class InvalidHello(Exception):
 	pass
 
 
+
+class Hello(object):
+	__slots__ = (
+		'credentialsData', 'requestNewStream', 'transportNumber',
+		'protocolVersion', 'streamId', 'wantsBoxes', 'succeedsTransport',
+		'httpFormat', 'readOnlyOnce', 'needPaddingBytes', 'maxReceiveBytes',
+		'maxOpenTime')
+
+
+
+def helloDataToHello(helloData, isHttp):
+	"""
+	Convert client's C{helloData} into a usable L{Hello} object. C{isHttp}
+	must be truthy if helloData was received over an HTTP transport. If there
+	are any problems with helloData, this raises L{InvalidHello}.
+	"""
+
+	# Note: the hello frame uses `2` (or `2.0`) to represent `True` in several
+	# places, and is also the minimum protocol version. We use a number
+	# to reduce the number of bytes the client must send. We also don't
+	# want to accept multiple forms (both 1 and True). In Python, 1 == True.
+	# That is why we use `2` instead of `1`.
+
+	if not isinstance(helloData, dict):
+		raise InvalidHello
+
+	obj = Hello()
+
+	# credentialsData is always optional
+	obj.credentialsData = helloData[Hello_credentialsData] if \
+		Hello_credentialsData in helloData else {}
+
+	if not isinstance(obj.credentialsData, dict):
+		raise InvalidHello
+
+	# requestNewStream is always optional. If missing or not == 2, the
+	# transport is intended to attach to an existing stream.
+	obj.requestNewStream = helloData[Hello_requestNewStream] == 2 if \
+		Hello_requestNewStream in helloData else False
+
+	try:
+		# Any line here can raise KeyError; additional exceptions marked with 'e:'
+
+		obj.transportNumber = abstract.ensureNonNegIntLimit(
+			helloData[Hello_transportNumber], 2**64) # e: ValueError, TypeError
+		obj.protocolVersion = helloData[Hello_protocolVersion]
+		# Rules for streamId: must be 20-30 inclusive bytes, must not
+		# contain characters > 127
+		obj.streamId = helloData[Hello_streamId]
+		# ,str is appropriate only because simplejson returns str when possible
+		if not isinstance(obj.streamId, str) or not 20 <= len(obj.streamId) <= 30:
+			raise InvalidHello
+		# No maxReceiveBytes or maxOpenTime for non-HTTP
+	except (KeyError, TypeError, ValueError):
+		raise InvalidHello
+
+	if obj.protocolVersion != 2:
+		raise InvalidHello
+
+	# succeedsTransport is always optional. If missing, the client does not
+	# want to get S2C boxes over this transport. If None, the client does,
+	# but the transport does not succeed an existing primary transport. If a
+	# number, the transport might succeed an existing primary transport.
+	obj.wantsBoxes = Hello_succeedsTransport in helloData
+	if obj.wantsBoxes:
+		obj.succeedsTransport = helloData[Hello_succeedsTransport]
+		if obj.succeedsTransport is not None:
+			try:
+				obj.succeedsTransport = abstract.ensureNonNegIntLimit(
+					obj.succeedsTransport, 2**64)
+			except (TypeError, ValueError):
+				raise InvalidHello
+
+	if isHttp:
+		try:
+			obj.httpFormat = helloData[Hello_httpFormat]
+		except KeyError:
+			raise InvalidHello
+		if not obj.httpFormat in (FORMAT_XHR, FORMAT_HTMLFILE):
+			raise InvalidHello
+
+		# readOnlyOnce is always optional. If missing, False.
+		obj.readOnlyOnce = helloData[Hello_readOnlyOnce] == 2 if \
+			Hello_readOnlyOnce in helloData else False
+
+		# needPaddingBytes is always optional. If missing, 0.
+		if Hello_needPaddingBytes in helloData:
+			try:
+				obj.needPaddingBytes = abstract.ensureNonNegIntLimit(
+					helloData[Hello_needPaddingBytes], 16*1024) # e: ValueError, TypeError
+			except (TypeError, ValueError):
+				raise InvalidHello
+		else:
+			obj.needPaddingBytes = 0
+
+		try:
+			obj.maxReceiveBytes = abstract.ensureNonNegIntLimit(
+				helloData[Hello_maxReceiveBytes], 2**64) # e: ValueError, TypeError
+			obj.maxOpenTime = abstract.ensureNonNegIntLimit(
+				helloData[Hello_maxOpenTime], 2**64) # e: ValueError, TypeError
+		except (TypeError, ValueError):
+			raise InvalidHello
+
+	return obj
+
+
 ##WAITING_FOR_AUTH, AUTHING, DYING, AUTH_OK = range(4)
 
 # Acceptable protocol modes for SocketTransport to be in. Int32* are for Flash Socket.
@@ -1087,112 +1193,44 @@ class SocketTransport(object):
 
 
 	def _handleHelloFrame(self, frame):
-		helloData = frame.contents[1]
+		hello = helloDataToHello(frame.contents[1], self._mode == HTTP)
 
-		if not isinstance(helloData, dict):
-			raise InvalidHello
-
-		# credentialsData is always optional
-		credentialsData = helloData[Hello_credentialsData] if \
-			Hello_credentialsData in helloData else {}
-
-		if not isinstance(credentialsData, dict):
-			raise InvalidHello
-
-		# requestNewStream is always optional. Allow 2, 2.0 from the client (represents True).
-		requestNewStream = helloData[Hello_requestNewStream] == 2 if \
-			Hello_requestNewStream in helloData else False
-
-		try:
-			# any line below can raise KeyError; additional exceptions marked with 'e:'
-
-			transportNumber = abstract.ensureNonNegIntLimit(
-				helloData[Hello_transportNumber], 2**64) # e: ValueError, TypeError
-			protocolVersion = helloData[Hello_protocolVersion]
-			# Rules for streamId: must be 20-30 inclusive bytes, must not contain characters > 127
-			streamId = helloData[Hello_streamId]
-			# ,str is appropriate only because simplejson returns str when possible
-			if not isinstance(streamId, str) or not 20 <= len(streamId) <= 30:
-				raise InvalidHello
-			# No maxReceiveBytes or maxOpenTime for non-HTTP
-		except (KeyError, TypeError, ValueError):
-			raise InvalidHello
-
-		# Do not use protocolVersion < 2 ever because Python is very stupid about bool/int equivalence
-		if protocolVersion != 2:
-			raise InvalidHello
-
-		# If no 'g', client doesn't want to receive boxes over this transport.
-		gimmeBoxes = Hello_succeedsTransport in helloData
-		if gimmeBoxes:
-			succeedsTransport = helloData[Hello_succeedsTransport]
-			# If None, this transport does not succeed any transport.
-			if succeedsTransport is not None:
-				try:
-					succeedsTransport = abstract.ensureNonNegIntLimit(succeedsTransport, 2**64)
-				except (TypeError, ValueError):
-					raise InvalidHello
+		# self._protocolVersion = protocolVersion # Not needed at the moment
+		self.streamId = hello.streamId
+		self.credentialsData = hello.credentialsData
+		self.transportNumber = hello.transportNumber
 
 		if self._mode == HTTP:
-			try:
-				httpFormat = helloData[Hello_httpFormat]
-			except KeyError:
-				raise InvalidHello
-			if not httpFormat in (FORMAT_XHR, FORMAT_HTMLFILE):
-				raise InvalidHello
-
-			# readOnlyOnce is always optional. Allow 2, 2.0 from the client (represents True).
-			readOnlyOnce = helloData[Hello_readOnlyOnce] == 2 if \
-				Hello_readOnlyOnce in helloData else False
-
-			# needPaddingBytes is always optional.
-			if Hello_needPaddingBytes in helloData:
-				try:
-					needPaddingBytes = abstract.ensureNonNegIntLimit(
-						helloData[Hello_needPaddingBytes], 16*1024) # e: ValueError, TypeError
-				except (TypeError, ValueError):
-					raise InvalidHello
-			else:
-				needPaddingBytes = 0
-
-			try:
-				maxReceiveBytes = abstract.ensureNonNegIntLimit(
-					helloData[Hello_maxReceiveBytes], 2**64) # e: ValueError, TypeError
-				maxOpenTime = abstract.ensureNonNegIntLimit(
-					helloData[Hello_maxOpenTime], 2**64) # e: ValueError, TypeError
-			except (TypeError, ValueError):
-				raise InvalidHello
-
-			self._readOnlyOnce = readOnlyOnce
-			self._needPaddingBytes = needPaddingBytes
-			self._maxReceiveBytes = maxReceiveBytes
-			self._maxOpenTime = maxOpenTime
-
-		##self._protocolVersion = protocolVersion # Not needed yet
-		self.streamId = streamId
-		self.credentialsData = credentialsData
-		self.transportNumber = transportNumber
+			self._readOnlyOnce = hello.readOnlyOnce
+			self._needPaddingBytes = hello.needPaddingBytes
+			self._maxReceiveBytes = hello.maxReceiveBytes
+			self._maxOpenTime = hello.maxOpenTime
 
 		# We get/build a Stream instance before the firewall checkTransport
 		# because the firewall needs to know if we're working with a virgin
 		# Stream or not. And there's no way to reliably know this before
-		# doing the buildStream/getStream stuff, because 'requestNewStream=True
+		# doing the buildStream/getStream stuff, because requestNewStream=True
 		# doesn't always imply that a new stream will actually be created.
 
-		if requestNewStream:
+		if hello.requestNewStream:
 			try:
-				stream = self.factory.streamTracker.buildStream(streamId)
+				stream = self.factory.streamTracker.buildStream(self.streamId)
 			except StreamAlreadyExists:
-				stream = self.factory.streamTracker.getStream(streamId)
+				stream = self.factory.streamTracker.getStream(self.streamId)
 		else:
-			stream = self.factory.streamTracker.getStream(streamId)
+			stream = self.factory.streamTracker.getStream(self.streamId)
 
 		d = self.factory.firewall.checkTransport(self, stream)
+
+		# Keep only the variables we need for the cbAuthOkay closure
+		wantsBoxes = hello.wantsBoxes
+		if wantsBoxes:
+			succeedsTransport = hello.succeedsTransport
 
 		def cbAuthOkay(_):
 			if self._terminating:
 				return
-			# self._stream being non-None implies that were are authed,
+			# Note: self._stream being non-None implies that were are authed,
 			# and that we have called transportOnline (or are calling it right now).
 			self._stream = stream
 			self._stream.transportOnline(self)
@@ -1201,7 +1239,7 @@ class SocketTransport(object):
 			# which may even call reset.
 			# TODO: more test cases for re-entrant stuff, or remove
 			# `subscribeToBoxes` and make it part of `transportOnline`.
-			if gimmeBoxes and not self._terminating:
+			if wantsBoxes and not self._terminating:
 				self._stream.subscribeToBoxes(self, succeedsTransport)
 
 		def cbAuthFailed(f):
