@@ -73,7 +73,7 @@ class SlotlessSocketFace(SocketFace):
 
 
 
-def _makeValidHelloFrame(extra={}):
+def _makeHelloFrame(extra={}):
 	helloData = {
 		Hello_transportNumber: 0,
 		Hello_requestNewStream: 2,
@@ -87,13 +87,13 @@ def _makeValidHelloFrame(extra={}):
 	return frame
 
 
-def _makeValidHelloFrameHttp(extra={}):
+def _makeHelloFrameHttp(extra={}):
 	_extra = {
 		Hello_httpFormat: FORMAT_XHR,
 		Hello_readOnlyOnce: 2}
 	for k, v in extra.iteritems():
 		_extra[k] = v
-	return  _makeValidHelloFrame(_extra)
+	return  _makeHelloFrame(_extra)
 
 
 def _makeTransportWithDecoder(parser, faceFactory):
@@ -1458,7 +1458,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		Calling writeBoxes(queue, start=None) on a transport actually
 		results in all boxes in queue being written
 		"""
-		frame0 = _makeValidHelloFrame()
+		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		q = abstract.Queue()
@@ -1477,7 +1477,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		in (box 1 and later) in queue being written
 		"""
 		transport = self._makeTransport()
-		frame0 = _makeValidHelloFrame()
+		frame0 = _makeHelloFrame()
 		transport.sendFrames([frame0])
 		q = abstract.Queue()
 		q.extend([['box0'], ['box1'], ['box2']])
@@ -1499,7 +1499,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		At the time this was written, it was intended to exercise the
 			`if len(toSend) > 1024 * 1024:' branch.
 		"""
-		frame0 = _makeValidHelloFrame()
+		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		q = abstract.Queue()
@@ -1519,7 +1519,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		The transport remembers which boxes it already sent, so boxes
 		are not double-sent even if they are still in the queue.
 		"""
-		frame0 = _makeValidHelloFrame()
+		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		q = abstract.Queue()
@@ -1542,7 +1542,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		See also L{StreamTests.test_sendBoxesConnectionInterleaving}
 		"""
-		frame0 = _makeValidHelloFrame()
+		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		q = abstract.Queue()
@@ -1570,7 +1570,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		Same as L{test_writeBoxesConnectionInterleavingSupport} but start=1
 		instead of C{None}
 		"""
-		frame0 = _makeValidHelloFrame()
+		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		q = abstract.Queue()
@@ -1631,7 +1631,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_unknownFrameType(self):
 		transport = self._makeTransport()
-		frame0 = _makeValidHelloFrame()
+		frame0 = _makeHelloFrame()
 		transport.sendFrames([frame0])
 		transport.sendFrames([[9999]])
 		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
@@ -1656,7 +1656,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		for frameType in types:
 			transport = self._makeTransport()
-			frame0 = _makeValidHelloFrame()
+			frame0 = _makeHelloFrame()
 			transport.sendFrames([frame0])
 			transport.sendFrames([[frameType]])
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
@@ -1723,7 +1723,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		This test was designed for Bencode, but it works for Int32 as well.
 		"""
 		for corruptionType in (Fn.tk_frame_corruption, Fn.tk_intraframe_corruption):
-			frame0 = _makeValidHelloFrame()
+			frame0 = _makeHelloFrame()
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
 
@@ -1779,7 +1779,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		JSON as intraframe corruption.
 		"""
 		for bad in [nan, inf, neginf]:
-			frame0 = _makeValidHelloFrame()
+			frame0 = _makeHelloFrame()
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
 			transport.sendFrames([[Fn.boxes, [[0, [bad]]]]])
@@ -1790,7 +1790,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_validHello(self):
-		frame0 = _makeValidHelloFrame()
+		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		self.aE([], transport.getNew())
@@ -1809,7 +1809,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		Client can only send hello frame once. If they send it more than once, they get
 		tk_invalid_frame_type_or_arguments
 		"""
-		frame0 = _makeValidHelloFrame()
+		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		transport.sendFrames([frame0])
@@ -1822,7 +1822,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		same dataReceived call). If they send it more than once, they get
 		C{tk_invalid_frame_type_or_arguments}.
 		"""
-		frame0 = _makeValidHelloFrame()
+		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0, frame0])
 		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
@@ -1871,7 +1871,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		If the Minerva firewall rejects the transport, the transport is
 		killed with C{tk_stream_attach_failure}.
 		"""
-		frame0 = _makeValidHelloFrame()
+		frame0 = _makeHelloFrame()
 		transport = self._makeTransport(rejectAll=True)
 		transport.sendFrames([frame0])
 		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], transport.getNew())
@@ -1889,7 +1889,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		lost in transit.
 		"""
 		def act():
-			frame0 = _makeValidHelloFrame()
+			frame0 = _makeHelloFrame()
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
 			self.aE([], transport.getNew())
@@ -1926,7 +1926,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				l.remove(w)
 			return l
 
-		goodHello = _makeValidHelloFrame()
+		goodHello = _makeHelloFrame()
 
 		DeleteProperty = object()
 
@@ -2011,7 +2011,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		If client closes connection on a Minerva transport that is
 		attached to a Stream, streamObj.transportOffline(transport) is called.
 		"""
-		frame0 = _makeValidHelloFrame()
+		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
@@ -2032,7 +2032,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		Minerva transport should call Stream.subscribeToBoxes.
 		"""
 		for succeedsTransport in [None, 0, 3]:
-			frame0 = _makeValidHelloFrame(
+			frame0 = _makeHelloFrame(
 				{Hello_succeedsTransport: succeedsTransport})
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
@@ -2055,7 +2055,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		In this case, the stream is never registered with the streamTracker.
 		"""
 		for succeedsTransport in [-1, -2**32, -0.5, 2**64+1, "4", True, False, [], {}]:
-			frame0 = _makeValidHelloFrame(
+			frame0 = _makeHelloFrame(
 				{Hello_succeedsTransport: succeedsTransport})
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
@@ -2072,7 +2072,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		If client writes boxes to the transport, those boxes are delivered
 		to the Stream, and a SACK is written out to the transport.
 		"""
-		frame0 = _makeValidHelloFrame()
+		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
@@ -2106,7 +2106,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		same time, those boxes are delivered to Stream, and just *one*
 		SACK is written out to the transport.
 		"""
-		frame0 = _makeValidHelloFrame()
+		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
@@ -2130,7 +2130,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		gets C{tk_invalid_frame_type_or_arguments}.
 		"""
 		for boxes in [-1, -2**32, -0.5, 2**64+1, "4", True, False, None, {}]:
-			frame0 = _makeValidHelloFrame()
+			frame0 = _makeHelloFrame()
 			transport = self._makeTransport()
 			transport.sendFrames([frame0, [Fn.boxes, boxes]])
 			stream = self.streamTracker.getStream('x'*26)
@@ -2146,7 +2146,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		gets C{tk_invalid_frame_type_or_arguments}.
 		"""
 		for box in [-1, -2**32, -0.5, 2**64+1, "4", True, False, None, {}, {1: 2, 3: 4}]:
-			frame0 = _makeValidHelloFrame()
+			frame0 = _makeHelloFrame()
 			transport = self._makeTransport()
 			transport.sendFrames([frame0, [Fn.boxes, [box]]])
 			stream = self.streamTracker.getStream('x'*26)
@@ -2163,7 +2163,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		C{tk_invalid_frame_type_or_arguments}.
 		"""
 		for invalidSeqNum in ["-1", "asdf", "", "nan", "Infinity", 2**64+1, [], {}]:
-			frame0 = _makeValidHelloFrame()
+			frame0 = _makeHelloFrame()
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
 			stream = self.streamTracker.getStream('x'*26)
@@ -2175,7 +2175,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_sackFrameValid(self):
-		frame0 = _makeValidHelloFrame()
+		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
@@ -2194,7 +2194,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		Actually test the SACK numbers
 		"""
-		frame0 = _makeValidHelloFrame()
+		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
@@ -2210,7 +2210,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_sackedUnsentBoxes(self):
-		frame0 = _makeValidHelloFrame()
+		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
@@ -2230,7 +2230,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		# Note how an ACK of -1 is invalid. First legal ACK is 0.
 		badNumbers = [-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"], "something", {}, True, False, None]
 		for num in badNumbers:
-			frame0 = _makeValidHelloFrame()
+			frame0 = _makeHelloFrame()
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
 			stream = self.streamTracker.getStream('x'*26)
@@ -2256,7 +2256,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			-2**65, -1, -0.5, 0.5, 2**64+1, "", "something",
 			{}, True, False, None]
 		for badObj in badObjects:
-			frame0 = _makeValidHelloFrame()
+			frame0 = _makeHelloFrame()
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
 			stream = self.streamTracker.getStream('x'*26)
@@ -2283,7 +2283,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			-2**65, -1, -0.5, 0.5, 2**64+1, "", ["something"],
 			"something", [], {}, True, False, None]
 		for badNum in badNumbers:
-			frame0 = _makeValidHelloFrame()
+			frame0 = _makeHelloFrame()
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
 			stream = self.streamTracker.getStream('x'*26)
@@ -2307,7 +2307,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		for applicationLevel in (True, False):
 			for reason in (u'the reason \uffff', 'simplejson decodes this reason to str, not unicode'):
-				frame0 = _makeValidHelloFrame()
+				frame0 = _makeHelloFrame()
 				transport = self._makeTransport()
 				transport.sendFrames([frame0])
 				stream = self.streamTracker.getStream('x'*26)
@@ -2327,7 +2327,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 	def test_resetInvalidReasonString(self):
 		badReasonStrings = [-2**65, -1, -0.5, 0.5, 2**64+1, ["something"], [], {}, True, False, None]
 		for reasonString in badReasonStrings:
-			frame0 = _makeValidHelloFrame()
+			frame0 = _makeHelloFrame()
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
 			transport.sendFrames([[Fn.reset, reasonString, True]])
@@ -2337,7 +2337,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 	def test_resetInvalidApplicationLevel(self):
 		badApplicationLevels = [-2**65, -1, -0.5, 0, 1, 0.5, 2**64+1, "", ["something"], "something", [], {}, None]
 		for applicationLevel in badApplicationLevels:
-			frame0 = _makeValidHelloFrame()
+			frame0 = _makeHelloFrame()
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
 			transport.sendFrames([[Fn.reset, u'the reason\uffff', applicationLevel]])
@@ -2349,7 +2349,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		A regression test: make sure SocketTransport only calls transportOffline
 		if it called transportOnline.
 		"""
-		frame0 = _makeValidHelloFrame()
+		frame0 = _makeHelloFrame()
 		transport = self._makeTransport(rejectAll=False, firewallActionTime=1.0)
 		transport.sendFrames([frame0])
 		self.aE([], transport.getNew())
@@ -2375,7 +2375,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 				self._resetStreamTracker()
 
-				frame0 = _makeValidHelloFrame()
+				frame0 = _makeHelloFrame()
 				transport = self._makeTransport(rejectAll=rejectAll, firewallActionTime=1.0)
 				transport.sendFrames([frame0])
 				self.aE([], transport.getNew())
@@ -2617,7 +2617,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport0 = self._makeTransport()
 
-		frame0 = _makeValidHelloFrame({Hello_succeedsTransport: None})
+		frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
 		transport0.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
 
@@ -2656,7 +2656,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport1 = self._makeTransport()
 
-		frame0 = _makeValidHelloFrame({Hello_succeedsTransport: None}) # TODO: increment transportNumber?
+		frame0 = _makeHelloFrame({Hello_succeedsTransport: None}) # TODO: increment transportNumber?
 		transport1.sendFrames([frame0])
 
 		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], transport1.getNew())
@@ -2672,7 +2672,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport2 = self._makeTransport()
 
-		frame0 = _makeValidHelloFrame({Hello_succeedsTransport: None}) # TODO: increment transportNumber?
+		frame0 = _makeHelloFrame({Hello_succeedsTransport: None}) # TODO: increment transportNumber?
 		transport2.sendFrames([frame0])
 
 		self.aE([], transport2.getNew())
@@ -2699,7 +2699,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport0 = self._makeTransport()
 
-		frame0 = _makeValidHelloFrame({Hello_succeedsTransport: None})
+		frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
 		transport0.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
 
@@ -2722,7 +2722,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport1 = self._makeTransport()
 
-		newHello = _makeValidHelloFrame({Hello_succeedsTransport: 0}) # succeeds transport0
+		newHello = _makeHelloFrame({Hello_succeedsTransport: 0}) # succeeds transport0
 		newHello[1]['n'] = 1
 
 		transport1.sendFrames([newHello])
@@ -2746,7 +2746,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		"""
 		transport0 = self._makeTransport()
 
-		frame0 = _makeValidHelloFrame({Hello_succeedsTransport: None})
+		frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
 		transport0.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
 
@@ -2782,7 +2782,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		"""
 		transport0 = self._makeTransport()
 
-		transport0.sendFrames([_makeValidHelloFrame()])
+		transport0.sendFrames([_makeHelloFrame()])
 		self.aE([], transport0.getNew())
 
 		stream = self.streamTracker.getStream('x'*26)
@@ -2803,7 +2803,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		gets the right calls.
 		"""
 		transport0 = self._makeTransport()
-		frame0 = _makeValidHelloFrame({Hello_succeedsTransport: None})
+		frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
 
 		frames = [
 			frame0,
@@ -2830,14 +2830,14 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		"""
 		transport0 = self._makeTransport()
 
-		transport0.sendFrames([_makeValidHelloFrame()])
+		transport0.sendFrames([_makeHelloFrame()])
 		self.aE([], transport0.getNew())
 
 		stream = self.streamTracker.getStream('x'*26)
 
 		transport1 = self._makeTransport()
 
-		transport1.sendFrames([_makeValidHelloFrame()])
+		transport1.sendFrames([_makeHelloFrame()])
 		self.aE([], transport1.getNew())
 
 		transport0.sendFrames([[Fn.reset, "reason", True]])
@@ -2865,7 +2865,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self._resetStreamTracker(protocolFactoryClass=MyFactory)
 
 			transport0 = self._makeTransport()
-			frame0 = _makeValidHelloFrame({Hello_succeedsTransport: None})
+			frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
 
 			frames = [frame0]
 			if clientResetsImmediately:
@@ -2911,7 +2911,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self._resetStreamTracker(protocolFactoryClass=MyFactory)
 
 			transport0 = self._makeTransport()
-			frame0 = _makeValidHelloFrame({Hello_succeedsTransport: None})
+			frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
 
 			frames = [frame0]
 			if clientResetsImmediately:
@@ -2954,7 +2954,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self._resetStreamTracker(protocolFactoryClass=MyFactory)
 
 			transport0 = self._makeTransport()
-			frame0 = _makeValidHelloFrame({Hello_succeedsTransport: None})
+			frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
 
 			frames = [
 				frame0,
@@ -2998,7 +2998,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self._resetStreamTracker(protocolFactoryClass=MyFactory)
 
 			transport0 = self._makeTransport()
-			frame0 = _makeValidHelloFrame({Hello_succeedsTransport: None})
+			frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
 
 			frames = [
 				frame0,
@@ -3050,7 +3050,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self._resetStreamTracker(protocolFactoryClass=MyFactory)
 
 			transport0 = self._makeTransport()
-			frame0 = _makeValidHelloFrame({Hello_succeedsTransport: None})
+			frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
 
 			frames = [
 				frame0,
@@ -3105,7 +3105,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				request = DummyRequest(postpath=[])
 				request.method = 'POST'
 
-				frame0 = _makeValidHelloFrameHttp({Hello_succeedsTransport: None})
+				frame0 = _makeHelloFrameHttp({Hello_succeedsTransport: None})
 				frames = [
 					frame0,
 					[Fn.boxes, [[0, ["box0"]], [1, ["box1"]]]],
