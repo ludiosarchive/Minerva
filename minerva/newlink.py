@@ -1257,7 +1257,7 @@ class SocketTransport(object):
 						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 					seqNum, box = thing
 					try:
-						# This is probably enough to stop an ACA on 64-bit
+						# This is probably enough to stop an ACA (on Incoming) on 64-bit
 						# Python, but maybe worry about 32-bit Python too?
 						#
 						# We ignore the return value; it's okay to give Incoming
