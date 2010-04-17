@@ -4,9 +4,11 @@ You really want to read docs/Overview.rst to understand the code in this file.
 See minerva/sample/demo.py for an idea of how to use the classes below.
 """
 
-from minerva import abstract, decoders
+from minerva import decoders
 from minerva.website import RejectTransport
 from minerva.interfaces import ISimpleConsumer
+from minerva.abstract import (
+	Queue, Incoming, InvalidSACK, secureRandom, ensureNonNegIntLimit)
 
 import simplejson
 import traceback
@@ -14,7 +16,8 @@ from zope.interface import Interface, Attribute, implements
 from twisted.python import log
 from twisted.internet import protocol, defer
 from twisted.internet.main import CONNECTION_LOST
-from twisted.internet.interfaces import IPushProducer, IPullProducer, IProtocol, IProtocolFactory
+from twisted.internet.interfaces import (
+	IPushProducer, IPullProducer, IProtocol, IProtocolFactory)
 from twisted.python.failure import Failure
 from twisted.web import resource, http
 from twisted.web.server import NOT_DONE_YET
@@ -317,8 +320,8 @@ class Stream(object):
 		self._notifications = []
 		self._transports = set()
 
-		self.queue = abstract.Queue()
-		self._incoming = abstract.Incoming()
+		self.queue = Queue()
+		self._incoming = Incoming()
 
 
 	def __repr__(self):
@@ -722,8 +725,8 @@ class StreamTracker(object):
 		self._observers = set()
 		self._reactor.addSystemEventTrigger('before', 'shutdown', self._disconnectAll)
 
-		self._preKey = abstract.secureRandom(3)
-		self._postKey = abstract.secureRandom(3)
+		self._preKey = secureRandom(3)
+		self._postKey = secureRandom(3)
 
 
 	def _makeSafeKey(self, key):
@@ -935,7 +938,7 @@ def helloDataToHello(helloData, isHttp):
 	try:
 		# Any line here can raise KeyError; additional exceptions marked with 'e:'
 
-		obj.transportNumber = abstract.ensureNonNegIntLimit(
+		obj.transportNumber = ensureNonNegIntLimit(
 			helloData[Hello_transportNumber], 2**64) # e: ValueError, TypeError
 		obj.protocolVersion = helloData[Hello_protocolVersion]
 		# Rules for streamId: must be 20-30 inclusive bytes, must not
@@ -960,7 +963,7 @@ def helloDataToHello(helloData, isHttp):
 		obj.succeedsTransport = helloData[Hello_succeedsTransport]
 		if obj.succeedsTransport is not None:
 			try:
-				obj.succeedsTransport = abstract.ensureNonNegIntLimit(
+				obj.succeedsTransport = ensureNonNegIntLimit(
 					obj.succeedsTransport, 2**64)
 			except (TypeError, ValueError):
 				raise InvalidHello
@@ -980,7 +983,7 @@ def helloDataToHello(helloData, isHttp):
 		# needPaddingBytes is always optional. If missing, 0.
 		if Hello_needPaddingBytes in helloData:
 			try:
-				obj.needPaddingBytes = abstract.ensureNonNegIntLimit(
+				obj.needPaddingBytes = ensureNonNegIntLimit(
 					helloData[Hello_needPaddingBytes], 16*1024) # e: ValueError, TypeError
 			except (TypeError, ValueError):
 				raise InvalidHello
@@ -988,9 +991,9 @@ def helloDataToHello(helloData, isHttp):
 			obj.needPaddingBytes = 0
 
 		try:
-			obj.maxReceiveBytes = abstract.ensureNonNegIntLimit(
+			obj.maxReceiveBytes = ensureNonNegIntLimit(
 				helloData[Hello_maxReceiveBytes], 2**64) # e: ValueError, TypeError
-			obj.maxOpenTime = abstract.ensureNonNegIntLimit(
+			obj.maxOpenTime = ensureNonNegIntLimit(
 				helloData[Hello_maxOpenTime], 2**64) # e: ValueError, TypeError
 		except (TypeError, ValueError):
 			raise InvalidHello
@@ -1316,7 +1319,7 @@ class SocketTransport(object):
 						#
 						# We ignore the return value; it's okay to give Incoming
 						# and therefore Stream an int/long/float seqNum.
-						abstract.ensureNonNegIntLimit(seqNum, 2**64)
+						ensureNonNegIntLimit(seqNum, 2**64)
 					except (TypeError, ValueError):
 						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 				self._sackDirty = True
@@ -1339,7 +1342,7 @@ class SocketTransport(object):
 			elif frameType == Fn_sack:
 				ackNumber, sackList = frameObj[1:]
 				try:
-					abstract.ensureNonNegIntLimit(ackNumber, 2**64) # okay to ignore return value here
+					ensureNonNegIntLimit(ackNumber, 2**64) # okay to ignore return value here
 				except (TypeError, ValueError):
 					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 
@@ -1348,13 +1351,13 @@ class SocketTransport(object):
 
 				for obj in sackList:
 					try:
-						abstract.ensureNonNegIntLimit(obj, 2**64) # okay to ignore return value here
+						ensureNonNegIntLimit(obj, 2**64) # okay to ignore return value here
 					except (TypeError, ValueError):
 						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 
 				try:
 					self._stream.sackReceived((ackNumber, sackList))
-				except abstract.InvalidSACK:
+				except InvalidSACK:
 					return self._closeWith(Fn_tk_acked_unsent_boxes)
 
 			elif frameType == Fn_start_timestamps:
