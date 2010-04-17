@@ -307,7 +307,7 @@ class StreamTests(unittest.TestCase):
 		assert len(manyBoxes) == 5001 + 1
 
 		s.boxesReceived(t, manyBoxes)
-		self.aE([['writeReset', u'reset for testing in MockMinervaProtocol._callStuff', True]], t.getNew())
+		self.aE([['writeReset', u'reset forced by mock protocol\u2603', True]], t.getNew())
 
 
 	def test_exhaustedIncomingTooManyBytesButResetsWithApplicationReason(self): # keywords: reentrant
@@ -331,7 +331,7 @@ class StreamTests(unittest.TestCase):
 		notManyBoxes = [(0, ['box0']), (2, FakeBigString(str(4*1024*1024 + 1)))]
 
 		s.boxesReceived(t, notManyBoxes)
-		self.aE([['writeReset', u'reset for testing in MockMinervaProtocol._callStuff', True]], t.getNew())
+		self.aE([['writeReset', u'reset forced by mock protocol\u2603', True]], t.getNew())
 
 
 	def test_sendBoxesAndActiveStreams(self):
@@ -2304,7 +2304,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		L{Stream.resetFromClient}.
 		"""
 		for applicationLevel in (True, False):
-			for reason in (u'the reason \uffff', 'simplejson decodes this reason to str, not unicode'):
+			for reason in (u'the reason \u2603', 'simplejson decodes this reason to str, not unicode'):
 				frame0 = _makeHelloFrame()
 				transport = self._makeTransport()
 				transport.sendFrames([frame0])
@@ -2710,7 +2710,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		stream.sendBoxes([["s2cbox0"], ["s2cbox1"]])
 
-		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], transport0.getNew())
+		self.aE([
+			[Fn.seqnum, 0],
+			[Fn.box, ["s2cbox0"]],
+			[Fn.box, ["s2cbox1"]]
+		], transport0.getNew())
 
 
 		# Connect a new transport that sends 'g' argument to subscribe to
@@ -2790,7 +2794,10 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self.aE([[Fn.you_close_it]], transport0.getNew())
 
 		proto = list(self.protocolFactory.instances)[0]
-		self.aE([["streamStarted", stream], ["streamReset", WhoReset.client_app, "reason"]], proto.getNew())
+		self.aE([
+			["streamStarted", stream],
+			["streamReset", WhoReset.client_app, "reason"]
+		], proto.getNew())
 
 
 	def test_boxThenResetWritesSACK(self):
@@ -2813,7 +2820,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		proto = list(self.protocolFactory.instances)[0]
 		self.aE([
 			["boxesReceived", [["box0"], ["box1"]]],
-			["streamReset", WhoReset.client_app, u'']
+			["streamReset", WhoReset.client_app, u''],
 		], proto.getNew()[1:])
 
 
@@ -2844,7 +2851,10 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self.aE([[Fn.you_close_it]], transport1.getNew())
 
 		proto = list(self.protocolFactory.instances)[0]
-		self.aE([["streamStarted", stream], ["streamReset", WhoReset.client_app, "reason"]], proto.getNew())
+		self.aE([
+			["streamStarted", stream],
+			["streamReset", WhoReset.client_app, "reason"],
+		], proto.getNew())
 
 
 	def test_sendBoxesAndResetUnderneathStreamStartedCall(self): # keywords: reentrant
@@ -2882,13 +2892,13 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 #				[Fn.box, ["s2cbox0"]],
 #				[Fn.box, ["s2cbox1"]],
 #				[Fn.box, ["s2cbox2"]],
-				[Fn.reset, u'reset for testing in MockMinervaProtocol._callStuff', True],
+				[Fn.reset, u'reset forced by mock protocol\u2603', True],
 				[Fn.you_close_it]
 			], transport0.getNew())
 
 			proto = list(self.protocolFactory.instances)[0]
 			self.aE([
-				["streamReset", WhoReset.server_app, u'reset for testing in MockMinervaProtocol._callStuff']
+				["streamReset", WhoReset.server_app, u'reset forced by mock protocol\u2603'],
 			], proto.getNew()[1:])
 
 
@@ -2947,7 +2957,6 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				return obj
 
 		for clientResetsImmediately in (True, False):
-
 			self._resetStreamTracker(protocolFactoryClass=MyFactory)
 
 			transport0 = self._makeTransport()
@@ -2968,14 +2977,14 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				[Fn.box, ["s2cbox0"]],
 				[Fn.box, ["s2cbox1"]],
 				[Fn.box, ["s2cbox2"]],
-				[Fn.reset, u'reset for testing in MockMinervaProtocol._callStuff', True],
-				[Fn.you_close_it]
+				[Fn.reset, u'reset forced by mock protocol\u2603', True],
+				[Fn.you_close_it],
 			], transport0.getNew())
 
 			proto = list(self.protocolFactory.instances)[0]
 			self.aE([
 				["boxesReceived", [["box0"], ["box1"]]],
-				["streamReset", WhoReset.server_app, u'reset for testing in MockMinervaProtocol._callStuff']
+				["streamReset", WhoReset.server_app, u'reset forced by mock protocol\u2603']
 			], proto.getNew()[1:])
 
 
@@ -3023,7 +3032,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			if clientResetsImmediately:
 				self.aE([
 					["boxesReceived", [["box0"], ["box1"]]],
-					["streamReset", WhoReset.client_app, u'']
+					["streamReset", WhoReset.client_app, u''],
 				], proto.getNew()[1:])
 			else:
 				self.aE([
@@ -3061,7 +3070,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			expected = [
 				[Fn.sack, 1, []],
-				[Fn.reset, u'reset for testing in MockMinervaProtocol._callStuff', True],
+				[Fn.reset, u'reset forced by mock protocol\u2603', True],
 				[Fn.you_close_it],
 			]
 
@@ -3070,7 +3079,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			proto = list(self.protocolFactory.instances)[0]
 			self.aE([
 				["boxesReceived", [["box0"], ["box1"]]],
-				["streamReset", WhoReset.server_app, u'reset for testing in MockMinervaProtocol._callStuff']
+				["streamReset", WhoReset.server_app, u'reset forced by mock protocol\u2603'],
 			], proto.getNew()[1:])
 
 

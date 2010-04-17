@@ -323,7 +323,7 @@ class MockMinervaProtocol(_MockMixin):
 			self.stream.sendBoxes([["s2cbox0"], ["s2cbox1"]])
 			self.stream.sendBoxes([["s2cbox2"]])
 		if 'reset' in self._callWhat:
-			self.stream.reset(u'reset for testing in MockMinervaProtocol._callStuff')
+			self.stream.reset(u'reset forced by mock protocol\u2603')
 
 
 	def streamStarted(self, stream):
