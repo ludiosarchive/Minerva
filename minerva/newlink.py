@@ -116,23 +116,12 @@ class Frame(object):
 
 
 Fn = Frame.names
-# make globals that will be optimized away by pypycpyo.optimizer
-Fn_boxes = Fn.boxes
-Fn_box = Fn.box
-Fn_seqnum = Fn.seqnum
-Fn_sack = Fn.sack
-Fn_hello = Fn.hello
-Fn_gimme_boxes = Fn.gimme_boxes
-Fn_reset = Fn.reset
-Fn_you_close_it = Fn.you_close_it
-Fn_start_timestamps = Fn.start_timestamps
-Fn_stop_timestamps = Fn.stop_timestamps
-Fn_tk_frame_corruption = Fn.tk_frame_corruption
-Fn_tk_intraframe_corruption = Fn.tk_intraframe_corruption
-Fn_tk_stream_attach_failure = Fn.tk_stream_attach_failure
-Fn_tk_invalid_frame_type_or_arguments = Fn.tk_invalid_frame_type_or_arguments
-Fn_tk_acked_unsent_boxes = Fn.tk_acked_unsent_boxes
-
+# Create globals that will be optimized away by pypycpyo.optimizer,
+# instead of using attribute lookups frequently. With this, we can use
+# Fn_boxes instead of Fn.boxes.
+for _name in dir(Fn):
+	globals()['Fn_' + _name] = getattr(Fn, _name)
+del _name
 
 
 class WhoReset(object):
