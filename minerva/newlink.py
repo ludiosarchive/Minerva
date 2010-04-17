@@ -123,6 +123,21 @@ for _name in dir(Fn):
 del _name
 
 
+# The hello frame property bag
+Hello_transportNumber = 'n'
+Hello_protocolVersion = 'v'
+Hello_httpFormat = 't'
+Hello_requestNewStream = 'w'
+Hello_streamId = 'i'
+Hello_credentialsData = 'c'
+Hello_needPaddingBytes = 'p'
+Hello_maxReceiveBytes = 'r'
+Hello_maxOpenTime = 'm'
+Hello_readOnlyOnce = 'o'
+Hello_useMyTcpAcks = 'a'
+Hello_succeedsTransport = 'g'
+
+
 class WhoReset(object):
 	server_minerva = 1
 	server_app = 2
@@ -904,7 +919,7 @@ class SocketTransport(object):
 		'connected', '_gotHello', '_terminating', '_sackDirty', '_paused',
 		'_stream', '_producer', '_parser', 'streamId', 'credentialsData',
 		'transportNumber', 'factory', 'transport', '_maxReceiveBytes',
-		'_maxOpenTime', '_readOnlyOnce', '_numPaddingBytes')
+		'_maxOpenTime', '_readOnlyOnce', '_needPaddingBytes')
 	# TODO: last 4 attributes above only for an HTTPSocketTransport, to save memory
 
 	maxLength = 1024*1024
@@ -1078,21 +1093,24 @@ class SocketTransport(object):
 			raise InvalidHello
 
 		# credentialsData is always optional
-		credentialsData = helloData['c'] if 'c' in helloData else {}
+		credentialsData = helloData[Hello_credentialsData] if \
+			Hello_credentialsData in helloData else {}
 
 		if not isinstance(credentialsData, dict):
 			raise InvalidHello
 
 		# requestNewStream is always optional. Allow 2, 2.0 from the client (represents True).
-		requestNewStream = helloData['w'] == 2 if 'w' in helloData else False
+		requestNewStream = helloData[Hello_requestNewStream] == 2 if \
+			Hello_requestNewStream in helloData else False
 
 		try:
 			# any line below can raise KeyError; additional exceptions marked with 'e:'
 
-			transportNumber = abstract.ensureNonNegIntLimit(helloData['n'], 2**64) # e: ValueError, TypeError
-			protocolVersion = helloData['v']
+			transportNumber = abstract.ensureNonNegIntLimit(
+				helloData[Hello_transportNumber], 2**64) # e: ValueError, TypeError
+			protocolVersion = helloData[Hello_protocolVersion]
 			# Rules for streamId: must be 20-30 inclusive bytes, must not contain characters > 127
-			streamId = helloData['i']
+			streamId = helloData[Hello_streamId]
 			# ,str is appropriate only because simplejson returns str when possible
 			if not isinstance(streamId, str) or not 20 <= len(streamId) <= 30:
 				raise InvalidHello
@@ -1105,9 +1123,9 @@ class SocketTransport(object):
 			raise InvalidHello
 
 		# If no 'g', client doesn't want to receive boxes over this transport.
-		gimmeBoxes = 'g' in helloData
+		gimmeBoxes = Hello_succeedsTransport in helloData
 		if gimmeBoxes:
-			succeedsTransport = helloData['g']
+			succeedsTransport = helloData[Hello_succeedsTransport]
 			# If None, this transport does not succeed any transport.
 			if succeedsTransport is not None:
 				try:
@@ -1117,32 +1135,36 @@ class SocketTransport(object):
 
 		if self._mode == HTTP:
 			try:
-				httpFormat = helloData['t']
+				httpFormat = helloData[Hello_httpFormat]
 			except KeyError:
 				raise InvalidHello
 			if not httpFormat in (FORMAT_XHR, FORMAT_HTMLFILE):
 				raise InvalidHello
 
 			# readOnlyOnce is always optional. Allow 2, 2.0 from the client (represents True).
-			readOnlyOnce = helloData['o'] == 2 if 'o' in helloData else False
+			readOnlyOnce = helloData[Hello_readOnlyOnce] == 2 if \
+				Hello_readOnlyOnce in helloData else False
 
-			# numPaddingBytes is always optional.
-			if 'p' in helloData:
+			# needPaddingBytes is always optional.
+			if Hello_needPaddingBytes in helloData:
 				try:
-					numPaddingBytes = abstract.ensureNonNegIntLimit(helloData['p'], 16*1024) # e: ValueError, TypeError
+					needPaddingBytes = abstract.ensureNonNegIntLimit(
+						helloData[Hello_needPaddingBytes], 16*1024) # e: ValueError, TypeError
 				except (TypeError, ValueError):
 					raise InvalidHello
 			else:
-				numPaddingBytes = 0
+				needPaddingBytes = 0
 
 			try:
-				maxReceiveBytes = abstract.ensureNonNegIntLimit(helloData['r'], 2**64) # e: ValueError, TypeError
-				maxOpenTime = abstract.ensureNonNegIntLimit(helloData['m'], 2**64) # e: ValueError, TypeError
+				maxReceiveBytes = abstract.ensureNonNegIntLimit(
+					helloData[Hello_maxReceiveBytes], 2**64) # e: ValueError, TypeError
+				maxOpenTime = abstract.ensureNonNegIntLimit(
+					helloData[Hello_maxOpenTime], 2**64) # e: ValueError, TypeError
 			except (TypeError, ValueError):
 				raise InvalidHello
 
 			self._readOnlyOnce = readOnlyOnce
-			self._numPaddingBytes = numPaddingBytes
+			self._needPaddingBytes = needPaddingBytes
 			self._maxReceiveBytes = maxReceiveBytes
 			self._maxOpenTime = maxOpenTime
 
