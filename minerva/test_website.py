@@ -6,7 +6,6 @@ from twisted.trial import unittest
 from twisted.internet.defer import Deferred
 from twisted.web.test.test_web import DummyChannel
 from twisted.web.server import Request
-from twisted.web import http, server
 
 from minerva.mocks import (
 	DummyRequest, DummySocketLikeTransport, MockStream
