@@ -313,7 +313,7 @@ class MockStream(_MockMixin):
 class MockMinervaProtocol(_MockMixin):
 	implements(IMinervaProtocol)
 
-	def __init__(self, when='', what=''):
+	def __init__(self, when=(), what=()):
 		self._when = when
 		self._what = what
 
