@@ -484,20 +484,19 @@ def getSizeOfRecursive(obj, _alreadySeen=None):
 	return total
 
 
-class Constant(object):
+class Constant(tuple):
 	"""
-	Represents a constant. Don't set name after you
-	initialize it.
+	Represents a constant. Immutable.
 	"""
-	__slots__ = ('name',)
+	__slots__ = ()
 
-	def __init__(self, name):
-		assert isinstance(name, str)
-		self.name = name
+	def __new__(cls, name):
+		assert isinstance(name, str), type(name)
+		return tuple.__new__(cls, (name,))
 
 
 	def __repr__(self):
-		return '<Constant %s>' % self.name
+		return '<Constant %s>' % self[0]
 
 
 
