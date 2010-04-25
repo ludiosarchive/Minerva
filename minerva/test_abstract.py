@@ -449,13 +449,13 @@ class TestIncomingConsumption(unittest.TestCase):
 
 class _DummyId(abstract.GenericIdentifier):
 	_expectedLength = 16
-	__slots__ = ['id']
+	__slots__ = ()
 
 
 
 class _DummyId2(abstract.GenericIdentifier):
 	_expectedLength = 16
-	__slots__ = ['id']
+	__slots__ = ()
 
 
 
@@ -476,6 +476,7 @@ class TestGenericIdentifier(unittest.TestCase):
 	def test_notEqualBecauseDifferentTypes(self):
 		s1 = _DummyId('a' * 16)
 		self.assertNotEqual(s1, 0)
+		self.assertNotEqual(0, s1)
 		self.assertNotEqual(s1, 'z' * 16)
 
 		s2 = _DummyId2('a' * 16)
@@ -497,7 +498,7 @@ class TestGenericIdentifier(unittest.TestCase):
 		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId('z' * 15))
 		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId('z' * 17))
 		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId(''))
-		
+
 
 	def test_wrongType(self):
 		self.assertRaises(abstract.InvalidIdentifier, lambda: _DummyId(u'z' * 16))

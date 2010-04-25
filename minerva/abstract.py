@@ -354,35 +354,30 @@ class InvalidIdentifier(Exception):
 
 
 
-class GenericIdentifier(object):
+class GenericIdentifier(tuple):
 	_expectedLength = -1
-	__slots__ = ('id',)
 
-	def __init__(self, id):
+	__slots__ = ()
+
+	def __new__(cls, id):
 		if not isinstance(id, str):
 			raise InvalidIdentifier("id must be a str, not %r" % (type(id)))
 		length = len(id)
-		if length != self._expectedLength:
-			raise InvalidIdentifier("id must be of length %d; was %d" % (self._expectedLength, length))
-		self.id = id
+		if length != cls._expectedLength:
+			raise InvalidIdentifier("id must be of length %d; was %d" % (cls._expectedLength, length))
+		return tuple.__new__(cls, (id,))
 
 
 	def __eq__(self, other):
-		if type(self) != type(other):
-			return False
-		return (self.id == other.id)
+		return False if type(self) != type(other) else self[0] == other[0]
 
 
 	def __ne__(self, other):
-		return not self.__eq__(other)
-
-
-	def __hash__(self):
-		return hash(self.id)
+		return True if type(self) != type(other) else self[0] != other[0]
 
 
 	def __repr__(self):
-		return '<StreamId id=%r>' % (self.id,)
+		return '<%s id=%r>' % (self.__class__.__name__, self[0])
 
 
 
