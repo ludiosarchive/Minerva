@@ -8,6 +8,7 @@ from twisted.web import server, http
 from twisted.internet import defer, task
 from twisted.internet.interfaces import (
 	IPushProducer, IPullProducer, IProtocol, IProtocolFactory)
+from mypy import constant
 
 from minerva import abstract
 from minerva.helpers import todo
@@ -68,7 +69,7 @@ class SlotlessSocketFace(SocketFace):
 
 
 
-DeleteProperty = abstract.Constant("DeleteProperty")
+DeleteProperty = constant.Constant("DeleteProperty")
 
 
 def _makeHelloFrame(extra={}):

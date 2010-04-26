@@ -349,38 +349,6 @@ class Incoming(object):
 
 
 
-class InvalidIdentifier(Exception):
-	pass
-
-
-
-class GenericIdentifier(tuple):
-	_expectedLength = -1
-
-	__slots__ = ()
-
-	def __new__(cls, id):
-		if not isinstance(id, str):
-			raise InvalidIdentifier("id must be a str, not %r" % (type(id)))
-		length = len(id)
-		if length != cls._expectedLength:
-			raise InvalidIdentifier("id must be of length %d; was %d" % (cls._expectedLength, length))
-		return tuple.__new__(cls, (id,))
-
-
-	def __eq__(self, other):
-		return False if type(self) != type(other) else self[0] == other[0]
-
-
-	def __ne__(self, other):
-		return True if type(self) != type(other) else self[0] != other[0]
-
-
-	def __repr__(self):
-		return '<%s id=%r>' % (self.__class__.__name__, self[0])
-
-
-
 class RandomFactory(object):
 	"""
 	Factory providing a L{secureRandom} method.
@@ -413,7 +381,8 @@ class RandomFactory(object):
 		@return: a string of random bytes.
 		@rtype: C{str}
 		"""
-		if nbytes is not 16: # ugly speed-up for the most common case; feel free to change/remove
+		# ugly speed-up for the most common case; feel free to change/remove
+		if nbytes is not 16:
 			nbytes = ensureNonNegInt(nbytes)
 
 		if nbytes > len(self._buffer) - self._position:
@@ -477,22 +446,6 @@ def getSizeOfRecursive(obj, _alreadySeen=None):
 					total += getSizeOfRecursive(item, _alreadySeen)
 
 	return total
-
-
-class Constant(tuple):
-	"""
-	Represents a constant. Immutable.
-	"""
-	__slots__ = ()
-
-	def __new__(cls, name):
-		assert isinstance(name, str), type(name)
-		return tuple.__new__(cls, (name,))
-
-
-	def __repr__(self):
-		return '<Constant %s>' % self[0]
-
 
 
 from pypycpyo import optimizer
