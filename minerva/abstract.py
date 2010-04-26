@@ -1,3 +1,9 @@
+"""
+Send and receive windows for Minerva server. This is similar to what
+you would expect with TCP, except we send and receive a stream of
+JSON objects instead of a stream of bytes.
+"""
+
 import warnings
 from collections import deque
 
