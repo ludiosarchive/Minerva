@@ -9,7 +9,7 @@ from twisted.web import resource, static, http, server
 from zope.interface import implements
 
 from cwtools import testing, jsimp
-from minerva import abstract
+from mypy import randgen
 
 from minerva.newlink import (
 	BasicMinervaProtocol, BasicMinervaFactory, StreamTracker, HttpFace, SocketFace)
@@ -334,7 +334,7 @@ class Root(BetterResource):
 def makeMinervaAndHttp(reactor, csrfSecret):
 	clock = reactor
 
-	cookieInstaller = CookieInstaller(abstract.secureRandom)
+	cookieInstaller = CookieInstaller(randgen.secureRandom)
 
 	# In the real world, you might want this to be more restrictive. Minerva has its own
 	# CSRF protection, so it's not critical.
