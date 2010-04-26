@@ -643,8 +643,14 @@ class GetSizeOfRecursiveTests(unittest.TestCase):
 			abstract.getSizeOfRecursive({"a": "bee"}))
 
 		self.aE(
-			s({"a": "bee", "2": None}) + s("a") + s("bee") + s("2") + s([None, None]),
+			s({0: None, 1: None}) + s("a") + s("bee") + s("2") + s([None, None]),
 			abstract.getSizeOfRecursive({"a": "bee", "2": ["bee", "a"]}))
+
+		# A tuple as a dict key to make sure the implementation doesn't
+		# just call sys.getsizeof on the key.
+		self.aE(
+			s({0: None, 1: None}) + s("a") + s("bee") + s("2") + s((None, None)),
+			abstract.getSizeOfRecursive({"bee": "a", ("bee", "a"): "2"}))
 
 
 	def test_circularList(self):
