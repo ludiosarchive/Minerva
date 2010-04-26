@@ -1,9 +1,10 @@
 from twisted.trial import unittest
 
-from minerva.helpers import todo
-
 import sys
-import abstract
+from mypy.objops import totalSizeOf
+
+from minerva.helpers import todo
+from minerva import abstract
 
 
 class TestQueue(unittest.TestCase):
@@ -282,12 +283,11 @@ class TestIncomingConsumption(unittest.TestCase):
 
 	def test_simple(self):
 		i = abstract.Incoming()
-		sr = abstract.getSizeOfRecursive
 		_ = i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
-		self.aE(sr('box1') * 3, i.getMaxConsumption())
+		self.aE(totalSizeOf('box1') * 3, i.getMaxConsumption())
 
 		_ = i.give([[4, 'box4'], [5, 'box5'], [6, 'box6']])
-		self.aE(sr('box1') * 6, i.getMaxConsumption())
+		self.aE(totalSizeOf('box1') * 6, i.getMaxConsumption())
 
 
 	def test_zeroAfterDeliverable(self):
@@ -297,9 +297,8 @@ class TestIncomingConsumption(unittest.TestCase):
 		with C{getDeliverableItems} yet.
 		"""
 		i = abstract.Incoming()
-		sr = abstract.getSizeOfRecursive
 		i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
-		self.aE(sr('box1') * 3, i.getMaxConsumption())
+		self.aE(totalSizeOf('box1') * 3, i.getMaxConsumption())
 		i.give([[0, 'box0']])
 		self.aE(0, i.getMaxConsumption())
 		items = i.getDeliverableItems()
@@ -319,65 +318,3 @@ class TestIncomingConsumption(unittest.TestCase):
 
 		i.give([[0, 'box0']])
 		self.aE(0, len(i._objSizeCache))
-
-
-
-class GetSizeOfRecursiveTests(unittest.TestCase):
-
-	def test_childlessObjects(self):
-		"""
-		For objects with no children,
-			abstract.getSizeOfRecursive(obj) == sys.getsizeof(obj)
-		"""
-		s = sys.getsizeof
-		self.aE(s([]), abstract.getSizeOfRecursive([]))
-		self.aE(s({}), abstract.getSizeOfRecursive({}))
-		self.aE(s(1), abstract.getSizeOfRecursive(1))
-
-
-	def test_listObjects(self):
-		s = sys.getsizeof
-		self.aE(s([1]) + s(1), abstract.getSizeOfRecursive([1]))
-		self.aE(s([1,1,1,1]) + s(1), abstract.getSizeOfRecursive([1,1,1,1]))
-
-
-	def test_dictObjects(self):
-		s = sys.getsizeof
-
-		self.aE(
-			s({"a": "bee"}) + s("a") + s("bee"),
-			abstract.getSizeOfRecursive({"a": "bee"}))
-
-		self.aE(
-			s({0: None, 1: None}) + s("a") + s("bee") + s("2") + s([None, None]),
-			abstract.getSizeOfRecursive({"a": "bee", "2": ["bee", "a"]}))
-
-		# A tuple as a dict key to make sure the implementation doesn't
-		# just call sys.getsizeof on the key.
-		self.aE(
-			s({0: None, 1: None}) + s("a") + s("bee") + s("2") + s((None, None)),
-			abstract.getSizeOfRecursive({"bee": "a", ("bee", "a"): "2"}))
-
-
-	def test_circularList(self):
-		s = sys.getsizeof
-
-		c = []
-		c.append(c)
-
-		n = []
-		n.append(None)
-
-		self.aE(s(n), abstract.getSizeOfRecursive(c))
-
-
-	def test_circularDict(self):
-		s = sys.getsizeof
-
-		c = {}
-		c['key'] = c
-
-		n = {}
-		n['key'] = None
-
-		self.aE(s(n) + s('key'), abstract.getSizeOfRecursive(c))
