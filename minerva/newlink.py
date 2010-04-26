@@ -7,6 +7,7 @@ See minerva/sample/demo.py for an idea of how to use the classes below.
 import simplejson
 import traceback
 from zope.interface import Interface, Attribute, implements
+
 from twisted.python import log
 from twisted.internet import protocol, defer
 from twisted.internet.interfaces import (
@@ -14,12 +15,13 @@ from twisted.internet.interfaces import (
 from twisted.web import resource
 from twisted.web.server import NOT_DONE_YET
 
+from mypy.randgen import secureRandom
+from mypy.objops import ensureNonNegIntLimit, ensureBool
+
 from minerva import decoders
 from minerva.website import RejectTransport
 from minerva.interfaces import ISimpleConsumer
-from minerva.abstract import (
-	Queue, Incoming, InvalidSACK, secureRandom, ensureNonNegIntLimit,
-	ensureBool)
+from minerva.abstract import Queue, Incoming, InvalidSACK
 
 _postImportVars = vars().keys()
 

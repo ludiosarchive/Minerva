@@ -10,7 +10,7 @@ code will be parsing the streams.
 
 import struct
 import simplejson
-from minerva.abstract import strToNonNeg
+from mypy.objops import strToNonNeg
 
 _postImportVars = vars().keys()
 
