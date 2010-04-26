@@ -1,5 +1,3 @@
-import os
-from sys import getsizeof
 import warnings
 from collections import deque
 
