@@ -4,14 +4,15 @@ import sys
 from mypy.objops import totalSizeOf
 
 from minerva.helpers import todo
-from minerva import abstract
+from minerva.window import Queue, Incoming, InvalidSACK, WantedItemsTooLowError
 
 
 class TestQueue(unittest.TestCase):
-	"""Tests for minerva.abstract.Queue"""
-
+	"""
+	Tests for L{window.Queue}
+	"""
 	def test_repr(self):
-		q = abstract.Queue()
+		q = Queue()
 		self.aE('<Queue with 0 items, first is #0>', repr(q))
 		q.extend(['a', 'b'])
 		self.aE('<Queue with 2 items, first is #0>', repr(q))
@@ -20,12 +21,12 @@ class TestQueue(unittest.TestCase):
 		
 
 	def test_iterEmptyQueue(self):
-		q = abstract.Queue()
+		q = Queue()
 		self.assertEqual([], list(q.iterItems(start=0)))
 
 
 	def test_appendExtendQueue(self):
-		q = abstract.Queue()
+		q = Queue()
 		q.append('zero')
 		q.extend(['one', 'two'])
 		self.assertEqual([(0, 'zero'), (1, 'one'), (2, 'two')], list(q.iterItems(start=0)))
@@ -34,7 +35,7 @@ class TestQueue(unittest.TestCase):
 
 
 	def test_appendExtendQueueStart1(self):
-		q = abstract.Queue()
+		q = Queue()
 		q.append('zero')
 		q.extend(['one', 'two'])
 		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems(start=1)))
@@ -43,7 +44,7 @@ class TestQueue(unittest.TestCase):
 
 
 	def test_appendExtendQueueStart3(self):
-		q = abstract.Queue()
+		q = Queue()
 		q.append('zero')
 		q.extend(['one', 'two'])
 		self.assertEqual([], list(q.iterItems(start=3)))
@@ -52,12 +53,12 @@ class TestQueue(unittest.TestCase):
 
 
 	def test_removeAllBefore(self):
-		q = abstract.Queue()
+		q = Queue()
 		q.append('zero')
 		q.extend(['one', 'two'])
 
 		q.removeAllBefore(1)
-		self.assertRaises(abstract.WantedItemsTooLowError, lambda: list(q.iterItems(start=0)))
+		self.assertRaises(WantedItemsTooLowError, lambda: list(q.iterItems(start=0)))
 		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems(start=1)))
 
 		# Removing again should be idempotent (even if it generates a log message)
@@ -66,18 +67,18 @@ class TestQueue(unittest.TestCase):
 
 
 	def test_removeAllBeforeTooHigh0(self):
-		q = abstract.Queue()
-		self.assertRaises(abstract.InvalidSACK, lambda: q.removeAllBefore(1))
+		q = Queue()
+		self.assertRaises(InvalidSACK, lambda: q.removeAllBefore(1))
 
 
 	def test_removeAllBeforeTooHigh1(self):
-		q = abstract.Queue()
+		q = Queue()
 		q.append('zero')
-		self.assertRaises(abstract.InvalidSACK, lambda: q.removeAllBefore(2))
+		self.assertRaises(InvalidSACK, lambda: q.removeAllBefore(2))
 
 
 	def test_removeAllBeforeAgain(self):
-		q = abstract.Queue()
+		q = Queue()
 		q.append('zero')
 		q.removeAllBefore(1)
 
@@ -88,7 +89,7 @@ class TestQueue(unittest.TestCase):
 
 
 	def test_removeAllBeforeToHigherNum(self):
-		q = abstract.Queue()
+		q = Queue()
 		q.extend([0,1,2,3,4,5,6,7,8])
 		q.removeAllBefore(2)
 		q.removeAllBefore(4)
@@ -101,7 +102,7 @@ class TestQueue(unittest.TestCase):
 		"""
 		A L{start} for iterItems is not required.
 		"""
-		q = abstract.Queue()
+		q = Queue()
 		q.append('zero')
 		q.extend(['one', 'two'])
 		self.assertEqual([(0, 'zero'), (1, 'one'), (2, 'two')], list(q.iterItems()))
@@ -116,7 +117,7 @@ class TestQueue(unittest.TestCase):
 		"""
 		handleSACK actually removes the selectively-acknowledged items from the queue 
 		"""
-		q = abstract.Queue()
+		q = Queue()
 		q.append('zero')
 		q.extend(['one', 'two', 'three'])
 		self.assertEqual([(0, 'zero'), (1, 'one'), (2, 'two'), (3, 'three')], list(q.iterItems()))
@@ -134,16 +135,17 @@ class TestQueue(unittest.TestCase):
 
 
 class TestIncoming(unittest.TestCase):
-	"""Tests for minerva.abstract.Incoming"""
-
+	"""
+	Tests for L{window.Incoming}
+	"""
 	def test_SACKNoItems(self):
-		i = abstract.Incoming()
+		i = Incoming()
 
 		self.assertEqual((-1, []), i.getSACK())
 
 
 	def test_threeItems(self):
-		i = abstract.Incoming()
+		i = Incoming()
 		i.give([[0, 'box0'], [1, 'box1'], [2, 'box2']])
 
 		self.assertEqual(['box0', 'box1', 'box2'], i.getDeliverableItems())
@@ -151,7 +153,7 @@ class TestIncoming(unittest.TestCase):
 
 
 	def test_itemMissing(self):
-		i = abstract.Incoming()
+		i = Incoming()
 		i.give([[0, 'box0'], [1, 'box1'], [3, 'box3']])
 
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
@@ -159,7 +161,7 @@ class TestIncoming(unittest.TestCase):
 
 
 	def test_twoItemsMissing(self):
-		i = abstract.Incoming()
+		i = Incoming()
 		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4']])
 
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
@@ -167,7 +169,7 @@ class TestIncoming(unittest.TestCase):
 
 
 	def test_twoRangesMissing(self):
-		i = abstract.Incoming()
+		i = Incoming()
 		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']])
 
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
@@ -175,7 +177,7 @@ class TestIncoming(unittest.TestCase):
 
 
 	def test_twoRangesMissingThenFill(self):
-		i = abstract.Incoming()
+		i = Incoming()
 		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']])
 
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
@@ -188,7 +190,7 @@ class TestIncoming(unittest.TestCase):
 
 
 	def test_outOfOrder(self):
-		i = abstract.Incoming()
+		i = Incoming()
 		# 0 missing
 		i.give([[1, 'box1'], [2, 'box2']])
 		self.assertEqual([], i.getDeliverableItems())
@@ -201,17 +203,17 @@ class TestIncoming(unittest.TestCase):
 
 	def test_outOfOrderJustOneCall(self):
 		"""
-		L{abstract.Incoming} handles all the boxes even when they're given
-		out-of-order in one L{abstract.Incoming.give} call.
+		L{Incoming} handles all the boxes even when they're given
+		out-of-order in one L{Incoming.give} call.
 		"""
-		i = abstract.Incoming()
+		i = Incoming()
 		i.give([[1, 'box1'], [0, 'box0']])
 		self.assertEqual((1, []), i.getSACK())
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
 
 
 	def test_alreadyGiven1Call(self):
-		i = abstract.Incoming()
+		i = Incoming()
 		alreadyGiven = i.give([[0, 'box0'], [1, 'box1'], [1, 'boxNEW']])
 		self.assertEqual((1, []), i.getSACK())
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
@@ -219,7 +221,7 @@ class TestIncoming(unittest.TestCase):
 
 
 	def test_alreadyGivenMultipleCalls(self):
-		i = abstract.Incoming()
+		i = Incoming()
 		alreadyGivenA = i.give([[0, 'box0'], [1, 'box1']])
 		alreadyGivenB = i.give([[0, 'box0NEW']])
 		alreadyGivenC = i.give([[1, 'box1NEW']])
@@ -233,7 +235,7 @@ class TestIncoming(unittest.TestCase):
 
 
 	def test_alreadyGivenButUndelivered(self):
-		i = abstract.Incoming()
+		i = Incoming()
 		alreadyGivenA = i.give([[0, 'box0'], [1, 'box1'], [4, 'box4']])
 		alreadyGivenB = i.give([[4, 'box4NEW']])
 		alreadyGivenC = i.give([[1, 'box1NEW'], [4, 'box4NEW']])
@@ -247,13 +249,13 @@ class TestIncoming(unittest.TestCase):
 
 
 	def test_negativeSequenceNum(self):
-		i = abstract.Incoming()
+		i = Incoming()
 		self.assertRaises(ValueError, lambda: i.give([[-1, 'box']]))
 		self.assertRaises(ValueError, lambda: i.give([[-2, 'box']]))
 
 
 	def test_getUndeliverableCount(self):
-		i = abstract.Incoming()
+		i = Incoming()
 		self.aE(0, i.getUndeliverableCount())
 		i.give([[1, 'box']])
 		self.aE(1, i.getUndeliverableCount())
@@ -274,15 +276,15 @@ class TestIncoming(unittest.TestCase):
 
 class TestIncomingConsumption(unittest.TestCase):
 	"""
-	Tests for L{minerva.abstract.Incoming}'s memory-consumption-prevention
+	Tests for L{window.Incoming}'s memory-consumption-prevention
 	"""
 	def test_noBoxesEverGiven(self):
-		i = abstract.Incoming()
+		i = Incoming()
 		self.aE(0, i.getMaxConsumption())
 
 
 	def test_simple(self):
-		i = abstract.Incoming()
+		i = Incoming()
 		_ = i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
 		self.aE(totalSizeOf('box1') * 3, i.getMaxConsumption())
 
@@ -296,7 +298,7 @@ class TestIncomingConsumption(unittest.TestCase):
 		not include them as consuming memory, even they were not grabbed
 		with C{getDeliverableItems} yet.
 		"""
-		i = abstract.Incoming()
+		i = Incoming()
 		i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
 		self.aE(totalSizeOf('box1') * 3, i.getMaxConsumption())
 		i.give([[0, 'box0']])
@@ -311,7 +313,7 @@ class TestIncomingConsumption(unittest.TestCase):
 		Test an implementation detail: the _objSizeCache map does not
 		keep around unneeded entries
 		"""
-		i = abstract.Incoming()
+		i = Incoming()
 		
 		i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
 		self.aE(3, len(i._objSizeCache))

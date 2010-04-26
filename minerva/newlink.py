@@ -21,7 +21,7 @@ from mypy.objops import ensureNonNegIntLimit, ensureBool
 from minerva import decoders
 from minerva.website import RejectTransport
 from minerva.interfaces import ISimpleConsumer
-from minerva.abstract import Queue, Incoming, InvalidSACK
+from minerva.window import Queue, Incoming, InvalidSACK
 
 _postImportVars = vars().keys()
 

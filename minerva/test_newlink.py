@@ -10,7 +10,7 @@ from twisted.internet.interfaces import (
 	IPushProducer, IPullProducer, IProtocol, IProtocolFactory)
 from mypy import constant
 
-from minerva import abstract
+from minerva.window import Queue, Incoming
 from minerva.helpers import todo
 from minerva.test_decoders import diceString
 
@@ -1467,7 +1467,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
-		q = abstract.Queue()
+		q = Queue()
 		q.extend([['box0'], ['box1']])
 		transport.writeBoxes(q, start=None)
 		self.aE([
@@ -1485,7 +1485,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		frame0 = _makeHelloFrame()
 		transport.sendFrames([frame0])
-		q = abstract.Queue()
+		q = Queue()
 		q.extend([['box0'], ['box1'], ['box2']])
 		transport.writeBoxes(q, start=1)
 		self.aE([
@@ -1495,7 +1495,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		], transport.getNew())
 
 
-	# TODO: once abstract.Queue supports SACK, add a test that really uses SACK here
+	# TODO: once window.Queue supports SACK, add a test that really uses SACK here
 
 
 	def test_writeBoxesHugeBoxes(self):
@@ -1508,7 +1508,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
-		q = abstract.Queue()
+		q = Queue()
 		box0 = ['b'*int(0.6*1024*1024)]
 		box1 = ['c'*int(0.6*1024*1024)]
 		q.extend([box0, box1])
@@ -1528,7 +1528,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
-		q = abstract.Queue()
+		q = Queue()
 		q.extend([['box0'], ['box1']])
 		transport.writeBoxes(q, start=None)
 		transport.writeBoxes(q, start=None)
@@ -1551,7 +1551,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
-		q = abstract.Queue()
+		q = Queue()
 		q.extend([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
 
 		transport.writeBoxes(q, start=3)
@@ -1579,7 +1579,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
-		q = abstract.Queue()
+		q = Queue()
 		q.extend([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
 
 		transport.writeBoxes(q, start=3)

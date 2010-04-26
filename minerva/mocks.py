@@ -7,7 +7,7 @@ from twisted.web.test.test_web import DummyRequest as _TwistedDummyRequest
 from twisted.test.proto_helpers import StringTransport
 #from twisted.internet.test.test_base import FakeReactor as _TwistedFakeReactor
 
-from minerva import abstract
+from minerva.window import Queue, Incoming
 from minerva.newlink import (
 	NoSuchStream, IMinervaProtocol, IMinervaFactory, StreamAlreadyExists)
 from minerva.decoders import OK
@@ -225,8 +225,8 @@ class MockStream(_MockMixin):
 		self.streamId = streamId
 		self.streamProtocolFactory = streamProtocolFactory
 		self.log = []
-		self._incoming = abstract.Incoming()
-		self.queue = abstract.Queue()
+		self._incoming = Incoming()
+		self.queue = Queue()
 		self._transports = set()
 
 
