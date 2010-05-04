@@ -1405,8 +1405,8 @@ class SocketTransport(object):
 		if self._terminating:
 			return
 
-		# Before we can even speak "Minerva" and send frames, we need to determine
-		# what mode the client wants us to speak in.
+		# Before we can even speak "Minerva" and send frames, we need to
+		# determine what mode the client wants us to speak in.
 		if self._mode == UNKNOWN:
 			self._initialBuffer += data
 
