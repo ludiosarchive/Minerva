@@ -1248,10 +1248,6 @@ class SocketTransport(object):
 
 
 	def _framesReceived(self, frames, alreadyDecoded):
-		# TODO: don't call transport.write() more than once for a _framesReceived() call.
-		# Twisted doesn't actually send multiple TCP packets when .write() is called twice
-		# on the same socket during one reactor tick, but for HTTP transports, multiple
-		# chunks will be written out. Multiple chunks waste bytes.
 		for frameString in frames: # possibly not a string if alreadyDecoded
 			if self._terminating:
 				break
