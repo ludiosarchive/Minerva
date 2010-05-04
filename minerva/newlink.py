@@ -1327,6 +1327,27 @@ class SocketTransport(object):
 				except NoSuchStream:
 					return self._closeWith(Fn_tk_stream_attach_failure)
 
+			elif frameType == Fn_sack:
+				ackNumber, sackList = frameObj[1:]
+				try:
+					ensureNonNegIntLimit(ackNumber, 2**64) # okay to ignore return value here
+				except (TypeError, ValueError):
+					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+
+				if not isinstance(sackList, list):
+					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+
+				for obj in sackList:
+					try:
+						ensureNonNegIntLimit(obj, 2**64) # okay to ignore return value here
+					except (TypeError, ValueError):
+						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+
+				try:
+					self._stream.sackReceived((ackNumber, sackList))
+				except InvalidSACK:
+					return self._closeWith(Fn_tk_acked_unsent_boxes)
+
 			elif frameType == Fn_boxes:
 				boxes = frameObj[1]
 				if not isinstance(boxes, list):
@@ -1360,27 +1381,6 @@ class SocketTransport(object):
 				if not isinstance(reasonString, basestring) or not isinstance(applicationLevel, bool):
 					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 				self._stream.resetFromClient(reasonString, applicationLevel)
-
-			elif frameType == Fn_sack:
-				ackNumber, sackList = frameObj[1:]
-				try:
-					ensureNonNegIntLimit(ackNumber, 2**64) # okay to ignore return value here
-				except (TypeError, ValueError):
-					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-
-				if not isinstance(sackList, list):
-					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-
-				for obj in sackList:
-					try:
-						ensureNonNegIntLimit(obj, 2**64) # okay to ignore return value here
-					except (TypeError, ValueError):
-						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-
-				try:
-					self._stream.sackReceived((ackNumber, sackList))
-				except InvalidSACK:
-					return self._closeWith(Fn_tk_acked_unsent_boxes)
 
 			elif frameType == Fn_start_timestamps:
 				1/0
