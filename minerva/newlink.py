@@ -1124,7 +1124,6 @@ class SocketTransport(object):
 	def _closeWith(self, errorType, *args):
 		if self._terminating:
 			return
-		# TODO: sack before closing
 		invalidArgsFrameObj = [errorType]
 		invalidArgsFrameObj.extend(args)
 		self._toSend += self._encodeFrame(invalidArgsFrameObj)
