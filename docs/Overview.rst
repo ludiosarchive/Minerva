@@ -279,30 +279,28 @@ object and say that applications need direct access to octets, but consider thes
 
 
 
-Why are frames JSON-based?
+Why are boxes JSON-based?
 =====================
 
-Frames contain semi-structured data (JSON). JSON is used as the building block
-instead of "unicode strings" or similar because:
+Boxes are semi-structured data (JSON). JSON is used as the building block
+for boxes instead of just "unicode strings" because:
 
-*	The Minerva protocol itself does some pretty complex things and sends structured
-	data. The protocol would be more complicated to change, and would require more
-	code, if JSON was not the building block.
+*	JSON suits the majority of applications, and it may be convenient for
+	developers to not have to worry about most encoding/decoding.
 
-*	Some environments are not unicode-safe: Firefox 2 + XHR streaming,
-	or anyone with a very bad proxy. Using JSON ensures we can easily drop down to
-	7-bit-clean mode. And if we're using JSON to convert ASCII to unicode, we just
-	called the JSON decoder and might as well get structured data out, instead of
-	just a string. But right now, Minerva always uses 7-bit-clean mode to avoid problems.
-
-*	JSON requires encoding control characters including `0x00` and `0xFF` and `LF`,
-	which is good because we cannot send those characters over all transports anyway.
+*	We can't send ``U+0000``, ``U+FFFF``, and many other codepoints over
+	all transports. Some browser objects like XDomainRequest block a large
+	set of codepoints. Some environments like (Firefox 2 + streaming XHR) support
+	only ASCII. We need to support JSON-style encoding/decoding anyway.
+	We use this "opportunity" to support the full gamut of JSON objects,
+	not just strings.
 
 *	IE8, Chrome, Firefox, Safari, and Opera have native JSON encoders and decoders.
-	Using JSON at the Minerva level ensures the native-JSON bugs have been abstracted
-	away. Note: at the present time, we don't use native JSON.
+	Using JSON at the Minerva level helps us work around bugs in native ``JSON``
+	objects. Note: at the present time, we don't use native JSON.
 
-We used to think there were more advantages, but they were found to be incorrect:
+This design decision was made when we thought there more advantages, but
+they were proven to be incorrect:
 
 * 	We thought that we could avoid ``eval()`` ing strings when the IE htmlfile transport
 	was in use, by dumping the JSON data straight into the ``<script>`` tags written
@@ -316,6 +314,9 @@ We used to think there were more advantages, but they were found to be incorrect
 ..	[#] see comments in ``goog.typeOf`` function in Closure Library: 
 	http://code.google.com/p/closure-library/source/browse/trunk/closure/goog/base.js?r=2#525
 
+Using JSON does add some complexity. The Minerva server has to block
+ACA attacks, stack exhaustion attacks, and determine how much memory
+the structured objects use.
 
 Problems with JSON
 -------------------------
