@@ -1078,7 +1078,11 @@ class SocketTransport(object):
 		self._gotHello = \
 		self._terminating = \
 		self._sackDirty = \
+		self._streamingResponse = \
 		self._paused = False
+		# _streamingResponse is False by default because client may fail
+		# to send a proper Hello frame in their HTTP request, and we don't
+		# want the request to get "stuck".
 
 		self._stream = \
 		self._producer = \
@@ -1092,13 +1096,14 @@ class SocketTransport(object):
 
 
 	def _stoppedSpinning(self):
-		if self._sackDirty:
-			self.writable.write(self._getSACKBytes())
+		sackDirty = self._sackDirty
+		if sackDirty:
 			self._sackDirty = False
+			self.writable.write(self._getSACKBytes())
 
 		toSend = self._toSend
-		self._toSend = ''
 		if toSend:
+			self._toSend = ''
 			self.writable.write(toSend)
 
 		if self._terminating:
@@ -1108,8 +1113,9 @@ class SocketTransport(object):
 				self._stream.transportOffline(self)
 				self._stream = None
 
-			if self._mode == HTTP:
-				self.writable.finish()
+		if self._mode == HTTP and not self._streamingResponse and (toSend or sackDirty or self._terminating):
+			# .finish() is only for Requests
+			self.writable.finish()
 
 
 	def _encodeFrame(self, frameData):
@@ -1191,8 +1197,6 @@ class SocketTransport(object):
 			lastBox = seqNum
 
 		self.lastBoxSent = lastBox
-
-		# TODO: possibly close for HTTP
 
 
 	def _getSACKBytes(self):
