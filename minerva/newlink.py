@@ -1167,9 +1167,9 @@ class SocketTransport(object):
 		"""
 		@see L{IMinervaTransport.writeBoxes}
 		"""
-		##print;print;traceback.print_stack()
 		if self._terminating:
 			return
+
 		assert self._gotHello
 
 		# See test_writeBoxesConnectionInterleavingSupport
