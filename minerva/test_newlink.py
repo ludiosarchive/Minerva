@@ -2099,30 +2099,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.aE([[Fn.sack, 0, [2]]], transport.getNew())
 
 
-	def test_boxesSameTimeOneSack(self):
-		"""
-		If client writes multiple box/boxes frames and they arrive at the
-		same time, those boxes are delivered to Stream, and just *one*
-		SACK is written out to the transport.
-		"""
-		frame0 = _makeHelloFrame()
-		transport = self._makeTransport()
-		transport.sendFrames([frame0])
-		stream = self.streamTracker.getStream('x'*26)
-
-		transport.sendFrames([[Fn.boxes, [[0, ["box0"]]]], [Fn.boxes, [[2, ["box2"]]]]])
-
-		self.aE([
-			['notifyFinish'],
-			['transportOnline', transport],
-			# TODO: maybe coalesce boxesReceived funcalls in the future
-			['boxesReceived', transport, [[0, ["box0"]]]],
-			['boxesReceived', transport, [[2, ["box2"]]]],
-			['getSACK']],
-		stream.getNew())
-		self.aE([[Fn.sack, 0, [2]]], transport.getNew())
-
-
 	def test_boxesFrameWithInvalidBoxes(self):
 		"""
 		If the [1]th argument of the boxes frame is not a list, the client
@@ -3066,6 +3042,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			expected = [
 				[Fn.sack, 1, []],
+				[Fn.sack, 1, []], # We get this twice because of two Fn.boxes frames
 				[Fn.reset, u'reset forced by mock protocol\u2603', True],
 				[Fn.you_close_it],
 			]
@@ -3126,7 +3103,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 					self.assertEqual(server.NOT_DONE_YET, out)
 
 					encode = DelimitedJSONDecoder.encode
-					self.assertEqual(['for(;;);\n', encode([Fn.sack, 2, []])], request.written)
+					self.assertEqual(['for(;;);\n', encode([Fn.sack, 1, []]) + encode([Fn.sack, 2, []])], request.written)
 					self.assertEqual(0 if streaming else 1, request.finished)
 
 					stream = self.streamTracker.getStream('x'*26)
@@ -3138,6 +3115,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 						["transportOnline", transport],
 						["subscribeToBoxes", transport, None],
 						["boxesReceived", transport, [[0, ['box0']], [1, ['box1']]]],
+						["getSACK"],
 						["boxesReceived", transport, [[2, ['box2']]]],
 						["getSACK"],
 					], stream.getNew())
@@ -3182,8 +3160,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			encode = DelimitedJSONDecoder.encode
 			expected = [
 				'for(;;);\n',
-				encode([Fn.sack, 0, []]),
-				encode([Fn.seqnum, 0]) + encode([Fn.box, ['box0']]) + encode([Fn.box, ['box1']])]
+				encode([Fn.sack, 0, []]) + encode([Fn.seqnum, 0]) + encode([Fn.box, ['box0']]) + encode([Fn.box, ['box1']])]
 
 			self.assertEqual(expected, request.written)
 			self.assertEqual(0 if streaming else 1, request.finished)

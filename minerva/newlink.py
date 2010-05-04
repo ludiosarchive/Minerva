@@ -1050,7 +1050,7 @@ class SocketTransport(object):
 	implements(IMinervaTransport, IPushProducer, IPullProducer) # Almost an IProtocol, but has no connectionMade
 
 	__slots__ = (
-		'_sackDirty', '_mailbox', 'lastBoxSent', '_lastStartParam', '_mode',
+		'_mailbox', 'lastBoxSent', '_lastStartParam', '_mode',
 		'_initialBuffer', '_toSend', 'writable', 'connected', '_gotHello',
 		'_terminating', '_paused', '_stream', '_producer', '_parser',
 		'streamId', 'credentialsData', 'transportNumber', 'factory',
@@ -1077,7 +1077,6 @@ class SocketTransport(object):
 		self.connected = \
 		self._gotHello = \
 		self._terminating = \
-		self._sackDirty = \
 		self._streamingResponse = \
 		self._paused = False
 		# _streamingResponse is False by default because client may fail
@@ -1096,11 +1095,6 @@ class SocketTransport(object):
 
 
 	def _stoppedSpinning(self):
-		sackDirty = self._sackDirty
-		if sackDirty:
-			self._sackDirty = False
-			self.writable.write(self._getSACKBytes())
-
 		toSend = self._toSend
 		if toSend:
 			self._toSend = ''
@@ -1113,7 +1107,7 @@ class SocketTransport(object):
 				self._stream.transportOffline(self)
 				self._stream = None
 
-		if self._mode == HTTP and not self._streamingResponse and (toSend or sackDirty or self._terminating):
+		if self._mode == HTTP and not self._streamingResponse and (toSend or self._terminating):
 			# .finish() is only for Requests
 			self.writable.finish()
 
@@ -1350,8 +1344,8 @@ class SocketTransport(object):
 						ensureNonNegIntLimit(pair[0], 2**64) # pair[0] is seqNum
 					except (TypeError, ValueError):
 						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-				self._sackDirty = True
 				self._stream.boxesReceived(self, boxes)
+				self._toSend += self._getSACKBytes()
 				# Remember that a lot can happen underneath that boxesReceived call,
 				# including a call to our own `reset` or `closeGently` or `writeBoxes`
 				# (though those are all mailboxify'ed).
