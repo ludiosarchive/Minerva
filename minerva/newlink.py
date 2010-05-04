@@ -785,7 +785,7 @@ class StreamTracker(object):
 		self._streams[safeKey] = s
 
 		try:
-			for o in self._observers.copy(): # copy() to avoid reentrant `unobserveStreams' disaster
+			for o in self._observers.copy(): # copy() in case `unobserveStreams' changes it
 				o.streamUp(s)
 		except:
 			# If an exception happened, at least we can clean up our part of the mess.
@@ -806,7 +806,7 @@ class StreamTracker(object):
 		del self._streams[safeKey]
 
 		# Do this after the `del' above in case some buggy observer raises an exception.
-		for o in self._observers.copy(): # copy() to avoid reentrant `unobserveStreams' disaster
+		for o in self._observers.copy(): # copy() in case `unobserveStreams' changes it
 			o.streamDown(stream)
 
 		# Last reference to the stream should be gone soon.
@@ -1039,13 +1039,14 @@ class SocketTransport(object):
 	This is a hybrid:
 		Flash Socket
 		Flash Socket policy server
-	TODO: WebSocket, Flash Socket (encrypted), pass-through to HTTP
+		HTTP (twisted.web.server.Request)
+	TODO: WebSocket, Flash Socket (encrypted)
 	"""
 	implements(IMinervaTransport, IPushProducer, IPullProducer) # Almost an IProtocol, but has no connectionMade
 
 	__slots__ = (
 		'_mailbox', 'lastBoxSent', '_lastStartParam', '_mode',
-		'_initialBuffer', '_toSend', 'writable', 'connected', '_gotHello',
+		'_initialBuffer', '_toSend', 'writable', 'connected', 'receivedCounter',
 		'_terminating', '_paused', '_stream', '_producer', '_parser',
 		'streamId', 'credentialsData', 'transportNumber', 'factory',
 		'transport', '_maxReceiveBytes', '_maxOpenTime',
@@ -1058,18 +1059,15 @@ class SocketTransport(object):
 	def __init__(self):
 		self._mailbox = Mailbox(self._stoppedSpinning)
 
-		self.lastBoxSent = -1
+		self.lastBoxSent = \
+		self.receivedCounter = -1
 		self._lastStartParam = 2**128
 		self._mode = UNKNOWN
 		# _initialBuffer buffers data while determining the mode
 		self._initialBuffer = \
 		self._toSend = ''
 
-		# TODO: perhaps use a _frameCounter instead of _gotHello;
-		# increment it for each frame we receive; only allow hello frame for
-		# _frameCounter == 0
 		self.connected = \
-		self._gotHello = \
 		self._terminating = \
 		self._streamingResponse = \
 		self._paused = False
@@ -1164,7 +1162,9 @@ class SocketTransport(object):
 		if self._terminating:
 			return
 
-		assert self._gotHello
+		# Something went wrong if we're writing boxes before
+		# we received the hello frame.
+		assert self.receivedCounter > -1, self.receivedCounter
 
 		# See test_writeBoxesConnectionInterleavingSupport
 		# Remember that None < any number
@@ -1252,6 +1252,8 @@ class SocketTransport(object):
 			if self._terminating:
 				break
 
+			self.receivedCounter += 1
+
 			if alreadyDecoded:
 				frameObj = frameString
 			else:
@@ -1274,22 +1276,18 @@ class SocketTransport(object):
 
 			frameType = frameObj[0]
 
-			# We demand a 'hello' frame before any other type of frame
-			if not self._gotHello and frameType != Fn_hello:
-				return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-
-
-			if frameType == Fn_hello:
-				# We only allow one 'hello' per connection
-				if self._gotHello:
+			# First frame must be hello frame; must not receive the hello
+			# frame twice.
+			if self.receivedCounter == 0:
+				if frameType == Fn_hello:
+					try:
+						self._handleHelloFrame(frame)
+					except InvalidHello:
+						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+					except NoSuchStream:
+						return self._closeWith(Fn_tk_stream_attach_failure)
+				else:
 					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-				self._gotHello = True
-				try:
-					self._handleHelloFrame(frame)
-				except InvalidHello:
-					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-				except NoSuchStream:
-					return self._closeWith(Fn_tk_stream_attach_failure)
 
 			elif frameType == Fn_sack:
 				ackNumber, sackList = frameObj[1:]
