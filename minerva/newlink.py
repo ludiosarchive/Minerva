@@ -1060,6 +1060,9 @@ class SocketTransport(object):
 		self._mode = UNKNOWN
 		self._initialBuffer = '' # To buffer data while determining the mode
 
+		# TODO: perhaps use a _frameCounter instead of _gotHello;
+		# increment it for each frame we receive; only allow hello frame for
+		# _frameCounter == 0
 		self.connected = \
 		self._gotHello = \
 		self._terminating = \
