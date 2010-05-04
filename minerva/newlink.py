@@ -1649,7 +1649,7 @@ class SocketFace(protocol.ServerFactory):
 				raise ValueError("policyString cannot contain NULL byte")
 			self.policyStringWithNull = policyString + '\x00'
 		else:
-			# TODO: test that Flash Player actually closes connection when it sees just NULL
+			# TODO: verify that Flash Player actually closes connection when it sees just NULL
 			self.policyStringWithNull = '\x00'
 
 
