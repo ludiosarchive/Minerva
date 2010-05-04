@@ -590,6 +590,10 @@ class Stream(object):
 		#<succeedsTransport> were SACKed.
 		"""
 		##print 'subscribeToBoxes', transport, succeedsTransport
+		# TODO: do we really need _primaryTransport to still be connected?
+		# Can't we just remember what its transportNumber and lastBoxSent were?
+		# That way, a transport can succeed the older even if it was disconnected
+		# in the meantime.
 		if \
 		succeedsTransport is not None and \
 		self._primaryTransport and \
