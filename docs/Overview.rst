@@ -360,8 +360,19 @@ Design your protocol the way you would design any other frame-based protocol, bu
 5.	Don't rely on the length of unicode strings to be the same in both server and browser
 	environments. `Notes on Python UCS-2/UCS-4 builds, and unicode length`_ explains.
 
+6.	Keep in mind that some unicode codepoints may take more bytes to transmit
+	than others. You may send non-character codepoints like ``U+FDD0`` - ``U+FDEF``,
+	``U+FFF0`` - ``U+FFF8``, ``U+FFFE``, ``U+FFFF``, or other `Noncharacters`_,
+	but Minerva has to escape them to ASCII ``\uXXXX`` escapes. This uses 6 bytes
+	instead of the typical 3 UTF-8 bytes.
+
+	Note: this is not important right now, because Minerva always uses the ``\uXXXX``
+	escape for non-ASCII codepoints.
+
 ..	[#] http://ajaxian.com/archives/garbage-collection-in-ie6
 ..	[#] http://pupius.co.uk/blog/2007/03/garbage-collection-in-ie6/
+
+..	_`Noncharacters`: http://www.unicode.org/versions/Unicode5.2.0/
 
 ..	_`amphacks/mediumbox.py`: http://bazaar.launchpad.net/~glyph/%2Bjunk/amphacks/annotate/head%3A/python/amphacks/mediumbox.py
 
@@ -490,24 +501,6 @@ exceed this nesting limit, so applications are responsible for keeping track of 
 
 **Future**: Make the server very strict about the nesting limit of 26, by passing
 a nesting limit for every ``simplejson.loads``.
-
-
-Noncharacter Unicode codepoints
-------------------------------------------
-Only use unicode to represent text. Do not use codepoints to represent numbers or
-delimiters, unless you use only codepoints which are unreserved and allocated to
-characters in the `Unicode 5.2 standard`_. Future optimizations may make it impossible
-to transmit certain codepoints or combinations of codepoints. For example, invalid
-surrogate pairs, as well as ``U+FDD0`` - ``U+FDEF``, ``U+FFF0`` - ``U+FFF8``,
-``U+FFFE``, ``U+FFFF``, as well as other Noncharacters, may be silently replaced
-with ``U+FFFD REPLACEMENT CHARACTER``. Do not use ``U+FEFF`` either, as it
-might be silently stripped in Safari 3. Minerva reserves the right to only
-sometimes substitute to ``U+FFFD``, even for adjacent frames in the same stream.
-
-This limitation doesn't apply to the current version of Minerva because both client and server
-use only ASCII-safe JSON. It may apply in future versions, so keep it mind.
-
-..	_`Unicode 5.2 standard`: http://www.unicode.org/versions/Unicode5.2.0/
 
 
 
