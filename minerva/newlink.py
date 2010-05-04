@@ -1186,13 +1186,13 @@ class SocketTransport(object):
 			self.lastBoxSent = -1
 			self._lastStartParam = start
 
-		# Even if there's a lot of stuff in the queue, try to write everything.
 		if self._sackDirty: # re: _sackDirty, see comment at the end of _framesReceived
 			self._sackDirty = False
 			toSend = self._getSACKBytes()
 		else:
 			toSend = ''
-		# we might want to send boxes frame instead of box sometimes? no?
+		# TODO: we might want to send boxes frame instead of box sometimes? no?
+		# Even if there's a lot of stuff in the queue, write everything.
 		lastBox = self.lastBoxSent
 		for seqNum, box in queue.iterItems(start=start):
 			##print seqNum, box, lastBox
@@ -1332,17 +1332,16 @@ class SocketTransport(object):
 				if not isinstance(boxes, list):
 					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 				# Validate the boxes
-				for thing in boxes:
-					if not isinstance(thing, list) or len(thing) != 2:
+				for pair in boxes:
+					if not isinstance(pair, list) or len(pair) != 2:
 						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-					seqNum, box = thing
 					try:
 						# This is probably enough to stop an ACA (on Incoming) on 64-bit
 						# Python, but maybe worry about 32-bit Python too?
 						#
 						# We ignore the return value; it's okay to give Incoming
 						# and therefore Stream an int/long/float seqNum.
-						ensureNonNegIntLimit(seqNum, 2**64)
+						ensureNonNegIntLimit(pair[0], 2**64) # pair[0] is seqNum
 					except (TypeError, ValueError):
 						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 				self._sackDirty = True
