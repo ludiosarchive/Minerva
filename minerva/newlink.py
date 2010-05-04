@@ -445,8 +445,7 @@ class Stream(object):
 
 	# This assumes _protocol has been instantiated.
 	def _internalReset(self, reasonString):
-		if self.disconnected:
-			return
+		assert not self.disconnected, self
 		self.disconnected = True
 		# .copy() because _transports shrinks as transports call Stream.transportOffline
 		# TODO: add explicit test that makes this .copy() necessary
