@@ -388,6 +388,8 @@ class Stream(object):
 		# because:
 		#     1) active S2C transport are responsible for pausing if there is TCP pressure
 		#     2) if there is no active S2C transport, we already paused it
+		# TODO: actually implement flow control if Queue is too big, since clients can
+		# resource-exhaust by never sending Minerva ACKs.
 		self.queue.extend(boxes)
 		self._tryToSend()
 
@@ -401,9 +403,10 @@ class Stream(object):
 		if self.disconnected:
 			raise RuntimeError("Cannot reset disconnected Stream %r" % (self,))
 		self.disconnected = True
-		# If no transports are connected, client will not get the reset frame. If client tries
+		# Note: If no transports are connected, client will not get the reset frame. If client tries
 		# to connect a transport to a dead stream, they will get a tk_stream_attach_failure.
-		for t in self._transports.copy(): # Copy because _transports shrinks as transports call transportOffline
+		# .copy() because _transports shrinks as transports call Stream.transportOffline
+		for t in self._transports.copy():
 			t.writeReset(reasonString, applicationLevel=True)
 		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
@@ -424,12 +427,15 @@ class Stream(object):
 		"""
 		assert not self.disconnected
 		self.disconnected = True
-		for t in self._transports.copy(): # Copy because _transports shrinks as transports call transportOffline
+		# .copy() because _transports shrinks as transports call Stream.transportOffline
+		for t in self._transports.copy():
 			t.closeGently()
 		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
 		try:
-			self._protocol.streamReset(WhoReset.client_app if applicationLevel else WhoReset.client_minerva, reasonString)
+			self._protocol.streamReset(
+				WhoReset.client_app if applicationLevel else WhoReset.client_minerva,
+				reasonString)
 		finally:
 			del self._protocol
 
@@ -438,7 +444,9 @@ class Stream(object):
 	def _internalReset(self, reasonString):
 		assert not self.disconnected
 		self.disconnected = True
-		for t in self._transports.copy(): # Copy because _transports shrinks as transports call transportOffline # TODO: add test that requires the .copy()
+		# .copy() because _transports shrinks as transports call Stream.transportOffline
+		# TODO: add explicit test that makes this .copy() necessary
+		for t in self._transports.copy():
 			t.writeReset(reasonString, applicationLevel=False)
 		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
