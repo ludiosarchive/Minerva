@@ -254,7 +254,6 @@ class IMinervaFactory(Interface):
 	"""
 	Interface for L{MinervaProtocol} factories.
 	"""
-
 	def buildProtocol():
 		"""
 		Called when a Stream has been established.
