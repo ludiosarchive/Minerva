@@ -3094,6 +3094,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 #		return transport
 
 
+	@todo
 	def test_httpBodyFramesPassedToProtocol(self):
 		r"""
 		Frames in the body of the HTTP POST request are passed to the
@@ -3145,6 +3146,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 					self._resetStreamTracker()
 
 
+	@todo
 	def test_S2CBoxesAlreadyAvailable(self):
 		r"""
 		If client uploads a box and S2C boxes are already available, client
@@ -3187,6 +3189,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			self.assertEqual(0 if streaming else 1, request.finished)
 
 
+	@todo
 	def test_S2CBoxesSoonAvailable(self):
 		r"""
 		If S2C boxes become available after the transport connects, and if
