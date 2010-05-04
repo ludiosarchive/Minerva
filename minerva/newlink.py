@@ -6,6 +6,7 @@ See minerva/sample/demo.py for an idea of how to use the classes below.
 
 import simplejson
 import traceback
+from collections import deque
 from zope.interface import Interface, Attribute, implements
 
 from twisted.python import log
@@ -17,6 +18,7 @@ from twisted.web.server import NOT_DONE_YET
 
 from mypy.randgen import secureRandom
 from mypy.objops import ensureNonNegIntLimit, ensureBool
+from mypy.mailbox import Mailbox, mailboxify
 
 from minerva import decoders
 from minerva.website import RejectTransport
@@ -425,7 +427,8 @@ class Stream(object):
 		Minerva transports call this when they get a reset frame from client.
 		Transport still needs to call transportOffline after this.
 		"""
-		assert not self.disconnected
+		if self.disconnected:
+			return
 		self.disconnected = True
 		# .copy() because _transports shrinks as transports call Stream.transportOffline
 		for t in self._transports.copy():
@@ -442,7 +445,8 @@ class Stream(object):
 
 	# This assumes _protocol has been instantiated.
 	def _internalReset(self, reasonString):
-		assert not self.disconnected
+		if self.disconnected:
+			return
 		self.disconnected = True
 		# .copy() because _transports shrinks as transports call Stream.transportOffline
 		# TODO: add explicit test that makes this .copy() necessary
@@ -462,6 +466,8 @@ class Stream(object):
 
 		Called by a transport to tell me that it has received boxes L{boxes}.
 		"""
+		if self.disconnected:
+			return
 		self._incoming.give(boxes)
 		items = self._incoming.getDeliverableItems()
 		if items:
@@ -1044,21 +1050,26 @@ class SocketTransport(object):
 	implements(IMinervaTransport, IPushProducer, IPullProducer) # Almost an IProtocol, but has no connectionMade
 
 	__slots__ = (
-		'writable', 'lastBoxSent', '_lastStartParam', '_mode', '_initialBuffer',
-		'connected', '_gotHello', '_terminating', '_sackDirty', '_paused',
-		'_stream', '_producer', '_parser', 'streamId', 'credentialsData',
-		'transportNumber', 'factory', 'transport', '_maxReceiveBytes',
-		'_maxOpenTime', '_streamingResponse', '_needPaddingBytes')
+		'_sackDirty', '_mailbox', 'lastBoxSent', '_lastStartParam', '_mode',
+		'_initialBuffer', '_toSend', 'writable', 'connected', '_gotHello',
+		'_terminating', '_paused', '_stream', '_producer', '_parser',
+		'streamId', 'credentialsData', 'transportNumber', 'factory',
+		'transport', '_maxReceiveBytes', '_maxOpenTime',
+		'_streamingResponse', '_needPaddingBytes')
 	# TODO: last 4 attributes above only for an HTTPSocketTransport, to save memory
 
 	maxLength = 1024*1024
 	noisy = True
 
 	def __init__(self):
+		self._mailbox = Mailbox(self._stoppedSpinning)
+
 		self.lastBoxSent = -1
 		self._lastStartParam = 2**128
 		self._mode = UNKNOWN
-		self._initialBuffer = '' # To buffer data while determining the mode
+		# _initialBuffer buffers data while determining the mode
+		self._initialBuffer = \
+		self._toSend = ''
 
 		# TODO: perhaps use a _frameCounter instead of _gotHello;
 		# increment it for each frame we receive; only allow hello frame for
@@ -1078,6 +1089,23 @@ class SocketTransport(object):
 		return '<%s terminating=%r, stream=%r, paused=%r, lastBoxSent=%r>' % (
 			self.__class__.__name__,
 			self._terminating, self._stream, self._paused, self.lastBoxSent)
+
+
+	def _stoppedSpinning(self):
+		if self._sackDirty:
+			self.writable.write(self._getSACKBytes())
+			self._sackDirty = False
+
+		toSend = self._toSend
+		self._toSend = ''
+		if toSend:
+			self.writable.write(toSend)
+
+		if self._terminating:
+			self._goOffline()
+
+			if self._mode == HTTP:
+				self.writable.finish()
 
 
 	def _encodeFrame(self, frameData):
@@ -1100,84 +1128,55 @@ class SocketTransport(object):
 
 
 	def _closeWith(self, errorType, *args):
-		assert not self._terminating, self
+		if self._terminating:
+			return
 		# TODO: sack before closing
 		invalidArgsFrameObj = [errorType]
 		invalidArgsFrameObj.extend(args)
-		toSend = ''
-		toSend += self._encodeFrame(invalidArgsFrameObj)
+		self._toSend += self._encodeFrame(invalidArgsFrameObj)
 		if self._mode != HTTP:
-			toSend += self._encodeFrame([Fn_you_close_it])
-		self.writable.write(toSend)
+			self._toSend += self._encodeFrame([Fn_you_close_it])
 		self._terminating = True
-		self._goOffline()
-
-		if self._mode == HTTP:
-			self.writable.finish()
 
 		# TODO: set timer and close the connection ourselves in 5-10 seconds
 		##self.transport.loseWriteConnection(), maybe followed by loseConnection later
 
 
+	@mailboxify('_mailbox')
 	def closeGently(self):
 		"""
 		@see L{IMinervaTransport.closeGently}
 		"""
-		assert not self._terminating, self
-
-		if self._sackDirty:
-			self._sackDirty = False
-			toSend = self._getSACKBytes()
-		else:
-			toSend = ''
+		if self._terminating:
+			return
 
 		if self._mode != HTTP:
-			toSend += self._encodeFrame([Fn_you_close_it])
-
-		if toSend:
-			self.writable.write(toSend)
+			self._toSend += self._encodeFrame([Fn_you_close_it])
 		self._terminating = True
-		self._goOffline()
-
-		if self._mode == HTTP:
-			self.writable.finish()
 
 
+	@mailboxify('_mailbox')
 	def writeReset(self, reasonString, applicationLevel):
 		"""
 		@see L{IMinervaTransport.writeReset}
 		"""
-		assert not self._terminating, self
+		if self._terminating:
+			return
 
-		if self._sackDirty:
-			self._sackDirty = False
-			toSend = self._getSACKBytes()
-		else:
-			toSend = ''
-
-		toSend += self._encodeFrame([Fn_reset, reasonString, applicationLevel])
+		self._toSend += self._encodeFrame([Fn_reset, reasonString, applicationLevel])
 		if self._mode != HTTP:
-			toSend += self._encodeFrame([Fn_you_close_it])
-		self.writable.write(toSend)
+			self._toSend += self._encodeFrame([Fn_you_close_it])
 		self._terminating = True
-		self._goOffline()
-
-		if self._mode == HTTP:
-			self.writable.finish()
 
 
-	def _closeIfNecessary(self):
-		pass
-
-
+	@mailboxify('_mailbox')
 	def writeBoxes(self, queue, start):
 		"""
 		@see L{IMinervaTransport.writeBoxes}
 		"""
 		##print;print;traceback.print_stack()
-
-		# If the transport is terminating, it should have already called Stream.transportOffline(self)
-		assert not self._terminating, self
+		if self._terminating:
+			return
 		assert self._gotHello
 
 		# See test_writeBoxesConnectionInterleavingSupport
@@ -1186,11 +1185,6 @@ class SocketTransport(object):
 			self.lastBoxSent = -1
 			self._lastStartParam = start
 
-		if self._sackDirty: # re: _sackDirty, see comment at the end of _framesReceived
-			self._sackDirty = False
-			toSend = self._getSACKBytes()
-		else:
-			toSend = ''
 		# TODO: we might want to send boxes frame instead of box sometimes? no?
 		# Even if there's a lot of stuff in the queue, write everything.
 		lastBox = self.lastBoxSent
@@ -1199,21 +1193,16 @@ class SocketTransport(object):
 			if seqNum <= lastBox: # This might have to change to support SACK.
 				continue
 			if lastBox == -1 or lastBox + 1 != seqNum:
-				toSend += self._encodeFrame([Fn_seqnum, seqNum])
-			toSend += self._encodeFrame([Fn_box, box])
+				self._toSend += self._encodeFrame([Fn_seqnum, seqNum])
+			self._toSend += self._encodeFrame([Fn_box, box])
 			lastBox = seqNum
-		if len(toSend) > 1024 * 1024:
-			log.msg("Caution: %r asked me to send a large amount of data "
-				"(%d bytes)" % (self._stream, len(toSend)))
 
-		self.writable.write(toSend)
 		self.lastBoxSent = lastBox
 
-		self._closeIfNecessary()
+		# TODO: possibly close for HTTP
 
 
 	def _getSACKBytes(self):
-		assert not self._terminating, self
 		sackFrame = (Fn_sack,) + self._stream.getSACK()
 		return self._encodeFrame(sackFrame)
 
@@ -1283,7 +1272,6 @@ class SocketTransport(object):
 		# Twisted doesn't actually send multiple TCP packets when .write() is called twice
 		# on the same socket during one reactor tick, but for HTTP transports, multiple
 		# chunks will be written out. Multiple chunks waste bytes.
-		assert self._sackDirty is False
 		for frameString in frames: # possibly not a string if alreadyDecoded
 			if self._terminating:
 				break
@@ -1368,7 +1356,8 @@ class SocketTransport(object):
 				self._sackDirty = True
 				self._stream.boxesReceived(self, boxes)
 				# Remember that a lot can happen underneath that boxesReceived call,
-				# including a call to our own `reset` or `closeGently` or `writeBoxes`.
+				# including a call to our own `reset` or `closeGently` or `writeBoxes`
+				# (though those are all mailboxify'ed).
 
 			elif frameType == Fn_box:
 				1/0
@@ -1381,6 +1370,7 @@ class SocketTransport(object):
 				if not isinstance(reasonString, basestring) or not isinstance(applicationLevel, bool):
 					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 				self._stream.resetFromClient(reasonString, applicationLevel)
+				break # No need to process any frames after the reset frame
 
 			elif frameType == Fn_start_timestamps:
 				1/0
@@ -1391,15 +1381,8 @@ class SocketTransport(object):
 			else:
 				return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 
-		# The _sackDirty behavior in this class reduces the number of Fn.sack frames
-		# that are written out, while making sure that Fn.sack frames are not "held up"
-		# by boxes written out by the Stream. If Stream writes boxes during the
-		# Stream.boxesReceived call, a SACK is sent before the box(es).
-		if self._sackDirty and not self._terminating:
-			self._sackDirty = False
-			self.writable.write(self._getSACKBytes())
 
-
+	@mailboxify('_mailbox')
 	def dataReceived(self, data):
 		##print repr(data)
 		if self._terminating:
@@ -1471,6 +1454,7 @@ class SocketTransport(object):
 
 
 	# called by Stream instances
+	@mailboxify('_mailbox')
 	def registerProducer(self, producer, streaming):
 		if self._producer:
 			raise RuntimeError("Cannot register producer %s, "
@@ -1492,6 +1476,7 @@ class SocketTransport(object):
 
 
 	# called by Stream instances
+	@mailboxify('_mailbox')
 	def unregisterProducer(self):
 		"""
 		Stop consuming data from a producer.
@@ -1502,6 +1487,7 @@ class SocketTransport(object):
 
 	# called by Twisted. We trust Twisted to only call this if we registered
 	# a push producer with self.writable
+	@mailboxify('_mailbox')
 	def pauseProducing(self):
 		self._paused = True
 		if self._producer:
@@ -1509,6 +1495,7 @@ class SocketTransport(object):
 
 
 	# called by Twisted.
+	@mailboxify('_mailbox')
 	def resumeProducing(self):
 		self._paused = False
 		if self._producer:
@@ -1522,12 +1509,12 @@ class SocketTransport(object):
 		pass
 
 
+	@mailboxify('_mailbox')
 	def connectionLost(self, reason):
 		if self.noisy:
 			log.msg('Connection lost for %r reason %r' % (self, reason))
 		# It might already be terminating, but often not.
 		self._terminating = True
-		self._goOffline()
 
 
 	def _handleRequestBody(self):
@@ -1581,12 +1568,12 @@ class SocketTransport(object):
 
 
 	# Called by twisted.web if client closes connection before the request is finished
+	@mailboxify('_mailbox')
 	def requestAborted(self, reason):
 		if self.noisy:
 			log.msg('Peer aborted request %r on %r' % (self.writable, self))
 		# It might already be terminating, but often not.
 		self._terminating = True
-		self._goOffline()
 
 
 	# Called by Twisted when a TCP connection is made

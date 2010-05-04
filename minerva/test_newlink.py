@@ -3182,10 +3182,12 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			self.assertEqual(server.NOT_DONE_YET, out)
 
 			encode = DelimitedJSONDecoder.encode
-			self.assertEqual(
-				# TODO: make Minerva write the Fn.sack before the boxes
-				['for(;;);\n', encode([Fn.seqnum, 0]) + encode([Fn.box, ['box0']]) + encode([Fn.box, ['box1']]), encode([Fn.sack, 0, []])],
-				request.written)
+			expected = [
+				'for(;;);\n',
+				encode([Fn.sack, 0, []]),
+				encode([Fn.seqnum, 0]) + encode([Fn.box, ['box0']]) + encode([Fn.box, ['box1']])]
+
+			self.assertEqual(expected, request.written)
 			self.assertEqual(0 if streaming else 1, request.finished)
 
 
