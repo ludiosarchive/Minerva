@@ -353,11 +353,10 @@ class Stream(object):
 				start = None
 			else:
 				# In this case, avoid calling writeBoxes when there aren't any new boxes.
-				# Sample:
+				# A sample case:
 				# Wrote boxes 0, 1 over T#1; T#2 connects and makes _pretendAcked = 1
 				# queue is still _seqNumAt0 == 0, len(self.queue) == 2
-				# This function is called;
-				# (not 0 + 2 > 1 + 1), so return
+				# This function is called; this is run: (not 0 + 2 > 1 + 1), so return
 				##print self.queue._seqNumAt0 + len(self.queue), self._pretendAcked + 1
 				# TODO: this may need an update when we implement SACK
 				if not self.queue._seqNumAt0 + len(self.queue) > self._pretendAcked + 1:
@@ -378,7 +377,6 @@ class Stream(object):
 
 		@param boxes: a sequence of boxes
 		@type boxes: a sequence
-
 		"""
 		if self.disconnected:
 			raise RuntimeError("Cannot sendBoxes on disconnected Stream %r" % (self,))
