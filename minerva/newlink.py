@@ -911,8 +911,9 @@ class IMinervaTransport(ISimpleConsumer):
 
 
 
+dumps = simplejson.dumps
 def dumpToJson7Bit(data):
-	return simplejson.dumps(data, separators=(',', ':'), allow_nan=False)
+	return dumps(data, separators=(',', ':'), allow_nan=False)
 
 
 
