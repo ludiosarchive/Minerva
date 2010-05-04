@@ -359,6 +359,7 @@ class Stream(object):
 				# This function is called;
 				# (not 0 + 2 > 1 + 1), so return
 				##print self.queue._seqNumAt0 + len(self.queue), self._pretendAcked + 1
+				# TODO: this may need an update when we implement SACK
 				if not self.queue._seqNumAt0 + len(self.queue) > self._pretendAcked + 1:
 					return
 				start = max(self._pretendAcked + 1, self.queue._seqNumAt0)
