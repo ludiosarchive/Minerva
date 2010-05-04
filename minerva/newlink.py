@@ -1102,7 +1102,11 @@ class SocketTransport(object):
 			self.writable.write(toSend)
 
 		if self._terminating:
-			self._goOffline()
+			# Tell Stream this transport is offline. Whether we still have a TCP
+			# connection open to the peer is irrelevant.
+			if self._stream:
+				self._stream.transportOffline(self)
+				self._stream = None
 
 			if self._mode == HTTP:
 				self.writable.finish()
@@ -1115,16 +1119,6 @@ class SocketTransport(object):
 			return dumpToJson7Bit(frameData) + '\n'
 		else:
 			1/0
-
-
-	def _goOffline(self):
-		"""
-		Tell Stream that we're offline, even if we still have a connection
-		open to the peer.
-		"""
-		if self._stream:
-			self._stream.transportOffline(self)
-			self._stream = None
 
 
 	def _closeWith(self, errorType, *args):
