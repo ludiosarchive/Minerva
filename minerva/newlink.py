@@ -1573,13 +1573,12 @@ class SocketTransport(object):
 
 class SocketFace(protocol.ServerFactory):
 	implements(IProtocolFactory)
-	__slots__ = ('_reactor', '_clock', 'streamTracker', 'firewall', 'policyStringWithNull')
+	__slots__ = ('_clock', 'streamTracker', 'firewall', 'policyStringWithNull')
 
 	protocol = SocketTransport
 
-	def __init__(self, reactor, clock, streamTracker, firewall, policyString=None):
+	def __init__(self, clock, streamTracker, firewall, policyString=None):
 		"""
-		@param reactor: must provide... TODO WHAT?
 		@param clock: must provide L{IReactorTime}
 		@param streamTracker: The StreamTracker that will know about all
 			active Streams.
@@ -1590,7 +1589,6 @@ class SocketFace(protocol.ServerFactory):
 			sent in response to <policy-file-request/>C{NULL}.
 		@type policyString: C{str} or C{NoneType}
 		"""
-		self._reactor = reactor
 		self._clock = clock
 		self.streamTracker = streamTracker
 		self.firewall = firewall

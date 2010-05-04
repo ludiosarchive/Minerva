@@ -349,7 +349,7 @@ def makeMinervaAndHttp(reactor, csrfSecret):
 	##tracker.observeStreams(firewall)
 	##httpFace = HttpFace(clock, tracker, firewall)
 
-	socketFace = SocketFace(reactor, clock, tracker, firewall, policyString=policyString)
+	socketFace = SocketFace(clock, tracker, firewall, policyString=policyString)
 
 	# the HTTP stuff
 

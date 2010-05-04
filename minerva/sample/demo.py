@@ -94,7 +94,7 @@ def makeFace(clock=reactor):
 	root = Root(clock, tracker, firewall)
 
 	site = server.Site(root, clock=clock)
-	so = SocketFace(reactor, clock, tracker, firewall, policyString=policyString)
+	so = SocketFace(clock, tracker, firewall, policyString=policyString)
 
 	return so
 

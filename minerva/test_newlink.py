@@ -1207,7 +1207,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 		reactor = FakeReactor()
 		self.tcpTransport = DummyTCPTransport()
 		firewall = DummyFirewall(self._clock, rejectAll=False)
-		self.face = SocketFace(reactor, None, self.streamTracker, firewall,
+		self.face = SocketFace(None, self.streamTracker, firewall,
 			policyString='<nonsense-policy/>')
 		self.transport = self.face.buildProtocol(addr=None)
 		self.transport.makeConnection(self.tcpTransport)
@@ -1349,7 +1349,7 @@ class _BaseHelpers(object):
 
 	def _makeTransport(self, rejectAll=False, firewallActionTime=0):
 		firewall = DummyFirewall(self._clock, rejectAll, firewallActionTime)
-		faceFactory = SlotlessSocketFace(self._reactor, None, self.streamTracker, firewall)
+		faceFactory = SlotlessSocketFace(None, self.streamTracker, firewall)
 
 		parser = self._makeParser()
 		transport = _makeTransportWithDecoder(parser, faceFactory)
@@ -2326,7 +2326,7 @@ class TransportProducerTests(unittest.TestCase):
 		self.proto = MockMinervaProtocol()
 		self.tracker = StreamTracker(reactor, clock, self.proto)
 
-		factory = SocketFace(reactor, clock, self.tracker, DummyFirewall(clock, rejectAll=False), None)
+		factory = SocketFace(clock, self.tracker, DummyFirewall(clock, rejectAll=False), None)
 		self.transport = factory.buildProtocol(addr=None)
 
 		self.tcpTransport = DummyTCPTransport()
@@ -2431,17 +2431,17 @@ class SocketFaceTests(unittest.TestCase):
 	Tests for L{newlink.SocketFace}
 	"""
 	def test_policyStringOkay(self):
-		face = SocketFace(FakeReactor(), clock=None, streamTracker=None, firewall=DummyFirewall())
+		face = SocketFace(clock=None, streamTracker=None, firewall=DummyFirewall())
 		face.setPolicyString('okay')
 
 
 	def test_policyStringCannotBeUnicode(self):
-		face = SocketFace(FakeReactor(), clock=None, streamTracker=None, firewall=DummyFirewall())
+		face = SocketFace(clock=None, streamTracker=None, firewall=DummyFirewall())
 		self.aR(TypeError, lambda: face.setPolicyString(u'hi'))
 
 
 	def test_policyStringCannotContainNull(self):
-		face = SocketFace(FakeReactor(), clock=None, streamTracker=None, firewall=DummyFirewall())
+		face = SocketFace(clock=None, streamTracker=None, firewall=DummyFirewall())
 		self.aR(ValueError, lambda: face.setPolicyString("hello\x00"))
 		self.aR(ValueError, lambda: face.setPolicyString("\x00"))
 
@@ -2487,7 +2487,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		parser = Int32StringDecoder(maxLength=1024*1024)
 		# is it okay to make a new one every time?
 		faceFactory = SlotlessSocketFace(
-			self._reactor, None, self.streamTracker, DummyFirewall(self._clock, rejectAll=False))
+			None, self.streamTracker, DummyFirewall(self._clock, rejectAll=False))
 		transport = _makeTransportWithDecoder(parser, faceFactory)
 		transport.dataReceived('<int32/>\n')
 		return transport
