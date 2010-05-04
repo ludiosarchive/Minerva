@@ -3147,12 +3147,57 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 	def test_S2CBoxesAlreadyAvailable(self):
 		r"""
-		If S2C boxes are already available, and if not Hello_streamingResponse,
-		the request is finished after box(es) are sent. If Hello_streamingResponse,
-		boxes are written and the request is kept open.
+		If client uploads a box and S2C boxes are already available, client
+		gets a SACK frame and the boxes.
+
+		Iif not Hello_streamingResponse, the request is finished after both
+		frame types are sent. If Hello_streamingResponse, frames are written
+		and the request is kept open.
 		"""
 		for streaming in (False, True):
-			print "streaming: %r" % streaming
+			##print "streaming: %r" % streaming
+
+			self._resetStreamTracker(realObjects=True)
+			resource = self._makeResource()
+			request = DummyRequest(postpath=[])
+			request.method = 'POST'
+
+			frame0 = _makeHelloFrameHttp({
+				Hello_succeedsTransport: None,
+				Hello_streamingResponse: streaming})
+			frames = [
+				frame0,
+				[Fn.boxes, [[0, ["box0"]]]],
+			]
+
+			request.content = StringIO(
+				'\n'.join(simplejson.dumps(f) for f in frames) + '\n')
+
+			stream = self.streamTracker.buildStream('x'*26)
+			stream.sendBoxes([['box0'], ['box1']])
+
+			out = resource.render(request)
+			self.assertEqual(server.NOT_DONE_YET, out)
+
+			encode = DelimitedJSONDecoder.encode
+			self.assertEqual(
+				# TODO: make Minerva write the Fn.sack before the boxes
+				['for(;;);\n', encode([Fn.seqnum, 0]) + encode([Fn.box, ['box0']]) + encode([Fn.box, ['box1']]), encode([Fn.sack, 0, []])],
+				request.written)
+			self.assertEqual(0 if streaming else 1, request.finished)
+
+
+	def test_S2CBoxesSoonAvailable(self):
+		r"""
+		If S2C boxes become available after the transport connects, and if
+		not Hello_streamingResponse, the request is finished after box(es)
+		are sent. If Hello_streamingResponse, boxes are written and the
+		request is kept open.
+		"""
+		for streaming in (False, True):
+			##print "streaming: %r" % streaming
+
+			self._resetStreamTracker(realObjects=True)
 			resource = self._makeResource()
 			request = DummyRequest(postpath=[])
 			request.method = 'POST'
@@ -3165,21 +3210,19 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			request.content = StringIO(
 				'\n'.join(simplejson.dumps(f) for f in frames) + '\n')
 
-			stream = self.streamTracker.buildStream('x'*26)
-			stream.sendBoxes([['box0'], ['box1']])
-			# eecch
-			transport = list(stream._transports)[0]
-
 			out = resource.render(request)
 			self.assertEqual(server.NOT_DONE_YET, out)
+
+			self.assertEqual(['for(;;);\n'], request.written)
+
+			stream = self.streamTracker.getStream('x'*26)
+			stream.sendBoxes([['box0'], ['box1']])
 
 			encode = DelimitedJSONDecoder.encode
 			self.assertEqual(
 				['for(;;);\n', encode([Fn.seqnum, 0]) + encode([Fn.box, ['box0']]) + encode([Fn.box, ['box1']])],
 				request.written)
 			self.assertEqual(0 if streaming else 1, request.finished)
-
-			self._resetStreamTracker()
 
 
 	def test_responseHasGoodHttpHeaders(self):
