@@ -1481,7 +1481,8 @@ class SocketTransport(object):
 		self._producer = producer
 		##self._streamingProducer = streaming # No need to keep this info around, apparently
 
-		# twisted.web.http.Request will pause a push producer if the request is queued, so we must not pause it ourselves.
+		# twisted.web.http.Request will pause a push producer if the
+		# request is queued, so we must not pause it ourselves.
 		doNotPause = self._mode == HTTP and self.writable.queued and streaming
 
 		if streaming and self._paused and not doNotPause:
@@ -1499,7 +1500,8 @@ class SocketTransport(object):
 		self.writable.unregisterProducer()
 
 
-	# called by Twisted. We trust Twisted to only call this if we registered a push producer with self.writable
+	# called by Twisted. We trust Twisted to only call this if we registered
+	# a push producer with self.writable
 	def pauseProducing(self):
 		self._paused = True
 		if self._producer:
@@ -1549,8 +1551,9 @@ class SocketTransport(object):
 		headers['pragma'] = ['no-cache']
 		headers['expires'] = ['Fri, 01 Jan 1990 00:00:00 GMT']
 
-		# "For Webkit browsers, it's critical to specify a Content-Type of "text/plain" or
-		# "application/x-javascript" when returning script content to an XHR for progressive handling."
+		# "For Webkit browsers, it's critical to specify a Content-Type of
+		# "text/plain" or "application/x-javascript" when returning script
+		# content to an XHR for progressive handling."
 		# - http://www.kylescholz.com/blog/2010/01/progressive_xmlhttprequest_1.html
 		headers['content-type'] = ['text/plain']
 
@@ -1577,7 +1580,7 @@ class SocketTransport(object):
 		self._handleRequestBody()
 
 
-	# Called by twisted.web if client closes connection before the request is finished 
+	# Called by twisted.web if client closes connection before the request is finished
 	def requestAborted(self, reason):
 		if self.noisy:
 			log.msg('Peer aborted request %r on %r' % (self.writable, self))
