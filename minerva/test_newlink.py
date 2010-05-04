@@ -1416,10 +1416,13 @@ class TransportIsHttpTests(unittest.TestCase):
 
 class _BaseHelpers(object):
 
-	def _resetStreamTracker(self):
+	def _resetStreamTracker(self, protocolFactoryClass=MockMinervaProtocolFactory, realObjects=False):
 		self._clock = task.Clock()
-		self.protocolFactory = MockMinervaProtocolFactory()
-		self.streamTracker = DummyStreamTracker(self._clock, self.protocolFactory, {})
+		self.protocolFactory = protocolFactoryClass()
+		if realObjects:
+			self.streamTracker = StreamTracker(self._reactor, self._clock, self.protocolFactory)
+		else:
+			self.streamTracker = DummyStreamTracker(self._clock, self.protocolFactory, {})
 
 
 	def setUp(self):
@@ -2590,24 +2593,17 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 	"""
 	def _makeTransport(self):
 		parser = Int32StringDecoder(maxLength=1024*1024)
-		transport = _makeTransportWithDecoder(parser, self.faceFactory)
+		# is it okay to make a new one every time?
+		faceFactory = SlotlessSocketFace(
+			self._reactor, None, self.streamTracker, DummyFirewall(self._clock, rejectAll=False))
+		transport = _makeTransportWithDecoder(parser, faceFactory)
 		transport.dataReceived('<int32/>\n')
 		return transport
 
 
-	# We use the real StreamTracker
-	def _resetStreamTracker(self, protocolFactoryClass=MockMinervaProtocolFactory):
-		clock = task.Clock()
-		self.protocolFactory = protocolFactoryClass()
-		self.streamTracker = StreamTracker(self._reactor, clock, self.protocolFactory)
-
-		self.faceFactory = SlotlessSocketFace(
-			self._reactor, None, self.streamTracker, DummyFirewall(clock, rejectAll=False))
-
-
 	def setUp(self):
 		self._reactor = FakeReactor()
-		self._resetStreamTracker()
+		self._resetStreamTracker(realObjects=True)
 
 
 	def test_boxSendingAndNewTransport(self):
@@ -2869,7 +2865,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				return obj
 
 		for clientResetsImmediately in (True, False):
-			self._resetStreamTracker(protocolFactoryClass=MyFactory)
+			self._resetStreamTracker(protocolFactoryClass=MyFactory, realObjects=True)
 
 			transport0 = self._makeTransport()
 			frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
@@ -2915,7 +2911,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		for clientResetsImmediately in (True, False):
 
-			self._resetStreamTracker(protocolFactoryClass=MyFactory)
+			self._resetStreamTracker(protocolFactoryClass=MyFactory, realObjects=True)
 
 			transport0 = self._makeTransport()
 			frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
@@ -2957,7 +2953,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				return obj
 
 		for clientResetsImmediately in (True, False):
-			self._resetStreamTracker(protocolFactoryClass=MyFactory)
+			self._resetStreamTracker(protocolFactoryClass=MyFactory, realObjects=True)
 
 			transport0 = self._makeTransport()
 			frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
@@ -3001,7 +2997,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		for clientResetsImmediately in (True, False):
 
-			self._resetStreamTracker(protocolFactoryClass=MyFactory)
+			self._resetStreamTracker(protocolFactoryClass=MyFactory, realObjects=True)
 
 			transport0 = self._makeTransport()
 			frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
@@ -3053,7 +3049,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				return obj
 
 		for clientResetsImmediately in (True, False):
-			self._resetStreamTracker(protocolFactoryClass=MyFactory)
+			self._resetStreamTracker(protocolFactoryClass=MyFactory, realObjects=True)
 
 			transport0 = self._makeTransport()
 			frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
@@ -3106,43 +3102,84 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		"""
 		for separator in ('\n', '\r\n'):
 			for missingLastSep in (False, True):
-				##print "missingLastSep: %r" % missingLastSep, "separator: %r" % separator
-				resource = self._makeResource()
-				request = DummyRequest(postpath=[])
-				request.method = 'POST'
+				for streaming in (False, True):
+					##print "missingLastSep: %r" % missingLastSep, \
+					##	"separator: %r" % separator, "streaming: %r" % streaming
+					resource = self._makeResource()
+					request = DummyRequest(postpath=[])
+					request.method = 'POST'
 
-				frame0 = _makeHelloFrameHttp({Hello_succeedsTransport: None})
-				frames = [
-					frame0,
-					[Fn.boxes, [[0, ["box0"]], [1, ["box1"]]]],
-					[Fn.boxes, [[2, ["box2"]]]],
-				]
+					frame0 = _makeHelloFrameHttp({
+						Hello_succeedsTransport: None,
+						Hello_streamingResponse: streaming})
+					frames = [
+						frame0,
+						[Fn.boxes, [[0, ["box0"]], [1, ["box1"]]]],
+						[Fn.boxes, [[2, ["box2"]]]],
+					]
 
-				# TODO: test without the trailing \n
-				request.content = StringIO(
-					separator.join(simplejson.dumps(f) for f in frames) +
-					(separator if not missingLastSep else ''))
+					request.content = StringIO(
+						separator.join(simplejson.dumps(f) for f in frames) +
+						(separator if not missingLastSep else ''))
 
-				out = resource.render(request)
-				self.assertEqual(server.NOT_DONE_YET, out)
+					out = resource.render(request)
+					self.assertEqual(server.NOT_DONE_YET, out)
 
-				encode = DelimitedJSONDecoder.encode
-				self.assertEqual(['for(;;);\n', encode([Fn.sack, 2, []])], request.written)
+					encode = DelimitedJSONDecoder.encode
+					self.assertEqual(['for(;;);\n', encode([Fn.sack, 2, []])], request.written)
+					self.assertEqual(0 if streaming else 1, request.finished)
 
-				stream = self.streamTracker.getStream('x'*26)
-				# eecch
-				transport = list(stream._transports)[0]
+					stream = self.streamTracker.getStream('x'*26)
+					# eecch
+					transport = list(stream._transports)[0]
 
-				self.aE([
-					["notifyFinish"],
-					["transportOnline", transport],
-					["subscribeToBoxes", transport, None],
-					["boxesReceived", transport, [[0, ['box0']], [1, ['box1']]]],
-					["boxesReceived", transport, [[2, ['box2']]]],
-					["getSACK"],
-				], stream.getNew())
+					self.aE([
+						["notifyFinish"],
+						["transportOnline", transport],
+						["subscribeToBoxes", transport, None],
+						["boxesReceived", transport, [[0, ['box0']], [1, ['box1']]]],
+						["boxesReceived", transport, [[2, ['box2']]]],
+						["getSACK"],
+					], stream.getNew())
 
-				self._resetStreamTracker()
+					self._resetStreamTracker()
+
+
+	def test_S2CBoxesAlreadyAvailable(self):
+		r"""
+		If S2C boxes are already available, and if not Hello_streamingResponse,
+		the request is finished after box(es) are sent. If Hello_streamingResponse,
+		boxes are written and the request is kept open.
+		"""
+		for streaming in (False, True):
+			print "streaming: %r" % streaming
+			resource = self._makeResource()
+			request = DummyRequest(postpath=[])
+			request.method = 'POST'
+
+			frame0 = _makeHelloFrameHttp({
+				Hello_succeedsTransport: None,
+				Hello_streamingResponse: streaming})
+			frames = [frame0]
+
+			request.content = StringIO(
+				'\n'.join(simplejson.dumps(f) for f in frames) + '\n')
+
+			stream = self.streamTracker.buildStream('x'*26)
+			stream.sendBoxes([['box0'], ['box1']])
+			# eecch
+			transport = list(stream._transports)[0]
+
+			out = resource.render(request)
+			self.assertEqual(server.NOT_DONE_YET, out)
+
+			encode = DelimitedJSONDecoder.encode
+			self.assertEqual(
+				['for(;;);\n', encode([Fn.seqnum, 0]) + encode([Fn.box, ['box0']]) + encode([Fn.box, ['box1']])],
+				request.written)
+			self.assertEqual(0 if streaming else 1, request.finished)
+
+			self._resetStreamTracker()
 
 
 	def test_responseHasGoodHttpHeaders(self):
