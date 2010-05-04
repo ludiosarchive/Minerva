@@ -501,7 +501,7 @@ class Stream(object):
 			self._tryToSend()
 
 
-	def transportOnline(self, transport):
+	def transportOnline(self, transport, wantsBoxes, succeedsTransport):
 		"""
 		Private. Do not call this.
 
@@ -511,6 +511,11 @@ class Stream(object):
 		Caller is responsible for verifying that a transport should really be attached
 		to this stream before calling L{transportOnline}. Usually this is done by
 		authenticating based on data in the `hello' frame.
+
+		If L{wantsBoxes} is truthy, this transport wants to receive boxes.
+
+		If L{succeedsTransport} != None, temporarily assume that all boxes written to
+		#<succeedsTransport> were SACKed.
 		"""
 		self._transports.add(transport)
 		self.virgin = False
@@ -521,6 +526,20 @@ class Stream(object):
 			self._protocol = self._streamProtocolFactory.buildProtocol()
 			self._protocol.streamStarted(self)
 		# Remember streamStarted can do anything to us, including reset or sendBoxes.
+
+		# TODO: do we really need _primaryTransport to still be connected?
+		# Can't we just remember what its transportNumber and lastBoxSent were?
+		# That way, a transport can succeed the older even if it was disconnected
+		# in the meantime.
+		if wantsBoxes and not self.disconnected:
+			if \
+			succeedsTransport is not None and \
+			self._primaryTransport and \
+			succeedsTransport == self._primaryTransport.transportNumber and \
+			self._primaryTransport.lastBoxSent != -1:
+				self._pretendAcked = self._primaryTransport.lastBoxSent
+			self._newPrimary(transport)
+			self._tryToSend()
 
 
 	def transportOffline(self, transport):
@@ -583,30 +602,6 @@ class Stream(object):
 		self._primaryTransport = transport
 		if self._producer:
 			self._registerProducerOnPrimary()
-
-
-	def subscribeToBoxes(self, transport, succeedsTransport):
-		"""
-		Private. Do not call this.
-
-		Transport C{transport} says it wants to start receiving boxes.
-
-		If L{succeedsTransport} != None, temporarily assume that all boxes written to
-		#<succeedsTransport> were SACKed.
-		"""
-		##print 'subscribeToBoxes', transport, succeedsTransport
-		# TODO: do we really need _primaryTransport to still be connected?
-		# Can't we just remember what its transportNumber and lastBoxSent were?
-		# That way, a transport can succeed the older even if it was disconnected
-		# in the meantime.
-		if \
-		succeedsTransport is not None and \
-		self._primaryTransport and \
-		succeedsTransport == self._primaryTransport.transportNumber and \
-		self._primaryTransport.lastBoxSent != -1:
-			self._pretendAcked = self._primaryTransport.lastBoxSent
-		self._newPrimary(transport)
-		self._tryToSend()
 
 
 	def getSACK(self):
@@ -1229,8 +1224,7 @@ class SocketTransport(object):
 
 		# Keep only the variables we need for the cbAuthOkay closure
 		wantsBoxes = hello.wantsBoxes
-		if wantsBoxes:
-			succeedsTransport = hello.succeedsTransport
+		succeedsTransport = hello.succeedsTransport if wantsBoxes else None
 
 		def cbAuthOkay(_):
 			if self._terminating:
@@ -1238,14 +1232,10 @@ class SocketTransport(object):
 			# Note: self._stream being non-None implies that were are authed,
 			# and that we have called transportOnline (or are calling it right now).
 			self._stream = stream
-			self._stream.transportOnline(self)
+			self._stream.transportOnline(self, wantsBoxes, succeedsTransport)
 			# Remember, a lot of stuff can happen underneath that
 			# transportOnline call because it may construct a MinervaProtocol,
 			# which may even call reset.
-			# TODO: more test cases for re-entrant stuff, or remove
-			# `subscribeToBoxes` and make it part of `transportOnline`.
-			if wantsBoxes and not self._terminating:
-				self._stream.subscribeToBoxes(self, succeedsTransport)
 
 		def cbAuthFailed(f):
 			f.trap(RejectTransport)

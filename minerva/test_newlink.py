@@ -195,7 +195,7 @@ class StreamTests(unittest.TestCase):
 		# is instantiated. This is necessary because s.reset below is only called by
 		# "application code."
 		t = DummySocketLikeTransport()
-		s.transportOnline(t)
+		s.transportOnline(t, False, None)
 
 		d = s.notifyFinish()
 		called = [False]
@@ -219,7 +219,7 @@ class StreamTests(unittest.TestCase):
 		self.aE(0, len(factory.instances))
 
 		t = DummySocketLikeTransport()
-		s.transportOnline(t)
+		s.transportOnline(t, False, None)
 		i = list(factory.instances)[0]
 
 		self.aE([['streamStarted', s]], i.getNew())
@@ -233,7 +233,7 @@ class StreamTests(unittest.TestCase):
 		factory = MockMinervaProtocolFactory()
 		s = Stream(None, 'some fake id', factory)
 		t = DummySocketLikeTransport()
-		s.transportOnline(t)
+		s.transportOnline(t, False, None)
 
 		s.boxesReceived(t, [(1, ['box1'])])
 		i = list(factory.instances)[0]
@@ -250,7 +250,7 @@ class StreamTests(unittest.TestCase):
 		factory = MockMinervaProtocolFactory()
 		s = Stream(None, 'some fake id', factory)
 		t = DummySocketLikeTransport()
-		s.transportOnline(t)
+		s.transportOnline(t, False, None)
 
 		manyBoxes = []
 		for n in xrange(1, 5002):
@@ -270,7 +270,7 @@ class StreamTests(unittest.TestCase):
 		factory = MockMinervaProtocolFactory()
 		s = Stream(None, 'some fake id', factory)
 		t = DummySocketLikeTransport()
-		s.transportOnline(t)
+		s.transportOnline(t, False, None)
 
 		notManyBoxes = [(1, FakeBigString(str(4*1024*1024 + 1)))]
 
@@ -295,7 +295,7 @@ class StreamTests(unittest.TestCase):
 		factory = MyFactory()
 		s = Stream(None, 'some fake id', factory)
 		t = DummySocketLikeTransport()
-		s.transportOnline(t)
+		s.transportOnline(t, False, None)
 
 		manyBoxes = []
 		manyBoxes.append((0, 'box0'))
@@ -322,7 +322,7 @@ class StreamTests(unittest.TestCase):
 		factory = MyFactory()
 		s = Stream(None, 'some fake id', factory)
 		t = DummySocketLikeTransport()
-		s.transportOnline(t)
+		s.transportOnline(t, False, None)
 
 		# we don't actually need to make box #2 big; we can lie to the Stream about how big it is
 		notManyBoxes = [(0, ['box0']), (2, FakeBigString(str(4*1024*1024 + 1)))]
@@ -337,7 +337,7 @@ class StreamTests(unittest.TestCase):
 		Test that obsolete formerly-primary transports are "closed gently"
 		Test that Stream tries to send boxes down new primary transports.
 		"""
-		# If a transport calls Stream.subscribeToBoxes with a `succeedsTransport`
+		# If a transport calls Stream.transportOnline with a `succeedsTransport`
 		# argument that doesn't match the primary transport's transport number,
 		# the `succeedsTransport` argument is ignored.
 		# Essentially, it doesn't matter whether the transport claims None or an invalid
@@ -346,30 +346,19 @@ class StreamTests(unittest.TestCase):
 			s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
 			t1 = DummySocketLikeTransport()
 			t1.transportNumber = 30
-			s.transportOnline(t1)
 			s.sendBoxes([['box0'], ['box1']])
-
-			# Boxes don't reach the transport because the transport isn't primary yet
-			self.aE([], t1.getNew())
-
-			# Make it primary
-			s.subscribeToBoxes(t1, succeedsTransport=None)
+			s.transportOnline(t1, True, None)
 
 			self.aE([['writeBoxes', s.queue, None]], t1.getNew())
 
 			# Now connect a new transport
 			t2 = DummySocketLikeTransport()
-			s.transportOnline(t2)
-
 			s.sendBoxes([['box2'], ['box3']])
-			# box2 and box3 still went to the old transport because t2 isn't the primary transport
-			self.aE([['writeBoxes', s.queue, None]], t1.getNew())
-			self.aE([], t2.getNew())
+			s.transportOnline(t2, True, succeedsTransportArgFor2ndTransport)
 
-			# Now make t2 primary
-			s.subscribeToBoxes(t2, succeedsTransport=succeedsTransportArgFor2ndTransport)
+			# box2 and box3 also went to t1 because t2 wasn't yet connected/primary
+			self.aE([['writeBoxes', s.queue, None], ['closeGently']], t1.getNew())
 
-			self.aE([['closeGently']], t1.getNew())
 			self.aE([['writeBoxes', s.queue, None]], t2.getNew())
 
 			# Just to exercise transportOffline
@@ -396,22 +385,15 @@ class StreamTests(unittest.TestCase):
 		s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
 		t1 = DummySocketLikeTransport()
 		t1.transportNumber = 30
-		s.transportOnline(t1)
 		s.sendBoxes([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
-
-		# Boxes don't reach the transport because the transport isn't primary yet
-		self.aE([], t1.getNew())
-
-		# Make it primary
-		s.subscribeToBoxes(t1, succeedsTransport=None)
+		s.transportOnline(t1, True, None)
 
 		self.aE([['writeBoxes', s.queue, None]], t1.getNew())
 
 		# Now connect a new transport and make it primary
 		t2 = DummySocketLikeTransport()
 		t2.transportNumber = 31
-		s.transportOnline(t2)
-		s.subscribeToBoxes(t2, succeedsTransport=30)
+		s.transportOnline(t2, True, 30)
 
 		self.aE([['closeGently']], t1.getNew())
 		# Because there are no new boxes yet, writeBoxes should not be called yet
@@ -434,49 +416,9 @@ class StreamTests(unittest.TestCase):
 		s.transportOffline(t2)
 
 
-	def test_sendBoxesConnectionInterleavingWithOldPrimaryNeverSentBoxes(self):
+	def test_succeedsTransportButNoPrimaryTransport(self):
 		"""
-		Similar to test_sendBoxesConnectionInterleaving, except the old
-		primary transport never wrote any boxes, which means its lastBoxSent == -1
-		"""
-		s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
-		t1 = DummySocketLikeTransport()
-		t1.transportNumber = 30
-		s.transportOnline(t1)
-		s.sendBoxes([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
-
-		# Boxes don't reach the transport because the transport isn't primary yet
-		self.aE([], t1.getNew())
-
-		t1.pauseProducing() # just a trick to make t1.writeBoxes `return' early when called
-
-		# Make it primary
-		s.subscribeToBoxes(t1, succeedsTransport=None)
-
-		# It was called, though it never actually writes to the wire.
-		self.aE([['writeBoxes', s.queue, None]], t1.getNew())
-		assert t1.lastBoxSent == -1
-
-		# Now connect a new transport and make it primary
-		t2 = DummySocketLikeTransport()
-		t2.transportNumber = 31
-		s.transportOnline(t2)
-		s.subscribeToBoxes(t2, succeedsTransport=30)
-
-		self.aE([['closeGently']], t1.getNew())
-		# Because nothing was really written to the first transport, this should already have a write.
-		self.aE([['writeBoxes', s.queue, None]], t2.getNew())
-
-		s.sendBoxes([['box5'], ['box6']])
-
-		# Just to exercise transportOffline
-		s.transportOffline(t1)
-		s.transportOffline(t2)
-
-
-	def test_subscribeToBoxesSucceedsTransportButNoPrimaryTransport(self):
-		"""
-		If a transport calls Stream.subscribeToBoxes with a
+		If a transport calls Stream.transportOnline with a
 		C{succeedsTransport} argument even though there is no primary
 		transport, the C{succeedsTransport} argument is ignored.
 		"""
@@ -487,17 +429,11 @@ class StreamTests(unittest.TestCase):
 			if connectIrrelevantTransport:
 				tIrrelevant = DummySocketLikeTransport()
 				tIrrelevant.transportNumber = 9999
-				s.transportOnline(tIrrelevant)
+				s.transportOnline(tIrrelevant, False, None)
 
 			t1 = DummySocketLikeTransport()
-			s.transportOnline(t1)
 			s.sendBoxes([['box0'], ['box1']])
-
-			# Boxes don't reach the transport because the transport isn't primary yet
-			self.aE([], t1.getNew())
-
-			# Make it primary
-			s.subscribeToBoxes(t1, succeedsTransport=9999)
+			s.transportOnline(t1, True, 9999)
 
 			self.aE([['writeBoxes', s.queue, None]], t1.getNew())
 
@@ -506,7 +442,7 @@ class StreamTests(unittest.TestCase):
 		s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
 
 		t = DummySocketLikeTransport()
-		s.transportOnline(t)
+		s.transportOnline(t, False, None)
 		
 		self.aE((-1, []), s.getSACK())
 		s.boxesReceived(t, [(0, ['box'])])
@@ -526,7 +462,7 @@ class StreamTests(unittest.TestCase):
 		self.aI(True, s. virgin)
 
 		t = DummySocketLikeTransport()
-		s.transportOnline(t)
+		s.transportOnline(t, False, None)
 		self.aI(False, s.virgin)
 
 		# no longer a virgin ever
@@ -534,7 +470,7 @@ class StreamTests(unittest.TestCase):
 		self.aI(False, s.virgin)
 
 		t2 = DummySocketLikeTransport()
-		s.transportOnline(t2)
+		s.transportOnline(t2, False, None)
 		self.aI(False, s.virgin)
 
 
@@ -542,14 +478,14 @@ class StreamTests(unittest.TestCase):
 		clock = task.Clock()
 		s = Stream(clock, 'some fake id', MockMinervaProtocolFactory())
 		t = DummySocketLikeTransport()
-		s.transportOnline(t)
+		s.transportOnline(t, False, None)
 
 
 	def test_transportOnlineOffline(self):
 		clock = task.Clock()
 		s = Stream(clock, 'some fake id', MockMinervaProtocolFactory())
 		t = DummySocketLikeTransport()
-		s.transportOnline(t)
+		s.transportOnline(t, False, None)
 		s.transportOffline(t)
 
 
@@ -581,9 +517,9 @@ class StreamTests(unittest.TestCase):
 		to write a reset frame.
 		"""
 		factory, clock, s, t1 = self._makeStuff()
-		s.transportOnline(t1)
+		s.transportOnline(t1, False, None)
 		t2 = DummySocketLikeTransport()
-		s.transportOnline(t2)
+		s.transportOnline(t2, False, None)
 
 		self.aE(False, s.disconnected)
 		s.reset(u'the reason')
@@ -600,9 +536,9 @@ class StreamTests(unittest.TestCase):
 		calling a "really private" method.
 		"""
 		factory, clock, s, t1 = self._makeStuff()
-		s.transportOnline(t1)
+		s.transportOnline(t1, False, None)
 		t2 = DummySocketLikeTransport()
-		s.transportOnline(t2)
+		s.transportOnline(t2, False, None)
 
 		self.aE(False, s.disconnected)
 		s._internalReset(u'the reason')
@@ -618,14 +554,14 @@ class StreamTests(unittest.TestCase):
 		"""
 		# original reset caused by "application code"
 		factory, clock, s, t1 = self._makeStuff()
-		s.transportOnline(t1)
+		s.transportOnline(t1, False, None)
 		s.reset(u'reason')
 		self.aR(RuntimeError, lambda: s.reset(u'reason'))
 		self.aR(RuntimeError, lambda: s.reset(u'reason'))
 
 		# original reset caused by a transport
 		factory, clock, s, t1 = self._makeStuff()
-		s.transportOnline(t1)
+		s.transportOnline(t1, False, None)
 		s.resetFromClient(u'reason', True)
 		self.aR(RuntimeError, lambda: s.reset(u'reason'))
 		self.aR(RuntimeError, lambda: s.reset(u'reason'))
@@ -638,14 +574,14 @@ class StreamTests(unittest.TestCase):
 		"""
 		# original reset caused by "application code"
 		factory, clock, s, t1 = self._makeStuff()
-		s.transportOnline(t1)
+		s.transportOnline(t1, False, None)
 		s.reset(u'reason')
 		self.aR(RuntimeError, lambda: s.sendBoxes([["somebox"]]))
 		self.aR(RuntimeError, lambda: s.sendBoxes([["somebox"]]))
 
 		# original reset caused by a transport
 		factory, clock, s, t1 = self._makeStuff()
-		s.transportOnline(t1)
+		s.transportOnline(t1, False, None)
 		s.resetFromClient(u'reason', True)
 		self.aR(RuntimeError, lambda: s.sendBoxes([["somebox"]]))
 		self.aR(RuntimeError, lambda: s.sendBoxes([["somebox"]]))
@@ -658,8 +594,7 @@ class StreamTests(unittest.TestCase):
 		"""
 		# original reset caused by "application code"
 		factory, clock, s, t1 = self._makeStuff()
-		s.transportOnline(t1)
-		s.subscribeToBoxes(t1, None)
+		s.transportOnline(t1, True, None)
 		s.sendBoxes([['box0']])
 		self.aE([['writeBoxes', s.queue, None]], t1.getNew())
 		s.sendBoxes([])
@@ -677,9 +612,9 @@ class StreamTests(unittest.TestCase):
 		"""
 		for applicationLevel in (True, False):
 			factory, clock, s, t1 = self._makeStuff()
-			s.transportOnline(t1)
+			s.transportOnline(t1, False, None)
 			t2 = DummySocketLikeTransport()
-			s.transportOnline(t2)
+			s.transportOnline(t2, False, None)
 
 			self.aE(False, s.disconnected)
 			s.resetFromClient(u'the reason\uffff', applicationLevel=applicationLevel)
@@ -723,8 +658,7 @@ class StreamTests(unittest.TestCase):
 		for streaming in (True, False):
 			factory, clock, s, t1 = self._makeStuff()
 
-			s.transportOnline(t1)
-			s.subscribeToBoxes(t1, succeedsTransport=None)
+			s.transportOnline(t1, True, None)
 
 			# No _producer yet? pauseProducing and resumeProducing are still legal
 			s.pauseProducing()
@@ -759,8 +693,7 @@ class StreamTests(unittest.TestCase):
 
 		# Need to do this to have at least one connected transport,
 		# otherwise all push producers all paused when registered.
-		s.transportOnline(t1)
-		s.subscribeToBoxes(t1, succeedsTransport=None)
+		s.transportOnline(t1, True, None)
 
 		s.pauseProducing()
 
@@ -788,8 +721,7 @@ class StreamTests(unittest.TestCase):
 		paused (because pull producers cannot be paused).
 		"""
 		factory, clock, s, t1 = self._makeStuff()
-		s.transportOnline(t1)
-		s.subscribeToBoxes(t1, succeedsTransport=None)
+		s.transportOnline(t1, True, None)
 		s.pauseProducing()
 
 		s.unregisterProducer()
@@ -813,8 +745,7 @@ class StreamTests(unittest.TestCase):
 			['pauseProducing'],
 		], producer1.getNew())
 
-		s.transportOnline(t1)
-		s.subscribeToBoxes(t1, succeedsTransport=None)
+		s.transportOnline(t1, True, None)
 
 		self.aE([['resumeProducing']], producer1.getNew())
 
@@ -832,8 +763,7 @@ class StreamTests(unittest.TestCase):
 		"""
 		factory, clock, s, t1 = self._makeStuff()
 
-		s.transportOnline(t1)
-		s.subscribeToBoxes(t1, succeedsTransport=None)
+		s.transportOnline(t1, True, None)
 
 		s.pauseProducing() # pretend that t1 called this
 
@@ -861,15 +791,13 @@ class StreamTests(unittest.TestCase):
 		"""
 		factory, clock, s, t1 = self._makeStuff()
 
-		s.transportOnline(t1)
-		s.subscribeToBoxes(t1, succeedsTransport=None)
+		s.transportOnline(t1, True, None)
 
 		producer1 = MockProducer()
 		s.registerProducer(producer1, streaming=True)
 
 		t2 = DummySocketLikeTransport()
-		s.transportOnline(t2)
-		s.subscribeToBoxes(t2, succeedsTransport=None)
+		s.transportOnline(t2, True, None)
 
 		self.aE([], producer1.getNew())
 
@@ -881,8 +809,7 @@ class StreamTests(unittest.TestCase):
 		"""
 		factory, clock, s, t1 = self._makeStuff()
 
-		s.transportOnline(t1)
-		s.subscribeToBoxes(t1, succeedsTransport=None)
+		s.transportOnline(t1, True, None)
 
 		producer1 = MockProducer()
 		s.registerProducer(producer1, streaming=True)
@@ -891,8 +818,7 @@ class StreamTests(unittest.TestCase):
 		self.aE([['pauseProducing']], producer1.getNew())
 
 		t2 = DummySocketLikeTransport()
-		s.transportOnline(t2)
-		s.subscribeToBoxes(t2, succeedsTransport=None)
+		s.transportOnline(t2, True, None)
 
 		self.aE([['resumeProducing']], producer1.getNew())
 
@@ -905,8 +831,7 @@ class StreamTests(unittest.TestCase):
 		"""
 		factory, clock, s, t1 = self._makeStuff()
 
-		s.transportOnline(t1)
-		s.subscribeToBoxes(t1, succeedsTransport=None)
+		s.transportOnline(t1, True, None)
 
 		producer1 = MockProducer()
 		s.registerProducer(producer1, streaming=True)
@@ -918,16 +843,14 @@ class StreamTests(unittest.TestCase):
 		self.aE([['pauseProducing']], producer1.getNew())
 
 		t2 = DummySocketLikeTransport()
-		s.transportOnline(t2)
-		s.subscribeToBoxes(t2, succeedsTransport=None)
+		s.transportOnline(t2, True, None)
 
 		self.aE([['registerProducer', s, True], ['unregisterProducer'], ['closeGently']], t1.getNew())
 		self.aE([['registerProducer', s, True]], t2.getNew())
 		self.aE([['resumeProducing']], producer1.getNew())
 
 		t3 = DummySocketLikeTransport()
-		s.transportOnline(t3)
-		s.subscribeToBoxes(t3, succeedsTransport=None)
+		s.transportOnline(t3, True, None)
 
 		self.aE([['unregisterProducer'], ['closeGently']], t2.getNew())
 		self.aE([['registerProducer', s, True]], t3.getNew())
@@ -944,8 +867,7 @@ class StreamTests(unittest.TestCase):
 		producer1 = MockProducer()
 		s.registerProducer(producer1, streaming=False)
 
-		s.transportOnline(t1)
-		s.subscribeToBoxes(t1, succeedsTransport=None)
+		s.transportOnline(t1, True, None)
 
 		s.transportOffline(t1)
 
@@ -955,20 +877,19 @@ class StreamTests(unittest.TestCase):
 	def test_transportOfflineOnlyPausesIfTransportIsPrimary(self):
 		factory, clock, s, t1 = self._makeStuff()
 
-		s.transportOnline(t1)
-		s.subscribeToBoxes(t1, succeedsTransport=None)
+		s.transportOnline(t1, True, None)
 
 		producer1 = MockProducer()
 		s.registerProducer(producer1, streaming=True)
 
 		t2 = DummySocketLikeTransport() # not the primary transport
-		s.transportOnline(t2)
+		s.transportOnline(t2, False, None)
 		s.transportOffline(t2)
 
 		self.aE([], producer1.getNew())
 
 
-	def test_registerUnregisterPushProducerThenSubscribe(self):
+	def test_registerUnregisterPushProducerThenNewPrimary(self):
 		"""
 		Regression test for a mistake in the code, where code forgot to check
 		for non-C{None} C{self._producer}.
@@ -979,8 +900,7 @@ class StreamTests(unittest.TestCase):
 		s.registerProducer(producer1, streaming=True)
 		s.unregisterProducer()
 
-		s.transportOnline(t1)
-		s.subscribeToBoxes(t1, succeedsTransport=None)
+		s.transportOnline(t1, True, None)
 
 
 	def test_downstreamProducerRegistration(self):
@@ -992,8 +912,7 @@ class StreamTests(unittest.TestCase):
 			s.registerProducer(producer1, streaming=streaming)
 
 			# Stream already has a producer before transport attaches and becomes primary
-			s.transportOnline(t1)
-			s.subscribeToBoxes(t1, succeedsTransport=None)
+			s.transportOnline(t1, True, None)
 
 			self.aE([['registerProducer', s, streaming]], t1.getNew())
 
@@ -1007,7 +926,7 @@ class StreamTests(unittest.TestCase):
 			self.aE([['registerProducer', s, streaming]], t1.getNew())
 
 
-	def test_producerRegstrationWithNewActiveS2CTransport(self):
+	def test_producerRegistrationWithNewPrimaryTransport(self):
 		for streaming in (True, False):
 			factory, clock, s, t1 = self._makeStuff()
 
@@ -1017,15 +936,16 @@ class StreamTests(unittest.TestCase):
 
 			# Stream already has a producer before transport attaches
 			# and becomes primary
-			s.transportOnline(t1)
-			s.subscribeToBoxes(t1, succeedsTransport=None)
-
-			t2 = DummySocketLikeTransport()
-			s.transportOnline(t1)
-			s.subscribeToBoxes(t2, succeedsTransport=None)
+			s.transportOnline(t1, True, None)
 
 			self.aE([
 				['registerProducer', s, streaming],
+			], t1.getNew())
+
+			t2 = DummySocketLikeTransport()
+			s.transportOnline(t2, True, None)
+
+			self.aE([
 				['unregisterProducer'],
 				['closeGently'],
 			], t1.getNew())
@@ -1038,8 +958,7 @@ class StreamTests(unittest.TestCase):
 	def test_transportOfflineEffectOnTransports(self):
 		factory, clock, s, t1 = self._makeStuff()
 
-		s.transportOnline(t1)
-		s.subscribeToBoxes(t1, succeedsTransport=None)
+		s.transportOnline(t1, True, None)
 
 		producer1 = MockProducer()
 		s.registerProducer(producer1, streaming=True)
@@ -1053,9 +972,7 @@ class StreamTests(unittest.TestCase):
 		self.aE([['registerProducer', s, True], ['unregisterProducer']], t1.getNew())
 
 		t2 = DummySocketLikeTransport() # not the primary transport
-		s.transportOnline(t2) # not primary yet
-		self.aE([], t2.getNew())
-		s.subscribeToBoxes(t2, succeedsTransport=None)
+		s.transportOnline(t2, True, None)
 		self.aE([['registerProducer', s, True]], t2.getNew())
 
 
@@ -1739,7 +1656,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			stream = self.streamTracker.getStream('x'*26)
 
 			self.aE([], transport.getNew())
-			self.aE([['notifyFinish'], ['transportOnline', transport]], stream.getNew())
+			self.aE([['notifyFinish'], ['transportOnline', transport, False, None]], stream.getNew())
 
 			toSend = {
 				Fn.tk_frame_corruption: '1:xxxxxxxx',
@@ -2016,7 +1933,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		stream = self.streamTracker.getStream('x'*26)
 
 		self.aE([], transport.getNew())
-		self.aE([['notifyFinish'], ['transportOnline', transport]], stream.getNew())
+		self.aE([['notifyFinish'], ['transportOnline', transport, False, None]], stream.getNew())
 
 		transport.connectionLost(failure.Failure(ValueError(
 			"Just a made-up error in test_connectionLostWithStream")))
@@ -2025,10 +1942,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.aE([['transportOffline', transport]], stream.getNew())
 
 
-	def test_gimmeBoxesCausesSubscription(self):
+	def test_gimmeBoxesFlagCausesSubscription(self):
 		"""
 		If the hello frame contains a 'g', it means "gimme boxes", so the
-		Minerva transport should call Stream.subscribeToBoxes.
+		Minerva transport should call Stream.transportOnline with wantsBoxes=True.
 		"""
 		for succeedsTransport in [None, 0, 3]:
 			frame0 = _makeHelloFrame(
@@ -2041,8 +1958,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 			self.aE([
 				['notifyFinish'],
-				['transportOnline', transport],
-				['subscribeToBoxes', transport, succeedsTransport],
+				['transportOnline', transport, True, succeedsTransport],
 			], stream.getNew())
 			self._resetStreamTracker()
 
@@ -2078,7 +1994,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		self.aE([
 			['notifyFinish'],
-			['transportOnline', transport]
+			['transportOnline', transport, False, None]
 		], stream.getNew())
 		self.aE([], transport.getNew())
 
@@ -2163,7 +2079,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.aE([], transport.getNew())
 		self.aE([
 			['notifyFinish'],
-			['transportOnline', transport],
+			['transportOnline', transport, False, None],
 			['sackReceived', (0, [])],
 		], stream.getNew())
 
@@ -2182,7 +2098,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.aE([], transport.getNew())
 		self.aE([
 			['notifyFinish'],
-			['transportOnline', transport],
+			['transportOnline', transport, False, None],
 			['sackReceived', (0, [2])],
 		], stream.getNew())
 
@@ -2198,7 +2114,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.aE([[Fn.tk_acked_unsent_boxes], [Fn.you_close_it]], transport.getNew())
 		self.aE([
 			['notifyFinish'],
-			['transportOnline', transport],
+			['transportOnline', transport, False, None],
 			['sackReceived', (1, [])],
 			['transportOffline', transport],
 		], stream.getNew())
@@ -2218,7 +2134,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
 			self.aE([
 				['notifyFinish'],
-				['transportOnline', transport],
+				['transportOnline', transport, False, None],
 				['transportOffline', transport],
 			], stream.getNew())
 
@@ -2244,7 +2160,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
 			self.aE([
 				['notifyFinish'],
-				['transportOnline', transport],
+				['transportOnline', transport, False, None],
 				['transportOffline', transport],
 			], stream.getNew())
 
@@ -2271,7 +2187,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
 			self.aE([
 				['notifyFinish'],
-				['transportOnline', transport],
+				['transportOnline', transport, False, None],
 				['transportOffline', transport],
 			], stream.getNew())
 
@@ -2294,7 +2210,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 				self.aE([
 					['notifyFinish'],
-					['transportOnline', transport],
+					['transportOnline', transport, False, None],
 					['resetFromClient', reason, True],
 					['transportOffline', transport],
 				], stream.getNew())
@@ -2583,7 +2499,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 
 	def test_boxSendingAndNewTransport(self):
-		# Send a hello frame and subscribe to boxes
+		# Send a hello frame that subscribes to boxes
 
 		transport0 = self._makeTransport()
 
@@ -2665,7 +2581,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 
 	def test_boxSendingAndNewTransportWithSucceedsTransport(self):
-		# Send a hello frame that subscribe to boxes
+		# Send a hello frame that subscribes to boxes
 
 		transport0 = self._makeTransport()
 
@@ -2852,12 +2768,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				frames.append([Fn.reset, u'', True])
 			transport0.sendFrames(frames)
 
-			# The server-side (mock) protocol calls sendBoxes and then reset,
-			# but the boxes it sends are always lost because of an implementation
-			# detail: SocketTransport calls Stream.transportOnline, lets things
-			# happen, then calls Stream.subscribeToBoxes only if the SocketTransport
-			# is not terminating. Because it is terminating, the transport never
-			# becomes primary and therefore the S2C boxes are lost.
+			# The S2C boxes are lost, possibly because of an implementation detail.
 
 			self.aE([
 #				[Fn.seqnum, 0],
@@ -3112,8 +3023,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 					self.aE([
 						["notifyFinish"],
-						["transportOnline", transport],
-						["subscribeToBoxes", transport, None],
+						["transportOnline", transport, True, None],
 						["boxesReceived", transport, [[0, ['box0']], [1, ['box1']]]],
 						["getSACK"],
 						["boxesReceived", transport, [[2, ['box2']]]],

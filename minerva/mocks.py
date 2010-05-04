@@ -254,9 +254,9 @@ class MockStream(_MockMixin):
 		self.queue.handleSACK(sackInfo)
 
 
-	def transportOnline(self, transport):
+	def transportOnline(self, transport, wantsBoxes, succeedsTransport):
 		self.virgin = False
-		self.log.append(['transportOnline', transport])
+		self.log.append(['transportOnline', transport, wantsBoxes, succeedsTransport])
 		assert transport not in self._transports
 		self._transports.add(transport)
 
@@ -264,10 +264,6 @@ class MockStream(_MockMixin):
 	def transportOffline(self, transport):
 		self.log.append(['transportOffline', transport])
 		self._transports.remove(transport)
-
-
-	def subscribeToBoxes(self, transport, succeedsTransport):
-		self.log.append(['subscribeToBoxes', transport, succeedsTransport])
 
 
 	def serverShuttingDown(self, transport):
@@ -398,9 +394,6 @@ class DummySocketLikeTransport(_MockMixin):
 
 	def writeBoxes(self, queue, start):
 		self.log.append(['writeBoxes', queue, start])
-
-		if self._paused:
-			return # XXX TODO the implementation in newlink does this, is it really the right thing to do?
 
 		lastBox = self.lastBoxSent
 		for seqNum, box in queue.iterItems(start=start):
