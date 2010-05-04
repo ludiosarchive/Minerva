@@ -1021,8 +1021,6 @@ def helloDataToHello(helloData, isHttp):
 	return obj
 
 
-##WAITING_FOR_AUTH, AUTHING, DYING, AUTH_OK = range(4)
-
 # Acceptable protocol modes for SocketTransport to be in. Int32* are for Flash Socket.
 UNKNOWN, POLICYFILE, INT32, INT32CRYPTO, WEBSOCKET, BENCODE, HTTP = range(7)
 
