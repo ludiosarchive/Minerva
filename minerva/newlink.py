@@ -1492,7 +1492,10 @@ class SocketTransport(object):
 	def _handleRequestBody(self):
 		request = self.writable
 
-		assert request.content.tell() == 0, request.content.tell()
+		if __debug__:
+			pos = request.content.tell()
+			assert pos == 0, pos
+
 		body = request.content.read()
 		# Proxies *might* strip whitespace around the request body, so add
 		# a newline if necessary.
