@@ -3069,8 +3069,11 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 			encode = DelimitedJSONDecoder.encode
 			expected = [
-				'for(;;);\n',
-				encode([Fn.sack, 0, []]) + encode([Fn.seqnum, 0]) + encode([Fn.box, ['box0']]) + encode([Fn.box, ['box1']])]
+				'for(;;);\n', (
+					encode([Fn.sack, 0, []]) +
+					encode([Fn.seqnum, 0]) +
+					encode([Fn.box, ['box0']]) +
+					encode([Fn.box, ['box1']]))]
 
 			self.assertEqual(expected, request.written)
 			self.assertEqual(0 if streaming else 1, request.finished)
