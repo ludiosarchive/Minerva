@@ -1451,7 +1451,6 @@ class SocketTransport(object):
 
 
 	# called by Stream instances
-	@mailboxify('_mailbox')
 	def unregisterProducer(self):
 		"""
 		Stop consuming data from a producer.
@@ -1462,7 +1461,6 @@ class SocketTransport(object):
 
 	# called by Twisted. We trust Twisted to only call this if we registered
 	# a push producer with self.writable
-	@mailboxify('_mailbox')
 	def pauseProducing(self):
 		self._paused = True
 		if self._producer:
@@ -1470,7 +1468,6 @@ class SocketTransport(object):
 
 
 	# called by Twisted.
-	@mailboxify('_mailbox')
 	def resumeProducing(self):
 		self._paused = False
 		if self._producer:
