@@ -1347,7 +1347,7 @@ class _BaseHelpers(object):
 		self._resetStreamTracker()
 
 
-	def _makeTransport(self, rejectAll=False, firewallActionTime=0):
+	def _makeTransport(self, rejectAll=False, firewallActionTime=None):
 		firewall = DummyFirewall(self._clock, rejectAll, firewallActionTime)
 		faceFactory = SlotlessSocketFace(None, self.streamTracker, firewall)
 
@@ -1784,7 +1784,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self._resetStreamTracker()
 
 
-	def test_validHelloButFirewallRejectedTransport(self):
+	def test_validHelloButFirewallRejectsTransport(self):
 		"""
 		If the Minerva firewall rejects the transport, the transport is
 		killed with C{tk_stream_attach_failure}.
@@ -1792,6 +1792,20 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport(rejectAll=True)
 		transport.sendFrames([frame0])
+		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], transport.getNew())
+		self._testExtraDataReceivedIgnored(transport)
+
+
+	def test_validHelloButFirewallRejectsTransportIn1Sec(self):
+		"""
+		If the Minerva firewall rejects the transport (after 1 second),
+		the transport is killed with C{tk_stream_attach_failure}.
+		"""
+		frame0 = _makeHelloFrame()
+		transport = self._makeTransport(rejectAll=True, firewallActionTime=1)
+		transport.sendFrames([frame0])
+		self.aE([], transport.getNew())
+		self._clock.advance(1.0)
 		self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], transport.getNew())
 		self._testExtraDataReceivedIgnored(transport)
 
@@ -2971,7 +2985,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 class HttpTests(_BaseHelpers, unittest.TestCase):
 	# Inherit setUp, _resetStreamTracker
 
-	def _makeResource(self, rejectAll=False, firewallActionTime=0):
+	def _makeResource(self, rejectAll=False, firewallActionTime=None):
 		firewall = DummyFirewall(self._clock, rejectAll, firewallActionTime)
 		resource = HttpFace(self._clock, self.streamTracker, firewall)
 		return resource

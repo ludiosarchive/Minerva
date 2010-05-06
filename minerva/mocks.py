@@ -492,7 +492,7 @@ class DummyStreamTracker(object):
 
 class DummyFirewall(object):
 
-	def __init__(self, clock=None, rejectAll=False, actionTime=0):
+	def __init__(self, clock=None, rejectAll=False, actionTime=None):
 		self._clock = clock
 		self._rejectAll = rejectAll
 		self._actionTime = actionTime
@@ -505,7 +505,7 @@ class DummyFirewall(object):
 				d.callback(None)
 			else:
 				d.errback(RejectTransport("%s rejecting this transport" % self.__class__.__name__))
-		if self._actionTime == 0:
+		if self._actionTime is None:
 			act()
 		else:
 			self._clock.callLater(self._actionTime, act)

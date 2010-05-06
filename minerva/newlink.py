@@ -1085,6 +1085,8 @@ class SocketTransport(object):
 
 
 	def _stoppedSpinning(self):
+		# This method always run after mailboxified methods(s) are called.
+
 		toSend = self._toSend
 		if toSend:
 			self._toSend = ''
@@ -1111,6 +1113,7 @@ class SocketTransport(object):
 			1/0
 
 
+	@mailboxify('_mailbox')
 	def _closeWith(self, errorType, *args):
 		if self._terminating:
 			return
