@@ -3138,8 +3138,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		self.assert_(headers['Server'][0].startswith('DWR-Reverse-Ajax'), headers['Server'])
 
 
-	# TODO: test that request is closed after SACK or boxes written to it,
-	# if streamingResponse == False
+	# TODO: implement and test minOpenTime
 
 	# TODO: test maxOpenTime
 
