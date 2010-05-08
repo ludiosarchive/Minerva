@@ -300,7 +300,7 @@ class ResourcesForTest(BetterResource):
 
 class Root(BetterResource):
 
-	def __init__(self, reactor, csrfStopper, cookieInstaller):
+	def __init__(self, reactor, httpFace, csrfStopper, cookieInstaller):
 		import cwtools
 
 		BetterResource.__init__(self)
@@ -321,6 +321,8 @@ class Root(BetterResource):
 		self.putChild('@testres_Minerva', testres_Minerva)
 
 		self.putChild('form_sandbox', FormSandbox(self._reactor))
+
+		self.putChild('httpface', httpFace)
 
 		self.putChild('flashtest', pages.FlashTestPage(csrfStopper, cookieInstaller, directoryScan, JSPATH))
 
@@ -347,13 +349,13 @@ def makeMinervaAndHttp(reactor, csrfSecret):
 	firewall = CsrfTransportFirewall(NoopTransportFirewall(), csrfStopper)
 	tracker = StreamTracker(reactor, clock, DemoFactory(clock))
 	##tracker.observeStreams(firewall)
-	##httpFace = HttpFace(clock, tracker, firewall)
 
+	httpFace = HttpFace(clock, tracker, firewall)
 	socketFace = SocketFace(clock, tracker, firewall, policyString=policyString)
 
 	# the HTTP stuff
 
-	root = Root(reactor, csrfStopper, cookieInstaller)
+	root = Root(reactor, httpFace, csrfStopper, cookieInstaller)
 	httpSite = ConnectionTrackingSite(root, clock=clock)
 
 	return (socketFace, httpSite)
