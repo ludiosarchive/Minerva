@@ -1189,11 +1189,6 @@ class SocketTransport(object):
 		self.lastBoxSent = lastBox
 
 
-	def _getSACKBytes(self):
-		sackFrame = (Fn_sack,) + self._stream.getSACK()
-		return self._encodeFrame(sackFrame)
-
-
 	def _handleHelloFrame(self, frame):
 		hello = helloDataToHello(frame.contents[1], self._mode == HTTP)
 
@@ -1247,6 +1242,11 @@ class SocketTransport(object):
 
 		d.addCallbacks(cbAuthOkay, cbAuthFailed)
 		d.addErrback(log.err)
+
+
+	def _getSACKBytes(self):
+		sackFrame = (Fn_sack,) + self._stream.getSACK()
+		return self._encodeFrame(sackFrame)
 
 
 	def _framesReceived(self, frames, alreadyDecoded):
