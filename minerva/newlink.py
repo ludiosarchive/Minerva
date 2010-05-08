@@ -1103,6 +1103,10 @@ class SocketTransport(object):
 			# .finish() is only for Requests
 			self.writable.finish()
 
+		# TODO: for non-HTTP, set timer and close the connection ourselves
+		# in 5-10 seconds
+		##self.transport.loseWriteConnection(), maybe followed by loseConnection later
+
 
 	def _encodeFrame(self, frameData):
 		if self._mode in (BENCODE, INT32):
@@ -1123,9 +1127,6 @@ class SocketTransport(object):
 		if self._mode != HTTP:
 			self._toSend += self._encodeFrame([Fn_you_close_it])
 		self._terminating = True
-
-		# TODO: set timer and close the connection ourselves in 5-10 seconds
-		##self.transport.loseWriteConnection(), maybe followed by loseConnection later
 
 
 	@mailboxify('_mailbox')
