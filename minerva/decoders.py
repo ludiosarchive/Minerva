@@ -213,7 +213,7 @@ class DelimitedStringDecoder(object):
 	Decodes a stream of (1-byte-delimiter)-terminated bytestrings.
 
 	Returns L{mypy.strops.StringFragment} objects instead of C{str}
-	objects to avoid some copying.
+	objects to reduce copying.
 	"""
 	delimiter = '\n' # MUST be 1 byte. Do not change this after any data has been received.
 
@@ -287,6 +287,9 @@ class DelimitedJSONDecoder(object):
 	Think hard before using this. Make sure your Python is patched to stop
 	algorithmic complexity attacks, and make sure your simplejson is patched
 	to limit the allowed depth (otherwise, you may segfault from stack overflow).
+
+	Returns L{mypy.strops.StringFragment} objects instead of C{str}
+	objects to reduce copying.
 	"""
 	delimiter = '\n' # MUST be 1 byte. Do not change this after any data has been received.
 
@@ -410,11 +413,11 @@ class IntNStringDecoder(object):
 				return strings, TOO_LONG
 			if lenBuffer - at < length + pLen: # not enough to read next string?
 				break
-			packet = self._buffer[at_pLen:at_pLen + length]
+			strings.append(StringFragment(self._buffer, at_pLen, length))
 			at = at_pLen + length # move to the right
-			strings.append(packet)
 
-		# This is actually fastest when a == 0 (at least in CPython 2.7), so there's no need for: if at > 0: 
+		# Because the StringFragment(s) point to the old _buffer, this may
+		# create a copy.
 		self._buffer = self._buffer[at:]
 		return strings, OK
 

@@ -44,7 +44,7 @@ class RecordingScriptDecoder(_BaseRecording, decoders.ScriptDecoder):
 
 
 
-def convertAllToStr(various):
+def fragmentsToStr(various):
 	"""
 	Convert all StringFragment to str if necessary.
 	"""
@@ -55,6 +55,13 @@ def convertAllToStr(various):
 		else:
 			newList.append(s)
 	return newList
+
+
+
+def fstValueToStrs(tup):
+	fst, snd = tup
+	fst = fragmentsToStr(fst)
+	return (fst, snd)
 
 
 
@@ -80,7 +87,7 @@ class CommonTests(object):
 				self.aE(decoders.OK, code)
 				got.extend(out)
 
-			got = convertAllToStr(got)
+			got = fragmentsToStr(got)
 			self.aE(self.strings, got)
 
 
@@ -256,7 +263,7 @@ class DelimitedStringDecoderTests(CommonTests, unittest.TestCase):
 
 		a = self.receiver(maxLength=10)
 		got, code = a.getNewFrames(toSend)
-		got = convertAllToStr(got)
+		got = fragmentsToStr(got)
 		self.aE((strings, decoders.OK), (got, code))
 
 
@@ -269,7 +276,7 @@ class DelimitedStringDecoderTests(CommonTests, unittest.TestCase):
 		a = self.receiver(maxLength=5)
 		strings = ['hello', 'there']
 		got, code = a.getNewFrames(toSend)
-		got = convertAllToStr(got)
+		got = fragmentsToStr(got)
 		self.aE((strings, decoders.TOO_LONG), (got, code))
 
 
@@ -401,7 +408,7 @@ class Int32StringDecoderTests(CommonTests, unittest.TestCase):
 		got = []
 		for s in self.strings:
 			for c in struct.pack(r.structFormat, len(s)) + s:
-				out, code = r.getNewFrames(c)
+				out, code = fstValueToStrs(r.getNewFrames(c))
 				self.aE(decoders.OK, code)
 				got.extend(out)
 		self.aE(self.strings, got)
@@ -416,7 +423,7 @@ class Int32StringDecoderTests(CommonTests, unittest.TestCase):
 		self.aE(([], decoders.OK), r.getNewFrames('\x00'))
 		self.aE(([], decoders.OK), r.getNewFrames('\x00'))
 		self.aE(([], decoders.OK), r.getNewFrames('\x00'))
-		self.aE(([''], decoders.OK), r.getNewFrames('\x00'))
+		self.aE(([''], decoders.OK), fstValueToStrs(r.getNewFrames('\x00')))
 
 
 	def test_partial(self):
@@ -449,7 +456,7 @@ class Int32StringDecoderTests(CommonTests, unittest.TestCase):
 
 	def test_decode32(self):
 		r = self.receiver(maxLength=10)
-		got, code = r.getNewFrames("\x00\x00\x00\x04ubar")
+		got, code = fstValueToStrs(r.getNewFrames("\x00\x00\x00\x04ubar"))
 		self.aE(decoders.OK, code)
 		self.aE(["ubar"], got)
 
