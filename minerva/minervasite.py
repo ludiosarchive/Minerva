@@ -244,16 +244,16 @@ class DemoProtocol(BasicMinervaProtocol):
 		self.stream.sendStrings([box] * numBoxes)
 
 
-	def stringsReceived(self, boxes):
+	def stringsReceived(self, strings):
 		# Remember, we cannot raise an exception here.
-		##print "stringsReceived", boxes
+		##print "stringsReceived", strings
 
 		send = []
-		for box in boxes:
-			if isinstance(box, list) and len(box) == 2 and box[0] == 'echo':
-				send.append(box[1])
+		for s in strings:
+			if s.startswith('echo:'):
+				send.append(s.replace('echo:', '', 1))
 
-			if isinstance(box, list) and len(box) == 1 and box[0] == 'send_demo':
+			elif s == 'send_demo':
 				self.stream.sendStrings(['starting_send_demo'])
 				self._sendDemo(1)
 
