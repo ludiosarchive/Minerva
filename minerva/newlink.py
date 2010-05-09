@@ -1322,7 +1322,7 @@ class SocketTransport(object):
 					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 				# Validate the pairs
 				for pair in pairs:
-					if not isinstance(pair, list) or len(pair) != 2:
+					if not isinstance(pair, list) or len(pair) != 2 or not isinstance(pair[1], str):
 						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 					try:
 						# This is probably enough to stop an ACA (on Incoming) on 64-bit

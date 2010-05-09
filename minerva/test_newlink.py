@@ -2041,7 +2041,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.aE([[Fn.sack, 0, [2]]], transport.getNew())
 
 
-	def test_boxesFrameWithInvalidBoxes(self):
+	def test_boxesFrameWithInvalidPayload(self):
 		"""
 		If the payload of the boxes frame is not a list, the client
 		gets C{tk_invalid_frame_type_or_arguments}.
@@ -2087,6 +2087,26 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				self.fail("No stream created?")
 
 			transport.sendFrames([[Fn.boxes, [[invalidSeqNum, "box0"]]]])
+			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
+
+			self._resetStreamTracker()
+
+
+	def test_boxesFrameWithInvalidString(self):
+		"""
+		Only C{str} objects are allowed for the [1]th item of each pair
+		in the payload.
+		"""
+		for invalidString in [-1, -2**32, -0.5, 2**64+1, True, False, None, ["string"], {}, {1: 2, 3: 4}]:
+			frame0 = _makeHelloFrame()
+			transport = self._makeTransport()
+			transport.sendFrames([frame0])
+			try:
+				self.streamTracker.getStream('x'*26)
+			except NoSuchStream:
+				self.fail("No stream created?")
+
+			transport.sendFrames([[Fn.boxes, [[0, invalidString]]]])
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
 
 			self._resetStreamTracker()
