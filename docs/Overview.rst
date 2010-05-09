@@ -339,9 +339,10 @@ Problems with JSON
 
 Designing your application protocol
 =========================
-**TODO**: Write about the standard AMP-style request/response mechanism.
+**TODO**: Write about the standard AMP-style request/response mechanism (after it exists).
 
-Design your protocol the way you would design any other frame-based protocol, but with these things in mind:
+Design your protocol the way you would design any other frame-based protocol,
+but with these things in mind:
 
 1.	Boxes are semi-structured (serialized and deserialized with JSON). Exploit the structure
 	of arrays and objects when possible.
@@ -353,9 +354,42 @@ Design your protocol the way you would design any other frame-based protocol, bu
 	If you need to send a lot of data, try to find a reasonable way to split and reassemble it,
 	it in the spirit of `amphacks/mediumbox.py`_.
 
-4.	If you care about performance in IE, prefer ``Array`` s to ``Object`` s. IE allocates
-	a lot of objects when you iterate over an ``Object`` with ``for(k in obj)``, and its
-	garbage collector is poor (especially before XP SP3/JScript 5.7) [#]_ [#]_.
+4.	Avoid sending ``Object`` s over the wire; send ``Array`` s instead, for these reasons:
+
+	1.	In IE6-IE8, iterating over an ``Object`` 's keys correctly with just ``for(var k in object)``
+		is impossible, because of incorrect ``[[DontEnum]]`` shadowing. Properties like
+		``toString`` won't be included in the iteration simply because they exist on
+		``Object.prototype``. This is a general IE problem and not specific to Minerva.
+		To avoid problems, either:
+
+		-	(The preferred option) If you use objects, don't let human behavior influence the
+			property names of the object. Essentially just use a fixed set of property names.
+
+		-	If you let human behavior influence the property names of an object:
+
+			-	Use Closure Library's ``goog.structs.Map`` as much as you can. It
+				preserves and iterates over properties like ``toString``.
+
+			-	When iterating over objects, always iterate over everything, or
+				always skip over any properties that any version of IE might skip.
+				(Use the ``TODO XXX`` helper to do this.)
+
+			-	When creating ``Object`` s for iteration by third-party code, prefix
+				all key names with the same character (example: underscore ``_``).
+
+		3.	Use our patched Closure Library 
+
+	2.	IE allocates a lot of objects when you iterate over an ``Object`` with ``for(k in obj)``,
+		and its garbage collector will slow down your page (especially before XP SP3/JScript 5.7) [#]_ [#]_.
+
+	3.	You avoid the extremely rare possibility of an accidental algorithmic complexity
+		"attack" on the server, because it does not create a hashmap in memory for
+		Python lists.
+
+	Keep in mind that the Minerva JavaScript by default serializes objects including
+	the ``[[DontEnum]]``properties like ``toString`` (if they're not equal to
+	``Object.prototype.toString``, and so on.). It also knows how to serialize
+	``goog.struct.Map`` s.
 
 5.	Don't rely on the length of unicode strings to be the same in both server and browser
 	environments. `Notes on Python UCS-2/UCS-4 builds, and unicode length`_ explains.
@@ -418,11 +452,14 @@ Minerva does a lot of neat stuff you won't find in other Comet servers.
 Minerva limitations
 =============
 
-Minerva server is written in Python, which `is slow`_. Ideally, Minerva server would be
-embedded in nginx and possibly use zeromq to copy boxes to and from application servers.
+Minerva server is written in Python and designed to run in CPython, which `is slow`_.
+We might consider using nginx for HTTP request processing (and the "hanging request"
+functionality), then using zeromq to copy frames to a Minerva server.
 
-For cross-domain communication, Minerva relies on access to many subdomains + ``document.domain``.
-If HTTPS is needed, this necessitates a wildcard SSL cert.
+For cross-domain communication, Minerva relies on access to many subdomains +
+``document.domain``. If you want Comet over HTTPS, you need a wildcard SSL cert.
+The cheap wildcart certs (~$150) cover only \*.domain.tld. If you want to cover
+\*.sub.domain.tld, you'll need a more expensive certificate.
 
 	**Future:** For cross-domain, we could rely on one or more of:
 
