@@ -39,10 +39,6 @@ class _BaseRecording(object):
 		self.got.extend(data)
 
 
-class RecordingScriptDecoder(_BaseRecording, decoders.ScriptDecoder):
-	pass
-
-
 
 def fragmentsToStr(various):
 	"""
@@ -57,12 +53,10 @@ def fragmentsToStr(various):
 	return newList
 
 
-
 def fstValueToStrs(tup):
 	fst, snd = tup
 	fst = fragmentsToStr(fst)
 	return (fst, snd)
-
 
 
 class CommonTests(object):
@@ -506,60 +500,3 @@ class Int32StringDecoderTests(CommonTests, unittest.TestCase):
 		self.aE(([], decoders.OK), r.getNewFrames('\x00'))
 		self.aE(([], decoders.OK), r.getNewFrames('\x00'))
 		self.aE(([], decoders.TOO_LONG), r.getNewFrames('\x00'))
-
-
-
-class ScriptDecoderTests(unittest.TestCase):
-
-	receiver = RecordingScriptDecoder
-
-	def test_encode(self):
-		big = 'x' * 100
-		self.aE('<script>f(%s)</script>' % (big,), self.receiver.encode(big))
-		self.aE('<script>f(hello)</script>', self.receiver.encode("hello"))
-		self.aE('<script>f()</script>', self.receiver.encode(""))
-
-
-	def _sendAndAssert(self, toSend, expected):
-		for packetSize in range(1, 20):
-			##print "packetSize", packetSize
-			a = self.receiver()
-
-			for s in diceString(toSend, packetSize):
-				##print 'sending', repr(s)
-				a.getNewFrames(s)
-
-			self.aE(expected, a.got)
-
-
-	def test_basicUsage(self):
-		"""
-		Test that when strings are received in chunks of different lengths,
-		they are still parsed correctly.
-		"""
-		toSend = '<script>f()</script><script>f("astring")</script>\nnonscriptstuff\n\t<script>f({})</script>\t\t\t'
-		expected = ['', '"astring"', '{}']
-		self._sendAndAssert(toSend, expected)
-
-
-	def test_endScriptNotLikeBrowser(self):
-		"""
-		Show that </script> in quoted string is _not_ handled like a browser would,
-		because decoders.ScriptDecoder is looking for ")</script>"
-
-		If you make it work like a browser, replace this test.
-		"""
-		toSend = '<script>f("hello</script>there")</script><script>f([])</script>'
-		expected = ['"hello</script>there"', "[]"]
-		self._sendAndAssert(toSend, expected)
-
-
-	def test_spaceInScriptNotLikeBrowser(self):
-		"""
-		Show that </ script> is not handled like a browser would.
-
-		If you make it work like a browser, replace this test.
-		"""
-		toSend = '<script>f("hi")< /script>'
-		expected = []
-		self._sendAndAssert(toSend, expected)

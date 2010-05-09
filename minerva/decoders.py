@@ -440,51 +440,5 @@ class Int32StringDecoder(IntNStringDecoder):
 
 
 
-class ScriptDecoder(object): # XXX remove this or fix manyDataCallback design
-	"""
-	This is not as loose as an SGML parser (which will handle whitespace
-	inside the "<script>" or "</script>", but it's good enough for testing.
-
-	This can easily be forced into exponential time by sending many <script>s
-	at once.
-
-	This might have a re-entrancy bug; write a unit test for it if it matters to you.
-	"""
-
-	# TODO XXX: change 'f' to 'q' or 'x' or 'y' to reduce chance of collision
-
-	startText = '<script>f('
-	endText = ')</script>'
-	_buffer = ''
-
-	decodesJson = False
-
-	@classmethod
-	def encode(cls, s):
-		return cls.startText + s + cls.endText
-
-
-	def manyDataCallback(self, strings):
-		"""
-		Override this.
-		"""
-		raise NotImplementedError
-
-
-	def getNewFrames(self, data):
-		self._buffer += data
-
-		scripts = []
-		
-		while self.startText in self._buffer and self.endText in self._buffer:
-			start = self._buffer.find(self.startText) + len(self.startText)
-			end = self._buffer.find(self.endText)
-			extracted = self._buffer[start:end]
-			self._buffer = self._buffer[end + len(self.endText):]
-			scripts.append(extracted)
-
-		self.manyDataCallback(scripts)
-
-
 from pypycpyo import optimizer
 optimizer.bind_all_many(vars(), _postImportVars)
