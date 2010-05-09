@@ -232,8 +232,8 @@ class MockStream(_MockMixin):
 		self._transports = set()
 
 
-	def sendBoxes(self, boxes):
-		self.log.append(['sendBoxes', boxes])
+	def sendStrings(self, strings):
+		self.log.append(['sendStrings', strings])
 
 
 	def reset(self, reasonString):
@@ -246,9 +246,9 @@ class MockStream(_MockMixin):
 			t.closeGently()
 
 
-	def boxesReceived(self, transport, boxes):
-		self.log.append(['boxesReceived', transport, boxes])
-		self._incoming.give(boxes)
+	def stringsReceived(self, transport, strings):
+		self.log.append(['stringsReceived', transport, strings])
+		self._incoming.give(strings)
 
 
 	def sackReceived(self, sackInfo):
@@ -256,9 +256,9 @@ class MockStream(_MockMixin):
 		self.queue.handleSACK(sackInfo)
 
 
-	def transportOnline(self, transport, wantsBoxes, succeedsTransport):
+	def transportOnline(self, transport, wantsStrings, succeedsTransport):
 		self.virgin = False
-		self.log.append(['transportOnline', transport, wantsBoxes, succeedsTransport])
+		self.log.append(['transportOnline', transport, wantsStrings, succeedsTransport])
 		assert transport not in self._transports
 		self._transports.add(transport)
 
@@ -317,9 +317,9 @@ class MockMinervaProtocol(_MockMixin):
 
 
 	def _callStuff(self):
-		if 'sendBoxes' in self._callWhat:
-			self.stream.sendBoxes(["s2cbox0", "s2cbox1"])
-			self.stream.sendBoxes(["s2cbox2"])
+		if 'sendStrings' in self._callWhat:
+			self.stream.sendStrings(["s2cbox0", "s2cbox1"])
+			self.stream.sendStrings(["s2cbox2"])
 		if 'reset' in self._callWhat:
 			self.stream.reset(u'reset forced by mock protocol\u2603')
 
@@ -337,9 +337,9 @@ class MockMinervaProtocol(_MockMixin):
 		self.log.append(['streamReset', whoReset, reasonString])
 
 
-	def boxesReceived(self, boxes):
-		self.log.append(['boxesReceived', boxes])
-		if 'boxesReceived' in self._callFrom:
+	def stringsReceived(self, strings):
+		self.log.append(['stringsReceived', strings])
+		if 'stringsReceived' in self._callFrom:
 			self._callStuff()
 
 
@@ -394,15 +394,15 @@ class DummySocketLikeTransport(_MockMixin):
 		self.log.append(['writeReset', reasonString, applicationLevel])
 
 
-	def writeBoxes(self, queue, start):
-		self.log.append(['writeBoxes', queue, start])
+	def writeStrings(self, queue, start):
+		self.log.append(['writeStrings', queue, start])
 
 		lastBox = self.lastBoxSent
-		for seqNum, box in queue.iterItems(start=start):
+		for seqNum, string in queue.iterItems(start=start):
 			if lastBox == -1 or lastBox + 1 != seqNum:
 				pass
 				##toSend += self._encodeFrame([Fn.seqnum, seqNum])
-			##toSend += self._encodeFrame([Fn.box, box])
+			##toSend += self._encodeFrame([Fn.box, string])
 			lastBox = seqNum
 		self.lastBoxSent = lastBox
 

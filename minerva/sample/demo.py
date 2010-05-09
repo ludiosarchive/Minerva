@@ -21,7 +21,7 @@ class DemoProtocol(BasicMinervaProtocol):
 		self._reset = False
 
 
-	def boxesReceived(self, boxes):
+	def stringsReceived(self, boxes):
 		# Remember, we cannot raise an exception here.
 
 		send = []
@@ -33,7 +33,7 @@ class DemoProtocol(BasicMinervaProtocol):
 				1/0
 
 		if send:
-			self.stream.sendBoxes(send)
+			self.stream.sendStrings(send)
 
 
 	def streamReset(self, whoReset, reasonString):

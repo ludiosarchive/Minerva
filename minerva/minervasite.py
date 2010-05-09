@@ -241,12 +241,12 @@ class DemoProtocol(BasicMinervaProtocol):
 
 		self._clock.callLater(0.2, self._sendDemo, iteration + 1)
 
-		self.stream.sendBoxes([box] * numBoxes)
+		self.stream.sendStrings([box] * numBoxes)
 
 
-	def boxesReceived(self, boxes):
+	def stringsReceived(self, boxes):
 		# Remember, we cannot raise an exception here.
-		##print "boxesReceived", boxes
+		##print "stringsReceived", boxes
 
 		send = []
 		for box in boxes:
@@ -254,13 +254,13 @@ class DemoProtocol(BasicMinervaProtocol):
 				send.append(box[1])
 
 			if isinstance(box, list) and len(box) == 1 and box[0] == 'send_demo':
-				self.stream.sendBoxes(['starting_send_demo'])
+				self.stream.sendStrings(['starting_send_demo'])
 				self._sendDemo(1)
 
 			# else ignore other boxes
 
 		# ugh
-		self.stream.sendBoxes(send)
+		self.stream.sendStrings(send)
 
 
 	def streamReset(self, whoReset, reasonString):

@@ -283,16 +283,16 @@ class Stream(object):
 		log.msg('Received box:', box)
 
 
-	def sendBoxes(self, boxes):
+	def sendStrings(self, boxes):
 		"""
 		Enqueue boxes L{boxes} for sending soon.
 		
-		Use L{sendBoxes} to send multiple boxes instead of repeated calls
-		to L{sendBox}. L{sendBoxes} lets a transport use fewer TCP packets
+		Use L{sendStrings} to send multiple boxes instead of repeated calls
+		to L{sendBox}. L{sendStrings} lets a transport use fewer TCP packets
 		when possible.
 
 		It is often correct to buffer boxes in a list and give them to
-		L{sendBoxes} all at once.
+		L{sendStrings} all at once.
 		"""
 		self.queue.extend(boxes)
 		if self.noisy:
@@ -302,10 +302,10 @@ class Stream(object):
 
 	def sendBox(self, box):
 		"""
-		Enqueue box L{box} for sending soon. Use L{sendBoxes} instead
+		Enqueue box L{box} for sending soon. Use L{sendStrings} instead
 		if you are sending multiple boxes.
 
-		Limitations (same applies to sendBoxes):
+		Limitations (same applies to sendStrings):
 			Do not send more than 2^16 - 1 (65535) items per list in the box; if you
 			do, IE6 will drop the box and the Stream will break.
 			See http://code.google.com/p/google-web-toolkit/issues/detail?id=1336

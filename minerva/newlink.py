@@ -174,9 +174,10 @@ class IMinervaProtocol(Interface):
 
 	I'm analogous to L{twisted.internet.interfaces.IProtocol}
 
-	Note: if you call stream.reset, some (or all) of the boxes you
+	Note: if you call stream.reset, some (or all) of the strings you
 	have recently sent may be lost. If you need a proper close, use
-	your own boxes to determine that it is safe to close, then call reset.
+	your own application-level strings to determine that it is safe to
+	close, then call reset.
 
 	Note: the stream never ends due to inactivity (there
 	are no timeouts in Stream). If you want to end the stream,
@@ -220,14 +221,15 @@ class IMinervaProtocol(Interface):
 		"""
 
 
-	def boxesReceived(boxes):
+	def stringsReceived(strings):
 		"""
-		Called whenever box(es) are received.
+		Called whenever one or more strings are received. Strings will
+		*never* be unicode.
 
 		You must *not* raise any exception. Wrap your code in try/except if necessary.
 
-		@type boxes: list
-		@param boxes: a list of boxes
+		@type strings: list
+		@param strings: a list of C{str} objects.
 		"""
 
 
@@ -248,7 +250,7 @@ class BasicMinervaProtocol(object):
 		del self.stream
 
 
-	def boxesReceived(self, boxes):
+	def stringsReceived(self, strings):
 		pass
 
 
@@ -309,7 +311,7 @@ class Stream(object):
 	# Don't implement IPushProducer or IPullProducer because we don't expect stopProducing
 	implements(ISimpleConsumer)
 
-	maxUndeliveredBoxes = 5000 # boxes
+	maxUndeliveredStrings = 5000 # strings
 	maxUndeliveredBytes = 4 * 1024 * 1024 # bytes
 
 	__slots__ = (
@@ -355,9 +357,9 @@ class Stream(object):
 			if self._pretendAcked is None:
 				start = None
 			else:
-				# In this case, avoid calling writeBoxes when there aren't any new boxes.
+				# In this case, avoid calling writeStrings when there aren't any new strings.
 				# A sample case:
-				# Wrote boxes 0, 1 over T#1; T#2 connects and makes _pretendAcked = 1
+				# Wrote strings 0, 1 over T#1; T#2 connects and makes _pretendAcked = 1
 				# queue is still _seqNumAt0 == 0, len(self.queue) == 2
 				# This function is called; this is run: (not 0 + 2 > 1 + 1), so return
 				##print self.queue._seqNumAt0 + len(self.queue), self._pretendAcked + 1
@@ -365,7 +367,7 @@ class Stream(object):
 				if not self.queue._seqNumAt0 + len(self.queue) > self._pretendAcked + 1:
 					return
 				start = max(self._pretendAcked + 1, self.queue._seqNumAt0)
-			self._primaryTransport.writeBoxes(self.queue, start=start)
+			self._primaryTransport.writeStrings(self.queue, start=start)
 
 
 	def _fireNotifications(self):
@@ -374,17 +376,17 @@ class Stream(object):
 		self._notifications = None
 
 
-	def sendBoxes(self, boxes):
+	def sendStrings(self, strings):
 		"""
-		Send C{boxes} boxes to the peer.
+		Send C{strings} to the peer.
 
-		@param boxes: a sequence of boxes
-		@type boxes: a sequence
+		@param strings: a sequence of C{str} objects
+		@type strings: a sequence
 		"""
 		if self.disconnected:
-			raise RuntimeError("Cannot sendBoxes on disconnected Stream %r" % (self,))
+			raise RuntimeError("Cannot sendStrings on disconnected Stream %r" % (self,))
 
-		if not boxes:
+		if not strings:
 			return
 
 		# We don't need to self._producer.pauseProducing() if queue is too big here,
@@ -393,7 +395,7 @@ class Stream(object):
 		#     2) if there is no active S2C transport, we already paused it
 		# TODO: actually implement flow control if Queue is too big, since clients can
 		# resource-exhaust by never sending Minerva ACKs.
-		self.queue.extend(boxes)
+		self.queue.extend(strings)
 		self._tryToSend()
 
 
@@ -460,7 +462,7 @@ class Stream(object):
 			del self._protocol
 
 
-	def boxesReceived(self, transport, boxes):
+	def stringsReceived(self, transport, strings):
 		"""
 		Private. Do not call this.
 
@@ -469,16 +471,16 @@ class Stream(object):
 		if self.disconnected:
 			return
 
-		self._incoming.give(boxes)
+		self._incoming.give(strings)
 		items = self._incoming.getDeliverableItems()
 		if items:
-			self._protocol.boxesReceived(items)
-		# We deliver the deliverable boxes before resetting the connection (if necessary),
+			self._protocol.stringsReceived(items)
+		# We deliver the deliverable strings before resetting the connection (if necessary),
 		# just in case the client sent something useful.
-		# Note: Underneath the boxesReceived call (above), someone may have
+		# Note: Underneath the stringsReceived call (above), someone may have
 		# reset the Stream! This is why we check for `not self.disconnected`.
 		if not self.disconnected and \
-		(self._incoming.getUndeliverableCount() > self.maxUndeliveredBoxes or \
+		(self._incoming.getUndeliverableCount() > self.maxUndeliveredStrings or \
 		self._incoming.getMaxConsumption() > self.maxUndeliveredBytes):
 			self._internalReset(u'resources exhausted')
 
@@ -499,11 +501,11 @@ class Stream(object):
 
 		if wasPretending:
 			# Try to send, because the SACK may have indicated that the client
-			# lost boxes that were delivered to the older active S2C transport.
+			# lost strings that were delivered to the older active S2C transport.
 			self._tryToSend()
 
 
-	def transportOnline(self, transport, wantsBoxes, succeedsTransport):
+	def transportOnline(self, transport, wantsStrings, succeedsTransport):
 		"""
 		Private. Do not call this.
 
@@ -514,7 +516,7 @@ class Stream(object):
 		to this stream before calling L{transportOnline}. Usually this is done by
 		authenticating based on data in the `hello' frame.
 
-		If L{wantsBoxes} is truthy, this transport wants to receive boxes.
+		If L{wantsStrings} is truthy, this transport wants to receive boxes.
 
 		If L{succeedsTransport} != None, temporarily assume that all boxes written to
 		#<succeedsTransport> were SACKed.
@@ -527,13 +529,13 @@ class Stream(object):
 		if not self._protocol:
 			self._protocol = self._streamProtocolFactory.buildProtocol()
 			self._protocol.streamStarted(self)
-		# Remember streamStarted can do anything to us, including reset or sendBoxes.
+		# Remember streamStarted can do anything to us, including reset or sendStrings.
 
 		# TODO: do we really need _primaryTransport to still be connected?
 		# Can't we just remember what its transportNumber and lastBoxSent were?
 		# That way, a transport can succeed the older even if it was disconnected
 		# in the meantime.
-		if wantsBoxes and not self.disconnected:
+		if wantsStrings and not self.disconnected:
 			if \
 			succeedsTransport is not None and \
 			self._primaryTransport and \
@@ -610,7 +612,7 @@ class Stream(object):
 		"""
 		Private, but no side-effects.
 
-		@return: the SACK information for C2S boxes.
+		@return: the SACK information for C2S strings.
 		@rtype: list
 		"""
 		return self._incoming.getSACK()
@@ -654,7 +656,7 @@ class Stream(object):
 	# its behavior; this is bad, it is unholy to send data when you are paused.
 	def registerProducer(self, producer, streaming):
 		"""
-		Register to receive data from a producer that creates S2C boxes.
+		Register to receive data from a producer that creates S2C strings.
 
 		This sets this stream to be a consumer for producer C{producer}.
 		When this stream runs out of data on a write() call, it will ask C{producer}
@@ -865,13 +867,14 @@ class StreamTracker(object):
 class IMinervaTransport(ISimpleConsumer):
 
 	lastBoxSent = Attribute(
-		"Sequence number of the last box written to the socket/request, or -1 if no boxes ever written")
+		"Sequence number of the last string written to the socket/request, "
+		"or -1 if no strings ever written")
 
 
-	def writeBoxes(queue, start):
+	def writeStrings(queue, start):
 		"""
-		Write boxes in queue C{queue} to the peer.
-		This never writes boxes that were already written to the peer.
+		Write strings in queue C{queue} to the peer.
+		This never writes strings that were already written to the peer.
 
 		@param queue: an L{abstract.Queue}
 		@param start: where to start in the queue, or C{None}
@@ -927,7 +930,7 @@ class InvalidHello(Exception):
 class Hello(object):
 	__slots__ = (
 		'credentialsData', 'requestNewStream', 'transportNumber',
-		'protocolVersion', 'streamId', 'wantsBoxes', 'succeedsTransport',
+		'protocolVersion', 'streamId', 'wantsStrings', 'succeedsTransport',
 		'httpFormat', 'streamingResponse', 'needPaddingBytes', 'maxReceiveBytes',
 		'maxOpenTime')
 
@@ -981,11 +984,11 @@ def helloDataToHello(helloData, isHttp):
 		raise InvalidHello
 
 	# succeedsTransport is always optional. If missing, the client does not
-	# want to get S2C boxes over this transport. If None, the client does,
+	# want to get S2C strings over this transport. If None, the client does,
 	# but the transport does not succeed an existing primary transport. If a
 	# number, the transport might succeed an existing primary transport.
-	obj.wantsBoxes = Hello_succeedsTransport in helloData
-	if obj.wantsBoxes:
+	obj.wantsStrings = Hello_succeedsTransport in helloData
+	if obj.wantsStrings:
 		obj.succeedsTransport = helloData[Hello_succeedsTransport]
 		if obj.succeedsTransport is not None:
 			try:
@@ -1159,9 +1162,9 @@ class SocketTransport(object):
 
 
 	@mailboxify('_mailbox')
-	def writeBoxes(self, queue, start):
+	def writeStrings(self, queue, start):
 		"""
-		@see L{IMinervaTransport.writeBoxes}
+		@see L{IMinervaTransport.writeStrings}
 		"""
 		if self._terminating:
 			return
@@ -1170,7 +1173,7 @@ class SocketTransport(object):
 		# we received the hello frame.
 		assert self.receivedCounter > -1, self.receivedCounter
 
-		# See test_writeBoxesConnectionInterleavingSupport
+		# See test_writeStringsConnectionInterleavingSupport
 		# Remember that None < any number
 		if start < self._lastStartParam:
 			self.lastBoxSent = -1
@@ -1179,13 +1182,13 @@ class SocketTransport(object):
 		# TODO: we might want to send boxes frame instead of box sometimes? no?
 		# Even if there's a lot of stuff in the queue, write everything.
 		lastBox = self.lastBoxSent
-		for seqNum, box in queue.iterItems(start=start):
-			##print seqNum, box, lastBox
+		for seqNum, string in queue.iterItems(start=start):
+			##print seqNum, string, lastBox
 			if seqNum <= lastBox: # This might have to change to support SACK.
 				continue
 			if lastBox == -1 or lastBox + 1 != seqNum:
 				self._toSend += self._encodeFrame([Fn_seqnum, seqNum])
-			self._toSend += self._encodeFrame([Fn_box, box])
+			self._toSend += self._encodeFrame([Fn_box, string])
 			lastBox = seqNum
 
 		self.lastBoxSent = lastBox
@@ -1222,8 +1225,8 @@ class SocketTransport(object):
 		d = self.factory.firewall.checkTransport(self, stream)
 
 		# Keep only the variables we need for the cbAuthOkay closure
-		wantsBoxes = hello.wantsBoxes
-		succeedsTransport = hello.succeedsTransport if wantsBoxes else None
+		wantsStrings = hello.wantsStrings
+		succeedsTransport = hello.succeedsTransport if wantsStrings else None
 
 		def cbAuthOkay(_):
 			if self._terminating:
@@ -1231,7 +1234,7 @@ class SocketTransport(object):
 			# Note: self._stream being non-None implies that were are authed,
 			# and that we have called transportOnline (or are calling it right now).
 			self._stream = stream
-			self._stream.transportOnline(self, wantsBoxes, succeedsTransport)
+			self._stream.transportOnline(self, wantsStrings, succeedsTransport)
 			# Remember, a lot of stuff can happen underneath that
 			# transportOnline call because it may construct a MinervaProtocol,
 			# which may even call reset.
@@ -1314,11 +1317,11 @@ class SocketTransport(object):
 					return self._closeWith(Fn_tk_acked_unsent_boxes)
 
 			elif frameType == Fn_boxes:
-				boxes = frameObj[1]
-				if not isinstance(boxes, list):
+				pairs = frameObj[1]
+				if not isinstance(pairs, list):
 					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-				# Validate the boxes
-				for pair in boxes:
+				# Validate the pairs
+				for pair in pairs:
 					if not isinstance(pair, list) or len(pair) != 2:
 						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 					try:
@@ -1330,10 +1333,10 @@ class SocketTransport(object):
 						ensureNonNegIntLimit(pair[0], 2**64) # pair[0] is seqNum
 					except (TypeError, ValueError):
 						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-				self._stream.boxesReceived(self, boxes)
+				self._stream.stringsReceived(self, pairs)
 				self._toSend += self._getSACKBytes()
-				# Remember that a lot can happen underneath that boxesReceived call,
-				# including a call to our own `reset` or `closeGently` or `writeBoxes`
+				# Remember that a lot can happen underneath that stringsReceived call,
+				# including a call to our own `reset` or `closeGently` or `writeStrings`
 				# (though those are all mailboxify'ed).
 
 			elif frameType == Fn_box:

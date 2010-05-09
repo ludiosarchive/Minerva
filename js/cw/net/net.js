@@ -1071,7 +1071,7 @@ cw.net.IMinervaProtocol.prototype.streamReset = function(whoReset, reasonString)
  *
  * @param {!Array.<*>} boxes The received boxes.
  */
-cw.net.IMinervaProtocol.prototype.boxesReceived = function(boxes) {
+cw.net.IMinervaProtocol.prototype.stringsReceived = function(boxes) {
 
 }
 
@@ -1110,7 +1110,7 @@ cw.net.IMinervaTransport = function() {
  *
  * @param {!cw.net.Queue} queue
  */
-cw.net.IMinervaTransport.prototype.writeBoxes_ = function(queue) { // No 'start' argument unlike newlink.py
+cw.net.IMinervaTransport.prototype.writeStrings_ = function(queue) { // No 'start' argument unlike newlink.py
 
 }
 
@@ -1169,7 +1169,7 @@ cw.net.Stream.prototype.primaryTransport_ = null;
  * @param {!Array.<*>} boxes Boxes to send.
  *
  */
-cw.net.Stream.prototype.sendBoxes_ = function(boxes) {
+cw.net.Stream.prototype.sendStrings_ = function(boxes) {
 	1/0
 }
 
@@ -1188,7 +1188,7 @@ cw.net.Stream.prototype.reset_ = function(reasonString) {
  * @param {!Object} transport The transport that received these boxes.
  * @param {Array.<*>} boxes In-order boxes that transport has received.
  */
-cw.net.Stream.prototype.boxesReceived_ = function(transport, boxes) {
+cw.net.Stream.prototype.stringsReceived_ = function(transport, boxes) {
 	1/0
 }
 

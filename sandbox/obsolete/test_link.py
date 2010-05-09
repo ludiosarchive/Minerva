@@ -156,7 +156,7 @@ class BaseTestIntegration(object):
 		"""
 		streamId = link.StreamId('\x11' * 16)
 		stream = self._streamFactory.getOrBuildStream(streamId)
-		stream.sendBoxes(boxes)
+		stream.sendStrings(boxes)
 		return stream
 
 
@@ -498,13 +498,13 @@ class TestStream(unittest.TestCase):
 		self.assertEqual(2, transport.numWrites)
 
 
-	def test_sendBoxes(self):
+	def test_sendStrings(self):
 		transport = _DummyMinervaTransport(0)
 		assert 0 == transport.numWrites
 
 		self.stream.transportOnline(transport)
 
-		self.stream.sendBoxes(['boxS2C0', 'boxS2C1', 'boxS2C2'])
+		self.stream.sendStrings(['boxS2C0', 'boxS2C1', 'boxS2C2'])
 		self.assertEqual(1, transport.numWrites)
 
 
@@ -530,7 +530,7 @@ class TestStream(unittest.TestCase):
 #		self.stream.transportWantsApproval(transport0)
 #		self.stream.transportOnline(transport1) # this newer transport is never approved
 #
-#		self.stream.sendBoxes(['boxS2C0', 'boxS2C1', 'boxS2C2'])
+#		self.stream.sendStrings(['boxS2C0', 'boxS2C1', 'boxS2C2'])
 #		self.assertEqual(1, transport0.numWrites)
 #		self.assertEqual(0, transport1.numWrites)
 

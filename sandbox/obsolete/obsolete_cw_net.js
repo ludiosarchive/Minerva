@@ -38,13 +38,13 @@ cw.Class.subclass(cw.net, "Stream").methods(
 	 * Enqueue boxes L{boxes} for sending soon. Returns the C2S sequence number
 	 * of the _last_ box, in case you need delivery notification later.
 	 *
-	 * Whenever possible, use L{sendBoxes} to send multiple boxes instead
+	 * Whenever possible, use L{sendStrings} to send multiple boxes instead
 	 * of repeated calls to L{sendBox}.
 	 *
 	 * It is often correct to buffer boxes in a list and give them to
-	 * L{sendBoxes} all at once.
+	 * L{sendStrings} all at once.
 	 */
-	function sendBoxes(self, boxes) {
+	function sendStrings(self, boxes) {
 		var boxesLen = boxes.length;
 		for(var i=0; i < boxesLen; i++) {
 			self._queue.push(box);
@@ -56,7 +56,7 @@ cw.Class.subclass(cw.net, "Stream").methods(
 	 * Enqueue box L{box} for sending soon. Returns the C2S sequence number
 	 * of the box, in case you need delivery notification later.
 	 *
-	 * Use L{sendBoxes} instead if you are sending multiple boxes.
+	 * Use L{sendStrings} instead if you are sending multiple boxes.
 	 */
 	function sendBox(self, box) {
 		self._queue.push(box);
@@ -115,7 +115,7 @@ cw.Class.subclass(cw.net, "Stream").methods(
 	 * For non-HTTP transports, queuing a box right now might avoid having to send
 	 * two separate TCP packets.
 	 *
-	 * You're free to call L{sendBox} or L{sendBoxes} as usual. Note that smuggling
+	 * You're free to call L{sendBox} or L{sendStrings} as usual. Note that smuggling
 	 * will not always work, but boxes will still be delivered.
 	 *
 	 * Some S2C transports can stay open for a very long time
@@ -152,9 +152,9 @@ cw.Class.subclass(cw.net, "Stream").methods(
 	/**
 	 * Received box L{boxes}. Override this.
 	 */
-	function boxesReceived(self, boxes) {
+	function stringsReceived(self, boxes) {
 		// TODO: use goog.abstractMethod instead
-		throw new Error('Forgot to override boxesReceived?');
+		throw new Error('Forgot to override stringsReceived?');
 	}
 )
 
