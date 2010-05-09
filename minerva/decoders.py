@@ -232,15 +232,16 @@ class DelimitedStringDecoder(object):
 
 
 	def getNewFrames(self, data):
-		# This should re-return the correct error code when more data is fed into it, even after
-		# the error code was already returned.
+		# This should re-return the correct error code when more data is
+		# fed into it, even after the error code was already returned.
 		de = self.delimiter
 		m = self.maxLength
 
 		self._buffer += data
 		completeStrings = []
-		# Stop the "dribble in bytes slowly" attack (where entire buffer is repeatedly scanned for \n)
-		# This trick works here because our delimiter is 1 byte.
+		# Stop the "dribble in bytes slowly" attack (where entire buffer is
+		# repeatedly scanned for \n). This trick works here because our
+		# delimiter is 1 byte.
 		if de not in data:
 			if len(self._buffer) > m:
 				return completeStrings, TOO_LONG
@@ -305,16 +306,17 @@ class DelimitedJSONDecoder(object):
 
 
 	def getNewFrames(self, data):
-		# This should re-return the correct error code when more data is fed into it, even after
-		# the error code was already returned.
+		# This should re-return the correct error code when more data is
+		# fed into it, even after the error code was already returned.
 		de = self.delimiter
 		m = self.maxLength
 
 		self.lastJsonError = None
 		self._buffer += data
 		docs = []
-		# Stop the "dribble in bytes slowly" attack (where entire buffer is repeatedly scanned for \n)
-		# This trick works here because our delimiter is 1 byte.
+		# Stop the "dribble in bytes slowly" attack (where entire buffer is
+		# repeatedly scanned for \n). This trick works here because our
+		# delimiter is 1 byte.
 		if de not in data:
 			if len(self._buffer) > m:
 				return docs, TOO_LONG
