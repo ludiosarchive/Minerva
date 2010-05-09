@@ -466,7 +466,7 @@ class Stream(object):
 		"""
 		Private. Do not call this.
 
-		Called by a transport to tell me that it has received boxes L{boxes}.
+		Called by a transport to tell me that it has received strings L{strings}.
 		"""
 		if self.disconnected:
 			return
@@ -516,16 +516,16 @@ class Stream(object):
 		to this stream before calling L{transportOnline}. Usually this is done by
 		authenticating based on data in the `hello' frame.
 
-		If L{wantsStrings} is truthy, this transport wants to receive boxes.
+		If L{wantsStrings} is truthy, this transport wants to receive strings.
 
-		If L{succeedsTransport} != None, temporarily assume that all boxes written to
+		If L{succeedsTransport} != None, temporarily assume that all strings written to
 		#<succeedsTransport> were SACKed.
 		"""
 		self._transports.add(transport)
 		self.virgin = False
 
 		# This is done here, and not in _newPrimary, because client should be able
-		# to upload boxes without ever having set up a primary transport.
+		# to upload strings without ever having set up a primary transport.
 		if not self._protocol:
 			self._protocol = self._streamProtocolFactory.buildProtocol()
 			self._protocol.streamStarted(self)
@@ -1169,7 +1169,7 @@ class SocketTransport(object):
 		if self._terminating:
 			return
 
-		# Something went wrong if we're writing boxes before
+		# Something went wrong if we're writing strings before
 		# we received the hello frame.
 		assert self.receivedCounter > -1, self.receivedCounter
 
