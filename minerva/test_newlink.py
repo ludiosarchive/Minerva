@@ -2043,7 +2043,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_boxesFrameWithInvalidBoxes(self):
 		"""
-		If the [1]th argument of the boxes frame is not a list, the client
+		If the payload of the boxes frame is not a list, the client
 		gets C{tk_invalid_frame_type_or_arguments}.
 		"""
 		for boxes in [-1, -2**32, -0.5, 2**64+1, "4", True, False, None, {}]:
@@ -2056,12 +2056,12 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self._resetStreamTracker()
 
 
-	def test_boxesFrameWithInvalidBox(self):
+	def test_boxesFrameWithInvalidPair(self):
 		"""
 		If the boxes list contains a non-list or non-length-2 object, the client
 		gets C{tk_invalid_frame_type_or_arguments}.
 		"""
-		for box in [-1, -2**32, -0.5, 2**64+1, "4", True, False, None, {}, {1: 2, 3: 4}]:
+		for box in [-1, -2**32, -0.5, 2**64+1, "4", True, False, None, [0, "x", "y"], {}, {1: 2, 3: 4}]:
 			frame0 = _makeHelloFrame()
 			transport = self._makeTransport()
 			transport.sendFrames([frame0, [Fn.boxes, [box]]])
