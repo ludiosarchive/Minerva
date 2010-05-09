@@ -35,36 +35,29 @@ peer
 	the thing on the other side of the Minerva stream. For a server, it is a client;
 	for a client, the server.
 frame
-	a piece of JSON-encoded data that is sent over streams. This ecompasses both
-	Minerva-level and application-level data.
-box
+	a bytestring is sent over streams. This ecompasses both Minerva-level and
+	application-level data.
+string (in the context of Minerva)
 	an atomic piece of application-level data that can be fit into a frame and sent
-	to the peer. Sending boxes successfully is the point of Minerva. At Minerva-level,
-	a frame will often contain more than one box.
+	to the peer. Strings have strict restrictions on which bytes/codepoints are
+	allowed, see `String restrictions`_.
 
-	Everything in a box can be represented near-equivalently in server and browser
-	environments. On the server, a box might be a ``list``, a ``dict``, a ``unicode`` object (or an ASCII-only ``str``),
-	a ``bool``, an ``int``, a ``long``, a ``float``, or ``None``, or any nested combination of these.
-
-	In a JavaScript environment, a box might be an ``Object``, an ``Array``, a string,
-	a number, a boolean, or ``null``, or any nested combination of these.
-
-	There is a limit to how much nesting a box can have (26 levels), the size of an
-	Array (65535 items), and what codepoints are allowed in ``unicode``/strings
-	(avoid Noncharacters and unallocated Specials). See `Box limitations`_ for details.
+	On the server, a string is represented as a bytestring (never decoded
+	to unicode). On the browser side, a string is represented as JavaScript UTF-16
+	string, but with the same restrictions on bytes/codepoints.
 S2C
-	server-to-client (e.g. a S2C transport, or a S2C box)
+	server-to-client (e.g. a S2C transport, or a S2C string)
 C2S
-	client-to-server. (e.g. a C2S transport, or a C2S box)
+	client-to-server. (e.g. a C2S transport, or a C2S string)
 transport
 	an HTTP request/response, or socket, or WebSocket, that Minerva uses to
 	send/receive frames.
 S2C transport
-	a transport that is being used or will be used to send S2C boxes,
+	a transport that is being used or will be used to send S2C strings,
 	regardless of whether it it used for C2S as well.
 primary transport
-	In server context: the transport that is currently designated to send boxes to the client.
-	This was formerly called "active S2C transport".
+	In server context: the transport that is currently designated to send
+	strings to the client. This was formerly called "active S2C transport".
 crypted
 	refers to not-yet-implemented encryption for Flash Socket, likely to be based
 	on a variant of ChaCha12 where client downloads 448 bits of random
@@ -139,9 +132,9 @@ Installation requirements / Dependencies
 
 	-	PyOpenSSL
 
--	simplejson (our branch ``prime``). Minerva relies on a depth limit of 32 while parsing JSON. If
+-	simplejson (use our patched version with a depth limit when decoding, branch ``prime``). If
 	an unpatched simplejson is used, Minerva will still work but the test suite will not pass
-	(and Minerva will be vulnerable to dedicated hackers trying to segfault the server).
+	(and Minerva will be vulnerable to hackers trying to segfault the server).
 
 -	zope.interface
 
@@ -153,8 +146,6 @@ If you want to compile the haXe code to a SWF (for Flash Socket support on the c
 
 	**TODO**: describe how to use the Minerva haXe code combined with your own haXe code
 	(so that you have just one .swf file for your application)
-	 
-	**TODO**: describe patched version of haXe that compiles without debugging symbols.
 
 If you want to run the client-side test suite (``twistd`` plugin ``minervarun``), you will need:
 
@@ -246,168 +237,43 @@ You can learn a lot about web browsers by reading `Google's browsersec`_,
 and by reading the source code of `Closure Library`_. browsersec has many
 errors and generalizations, but most of it is correct and very interesting.
 
-
 ..	_`Google's browsersec`: http://code.google.com/p/browsersec/wiki/Main
 ..	_`Closure Library`: http://code.google.com/p/closure-library/
 
 
-Why is Minerva frame-based?
-=====================
 
-Above, we said that Minerva is a "framed and extra-reliable TCP".
-By framed, we mean that applications send and receive frames, not octets.
-Why force applications to work with frames instead of octets? One might
-object and say that applications need direct access to octets, but consider these points:
+Why does Minerva deliver framed codepoint-restricted strings?
+============================================
 
-*	Minerva's frame overhead is minimal: just 4 extra bytes for the smallest frames.
-	This overhead is dwarfed by the per-packet TCP/IP overhead of ~52 bytes.
-	There is even more overhead when HTTP chunk lengths or TLS are involved.
+Codepoint-restricted strings are a flexible payload for further abstraction.
+You can implement many things on top of it:
 
-*	If it worked with octets, Minerva would need to encode and decode these octets
-	using base64 or similar, because:
+1.	JSON encoded as ASCII-only. On the server, use simplejson with
+	``ensure_ascii``. On the client, use ``goog.json``.
 
-	*	Over HTTP transports, ``NULL`` cannot be sent to IE or Opera.
+2.	Segments of TCP bytes encoded as base64. This is useful for `Orbited`_-style
+	proxying to backend TCP servers.
 
-	*	Minerva sometimes needs to send metadata over the transports that applications are using,
-		to determine if a transport is stalled or being buffered by proxies.
+3.	Your own custom serialization scheme, hopefully better than JSON.
 
-*	WebSocket uses frames natively, and they are mapped 1:1 to Minerva frames.
-	Also, ``0xFF`` cannot be sent over WebSocket (as of 2009-11).
+See `String restrictions`_ for reasons why only some codepoints are allowed.
 
-*	Most applications want Unicode, especially since browsers don't have
-	a native ``bytes`` type anyway. The application doesn't have to assemble the octets and convert them to Unicode,
-	since this already happened when the frame was parsed.
-
-
-
-Why are boxes JSON-based?
-=====================
-
-Boxes are semi-structured data (JSON). JSON is used as the building block
-for boxes instead of just "unicode strings" because:
-
-*	JSON suits the majority of applications, and it may be convenient for
-	developers to not have to worry about most encoding/decoding.
-
-*	We can't send ``U+0000``, ``U+FFFF``, and many other codepoints over
-	all transports. Some browser objects like XDomainRequest block a large
-	set of codepoints. Some environments like (Firefox 2 + streaming XHR) support
-	only ASCII. We need to support JSON-style encoding/decoding anyway.
-	We use this "opportunity" to support the full gamut of JSON objects,
-	not just strings.
-
-*	IE8, Chrome, Firefox, Safari, and Opera have native JSON encoders and decoders.
-	Using JSON at the Minerva level helps us work around bugs in native ``JSON``
-	objects. Note: at the present time, we don't use native JSON.
-
-This design decision was made when we thought there more advantages, but
-they were proven to be incorrect:
-
-* 	We thought that we could avoid ``eval()`` ing strings when the IE htmlfile transport
-	was in use, by dumping the JSON data straight into the ``<script>`` tags written
-	out in the transport. But this
-	creates problems with array prototypes in IE [#]_ and probably leaves iframe windows
-	uncollectable in other browsers.
-
-*	We thought that decoding JSON in Flash might be faster than ``eval()`` in IE,
-	but this is very untrue.
-
-..	[#] see comments in ``goog.typeOf`` function in Closure Library: 
-	http://code.google.com/p/closure-library/source/browse/trunk/closure/goog/base.js?r=2#525
-
-Using JSON does add some complexity. The Minerva server has to block
-ACA attacks, stack exhaustion attacks, and determine how much memory
-the structured objects use.
-
-Problems with JSON
--------------------------
-*	No support for dates, or sets, or self-references.
-
-*	Allows unlimited nesting, so you must worry about stack exhaustion. Minerva requires a
-	patched simplejson that limits nesting to 32 levels.
-
-*	Because JSON allows as many keys as you want, servers have to deal with possible
-	CPU-resource DoS caused by clients exploiting predictable hashing algorithms.
-
-*	The overhead of quoting every key in {"key": value} even when key is not a
-	reserved word in JavaScript is wasteful.
-
-*	Python dictionaries lose the order of keys in objects after decoding JSON, unless
-	application tells Minerva to tell simplejson to put things in ``OrderedDict``, which is
-	slower.
+..	_`Orbited`: http://orbited.org/
 
 
 
 Designing your application protocol
 =========================
-**TODO**: Write about the standard AMP-style request/response mechanism (after it exists).
-
 Design your protocol the way you would design any other frame-based protocol,
 but with these things in mind:
 
-1.	Boxes are semi-structured (serialized and deserialized with JSON). Exploit the structure
-	of arrays and objects when possible.
+1.	Observe all of the `String restrictions`_; otherwise, your streams may hang, reset,
+	or become corrupted with faked strings.
 
-2.	Observe all of the `Box limitations`_; otherwise, your streams may reset.
-
-3.	Make your boxes small. Minerva usually doesn't send more than one box at a time
-	(there is no interleaving). A big box might hold up other queued boxes.
+2.	Make your strings small. Minerva usually doesn't send more than one string at a time
+	(there is no interleaving). A big string might hold up other queued strings.
 	If you need to send a lot of data, try to find a reasonable way to split and reassemble it,
 	it in the spirit of `amphacks/mediumbox.py`_.
-
-4.	Avoid sending ``Object`` s over the wire; send ``Array`` s instead, for these reasons:
-
-	1.	In IE6-IE8, iterating over an ``Object`` 's keys correctly with just ``for(var k in object)``
-		is impossible, because of incorrect ``[[DontEnum]]`` shadowing. Properties like
-		``toString`` won't be included in the iteration simply because they exist on
-		``Object.prototype``. This is a general IE problem and not specific to Minerva.
-		To avoid problems, either:
-
-		-	(The preferred option) If you use objects, don't let human behavior influence the
-			property names of the object. Essentially just use a fixed set of property names.
-
-		-	If you let human behavior influence the property names of an object:
-
-			-	Use Closure Library's ``goog.structs.Map`` as much as you can. It
-				preserves and iterates over properties like ``toString``.
-
-			-	When iterating over objects, always iterate over everything, or
-				always skip over any properties that any version of IE might skip.
-				(Use the ``TODO XXX`` helper to do this.)
-
-			-	When creating ``Object`` s for iteration by third-party code, prefix
-				all key names with the same character (example: underscore ``_``).
-
-		3.	Use our patched Closure Library 
-
-	2.	IE allocates a lot of objects when you iterate over an ``Object`` with ``for(k in obj)``,
-		and its garbage collector will slow down your page (especially before XP SP3/JScript 5.7) [#]_ [#]_.
-
-	3.	You avoid the extremely rare possibility of an accidental algorithmic complexity
-		"attack" on the server, because it does not create a hashmap in memory for
-		Python lists.
-
-	Keep in mind that the Minerva JavaScript by default serializes objects including
-	the ``[[DontEnum]]``properties like ``toString`` (if they're not equal to
-	``Object.prototype.toString``, and so on.). It also knows how to serialize
-	``goog.struct.Map`` s.
-
-5.	Don't rely on the length of unicode strings to be the same in both server and browser
-	environments. `Notes on Python UCS-2/UCS-4 builds, and unicode length`_ explains.
-
-6.	Keep in mind that some unicode codepoints may take more bytes to transmit
-	than others. You may send non-character codepoints like ``U+FDD0`` - ``U+FDEF``,
-	``U+FFF0`` - ``U+FFF8``, ``U+FFFE``, ``U+FFFF``, or other `Noncharacters`_,
-	but Minerva has to escape them to ASCII ``\uXXXX`` escapes. This uses 6 bytes
-	instead of the typical 3 UTF-8 bytes.
-
-	Note: this is not important right now, because Minerva always uses the ``\uXXXX``
-	escape for non-ASCII codepoints.
-
-..	[#] http://ajaxian.com/archives/garbage-collection-in-ie6
-..	[#] http://pupius.co.uk/blog/2007/03/garbage-collection-in-ie6/
-
-..	_`Noncharacters`: http://www.unicode.org/versions/Unicode5.2.0/
 
 ..	_`amphacks/mediumbox.py`: http://bazaar.launchpad.net/~glyph/%2Bjunk/amphacks/annotate/head%3A/python/amphacks/mediumbox.py
 
@@ -430,7 +296,7 @@ Uncommon features in Minerva
 Minerva does a lot of neat stuff you won't find in other Comet servers.
 
 *	Minerva can respond to TCP pressure using Twisted's producer/consumer system.
-	Applications can stream megabytes of frames to the peer while using little memory.
+	Applications can stream megabytes of strings to the peer while using little memory.
 	Responding to TCP pressure is useful, because it often absolves the client
 	from having to send application-level "back off" and "ok, resume" messages.
 	See section `Producers/consumers`_.
@@ -470,17 +336,18 @@ The cheap wildcart certs (~$150) cover only \*.domain.tld. If you want to cover
 	*	Flash Socket with wildcard allow
 	*	Google Closure's VBScript-based transport for IE: ``goog/net/xpc/nixtransport.js``
 
-Minerva server ignores the selectively-acknowledged boxes in the SACK frame
+Minerva server ignores the selectively-acknowledged strings in the SACK frame
 (only the primary ACK number is used).
 
 Minerva server does not use gzip or any other compression to compress the boxes.
 If you want the client to receive compressed data, write client-side application code to make
-HTTP requests when necessary. These HTTP requests will hopefully be gzip-compressed.
+HTTP requests when necessary. Assuming proper server configuration, these
+HTTP requests will be gzip-compressed for most clients.
 
 In the future, we could support "temporary compression" when there is a large amount
 of data to send S2C. It would work like this:
 
-1.	Server-side application queues big boxes, or many boxes
+1.	Server-side application queues big strings, or many strings.
 2.	Minerva decides it would be faster to send these over a gzipped transport, even with
 	the client forced to take a round-trip hit.
 3.	Minerva server convinces the client to open an HTTP S2C transport
@@ -504,42 +371,90 @@ could be done inside a Web Worker.
 
 
 
-Box limitations
-===========
+Advice on using JSON in your Minerva strings
+================================
+1.	Avoid sending ``Object`` s over the wire; send ``Array`` s instead, for these reasons:
 
-Array size limit
-------------------
+	1.	In IE6-IE8, iterating over an ``Object`` 's keys correctly with just ``for(var k in object)``
+		is impossible, because of incorrect ``[[DontEnum]]`` shadowing. Properties like
+		``toString`` won't be included in the iteration simply because they exist on
+		``Object.prototype``. To avoid problems, either:
 
-The size of arrays is informally limited to 65535 (2^16 - 1). This is only because IE6/IE7
-cannot ``eval`` a stringed-array with 2^16 or more items. A `GWT bug report`_ describes the issue.
-Coreweb's ``cw.Test.TestAssumptions`` confirms this limitation precisely, and confirms
-that it applies only to IE6/IE7. This limitation applies to all arrays in the box, including the
-outer container. If a server application violates this limit with an IE6/IE7 client, the
-stream will reset.
+		-	(The preferred option) If you use objects, don't let human behavior influence the
+			property names of the object. Essentially just use a fixed set of property names.
 
-**Future**: Automatically serve "fixed" boxes to IE6/IE7 clients, as GWT's RPC does.
+		-	If you let human behavior influence the property names of an object:
 
+			-	Use Closure Library's ``goog.structs.Map`` as much as you can. It
+				preserves and iterates over properties like ``toString``.
+
+			-	When iterating over objects, always iterate over everything, or
+				always skip over any properties that any version of IE might skip.
+				(Use the ``TODO XXX`` helper to do this.)
+
+			-	When creating ``Object`` s for iteration by third-party code, prefix
+				all key names with the same character (example: underscore ``_``).
+
+	2.	IE allocates a lot of objects when you iterate over an ``Object`` with ``for(k in obj)``,
+		and its garbage collector will slow down your page (especially
+		before XP SP3/JScript 5.7) [#]_ [#]_.
+
+	3.	You avoid the extremely rare possibility of an accidental algorithmic complexity
+		"attack" on the server, because it does not create a hashmap in memory.
+
+2.	Keep in mind that IE has problems ``eval`` ing Arrays:
+	Arrays with more than 65535 (2^16 - 1) elements cannot be ``eval`` ed in IE6 and IE7.
+	A `GWT bug report`_ describes the issue. Coreweb's ``cw.Test.TestAssumptions``
+	confirms this limitation precisely, and confirms that it applies only to IE6/IE7.
+
+	**Future**: Add a helper to break apart long arrays into many shorter arrays for.
+	GWT's RPC does this transparently.
+
+3.	Keep in mind various JSON-related problems:
+
+	*	JSON has no support for dates, or sets, or self-references.
+
+	*	JSON allows unlimited nesting, so you must pick an arbitrary limit and
+		check that your JSON decoder in your application is not vulnerable to
+		stack overflow. Minerva itself uses a patched simplejson that limits
+		nesting to 32 levels.
+
+	*	Because JSON ``Object`` s allow as many keys as you want, applications
+		must deal with the rare but possible `algorithmic complexity attack`_ from
+		a client. Make sure your application is not vulnerable, or use a subset
+		of JSON (disallow the decoding of ``Object`` s on the server).
+
+		Minerva itself uses a patched CPython that limits how much iteration
+		is performed when inserting or looking up keys in a ``dict`` or ``set``.
+
+	*	A JavaScript ``Object`` is not ordered. A Python ``dict`` is not ordered.
+		Don't assume object properties/keys stay in order.
+
+4.	Don't rely on the length of unicode strings to be the same in both server and browser
+	environments. `Notes on Python UCS-2/UCS-4 builds, and unicode length`_ explains.
+
+..	[#] http://ajaxian.com/archives/garbage-collection-in-ie6
+..	[#] http://pupius.co.uk/blog/2007/03/garbage-collection-in-ie6/
 ..	_`GWT bug report`: http://code.google.com/p/google-web-toolkit/issues/detail?id=1336
+..	_`algorithmic complexity attack`: http://www.cs.rice.edu/~scrosby/hash/
 
 
-Maximum nesting limit
-----------------------------
-Containers (arrays/objects) in the box can be nested to a maximum of 26 levels.
-The limit at the JSON decoder level is 32 (note that this includes the very outer level).
-The limit at the protocol level is 6 levels lower because boxes may be sent in frames
-that add additional levels of nesting, like this:
+String restrictions
+=============
+On the server, you may send only Python ``str`` objects with bytes in the
+inclusive range:
 
-*	``[1, box]``    (1 additional level)
-*	``[0, {"30": box30, "31": box31}]``    (2 additional levels)
-*	``[reservedMegaFrameType, {"helloData": ...}, {"boxes": {"32": box32}}]``     (3 additional levels)
+	``0x20`` (``SPACE``) to ``0x7E`` (``~``).
 
-We reserve another three levels, leading to a maximum allowed container nesting of
-32 - (3 + 3) = 26. Note that Minerva server will not always reject frames that slightly
-exceed this nesting limit, so applications are responsible for keeping track of nesting.
+On the client, you may send only JavaScript primitive ``string`` s with codepoints
+in the inclusive range:
 
-**Future**: Make the server very strict about the nesting limit of 26, by passing
-a nesting limit for every ``simplejson.loads``.
+	``U+0020`` (``SPACE``) to  ``U+007E`` (``~``).
 
+These restrictions exist because we use the lowest common denominator of
+supported codepoints to maximize support for various Minerva transports
+and broken proxies. **Future**: We plan to implement automatic per-Stream
+negotation to reduce the byte/codepoint restrictions.
 
 
 Real-world deployment strategy that supports HTTP, Flash Socket, WebSocket
