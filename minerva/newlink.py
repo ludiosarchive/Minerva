@@ -18,6 +18,7 @@ from twisted.web.server import NOT_DONE_YET
 
 from mypy.randgen import secureRandom
 from mypy.objops import ensureNonNegIntLimit, ensureBool
+from mypy.strops import StringFragment
 from mypy.mailbox import Mailbox, mailboxify
 
 from minerva import decoders
@@ -1249,24 +1250,23 @@ class SocketTransport(object):
 		return self._encodeFrame(sackFrame)
 
 
-	def _framesReceived(self, frames, alreadyDecoded):
-		for frameString in frames: # possibly not a string if alreadyDecoded
+	def _framesReceived(self, frames):
+		for frameString in frames:
 			if self._terminating:
 				break
 
 			self.receivedCounter += 1
 
-			if alreadyDecoded:
-				frameObj = frameString
-			else:
-				assert isinstance(frameString, str), type(frameString)
+			if isinstance(frameString, StringFragment):
+				frameString = frameString.toString()
+				# TODO: be more efficient; pass an idx= to simplejson instead
 
-				try:
-					frameObj, position = decoders.strictDecoder.raw_decode(frameString)
-					if position != len(frameString):
-						return self._closeWith(Fn_tk_intraframe_corruption)
-				except (simplejson.decoder.JSONDecodeError, decoders.ParseError):
+			try:
+				frameObj, position = decoders.strictDecoder.raw_decode(frameString)
+				if position != len(frameString):
 					return self._closeWith(Fn_tk_intraframe_corruption)
+			except (simplejson.decoder.JSONDecodeError, decoders.ParseError):
+				return self._closeWith(Fn_tk_intraframe_corruption)
 
 			try:
 				frame = Frame(frameObj)
@@ -1418,7 +1418,7 @@ class SocketTransport(object):
 			out, code = self._parser.getNewFrames(frameData)
 			if code == decoders.OK:
 				##print out
-				self._framesReceived(out, alreadyDecoded=self._parser.decodesJson)
+				self._framesReceived(out)
 			elif code in (decoders.TOO_LONG, decoders.FRAME_CORRUPTION):
 				self._closeWith(Fn_tk_frame_corruption)
 			elif code == decoders.INTRAFRAME_CORRUPTION:
@@ -1504,6 +1504,7 @@ class SocketTransport(object):
 			body += '\n'
 
 		if '\r\n' in body:
+			body = body.replace('\r\n', '\n')
 			log.msg("Unusual: found a CRLF in POST body for "
 				"%r from %r" % (request, request.client))
 
@@ -1538,7 +1539,7 @@ class SocketTransport(object):
 	def requestStarted(self, request):
 		assert self._mode == UNKNOWN, self._mode
 		self._mode = HTTP
-		self._parser = decoders.DelimitedJSONDecoder(maxLength=self.maxLength)
+		self._parser = decoders.DelimitedStringDecoder(maxLength=self.maxLength)
 		self.writable = request
 		self._handleRequestBody()
 

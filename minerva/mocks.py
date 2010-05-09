@@ -7,6 +7,7 @@ from twisted.web.test.test_web import DummyRequest as _TwistedDummyRequest
 from twisted.test.proto_helpers import StringTransport
 #from twisted.internet.test.test_base import FakeReactor as _TwistedFakeReactor
 
+from mypy.strops import StringFragment
 from minerva.window import Queue, Incoming
 from minerva.newlink import (
 	NoSuchStream, IMinervaProtocol, IMinervaFactory, StreamAlreadyExists)
@@ -100,7 +101,8 @@ class JSONDecodingTcpTransport(DummyTCPTransport, _MockMixin):
 
 	def write(self, data):
 		frames, code = strictGetNewFrames(self.parser, data)
-		self.log.extend(simplejson.loads(f) for f in frames)
+		self.log.extend(simplejson.loads(
+			f.toString() if isinstance(f, StringFragment) else f) for f in frames)
 
 
 
