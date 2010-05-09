@@ -11,6 +11,7 @@ code will be parsing the streams.
 import struct
 import simplejson
 from mypy.objops import strToNonNeg
+from mypy.strops import StringFragment
 
 _postImportVars = vars().keys()
 
@@ -207,6 +208,63 @@ def strictDecodeOne(s):
 
 
 
+class DelimitedStringDecoder(object):
+	r"""
+	Decodes a stream of (1-byte-delimiter)-terminated bytestrings.
+
+	Returns L{mypy.strops.StringFragment} objects instead of C{str}
+	objects to avoid some copying.
+	"""
+	delimiter = '\n' # MUST be 1 byte. Do not change this after any data has been received.
+
+	__slots__ = ('maxLength', '_buffer')
+	decodesJson = True
+
+	def __init__(self, maxLength):
+		self.maxLength = maxLength
+		self._buffer = ''
+
+
+	@classmethod
+	def encode(cls, s):
+		s += cls.delimiter
+		return s
+
+
+	def getNewFrames(self, data):
+		# This should re-return the correct error code when more data is fed into it, even after
+		# the error code was already returned.
+		de = self.delimiter
+		m = self.maxLength
+
+		self._buffer += data
+		completeStrings = []
+		# Stop the "dribble in bytes slowly" attack (where entire buffer is repeatedly scanned for \n)
+		# This trick works here because our delimiter is 1 byte.
+		if de not in data:
+			if len(self._buffer) > m:
+				return completeStrings, TOO_LONG
+			return completeStrings, OK
+		at = 0
+		while True:
+			# Find the delimiter that ends the string were about to extract
+			endsAt = self._buffer.find(de, at)
+			if endsAt - at > m:
+				return completeStrings, TOO_LONG
+			# Note that if the user keeps the StringFragment around, the next
+			# `self._buffer += data` will not be optimized (in CPython).
+			completeStrings.append(StringFragment(self._buffer, at, endsAt - at))
+			at = endsAt + 1
+			# If there's no delimiter after that delimiter, break.
+			if self._buffer.find(de, at) == -1:
+				break
+		self._buffer = self._buffer[at:]
+		if len(self._buffer) > m:
+			return completeStrings, TOO_LONG
+		return completeStrings, OK
+
+
+
 class DelimitedJSONDecoder(object):
 	r"""
 	Decodes a stream of (1-byte-delimiter)-terminated JSON documents into Python objects.
@@ -224,6 +282,10 @@ class DelimitedJSONDecoder(object):
 	Implementation note:
 		String append is fast enough in CPython 2.5+. On Windows CPython,
 		it can still be ~5x slower than list-based buffers.
+
+	Think hard before using this. Make sure your Python is patched to stop
+	algorithmic complexity attacks, and make sure your simplejson is patched
+	to limit the allowed depth (otherwise, you may segfault from stack overflow).
 	"""
 	delimiter = '\n' # MUST be 1 byte. Do not change this after any data has been received.
 

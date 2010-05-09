@@ -3,6 +3,7 @@ import simplejson
 
 from twisted.trial import unittest
 
+from mypy.strops import StringFragment
 from minerva import decoders
 from minerva.helpers import todo
 
@@ -43,6 +44,20 @@ class RecordingScriptDecoder(_BaseRecording, decoders.ScriptDecoder):
 
 
 
+def convertAllToStr(various):
+	"""
+	Convert all StringFragment to str if necessary.
+	"""
+	newList = []
+	for s in various:
+		if isinstance(s, StringFragment):
+			newList.append(s.toString())
+		else:
+			newList.append(s)
+	return newList
+
+
+
 class CommonTests(object):
 
 	def test_buffer(self):
@@ -65,6 +80,7 @@ class CommonTests(object):
 				self.aE(decoders.OK, code)
 				got.extend(out)
 
+			got = convertAllToStr(got)
 			self.aE(self.strings, got)
 
 
@@ -194,6 +210,64 @@ class BencodeStringDecoderTests(NetStringDecoderTests):
 	receiver = decoders.BencodeStringDecoder
 
 	trailingComma = ''
+
+
+
+class DelimitedStringDecoderTests(CommonTests, unittest.TestCase):
+	receiver = decoders.DelimitedStringDecoder
+
+	corruptedSequences = [] # No such thing for this decoder
+
+	jsonCorruptedSequences = []
+
+	# For maxLength == 50
+	tooLongSequences = [
+		'%s\n' % ("x" * 51),
+	]
+
+	strings = ['', 'hello', 'world', 'how', 'are', 'you123']
+
+
+	def test_encode(self):
+		self.aE('\n', self.receiver.encode(""))
+		self.aE('h\n', self.receiver.encode("h"))
+		self.aE('a longer string\n', self.receiver.encode("a longer string"))
+		# It does not check if string-to-send contains the delimiter;
+		# it assumes it is safe.
+		self.aE('\n\n', self.receiver.encode("\n"))
+
+
+	def test_bufferSizeLimit(self):
+		"""
+		If 200 bytes of data are delivered, and maxLength is 9, and data
+		has delimiter at every 10th byte, the strings are extracted without
+		a TOO_LONG error code.
+		"""
+		strings = []
+		for i in xrange(20):
+			strings.append(chr(65+i) * 7)
+
+		toSend = ''
+		for s in strings:
+			toSend += '%s\n' % s
+
+		a = self.receiver(maxLength=10)
+		got, code = a.getNewFrames(toSend)
+		got = convertAllToStr(got)
+		self.aE((strings, decoders.OK), (got, code))
+
+
+	def test_someDocumentsParsedButRemainingBufferTooLong(self):
+		"""
+		If some lines can be extracted but the remaining buffer is too long,
+		the parser returns those lines and returns TOO_LONG.
+		"""
+		toSend = 'hello\nthere\n8chars'
+		a = self.receiver(maxLength=5)
+		strings = ['hello', 'there']
+		got, code = a.getNewFrames(toSend)
+		got = convertAllToStr(got)
+		self.aE((strings, decoders.TOO_LONG), (got, code))
 
 
 
