@@ -267,8 +267,9 @@ Designing your application protocol
 Design your protocol the way you would design any other frame-based protocol,
 but with these things in mind:
 
-1.	Observe all of the `String restrictions`_; otherwise, your streams may hang, reset,
-	or become corrupted with faked strings.
+1.	Observe all of the `String restrictions`_; If you do not, the transport may
+	hang or disconnect repeatedly. The stream may reset. You might even send
+	an "injected" string you did not mean to send.
 
 2.	Make your strings small. Minerva usually doesn't send more than one string at a time
 	(there is no interleaving). A big string might hold up other queued strings.
