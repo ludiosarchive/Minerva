@@ -468,6 +468,7 @@ class Stream(object):
 		"""
 		if self.disconnected:
 			return
+
 		self._incoming.give(boxes)
 		items = self._incoming.getDeliverableItems()
 		if items:

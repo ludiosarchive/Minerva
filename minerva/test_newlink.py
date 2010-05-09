@@ -125,7 +125,7 @@ class FrameTests(unittest.TestCase):
 	"""
 	def test_ok(self):
 		# No exception raised
-		f = Frame([Fn.box, ["box_payload"]])
+		f = Frame([Fn.box, "box_payload"])
 		self.aE('box', f.getType())
 
 
@@ -235,12 +235,12 @@ class StreamTests(unittest.TestCase):
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 
-		s.boxesReceived(t, [(1, ['box1'])])
+		s.boxesReceived(t, [(1, 'box1')])
 		i = list(factory.instances)[0]
 		self.aE([['streamStarted', s]], i.getNew())
 
-		s.boxesReceived(t, [(0, ['box0'])])
-		self.aE([['boxesReceived', [['box0'], ['box1']]]], i.getNew())
+		s.boxesReceived(t, [(0, 'box0')])
+		self.aE([['boxesReceived', ['box0', 'box1']]], i.getNew())
 
 
 	def test_exhaustedIncomingResetsBecauseTooManyBoxes(self):
@@ -325,7 +325,7 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t, False, None)
 
 		# we don't actually need to make box #2 big; we can lie to the Stream about how big it is
-		notManyBoxes = [(0, ['box0']), (2, FakeBigString(str(4*1024*1024 + 1)))]
+		notManyBoxes = [(0, 'box0'), (2, FakeBigString(str(4*1024*1024 + 1)))]
 
 		s.boxesReceived(t, notManyBoxes)
 		self.aE([['writeReset', u'reset forced by mock protocol\u2603', True]], t.getNew())
@@ -346,14 +346,14 @@ class StreamTests(unittest.TestCase):
 			s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
 			t1 = DummySocketLikeTransport()
 			t1.transportNumber = 30
-			s.sendBoxes([['box0'], ['box1']])
+			s.sendBoxes(['box0', 'box1'])
 			s.transportOnline(t1, True, None)
 
 			self.aE([['writeBoxes', s.queue, None]], t1.getNew())
 
 			# Now connect a new transport
 			t2 = DummySocketLikeTransport()
-			s.sendBoxes([['box2'], ['box3']])
+			s.sendBoxes(['box2', 'box3'])
 			s.transportOnline(t2, True, succeedsTransportArgFor2ndTransport)
 
 			# box2 and box3 also went to t1 because t2 wasn't yet connected/primary
@@ -385,7 +385,7 @@ class StreamTests(unittest.TestCase):
 		s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
 		t1 = DummySocketLikeTransport()
 		t1.transportNumber = 30
-		s.sendBoxes([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
+		s.sendBoxes(['box0', 'box1', 'box2', 'box3', 'box4'])
 		s.transportOnline(t1, True, None)
 
 		self.aE([['writeBoxes', s.queue, None]], t1.getNew())
@@ -399,7 +399,7 @@ class StreamTests(unittest.TestCase):
 		# Because there are no new boxes yet, writeBoxes should not be called yet
 		self.aE([], t2.getNew())
 
-		s.sendBoxes([['box5'], ['box6']])
+		s.sendBoxes(['box5', 'box6'])
 
 		self.aE([['writeBoxes', s.queue, 5]], t2.getNew())
 
@@ -432,7 +432,7 @@ class StreamTests(unittest.TestCase):
 				s.transportOnline(tIrrelevant, False, None)
 
 			t1 = DummySocketLikeTransport()
-			s.sendBoxes([['box0'], ['box1']])
+			s.sendBoxes(['box0', 'box1'])
 			s.transportOnline(t1, True, 9999)
 
 			self.aE([['writeBoxes', s.queue, None]], t1.getNew())
@@ -445,11 +445,11 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t, False, None)
 		
 		self.aE((-1, []), s.getSACK())
-		s.boxesReceived(t, [(0, ['box'])])
+		s.boxesReceived(t, [(0, 'box')])
 		self.aE((0, []), s.getSACK())
-		s.boxesReceived(t, [(4, ['box'])])
+		s.boxesReceived(t, [(4, 'box')])
 		self.aE((0, [4]), s.getSACK())
-		s.boxesReceived(t, [(5, ['box'])])
+		s.boxesReceived(t, [(5, 'box')])
 		self.aE((0, [4, 5]), s.getSACK())
 
 
@@ -576,15 +576,15 @@ class StreamTests(unittest.TestCase):
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
 		s.reset(u'reason')
-		self.aR(RuntimeError, lambda: s.sendBoxes([["somebox"]]))
-		self.aR(RuntimeError, lambda: s.sendBoxes([["somebox"]]))
+		self.aR(RuntimeError, lambda: s.sendBoxes(["somebox"]))
+		self.aR(RuntimeError, lambda: s.sendBoxes(["somebox"]))
 
 		# original reset caused by a transport
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
 		s.resetFromClient(u'reason', True)
-		self.aR(RuntimeError, lambda: s.sendBoxes([["somebox"]]))
-		self.aR(RuntimeError, lambda: s.sendBoxes([["somebox"]]))
+		self.aR(RuntimeError, lambda: s.sendBoxes(["somebox"]))
+		self.aR(RuntimeError, lambda: s.sendBoxes(["somebox"]))
 
 
 	def test_ignoreCallToSendBoxesZeroBoxes(self):
@@ -595,7 +595,7 @@ class StreamTests(unittest.TestCase):
 		# original reset caused by "application code"
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1, True, None)
-		s.sendBoxes([['box0']])
+		s.sendBoxes(['box0'])
 		self.aE([['writeBoxes', s.queue, None]], t1.getNew())
 		s.sendBoxes([])
 		self.aE([], t1.getNew())
@@ -1388,12 +1388,12 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		q = Queue()
-		q.extend([['box0'], ['box1']])
+		q.extend(['box0', 'box1'])
 		transport.writeBoxes(q, start=None)
 		self.aE([
 			[Fn.seqnum, 0],
-			[Fn.box, ['box0']],
-			[Fn.box, ['box1']],
+			[Fn.box, 'box0'],
+			[Fn.box, 'box1'],
 		], transport.getNew())
 
 
@@ -1406,12 +1406,12 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport.sendFrames([frame0])
 		q = Queue()
-		q.extend([['box0'], ['box1'], ['box2']])
+		q.extend(['box0', 'box1', 'box2'])
 		transport.writeBoxes(q, start=1)
 		self.aE([
 			[Fn.seqnum, 1],
-			[Fn.box, ['box1']],
-			[Fn.box, ['box2']],
+			[Fn.box, 'box1'],
+			[Fn.box, 'box2'],
 		], transport.getNew())
 
 
@@ -1449,14 +1449,14 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		q = Queue()
-		q.extend([['box0'], ['box1']])
+		q.extend(['box0', 'box1'])
 		transport.writeBoxes(q, start=None)
 		transport.writeBoxes(q, start=None)
-		self.aE([[Fn.seqnum, 0], [Fn.box, ['box0']], [Fn.box, ['box1']]], transport.getNew())
+		self.aE([[Fn.seqnum, 0], [Fn.box, 'box0'], [Fn.box, 'box1']], transport.getNew())
 
-		q.extend([['box2']])
+		q.extend(['box2'])
 		transport.writeBoxes(q, start=None)
-		self.aE([[Fn.box, ['box2']]], transport.getNew())
+		self.aE([[Fn.box, 'box2']], transport.getNew())
 
 
 	def test_writeBoxesConnectionInterleavingSupport(self):
@@ -1472,7 +1472,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		q = Queue()
-		q.extend([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
+		q.extend(['box0', 'box1', 'box2', 'box3', 'box4'])
 
 		transport.writeBoxes(q, start=3)
 		transport.writeBoxes(q, start=3) # doing it again is pretty much a no-op
@@ -1480,14 +1480,14 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport.writeBoxes(q, start=None) # doing it again is pretty much a no-op
 		self.aE([
 			[Fn.seqnum, 3],
-			[Fn.box, ['box3']],
-			[Fn.box, ['box4']],
+			[Fn.box, 'box3'],
+			[Fn.box, 'box4'],
 			[Fn.seqnum, 0],
-			[Fn.box, ['box0']],
-			[Fn.box, ['box1']],
-			[Fn.box, ['box2']],
-			[Fn.box, ['box3']],
-			[Fn.box, ['box4']],
+			[Fn.box, 'box0'],
+			[Fn.box, 'box1'],
+			[Fn.box, 'box2'],
+			[Fn.box, 'box3'],
+			[Fn.box, 'box4'],
 		], transport.getNew())
 
 
@@ -1500,7 +1500,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		q = Queue()
-		q.extend([['box0'], ['box1'], ['box2'], ['box3'], ['box4']])
+		q.extend(['box0', 'box1', 'box2', 'box3', 'box4'])
 
 		transport.writeBoxes(q, start=3)
 		transport.writeBoxes(q, start=3) # doing it again is pretty much a no-op
@@ -1508,13 +1508,13 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport.writeBoxes(q, start=1) # doing it again is pretty much a no-op
 		self.aE([
 			[Fn.seqnum, 3],
-			[Fn.box, ['box3']],
-			[Fn.box, ['box4']],
+			[Fn.box, 'box3'],
+			[Fn.box, 'box4'],
 			[Fn.seqnum, 1],
-			[Fn.box, ['box1']],
-			[Fn.box, ['box2']],
-			[Fn.box, ['box3']],
-			[Fn.box, ['box4']],
+			[Fn.box, 'box1'],
+			[Fn.box, 'box2'],
+			[Fn.box, 'box3'],
+			[Fn.box, 'box4'],
 		], transport.getNew())
 
 
@@ -1596,7 +1596,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		transport = self._makeTransport()
 		# a completely valid frame
-		transport.sendFrames([[Fn.boxes, [[0, ["box0"]]]]])
+		transport.sendFrames([[Fn.boxes, [[0, "box0"]]]])
 		self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
 
 
@@ -2012,18 +2012,18 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		], stream.getNew())
 		self.aE([], transport.getNew())
 
-		transport.sendFrames([[Fn.boxes, [[0, ["box0"]]]]])
+		transport.sendFrames([[Fn.boxes, [[0, "box0"]]]])
 
 		self.aE([
-			['boxesReceived', transport, [[0, ["box0"]]]],
+			['boxesReceived', transport, [[0, "box0"]]],
 			['getSACK']
 		], stream.getNew())
 		self.aE([[Fn.sack, 0, []]], transport.getNew())
 
-		transport.sendFrames([[Fn.boxes, [[2, ["box2"]]]]])
+		transport.sendFrames([[Fn.boxes, [[2, "box2"]]]])
 
 		self.aE([
-			['boxesReceived', transport, [[2, ["box2"]]]],
+			['boxesReceived', transport, [[2, "box2"]]],
 			['getSACK']
 		], stream.getNew())
 		self.aE([[Fn.sack, 0, [2]]], transport.getNew())
@@ -2076,7 +2076,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			except NoSuchStream:
 				self.fail("No stream created?")
 
-			transport.sendFrames([[Fn.boxes, [[invalidSeqNum, ["box0"]]]]])
+			transport.sendFrames([[Fn.boxes, [[invalidSeqNum, "box0"]]]])
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
 
 			self._resetStreamTracker()
@@ -2087,7 +2087,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
-		stream.queue.append(["box0"])
+		stream.queue.append("box0")
 
 		transport.sendFrames([[Fn.sack, 0, []]])
 		self.aE([], transport.getNew())
@@ -2106,7 +2106,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
-		stream.queue.extend([["box0"], ["box1"], ["box2"]])
+		stream.queue.extend(["box0", "box1", "box2"])
 
 		transport.sendFrames([[Fn.sack, 0, [2]]])
 		self.aE([], transport.getNew())
@@ -2122,7 +2122,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
-		stream.queue.append(["box0"])
+		stream.queue.append("box0")
 
 		transport.sendFrames([[Fn.sack, 1, []]])
 		self.aE([[Fn.tk_acked_unsent_boxes], [Fn.you_close_it]], transport.getNew())
@@ -2142,7 +2142,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
 			stream = self.streamTracker.getStream('x'*26)
-			stream.queue.extend([["box0"], ["box1"], ["box2"]])
+			stream.queue.extend(["box0", "box1", "box2"])
 
 			transport.sendFrames([[Fn.sack, num, []]])
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
@@ -2168,7 +2168,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
 			stream = self.streamTracker.getStream('x'*26)
-			stream.queue.extend([["box0"], ["box1"], ["box2"]])
+			stream.queue.extend(["box0", "box1", "box2"])
 
 			transport.sendFrames([[Fn.sack, 0, badObj]])
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
@@ -2195,7 +2195,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
 			stream = self.streamTracker.getStream('x'*26)
-			stream.queue.extend([["box0"], ["box1"], ["box2"]])
+			stream.queue.extend(["box0", "box1", "box2"])
 
 			transport.sendFrames([[Fn.sack, 0, [1, badNum]]]) # the 1 is valid number, badNum is not
 			self.aE([[Fn.tk_invalid_frame_type_or_arguments], [Fn.you_close_it]], transport.getNew())
@@ -2529,26 +2529,26 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		# Send two boxes; make sure we got SACK; make sure the protocol
 		# gots box0
 
-		transport0.sendFrames([[Fn.boxes, [[0, ["box0"]], [2, ["box2"]]]]])
+		transport0.sendFrames([[Fn.boxes, [[0, "box0"], [2, "box2"]]]])
 
 		self.aE([[Fn.sack, 0, [2]]], transport0.getNew())
-		self.aE([["streamStarted", stream], ["boxesReceived", [["box0"]]]], proto.getNew())
+		self.aE([["streamStarted", stream], ["boxesReceived", ["box0"]]], proto.getNew())
 
 
 		# Send box1 and box3; make sure the protocol gets boxes 1, 2, 3;
 		# make sure we got SACK
 
-		transport0.sendFrames([[Fn.boxes, [[1, ["box1"]], [3, ["box3"]]]]])
+		transport0.sendFrames([[Fn.boxes, [[1, "box1"], [3, "box3"]]]])
 
 		self.aE([[Fn.sack, 3, []]], transport0.getNew())
-		self.aE([["boxesReceived", [["box1"], ["box2"], ["box3"]]]], proto.getNew())
+		self.aE([["boxesReceived", ["box1", "box2", "box3"]]], proto.getNew())
 
 
 		# Send two boxes S2C; make sure we get them.
 
-		stream.sendBoxes([["s2cbox0"], ["s2cbox1"]])
+		stream.sendBoxes(["s2cbox0", "s2cbox1"])
 
-		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], transport0.getNew())
+		self.aE([[Fn.seqnum, 0], [Fn.box, "s2cbox0"], [Fn.box, "s2cbox1"]], transport0.getNew())
 
 
 		# Don't ACK those boxes; connect a new transport; make sure we get
@@ -2559,7 +2559,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		frame0 = _makeHelloFrame({Hello_succeedsTransport: None}) # TODO: increment transportNumber?
 		transport1.sendFrames([frame0])
 
-		self.aE([[Fn.seqnum, 0], [Fn.box, ["s2cbox0"]], [Fn.box, ["s2cbox1"]]], transport1.getNew())
+		self.aE([[Fn.seqnum, 0], [Fn.box, "s2cbox0"], [Fn.box, "s2cbox1"]], transport1.getNew())
 
 		self.aE([[Fn.you_close_it]], transport0.getNew())
 
@@ -2610,12 +2610,12 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		# Send two boxes S2C; make sure we get them.
 
-		stream.sendBoxes([["s2cbox0"], ["s2cbox1"]])
+		stream.sendBoxes(["s2cbox0", "s2cbox1"])
 
 		self.aE([
 			[Fn.seqnum, 0],
-			[Fn.box, ["s2cbox0"]],
-			[Fn.box, ["s2cbox1"]]
+			[Fn.box, "s2cbox0"],
+			[Fn.box, "s2cbox1"]
 		], transport0.getNew())
 
 
@@ -2637,9 +2637,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		# Send another box S2C and make sure it is written to transport1
 
-		stream.sendBoxes([["s2cbox2"]])
+		stream.sendBoxes(["s2cbox2"])
 
-		self.aE([[Fn.seqnum, 2], [Fn.box, ["s2cbox2"]]], transport1.getNew())
+		self.aE([[Fn.seqnum, 2], [Fn.box, "s2cbox2"]], transport1.getNew())
 
 
 	def test_clientSendsAlreadyReceivedBoxes(self):
@@ -2657,22 +2657,22 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		proto = list(self.protocolFactory.instances)[0]
 
-		transport0.sendFrames([[Fn.boxes, [[0, ["box0"]]]]])
+		transport0.sendFrames([[Fn.boxes, [[0, "box0"]]]])
 		self.aE([[Fn.sack, 0, []]], transport0.getNew())
 
 		# 0 was already received, 1 was not.
-		transport0.sendFrames([[Fn.boxes, [[0, ["box0"]], [1, ["box1"]]]]])
+		transport0.sendFrames([[Fn.boxes, [[0, "box0"], [1, "box1"]]]])
 		self.aE([[Fn.sack, 1, []]], transport0.getNew())
 
 		# 0 and 1 were already received, 2 was not.
-		transport0.sendFrames([[Fn.boxes, [[0, ["box0"]], [1, ["box1"]], [2, ["box2"]]]]])
+		transport0.sendFrames([[Fn.boxes, [[0, "box0"], [1, "box1"], [2, "box2"]]]])
 		self.aE([[Fn.sack, 2, []]], transport0.getNew())
 
 		self.aE([
 			['streamStarted', stream],
-			['boxesReceived', [['box0']]],
-			['boxesReceived', [['box1']]],
-			['boxesReceived', [['box2']]],
+			['boxesReceived', ['box0']],
+			['boxesReceived', ['box1']],
+			['boxesReceived', ['box2']],
 		], proto.getNew())
 
 
@@ -2713,7 +2713,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		frames = [
 			frame0,
-			[Fn.boxes, [[0, ["box0"]], [1, ["box1"]]]], [Fn.reset, u'', True]
+			[Fn.boxes, [[0, "box0"], [1, "box1"]]], [Fn.reset, u'', True]
 		]
 		transport0.sendFrames(frames)
 
@@ -2721,7 +2721,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		proto = list(self.protocolFactory.instances)[0]
 		self.aE([
-			["boxesReceived", [["box0"], ["box1"]]],
+			["boxesReceived", ["box0", "box1"]],
 			["streamReset", WhoReset.client_app, u''],
 		], proto.getNew()[1:])
 
@@ -2786,9 +2786,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			self.aE([
 #				[Fn.seqnum, 0],
-#				[Fn.box, ["s2cbox0"]],
-#				[Fn.box, ["s2cbox1"]],
-#				[Fn.box, ["s2cbox2"]],
+#				[Fn.box, "s2cbox0"],
+#				[Fn.box, "s2cbox1"],
+#				[Fn.box, "s2cbox2"],
 				[Fn.reset, u'reset forced by mock protocol\u2603', True],
 				[Fn.you_close_it]
 			], transport0.getNew())
@@ -2825,9 +2825,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			expected = [
 				[Fn.seqnum, 0],
-				[Fn.box, ["s2cbox0"]],
-				[Fn.box, ["s2cbox1"]],
-				[Fn.box, ["s2cbox2"]],
+				[Fn.box, "s2cbox0"],
+				[Fn.box, "s2cbox1"],
+				[Fn.box, "s2cbox2"],
 			]
 
 			if clientResetsImmediately:
@@ -2861,7 +2861,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			frames = [
 				frame0,
-				[Fn.boxes, [[0, ["box0"]], [1, ["box1"]]]]
+				[Fn.boxes, [[0, "box0"], [1, "box1"]]]
 			]
 			if clientResetsImmediately:
 				# Surprise! Client wants to reset very immediately too.
@@ -2871,16 +2871,16 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self.aE([
 				[Fn.sack, 1, []],
 				[Fn.seqnum, 0],
-				[Fn.box, ["s2cbox0"]],
-				[Fn.box, ["s2cbox1"]],
-				[Fn.box, ["s2cbox2"]],
+				[Fn.box, "s2cbox0"],
+				[Fn.box, "s2cbox1"],
+				[Fn.box, "s2cbox2"],
 				[Fn.reset, u'reset forced by mock protocol\u2603', True],
 				[Fn.you_close_it],
 			], transport0.getNew())
 
 			proto = list(self.protocolFactory.instances)[0]
 			self.aE([
-				["boxesReceived", [["box0"], ["box1"]]],
+				["boxesReceived", ["box0", "box1"]],
 				["streamReset", WhoReset.server_app, u'reset forced by mock protocol\u2603']
 			], proto.getNew()[1:])
 
@@ -2905,7 +2905,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			frames = [
 				frame0,
-				[Fn.boxes, [[0, ["box0"]], [1, ["box1"]]]]
+				[Fn.boxes, [[0, "box0"], [1, "box1"]]]
 			]
 			if clientResetsImmediately:
 				# Surprise! Client wants to reset very immediately too.
@@ -2915,9 +2915,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			expected = [
 				[Fn.sack, 1, []],
 				[Fn.seqnum, 0],
-				[Fn.box, ["s2cbox0"]],
-				[Fn.box, ["s2cbox1"]],
-				[Fn.box, ["s2cbox2"]],
+				[Fn.box, "s2cbox0"],
+				[Fn.box, "s2cbox1"],
+				[Fn.box, "s2cbox2"],
 			]
 
 			if clientResetsImmediately:
@@ -2928,12 +2928,12 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			proto = list(self.protocolFactory.instances)[0]
 			if clientResetsImmediately:
 				self.aE([
-					["boxesReceived", [["box0"], ["box1"]]],
+					["boxesReceived", ["box0", "box1"]],
 					["streamReset", WhoReset.client_app, u''],
 				], proto.getNew()[1:])
 			else:
 				self.aE([
-					["boxesReceived", [["box0"], ["box1"]]],
+					["boxesReceived", ["box0", "box1"]],
 				], proto.getNew()[1:])
 
 
@@ -2957,8 +2957,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			frames = [
 				frame0,
-				[Fn.boxes, [[0, ["box0"]], [1, ["box1"]]]],
-				[Fn.boxes, [[2, ["box2"]]]],
+				[Fn.boxes, [[0, "box0"], [1, "box1"]]],
+				[Fn.boxes, [[2, "box2"]]],
 			]
 			if clientResetsImmediately:
 				# Surprise! Client wants to reset very immediately too. But this is completely ignored.
@@ -2976,7 +2976,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			proto = list(self.protocolFactory.instances)[0]
 			self.aE([
-				["boxesReceived", [["box0"], ["box1"]]],
+				["boxesReceived", ["box0", "box1"]],
 				["streamReset", WhoReset.server_app, u'reset forced by mock protocol\u2603'],
 			], proto.getNew()[1:])
 
@@ -3016,8 +3016,8 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 						Hello_streamingResponse: streaming})
 					frames = [
 						frame0,
-						[Fn.boxes, [[0, ["box0"]], [1, ["box1"]]]],
-						[Fn.boxes, [[2, ["box2"]]]],
+						[Fn.boxes, [[0, "box0"], [1, "box1"]]],
+						[Fn.boxes, [[2, "box2"]]],
 					]
 
 					request.content = StringIO(
@@ -3038,9 +3038,9 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 					self.aE([
 						["notifyFinish"],
 						["transportOnline", transport, True, None],
-						["boxesReceived", transport, [[0, ['box0']], [1, ['box1']]]],
+						["boxesReceived", transport, [[0, 'box0'], [1, 'box1']]],
 						["getSACK"],
-						["boxesReceived", transport, [[2, ['box2']]]],
+						["boxesReceived", transport, [[2, 'box2']]],
 						["getSACK"],
 					], stream.getNew())
 
@@ -3069,14 +3069,14 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				Hello_streamingResponse: streaming})
 			frames = [
 				frame0,
-				[Fn.boxes, [[0, ["box0"]]]],
+				[Fn.boxes, [[0, "box0"]]],
 			]
 
 			request.content = StringIO(
 				'\n'.join(simplejson.dumps(f) for f in frames) + '\n')
 
 			stream = self.streamTracker.buildStream('x'*26)
-			stream.sendBoxes([['box0'], ['box1']])
+			stream.sendBoxes(['box0', 'box1'])
 
 			out = resource.render(request)
 			self.assertEqual(server.NOT_DONE_YET, out)
@@ -3086,8 +3086,8 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				'for(;;);\n', (
 					encode([Fn.sack, 0, []]) +
 					encode([Fn.seqnum, 0]) +
-					encode([Fn.box, ['box0']]) +
-					encode([Fn.box, ['box1']]))]
+					encode([Fn.box, 'box0']) +
+					encode([Fn.box, 'box1']))]
 
 			self.assertEqual(expected, request.written)
 			self.assertEqual(0 if streaming else 1, request.finished)
@@ -3122,11 +3122,11 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			self.assertEqual(['for(;;);\n'], request.written)
 
 			stream = self.streamTracker.getStream('x'*26)
-			stream.sendBoxes([['box0'], ['box1']])
+			stream.sendBoxes(['box0', 'box1'])
 
 			encode = DelimitedJSONDecoder.encode
 			self.assertEqual(
-				['for(;;);\n', encode([Fn.seqnum, 0]) + encode([Fn.box, ['box0']]) + encode([Fn.box, ['box1']])],
+				['for(;;);\n', encode([Fn.seqnum, 0]) + encode([Fn.box, 'box0']) + encode([Fn.box, 'box1'])],
 				request.written)
 			self.assertEqual(0 if streaming else 1, request.finished)
 
