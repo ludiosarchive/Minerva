@@ -274,7 +274,8 @@ object and say that applications need direct access to octets, but consider thes
 *	WebSocket uses frames natively, and they are mapped 1:1 to Minerva frames.
 	Also, ``0xFF`` cannot be sent over WebSocket (as of 2009-11).
 
-*	The application doesn't have to assemble the octets and convert them to Unicode,
+*	Most applications want Unicode, especially since browsers don't have
+	a native ``bytes`` type anyway. The application doesn't have to assemble the octets and convert them to Unicode,
 	since this already happened when the frame was parsed.
 
 
