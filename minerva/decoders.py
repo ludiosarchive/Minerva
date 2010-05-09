@@ -218,7 +218,7 @@ class DelimitedStringDecoder(object):
 	delimiter = '\n' # MUST be 1 byte. Do not change this after any data has been received.
 
 	__slots__ = ('maxLength', '_buffer')
-	decodesJson = True
+	decodesJson = False
 
 	def __init__(self, maxLength):
 		self.maxLength = maxLength

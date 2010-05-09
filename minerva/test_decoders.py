@@ -227,6 +227,9 @@ class DelimitedStringDecoderTests(CommonTests, unittest.TestCase):
 
 	strings = ['', 'hello', 'world', 'how', 'are', 'you123']
 
+	def test_decodesJsonAttr(self):
+		self.assertEqual(False, self.receiver.decodesJson)
+
 
 	def test_encode(self):
 		self.aE('\n', self.receiver.encode(""))
@@ -297,6 +300,10 @@ class DelimitedJSONDecoderTests(CommonTests, unittest.TestCase):
 
 	# Not really strings but JSON-safe objects.
 	strings = ["hello world", u"unicode", {}, [], {"key": ["val1", "val2"]}, None, False, True, 0.0, -0.5, 0.5, 5, 12738123912, 2**50]
+
+	def test_decodesJsonAttr(self):
+		self.assertEqual(True, self.receiver.decodesJson)
+
 
 	def test_bufferWithTrailingBytes(self):
 		"""
