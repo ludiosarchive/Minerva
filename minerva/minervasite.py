@@ -232,15 +232,12 @@ class DemoProtocol(BasicMinervaProtocol):
 		if iteration > 20:
 			return
 
-		box = []
 		numItems = iteration * 5
-		for n in xrange(numItems):
-			box.append('#' + str(iteration))
-
-		numBoxes = iteration
+		box = ' '.join(('#%d' % iteration,) * numItems)
 
 		self._clock.callLater(0.2, self._sendDemo, iteration + 1)
 
+		numBoxes = iteration
 		self.stream.sendStrings([box] * numBoxes)
 
 
