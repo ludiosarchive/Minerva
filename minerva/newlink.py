@@ -378,7 +378,9 @@ class Stream(object):
 
 	def sendStrings(self, strings):
 		"""
-		Send C{strings} to the peer.
+		Send strings C{strings} to the peer. You are severely restricted
+		as to which bytes may be in the string; by default you are allowed
+		inclusive range 0x20 (SPACE) - 0x7E (~).
 
 		@param strings: a sequence of C{str} objects
 		@type strings: a sequence
