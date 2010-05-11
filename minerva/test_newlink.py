@@ -3136,6 +3136,8 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		self.assert_(headers['Server'][0].startswith('DWR-Reverse-Ajax'), headers['Server'])
 
 
+	# TODO: test request aborting
+
 	# TODO: implement and test minOpenTime
 
 	# TODO: test maxOpenTime
