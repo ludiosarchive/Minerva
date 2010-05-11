@@ -1336,13 +1336,12 @@ class SocketTransport(object):
 
 				badSack = False
 				for obj in sackList:
-					if badSack:
-						break
 					try:
 						ensureNonNegIntLimit(obj, 2**64) # okay to ignore return value here
 					except (TypeError, ValueError):
 						self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 						badSack = True
+						break
 				if badSack:
 					break
 
