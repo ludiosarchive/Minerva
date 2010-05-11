@@ -17,11 +17,12 @@ from twisted.web import resource
 from twisted.web.server import NOT_DONE_YET
 
 from mypy.randgen import secureRandom
-from mypy.objops import ensureNonNegIntLimit, ensureBool
+from mypy.objops import ensureNonNegIntLimit, ensureBool, strToNonNegLimit
 from mypy.strops import StringFragment, FS_STR, FS_POSITION, FS_SIZE
 from mypy.mailbox import Mailbox, mailboxify
 
 from minerva import decoders
+from minerva.frames import WhoReset
 from minerva.website import RejectTransport
 from minerva.interfaces import ISimpleConsumer
 from minerva.window import Queue, Incoming, InvalidSACK
@@ -116,7 +117,6 @@ class Frame(object):
 		return self.knownTypes[self.type][0]
 
 
-
 Fn = Frame.names
 
 
@@ -137,28 +137,6 @@ Fn_tk_intraframe_corruption = Fn.tk_intraframe_corruption
 Fn_tk_stream_attach_failure = Fn.tk_stream_attach_failure
 Fn_tk_invalid_frame_type_or_arguments = Fn.tk_invalid_frame_type_or_arguments
 Fn_tk_acked_unsent_boxes = Fn.tk_acked_unsent_boxes
-
-
-# Property key names for the hello frame.
-Hello_transportNumber = 'n'
-Hello_protocolVersion = 'v'
-Hello_httpFormat = 't'
-Hello_requestNewStream = 'w'
-Hello_streamId = 'i'
-Hello_credentialsData = 'c'
-Hello_streamingResponse = 's'
-Hello_needPaddingBytes = 'p'
-Hello_maxReceiveBytes = 'r'
-Hello_maxOpenTime = 'm'
-Hello_useMyTcpAcks = 'a'
-Hello_succeedsTransport = 'g'
-
-
-class WhoReset(object):
-	server_minerva = 1
-	server_app = 2
-	client_minerva = 3
-	client_app = 4
 
 
 
@@ -212,7 +190,7 @@ class IMinervaProtocol(Interface):
 		@type whoReset: int
 
 		@param reasonString: why the L{Stream} has reset.
-		@type reasonString: C{unicode} or ASCII-only C{str}
+		@type reasonString: ASCII (0x20-0x7E)-only C{str}
 		"""
 
 
@@ -917,110 +895,6 @@ dumps = simplejson.dumps
 def dumpToJson7Bit(data):
 	return dumps(data, separators=(',', ':'), allow_nan=False)
 
-
-
-class InvalidHello(Exception):
-	pass
-
-
-
-class Hello(object):
-	__slots__ = (
-		'credentialsData', 'requestNewStream', 'transportNumber',
-		'protocolVersion', 'streamId', 'wantsStrings', 'succeedsTransport',
-		'httpFormat', 'streamingResponse', 'needPaddingBytes', 'maxReceiveBytes',
-		'maxOpenTime')
-
-
-
-def helloDataToHello(helloData, isHttp):
-	"""
-	Convert client's C{helloData} into a usable L{Hello} object. C{isHttp}
-	must be truthy if helloData was received over an HTTP transport. If there
-	are any problems with helloData, this raises L{InvalidHello}.
-	"""
-	if not isinstance(helloData, dict):
-		raise InvalidHello
-
-	obj = Hello()
-
-	# credentialsData is always optional
-	obj.credentialsData = helloData[Hello_credentialsData] if \
-		Hello_credentialsData in helloData else {}
-
-	if not isinstance(obj.credentialsData, dict):
-		raise InvalidHello
-
-	try:
-		# Any line here can raise KeyError; additional exceptions marked with 'e:'
-
-		# requestNewStream is always optional. If missing or False/0, transport
-		# is intended to attach to an existing stream.
-		obj.requestNewStream = ensureBool( # e: ValueError
-			helloData[Hello_requestNewStream]) if \
-			Hello_requestNewStream in helloData else False
-
-		obj.transportNumber = ensureNonNegIntLimit( # e: ValueError, TypeError
-			helloData[Hello_transportNumber], 2**64)
-
-		obj.protocolVersion = helloData[Hello_protocolVersion]
-
-		obj.streamingResponse = ensureBool( # e: ValueError
-			helloData[Hello_streamingResponse])
-
-		# Rules for streamId: must be 20-30 inclusive bytes, must not
-		# contain codepoints > 127
-		obj.streamId = helloData[Hello_streamId]
-		# ,str is appropriate only because simplejson returns str when possible
-		if not isinstance(obj.streamId, str) or not 20 <= len(obj.streamId) <= 30:
-			raise InvalidHello
-	except (KeyError, TypeError, ValueError):
-		raise InvalidHello
-
-	if obj.protocolVersion != 2:
-		raise InvalidHello
-
-	# succeedsTransport is always optional. If missing, the client does not
-	# want to get S2C strings over this transport. If None, the client does,
-	# but the transport does not succeed an existing primary transport. If a
-	# number, the transport might succeed an existing primary transport.
-	obj.wantsStrings = Hello_succeedsTransport in helloData
-	if obj.wantsStrings:
-		obj.succeedsTransport = helloData[Hello_succeedsTransport]
-		if obj.succeedsTransport is not None:
-			try:
-				obj.succeedsTransport = ensureNonNegIntLimit(
-					obj.succeedsTransport, 2**64)
-			except (TypeError, ValueError):
-				raise InvalidHello
-
-	if isHttp:
-		try:
-			obj.httpFormat = helloData[Hello_httpFormat]
-		except KeyError:
-			raise InvalidHello
-		if not obj.httpFormat in (FORMAT_XHR, FORMAT_HTMLFILE):
-			raise InvalidHello
-
-		# needPaddingBytes is always optional. If missing, 0.
-		if Hello_needPaddingBytes in helloData:
-			try:
-				obj.needPaddingBytes = ensureNonNegIntLimit(
-					helloData[Hello_needPaddingBytes], 16*1024) # e: ValueError, TypeError
-			except (TypeError, ValueError):
-				raise InvalidHello
-		else:
-			obj.needPaddingBytes = 0
-
-		try:
-			obj.maxReceiveBytes = ensureNonNegIntLimit(
-				helloData[Hello_maxReceiveBytes], 2**64) # e: ValueError, TypeError
-			obj.maxOpenTime = ensureNonNegIntLimit(
-				helloData[Hello_maxOpenTime], 2**64) # e: ValueError, TypeError
-		except (TypeError, ValueError):
-			raise InvalidHello
-
-	return obj
 
 
 # Acceptable protocol modes for SocketTransport to be in. Int32* are for Flash Socket.

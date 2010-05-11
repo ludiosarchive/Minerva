@@ -38,7 +38,7 @@ from minerva.newlink import (
 	FORMAT_XHR, FORMAT_HTMLFILE,
 )
 
-from minerva.newlink import (
+from minerva.frames import (
 	Hello_transportNumber,
 	Hello_protocolVersion,
 	Hello_httpFormat,
