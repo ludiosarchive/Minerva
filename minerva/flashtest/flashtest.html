@@ -123,9 +123,10 @@ function connect(bridge) {
 			// If the server receives this more than once, it is
 			// subsequently ignored because the box # is always 0,
 			// and box 0 was already received.
-			var boxesFrame = [cw.net.FrameType.boxes, [[0, 'send_demo']]];
+			var seqNumFrame = [cw.net.FrameType.seqnum, 0]; // Not really necessary to send
+			var boxFrame = [cw.net.FrameType.string, 'send_demo'];
 
-			var frames = [ser(helloFrame), ser(boxesFrame)];
+			var frames = [ser(helloFrame), ser(seqNumFrame), ser(boxFrame)];
 			for(i=0; i < frames.length; i++) {
 				logger.info('Sending: ' + frames[i]);
 			}

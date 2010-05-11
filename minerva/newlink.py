@@ -50,12 +50,8 @@ class Frame(object):
 	# Most-frequently-used types should be non-negative and single-digit.
 	# num -> (name, minArgs, maxArgs)
 	knownTypes = {
-		# You may be tempted to make boxes take any number of arguments
-		# instead of having the boxes in the [1]th item, to make the frame
-		# "flatter". Don't. It'll be harder to iterate over, and you'll probably
-		# end up doing more writes to memory.
-		0: ('boxes', 1, 1),
-		1: ('box', 1, 1),
+		# 0: reserved,
+		1: ('string', 1, 1),
 		2: ('seqnum', 1, 1),
 
 		4: ('sack', 2, 2),
@@ -126,10 +122,9 @@ Fn = Frame.names
 
 # Create globals that will be optimized away by pypycpyo.optimizer,
 # instead of using attribute lookups frequently. With this, we can use
-# Fn_boxes instead of Fn.boxes. We don't use a globals()['Fn_' + ...]
+# Fn_string instead of Fn.string. We don't use a globals()['Fn_' + ...]
 # hack here because Pyflakes does not understand it.
-Fn_boxes = Fn.boxes
-Fn_box = Fn.box
+Fn_string = Fn.string
 Fn_seqnum = Fn.seqnum
 Fn_sack = Fn.sack
 Fn_hello = Fn.hello
@@ -1050,7 +1045,7 @@ class SocketTransport(object):
 	implements(IMinervaTransport, IPushProducer, IPullProducer) # Almost an IProtocol, but has no connectionMade
 
 	__slots__ = (
-		'_mailbox', 'lastBoxSent', '_lastStartParam', '_mode',
+		'_mailbox', 'lastBoxSent', '_lastStartParam', '_mode', '_seqNum',
 		'_initialBuffer', '_toSend', 'writable', 'connected', 'receivedCounter',
 		'_terminating', '_paused', '_stream', '_producer', '_parser',
 		'streamId', 'credentialsData', 'transportNumber', 'factory',
@@ -1065,6 +1060,7 @@ class SocketTransport(object):
 		self._mailbox = Mailbox(self._stoppedSpinning)
 
 		self.lastBoxSent = \
+		self._seqNum = \
 		self.receivedCounter = -1
 		self._lastStartParam = 2**128
 		self._mode = UNKNOWN
@@ -1181,7 +1177,6 @@ class SocketTransport(object):
 			self.lastBoxSent = -1
 			self._lastStartParam = start
 
-		# TODO: we might want to send boxes frame instead of box sometimes? no?
 		# Even if there's a lot of stuff in the queue, write everything.
 		lastBox = self.lastBoxSent
 		for seqNum, string in queue.iterItems(start=start):
@@ -1190,7 +1185,7 @@ class SocketTransport(object):
 				continue
 			if lastBox == -1 or lastBox + 1 != seqNum:
 				self._toSend += self._encodeFrame([Fn_seqnum, seqNum])
-			self._toSend += self._encodeFrame([Fn_box, string])
+			self._toSend += self._encodeFrame([Fn_string, string])
 			lastBox = seqNum
 
 		self.lastBoxSent = lastBox
@@ -1257,6 +1252,17 @@ class SocketTransport(object):
 
 
 	def _framesReceived(self, frames):
+		# Mutable outside list to work around Python 2.x read-only closures
+		bunchedStrings = [[]]
+		def handleStrings():
+			self._stream.stringsReceived(self, bunchedStrings[0])
+			# Remember that a lot can happen underneath that stringsReceived call,
+			# including a call to our own `reset` or `closeGently` or `writeStrings`
+			# (though those are all mailboxify'ed).
+
+			bunchedStrings[0] = []
+			self._toSend += self._getSACKBytes()
+
 		for frameString in frames:
 			if self._terminating:
 				break
@@ -1297,6 +1303,15 @@ class SocketTransport(object):
 				else:
 					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
 
+			elif frameType == Fn_string:
+				if not isinstance(frameObj[1], str):
+					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+				self._seqNum += 1
+				# Because we may have received multiple Minerva strings, collect
+				# them into a list and then deliver them all at once to Stream.
+				# This does *not* add any latency. It does reduce the number of funcalls.
+				bunchedStrings[0].append((self._seqNum, frameObj[1]))
+
 			elif frameType == Fn_sack:
 				ackNumber, sackList = frameObj[1:]
 				try:
@@ -1318,50 +1333,35 @@ class SocketTransport(object):
 				except InvalidSACK:
 					return self._closeWith(Fn_tk_acked_unsent_boxes)
 
-			elif frameType == Fn_boxes:
-				pairs = frameObj[1]
-				if not isinstance(pairs, list):
-					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-				# Validate the pairs
-				for pair in pairs:
-					if not isinstance(pair, list) or len(pair) != 2 or not isinstance(pair[1], str):
-						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-					try:
-						# This is probably enough to stop an ACA (on Incoming) on 64-bit
-						# Python, but maybe worry about 32-bit Python too?
-						#
-						# We ignore the return value; it's okay to give Incoming
-						# and therefore Stream an int/long/float seqNum.
-						ensureNonNegIntLimit(pair[0], 2**64) # pair[0] is seqNum
-					except (TypeError, ValueError):
-						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-				self._stream.stringsReceived(self, pairs)
-				self._toSend += self._getSACKBytes()
-				# Remember that a lot can happen underneath that stringsReceived call,
-				# including a call to our own `reset` or `closeGently` or `writeStrings`
-				# (though those are all mailboxify'ed).
-
-			elif frameType == Fn_box:
-				1/0
-
 			elif frameType == Fn_seqnum:
-				1/0
-
-			elif frameType == Fn_reset:
-				reasonString, applicationLevel = frameObj[1:]
-				if not isinstance(reasonString, basestring) or not isinstance(applicationLevel, bool):
+				try:
+					self._seqNum = ensureNonNegIntLimit(frameObj[1], 2**64) - 1
+				except (TypeError, ValueError):
 					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-				self._stream.resetFromClient(reasonString, applicationLevel)
-				break # No need to process any frames after the reset frame
 
-			elif frameType == Fn_start_timestamps:
-				1/0
-
-			elif frameType == Fn_stop_timestamps:
-				1/0
-				
 			else:
-				return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+				# Deliver the strings before processing client's reset frame. This
+				# is an implementation detail and may go away.
+				if bunchedStrings[0]:
+					handleStrings()
+
+				if frameType == Fn_reset:
+					reasonString, applicationLevel = frameObj[1:]
+					if not isinstance(reasonString, basestring) or not isinstance(applicationLevel, bool):
+						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+					self._stream.resetFromClient(reasonString, applicationLevel)
+					break # No need to process any frames after the reset frame
+
+				else:
+					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+
+				# TODO: support "start timestamps", "stop timestamps" frames
+
+		# TODO: should we also process bunchedStrings before transport-killing
+		# due to a bad frame?
+
+		if bunchedStrings[0]:
+			handleStrings()
 
 
 	@mailboxify('_mailbox')

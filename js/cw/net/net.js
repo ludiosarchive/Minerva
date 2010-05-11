@@ -959,8 +959,7 @@ cw.net.protocolVersion_ = 2;
  * @enum {number}
  */
 cw.net.FrameType = {
-	boxes: 0,
-	box: 1,
+	string: 1,
 	seqnum: 2,
 
 	sack: 4,
