@@ -1263,6 +1263,9 @@ class SocketTransport(object):
 			bunchedStrings[0] = []
 			self._toSend += self._getSACKBytes()
 
+		# Note: keep in mind that _closeWith is mailboxified, so any actual
+		# closing happens after we call `handleStrings` near the end.
+
 		for frameString in frames:
 			if self._terminating:
 				break
@@ -1276,14 +1279,17 @@ class SocketTransport(object):
 				frameObj, stoppedAt = decoders.strictDecoder.raw_decode(
 					frameString[FS_STR], frameString[FS_POSITION])
 				if stoppedAt != frameString[FS_POSITION] + frameString[FS_SIZE]: # TODO: this will be `- 1` soon
-					return self._closeWith(Fn_tk_intraframe_corruption)
+					self._closeWith(Fn_tk_intraframe_corruption)
+					break
 			except (simplejson.decoder.JSONDecodeError, decoders.ParseError):
-				return self._closeWith(Fn_tk_intraframe_corruption)
+				self._closeWith(Fn_tk_intraframe_corruption)
+				break
 
 			try:
 				frame = Frame(frameObj)
 			except BadFrame:
-				return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+				self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+				break
 
 			# Below, we can assume that the frame has the minimum/maximum
 			# allowed number of arguments for the frame type.
@@ -1297,15 +1303,19 @@ class SocketTransport(object):
 					try:
 						self._handleHelloFrame(frame)
 					except InvalidHello:
-						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+						self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+						break
 					except NoSuchStream:
-						return self._closeWith(Fn_tk_stream_attach_failure)
+						self._closeWith(Fn_tk_stream_attach_failure)
+						break
 				else:
-					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+					self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+					break
 
 			elif frameType == Fn_string:
 				if not isinstance(frameObj[1], str):
-					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+					self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+					break
 				self._seqNum += 1
 				# Because we may have received multiple Minerva strings, collect
 				# them into a list and then deliver them all at once to Stream.
@@ -1317,27 +1327,37 @@ class SocketTransport(object):
 				try:
 					ensureNonNegIntLimit(ackNumber, 2**64) # okay to ignore return value here
 				except (TypeError, ValueError):
-					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+					self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+					break
 
 				if not isinstance(sackList, list):
-					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+					self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+					break
 
+				badSack = False
 				for obj in sackList:
+					if badSack:
+						break
 					try:
 						ensureNonNegIntLimit(obj, 2**64) # okay to ignore return value here
 					except (TypeError, ValueError):
-						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+						self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+						badSack = True
+				if badSack:
+					break
 
 				try:
 					self._stream.sackReceived((ackNumber, sackList))
 				except InvalidSACK:
-					return self._closeWith(Fn_tk_acked_unsent_boxes)
+					self._closeWith(Fn_tk_acked_unsent_boxes)
+					break
 
 			elif frameType == Fn_seqnum:
 				try:
 					self._seqNum = ensureNonNegIntLimit(frameObj[1], 2**64) - 1
 				except (TypeError, ValueError):
-					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+					self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+					break
 
 			else:
 				# Deliver the strings before processing client's reset frame. This
@@ -1348,17 +1368,19 @@ class SocketTransport(object):
 				if frameType == Fn_reset:
 					reasonString, applicationLevel = frameObj[1:]
 					if not isinstance(reasonString, basestring) or not isinstance(applicationLevel, bool):
-						return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+						self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+						break
 					self._stream.resetFromClient(reasonString, applicationLevel)
 					break # No need to process any frames after the reset frame
 
 				else:
-					return self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+					self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+					break
 
 				# TODO: support "start timestamps", "stop timestamps" frames
 
-		# TODO: should we also process bunchedStrings before transport-killing
-		# due to a bad frame?
+		# TODO: add unit to ensure that we successfully process bunchedStrings
+		# before transport-killing due to a bad frame.
 
 		if bunchedStrings[0]:
 			handleStrings()
