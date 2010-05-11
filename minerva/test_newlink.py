@@ -1292,7 +1292,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
 			frames, code = strictGetNewFrames(self.parser, self.tcpTransport.value())
-			decodedFrames = [strictDecodeOne(f.toString()) for f in frames]
+			decodedFrames = [strictDecodeOne(str(f)) for f in frames]
 			self.aE([[Fn.tk_stream_attach_failure], [Fn.you_close_it]], decodedFrames)
 
 

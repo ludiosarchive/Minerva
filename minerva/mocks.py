@@ -102,7 +102,7 @@ class JSONDecodingTcpTransport(DummyTCPTransport, _MockMixin):
 	def write(self, data):
 		frames, code = strictGetNewFrames(self.parser, data)
 		self.log.extend(simplejson.loads(
-			f.toString() if isinstance(f, StringFragment) else f) for f in frames)
+			str(f) if isinstance(f, StringFragment) else f) for f in frames)
 
 
 

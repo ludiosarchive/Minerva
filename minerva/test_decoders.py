@@ -47,7 +47,7 @@ def fragmentsToStr(various):
 	newList = []
 	for s in various:
 		if isinstance(s, StringFragment):
-			newList.append(s.toString())
+			newList.append(str(s))
 		else:
 			newList.append(s)
 	return newList
