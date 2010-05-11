@@ -1267,9 +1267,6 @@ class SocketTransport(object):
 		# closing happens after we call `handleStrings` near the end.
 
 		for frameString in frames:
-			if self._terminating:
-				break
-
 			self.receivedCounter += 1
 
 			if isinstance(frameString, str):
@@ -1441,19 +1438,14 @@ class SocketTransport(object):
 		else:
 			frameData = data
 
-		if self._mode in (BENCODE, INT32, HTTP):
-			out, code = self._parser.getNewFrames(frameData)
-			if code == decoders.OK:
-				##print out
-				self._framesReceived(out)
-			elif code in (decoders.TOO_LONG, decoders.FRAME_CORRUPTION):
-				self._closeWith(Fn_tk_frame_corruption)
-			elif code == decoders.INTRAFRAME_CORRUPTION:
-				self._closeWith(Fn_tk_intraframe_corruption)
-			else:
-				raise RuntimeError("Got unknown code from parser %r: %r" % (self._parser, code))
+		out, code = self._parser.getNewFrames(frameData)
+		if code == decoders.OK:
+			##print out
+			self._framesReceived(out)
+		elif code in (decoders.TOO_LONG, decoders.FRAME_CORRUPTION):
+			self._closeWith(Fn_tk_frame_corruption)
 		else:
-			assert 0, self._mode
+			raise RuntimeError("Got unknown code from parser %r: %r" % (self._parser, code))
 
 
 	# called by Stream instances
