@@ -1587,7 +1587,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			Fn.tk_intraframe_corruption,
 			Fn.tk_frame_corruption,
 			Fn.tk_invalid_frame_type_or_arguments,
-			Fn.tk_acked_unsent_boxes,
+			Fn.tk_acked_unsent_strings,
 			Fn.tk_stream_attach_failure,
 			Fn.you_close_it, # TODO: allow you_close_it for HTTP
 		]
@@ -2103,7 +2103,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		stream.queue.append("box0")
 
 		transport.sendFrames([[Fn.sack, 1, []]])
-		self.aE([[Fn.tk_acked_unsent_boxes], [Fn.you_close_it]], transport.getNew())
+		self.aE([[Fn.tk_acked_unsent_strings], [Fn.you_close_it]], transport.getNew())
 		self.aE([
 			['notifyFinish'],
 			['transportOnline', transport, False, None],
@@ -3151,3 +3151,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 # TODO: test_pushProducerOnQueuedRequest
 	# verify that attaching a push producer to a queued Request does not result in multiple pauseProducing calls
+
+# Old TODO:
+#		# TODO: test that transportOffline is called when client causes this after transport attached to a Stream
+#		603: ('tk_invalid_frame_type_or_arguments', 0, 0),

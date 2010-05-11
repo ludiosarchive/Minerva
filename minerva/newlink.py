@@ -900,8 +900,6 @@ def dumpToJson7Bit(data):
 # Acceptable protocol modes for SocketTransport to be in. Int32* are for Flash Socket.
 UNKNOWN, POLICYFILE, INT32, INT32CRYPTO, WEBSOCKET, BENCODE, HTTP = range(7)
 
-FORMAT_XHR, FORMAT_HTMLFILE = 2, 3
-
 # TODO: We'll need to make sure it's impossible for an attacker to downgrade "int32+crypto"
 # down to "int32"
 
