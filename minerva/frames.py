@@ -44,16 +44,140 @@ class InvalidHello(InvalidFrame):
 
 
 
-class HelloFrame(object):
-	__slots__ = (
-		'credentialsData', 'requestNewStream', 'transportNumber',
-		'protocolVersion', 'streamId', 'wantsStrings', 'succeedsTransport',
-		'httpFormat', 'streamingResponse', 'needPaddingBytes', 'maxReceiveBytes',
-		'maxOpenTime')
+def helloDataToHelloFrame(helloData):
+	"""
+	Convert arbitrary JSON-decoded blob of objects into a L{HelloFrame}.
+
+	See also L{newlink.sanitizeHelloFrame}, which is run on the L{HelloFrame}
+	before it is used.
+	"""
+	if not isinstance(helloData, dict):
+		raise InvalidHello
+
+	obj = cls()
+
+	# credentialsData is always optional
+	obj.credentialsData = helloData[Hello_credentialsData] if \
+		Hello_credentialsData in helloData else {}
+
+	if not isinstance(obj.credentialsData, dict):
+		raise InvalidHello
+
+	try:
+		# Any line here can raise KeyError; additional exceptions marked with 'e:'
+
+		# requestNewStream is always optional. If missing or False/0, transport
+		# is intended to attach to an existing stream.
+		obj.requestNewStream = ensureBool( # e: ValueError
+			helloData[Hello_requestNewStream]) if \
+			Hello_requestNewStream in helloData else False
+
+		obj.transportNumber = ensureNonNegIntLimit( # e: ValueError, TypeError
+			helloData[Hello_transportNumber], 2**64)
+
+		obj.protocolVersion = helloData[Hello_protocolVersion]
+
+		obj.streamingResponse = ensureBool( # e: ValueError
+			helloData[Hello_streamingResponse])
+
+		# Rules for streamId: must be 20-30 inclusive bytes, must not
+		# contain codepoints > 127
+		obj.streamId = helloData[Hello_streamId]
+		# ,str is appropriate only because simplejson returns str when possible
+		if not isinstance(obj.streamId, str) or not 20 <= len(obj.streamId) <= 30:
+			raise InvalidHello
+	except (KeyError, TypeError, ValueError):
+		raise InvalidHello
+
+	if obj.protocolVersion != 2:
+		raise InvalidHello
+
+	# succeedsTransport is always optional. If missing, the client does not
+	# want to get S2C strings over this transport. If None, the client does,
+	# but the transport does not succeed an existing primary transport. If a
+	# number, the transport might succeed an existing primary transport.
+	obj.wantsStrings = Hello_succeedsTransport in helloData
+	if obj.wantsStrings:
+		obj.succeedsTransport = helloData[Hello_succeedsTransport]
+		if obj.succeedsTransport is not None:
+			try:
+				obj.succeedsTransport = ensureNonNegIntLimit(
+					obj.succeedsTransport, 2**64)
+			except (TypeError, ValueError):
+				raise InvalidHello
+
+	if isHttp:
+		try:
+			obj.httpFormat = helloData[Hello_httpFormat]
+		except KeyError:
+			raise InvalidHello
+		if not obj.httpFormat in (FORMAT_XHR, FORMAT_HTMLFILE):
+			raise InvalidHello
+
+		# needPaddingBytes is always optional. If missing, 0.
+		if Hello_needPaddingBytes in helloData:
+			try:
+				obj.needPaddingBytes = ensureNonNegIntLimit(
+					helloData[Hello_needPaddingBytes], 16*1024) # e: ValueError, TypeError
+			except (TypeError, ValueError):
+				raise InvalidHello
+		else:
+			obj.needPaddingBytes = 0
+
+		try:
+			obj.maxReceiveBytes = ensureNonNegIntLimit(
+				helloData[Hello_maxReceiveBytes], 2**64) # e: ValueError, TypeError
+			obj.maxOpenTime = ensureNonNegIntLimit(
+				helloData[Hello_maxOpenTime], 2**64) # e: ValueError, TypeError
+		except (TypeError, ValueError):
+			raise InvalidHello
+	else:
+		# For non-HTTP, don't allow clients to
+		obj.httpFormat = None
+		obj.maxReceiveBytes = 2**64
+		obj.maxOpenTime = 2**64
+
+
+	return cls(
+		credentialsData, requestNewStream, transportNumber, protocolVersion,
+		streamId, wantsStrings, succeedsTransport, httpFormat,
+		streamingResponse, needPaddingBytes, maxReceiveBytes, maxOpenTime)
+
+
+
+# The other frame classes are a tuple; this one is not, so be careful.
+class HelloFrame(tuple):
+	__slots__ = ()
+	__metaclass__ = attachClassMarker('_MARKER')
+
+	credentialsData = property(operator.itemgetter(1))
+	requestNewStream = property(operator.itemgetter(2))
+	transportNumber = property(operator.itemgetter(3))
+	protocolVersion = property(operator.itemgetter(4))
+	streamId = property(operator.itemgetter(5))
+	wantsStrings = property(operator.itemgetter(6))
+	succeedsTransport = property(operator.itemgetter(7))
+	httpFormat = property(operator.itemgetter(8))
+	streamingResponse = property(operator.itemgetter(9))
+	needPaddingBytes = property(operator.itemgetter(10))
+	maxReceiveBytes = property(operator.itemgetter(11))
+	maxOpenTime = property(operator.itemgetter(12))
+
+	def __new__(cls,
+		credentialsData, requestNewStream, transportNumber, protocolVersion,
+		streamId, wantsStrings, succeedsTransport, httpFormat,
+		streamingResponse, needPaddingBytes, maxReceiveBytes, maxOpenTime):
+		"""
+		C{string} is a L{StringFragment}.
+		"""
+		return tuple.__new__(cls, (cls._MARKER,
+		credentialsData, requestNewStream, transportNumber, protocolVersion,
+		streamId, wantsStrings, succeedsTransport, httpFormat,
+		streamingResponse, needPaddingBytes, maxReceiveBytes, maxOpenTime))
 
 
 	@classmethod
-	def decode(cls, frameString, isHttp):
+	def decode(cls, frameString):
 		"""
 		C{frameString} is a L{StringFragment} that ends with "H".
 		"""
@@ -63,88 +187,10 @@ class HelloFrame(object):
 		if stoppedAt != frameString[FS_POSITION] + frameString[FS_SIZE] - 1:
 			raise InvalidHello
 
-		if not isinstance(helloData, dict):
-			raise InvalidHello
+		return helloDataToHelloFrame(helloData)
 
-		obj = cls()
 
-		# credentialsData is always optional
-		obj.credentialsData = helloData[Hello_credentialsData] if \
-			Hello_credentialsData in helloData else {}
-
-		if not isinstance(obj.credentialsData, dict):
-			raise InvalidHello
-
-		try:
-			# Any line here can raise KeyError; additional exceptions marked with 'e:'
-
-			# requestNewStream is always optional. If missing or False/0, transport
-			# is intended to attach to an existing stream.
-			obj.requestNewStream = ensureBool( # e: ValueError
-				helloData[Hello_requestNewStream]) if \
-				Hello_requestNewStream in helloData else False
-
-			obj.transportNumber = ensureNonNegIntLimit( # e: ValueError, TypeError
-				helloData[Hello_transportNumber], 2**64)
-
-			obj.protocolVersion = helloData[Hello_protocolVersion]
-
-			obj.streamingResponse = ensureBool( # e: ValueError
-				helloData[Hello_streamingResponse])
-
-			# Rules for streamId: must be 20-30 inclusive bytes, must not
-			# contain codepoints > 127
-			obj.streamId = helloData[Hello_streamId]
-			# ,str is appropriate only because simplejson returns str when possible
-			if not isinstance(obj.streamId, str) or not 20 <= len(obj.streamId) <= 30:
-				raise InvalidHello
-		except (KeyError, TypeError, ValueError):
-			raise InvalidHello
-
-		if obj.protocolVersion != 2:
-			raise InvalidHello
-
-		# succeedsTransport is always optional. If missing, the client does not
-		# want to get S2C strings over this transport. If None, the client does,
-		# but the transport does not succeed an existing primary transport. If a
-		# number, the transport might succeed an existing primary transport.
-		obj.wantsStrings = Hello_succeedsTransport in helloData
-		if obj.wantsStrings:
-			obj.succeedsTransport = helloData[Hello_succeedsTransport]
-			if obj.succeedsTransport is not None:
-				try:
-					obj.succeedsTransport = ensureNonNegIntLimit(
-						obj.succeedsTransport, 2**64)
-				except (TypeError, ValueError):
-					raise InvalidHello
-
-		if isHttp:
-			try:
-				obj.httpFormat = helloData[Hello_httpFormat]
-			except KeyError:
-				raise InvalidHello
-			if not obj.httpFormat in (FORMAT_XHR, FORMAT_HTMLFILE):
-				raise InvalidHello
-
-			# needPaddingBytes is always optional. If missing, 0.
-			if Hello_needPaddingBytes in helloData:
-				try:
-					obj.needPaddingBytes = ensureNonNegIntLimit(
-						helloData[Hello_needPaddingBytes], 16*1024) # e: ValueError, TypeError
-				except (TypeError, ValueError):
-					raise InvalidHello
-			else:
-				obj.needPaddingBytes = 0
-
-			try:
-				obj.maxReceiveBytes = ensureNonNegIntLimit(
-					helloData[Hello_maxReceiveBytes], 2**64) # e: ValueError, TypeError
-				obj.maxOpenTime = ensureNonNegIntLimit(
-					helloData[Hello_maxOpenTime], 2**64) # e: ValueError, TypeError
-			except (TypeError, ValueError):
-				raise InvalidHello
-
-		return obj
+	# TODO: encode
 
 
 
@@ -170,9 +216,7 @@ class StringFrame(tuple):
 		"""
 		C{frameString} is a L{StringFragment} that ends with "~".
 		"""
-		obj = cls()
-		obj.string = frameString[:-1]
-		return obj
+		return cls(frameString[:-1])
 
 
 	def encode(self):
@@ -194,7 +238,7 @@ class SeqNumFrame(tuple):
 
 
 	def __repr__(self):
-		return '%s(%r)' % (self.__class__.__name__, self[1])
+		return '%s(%d)' % (self.__class__.__name__, self[1])
 
 
 	@classmethod
@@ -224,13 +268,13 @@ class SackFrame(tuple):
 	def __new__(cls, ackNumber, sackList):
 		"""
 		C{ackNumber} is an L{int} or L{long}.
-		C{sackList} is a collection of L{int}s and L{long}s.
+		C{sackList} is a tuple of L{int}s and L{long}s.
 		"""
 		return tuple.__new__(cls, (cls._MARKER, ackNumber, sackList))
 
 
 	def __repr__(self):
-		return '%s(%r, %r)' % (self.__class__.__name__, self[1], self[2])
+		return '%s(%d, %r)' % (self.__class__.__name__, self[1], self[2])
 
 
 	@classmethod
@@ -239,17 +283,16 @@ class SackFrame(tuple):
 		C{frameString} is a L{StringFragment} that ends with "A".
 		"""
 		joinedSackList, ackNumberStr = str(frameString[:-1]).split('|')
-		sackListStrs = joinedSackList.split(',')
 		try:
-			sackList = list(strToNonNegLimit(s, 2**64) for s in sackListStrs)
-			ackNumber = strToNonNegLimit(ackNumberStr)
+			sackList = tuple(strToNonNegLimit(s, 2**64) for s in joinedSackList.split(','))
+			ackNumber = strToNonNegLimit(ackNumberStr, 2**64)
 		except ValueError:
 			raise InvalidFrame
 		return cls(ackNumber, sackList)
 
 
 	def encode(self):
-		return ','.join(self.sackList) + '|' + str(self.ackNumber) + 'A'
+		return ','.join(str(s) for s in self.sackList) + '|' + str(self.ackNumber) + 'A'
 
 
 
@@ -297,7 +340,7 @@ class PaddingFrame(tuple):
 
 
 	def __repr__(self):
-		return '%s(%r)' % (self.__class__.__name__, self[1])
+		return '%s(%d)' % (self.__class__.__name__, self[1])
 
 
 	@classmethod
@@ -460,10 +503,9 @@ lastByteToFrameClass = {
 	'K': TransportKillFrame,
 }
 
-def frameStringToFrame(frameString, isHttp, allowedFrameClasses):
+def frameStringToFrame(frameString, allowedFrameClasses):
 	"""
 	C{frameString} is a L{StringFragment}.
-	C{isHttp} must be truthy if C{frameString} was received over an HTTP transport.
 	C{allowedFrameClasses} is a C{tuple} of allowed frame classes.
 	"""
 	# Must use slicing, not index, because of StringFragment implementation.
@@ -478,10 +520,7 @@ def frameStringToFrame(frameString, isHttp, allowedFrameClasses):
 	if not frameClass in allowedFrameClasses:
 		return InvalidFrame("Frame class %r not allowed" % (frameClass,))
 
-	if frameClass == HelloFrame:
-		return frameClass.decode(frameString, isHttp)
-	else:
-		return frameClass.decode(frameString)
+	return frameClass.decode(frameString)
 
 
 # Frames TODO: timestamp, start timestamps, stop timestamps,

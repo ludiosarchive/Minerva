@@ -35,7 +35,6 @@ from minerva.newlink import (
 	StreamAlreadyExists, BadFrame, ISimpleConsumer, IMinervaProtocol,
 	IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
 	IMinervaTransport, SocketTransport, SocketFace, HttpFace,
-	FORMAT_XHR, FORMAT_HTMLFILE,
 )
 
 from minerva.frames import (
@@ -51,6 +50,7 @@ from minerva.frames import (
 	Hello_maxOpenTime,
 	Hello_useMyTcpAcks,
 	Hello_succeedsTransport,
+	FORMAT_XHR, FORMAT_HTMLFILE,
 )
 
 from minerva.mocks import (

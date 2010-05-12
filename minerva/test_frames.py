@@ -29,6 +29,18 @@ class StringFrameTests(unittest.TestCase):
 		self.assertEqual("StringFrame('Hello')", repr(StringFrame("Hello")))
 
 
+	def test_decode(self):
+		s = '\x00unchecked\xfftext' + '~'
+		self	.assertEqual(
+			StringFrame(StringFragment(s, 0, len(s) - 1)),
+			StringFrame.decode(StringFragment(s, 0, len(s))))
+
+
+	def test_encode(self):
+		s = '\x00unchecked\xfftext'
+		self	.assertEqual(s + '~', StringFrame(StringFragment(s, 0, len(s))).encode())
+
+
 
 class SeqNumFrameTests(unittest.TestCase):
 
@@ -43,24 +55,58 @@ class SeqNumFrameTests(unittest.TestCase):
 
 	def test_repr(self):
 		self.assertEqual("SeqNumFrame(2)", repr(SeqNumFrame(2)))
+		self.assertEqual("SeqNumFrame(%d)" % 2**64, repr(SeqNumFrame(2**64)))
+
+
+	def test_encode(self):
+		self	.assertEqual('2N', SeqNumFrame(2).encode())
+		self	.assertEqual('0N', SeqNumFrame(0).encode())
+		self	.assertEqual('%dN' % 2**64, SeqNumFrame(2**64).encode())
 
 
 
 class SackFrameTests(unittest.TestCase):
 
 	def test_eq(self):
-		self.assertEqual(SackFrame(2, []), SackFrame(2, []))
-		self.assertNotEqual(SackFrame(2, [1]), SackFrame(3, [2]))
-		self.assertNotEqual(SackFrame(2, []), SackFrame(3, []))
+		self.assertEqual(SackFrame(2, ()), SackFrame(2, ()))
+		self.assertNotEqual(SackFrame(2, (1,)), SackFrame(3, (2,)))
+		self.assertNotEqual(SackFrame(2, ()), SackFrame(3, ()))
 
 
 	def test_publicAttr(self):
-		self.assertEqual(2, SackFrame(2, [4, 5]).ackNumber)
-		self.assertEqual([4, 5], SackFrame(2, [4, 5]).sackList)
+		self.assertEqual(2, SackFrame(2, (4, 5)).ackNumber)
+		self.assertEqual((4, 5), SackFrame(2, (4, 5)).sackList)
 
 
 	def test_repr(self):
-		self.assertEqual("SackFrame(2, [1, 4])", repr(SackFrame(2, [1, 4])))
+		self.assertEqual("SackFrame(2, (1, 4))", repr(SackFrame(2, (1, 4))))
+
+
+	def test_decode(self):
+		s = '1,4|%dA' % (2**64,)
+		self	.assertEqual(
+			SackFrame(2**64, (1, 4)),
+			SackFrame.decode(StringFragment(s, 0, len(s))))
+
+
+	def test_decodeFailedAckNumberTooHigh(self):
+		s = '1,4|%dA' % (2**64+1,)
+		self	.assertRaises(
+			InvalidFrame,
+			lambda: SackFrame.decode(StringFragment(s, 0, len(s))))
+
+
+	def test_decodeFailedOneSackNumberTooHigh(self):
+		s = '1,%d|4A' % (2**64+1,)
+		self	.assertRaises(
+			InvalidFrame,
+			lambda: SackFrame.decode(StringFragment(s, 0, len(s))))
+
+
+	def test_encode(self):
+		self	.assertEqual('1,4|2A', SackFrame(2, (1, 4)).encode())
+		self	.assertEqual('4|2A', SackFrame(2, (4,)).encode())
+		self	.assertEqual('|2A', SackFrame(2, ()).encode())
 
 
 
@@ -73,6 +119,24 @@ class YouCloseItFrameTests(unittest.TestCase):
 
 	def test_repr(self):
 		self.assertEqual("YouCloseItFrame()", repr(YouCloseItFrame()))
+
+
+	def test_decode(self):
+		s = 'Y'
+		self	.assertEqual(
+			YouCloseItFrame(),
+			YouCloseItFrame.decode(StringFragment(s, 0, len(s))))
+
+
+	def test_decodeFailed(self):
+		s = 'extra stuff' + 'Y'
+		self	.assertRaises(
+			InvalidFrame,
+			lambda: YouCloseItFrame.decode(StringFragment(s, 0, len(s))))
+
+
+	def test_encode(self):
+		self	.assertEqual('Y', YouCloseItFrame().encode())
 
 
 
@@ -92,7 +156,7 @@ class PaddingFrameTests(unittest.TestCase):
 
 
 	def test_decode(self):
-		s = 'complete ignored stuff' + 'P'
+		s = 'completely ignored stuff' + 'P'
 		n = len(s) - 1
 		self	.assertEqual(
 			PaddingFrame(n),

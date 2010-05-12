@@ -897,6 +897,22 @@ def dumpToJson7Bit(data):
 
 
 
+def sanitizeHelloFrame(helloFrame, isHttp):
+	"""
+	Takes a L{HelloFrame} and returns a sanitized L{HelloFrame} that
+	disables some options for non-HTTP transports (because clients should
+	not be using them anyway).
+
+	C{isHttp} must be truthy if C{helloFrame} was received over an HTTP
+	transport.
+	"""
+	if isHttp:
+		return helloFrame
+
+	
+
+
+
 # Acceptable protocol modes for SocketTransport to be in. Int32* are for Flash Socket.
 UNKNOWN, POLICYFILE, INT32, INT32CRYPTO, WEBSOCKET, BENCODE, HTTP = range(7)
 
