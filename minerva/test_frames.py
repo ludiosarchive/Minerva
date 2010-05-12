@@ -91,6 +91,19 @@ class PaddingFrameTests(unittest.TestCase):
 		self.assertEqual("PaddingFrame(4096)", repr(PaddingFrame(4096)))
 
 
+	def test_decode(self):
+		s = 'complete ignored stuff' + 'P'
+		n = len(s) - 1
+		self	.assertEqual(
+			PaddingFrame(n),
+			PaddingFrame.decode(StringFragment(s, 0, len(s))))
+
+
+	def test_encode(self):
+		self	.assertEqual(' ' * 5 + 'P', PaddingFrame(5).encode())
+		self	.assertEqual('P', PaddingFrame(0).encode())
+
+
 
 class ResetFrameTests(unittest.TestCase):
 
@@ -107,6 +120,34 @@ class ResetFrameTests(unittest.TestCase):
 
 	def test_repr(self):
 		self.assertEqual("ResetFrame('why', True)", repr(ResetFrame("why", True)))
+
+
+	def test_encode(self):
+		self	.assertEqual('the reason|0!', ResetFrame("the reason", False).encode())
+		self	.assertEqual('the reason|1!', ResetFrame("the reason", True).encode())
+
+
+	def test_decode(self):
+		for applicationLevel in (True, False):
+			reasonString = 'the reason'
+			s = reasonString + '|' + str(int(applicationLevel)) + '!'
+			self	.assertEqual(
+				ResetFrame(reasonString, applicationLevel),
+				ResetFrame.decode(StringFragment(s, 0, len(s))))
+
+
+	def test_decodeFailedBadReason(self):
+		s = '\x7freason|0!'
+		self	.assertRaises(
+			InvalidFrame,
+			lambda: ResetFrame.decode(StringFragment(s, 0, len(s))))
+
+
+	def test_decodeFailedBadBoolean(self):
+		s = 'reason|2!'
+		self	.assertRaises(
+			InvalidFrame,
+			lambda: ResetFrame.decode(StringFragment(s, 0, len(s))))
 
 
 
