@@ -152,7 +152,7 @@ class StringFrame(tuple):
 	__slots__ = ()
 	__metaclass__ = attachClassMarker('_MARKER')
 
-	value = property(operator.itemgetter(1))
+	string = property(operator.itemgetter(1))
 
 	def __new__(cls, string):
 		"""
@@ -180,11 +180,21 @@ class StringFrame(tuple):
 
 
 
-class SeqNumFrame(object):
-	__slots__ = ('seqNum',)
+class SeqNumFrame(tuple):
+	__slots__ = ()
+	__metaclass__ = attachClassMarker('_MARKER')
 
-	def __init__(self, seqNum):
-		self.seqNum = seqNum
+	seqNum = property(operator.itemgetter(1))
+
+	def __new__(cls, seqNum):
+		"""
+		C{seqNum} is an L{int} or L{long}.
+		"""
+		return tuple.__new__(cls, (cls._MARKER, seqNum))
+
+
+	def __repr__(self):
+		return '%s(%r)' % (self.__class__.__name__, self[1])
 
 
 	@classmethod
@@ -204,12 +214,23 @@ class SeqNumFrame(object):
 
 
 
-class SackFrame(object):
-	__slots__ = ('ackNumber', 'sackList')
+class SackFrame(tuple):
+	__slots__ = ()
+	__metaclass__ = attachClassMarker('_MARKER')
 
-	def __init__(self, ackNumber, sackList):
-		self.ackNumber = ackNumber
-		self.sackList = sackList
+	ackNumber = property(operator.itemgetter(1))
+	sackList = property(operator.itemgetter(2))
+
+	def __new__(cls, ackNumber, sackList):
+		"""
+		C{ackNumber} is an L{int} or L{long}.
+		C{sackList} is a collection of L{int}s and L{long}s.
+		"""
+		return tuple.__new__(cls, (cls._MARKER, ackNumber, sackList))
+
+
+	def __repr__(self):
+		return '%s(%r, %r)' % (self.__class__.__name__, self[1], self[2])
 
 
 	@classmethod
@@ -232,8 +253,20 @@ class SackFrame(object):
 
 
 
-class YouCloseItFrame(object):
+class YouCloseItFrame(tuple):
 	__slots__ = ()
+	__metaclass__ = attachClassMarker('_MARKER')
+
+	def __new__(cls):
+		"""
+		No arguments.
+		"""
+		return tuple.__new__(cls, (cls._MARKER,))
+
+
+	def __repr__(self):
+		return '%s()' % (self.__class__.__name__,)
+
 
 	@classmethod
 	def decode(cls, frameString):
