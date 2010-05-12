@@ -6,8 +6,10 @@ yet written).
 TODO: add HelloFrame.encode
 """
 
+import operator
+
 from mypy.objops import ensureBool, ensureNonNegIntLimit, strToNonNegLimit
-from mypy.constant import Constant, BC_VALUE
+from mypy.constant import Constant, attachClassMarker
 from mypy.strops import FS_STR, FS_POSITION, FS_SIZE
 from minerva.decoders import strictDecoder
 
@@ -146,14 +148,21 @@ class HelloFrame(object):
 
 
 
-class StringFrame(object):
-	__slots__ = ('string',)
+class StringFrame(tuple):
+	__slots__ = ()
+	__metaclass__ = attachClassMarker('_MARKER')
 
-	def __init__(self, string):
+	value = property(operator.itemgetter(1))
+
+	def __new__(cls, string):
 		"""
 		C{string} is a L{StringFragment}.
 		"""
-		self.string = string
+		return tuple.__new__(cls, (cls._MARKER, string))
+
+
+	def __repr__(self):
+		return '%s(%r)' % (self.__class__.__name__, self[1])
 
 
 	@classmethod
@@ -348,8 +357,8 @@ class TransportKillFrame(object):
 	stringToConstant = {}
 	constantToString = {}
 	for c in reasons:
-		stringToConstant[c[BC_VALUE]] = c
-		constantToString[c] = c[BC_VALUE]
+		stringToConstant[c.value] = c
+		constantToString[c] = c.value
 
 
 	def __init__(self, reason):
@@ -382,13 +391,13 @@ class TransportKillFrame(object):
 
 
 lastByteToFrameClass = {
-	'~': StringFrame,
-	'A': SackFrame,
-	'N': SeqNumFrame,
 	'H': HelloFrame,
+	'~': StringFrame,
+	'N': SeqNumFrame,
+	'A': SackFrame,
+	'Y': YouCloseItFrame,
 	'!': ResetFrame,
 	'P': PaddingFrame,
-	'Y': YouCloseItFrame,
 	'K': TransportKillFrame,
 }
 
@@ -399,11 +408,14 @@ def frameStringToFrame(frameString, isHttp, allowedFrameClasses):
 	C{allowedFrameClasses} is a C{tuple} of allowed frame classes.
 	"""
 	# Must use slicing, not index, because of StringFragment implementation.
-	lastByte = str(frameString[-1:]) # lastByte may be ""
+	if not frameString.size:
+		return InvalidFrame("0-length frame")
+	lastByte = frameString[-1]
+
 	try:
 		frameClass = lastByteToFrameClass[lastByte]
 	except KeyError:
-		return InvalidFrame("Unknown frame type or 0-length frame")
+		return InvalidFrame("Unknown frame type")
 	if not frameClass in allowedFrameClasses:
 		return InvalidFrame("Frame class %r not allowed" % (frameClass,))
 

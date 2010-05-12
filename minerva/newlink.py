@@ -18,7 +18,7 @@ from twisted.web.server import NOT_DONE_YET
 
 from mypy.randgen import secureRandom
 from mypy.objops import ensureNonNegIntLimit, ensureBool, strToNonNegLimit
-from mypy.strops import StringFragment, FS_STR, FS_POSITION, FS_SIZE
+from mypy.strops import StringFragment
 from mypy.mailbox import Mailbox, mailboxify
 
 from minerva import decoders
@@ -1146,8 +1146,8 @@ class SocketTransport(object):
 
 			try:
 				frameObj, stoppedAt = decoders.strictDecoder.raw_decode(
-					frameString[FS_STR], frameString[FS_POSITION])
-				if stoppedAt != frameString[FS_POSITION] + frameString[FS_SIZE]: # TODO: this will be `- 1` soon
+					frameString.string, frameString.pos)
+				if stoppedAt != frameString[FS_POSITION] + frameString.size: # TODO: this will be `- 1` soon
 					self._closeWith(Fn_tk_intraframe_corruption)
 					break
 			except (simplejson.decoder.JSONDecodeError, decoders.ParseError):
