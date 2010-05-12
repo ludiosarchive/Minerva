@@ -1,5 +1,8 @@
+import simplejson
+
 from twisted.trial import unittest
 
+from mypy.constant import Constant
 from mypy.strops import StringFragment
 
 from minerva.frames import (
@@ -7,10 +10,81 @@ from minerva.frames import (
 	ResetFrame, PaddingFrame, TransportKillFrame,
 	InvalidFrame, frameStringToFrame)
 
+from minerva.frames import (
+	Hello_transportNumber,
+	Hello_protocolVersion,
+	Hello_httpFormat,
+	Hello_requestNewStream,
+	Hello_streamId,
+	Hello_credentialsData,
+	Hello_streamingResponse,
+	Hello_needPaddingBytes,
+	Hello_maxReceiveBytes,
+	Hello_maxOpenTime,
+	Hello_useMyTcpAcks,
+	Hello_succeedsTransport,
+	FORMAT_XHR, FORMAT_HTMLFILE,
+)
+
+
+DeleteProperty = Constant("DeleteProperty")
+
+def _makeHelloObject(extra={}):
+	obj = {
+		Hello_transportNumber: 0,
+		Hello_requestNewStream: 1,
+		Hello_protocolVersion: 2,
+		Hello_streamId: 'x'*26,
+		Hello_streamingResponse: 1,
+		Hello_maxReceiveBytes: 2**30,
+		Hello_maxOpenTime: 2**30}
+	for k, v in extra.iteritems():
+		if v == DeleteProperty and k in obj:
+			del obj[k]
+		else:
+			obj[k] = v
+	return obj
+
+
+def dumpToJson7Bit(data):
+	return simplejson.dumps(data, separators=(',', ':'), allow_nan=False)
+
 
 class HelloFrameTests(unittest.TestCase):
-	# TODO
-	pass
+
+	def test_eq(self):
+		self.assertTrue(HelloFrame({"a": 1}) == HelloFrame({"a": 1}))
+		self.assertFalse(HelloFrame({"a": 1}) != HelloFrame({"a": 1}))
+		self.assertTrue(HelloFrame({"a": 1}) != HelloFrame({"a": 2}))
+		self.assertFalse(HelloFrame({"a": 1}) == HelloFrame({"a": 2}))
+		self.assertTrue(HelloFrame({"a": 1}) != HelloFrame({"a": 1, "b": 1}))
+		self.assertFalse(HelloFrame({"a": 1}) == HelloFrame({"a": 1, "b": 1}))
+
+
+	def test_publicAttr(self):
+		self.assertEqual("goes", HelloFrame({"anything": "goes"}).anything)
+
+
+	def test_repr(self):
+		self.assertEqual("HelloFrame({'a': 1})", repr(HelloFrame({'a': 1})))
+
+
+	def test_decode(self):
+		s = dumpToJson7Bit(_makeHelloObject()) + 'H'
+		self	.assertEqual(
+			HelloFrame(dict(
+				transportNumber=0,
+				requestNewStream=True,
+				protocolVersion=2,
+				streamId='x'*26,
+				streamingResponse=True,
+				maxReceiveBytes=2**30,
+				maxOpenTime=2**30,
+				wantsStrings=False,
+				credentialsData={},
+				needPaddingBytes=0,
+				httpFormat=None)),
+			HelloFrame.decode(StringFragment(s, 0, len(s))))
 
 
 

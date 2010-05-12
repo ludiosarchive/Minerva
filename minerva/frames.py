@@ -8,9 +8,9 @@ TODO: add HelloFrame.encode
 
 import operator
 
+from mypy.dictops import attrdict
 from mypy.objops import ensureBool, ensureNonNegIntLimit, strToNonNegLimit
 from mypy.constant import Constant, attachClassMarker
-from mypy.strops import FS_STR, FS_POSITION, FS_SIZE
 from minerva.decoders import strictDecoder
 
 _postImportVars = vars().keys()
@@ -47,14 +47,12 @@ class InvalidHello(InvalidFrame):
 def helloDataToHelloFrame(helloData):
 	"""
 	Convert arbitrary JSON-decoded blob of objects into a L{HelloFrame}.
-
-	See also L{newlink.sanitizeHelloFrame}, which is run on the L{HelloFrame}
-	before it is used.
+	Raises L{InvalidHello} if there were errors in the blob of objects.
 	"""
 	if not isinstance(helloData, dict):
 		raise InvalidHello
 
-	obj = cls()
+	obj = attrdict()
 
 	# credentialsData is always optional
 	obj.credentialsData = helloData[Hello_credentialsData] if \
@@ -106,74 +104,63 @@ def helloDataToHelloFrame(helloData):
 			except (TypeError, ValueError):
 				raise InvalidHello
 
-	if isHttp:
-		try:
-			obj.httpFormat = helloData[Hello_httpFormat]
-		except KeyError:
-			raise InvalidHello
+	obj.httpFormat = None
+	try:
+		obj.httpFormat = helloData[Hello_httpFormat]
 		if not obj.httpFormat in (FORMAT_XHR, FORMAT_HTMLFILE):
-			raise InvalidHello
+			obj.httpFormat = None
+	except KeyError:
+		pass
 
-		# needPaddingBytes is always optional. If missing, 0.
-		if Hello_needPaddingBytes in helloData:
-			try:
-				obj.needPaddingBytes = ensureNonNegIntLimit(
-					helloData[Hello_needPaddingBytes], 16*1024) # e: ValueError, TypeError
-			except (TypeError, ValueError):
-				raise InvalidHello
-		else:
-			obj.needPaddingBytes = 0
-
+	# needPaddingBytes is always optional. If missing, 0.
+	if Hello_needPaddingBytes in helloData:
 		try:
-			obj.maxReceiveBytes = ensureNonNegIntLimit(
-				helloData[Hello_maxReceiveBytes], 2**64) # e: ValueError, TypeError
-			obj.maxOpenTime = ensureNonNegIntLimit(
-				helloData[Hello_maxOpenTime], 2**64) # e: ValueError, TypeError
+			obj.needPaddingBytes = ensureNonNegIntLimit(
+				helloData[Hello_needPaddingBytes], 16*1024) # e: ValueError, TypeError
 		except (TypeError, ValueError):
 			raise InvalidHello
 	else:
-		# For non-HTTP, don't allow clients to
-		obj.httpFormat = None
+		obj.needPaddingBytes = 0
+
+	# Both are optional and have no limit by default
+	try:
+		obj.maxReceiveBytes = ensureNonNegIntLimit(
+			helloData[Hello_maxReceiveBytes], 2**64) # e: ValueError, TypeError
+	except KeyError:
 		obj.maxReceiveBytes = 2**64
+	except (TypeError, ValueError):
+		raise InvalidHello
+
+	try:
+		obj.maxOpenTime = ensureNonNegIntLimit(
+			helloData[Hello_maxOpenTime], 2**64) # e: ValueError, TypeError
+	except KeyError:
 		obj.maxOpenTime = 2**64
+	except (TypeError, ValueError):
+		raise InvalidHello
 
-
-	return cls(
-		credentialsData, requestNewStream, transportNumber, protocolVersion,
-		streamId, wantsStrings, succeedsTransport, httpFormat,
-		streamingResponse, needPaddingBytes, maxReceiveBytes, maxOpenTime)
+	return HelloFrame(obj)
 
 
 
-# The other frame classes are a tuple; this one is not, so be careful.
-class HelloFrame(tuple):
-	__slots__ = ()
-	__metaclass__ = attachClassMarker('_MARKER')
+# The other frame classes are a tuple; this one is not, and some users
+# like L{newlink.sanitizeHelloFrame} do mutate it.
+class HelloFrame(object):
 
-	credentialsData = property(operator.itemgetter(1))
-	requestNewStream = property(operator.itemgetter(2))
-	transportNumber = property(operator.itemgetter(3))
-	protocolVersion = property(operator.itemgetter(4))
-	streamId = property(operator.itemgetter(5))
-	wantsStrings = property(operator.itemgetter(6))
-	succeedsTransport = property(operator.itemgetter(7))
-	httpFormat = property(operator.itemgetter(8))
-	streamingResponse = property(operator.itemgetter(9))
-	needPaddingBytes = property(operator.itemgetter(10))
-	maxReceiveBytes = property(operator.itemgetter(11))
-	maxOpenTime = property(operator.itemgetter(12))
+	def __init__(self, obj):
+		self.__dict__ = obj
 
-	def __new__(cls,
-		credentialsData, requestNewStream, transportNumber, protocolVersion,
-		streamId, wantsStrings, succeedsTransport, httpFormat,
-		streamingResponse, needPaddingBytes, maxReceiveBytes, maxOpenTime):
-		"""
-		C{string} is a L{StringFragment}.
-		"""
-		return tuple.__new__(cls, (cls._MARKER,
-		credentialsData, requestNewStream, transportNumber, protocolVersion,
-		streamId, wantsStrings, succeedsTransport, httpFormat,
-		streamingResponse, needPaddingBytes, maxReceiveBytes, maxOpenTime))
+
+	def __eq__(self, other):
+		return False if type(self) != type(other) else self.__dict__ == other.__dict__
+
+
+	def __ne__(self, other):
+		return True if type(self) != type(other) else self.__dict__ != other.__dict__
+
+
+	def __repr__(self):
+		return '%s(%r)' % (self.__class__.__name__, self.__dict__)
 
 
 	@classmethod
@@ -182,9 +169,9 @@ class HelloFrame(tuple):
 		C{frameString} is a L{StringFragment} that ends with "H".
 		"""
 		helloData, stoppedAt = strictDecoder.raw_decode(
-			frameString[FS_STR], frameString[FS_POSITION])
+			frameString.string, frameString.pos)
 		# `- 1` because we expect to stop before the trailing "H"
-		if stoppedAt != frameString[FS_POSITION] + frameString[FS_SIZE] - 1:
+		if stoppedAt != frameString.pos + frameString.size - 1:
 			raise InvalidHello
 
 		return helloDataToHelloFrame(helloData)
