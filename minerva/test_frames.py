@@ -1,9 +1,11 @@
 from twisted.trial import unittest
 
+from mypy.strops import StringFragment
+
 from minerva.frames import (
 	HelloFrame, StringFrame, SeqNumFrame, SackFrame, YouCloseItFrame,
 	ResetFrame, PaddingFrame, TransportKillFrame,
-	frameStringToFrame)
+	InvalidFrame, frameStringToFrame)
 
 
 class HelloFrameTests(unittest.TestCase):
@@ -74,6 +76,22 @@ class YouCloseItFrameTests(unittest.TestCase):
 
 
 
+class PaddingFrameTests(unittest.TestCase):
+
+	def test_eq(self):
+		self.assertEqual(PaddingFrame(4096), PaddingFrame(4096))
+		self.assertNotEqual(PaddingFrame(4096), PaddingFrame(4097))
+
+
+	def test_publicAttr(self):
+		self.assertEqual(4096, PaddingFrame(4096).numBytes)
+
+
+	def test_repr(self):
+		self.assertEqual("PaddingFrame(4096)", repr(PaddingFrame(4096)))
+
+
+
 class ResetFrameTests(unittest.TestCase):
 
 	def test_eq(self):
@@ -92,16 +110,45 @@ class ResetFrameTests(unittest.TestCase):
 
 
 
-class PaddingFrameTests(unittest.TestCase):
+tk = TransportKillFrame
+
+class TransportKillFrameTests(unittest.TestCase):
 
 	def test_eq(self):
-		self.assertEqual(PaddingFrame(4096), PaddingFrame(4096))
-		self.assertNotEqual(PaddingFrame(4096), PaddingFrame(4097))
+		self.assertEqual(
+			TransportKillFrame(tk.stream_attach_failure),
+			TransportKillFrame(tk.stream_attach_failure))
+		self.assertNotEqual(
+			TransportKillFrame(tk.stream_attach_failure),
+			TransportKillFrame(tk.acked_unsent_strings))
 
 
 	def test_publicAttr(self):
-		self.assertEqual(4096, PaddingFrame(4096).numBytes)
+		self.assertEqual(
+			tk.acked_unsent_strings,
+			TransportKillFrame(tk.acked_unsent_strings).reason)
 
 
 	def test_repr(self):
-		self.assertEqual("PaddingFrame(4096)", repr(PaddingFrame(4096)))
+		self.assertEqual(
+			"TransportKillFrame(_TransportKillReason('frame_corruption'))",
+			repr(TransportKillFrame(tk.frame_corruption)))
+
+
+	def test_encode(self):
+		self	.assertEqual('frame_corruptionK', TransportKillFrame(tk.frame_corruption).encode())
+
+
+	def test_decode(self):
+		for reason in tk.allReasons:
+			s = reason.value + 'K'
+		self	.assertEqual(
+			TransportKillFrame(reason),
+			TransportKillFrame.decode(StringFragment(s, 0, len(s))))
+
+
+	def test_decodeFailed(self):
+		s = 'not_a_reasonK'
+		self	.assertRaises(
+			InvalidFrame,
+			lambda: TransportKillFrame.decode(StringFragment(s, 0, len(s))))

@@ -283,6 +283,36 @@ class YouCloseItFrame(tuple):
 
 
 
+class PaddingFrame(tuple):
+	__slots__ = ()
+	__metaclass__ = attachClassMarker('_MARKER')
+
+	numBytes = property(operator.itemgetter(1))
+
+	def __new__(cls, numBytes):
+		"""
+		C{numBytes} is an L{int}.
+		"""
+		return tuple.__new__(cls, (cls._MARKER, numBytes))
+
+
+	def __repr__(self):
+		return '%s(%r)' % (self.__class__.__name__, self[1])
+
+
+	@classmethod
+	def decode(cls, frameString):
+		"""
+		C{frameString} is a L{StringFragment} that ends with "P".
+		"""
+		return cls(len(frameString) - 1)
+
+
+	def encode(self):
+		return (' ' * self.numBytes) + 'P'
+
+
+
 class WhoReset(object):
 	server_minerva = 1
 	server_app = 2
@@ -349,43 +379,16 @@ class ResetFrame(tuple):
 
 
 
-class PaddingFrame(tuple):
-	__slots__ = ()
-	__metaclass__ = attachClassMarker('_MARKER')
-
-	numBytes = property(operator.itemgetter(1))
-
-	def __new__(cls, numBytes):
-		"""
-		C{numBytes} is an L{int}.
-		"""
-		return tuple.__new__(cls, (cls._MARKER, numBytes))
-
-
-	def __repr__(self):
-		return '%s(%r)' % (self.__class__.__name__, self[1])
-
-
-	@classmethod
-	def decode(cls, frameString):
-		"""
-		C{frameString} is a L{StringFragment} that ends with "P".
-		"""
-		return cls(len(frameString) - 1)
-
-
-	def encode(self):
-		return (' ' * self.numBytes) + 'P'
-
-
-
 class _TransportKillReason(Constant):
 	__slots__ = ()
 
 
 
-class TransportKillFrame(object):
+class TransportKillFrame(tuple):
 	__slots__ = ()
+	__metaclass__ = attachClassMarker('_MARKER')
+
+	reason = property(operator.itemgetter(1))
 
 	# Either because no such Stream, or bad credentialsData
 	stream_attach_failure = _TransportKillReason("stream_attach_failure")
@@ -400,22 +403,28 @@ class TransportKillFrame(object):
 	# (only applies to some decoders).
 	frame_corruption = _TransportKillReason("frame_corruption")
 
-	reasons = (
+	allReasons = (
 		stream_attach_failure, acked_unsent_strings,
 		 invalid_frame_type_or_arguments, frame_corruption)
 
 	stringToConstant = {}
 	constantToString = {}
-	for c in reasons:
-		stringToConstant[c.value] = c
-		constantToString[c] = c.value
+	for _c in allReasons:
+		stringToConstant[_c.value] = _c
+		constantToString[_c] = _c.value
+	del _c
 
 
-	def __init__(self, reason):
+	def __new__(cls, reason):
 		"""
-		C{reason} is a L{_TransportKillReason}.
+		C{reason} is a one of the L{_TransportKillReason}s defined on
+		this class.
 		"""
-		self.reason = reason
+		return tuple.__new__(cls, (cls._MARKER, reason))
+
+
+	def __repr__(self):
+		return '%s(%r)' % (self.__class__.__name__, self[1])
 
 
 	@classmethod
@@ -425,7 +434,7 @@ class TransportKillFrame(object):
 		"""
 		string = str(frameString[:-1])
 		try:
-			reason = self.stringToConstant[string]
+			reason = cls.stringToConstant[string]
 		except KeyError:
 			raise InvalidFrame
 
@@ -446,8 +455,8 @@ lastByteToFrameClass = {
 	'N': SeqNumFrame,
 	'A': SackFrame,
 	'Y': YouCloseItFrame,
-	'!': ResetFrame,
 	'P': PaddingFrame,
+	'!': ResetFrame,
 	'K': TransportKillFrame,
 }
 
