@@ -305,20 +305,27 @@ def isValidReasonString(reasonString):
 	return True
 
 
-class ResetFrame(object):
+class ResetFrame(tuple):
 	"""
 	A reset frame indicates this side has given up on the Stream.
 	A reset frame implies a transport kill as well.
 	"""
 	__slots__ = ()
+	__metaclass__ = attachClassMarker('_MARKER')
 
-	def __init__(self, reasonString, applicationLevel):
+	reasonString = property(operator.itemgetter(1))
+	applicationLevel = property(operator.itemgetter(2))
+
+	def __new__(cls, reasonString, applicationLevel):
 		"""
 		@param reasonString: why the Stream reset.
 			ASCII (0x20-0x7E)-only C{str}, max 255 bytes.
 		"""
-		self.reasonString = reasonString
-		self.applicationLevel = applicationLevel
+		return tuple.__new__(cls, (cls._MARKER, reasonString, applicationLevel))
+
+
+	def __repr__(self):
+		return '%s(%r, %r)' % (self.__class__.__name__, self[1], self[2])
 
 
 	@classmethod
@@ -342,11 +349,21 @@ class ResetFrame(object):
 
 
 
-class PaddingFrame(object):
+class PaddingFrame(tuple):
 	__slots__ = ()
+	__metaclass__ = attachClassMarker('_MARKER')
 
-	def __init__(self, numBytes):
-		self.numBytes = numBytes
+	numBytes = property(operator.itemgetter(1))
+
+	def __new__(cls, numBytes):
+		"""
+		C{numBytes} is an L{int}.
+		"""
+		return tuple.__new__(cls, (cls._MARKER, numBytes))
+
+
+	def __repr__(self):
+		return '%s(%r)' % (self.__class__.__name__, self[1])
 
 
 	@classmethod

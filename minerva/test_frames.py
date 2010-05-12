@@ -71,3 +71,37 @@ class YouCloseItFrameTests(unittest.TestCase):
 
 	def test_repr(self):
 		self.assertEqual("YouCloseItFrame()", repr(YouCloseItFrame()))
+
+
+
+class ResetFrameTests(unittest.TestCase):
+
+	def test_eq(self):
+		self.assertEqual(ResetFrame("why", True), ResetFrame("why", True))
+		self.assertNotEqual(ResetFrame("why", True), ResetFrame("why", False))
+		self.assertNotEqual(ResetFrame("why2", True), ResetFrame("why", True))
+
+
+	def test_publicAttr(self):
+		self.assertEqual("why", ResetFrame("why", True).reasonString)
+		self.assertEqual(True, ResetFrame("why", True).applicationLevel)
+
+
+	def test_repr(self):
+		self.assertEqual("ResetFrame('why', True)", repr(ResetFrame("why", True)))
+
+
+
+class PaddingFrameTests(unittest.TestCase):
+
+	def test_eq(self):
+		self.assertEqual(PaddingFrame(4096), PaddingFrame(4096))
+		self.assertNotEqual(PaddingFrame(4096), PaddingFrame(4097))
+
+
+	def test_publicAttr(self):
+		self.assertEqual(4096, PaddingFrame(4096).numBytes)
+
+
+	def test_repr(self):
+		self.assertEqual("PaddingFrame(4096)", repr(PaddingFrame(4096)))
