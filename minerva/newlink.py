@@ -4,7 +4,6 @@ You really want to read docs/Overview.rst to understand the code in this file.
 See minerva/sample/demo.py for an idea of how to use the classes below.
 """
 
-import simplejson
 import traceback
 from collections import deque
 from zope.interface import Interface, Attribute, implements
@@ -26,118 +25,19 @@ from minerva.frames import WhoReset
 from minerva.website import RejectTransport
 from minerva.interfaces import ISimpleConsumer
 from minerva.window import Queue, Incoming, InvalidSACK
+from minerva.frames import (
+	HelloFrame, StringFrame, SeqNumFrame, SackFrame, YouCloseItFrame,
+	ResetFrame, PaddingFrame, TransportKillFrame,
+	WhoReset, InvalidFrame, decodeFrameFromClient)
+
+# Make globals that pypycpyo.optimizer can optimize away
+tk_stream_attach_failure = TransportKillFrame.stream_attach_failure
+tk_acked_unsent_strings =  TransportKillFrame.acked_unsent_strings
+tk_invalid_frame_type_or_arguments =  TransportKillFrame.invalid_frame_type_or_arguments
+tk_frame_corruption =  TransportKillFrame.frame_corruption
+
 
 _postImportVars = vars().keys()
-
-
-class BadFrame(Exception):
-	pass
-
-
-
-class Frame(object):
-	"""
-	I represent a frame. When instantiated, I will check that
-	the frame type is valid, and that the number of arguments
-	in the frame is correct. I will not actually check the arguments,
-	though.
-
-	I do not have a `toBytes' method or similar because
-	different transports require different serializations.
-	"""
-
-	# If you change these, YOU MUST ALSO CHANGE js/cw/net/net.js
-
-	# Most-frequently-used types should be non-negative and single-digit.
-	# num -> (name, minArgs, maxArgs)
-	knownTypes = {
-		# 0: reserved,
-		1: ('string', 1, 1),
-		2: ('seqnum', 1, 1),
-
-		4: ('sack', 2, 2),
-		5: ('hello', 1, 1),
-
-		8: ('timestamp', 1, 1),
-		10: ('reset', 2, 2), # reset really means "Stream is dead to me. Also, transport kill because stream is dead."
-
-		11: ('you_close_it', 0, 0),
-		12: ('start_timestamps', 3, 3),
-		13: ('stop_timestamps', 1, 1),
-
-		20: ('padding', 1, 1),
-
-		601: ('tk_stream_attach_failure', 0, 0), # Either because no such Stream, or bad credentialsData
-		602: ('tk_acked_unsent_boxes', 0, 0),
-		# TODO: test that transportOffline is called when client causes this after transport attached to a Stream
-		603: ('tk_invalid_frame_type_or_arguments', 0, 0),
-		610: ('tk_frame_corruption', 0, 0),
-		611: ('tk_intraframe_corruption', 0, 0),
-		650: ('tk_brb', 1, 1), # Server is overloaded or shutting down, tells client to come back soon
-	}
-
-	class names:
-		pass
-	names = names()
-	for num, (name, minArgs, maxArgs) in knownTypes.iteritems():
-		setattr(names, name, num)
-
-	__slots__ = ('contents', 'type', '_cachedSize')
-
-	def __init__(self, contents):
-		"""
-		Convert C{list} C{contents} to a L{Frame}.
-
-		@throws: L{BadFrame} if cannot convert
-		"""
-		try:
-			self.type = contents[0]
-		except (IndexError, KeyError, TypeError):
-			raise BadFrame("Frame did not have a [0]th item")
-		try:
-			typeInfo = self.knownTypes[self.type]
-		except (KeyError, TypeError):
-			raise BadFrame("Frame(%r) has unknown frame type %r, "
-				"or [0]th item was not hashable" % (contents, self.type))
-
-		_, minArgs, maxArgs = typeInfo
-		if not minArgs <= len(contents) - 1 <= maxArgs:
-			raise BadFrame("Bad argument count for Frame type %r (%r); "
-				"got %d args." % (self.type, self.getType(), len(contents) - 1))
-
-		self.contents = contents
-
-
-	def __repr__(self):
-		return '<%s type %r, contents %r>' % (
-			self.__class__.__name__, self.knownTypes[self.type][0], self.contents)
-
-
-	def getType(self):
-		return self.knownTypes[self.type][0]
-
-
-Fn = Frame.names
-
-
-# Create globals that will be optimized away by pypycpyo.optimizer,
-# instead of using attribute lookups frequently. With this, we can use
-# Fn_string instead of Fn.string. We don't use a globals()['Fn_' + ...]
-# hack here because Pyflakes does not understand it.
-Fn_string = Fn.string
-Fn_seqnum = Fn.seqnum
-Fn_sack = Fn.sack
-Fn_hello = Fn.hello
-Fn_reset = Fn.reset
-Fn_you_close_it = Fn.you_close_it
-Fn_start_timestamps = Fn.start_timestamps
-Fn_stop_timestamps = Fn.stop_timestamps
-Fn_tk_frame_corruption = Fn.tk_frame_corruption
-Fn_tk_intraframe_corruption = Fn.tk_intraframe_corruption
-Fn_tk_stream_attach_failure = Fn.tk_stream_attach_failure
-Fn_tk_invalid_frame_type_or_arguments = Fn.tk_invalid_frame_type_or_arguments
-Fn_tk_acked_unsent_boxes = Fn.tk_acked_unsent_boxes
-
 
 
 class IMinervaProtocol(Interface):
@@ -853,7 +753,7 @@ class IMinervaTransport(ISimpleConsumer):
 
 		@param queue: an L{abstract.Queue}
 		@param start: where to start in the queue, or C{None}
-		@type start: L{int} or L{NoneType}
+		@type start: L{int} or L{long} or L{NoneType}
 		"""
 
 
@@ -883,17 +783,11 @@ class IMinervaTransport(ISimpleConsumer):
 
 	def isHttp():
 		"""
-		@return: C{True} if this transport is using HTTP, otherwise C{False}.
+		@return: Whether this transport is using HTTP.
 		@rtype: bool
 
 		@raise: L{RuntimeError} if we don't know yet.
 		"""
-
-
-
-dumps = simplejson.dumps
-def dumpToJson7Bit(data):
-	return dumps(data, separators=(',', ':'), allow_nan=False)
 
 
 
@@ -905,13 +799,11 @@ def sanitizeHelloFrame(helloFrame, isHttp):
 	C{isHttp} must be truthy if C{helloFrame} was received over an HTTP
 	transport.
 	"""
-	if isHttp:
-		return helloFrame
-
-	# For non-HTTP transports, don't allow clients to use these options.
-	helloFrame.streamingResponse = True
-	helloFrame.maxReceiveBytes = 2**64
-	helloFrame.maxOpenTime = 2**64
+	if not isHttp:
+		# For non-HTTP transports, don't allow clients to use these options.
+		helloFrame.streamingResponse = True
+		helloFrame.maxReceiveBytes = 2**64
+		helloFrame.maxOpenTime = 2**64
 
 
 
@@ -1001,24 +893,20 @@ class SocketTransport(object):
 		##self.transport.loseWriteConnection(), maybe followed by loseConnection later
 
 
-	def _encodeFrame(self, frameData):
-		if self._mode in (BENCODE, INT32):
-			return self._parser.encode(dumpToJson7Bit(frameData))
-		elif self._mode == HTTP:
-			return dumpToJson7Bit(frameData) + '\n'
-		else:
-			1/0
+	def _encodeFrame(self, frame):
+		if self._mode == HTTP:
+			return frame.encode() + '\n'
+		elif self._mode in (BENCODE, INT32):
+			return self._parser.encode(frame.encode())
 
 
 	@mailboxify('_mailbox')
-	def _closeWith(self, errorType, *args):
+	def _closeWith(self, reason):
 		if self._terminating:
 			return
-		invalidArgsFrameObj = [errorType]
-		invalidArgsFrameObj.extend(args)
-		self._toSend += self._encodeFrame(invalidArgsFrameObj)
+		self._toSend += self._encodeFrame(TransportKillFrame(reason))
 		if self._mode != HTTP:
-			self._toSend += self._encodeFrame([Fn_you_close_it])
+			self._toSend += self._encodeFrame(YouCloseItFrame())
 		self._terminating = True
 
 
@@ -1031,7 +919,7 @@ class SocketTransport(object):
 			return
 
 		if self._mode != HTTP:
-			self._toSend += self._encodeFrame([Fn_you_close_it])
+			self._toSend += self._encodeFrame(YouCloseItFrame())
 		self._terminating = True
 
 
@@ -1043,9 +931,9 @@ class SocketTransport(object):
 		if self._terminating:
 			return
 
-		self._toSend += self._encodeFrame([Fn_reset, reasonString, applicationLevel])
+		self._toSend += self._encodeFrame(ResetFrame(reasonString, applicationLevel))
 		if self._mode != HTTP:
-			self._toSend += self._encodeFrame([Fn_you_close_it])
+			self._toSend += self._encodeFrame(YouCloseItFrame())
 		self._terminating = True
 
 
@@ -1074,15 +962,18 @@ class SocketTransport(object):
 			if seqNum <= lastBox: # This might have to change to support SACK.
 				continue
 			if lastBox == -1 or lastBox + 1 != seqNum:
-				self._toSend += self._encodeFrame([Fn_seqnum, seqNum])
-			self._toSend += self._encodeFrame([Fn_string, string])
+				self._toSend += self._encodeFrame(SeqNumFrame(seqNum))
+			self._toSend += self._encodeFrame(StringFrame(string))
 			lastBox = seqNum
 
 		self.lastBoxSent = lastBox
 
 
-	def _handleHelloFrame(self, frame):
-		hello = helloDataToHello(frame.contents[1], self._mode == HTTP)
+	def _handleHelloFrame(self, hello):
+		"""
+		C{hello} is a L{HelloFrame}.
+		"""
+		sanitizeHelloFrame(hello)
 
 		# self._protocolVersion = protocolVersion # Not needed at the moment
 		self.streamId = hello.streamId
@@ -1130,15 +1021,10 @@ class SocketTransport(object):
 			f.trap(RejectTransport)
 			if self._terminating:
 				return
-			self._closeWith(Fn_tk_stream_attach_failure)
+			self._closeWith(tk_stream_attach_failure)
 
 		d.addCallbacks(cbAuthOkay, cbAuthFailed)
 		d.addErrback(log.err)
-
-
-	def _getSACKBytes(self):
-		sackFrame = (Fn_sack,) + self._stream.getSACK()
-		return self._encodeFrame(sackFrame)
 
 
 	def _framesReceived(self, frames):
@@ -1151,7 +1037,7 @@ class SocketTransport(object):
 			# (though those are all mailboxify'ed).
 
 			bunchedStrings[0] = []
-			self._toSend += self._getSACKBytes()
+			self._toSend += self._encodeFrame(SackFrame(*self._stream.getSACK()))
 
 		# Note: keep in mind that _closeWith is mailboxified, so any actual
 		# closing happens after we call `handleStrings` near the end.
@@ -1163,104 +1049,55 @@ class SocketTransport(object):
 				frameString = StringFragment(frameString, 0, len(frameString))
 
 			try:
-				frameObj, stoppedAt = decoders.strictDecoder.raw_decode(
-					frameString.string, frameString.pos)
-				if stoppedAt != frameString[FS_POSITION] + frameString.size: # TODO: this will be `- 1` soon
-					self._closeWith(Fn_tk_intraframe_corruption)
-					break
-			except (simplejson.decoder.JSONDecodeError, decoders.ParseError):
-				self._closeWith(Fn_tk_intraframe_corruption)
+				frame = decodeFrameFromClient(frameString)
+			except InvalidFrame:
+				self._closeWith(tk_invalid_frame_type_or_arguments)
 				break
 
-			try:
-				frame = Frame(frameObj)
-			except BadFrame:
-				self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-				break
-
-			# Below, we can assume that the frame has the minimum/maximum
-			# allowed number of arguments for the frame type.
-
-			frameType = frameObj[0]
+			frameType = frame.__class__
 
 			# First frame must be hello frame; must not receive the hello
 			# frame twice.
 			if self.receivedCounter == 0:
-				if frameType == Fn_hello:
+				if frameType == HelloFrame:
 					try:
 						self._handleHelloFrame(frame)
-					except InvalidHello:
-						self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-						break
 					except NoSuchStream:
-						self._closeWith(Fn_tk_stream_attach_failure)
+						self._closeWith(tk_stream_attach_failure)
 						break
 				else:
-					self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+					self._closeWith(tk_invalid_frame_type_or_arguments)
 					break
 
-			elif frameType == Fn_string:
-				if not isinstance(frameObj[1], str):
-					self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-					break
+			elif frameType == StringFrame:
 				self._seqNum += 1
 				# Because we may have received multiple Minerva strings, collect
 				# them into a list and then deliver them all at once to Stream.
 				# This does *not* add any latency. It does reduce the number of funcalls.
 				bunchedStrings[0].append((self._seqNum, frameObj[1]))
 
-			elif frameType == Fn_sack:
-				ackNumber, sackList = frameObj[1:]
+			elif frameType == SackFrame:
 				try:
-					ensureNonNegIntLimit(ackNumber, 2**64) # okay to ignore return value here
-				except (TypeError, ValueError):
-					self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-					break
-
-				if not isinstance(sackList, list):
-					self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-					break
-
-				badSack = False
-				for obj in sackList:
-					try:
-						ensureNonNegIntLimit(obj, 2**64) # okay to ignore return value here
-					except (TypeError, ValueError):
-						self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-						badSack = True
-						break
-				if badSack:
-					break
-
-				try:
-					self._stream.sackReceived((ackNumber, sackList))
+					self._stream.sackReceived((frame.ackNumber, frame.sackList))
 				except InvalidSACK:
-					self._closeWith(Fn_tk_acked_unsent_boxes)
+					self._closeWith(tk_acked_unsent_boxes)
 					break
 
-			elif frameType == Fn_seqnum:
-				try:
-					self._seqNum = ensureNonNegIntLimit(frameObj[1], 2**64) - 1
-				except (TypeError, ValueError):
-					self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-					break
+			elif frameType == SeqNumFrame:
+				self._seqNum = frame.seqNum
 
 			else:
 				# Deliver the strings before processing client's reset frame. This
-				# is an implementation detail and may go away.
+				# is an implementation detail that may change.
 				if bunchedStrings[0]:
 					handleStrings()
 
-				if frameType == Fn_reset:
-					reasonString, applicationLevel = frameObj[1:]
-					if not isinstance(reasonString, basestring) or not isinstance(applicationLevel, bool):
-						self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
-						break
-					self._stream.resetFromClient(reasonString, applicationLevel)
+				if frameType == ResetFrame:
+					self._stream.resetFromClient(frame.reasonString, frame.applicationLevel)
 					break # No need to process any frames after the reset frame
 
 				else:
-					self._closeWith(Fn_tk_invalid_frame_type_or_arguments)
+					self._closeWith(tk_invalid_frame_type_or_arguments)
 					break
 
 				# TODO: support "start timestamps", "stop timestamps" frames
@@ -1333,7 +1170,7 @@ class SocketTransport(object):
 			##print out
 			self._framesReceived(out)
 		elif code in (decoders.TOO_LONG, decoders.FRAME_CORRUPTION):
-			self._closeWith(Fn_tk_frame_corruption)
+			self._closeWith(tk_frame_corruption)
 		else:
 			raise RuntimeError("Got unknown code from parser %r: %r" % (self._parser, code))
 

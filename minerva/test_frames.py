@@ -8,7 +8,7 @@ from mypy.strops import StringFragment
 from minerva.frames import (
 	HelloFrame, StringFrame, SeqNumFrame, SackFrame, YouCloseItFrame,
 	ResetFrame, PaddingFrame, TransportKillFrame,
-	InvalidFrame, frameStringToFrame)
+	InvalidFrame, decodeFrameFromClient, decodeFrameFromServer)
 
 from minerva.frames import (
 	Hello_transportNumber,

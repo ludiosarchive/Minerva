@@ -168,11 +168,14 @@ class HelloFrame(object):
 		"""
 		C{frameString} is a L{StringFragment} that ends with "H".
 		"""
-		helloData, stoppedAt = strictDecoder.raw_decode(
-			frameString.string, frameString.pos)
+		try:
+			helloData, stoppedAt = strictDecoder.raw_decode(
+				frameString.string, frameString.pos)
+		except (simplejson.decoder.JSONDecodeError, decoders.ParseError):
+			raise InvalidHello("corrupt JSON")
 		# `- 1` because we expect to stop before the trailing "H"
 		if stoppedAt != frameString.pos + frameString.size - 1:
-			raise InvalidHello
+			raise InvalidHello("trailing garbage")
 
 		return helloDataToHelloFrame(helloData)
 
@@ -254,8 +257,8 @@ class SackFrame(tuple):
 
 	def __new__(cls, ackNumber, sackList):
 		"""
-		C{ackNumber} is an L{int} or L{long}.
-		C{sackList} is a tuple of L{int}s and L{long}s.
+		C{ackNumber} is an C{int} or C{long}.
+		C{sackList} is a tuple or list of C{int}s and C{long}s.
 		"""
 		return tuple.__new__(cls, (cls._MARKER, ackNumber, sackList))
 
@@ -475,39 +478,73 @@ class TransportKillFrame(tuple):
 		return self.constantToString[self.reason] + 'K'
 
 
-# Design note: for frames that carry text, use a non-[A-Za-z] character,
-# to avoid accidentally forming words that proxies may block.
+# A readable mapping for your reference:
+#	'H': HelloFrame,
+#	'~': StringFrame,
+#	'N': SeqNumFrame,
+#	'A': SackFrame,
+#	'Y': YouCloseItFrame,
+#	'P': PaddingFrame,
+#	'!': ResetFrame,
+#	'K': TransportKillFrame,
+
+# Design note: for frames that carry arbitrary text, use a non-[A-Za-z]
+# character, to avoid accidentally forming words that proxies may block.
 
 
-lastByteToFrameClass = {
-	'H': HelloFrame,
-	'~': StringFrame,
-	'N': SeqNumFrame,
-	'A': SackFrame,
-	'Y': YouCloseItFrame,
-	'P': PaddingFrame,
-	'!': ResetFrame,
-	'K': TransportKillFrame,
-}
-
-def frameStringToFrame(frameString, allowedFrameClasses):
+def decodeFrameFromClient(frameString):
 	"""
+	Decode a frame received from a Minerva client.
 	C{frameString} is a L{StringFragment}.
-	C{allowedFrameClasses} is a C{tuple} of allowed frame classes.
 	"""
-	# Must use slicing, not index, because of StringFragment implementation.
-	if not frameString.size:
-		return InvalidFrame("0-length frame")
-	lastByte = frameString[-1]
-
 	try:
-		frameClass = lastByteToFrameClass[lastByte]
-	except KeyError:
-		return InvalidFrame("Unknown frame type")
-	if not frameClass in allowedFrameClasses:
-		return InvalidFrame("Frame class %r not allowed" % (frameClass,))
+		lastByte = frameString[-1]
+	except IndexError:
+		return InvalidFrame("0-length frame")
 
-	return frameClass.decode(frameString)
+	# Keep this ordered by most-probable first
+	if lastByte == "~":
+		return StringFrame.decode(frameString)
+	elif lastByte == "A":
+		return SackFrame.decode(frameString)
+	elif lastByte == "N":
+		return SeqNumFrame.decode(frameString)
+	elif lastByte == "H":
+		return HelloFrame.decode(frameString)
+	elif lastByte == "!":
+		return ResetFrame.decode(frameString)
+	else:
+		return InvalidFrame("Invalid frame type")
+
+
+def decodeFrameFromServer(frameString):
+	"""
+	Decode a frame received from a Minerva server.
+	C{frameString} is a L{StringFragment}.
+	"""
+	try:
+		lastByte = frameString[-1]
+	except IndexError:
+		return InvalidFrame("0-length frame")
+
+	# Keep this ordered by most-probable first
+	if lastByte == "~":
+		return StringFrame.decode(frameString)
+	elif lastByte == "A":
+		return SackFrame.decode(frameString)
+	elif lastByte == "N":
+		return SeqNumFrame.decode(frameString)
+	elif lastByte == "Y":
+		return YouCloseItFrame.decode(frameString)
+	elif lastByte == "P":
+		return PaddingFrame.decode(frameString)
+	elif lastByte == "!":
+		return ResetFrame.decode(frameString)
+	elif lastByte == "K":
+		return TransportKillFrame.decode(frameString)
+	else:
+		return InvalidFrame("Invalid frame type")
+
 
 
 # Frames TODO: timestamp, start timestamps, stop timestamps,
