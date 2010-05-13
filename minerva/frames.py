@@ -12,6 +12,7 @@ from simplejson.decoder import JSONDecodeError
 
 from mypy.dictops import attrdict
 from mypy.objops import ensureBool, ensureNonNegIntLimit, strToNonNegLimit
+from mypy.strops import StringFragment
 from mypy.constant import Constant, attachClassMarker
 from minerva.decoders import strictDecoder, ParseError
 
@@ -200,13 +201,15 @@ class StringFrame(tuple):
 
 	def __new__(cls, string):
 		"""
-		C{string} is a L{StringFragment}.
+		C{string} is a L{StringFragment} or C{str}.
 		"""
+		if not isinstance(string, StringFragment):
+			string = StringFragment(string, 0, len(string))
 		return tuple.__new__(cls, (cls._MARKER, string))
 
 
 	def __repr__(self):
-		return '%s(%r)' % (self.__class__.__name__, self[1])
+		return '%s(%r)' % (self.__class__.__name__, str(self[1]))
 
 
 	@classmethod

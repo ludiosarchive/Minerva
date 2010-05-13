@@ -209,10 +209,11 @@ class StringFrameTests(unittest.TestCase):
 	def test_eq(self):
 		self.assertEqual(StringFrame("Hello"), StringFrame("Hello"))
 		self.assertNotEqual(StringFrame("Hello"), StringFrame("Hello2"))
+		self.assertEqual(StringFrame(StringFragment("Hello", 0, 5)), StringFrame("Hello"))
 
 
 	def test_publicAttr(self):
-		self.assertEqual("Hello", StringFrame("Hello").string)
+		self.assertEqual(StringFragment("Hello", 0, 5), StringFrame("Hello").string)
 
 
 	def test_repr(self):
