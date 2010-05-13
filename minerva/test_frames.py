@@ -26,6 +26,12 @@ from minerva.frames import (
 	FORMAT_XHR, FORMAT_HTMLFILE,
 )
 
+# simplejson.loads('NaN') always works, but float('nan') => 0
+# in Python ICC builds with floating point optimizations
+nan = simplejson.loads('NaN')
+inf = simplejson.loads('Infinity')
+neginf = simplejson.loads('-Infinity')
+
 
 DeleteProperty = Constant("DeleteProperty")
 
@@ -85,6 +91,111 @@ class HelloFrameTests(unittest.TestCase):
 				needPaddingBytes=0,
 				httpFormat=None)),
 			HelloFrame.decode(StringFragment(s, 0, len(s))))
+
+
+#	def test_intraFrameCorruptionTooMuchNestingObject(self):
+#		"""
+#		Server thinks too much nesting is equivalent to intra-frame JSON corruption.
+#		If this test fails, you need to install the patched simplejson."""
+#		nestingLimit = 32
+#		transport = self._makeTransport()
+#		transport.sendFrames([eval('{"":' * nestingLimit + '1' + '}' * nestingLimit)])
+#		self.aE([[Fn.tk_intraframe_corruption], YouCloseItFrame()], transport.getNew())
+#		self._testExtraDataReceivedIgnored(transport)
+#
+#
+#	def test_intraFrameCorruptionTooMuchNestingArray(self):
+#		"""
+#		Server thinks too much nesting is equivalent to intra-frame JSON corruption
+#		If this test fails, you need to install the patched simplejson."""
+#		nestingLimit = 32
+#		transport = self._makeTransport()
+#		transport.sendFrames([eval('[' * nestingLimit + '1' + ']' * nestingLimit)])
+#		self.aE([[Fn.tk_intraframe_corruption], YouCloseItFrame()], transport.getNew())
+#		self._testExtraDataReceivedIgnored(transport)
+#
+#
+#	def test_intraFrameCorruptionTrailingGarbage(self):
+#		transport = self._makeTransport()
+#		transport.dataReceived(self._makeParser().encode('{}x')) # complete JSON but with trailing garbage
+#
+#		self.aE([[Fn.tk_intraframe_corruption], YouCloseItFrame()], transport.getNew())
+#		self._testExtraDataReceivedIgnored(transport)
+#
+#
+#	def test_nan_inf_neginf_areForbidden(self):
+#		"""
+#		Minerva transports treat NaN, Infinity, and -Infinity inside the
+#		JSON as intraframe corruption.
+#		"""
+#		for bad in [nan, inf, neginf]:
+#			frame0 = _makeHelloFrame()
+#			transport = self._makeTransport()
+#			transport.sendFrames([frame0])
+#			transport.sendFrames([StringFrame(bad)])
+#
+#			self.aE([[Fn.tk_intraframe_corruption], YouCloseItFrame()], transport.getNew())
+#
+#			self._resetStreamTracker()
+#
+#	def test_invalidHelloKeys(self):
+#		"""
+#		Test that all any problem with the helloData keys results in
+#		tk_invalid_frame_type_or_arguments.
+#		"""
+#		def listWithout(alist, without):
+#			l = alist[:]
+#			for w in without:
+#				l.remove(w)
+#			return l
+#
+#		goodHello = _makeHelloFrame()
+#
+#		genericBad = [
+#			-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"],
+#			{}, True, False, None, DeleteProperty]
+#
+#		badMutations = {
+#			Hello_transportNumber: genericBad,
+#			Hello_protocolVersion: [0, 1, "1", 1.001] + genericBad,
+#			Hello_streamId: [
+#				'', '\x00', 'x'*1, u'\ucccc'*25, u'\ucccc'*8,
+#				u'\x80'*25, 'x'*19, 'x'*31, 'x'*3000] + genericBad, # 19 is below limit, 31 is over limit
+#			#Hello_maxReceiveBytes: genericBad, # TODO: test for HTTP
+#			#Hello_maxOpenTime: genericBad, # TODO: test for HTTP
+#			Hello_credentialsData: listWithout(genericBad, [{}]),
+#		}
+#
+#		ran = 0
+#
+#		for mutateProperty, mutateValues in badMutations.iteritems():
+#			for value in mutateValues:
+#				badHello = copy.deepcopy(goodHello)
+#				if value is not DeleteProperty:
+#					badHello[1][mutateProperty] = value
+#				else:
+#					try:
+#						del badHello[1][mutateProperty]
+#					except KeyError:
+#						 # If it wasn't there in the first place, deleting
+#						 # it from badHello can't cause an error later
+#						continue
+#
+#				##print badHello
+#
+#				transport = self._makeTransport()
+#				transport.sendFrames([badHello])
+#				self.aE([
+#					TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()
+#				], transport.getNew())
+#				##print self.decodingTcpTransport
+#				self._testExtraDataReceivedIgnored(transport)
+#
+#				ran += 1
+#
+#		# sanity check; make sure we actually tested things
+#		assert ran == 63, "Ran %d times; change this assert as needed" % (ran,)
+
 
 
 

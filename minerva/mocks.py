@@ -321,7 +321,7 @@ class MockMinervaProtocol(_MockMixin):
 			self.stream.sendStrings(["s2cbox0", "s2cbox1"])
 			self.stream.sendStrings(["s2cbox2"])
 		if 'reset' in self._callWhat:
-			self.stream.reset(u'reset forced by mock protocol\u2603')
+			self.stream.reset('reset forced by mock protocol')
 
 
 	def streamStarted(self, stream):
@@ -401,8 +401,8 @@ class DummySocketLikeTransport(_MockMixin):
 		for seqNum, string in queue.iterItems(start=start):
 			if lastBox == -1 or lastBox + 1 != seqNum:
 				pass
-				##toSend += self._encodeFrame([Fn.seqnum, seqNum])
-			##toSend += self._encodeFrame([Fn.box, string])
+				##toSend += self._encodeFrame(SeqNumFrame(seqNum))
+			##toSend += self._encodeFrame(StringFrame(string))
 			lastBox = seqNum
 		self.lastBoxSent = lastBox
 
