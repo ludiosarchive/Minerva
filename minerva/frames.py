@@ -283,9 +283,9 @@ class SackFrame(tuple):
 		"""
 		C{frameString} is a L{StringFragment} that ends with "A".
 		"""
-		joinedSackList, ackNumberStr = str(frameString[:-1]).split('|')
+		joinedSackList, ackNumberStr = str(frameString[:-1]).rsplit('|', 1)
 		try:
-			sackList = tuple(strToNonNegLimit(s, 2**64) for s in joinedSackList.split(','))
+			sackList = tuple(strToNonNegLimit(s, 2**64) for s in joinedSackList.split(',')) if joinedSackList else ()
 			ackNumber = strToNonNegLimit(ackNumberStr, 2**64)
 		except ValueError:
 			raise InvalidFrame("bad sackList or ackNumber")

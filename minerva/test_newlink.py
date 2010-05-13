@@ -1883,7 +1883,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			['stringsReceived', transport, [(0, "box0")]],
 			['getSACK']
 		], stream.getNew())
-		self.aE([SackFrame(0, [])], transport.getNew())
+		self.aE([SackFrame(0, ())], transport.getNew())
 
 		transport.sendFrames([SeqNumFrame(2), StringFrame("box2")])
 
@@ -1891,7 +1891,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			['stringsReceived', transport, [(2, "box2")]],
 			['getSACK']
 		], stream.getNew())
-		self.aE([SackFrame(0, [2])], transport.getNew())
+		self.aE([SackFrame(0, (2,))], transport.getNew())
 
 
 	def test_stringFrameWithInvalidString(self):
@@ -1920,12 +1920,12 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		stream = self.streamTracker.getStream('x'*26)
 		stream.queue.append("box0")
 
-		transport.sendFrames([SackFrame(0, [])])
+		transport.sendFrames([SackFrame(0, ())])
 		self.aE([], transport.getNew())
 		self.aE([
 			['notifyFinish'],
 			['transportOnline', transport, False, None],
-			['sackReceived', (0, [])],
+			['sackReceived', (0, ())],
 		], stream.getNew())
 
 
@@ -1939,12 +1939,12 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		stream = self.streamTracker.getStream('x'*26)
 		stream.queue.extend(["box0", "box1", "box2"])
 
-		transport.sendFrames([SackFrame(0, [2])])
+		transport.sendFrames([SackFrame(0, (2,))])
 		self.aE([], transport.getNew())
 		self.aE([
 			['notifyFinish'],
 			['transportOnline', transport, False, None],
-			['sackReceived', (0, [2])],
+			['sackReceived', (0, (2,))],
 		], stream.getNew())
 
 
@@ -1955,88 +1955,14 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		stream = self.streamTracker.getStream('x'*26)
 		stream.queue.append("box0")
 
-		transport.sendFrames([SackFrame(1, [])])
+		transport.sendFrames([SackFrame(1, ())])
 		self.aE([[TransportKillFrame(tk_acked_unsent_strings)], YouCloseItFrame()], transport.getNew())
 		self.aE([
 			['notifyFinish'],
 			['transportOnline', transport, False, None],
-			['sackReceived', (1, [])],
+			['sackReceived', (1, ())],
 			['transportOffline', transport],
 		], stream.getNew())
-
-
-	def test_sackFrameInvalidACKNumber(self):
-		# Note how an ACK of -1 is invalid. First legal ACK is 0.
-		badNumbers = [-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"], "something", {}, True, False, None]
-		for num in badNumbers:
-			frame0 = _makeHelloFrame()
-			transport = self._makeTransport()
-			transport.sendFrames([frame0])
-			stream = self.streamTracker.getStream('x'*26)
-			stream.queue.extend(["box0", "box1", "box2"])
-
-			transport.sendFrames([SackFrame(num, [])])
-			self.aE([TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()], transport.getNew())
-			self.aE([
-				['notifyFinish'],
-				['transportOnline', transport, False, None],
-				['transportOffline', transport],
-			], stream.getNew())
-
-			self._resetStreamTracker()
-
-
-	def test_sackFrameInvalidSecondArgumentType(self):
-		"""
-		If client sends a SACK frame whose [2]th item is not a list, the
-		transport is killed with C{tk_invalid_frame_type_or_arguments}.
-		"""
-		badObjects = [
-			-2**65, -1, -0.5, 0.5, 2**64+1, "", "something",
-			{}, True, False, None]
-		for badObj in badObjects:
-			frame0 = _makeHelloFrame()
-			transport = self._makeTransport()
-			transport.sendFrames([frame0])
-			stream = self.streamTracker.getStream('x'*26)
-			stream.queue.extend(["box0", "box1", "box2"])
-
-			transport.sendFrames([SackFrame(0, badObj)])
-			self.aE([TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()], transport.getNew())
-			self.aE([
-				['notifyFinish'],
-				['transportOnline', transport, False, None],
-				['transportOffline', transport],
-			], stream.getNew())
-
-			self._resetStreamTracker()
-
-
-	def test_sackFrameInvalidSACKNumber(self):
-		"""
-		If client sends a SACK frame whose [2]th item is a list, but the
-		list includes an item that is not a non-negative integer, the
-		transport is killed with C{tk_invalid_frame_type_or_arguments}.
-		"""
-		badNumbers = [
-			-2**65, -1, -0.5, 0.5, 2**64+1, "", ["something"],
-			"something", [], {}, True, False, None]
-		for badNum in badNumbers:
-			frame0 = _makeHelloFrame()
-			transport = self._makeTransport()
-			transport.sendFrames([frame0])
-			stream = self.streamTracker.getStream('x'*26)
-			stream.queue.extend(["box0", "box1", "box2"])
-
-			transport.sendFrames([SackFrame(0, [1, badNum])]) # the 1 is valid number, badNum is not
-			self.aE([TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()], transport.getNew())
-			self.aE([
-				['notifyFinish'],
-				['transportOnline', transport, False, None],
-				['transportOffline', transport],
-			], stream.getNew())
-
-			self._resetStreamTracker()
 
 
 	def test_resetValid(self):
@@ -2061,17 +1987,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				], stream.getNew())
 
 				self._resetStreamTracker()
-
-
-	def test_resetInvalid(self):
-		badReasonFrames = [_BadFrame('\x00reason|1' + '!'), _BadFrame('reason|2' + '!')]
-		for reasonFrame in badReasonFrames:
-			frame0 = _makeHelloFrame()
-			transport = self._makeTransport()
-			transport.sendFrames([frame0])
-			self.aE([], transport.getNew())
-			transport.sendFrames([reasonFrame])
-			self.aE([TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()], transport.getNew())
 
 
 	def test_transportOfflineNotCalledIfNeverAuthed(self):
@@ -2353,7 +2268,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport0.sendFrames([StringFrame("box0"), SeqNumFrame(2), StringFrame("box2")])
 
-		self.aE([SackFrame(0, [2])], transport0.getNew())
+		self.aE([SackFrame(0, (2,))], transport0.getNew())
 		self.aE([["streamStarted", stream], ["stringsReceived", ["box0"]]], proto.getNew())
 
 
@@ -2362,7 +2277,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport0.sendFrames([SeqNumFrame(1), StringFrame("box1"), SeqNumFrame(3), StringFrame("box3")])
 
-		self.aE([SackFrame(3, [])], transport0.getNew())
+		self.aE([SackFrame(3, ())], transport0.getNew())
 		self.aE([["stringsReceived", ["box1", "box2", "box3"]]], proto.getNew())
 
 
@@ -2390,7 +2305,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		# those S2C strings are *not* received; make sure transport1 is
 		# terminating;
 
-		transport1.sendFrames([SackFrame(1, [])])
+		transport1.sendFrames([SackFrame(1, ())])
 
 		transport2 = self._makeTransport()
 
@@ -2480,15 +2395,15 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		proto = list(self.protocolFactory.instances)[0]
 
 		transport0.sendFrames([SeqNumFrame(0), StringFrame("box0")])
-		self.aE([SackFrame(0, [])], transport0.getNew())
+		self.aE([SackFrame(0, ())], transport0.getNew())
 
 		# 0 was already received, 1 was not.
 		transport0.sendFrames([SeqNumFrame(0), StringFrame("box0"), StringFrame("box1")])
-		self.aE([SackFrame(1, [])], transport0.getNew())
+		self.aE([SackFrame(1, ())], transport0.getNew())
 
 		# 0 and 1 were already received, 2 was not.
 		transport0.sendFrames([SeqNumFrame(0), StringFrame("box0"), StringFrame("box1"), StringFrame("box2")])
-		self.aE([SackFrame(2, [])], transport0.getNew())
+		self.aE([SackFrame(2, ())], transport0.getNew())
 
 		self.aE([
 			['streamStarted', stream],
@@ -2541,7 +2456,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		]
 		transport0.sendFrames(frames)
 
-		self.aE([SackFrame(1, []), YouCloseItFrame()], transport0.getNew())
+		self.aE([SackFrame(1, ()), YouCloseItFrame()], transport0.getNew())
 
 		proto = list(self.protocolFactory.instances)[0]
 		self.aE([
@@ -2694,7 +2609,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			transport0.sendFrames(frames)
 
 			self.aE([
-				SackFrame(1, []),
+				SackFrame(1, ()),
 				SeqNumFrame(0),
 				StringFrame("s2cbox0"),
 				StringFrame("s2cbox1"),
@@ -2739,7 +2654,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			transport0.sendFrames(frames)
 
 			expected = [
-				SackFrame(1, []),
+				SackFrame(1, ()),
 				SeqNumFrame(0),
 				StringFrame("s2cbox0"),
 				StringFrame("s2cbox1"),
@@ -2793,7 +2708,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			transport0.sendFrames(frames)
 
 			expected = [
-				SackFrame(2, []),
+				SackFrame(2, ()),
 				ResetFrame('reset forced by mock protocol', True),
 				YouCloseItFrame(),
 			]
@@ -2855,7 +2770,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 					self.assertEqual(server.NOT_DONE_YET, out)
 
 					encode = DelimitedStringDecoder.encode
-					self.assertEqual(['for(;;);\n', encode(SackFrame(2, [])).encode()], request.written)
+					self.assertEqual(['for(;;);\n', encode(SackFrame(2, ())).encode()], request.written)
 					self.assertEqual(0 if streaming else 1, request.finished)
 
 					stream = self.streamTracker.getStream('x'*26)
@@ -2909,7 +2824,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			encode = DelimitedStringDecoder.encode
 			expected = [
 				'for(;;);\n', (
-					encode(SackFrame(0, []).encode()) +
+					encode(SackFrame(0, ()).encode()) +
 					encode(SeqNumFrame(0).encode()) +
 					encode(StringFrame('box0').encode()) +
 					encode(StringFrame('box1').encode()))]

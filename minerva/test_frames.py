@@ -289,21 +289,37 @@ class SackFrameTests(unittest.TestCase):
 
 
 	def test_decode(self):
-		s = '1,4|%dA' % (2**64,)
+		s = '1,4|%sA' % (2**64,)
 		self	.assertEqual(
 			SackFrame(2**64, (1, 4)),
 			SackFrame.decode(StringFragment(s, 0, len(s))))
 
 
-	def test_decodeFailedAckNumberTooHigh(self):
-		s = '1,4|%dA' % (2**64+1,)
-		self	.assertRaises(
-			InvalidFrame,
-			lambda: SackFrame.decode(StringFragment(s, 0, len(s))))
+	def test_decodeNoSackNumbers(self):
+		s = '|%sA' % (2**64,)
+		self	.assertEqual(
+			SackFrame(2**64, ()),
+			SackFrame.decode(StringFragment(s, 0, len(s))))
 
 
-	def test_decodeFailedOneSackNumberTooHigh(self):
-		s = '1,%d|4A' % (2**64+1,)
+	def test_decodeFailedAckNumberInvalid(self):
+		for badNum in (2**64+1, -1, 0.5, 1.5):
+			s = '1,4|%sA' % (badNum,)
+			self	.assertRaises(
+				InvalidFrame,
+				lambda: SackFrame.decode(StringFragment(s, 0, len(s))))
+
+
+	def test_decodeFailedOneSackNumberInvalid(self):
+		for badNum in (2**64+1, -1, 0.5, 1.5):
+			s = '1,%s|4A' % (badNum,)
+			self	.assertRaises(
+				InvalidFrame,
+				lambda: SackFrame.decode(StringFragment(s, 0, len(s))))
+
+
+	def test_decodeFailedTooManyPipes(self):
+		s = '||4A'
 		self	.assertRaises(
 			InvalidFrame,
 			lambda: SackFrame.decode(StringFragment(s, 0, len(s))))
