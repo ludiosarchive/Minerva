@@ -124,7 +124,7 @@ function connect(bridge) {
 			// subsequently ignored because the box # is always 0,
 			// and box 0 was already received.
 			var seqNumFrame = '0' + 'N'; // not really necessary to send
-			var boxFrame = 'send_demo' + '~';
+			var boxFrame = 'send_demo' + ' ';
 
 			var frames = [helloFrame, seqNumFrame, boxFrame];
 			for(i=0; i < frames.length; i++) {

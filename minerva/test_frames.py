@@ -104,7 +104,7 @@ class StringFrameTests(unittest.TestCase):
 
 
 	def test_decode(self):
-		s = '\x00unchecked\xfftext' + '~'
+		s = '\x00unchecked\xfftext' + ' '
 		self	.assertEqual(
 			StringFrame(StringFragment(s, 0, len(s) - 1)),
 			StringFrame.decode(StringFragment(s, 0, len(s))))
@@ -112,7 +112,7 @@ class StringFrameTests(unittest.TestCase):
 
 	def test_encode(self):
 		s = '\x00unchecked\xfftext'
-		self	.assertEqual(s + '~', StringFrame(StringFragment(s, 0, len(s))).encode())
+		self	.assertEqual(s + ' ', StringFrame(StringFragment(s, 0, len(s))).encode())
 
 
 

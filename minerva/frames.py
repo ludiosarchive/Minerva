@@ -204,13 +204,13 @@ class StringFrame(tuple):
 	@classmethod
 	def decode(cls, frameString):
 		"""
-		C{frameString} is a L{StringFragment} that ends with "~".
+		C{frameString} is a L{StringFragment} that ends with " ".
 		"""
 		return cls(frameString[:-1])
 
 
 	def encode(self):
-		return str(self.string) + '~'
+		return str(self.string) + ' '
 
 
 
@@ -480,7 +480,7 @@ class TransportKillFrame(tuple):
 
 # A readable mapping for your reference:
 #	'H': HelloFrame,
-#	'~': StringFrame,
+#	' ': StringFrame,
 #	'N': SeqNumFrame,
 #	'A': SackFrame,
 #	'Y': YouCloseItFrame,
@@ -503,7 +503,7 @@ def decodeFrameFromClient(frameString):
 		return InvalidFrame("0-length frame")
 
 	# Keep this ordered by most-probable first
-	if lastByte == "~":
+	if lastByte == " ":
 		return StringFrame.decode(frameString)
 	elif lastByte == "A":
 		return SackFrame.decode(frameString)
@@ -528,7 +528,7 @@ def decodeFrameFromServer(frameString):
 		return InvalidFrame("0-length frame")
 
 	# Keep this ordered by most-probable first
-	if lastByte == "~":
+	if lastByte == " ":
 		return StringFrame.decode(frameString)
 	elif lastByte == "A":
 		return SackFrame.decode(frameString)
