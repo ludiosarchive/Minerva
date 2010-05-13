@@ -1900,25 +1900,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.aE([SackFrame(0, (2,))], transport.getNew())
 
 
-	def test_stringFrameWithInvalidString(self):
-		"""
-		Only C{str} objects are allowed in the string frame.
-		"""
-		for invalidString in [-1, -2**32, -0.5, 2**64+1, True, False, None, ["string"], {}, {1: 2, 3: 4}]:
-			frame0 = _makeHelloFrame()
-			transport = self._makeTransport()
-			transport.sendFrames([frame0])
-			try:
-				self.streamTracker.getStream('x'*26)
-			except NoSuchStream:
-				self.fail("No stream created?")
-
-			transport.sendFrames([StringFrame(invalidString)])
-			self.aE([TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()], transport.getNew())
-
-			self._resetStreamTracker()
-
-
 	def test_sackFrameValid(self):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
@@ -2014,10 +1995,12 @@ class _BaseSocketTransportTests(_BaseHelpers):
 	def test_nothingHappensIfAuthedAfterTransportTerminated(self):
 		"""
 		If the transport is authenticated after it is already terminated,
-		nothing happens.
+		nothing bad happens.
 		"""
 		expected = {}
-		expected['bad_frame'] = [[603], [11]]
+		expected['bad_frame'] = [
+			TransportKillFrame(tk_invalid_frame_type_or_arguments),
+			YouCloseItFrame()]
 		expected['client_closed'] = []
 
 		for rejectAll in (True, False):
@@ -2031,7 +2014,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				transport.sendFrames([frame0])
 				self.aE([], transport.getNew())
 				if terminationMethod == 'bad_frame':
-					transport.sendFrames([9999])
+					transport.sendFrames([_BadFrame('?')])
 				elif terminationMethod == 'client_closed':
 					transport.connectionLost(ValueError("testing"))
 				else:
