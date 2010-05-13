@@ -875,7 +875,6 @@ class SocketTransport(object):
 		toSend = self._toSend
 		if toSend:
 			self._toSend = ''
-			print repr(toSend)
 			self.writable.write(toSend)
 
 		if self._terminating:
@@ -1052,6 +1051,7 @@ class SocketTransport(object):
 			try:
 				frame = decodeFrameFromClient(frameString)
 			except InvalidFrame:
+				##log.err()
 				self._closeWith(tk_invalid_frame_type_or_arguments)
 				break
 

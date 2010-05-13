@@ -1,4 +1,3 @@
-import simplejson
 from zope.interface import implements
 
 from twisted.internet import protocol, defer, address, interfaces, task
@@ -13,6 +12,7 @@ from minerva.newlink import (
 	NoSuchStream, IMinervaProtocol, IMinervaFactory, StreamAlreadyExists)
 from minerva.decoders import OK
 from minerva.website import RejectTransport
+from minerva.frames import decodeFrameFromServer
 
 # The use of "mock" and "dummy" in this file is totally inconsistent.
 
@@ -89,10 +89,10 @@ def strictGetNewFrames(parser, data):
 
 
 
-class JSONDecodingTcpTransport(DummyTCPTransport, _MockMixin):
+class FrameDecodingTcpTransport(DummyTCPTransport, _MockMixin):
 	"""
 	A TCP transport that first decodes bytes with a parser,
-	then decodes the frames with simplejson.
+	then decodes the Minerva frames with decodeFrameFromServer.
 	"""
 	def __init__(self, parser):
 		self.parser = parser
@@ -101,8 +101,8 @@ class JSONDecodingTcpTransport(DummyTCPTransport, _MockMixin):
 
 	def write(self, data):
 		frames, code = strictGetNewFrames(self.parser, data)
-		self.log.extend(simplejson.loads(
-			str(f) if isinstance(f, StringFragment) else f) for f in frames)
+		self.log.extend(decodeFrameFromServer(
+			StringFragment(f, 0, len(f)) if isinstance(f, str) else f) for f in frames)
 
 
 

@@ -10,7 +10,6 @@ Notes on understanding this test file:
 	that it was a victim of a search/replace spree.
 """
 
-import simplejson
 import copy
 from cStringIO import StringIO
 from zope.interface import verify
@@ -27,7 +26,7 @@ from minerva.helpers import todo
 from minerva.test_decoders import diceString
 
 from minerva.decoders import (
-	BencodeStringDecoder, Int32StringDecoder, DelimitedJSONDecoder,
+	BencodeStringDecoder, Int32StringDecoder, DelimitedStringDecoder,
 	strictDecodeOne)
 
 from minerva.newlink import (
@@ -65,7 +64,7 @@ from minerva.frames import (
 
 from minerva.mocks import (
 	FakeReactor, DummyChannel, DummyRequest, MockProducer,
-	JSONDecodingTcpTransport, MockStream, MockMinervaProtocol,
+	FrameDecodingTcpTransport, MockStream, MockMinervaProtocol,
 	MockMinervaProtocolFactory, DummySocketLikeTransport, MockObserver,
 	BrokenOnPurposeError, BrokenMockObserver, DummyStreamTracker,
 	DummyFirewall, DummyTCPTransport, strictGetNewFrames
@@ -86,6 +85,16 @@ class SlotlessSocketFace(SocketFace):
 DeleteProperty = constant.Constant("DeleteProperty")
 
 
+class _BadFrame(object):
+
+	def __init__(self, encodesTo):
+		self.encodesTo = encodesTo
+
+
+	def encode(self):
+		return self.encodesTo
+
+
 def _makeHelloFrame(extra={}):
 	_extra = {
 		Hello_transportNumber: 0,
@@ -94,14 +103,14 @@ def _makeHelloFrame(extra={}):
 		Hello_streamId: 'x'*26,
 		Hello_streamingResponse: 1,
 		Hello_maxReceiveBytes: 2**30,
-		Hello_maxOpenTime: 2**30}
+		Hello_maxOpenTime: 2**30,
+		Hello_streamingResponse: 1}
 	for k, v in extra.iteritems():
 		if v == DeleteProperty and k in _extra:
 			del _extra[k]
 		else:
 			_extra[k] = v
-	frame = HelloFrame(_extra)
-	return frame
+	return HelloFrame(_extra)
 
 
 def _makeHelloFrameHttp(extra={}):
@@ -113,11 +122,11 @@ def _makeHelloFrameHttp(extra={}):
 			del _extra[k]
 		else:
 			_extra[k] = v
-	return  _makeHelloFrame(_extra)
+	return _makeHelloFrame(_extra)
 
 
 def _makeTransportWithDecoder(parser, faceFactory):
-	tcpTransport = JSONDecodingTcpTransport(parser)
+	tcpTransport = FrameDecodingTcpTransport(parser)
 	transport = faceFactory.buildProtocol(addr=None)
 	transport.getNew = tcpTransport.getNew
 
@@ -283,7 +292,7 @@ class StreamTests(unittest.TestCase):
 		assert len(manyStrings) == 5001 + 1
 
 		s.stringsReceived(t, manyStrings)
-		self.aE([['writeReset', u'reset forced by mock protocol\u2603', True]], t.getNew())
+		self.aE([['writeReset', 'reset forced by mock protocol', True]], t.getNew())
 
 
 	def test_exhaustedIncomingTooManyBytesButResetsWithApplicationReason(self): # keywords: reentrant
@@ -307,7 +316,7 @@ class StreamTests(unittest.TestCase):
 		notManyStrings = [(0, 'box0'), (2, FakeBigString(str(4*1024*1024 + 1)))]
 
 		s.stringsReceived(t, notManyStrings)
-		self.aE([['writeReset', u'reset forced by mock protocol\u2603', True]], t.getNew())
+		self.aE([['writeReset', 'reset forced by mock protocol', True]], t.getNew())
 
 
 	def test_sendStringsAndActiveStreams(self):
@@ -422,7 +431,7 @@ class StreamTests(unittest.TestCase):
 
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
-		
+
 		self.aE((-1, []), s.getSACK())
 		s.stringsReceived(t, [(0, 'box')])
 		self.aE((0, []), s.getSACK())
@@ -596,12 +605,12 @@ class StreamTests(unittest.TestCase):
 			s.transportOnline(t2, False, None)
 
 			self.aE(False, s.disconnected)
-			s.resetFromClient(u'the reason\uffff', applicationLevel=applicationLevel)
+			s.resetFromClient('the reason', applicationLevel)
 			self.aE(True, s.disconnected)
 
 			i = list(factory.instances)[0]
 			who = WhoReset.client_app if applicationLevel else WhoReset.client_minerva
-			self.aE([["streamStarted", s], ["streamReset", who, u'the reason\uffff']], i.getNew())
+			self.aE([["streamStarted", s], ["streamReset", who, 'the reason']], i.getNew())
 
 			self.aE([["closeGently"]], t1.getNew())
 			self.aE([["closeGently"]], t2.getNew())
@@ -1230,7 +1239,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			frame0 = _makeHelloFrame(
 				{Hello_streamId: '\x00'*26, Hello_requestNewStream: DeleteProperty})
 			toSend = '<bencode/>\n' + self._serializeFrames([frame0])
-			
+
 			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
 			frames, code = strictGetNewFrames(self.parser, self.tcpTransport.value())
@@ -1396,26 +1405,26 @@ class _BaseSocketTransportTests(_BaseHelpers):
 	# TODO: once window.Queue supports SACK, add a test that really uses SACK here
 
 
-	def test_writeStringsHugeBoxes(self):
-		"""
-		Like test_writeStringsStartNone, except there is a lot of data.
-		
-		At the time this was written, it was intended to exercise the
-			`if len(toSend) > 1024 * 1024:' branch.
-		"""
-		frame0 = _makeHelloFrame()
-		transport = self._makeTransport()
-		transport.sendFrames([frame0])
-		q = Queue()
-		box0 = ['b'*int(0.6*1024*1024)]
-		box1 = ['c'*int(0.6*1024*1024)]
-		q.extend([box0, box1])
-		transport.writeStrings(q, start=None)
-		self.aE([
-			SeqNumFrame(0),
-			StringFrame(box0),
-			StringFrame(box1),
-		], transport.getNew())
+#	def test_writeStringsHugeBoxes(self):
+#		"""
+#		Like test_writeStringsStartNone, except there is a lot of data.
+#
+#		At the time this was written, it was intended to exercise the
+#			`if len(toSend) > 1024 * 1024:' branch.
+#		"""
+#		frame0 = _makeHelloFrame()
+#		transport = self._makeTransport()
+#		transport.sendFrames([frame0])
+#		q = Queue()
+#		box0 = 'b'*int(0.6*1024*1024)
+#		box1 = 'c'*int(0.6*1024*1024)
+#		q.extend([box0, box1])
+#		transport.writeStrings(q, start=None)
+#		self.aE([
+#			SeqNumFrame(0),
+#			StringFrame(box0),
+#			StringFrame(box1),
+#		], transport.getNew())
 
 
 	def test_writeStringsSentOnlyOnce(self):
@@ -2054,23 +2063,14 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				self._resetStreamTracker()
 
 
-	def test_resetInvalidReasonString(self):
-		badReasonStrings = [-2**65, -1, -0.5, 0.5, 2**64+1, ["something"], [], {}, True, False, None]
-		for reasonString in badReasonStrings:
+	def test_resetInvalid(self):
+		badReasonFrames = [_BadFrame('\x00reason|1' + '!'), _BadFrame('reason|2' + '!')]
+		for reasonFrame in badReasonFrames:
 			frame0 = _makeHelloFrame()
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
-			transport.sendFrames([ResetFrame(reasonString, True)])
-			self.aE([TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()], transport.getNew())
-
-
-	def test_resetInvalidApplicationLevel(self):
-		badApplicationLevels = [-2**65, -1, -0.5, 0, 1, 0.5, 2**64+1, "", ["something"], "something", [], {}, None]
-		for applicationLevel in badApplicationLevels:
-			frame0 = _makeHelloFrame()
-			transport = self._makeTransport()
-			transport.sendFrames([frame0])
-			transport.sendFrames([ResetFrame(u'the reason\uffff', applicationLevel)])
+			self.aE([], transport.getNew())
+			transport.sendFrames([reasonFrame])
 			self.aE([TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()], transport.getNew())
 
 
@@ -2158,7 +2158,7 @@ class TransportProducerTests(unittest.TestCase):
 	def setUp(self):
 		reactor = FakeReactor()
 		clock = task.Clock()
-		
+
 		self.proto = MockMinervaProtocol()
 		self.tracker = StreamTracker(reactor, clock, self.proto)
 
@@ -2613,13 +2613,13 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 #				StringFrame("s2cbox0"),
 #				StringFrame("s2cbox1"),
 #				StringFrame("s2cbox2"),
-				ResetFrame('reset forced by mock protocol\u2603', True),
+				ResetFrame('reset forced by mock protocol', True),
 				YouCloseItFrame()
 			], transport0.getNew())
 
 			proto = list(self.protocolFactory.instances)[0]
 			self.aE([
-				["streamReset", WhoReset.server_app, u'reset forced by mock protocol\u2603'],
+				["streamReset", WhoReset.server_app, 'reset forced by mock protocol'],
 			], proto.getNew()[1:])
 
 
@@ -2706,7 +2706,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			proto = list(self.protocolFactory.instances)[0]
 			self.aE([
 				["stringsReceived", ["box0", "box1"]],
-				["streamReset", WhoReset.server_app, u'reset forced by mock protocol\u2603']
+				["streamReset", WhoReset.server_app, 'reset forced by mock protocol']
 			], proto.getNew()[1:])
 
 
@@ -2854,8 +2854,8 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 					out = resource.render(request)
 					self.assertEqual(server.NOT_DONE_YET, out)
 
-					encode = DelimitedJSONDecoder.encode
-					self.assertEqual(['for(;;);\n', encode(SackFrame(2, []))], request.written)
+					encode = DelimitedStringDecoder.encode
+					self.assertEqual(['for(;;);\n', encode(SackFrame(2, [])).encode()], request.written)
 					self.assertEqual(0 if streaming else 1, request.finished)
 
 					stream = self.streamTracker.getStream('x'*26)
@@ -2906,13 +2906,13 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			out = resource.render(request)
 			self.assertEqual(server.NOT_DONE_YET, out)
 
-			encode = DelimitedJSONDecoder.encode
+			encode = DelimitedStringDecoder.encode
 			expected = [
 				'for(;;);\n', (
-					encode(SackFrame(0, [])) +
-					encode(SeqNumFrame(0)) +
-					encode(StringFrame('box0')) +
-					encode(StringFrame('box1')))]
+					encode(SackFrame(0, []).encode()) +
+					encode(SeqNumFrame(0).encode()) +
+					encode(StringFrame('box0').encode()) +
+					encode(StringFrame('box1').encode()))]
 
 			self.assertEqual(expected, request.written)
 			self.assertEqual(0 if streaming else 1, request.finished)
@@ -2949,9 +2949,12 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			stream = self.streamTracker.getStream('x'*26)
 			stream.sendStrings(['box0', 'box1'])
 
-			encode = DelimitedJSONDecoder.encode
+			encode = DelimitedStringDecoder.encode
 			self.assertEqual(
-				['for(;;);\n', encode(SeqNumFrame(0)) + encode(StringFrame('box0')) + encode(StringFrame('box1'))],
+				['for(;;);\n',
+					encode(SeqNumFrame(0).encode()) +
+					encode(StringFrame('box0').encode()) +
+					encode(StringFrame('box1').encode())],
 				request.written)
 			self.assertEqual(0 if streaming else 1, request.finished)
 

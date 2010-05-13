@@ -7,11 +7,13 @@ TODO: add HelloFrame.encode
 """
 
 import operator
+from simplejson import dumps
+from simplejson.decoder import JSONDecodeError
 
 from mypy.dictops import attrdict
 from mypy.objops import ensureBool, ensureNonNegIntLimit, strToNonNegLimit
 from mypy.constant import Constant, attachClassMarker
-from minerva.decoders import strictDecoder
+from minerva.decoders import strictDecoder, ParseError
 
 _postImportVars = vars().keys()
 
@@ -173,13 +175,17 @@ class HelloFrame(object):
 		try:
 			helloData, stoppedAt = strictDecoder.raw_decode(
 				frameString.string, frameString.pos)
-		except (simplejson.decoder.JSONDecodeError, decoders.ParseError):
+		except (JSONDecodeError, ParseError):
 			raise InvalidHello("corrupt JSON")
 		# `- 1` because we expect to stop before the trailing "H"
 		if stoppedAt != frameString.pos + frameString.size - 1:
 			raise InvalidHello("trailing garbage")
 
 		return helloDataToHelloFrame(helloData)
+
+
+	def encode(self):
+		return dumps(self.__dict__, separators=(',', ':'), allow_nan=False) + 'H'
 
 
 	# TODO: encode
@@ -516,7 +522,7 @@ def decodeFrameFromClient(frameString):
 	elif lastByte == "!":
 		return ResetFrame.decode(frameString)
 	else:
-		return InvalidFrame("Invalid frame type %r" % lastByte)
+		raise InvalidFrame("Invalid frame type %r" % lastByte)
 
 
 def decodeFrameFromServer(frameString):
@@ -545,7 +551,7 @@ def decodeFrameFromServer(frameString):
 	elif lastByte == "K":
 		return TransportKillFrame.decode(frameString)
 	else:
-		return InvalidFrame("Invalid frame type %r" % lastByte)
+		raise InvalidFrame("Invalid frame type %r" % lastByte)
 
 
 
