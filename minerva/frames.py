@@ -50,7 +50,7 @@ def helloDataToHelloFrame(helloData):
 	Raises L{InvalidHello} if there were errors in the blob of objects.
 	"""
 	if not isinstance(helloData, dict):
-		raise InvalidHello
+		raise InvalidHello("helloData not a dict")
 
 	obj = attrdict()
 
@@ -59,7 +59,7 @@ def helloDataToHelloFrame(helloData):
 		Hello_credentialsData in helloData else {}
 
 	if not isinstance(obj.credentialsData, dict):
-		raise InvalidHello
+		raise InvalidHello("credentialsData not a dict")
 
 	try:
 		# Any line here can raise KeyError; additional exceptions marked with 'e:'
@@ -83,12 +83,14 @@ def helloDataToHelloFrame(helloData):
 		obj.streamId = helloData[Hello_streamId]
 		# ,str is appropriate only because simplejson returns str when possible
 		if not isinstance(obj.streamId, str) or not 20 <= len(obj.streamId) <= 30:
-			raise InvalidHello
+			raise InvalidHello("bad streamId length: %d" % len(obj.streamId))
 	except (KeyError, TypeError, ValueError):
-		raise InvalidHello
+		raise InvalidHello(
+			"problem with requestNewStream, transportNumber, "
+			"protocolVersion, streamingResponse, or streamId")
 
 	if obj.protocolVersion != 2:
-		raise InvalidHello
+		raise InvalidHello("bad protocolVersion")
 
 	# succeedsTransport is always optional. If missing, the client does not
 	# want to get S2C strings over this transport. If None, the client does,
@@ -102,7 +104,7 @@ def helloDataToHelloFrame(helloData):
 				obj.succeedsTransport = ensureNonNegIntLimit(
 					obj.succeedsTransport, 2**64)
 			except (TypeError, ValueError):
-				raise InvalidHello
+				raise InvalidHello("bad succeedsTransport")
 
 	obj.httpFormat = None
 	try:
@@ -118,7 +120,7 @@ def helloDataToHelloFrame(helloData):
 			obj.needPaddingBytes = ensureNonNegIntLimit(
 				helloData[Hello_needPaddingBytes], 16*1024) # e: ValueError, TypeError
 		except (TypeError, ValueError):
-			raise InvalidHello
+			raise InvalidHello("bad needPaddingBytes")
 	else:
 		obj.needPaddingBytes = 0
 
@@ -129,7 +131,7 @@ def helloDataToHelloFrame(helloData):
 	except KeyError:
 		obj.maxReceiveBytes = 2**64
 	except (TypeError, ValueError):
-		raise InvalidHello
+		raise InvalidHello("bad maxReceiveBytes")
 
 	try:
 		obj.maxOpenTime = ensureNonNegIntLimit(
@@ -137,7 +139,7 @@ def helloDataToHelloFrame(helloData):
 	except KeyError:
 		obj.maxOpenTime = 2**64
 	except (TypeError, ValueError):
-		raise InvalidHello
+		raise InvalidHello("bad maxOpenTime")
 
 	return HelloFrame(obj)
 
@@ -239,7 +241,7 @@ class SeqNumFrame(tuple):
 		try:
 			seqNum = strToNonNegLimit(str(frameString[:-1]), 2**64)
 		except ValueError:
-			raise InvalidFrame
+			raise InvalidFrame("bad seqNum")
 		return cls(seqNum)
 
 
@@ -277,7 +279,7 @@ class SackFrame(tuple):
 			sackList = tuple(strToNonNegLimit(s, 2**64) for s in joinedSackList.split(','))
 			ackNumber = strToNonNegLimit(ackNumberStr, 2**64)
 		except ValueError:
-			raise InvalidFrame
+			raise InvalidFrame("bad sackList or ackNumber")
 		return cls(ackNumber, sackList)
 
 
@@ -307,7 +309,7 @@ class YouCloseItFrame(tuple):
 		C{frameString} is a L{StringFragment} that ends with "Y".
 		"""
 		if len(frameString) != 1:
-			raise InvalidFrame
+			raise InvalidFrame("leading garbage")
 		return cls()
 
 
@@ -400,9 +402,9 @@ class ResetFrame(tuple):
 		try:
 			applicationLevel = {'0': False, '1': True}[applicationLevelStr]
 		except KeyError:
-			raise InvalidFrame
+			raise InvalidFrame("bad applicationLevel")
 		if not isValidReasonString(reasonString):
-			raise InvalidFrame
+			raise InvalidFrame("illegal bytes in reasonString")
 
 		return cls(reasonString, applicationLevel)
 
@@ -469,7 +471,7 @@ class TransportKillFrame(tuple):
 		try:
 			reason = cls.stringToConstant[string]
 		except KeyError:
-			raise InvalidFrame
+			raise InvalidFrame("unknown kill reason %r" % string)
 
 		return cls(reason)
 
@@ -514,7 +516,7 @@ def decodeFrameFromClient(frameString):
 	elif lastByte == "!":
 		return ResetFrame.decode(frameString)
 	else:
-		return InvalidFrame("Invalid frame type")
+		return InvalidFrame("Invalid frame type %r" % lastByte)
 
 
 def decodeFrameFromServer(frameString):
@@ -543,7 +545,7 @@ def decodeFrameFromServer(frameString):
 	elif lastByte == "K":
 		return TransportKillFrame.decode(frameString)
 	else:
-		return InvalidFrame("Invalid frame type")
+		return InvalidFrame("Invalid frame type %r" % lastByte)
 
 
 
