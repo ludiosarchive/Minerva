@@ -119,14 +119,14 @@ function connect(bridge) {
 			helloData[hp.maxReceiveBytes] = 9999999;
 			helloData[hp.maxOpenTime] = 3600;
 			helloData[hp.succeedsTransport] = null;
-			var helloFrame = [cw.net.FrameType.hello, helloData];
+			var helloFrame = ser(helloData) + 'H';
 			// If the server receives this more than once, it is
 			// subsequently ignored because the box # is always 0,
 			// and box 0 was already received.
-			var seqNumFrame = [cw.net.FrameType.seqnum, 0]; // Not really necessary to send
-			var boxFrame = [cw.net.FrameType.string, 'send_demo'];
+			var seqNumFrame = '0' + 'N'; // not really necessary to send
+			var boxFrame = 'send_demo' + '~';
 
-			var frames = [ser(helloFrame), ser(seqNumFrame), ser(boxFrame)];
+			var frames = [helloFrame, seqNumFrame, boxFrame];
 			for(i=0; i < frames.length; i++) {
 				logger.info('Sending: ' + frames[i]);
 			}

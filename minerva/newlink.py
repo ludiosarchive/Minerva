@@ -973,7 +973,7 @@ class SocketTransport(object):
 		"""
 		C{hello} is a L{HelloFrame}.
 		"""
-		sanitizeHelloFrame(hello)
+		sanitizeHelloFrame(hello, self._mode == HTTP)
 
 		# self._protocolVersion = protocolVersion # Not needed at the moment
 		self.streamId = hello.streamId

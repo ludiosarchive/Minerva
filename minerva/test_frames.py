@@ -132,6 +132,21 @@ class SeqNumFrameTests(unittest.TestCase):
 		self.assertEqual("SeqNumFrame(%d)" % 2**64, repr(SeqNumFrame(2**64)))
 
 
+	def test_decode(self):
+		for seqNum in (0, 1, 2**32, 2**64):
+			s = str(seqNum) + 'N'
+			self	.assertEqual(
+				SeqNumFrame(seqNum),
+				SeqNumFrame.decode(StringFragment(s, 0, len(s))))
+
+
+	def test_decodeFailed(self):
+		for s in (str(-1) + 'N', str(-2**64) + 'N', str(2**64 + 1) + 'N', ' ', '0' * 1024):
+			self	.assertRaises(
+				InvalidFrame,
+				lambda: SeqNumFrame.decode(StringFragment(s, 0, len(s))))
+
+
 	def test_encode(self):
 		self	.assertEqual('2N', SeqNumFrame(2).encode())
 		self	.assertEqual('0N', SeqNumFrame(0).encode())

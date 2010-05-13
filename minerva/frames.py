@@ -237,7 +237,7 @@ class SeqNumFrame(tuple):
 		C{frameString} is a L{StringFragment} that ends with "N".
 		"""
 		try:
-			seqNum = strToNonNegLimit(frameString, 2**64)
+			seqNum = strToNonNegLimit(str(frameString[:-1]), 2**64)
 		except ValueError:
 			raise InvalidFrame
 		return cls(seqNum)
