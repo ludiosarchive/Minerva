@@ -93,6 +93,11 @@ class HelloFrameTests(unittest.TestCase):
 			HelloFrame.decode(StringFragment(s, 0, len(s))))
 
 
+	def test_encode(self):
+		h = HelloFrame({"a": []})
+		self.assertEqual('{"a":[]}' + 'H', h.encode())
+
+
 #	def test_intraFrameCorruptionTooMuchNestingObject(self):
 #		"""
 #		Server thinks too much nesting is equivalent to intra-frame JSON corruption.
