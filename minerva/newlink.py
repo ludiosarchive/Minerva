@@ -875,6 +875,7 @@ class SocketTransport(object):
 		toSend = self._toSend
 		if toSend:
 			self._toSend = ''
+			print repr(toSend)
 			self.writable.write(toSend)
 
 		if self._terminating:
@@ -1074,7 +1075,7 @@ class SocketTransport(object):
 				# Because we may have received multiple Minerva strings, collect
 				# them into a list and then deliver them all at once to Stream.
 				# This does *not* add any latency. It does reduce the number of funcalls.
-				bunchedStrings[0].append((self._seqNum, frameObj[1]))
+				bunchedStrings[0].append((self._seqNum, frame.string))
 
 			elif frameType == SackFrame:
 				try:
@@ -1084,7 +1085,7 @@ class SocketTransport(object):
 					break
 
 			elif frameType == SeqNumFrame:
-				self._seqNum = frame.seqNum
+				self._seqNum = frame.seqNum - 1
 
 			else:
 				# Deliver the strings before processing client's reset frame. This

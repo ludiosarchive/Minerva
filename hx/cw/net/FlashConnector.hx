@@ -134,7 +134,9 @@ class FlashConnection {
 				// Expecting ASCII only, but using readUTFBytes anyway.
 				try {
 					outBuffer += comma;
+					outBuffer += '"';
 					outBuffer += socket.readUTFBytes(expecting);
+					outBuffer += '"';
 					comma = ",";
 				} catch (e:Dynamic) { // Unknown if IOError is ever actually thrown here
 					hadError = true;

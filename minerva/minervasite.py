@@ -247,6 +247,7 @@ class DemoProtocol(BasicMinervaProtocol):
 
 		send = []
 		for s in strings:
+			s = str(s) # StringFragment -> str
 			if s.startswith('echo:'):
 				send.append(s.replace('echo:', '', 1))
 
