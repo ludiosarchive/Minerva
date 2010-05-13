@@ -1543,7 +1543,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		If the Minerva transport is shutting down (because it received bad
 		frames or something), it will silently ignore any data it receives.
 		"""
-		transport.sendFrames([[9999]])
+		transport.sendFrames([_BadFrame('?')])
 		self.aE([], transport.getNew())
 		self.aE(False, transport.writable.disconnecting)
 
@@ -1552,7 +1552,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		frame0 = _makeHelloFrame()
 		transport.sendFrames([frame0])
-		transport.sendFrames([[9999]])
+		transport.sendFrames([_BadFrame('?')])
 		self.aE([TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()], transport.getNew())
 		self._testExtraDataReceivedIgnored(transport)
 

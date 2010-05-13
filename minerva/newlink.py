@@ -1081,7 +1081,7 @@ class SocketTransport(object):
 				try:
 					self._stream.sackReceived((frame.ackNumber, frame.sackList))
 				except InvalidSACK:
-					self._closeWith(tk_acked_unsent_boxes)
+					self._closeWith(tk_acked_unsent_strings)
 					break
 
 			elif frameType == SeqNumFrame:
