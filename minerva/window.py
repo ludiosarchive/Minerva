@@ -5,6 +5,7 @@ JSON objects instead of a stream of bytes.
 """
 
 import warnings
+from mypy.strops import StringFragment
 from collections import deque
 
 from twisted.python import log
@@ -129,6 +130,15 @@ class Queue(object):
 
 
 
+class _wasSF(str):
+	"""
+	A marker class for objects that were a L{StringFragment}
+	before being converted to a str.
+	"""
+	__slots__ = ()
+
+
+
 class Incoming(object):
 	"""
 	I am a processor for incoming numbered items. I take input through
@@ -142,6 +152,12 @@ class Incoming(object):
 	exhaustion attacks by calling L{getUndeliverableCount} or
 	L{getMaxConsumption}, and destroying the Stream if the numbers are too
 	high.
+
+	Not-currently-deliverable L{StringFragment}s will be be converted to
+	C{str}s while in Incoming, and converted back when you retrieve them.
+	This is done because L{StringFragment}s may be referencing a giant
+	C{str}, which we don't want to keep around. It's also easier to get the
+	size-in-memory of a C{str}.
 	"""
 	__slots__ = ('_lastAck', '_cached', '_deliverable', '_objSizeCache')
 
@@ -166,7 +182,7 @@ class Incoming(object):
 		@type howMuch: int
 
 		Returns a list of sequence numbers that were ignored (because items with
-		such sequence numbers were already received - not necessarily delivered)
+		such sequence numbers were already received - not necessarily delivered).
 		"""
 		alreadyGiven = []
 		seqNums = []
@@ -202,6 +218,10 @@ class Incoming(object):
 
 		for num, item in self._cached.iteritems():
 			if num not in self._objSizeCache:
+				# Do the conversion here so that it applies only to the
+				# undeliverable items.
+				if isinstance(item, StringFragment):
+					item = _wasSF(item)
 				self._objSizeCache[num] = totalSizeOf(item)
 
 		return alreadyGiven
@@ -213,7 +233,10 @@ class Incoming(object):
 		After I return these items, I will not know about them any more. They're your
 		responsibility now.
 		"""
-		yourItems = list(self._deliverable)
+		yourItems = []
+		for i in self._deliverable:
+			yourItems.append(StringFragment(i, 0, len(i)) if isinstance(i, _wasSF) else i)
+
 		for i in xrange(len(yourItems)):
 			self._deliverable.popleft()
 

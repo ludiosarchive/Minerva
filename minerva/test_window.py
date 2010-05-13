@@ -1,10 +1,11 @@
 from twisted.trial import unittest
 
 import sys
+from mypy.strops import StringFragment
 from mypy.objops import totalSizeOf
 
 from minerva.helpers import todo
-from minerva.window import Queue, Incoming, InvalidSACK, WantedItemsTooLowError
+from minerva.window import Queue, Incoming, InvalidSACK, WantedItemsTooLowError, _wasSF
 
 
 class TestQueue(unittest.TestCase):
@@ -320,3 +321,28 @@ class TestIncomingConsumption(unittest.TestCase):
 
 		i.give([[0, 'box0']])
 		self.aE(0, len(i._objSizeCache))
+
+
+	def test_StringFragmentConvertToStr(self):
+		"""
+		L{StringFragment}s are converted to C{window._wasSF}s if they are
+		undeliverable inside L{Incoming}.
+		"""
+		i = Incoming()
+		s = _wasSF("helloworld" * 100)
+		sf = StringFragment(s, 0, len(s))
+		i.give([[1, sf]])
+		self.aE(totalSizeOf(s), i.getMaxConsumption())
+
+
+	def test_strConvertedBackToStringFragment(self):
+		"""
+		L{window._wasSF}s are converted back to C{StringFragment}s before
+		being delivered.
+		"""
+		i = Incoming()
+		s = _wasSF("helloworld" * 100)
+		sf = StringFragment(s, 0, len(s))
+		i.give([[1, sf]])
+		i.give([[0, sf]])
+		self.aE([sf, sf], i.getDeliverableItems())
