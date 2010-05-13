@@ -1962,7 +1962,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		stream.queue.append("box0")
 
 		transport.sendFrames([SackFrame(1, ())])
-		self.aE([[TransportKillFrame(tk_acked_unsent_strings)], YouCloseItFrame()], transport.getNew())
+		self.aE([TransportKillFrame(tk_acked_unsent_strings), YouCloseItFrame()], transport.getNew())
 		self.aE([
 			['notifyFinish'],
 			['transportOnline', transport, False, None],
