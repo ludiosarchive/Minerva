@@ -20,6 +20,7 @@ from twisted.internet import defer, task
 from twisted.internet.interfaces import (
 	IPushProducer, IPullProducer, IProtocol, IProtocolFactory)
 from mypy import constant
+from mypy.strops import StringFragment
 
 from minerva.window import Queue, Incoming
 from minerva.helpers import todo
@@ -81,8 +82,11 @@ class SlotlessSocketFace(SocketFace):
 	protocol = SlotlessSocketTransport
 
 
-
-DeleteProperty = constant.Constant("DeleteProperty")
+def sf(s):
+	"""
+	Convert C{str} C{s} to a L{StringFragment}
+	"""
+	return StringFragment(s, 0, len(s))
 
 
 class _BadFrame(object):
@@ -94,6 +98,8 @@ class _BadFrame(object):
 	def encode(self):
 		return self.encodesTo
 
+
+DeleteProperty = constant.Constant("DeleteProperty")
 
 def _makeHelloFrame(extra={}):
 	_extra = {
@@ -223,12 +229,12 @@ class StreamTests(unittest.TestCase):
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 
-		s.stringsReceived(t, [(1, 'box1')])
+		s.stringsReceived(t, [(1, sf('box1'))])
 		i = list(factory.instances)[0]
 		self.aE([['streamStarted', s]], i.getNew())
 
-		s.stringsReceived(t, [(0, 'box0')])
-		self.aE([['stringsReceived', ['box0', 'box1']]], i.getNew())
+		s.stringsReceived(t, [(0, sf('box0'))])
+		self.aE([['stringsReceived', [sf('box0'), sf('box1')]]], i.getNew())
 
 
 	def test_exhaustedIncomingResetsBecauseTooManyStrings(self):
@@ -242,13 +248,13 @@ class StreamTests(unittest.TestCase):
 
 		manyStrings = []
 		for n in xrange(1, 5002):
-			manyStrings.append((n, 'box'))
+			manyStrings.append((n, sf('box')))
 		assert len(manyStrings) == 5001
 
 		# box #0 is never given, so it cannot deliver any of them
 
 		s.stringsReceived(t, manyStrings)
-		self.aE([['writeReset', u'resources exhausted', False]], t.getNew())
+		self.aE([['writeReset', 'resources exhausted', False]], t.getNew())
 
 
 	def test_exhaustedIncomingResetsBecauseTooManyBytes(self):
@@ -260,12 +266,12 @@ class StreamTests(unittest.TestCase):
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 
-		notManyStrings = [(1, FakeBigString(str(4*1024*1024 + 1)))]
+		notManyStrings = [(1, sf(FakeBigString(str(4*1024*1024 + 1))))]
 
 		# box #0 is never given, so it cannot deliver any of them
 
 		s.stringsReceived(t, notManyStrings)
-		self.aE([['writeReset', u'resources exhausted', False]], t.getNew())
+		self.aE([['writeReset', 'resources exhausted', False]], t.getNew())
 
 
 	def test_exhaustedIncomingTooManyStringsButResetsWithApplicationReason(self): # keywords: reentrant
@@ -433,11 +439,11 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t, False, None)
 
 		self.aE((-1, []), s.getSACK())
-		s.stringsReceived(t, [(0, 'box')])
+		s.stringsReceived(t, [(0, sf('box'))])
 		self.aE((0, []), s.getSACK())
-		s.stringsReceived(t, [(4, 'box')])
+		s.stringsReceived(t, [(4, sf('box'))])
 		self.aE((0, [4]), s.getSACK())
-		s.stringsReceived(t, [(5, 'box')])
+		s.stringsReceived(t, [(5, sf('box'))])
 		self.aE((0, [4, 5]), s.getSACK())
 
 
@@ -510,10 +516,10 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t2, False, None)
 
 		self.aE(False, s.disconnected)
-		s.reset(u'the reason')
+		s.reset('the reason')
 		self.aE(True, s.disconnected)
-		self.aE([["writeReset", u'the reason', True]], t1.getNew())
-		self.aE([["writeReset", u'the reason', True]], t2.getNew())
+		self.aE([["writeReset", 'the reason', True]], t1.getNew())
+		self.aE([["writeReset", 'the reason', True]], t2.getNew())
 
 
 	def test_internalResetCallsAllTransports(self):
@@ -529,10 +535,10 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t2, False, None)
 
 		self.aE(False, s.disconnected)
-		s._internalReset(u'the reason')
+		s._internalReset('the reason')
 		self.aE(True, s.disconnected)
-		self.aE([["writeReset", u'the reason', False]], t1.getNew())
-		self.aE([["writeReset", u'the reason', False]], t2.getNew())
+		self.aE([["writeReset", 'the reason', False]], t1.getNew())
+		self.aE([["writeReset", 'the reason', False]], t2.getNew())
 
 
 	def test_cannotResetDisconnectedStream(self):
@@ -543,16 +549,16 @@ class StreamTests(unittest.TestCase):
 		# original reset caused by "application code"
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
-		s.reset(u'reason')
-		self.aR(RuntimeError, lambda: s.reset(u'reason'))
-		self.aR(RuntimeError, lambda: s.reset(u'reason'))
+		s.reset('reason')
+		self.aR(RuntimeError, lambda: s.reset('reason'))
+		self.aR(RuntimeError, lambda: s.reset('reason'))
 
 		# original reset caused by a transport
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
-		s.resetFromClient(u'reason', True)
-		self.aR(RuntimeError, lambda: s.reset(u'reason'))
-		self.aR(RuntimeError, lambda: s.reset(u'reason'))
+		s.resetFromClient('reason', True)
+		self.aR(RuntimeError, lambda: s.reset('reason'))
+		self.aR(RuntimeError, lambda: s.reset('reason'))
 
 
 	def test_cannotSendStringsDisconnectedStream(self):
@@ -563,14 +569,14 @@ class StreamTests(unittest.TestCase):
 		# original reset caused by "application code"
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
-		s.reset(u'reason')
+		s.reset('reason')
 		self.aR(RuntimeError, lambda: s.sendStrings(["somebox"]))
 		self.aR(RuntimeError, lambda: s.sendStrings(["somebox"]))
 
 		# original reset caused by a transport
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
-		s.resetFromClient(u'reason', True)
+		s.resetFromClient('reason', True)
 		self.aR(RuntimeError, lambda: s.sendStrings(["somebox"]))
 		self.aR(RuntimeError, lambda: s.sendStrings(["somebox"]))
 
@@ -1880,7 +1886,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport.sendFrames([StringFrame("box0")])
 
 		self.aE([
-			['stringsReceived', transport, [(0, "box0")]],
+			['stringsReceived', transport, [(0, sf("box0"))]],
 			['getSACK']
 		], stream.getNew())
 		self.aE([SackFrame(0, ())], transport.getNew())
@@ -1888,7 +1894,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport.sendFrames([SeqNumFrame(2), StringFrame("box2")])
 
 		self.aE([
-			['stringsReceived', transport, [(2, "box2")]],
+			['stringsReceived', transport, [(2, sf("box2"))]],
 			['getSACK']
 		], stream.getNew())
 		self.aE([SackFrame(0, (2,))], transport.getNew())
@@ -2188,7 +2194,7 @@ class SocketFaceTests(unittest.TestCase):
 
 	def test_policyStringCannotBeUnicode(self):
 		face = SocketFace(clock=None, streamTracker=None, firewall=DummyFirewall())
-		self.aR(TypeError, lambda: face.setPolicyString(u'hi'))
+		self.aR(TypeError, lambda: face.setPolicyString('hi'))
 
 
 	def test_policyStringCannotContainNull(self):
@@ -2269,7 +2275,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		transport0.sendFrames([StringFrame("box0"), SeqNumFrame(2), StringFrame("box2")])
 
 		self.aE([SackFrame(0, (2,))], transport0.getNew())
-		self.aE([["streamStarted", stream], ["stringsReceived", ["box0"]]], proto.getNew())
+		self.aE([["streamStarted", stream], ["stringsReceived", [sf("box0")]]], proto.getNew())
 
 
 		# Send box1 and box3; make sure the protocol gets strings 1, 2, 3;
@@ -2278,7 +2284,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		transport0.sendFrames([SeqNumFrame(1), StringFrame("box1"), SeqNumFrame(3), StringFrame("box3")])
 
 		self.aE([SackFrame(3, ())], transport0.getNew())
-		self.aE([["stringsReceived", ["box1", "box2", "box3"]]], proto.getNew())
+		self.aE([["stringsReceived", [sf("box1"), sf("box2"), sf("box3")]]], proto.getNew())
 
 
 		# Send two strings S2C; make sure we get them.
@@ -2407,9 +2413,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		self.aE([
 			['streamStarted', stream],
-			['stringsReceived', ['box0']],
-			['stringsReceived', ['box1']],
-			['stringsReceived', ['box2']],
+			['stringsReceived', [sf('box0')]],
+			['stringsReceived', [sf('box1')]],
+			['stringsReceived', [sf('box2')]],
 		], proto.getNew())
 
 
@@ -2460,8 +2466,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		proto = list(self.protocolFactory.instances)[0]
 		self.aE([
-			["stringsReceived", ["box0", "box1"]],
-			["streamReset", WhoReset.client_app, u''],
+			["stringsReceived", [sf("box0"), sf("box1")]],
+			["streamReset", WhoReset.client_app, ''],
 		], proto.getNew()[1:])
 
 
@@ -2576,7 +2582,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			proto = list(self.protocolFactory.instances)[0]
 			if clientResetsImmediately:
-				self.aE([["streamReset", WhoReset.client_app, u'']], proto.getNew()[1:])
+				self.aE([["streamReset", WhoReset.client_app, '']], proto.getNew()[1:])
 			else:
 				self.aE([], proto.getNew()[1:])
 
@@ -2620,7 +2626,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			proto = list(self.protocolFactory.instances)[0]
 			self.aE([
-				["stringsReceived", ["box0", "box1"]],
+				["stringsReceived", [sf("box0"), sf("box1")]],
 				["streamReset", WhoReset.server_app, 'reset forced by mock protocol']
 			], proto.getNew()[1:])
 
@@ -2669,12 +2675,12 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			proto = list(self.protocolFactory.instances)[0]
 			if clientResetsImmediately:
 				self.aE([
-					["stringsReceived", ["box0", "box1"]],
-					["streamReset", WhoReset.client_app, u''],
+					["stringsReceived", [sf("box0"), sf("box1")]],
+					["streamReset", WhoReset.client_app, ''],
 				], proto.getNew()[1:])
 			else:
 				self.aE([
-					["stringsReceived", ["box0", "box1"]],
+					["stringsReceived", [sf("box0"), sf("box1")]],
 				], proto.getNew()[1:])
 
 
@@ -2717,7 +2723,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			proto = list(self.protocolFactory.instances)[0]
 			self.aE([
-				["stringsReceived", ["box0", "box1", "box2"]],
+				["stringsReceived", [sf("box0"), sf("box1"), sf("box2")]],
 				["streamReset", WhoReset.server_app, 'reset forced by mock protocol'],
 			], proto.getNew()[1:])
 
@@ -2780,7 +2786,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 					self.aE([
 						["notifyFinish"],
 						["transportOnline", transport, True, None],
-						["stringsReceived", transport, [(0, 'box0'), (1, 'box1'), (2, 'box2')]],
+						["stringsReceived", transport, [(0, sf('box0')), (1, sf('box1')), (2, sf('box2'))]],
 						["getSACK"],
 					], stream.getNew())
 

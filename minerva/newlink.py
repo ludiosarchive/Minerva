@@ -96,13 +96,13 @@ class IMinervaProtocol(Interface):
 
 	def stringsReceived(strings):
 		"""
-		Called whenever one or more strings are received. Strings will
-		*never* be unicode.
+		Called whenever one or more strings are received.
 
-		You must *not* raise any exception. Wrap your code in try/except if necessary.
+		You must *not* raise any exception. Wrap your code in try/except
+		if necessary.
 
 		@type strings: list
-		@param strings: a list of C{str} objects.
+		@param strings: a list of L{StringFragment} objects.
 		"""
 
 
@@ -357,7 +357,7 @@ class Stream(object):
 		if not self.disconnected and \
 		(self._incoming.getUndeliverableCount() > self.maxUndeliveredStrings or \
 		self._incoming.getMaxConsumption() > self.maxUndeliveredBytes):
-			self._internalReset(u'resources exhausted')
+			self._internalReset('resources exhausted')
 
 
 	def sackReceived(self, sackInfo):
