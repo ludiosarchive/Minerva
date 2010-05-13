@@ -201,7 +201,8 @@ class Incoming(object):
 		# to _deliverable immediately)
 
 		for num, item in self._cached.iteritems():
-			self._objSizeCache[num] = totalSizeOf(item)
+			if num not in self._objSizeCache:
+				self._objSizeCache[num] = totalSizeOf(item)
 
 		return alreadyGiven
 
