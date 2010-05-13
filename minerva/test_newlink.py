@@ -2194,7 +2194,7 @@ class SocketFaceTests(unittest.TestCase):
 
 	def test_policyStringCannotBeUnicode(self):
 		face = SocketFace(clock=None, streamTracker=None, firewall=DummyFirewall())
-		self.aR(TypeError, lambda: face.setPolicyString('hi'))
+		self.aR(TypeError, lambda: face.setPolicyString(u'hi'))
 
 
 	def test_policyStringCannotContainNull(self):
