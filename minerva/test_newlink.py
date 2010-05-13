@@ -31,11 +31,16 @@ from minerva.decoders import (
 	strictDecodeOne)
 
 from minerva.newlink import (
-	Frame, Stream, StreamTracker, NoSuchStream, WhoReset,
-	StreamAlreadyExists, BadFrame, ISimpleConsumer, IMinervaProtocol,
+	Stream, StreamTracker, NoSuchStream, WhoReset,
+	StreamAlreadyExists, ISimpleConsumer, IMinervaProtocol,
 	IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
 	IMinervaTransport, SocketTransport, SocketFace, HttpFace,
 )
+
+from minerva.frames import (
+	HelloFrame, StringFrame, SeqNumFrame, SackFrame, YouCloseItFrame,
+	ResetFrame, PaddingFrame, TransportKillFrame,
+	InvalidFrame, decodeFrameFromClient, decodeFrameFromServer)
 
 from minerva.frames import (
 	Hello_transportNumber,
@@ -60,8 +65,6 @@ from minerva.mocks import (
 	BrokenOnPurposeError, BrokenMockObserver, DummyStreamTracker,
 	DummyFirewall, DummyTCPTransport, strictGetNewFrames
 )
-
-Fn = Frame.names
 
 # simplejson.loads('NaN') always works, but float('nan') => 0
 # in Python ICC builds with floating point optimizations
@@ -129,40 +132,6 @@ def _makeTransportWithDecoder(parser, faceFactory):
 	transport.sendFrames = sendFrames
 	transport.makeConnection(tcpTransport)
 	return transport
-
-
-class FrameTests(unittest.TestCase):
-	"""
-	Tests for L{newlink.Frame}
-	"""
-	def test_ok(self):
-		# No exception raised
-		f = Frame([Fn.string, "box_payload"])
-		self.aE('string', f.getType())
-
-
-	def test_notOkay(self):
-		badFrames = ([], [9999], {}, {0: 'x'}, {'0': 'x'}, 1, 1.5, nan, inf, neginf, True, False, None)
-		badFrames = badFrames + ([[], "something"], [{}, "something"], [inf, "something"], [nan, "something"])
-		for frame in badFrames:
-			self.aR(BadFrame, lambda: Frame(frame))
-
-
-	def test_notOkayWrongArgCount(self):
-		badFrames = [
-			[Fn.string],
-			[Fn.string, "one", "two"],
-			[Fn.you_close_it, "one"],
-			[Fn.start_timestamps, "one", "two", "three", 4],
-		]
-
-		for frame in badFrames:
-			self.aR(BadFrame, lambda: Frame(frame))
-
-
-	def test_repr(self):
-		f = Frame([1, "hello"])
-		self.aE("<Frame type 'string', contents [1, 'hello']>", repr(f))
 
 
 
