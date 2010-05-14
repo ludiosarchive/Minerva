@@ -904,6 +904,7 @@ class SocketTransport(object):
 	def _closeWith(self, reason):
 		if self._terminating:
 			return
+
 		self._toSend += self._encodeFrame(TransportKillFrame(reason))
 		if self._mode != HTTP:
 			self._toSend += self._encodeFrame(YouCloseItFrame())
