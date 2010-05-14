@@ -483,3 +483,6 @@ class TransportKillFrameTests(unittest.TestCase):
 		self	.assertRaises(
 			InvalidFrame,
 			lambda: TransportKillFrame.decode(sf(s)))
+
+
+# TODO: maybe explicit tests for decodeFrameFromClient, decodeFrameFromServer

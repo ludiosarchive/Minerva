@@ -5,7 +5,6 @@ See minerva/sample/demo.py for an idea of how to use the classes below.
 """
 
 import traceback
-from collections import deque
 from zope.interface import Interface, Attribute, implements
 
 from twisted.python import log
@@ -16,12 +15,10 @@ from twisted.web import resource
 from twisted.web.server import NOT_DONE_YET
 
 from mypy.randgen import secureRandom
-from mypy.objops import ensureNonNegIntLimit, ensureBool, strToNonNegLimit
 from mypy.strops import StringFragment
 from mypy.mailbox import Mailbox, mailboxify
 
 from minerva import decoders
-from minerva.frames import WhoReset
 from minerva.website import RejectTransport
 from minerva.interfaces import ISimpleConsumer
 from minerva.window import Queue, Incoming, InvalidSACK

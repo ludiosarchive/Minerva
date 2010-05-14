@@ -10,7 +10,6 @@ Notes on understanding this test file:
 	that it was a victim of a search/replace spree.
 """
 
-import copy
 from cStringIO import StringIO
 from zope.interface import verify
 from twisted.trial import unittest
@@ -22,13 +21,12 @@ from twisted.internet.interfaces import (
 from mypy import constant
 from mypy.strops import StringFragment
 
-from minerva.window import Queue, Incoming
+from minerva.window import Queue
 from minerva.helpers import todo
 from minerva.test_decoders import diceString
 
 from minerva.decoders import (
-	BencodeStringDecoder, Int32StringDecoder, DelimitedStringDecoder,
-	strictDecodeOne)
+	BencodeStringDecoder, Int32StringDecoder, DelimitedStringDecoder)
 
 from minerva.newlink import (
 	Stream, StreamTracker, NoSuchStream, WhoReset,
@@ -39,8 +37,7 @@ from minerva.newlink import (
 
 from minerva.frames import (
 	HelloFrame, StringFrame, SeqNumFrame, SackFrame, YouCloseItFrame,
-	ResetFrame, PaddingFrame, TransportKillFrame,
-	InvalidFrame, decodeFrameFromClient, decodeFrameFromServer)
+	ResetFrame, PaddingFrame, TransportKillFrame, decodeFrameFromServer)
 
 tk_stream_attach_failure = TransportKillFrame.stream_attach_failure
 tk_acked_unsent_strings =  TransportKillFrame.acked_unsent_strings
