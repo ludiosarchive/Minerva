@@ -148,17 +148,19 @@ class HelloFrameTests(unittest.TestCase):
 
 		genericBad = [
 			-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"],
-			{}, True, False, None, DeleteProperty]
+			{}, True, False, None]
 
 		badMutations = dict(
-			transportNumber=genericBad,
-			protocolVersion=[0, 1, "1", 1.001] + genericBad,
+			transportNumber=[DeleteProperty] + genericBad,
+			protocolVersion=[DeleteProperty, 0, 1, "1", 1.001] + genericBad,
 			streamId=[
-				'', '\x00', 'x'*1, u'\ucccc'*25, u'\ucccc'*8,
+				DeleteProperty, '', '\x00', 'x'*1, u'\ucccc'*25, u'\ucccc'*8,
 				u'\x80'*25, 'x'*19, 'x'*31, 'x'*3000] + genericBad, # 19 is below limit, 31 is over limit
-			#maxReceiveBytes=genericBad, # TODO: test for HTTP
-			#maxOpenTime=genericBad, # TODO: test for HTTP
-			credentialsData=listWithout(genericBad, [{}]),
+			httpFormat=[4, 1, 0] + genericBad,
+			streamingResponse=[2, 3] + listWithout(genericBad, [True, False]),
+			maxReceiveBytes=genericBad,
+			maxOpenTime=genericBad,
+			credentialsData=[DeleteProperty] + listWithout(genericBad, [{}]),
 		)
 
 		ran = 0
@@ -182,7 +184,7 @@ class HelloFrameTests(unittest.TestCase):
 				ran += 1
 
 		# sanity check; make sure we actually tested things
-		assert ran == 63, "Ran %d times; change this assert as needed" % (ran,)
+		assert ran == 114, "Ran %d times; change this assert as needed" % (ran,)
 
 
 	def test_encode(self):
@@ -193,7 +195,7 @@ class HelloFrameTests(unittest.TestCase):
 	def test_encodeDecodeEquality(self):
 		# Need to make some options explicit for equality to work
 		hello = _makeHelloFrame(dict(
-			httpFormat=None,
+			httpFormat=FORMAT_XHR,
 			credentialsData={},
 			streamingResponse=True, # for equality, need bool instead of int
 			needPaddingBytes=0))

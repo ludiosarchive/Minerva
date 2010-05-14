@@ -130,13 +130,12 @@ def helloDataToHelloFrame(helloData):
 			except (TypeError, ValueError):
 				raise InvalidHello("bad succeedsTransport")
 
-	obj.httpFormat = None
 	try:
 		obj.httpFormat = helloData[Hello_httpFormat]
 		if not obj.httpFormat in (FORMAT_XHR, FORMAT_HTMLFILE):
-			obj.httpFormat = None
+			raise InvalidHello("bad httpFormat")
 	except KeyError:
-		pass
+		obj.httpFormat = None
 
 	# needPaddingBytes is always optional. If missing, 0.
 	if Hello_needPaddingBytes in helloData:
