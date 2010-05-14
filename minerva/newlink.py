@@ -99,7 +99,10 @@ class IMinervaProtocol(Interface):
 		if necessary.
 
 		@type strings: list
-		@param strings: a list of L{StringFragment} objects.
+		@param strings: a list of L{StringFragment} objects. You can convert
+			them to C{str}s by C{str()}ing them. Do *not* keep them around
+			in L{StringFragment} form because they may consume more
+			memory than you expect.
 		"""
 
 
