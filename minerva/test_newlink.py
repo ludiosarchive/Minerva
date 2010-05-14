@@ -48,18 +48,6 @@ tk_invalid_frame_type_or_arguments =  TransportKillFrame.invalid_frame_type_or_a
 tk_frame_corruption =  TransportKillFrame.frame_corruption
 
 from minerva.frames import (
-	Hello_transportNumber,
-	Hello_protocolVersion,
-	Hello_httpFormat,
-	Hello_requestNewStream,
-	Hello_streamId,
-	Hello_credentialsData,
-	Hello_streamingResponse,
-	Hello_needPaddingBytes,
-	Hello_maxReceiveBytes,
-	Hello_maxOpenTime,
-	Hello_useMyTcpAcks,
-	Hello_succeedsTransport,
 	FORMAT_XHR, FORMAT_HTMLFILE,
 )
 
@@ -102,15 +90,14 @@ class _BadFrame(object):
 DeleteProperty = constant.Constant("DeleteProperty")
 
 def _makeHelloFrame(extra={}):
-	_extra = {
-		Hello_transportNumber: 0,
-		Hello_requestNewStream: 1,
-		Hello_protocolVersion: 2,
-		Hello_streamId: 'x'*26,
-		Hello_streamingResponse: 1,
-		Hello_maxReceiveBytes: 2**30,
-		Hello_maxOpenTime: 2**30,
-		Hello_streamingResponse: 1}
+	_extra = dict(
+		transportNumber=0,
+		requestNewStream=1,
+		protocolVersion=2,
+		streamId='x'*26,
+		streamingResponse=1,
+		maxReceiveBytes=2**30,
+		maxOpenTime=2**30)
 	for k, v in extra.iteritems():
 		if v == DeleteProperty and k in _extra:
 			del _extra[k]
@@ -120,9 +107,9 @@ def _makeHelloFrame(extra={}):
 
 
 def _makeHelloFrameHttp(extra={}):
-	_extra = {
-		Hello_httpFormat: FORMAT_XHR,
-		Hello_streamingResponse: 0}
+	_extra = dict(
+		httpFormat=FORMAT_XHR,
+		streamingResponse=0)
 	for k, v in extra.iteritems():
 		if v == DeleteProperty and k in _extra:
 			del _extra[k]
@@ -1243,7 +1230,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			# we know we're getting frames correctly. This error is a good one to test for, unlike
 			# any "frame corruption" error, to distinguish things properly.
 			frame0 = _makeHelloFrame(
-				{Hello_streamId: '\x00'*26, Hello_requestNewStream: DeleteProperty})
+				dict(streamId='\x00'*26, requestNewStream=DeleteProperty))
 			toSend = '<bencode/>\n' + self._serializeFrames([frame0])
 
 			for s in diceString(toSend, packetSize):
@@ -1268,7 +1255,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			# This error is a good one to test for, unlike any "frame
 			# corruption" error, to distinguish things properly.
 			frame0 = _makeHelloFrame(
-				{Hello_streamId: '\x00'*26, Hello_requestNewStream: DeleteProperty})
+				dict(streamId='\x00'*26, requestNewStream=DeleteProperty))
 			toSend = '<int32/>\n' + self._serializeFrames([frame0])
 
 			for s in diceString(toSend, packetSize):
@@ -1690,7 +1677,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_validHelloWithCredentials(self):
 		frame0 = _makeHelloFrame(
-			{Hello_credentialsData: {'not_looked_at': True}})
+			dict(credentialsData={'not_looked_at': True}))
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		self.aE([], transport.getNew())
@@ -1701,7 +1688,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transportNumber can be 0 <= transportNumber <= 2**64
 		"""
 		for n in [1, 1000, 10000, 12378912, 1283718237, 2**64]:
-			frame0 = _makeHelloFrame({Hello_transportNumber: n})
+			frame0 = _makeHelloFrame(dict(transportNumber=n))
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
 			self.aE([], transport.getNew())
@@ -1714,7 +1701,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		for requestNewStream in (DeleteProperty, 0, 0.0, -0, -0.0, False):
 			##print requestNewStream
-			frame0 = _makeHelloFrame({Hello_requestNewStream: requestNewStream})
+			frame0 = _makeHelloFrame(dict(requestNewStream=requestNewStream))
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
 			self.aE([
@@ -1754,13 +1741,13 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_newStreamMoreThanOnceOk(self):
 		"""
-		If a hello frame includes Hello_requestNewStream=1, but the
+		If a hello frame includes requestNewStream=1, but the
 		stream with corresponding streamId already exists, the transport
 		treats the hello frame just as if it did not include
-		Hello_requestNewStream=1
+		requestNewStream=1
 
 		We do this because the response to a request with
-		Hello_requestNewStream=1 might get lost in transit.
+		requestNewStream=1 might get lost in transit.
 		"""
 		def act():
 			frame0 = _makeHelloFrame()
@@ -1774,19 +1761,20 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		act()
 
-	# We need a test that covers the "invalid hello" branch in newlink
-#	def test_invalidHello(self):
-#		"""
-#		Test that a hello frame with a wrong-type helloData results in
-#		tk_invalid_frame_type_or_arguments.
-#		"""
-#		genericBad = [-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"], True, False, None]
-#
-#		for bad in genericBad:
-#			transport = self._makeTransport()
-#			transport.sendFrames([[Fn.hello, bad]])
-#			self.aE([TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()], transport.getNew())
-#			self._testExtraDataReceivedIgnored(transport)
+
+	def test_invalidHello(self):
+		"""
+		Test that a bad HelloFrame results in
+		C{tk_invalid_frame_type_or_arguments}.
+		"""
+		transport = self._makeTransport()
+		transport.sendFrames([HelloFrame({})]) # nothing in it
+		self.aE([
+			TransportKillFrame(tk_invalid_frame_type_or_arguments),
+			YouCloseItFrame()
+		], transport.getNew())
+		self.assertRaises(NoSuchStream, lambda: self.streamTracker.getStream('x'*26))
+		self._testExtraDataReceivedIgnored(transport)
 
 
 	def test_noDelayEnabled(self):
@@ -1846,7 +1834,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		for succeedsTransport in [None, 0, 3]:
 			frame0 = _makeHelloFrame(
-				{Hello_succeedsTransport: succeedsTransport})
+				dict(succeedsTransport=succeedsTransport))
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
 			stream = self.streamTracker.getStream('x'*26)
@@ -1857,28 +1845,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				['notifyFinish'],
 				['transportOnline', transport, True, succeedsTransport],
 			], stream.getNew())
-			self._resetStreamTracker()
-
-
-	def test_gimmeStringsSucceedsTransportInvalidNumber(self):
-		"""
-		If client sends a too-low or too-high transport number (or a wrong
-		type) for the 'g' argument in the hello frame, the transport is killed.
-		In this case, the stream is never registered with the streamTracker.
-		"""
-		for succeedsTransport in [-1, -2**32, -0.5, 2**64+1, "4", True, False, [], {}]:
-			frame0 = _makeHelloFrame(
-				{Hello_succeedsTransport: succeedsTransport})
-			transport = self._makeTransport()
-			transport.sendFrames([frame0])
-
-			self.aE([
-				TransportKillFrame(tk_invalid_frame_type_or_arguments),
-				YouCloseItFrame()
-			], transport.getNew())
-
-			self.assertRaises(NoSuchStream, lambda: self.streamTracker.getStream('x'*26))
-
 			self._resetStreamTracker()
 
 
@@ -2261,7 +2227,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport0 = self._makeTransport()
 
-		frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
+		frame0 = _makeHelloFrame(dict(succeedsTransport=None))
 		transport0.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
 
@@ -2300,7 +2266,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport1 = self._makeTransport()
 
-		frame0 = _makeHelloFrame({Hello_succeedsTransport: None}) # TODO: increment transportNumber?
+		frame0 = _makeHelloFrame(dict(succeedsTransport=None)) # TODO: increment transportNumber?
 		transport1.sendFrames([frame0])
 
 		self.aE([SeqNumFrame(0), StringFrame("s2cbox0"), StringFrame("s2cbox1")], transport1.getNew())
@@ -2316,7 +2282,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport2 = self._makeTransport()
 
-		frame0 = _makeHelloFrame({Hello_succeedsTransport: None}) # TODO: increment transportNumber?
+		frame0 = _makeHelloFrame(dict(succeedsTransport=None)) # TODO: increment transportNumber?
 		transport2.sendFrames([frame0])
 
 		self.aE([], transport2.getNew())
@@ -2343,7 +2309,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport0 = self._makeTransport()
 
-		frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
+		frame0 = _makeHelloFrame(dict(succeedsTransport=None))
 		transport0.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
 
@@ -2371,7 +2337,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		transport1 = self._makeTransport()
 
 		newHello = _makeHelloFrame(
-			{Hello_transportNumber: 1, Hello_succeedsTransport: 0})
+			dict(transportNumber=1, succeedsTransport=0))
 		transport1.sendFrames([newHello])
 
 		self.aE([], transport1.getNew())
@@ -2393,7 +2359,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		"""
 		transport0 = self._makeTransport()
 
-		frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
+		frame0 = _makeHelloFrame(dict(succeedsTransport=None))
 		transport0.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
 
@@ -2453,7 +2419,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		gets the right calls.
 		"""
 		transport0 = self._makeTransport()
-		frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
+		frame0 = _makeHelloFrame(dict(succeedsTransport=None))
 
 		frames = [
 			frame0,
@@ -2520,7 +2486,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self._resetStreamTracker(protocolFactoryClass=MyFactory, realObjects=True)
 
 			transport0 = self._makeTransport()
-			frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
+			frame0 = _makeHelloFrame(dict(succeedsTransport=None))
 
 			frames = [frame0]
 			if clientResetsImmediately:
@@ -2561,7 +2527,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self._resetStreamTracker(protocolFactoryClass=MyFactory, realObjects=True)
 
 			transport0 = self._makeTransport()
-			frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
+			frame0 = _makeHelloFrame(dict(succeedsTransport=None))
 
 			frames = [frame0]
 			if clientResetsImmediately:
@@ -2603,7 +2569,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self._resetStreamTracker(protocolFactoryClass=MyFactory, realObjects=True)
 
 			transport0 = self._makeTransport()
-			frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
+			frame0 = _makeHelloFrame(dict(succeedsTransport=None))
 
 			frames = [
 				frame0,
@@ -2648,7 +2614,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self._resetStreamTracker(protocolFactoryClass=MyFactory, realObjects=True)
 
 			transport0 = self._makeTransport()
-			frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
+			frame0 = _makeHelloFrame(dict(succeedsTransport=None))
 
 			frames = [
 				frame0,
@@ -2701,7 +2667,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self._resetStreamTracker(protocolFactoryClass=MyFactory, realObjects=True)
 
 			transport0 = self._makeTransport()
-			frame0 = _makeHelloFrame({Hello_succeedsTransport: None})
+			frame0 = _makeHelloFrame(dict(succeedsTransport=None))
 
 			frames = [
 				frame0,
@@ -2759,9 +2725,9 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 					request = DummyRequest(postpath=[])
 					request.method = 'POST'
 
-					frame0 = _makeHelloFrameHttp({
-						Hello_succeedsTransport: None,
-						Hello_streamingResponse: streaming})
+					frame0 = _makeHelloFrameHttp(dict(
+						succeedsTransport=None,
+						streamingResponse=streaming))
 					frames = [
 						frame0,
 						StringFrame("box0"),
@@ -2799,8 +2765,8 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		If client uploads a strings and S2C strings are already available, client
 		gets a SACK frame and the strings.
 
-		Iif not Hello_streamingResponse, the request is finished after both
-		frame types are sent. If Hello_streamingResponse, frames are written
+		Iif not streamingResponse, the request is finished after both
+		frame types are sent. If streamingResponse, frames are written
 		and the request is kept open.
 		"""
 		for streaming in (False, True):
@@ -2811,9 +2777,9 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			request = DummyRequest(postpath=[])
 			request.method = 'POST'
 
-			frame0 = _makeHelloFrameHttp({
-				Hello_succeedsTransport: None,
-				Hello_streamingResponse: streaming})
+			frame0 = _makeHelloFrameHttp(dict(
+				succeedsTransport=None,
+				streamingResponse=streaming))
 			frames = [
 				frame0,
 				StringFrame("box0"),
@@ -2843,8 +2809,8 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 	def test_S2CStringsSoonAvailable(self):
 		r"""
 		If S2C strings become available after the transport connects, and if
-		not Hello_streamingResponse, the request is finished after string(s)
-		are sent. If Hello_streamingResponse, strings are written and the
+		not streamingResponse, the request is finished after string(s)
+		are sent. If streamingResponse, strings are written and the
 		request is kept open.
 		"""
 		for streaming in (False, True):
@@ -2855,9 +2821,9 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			request = DummyRequest(postpath=[])
 			request.method = 'POST'
 
-			frame0 = _makeHelloFrameHttp({
-				Hello_succeedsTransport: None,
-				Hello_streamingResponse: streaming})
+			frame0 = _makeHelloFrameHttp(dict(
+				succeedsTransport=None,
+				streamingResponse=streaming))
 			frames = [frame0]
 
 			request.content = StringIO(

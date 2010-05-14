@@ -8,23 +8,14 @@ from mypy.strops import StringFragment
 from minerva.frames import (
 	HelloFrame, StringFrame, SeqNumFrame, SackFrame, YouCloseItFrame,
 	ResetFrame, PaddingFrame, TransportKillFrame,
-	InvalidFrame, decodeFrameFromClient, decodeFrameFromServer)
+	InvalidFrame, InvalidHello, CannotEncode,
+	decodeFrameFromClient, decodeFrameFromServer)
 
 from minerva.frames import (
-	Hello_transportNumber,
-	Hello_protocolVersion,
-	Hello_httpFormat,
-	Hello_requestNewStream,
-	Hello_streamId,
-	Hello_credentialsData,
-	Hello_streamingResponse,
-	Hello_needPaddingBytes,
-	Hello_maxReceiveBytes,
-	Hello_maxOpenTime,
-	Hello_useMyTcpAcks,
-	Hello_succeedsTransport,
 	FORMAT_XHR, FORMAT_HTMLFILE,
 )
+
+from minerva.test_newlink import _makeHelloFrame, sf
 
 # simplejson.loads('NaN') always works, but float('nan') => 0
 # in Python ICC builds with floating point optimizations
@@ -34,22 +25,6 @@ neginf = simplejson.loads('-Infinity')
 
 
 DeleteProperty = Constant("DeleteProperty")
-
-def _makeHelloObject(extra={}):
-	obj = {
-		Hello_transportNumber: 0,
-		Hello_requestNewStream: 1,
-		Hello_protocolVersion: 2,
-		Hello_streamId: 'x'*26,
-		Hello_streamingResponse: 1,
-		Hello_maxReceiveBytes: 2**30,
-		Hello_maxOpenTime: 2**30}
-	for k, v in extra.iteritems():
-		if v == DeleteProperty and k in obj:
-			del obj[k]
-		else:
-			obj[k] = v
-	return obj
 
 
 def dumpToJson7Bit(data):
@@ -76,7 +51,7 @@ class HelloFrameTests(unittest.TestCase):
 
 
 	def test_decode(self):
-		s = dumpToJson7Bit(_makeHelloObject()) + 'H'
+		s = _makeHelloFrame().encode()
 		self	.assertEqual(
 			HelloFrame(dict(
 				transportNumber=0,
@@ -90,50 +65,63 @@ class HelloFrameTests(unittest.TestCase):
 				credentialsData={},
 				needPaddingBytes=0,
 				httpFormat=None)),
-			HelloFrame.decode(StringFragment(s, 0, len(s))))
+			HelloFrame.decode(sf(s)))
 
 
-	def test_encode(self):
-		h = HelloFrame({"a": []})
-		self.assertEqual('{"a":[]}' + 'H', h.encode())
+	def test_decodeFailedBadGArgument(self):
+		"""
+		A too-low or too-high transport number (or a wrong type) for the 'g'
+		argument causes L{InvalidHello} to be raised.
+		In this case, the stream is never registered with the streamTracker.
+		"""
+		for succeedsTransport in [-1, -2**32, -0.5, 2**64+1, "4", True, False, [], {}]:
+			s = _makeHelloFrame(dict(
+				succeedsTransport=succeedsTransport)).encode()
+
+			self.assertRaises(InvalidHello, lambda: HelloFrame.decode(sf(s)))
 
 
-#	def test_intraFrameCorruptionTooMuchNestingObject(self):
+	def test_decodeFailedTooMuchNestingObject(self):
+		"""
+		If the L{HelloFrame} has too much nesting of objects,
+		L{InvalidHello} is raised.
+
+		If this test fails, you need to install our patched simplejson.
+		"""
+		nestingLimit = 32
+		s = '{"":' * nestingLimit + '1' + '}' * nestingLimit
+		self.assertRaises(InvalidHello, lambda: HelloFrame.decode(sf(s)))
+
+
+	def test_decodeFailedTooMuchNestingArray(self):
+		"""
+		If the L{HelloFrame} has too much nesting of arrays,
+		L{InvalidHello} is raised.
+
+		If this test fails, you need to install our patched simplejson.
+		"""
+		nestingLimit = 32
+		s = '[' * nestingLimit + '1' + ']' * nestingLimit
+		self.assertRaises(InvalidHello, lambda: HelloFrame.decode(sf(s)))
+
+
+	def test_decodeFailedTrailingGarbage(self):
+		"""
+		If L{HelloFrame} has trailing garbage 'x' after the JSON,
+		L{InvalidHello} is raised.
+		"""
+		s = _makeHelloFrame().encode()[:-1] + 'x' + 'H'
+		self.assertRaises(InvalidHello, lambda: HelloFrame.decode(sf(s)))
+
+
+#	def test_decodeFailed_nan_inf_neginf(self):
 #		"""
-#		Server thinks too much nesting is equivalent to intra-frame JSON corruption.
-#		If this test fails, you need to install the patched simplejson."""
-#		nestingLimit = 32
-#		transport = self._makeTransport()
-#		transport.sendFrames([eval('{"":' * nestingLimit + '1' + '}' * nestingLimit)])
-#		self.aE([[Fn.tk_intraframe_corruption], YouCloseItFrame()], transport.getNew())
-#		self._testExtraDataReceivedIgnored(transport)
-#
-#
-#	def test_intraFrameCorruptionTooMuchNestingArray(self):
+#		If L{HelloFrame} contains NaN, Infinity, or -Infinity,
+#		L{InvalidHello} is raised.
 #		"""
-#		Server thinks too much nesting is equivalent to intra-frame JSON corruption
-#		If this test fails, you need to install the patched simplejson."""
-#		nestingLimit = 32
-#		transport = self._makeTransport()
-#		transport.sendFrames([eval('[' * nestingLimit + '1' + ']' * nestingLimit)])
-#		self.aE([[Fn.tk_intraframe_corruption], YouCloseItFrame()], transport.getNew())
-#		self._testExtraDataReceivedIgnored(transport)
-#
-#
-#	def test_intraFrameCorruptionTrailingGarbage(self):
-#		transport = self._makeTransport()
-#		transport.dataReceived(self._makeParser().encode('{}x')) # complete JSON but with trailing garbage
-#
-#		self.aE([[Fn.tk_intraframe_corruption], YouCloseItFrame()], transport.getNew())
-#		self._testExtraDataReceivedIgnored(transport)
-#
-#
-#	def test_nan_inf_neginf_areForbidden(self):
-#		"""
-#		Minerva transports treat NaN, Infinity, and -Infinity inside the
-#		JSON as intraframe corruption.
-#		"""
-#		for bad in [nan, inf, neginf]:
+#		for bad in (nan, inf, neginf):
+#			hello = _makeHelloFrame()
+#			hello.unused = bad
 #			frame0 = _makeHelloFrame()
 #			transport = self._makeTransport()
 #			transport.sendFrames([frame0])
@@ -142,6 +130,7 @@ class HelloFrameTests(unittest.TestCase):
 #			self.aE([[Fn.tk_intraframe_corruption], YouCloseItFrame()], transport.getNew())
 #
 #			self._resetStreamTracker()
+#
 #
 #	def test_invalidHelloKeys(self):
 #		"""
@@ -203,6 +192,17 @@ class HelloFrameTests(unittest.TestCase):
 
 
 
+	def test_encode(self):
+		hello = HelloFrame(dict(transportNumber=0))
+		self.assertEqual('{"n":0}' + 'H', hello.encode())
+
+
+	def test_encodeFailed(self):
+		hello = HelloFrame(dict(aMadeUpKey=0))
+		self.assertRaises(CannotEncode, lambda: hello.encode())
+
+
+
 
 class StringFrameTests(unittest.TestCase):
 
@@ -224,12 +224,12 @@ class StringFrameTests(unittest.TestCase):
 		s = '\x00unchecked\xfftext' + ' '
 		self	.assertEqual(
 			StringFrame(StringFragment(s, 0, len(s) - 1)),
-			StringFrame.decode(StringFragment(s, 0, len(s))))
+			StringFrame.decode(sf(s)))
 
 
 	def test_encode(self):
 		s = '\x00unchecked\xfftext'
-		self	.assertEqual(s + ' ', StringFrame(StringFragment(s, 0, len(s))).encode())
+		self	.assertEqual(s + ' ', StringFrame(sf(s)).encode())
 
 
 
@@ -254,14 +254,14 @@ class SeqNumFrameTests(unittest.TestCase):
 			s = str(seqNum) + 'N'
 			self	.assertEqual(
 				SeqNumFrame(seqNum),
-				SeqNumFrame.decode(StringFragment(s, 0, len(s))))
+				SeqNumFrame.decode(sf(s)))
 
 
 	def test_decodeFailed(self):
 		for s in (str(-1) + 'N', str(-2**64) + 'N', str(2**64 + 1) + 'N', ' ', '0' * 1024):
 			self	.assertRaises(
 				InvalidFrame,
-				lambda: SeqNumFrame.decode(StringFragment(s, 0, len(s))))
+				lambda: SeqNumFrame.decode(sf(s)))
 
 
 	def test_encode(self):
@@ -292,14 +292,14 @@ class SackFrameTests(unittest.TestCase):
 		s = '1,4|%sA' % (2**64,)
 		self	.assertEqual(
 			SackFrame(2**64, (1, 4)),
-			SackFrame.decode(StringFragment(s, 0, len(s))))
+			SackFrame.decode(sf(s)))
 
 
 	def test_decodeNoSackNumbers(self):
 		s = '|%sA' % (2**64,)
 		self	.assertEqual(
 			SackFrame(2**64, ()),
-			SackFrame.decode(StringFragment(s, 0, len(s))))
+			SackFrame.decode(sf(s)))
 
 
 	def test_decodeFailedAckNumberInvalid(self):
@@ -307,7 +307,7 @@ class SackFrameTests(unittest.TestCase):
 			s = '1,4|%sA' % (badNum,)
 			self	.assertRaises(
 				InvalidFrame,
-				lambda: SackFrame.decode(StringFragment(s, 0, len(s))))
+				lambda: SackFrame.decode(sf(s)))
 
 
 	def test_decodeFailedOneSackNumberInvalid(self):
@@ -315,14 +315,14 @@ class SackFrameTests(unittest.TestCase):
 			s = '1,%s|4A' % (badNum,)
 			self	.assertRaises(
 				InvalidFrame,
-				lambda: SackFrame.decode(StringFragment(s, 0, len(s))))
+				lambda: SackFrame.decode(sf(s)))
 
 
 	def test_decodeFailedTooManyPipes(self):
 		s = '||4A'
 		self	.assertRaises(
 			InvalidFrame,
-			lambda: SackFrame.decode(StringFragment(s, 0, len(s))))
+			lambda: SackFrame.decode(sf(s)))
 
 
 	def test_encode(self):
@@ -347,14 +347,14 @@ class YouCloseItFrameTests(unittest.TestCase):
 		s = 'Y'
 		self	.assertEqual(
 			YouCloseItFrame(),
-			YouCloseItFrame.decode(StringFragment(s, 0, len(s))))
+			YouCloseItFrame.decode(sf(s)))
 
 
 	def test_decodeFailed(self):
 		s = 'extra stuff' + 'Y'
 		self	.assertRaises(
 			InvalidFrame,
-			lambda: YouCloseItFrame.decode(StringFragment(s, 0, len(s))))
+			lambda: YouCloseItFrame.decode(sf(s)))
 
 
 	def test_encode(self):
@@ -382,7 +382,7 @@ class PaddingFrameTests(unittest.TestCase):
 		n = len(s) - 1
 		self	.assertEqual(
 			PaddingFrame(n),
-			PaddingFrame.decode(StringFragment(s, 0, len(s))))
+			PaddingFrame.decode(sf(s)))
 
 
 	def test_encode(self):
@@ -419,21 +419,21 @@ class ResetFrameTests(unittest.TestCase):
 			s = reasonString + '|' + str(int(applicationLevel)) + '!'
 			self	.assertEqual(
 				ResetFrame(reasonString, applicationLevel),
-				ResetFrame.decode(StringFragment(s, 0, len(s))))
+				ResetFrame.decode(sf(s)))
 
 
 	def test_decodeFailedBadReason(self):
 		s = '\x7freason|0!'
 		self	.assertRaises(
 			InvalidFrame,
-			lambda: ResetFrame.decode(StringFragment(s, 0, len(s))))
+			lambda: ResetFrame.decode(sf(s)))
 
 
 	def test_decodeFailedBadBoolean(self):
 		s = 'reason|2!'
 		self	.assertRaises(
 			InvalidFrame,
-			lambda: ResetFrame.decode(StringFragment(s, 0, len(s))))
+			lambda: ResetFrame.decode(sf(s)))
 
 
 
@@ -471,11 +471,11 @@ class TransportKillFrameTests(unittest.TestCase):
 			s = reason.value + 'K'
 		self	.assertEqual(
 			TransportKillFrame(reason),
-			TransportKillFrame.decode(StringFragment(s, 0, len(s))))
+			TransportKillFrame.decode(sf(s)))
 
 
 	def test_decodeFailed(self):
 		s = 'not_a_reasonK'
 		self	.assertRaises(
 			InvalidFrame,
-			lambda: TransportKillFrame.decode(StringFragment(s, 0, len(s))))
+			lambda: TransportKillFrame.decode(sf(s)))

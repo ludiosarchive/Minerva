@@ -2,8 +2,6 @@
 This file includes frame encoders and decoders for each frame type, so that
 it is suitable for both both Minerva server, and a Python Minerva client (not
 yet written).
-
-TODO: add HelloFrame.encode
 """
 
 import operator
@@ -20,18 +18,37 @@ _postImportVars = vars().keys()
 
 
 # Property key names for the hello frame.
-Hello_transportNumber = 'n'
-Hello_protocolVersion = 'v'
-Hello_httpFormat = 't'
-Hello_requestNewStream = 'w'
-Hello_streamId = 'i'
-Hello_credentialsData = 'c'
-Hello_streamingResponse = 's'
-Hello_needPaddingBytes = 'p'
-Hello_maxReceiveBytes = 'r'
-Hello_maxOpenTime = 'm'
-Hello_useMyTcpAcks = 'a'
-Hello_succeedsTransport = 'g'
+class HelloFrameArguments(object):
+	transportNumber = 'n'
+	protocolVersion = 'v'
+	httpFormat = 't'
+	requestNewStream = 'w'
+	streamId = 'i'
+	credentialsData = 'c'
+	streamingResponse = 's'
+	needPaddingBytes = 'p'
+	maxReceiveBytes = 'r'
+	maxOpenTime = 'm'
+	useMyTcpAcks = 'a'
+	succeedsTransport = 'g'
+
+
+
+# Make globals that pypycpyo.optimizer can optimize away
+_hfa = HelloFrameArguments
+Hello_transportNumber = _hfa.transportNumber
+Hello_protocolVersion = _hfa.protocolVersion
+Hello_httpFormat = _hfa.httpFormat
+Hello_requestNewStream = _hfa.requestNewStream
+Hello_streamId = _hfa.streamId
+Hello_credentialsData = _hfa.credentialsData
+Hello_streamingResponse = _hfa.streamingResponse
+Hello_needPaddingBytes = _hfa.needPaddingBytes
+Hello_maxReceiveBytes = _hfa.maxReceiveBytes
+Hello_maxOpenTime = _hfa.maxOpenTime
+Hello_useMyTcpAcks = _hfa.useMyTcpAcks
+Hello_succeedsTransport = _hfa.succeedsTransport
+del _hfa
 
 
 FORMAT_XHR, FORMAT_HTMLFILE = 2, 3
@@ -43,6 +60,11 @@ class InvalidFrame(Exception):
 
 
 class InvalidHello(InvalidFrame):
+	pass
+
+
+
+class CannotEncode(Exception):
 	pass
 
 
@@ -186,7 +208,13 @@ class HelloFrame(object):
 
 
 	def encode(self):
-		return dumps(self.__dict__, separators=(',', ':'), allow_nan=False) + 'H'
+		out = {}
+		for k, v in self.__dict__.iteritems():
+			argByte = getattr(HelloFrameArguments, k, None)
+			if argByte is None:
+				raise CannotEncode("Don't know argByte for %r" % (k,))
+			out[argByte] = v
+		return dumps(out, separators=(',', ':'), allow_nan=False) + 'H'
 
 
 	# TODO: encode
