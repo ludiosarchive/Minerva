@@ -206,14 +206,16 @@ class HelloFrame(object):
 		return helloDataToHelloFrame(helloData)
 
 
-	def encode(self):
-		out = {}
+	def _yieldMapping(self):
 		for k, v in self.__dict__.iteritems():
 			argByte = getattr(HelloFrameArguments, k, None)
 			if argByte is None:
 				raise CannotEncode("Don't know argByte for %r" % (k,))
-			out[argByte] = v
-		return dumps(out, separators=(',', ':'), allow_nan=False) + 'H'
+			yield argByte, v
+
+
+	def encode(self):
+		return dumps(dict(self._yieldMapping()), separators=(',', ':'), allow_nan=False) + 'H'
 
 
 	def wantsStrings(self):

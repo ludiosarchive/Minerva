@@ -113,23 +113,16 @@ class HelloFrameTests(unittest.TestCase):
 		self.assertRaises(InvalidHello, lambda: HelloFrame.decode(sf(s)))
 
 
-#	def test_decodeFailed_nan_inf_neginf(self):
-#		"""
-#		If L{HelloFrame} contains NaN, Infinity, or -Infinity,
-#		L{InvalidHello} is raised.
-#		"""
-#		for bad in (nan, inf, neginf):
-#			hello = _makeHelloFrame()
-#			hello.unused = bad
-#			frame0 = _makeHelloFrame()
-#			transport = self._makeTransport()
-#			transport.sendFrames([frame0])
-#			transport.sendFrames([StringFrame(bad)])
-#
-#			self.aE([[Fn.tk_intraframe_corruption], YouCloseItFrame()], transport.getNew())
-#
-#			self._resetStreamTracker()
-#
+	def test_decodeFailed_nan_inf_neginf(self):
+		"""
+		If L{HelloFrame} contains NaN, Infinity, or -Infinity,
+		L{InvalidHello} is raised.
+		"""
+		for bad in (nan, inf, neginf):
+			hello = _makeHelloFrame(dict(credentialsData={'somekey': bad}))
+			s = simplejson.dumps(dict(hello._yieldMapping()))
+			self.assertRaises(InvalidHello, lambda: HelloFrame.decode(sf(s)))
+
 #
 #	def test_invalidHelloKeys(self):
 #		"""
