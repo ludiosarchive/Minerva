@@ -1558,27 +1558,22 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self._testExtraDataReceivedIgnored(transport)
 
 
-	def test_knownButInvalidFrameType(self):
+	def test_knownFrameTypeButNotAllowedC2S(self):
 		"""
-		If client sends a known frame type, but the server cannot accept
-		this frame type, the transport is killed with
-		C{tk_invalid_frame_type_or_arguments}.
+		If client sends a known frame type, but one the server does not accept,
+		the transport is killed with C{tk_invalid_frame_type_or_arguments}.
 		"""
-		types = [
-			Fn.tk_brb,
-			Fn.tk_intraframe_corruption,
-			Fn.tk_frame_corruption,
-			Fn.tk_invalid_frame_type_or_arguments,
-			Fn.tk_acked_unsent_strings,
-			Fn.tk_stream_attach_failure,
-			Fn.you_close_it, # TODO: allow you_close_it for HTTP
-		]
+		frames = (
+			TransportKillFrame(tk_invalid_frame_type_or_arguments),
+			PaddingFrame(4096),
+		)
 
-		for frameType in types:
+		for frame in frames:
 			transport = self._makeTransport()
 			frame0 = _makeHelloFrame()
 			transport.sendFrames([frame0])
-			transport.sendFrames([[frameType]])
+			self.aE([], transport.getNew())
+			transport.sendFrames([frame])
 			self.aE([TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()], transport.getNew())
 			self._testExtraDataReceivedIgnored(transport)
 
