@@ -1574,7 +1574,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			transport.sendFrames([frame0])
 			self.aE([], transport.getNew())
 			transport.sendFrames([frame])
-			self.aE([TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()], transport.getNew())
+			self.aE([
+				TransportKillFrame(tk_invalid_frame_type_or_arguments),
+				YouCloseItFrame()
+			], transport.getNew())
 			self._testExtraDataReceivedIgnored(transport)
 
 
@@ -1586,7 +1589,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		# a completely valid frame
 		transport.sendFrames([StringFrame("box0")])
-		self.aE([TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()], transport.getNew())
+		self.aE([
+			TransportKillFrame(tk_invalid_frame_type_or_arguments),
+			YouCloseItFrame()
+		], transport.getNew())
 
 
 	def test_frameCorruption(self):
@@ -1668,7 +1674,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		transport.sendFrames([frame0])
-		self.aE([TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()], transport.getNew())
+		self.aE([
+			TransportKillFrame(tk_invalid_frame_type_or_arguments),
+			YouCloseItFrame()
+		], transport.getNew())
 
 
 	def test_validHelloButSentTwiceAtSameTime(self):
@@ -1680,7 +1689,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0, frame0])
-		self.aE([TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()], transport.getNew())
+		self.aE([
+			TransportKillFrame(tk_invalid_frame_type_or_arguments),
+			YouCloseItFrame()
+		], transport.getNew())
 
 
 	def test_transportNumberDoesntMatter(self):
@@ -1704,7 +1716,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			frame0 = _makeHelloFrame({Hello_requestNewStream: requestNewStream})
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
-			self.aE([TransportKillFrame(tk_stream_attach_failure), YouCloseItFrame()], transport.getNew())
+			self.aE([
+				TransportKillFrame(tk_stream_attach_failure),
+				YouCloseItFrame()
+			], transport.getNew())
 			self._testExtraDataReceivedIgnored(transport)
 
 			self._resetStreamTracker()
@@ -1856,7 +1871,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
 
-			self.aE([TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()], transport.getNew())
+			self.aE([
+				TransportKillFrame(tk_invalid_frame_type_or_arguments),
+				YouCloseItFrame()
+			], transport.getNew())
 
 			self.assertRaises(NoSuchStream, lambda: self.streamTracker.getStream('x'*26))
 
@@ -1939,7 +1957,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		stream.queue.append("box0")
 
 		transport.sendFrames([SackFrame(1, ())])
-		self.aE([TransportKillFrame(tk_acked_unsent_strings), YouCloseItFrame()], transport.getNew())
+		self.aE([
+			TransportKillFrame(tk_acked_unsent_strings),
+			YouCloseItFrame()
+		], transport.getNew())
 		self.aE([
 			['notifyFinish'],
 			['transportOnline', transport, False, None],
@@ -2081,8 +2102,8 @@ class TransportProducerTests(unittest.TestCase):
 			self.aI(self.tcpTransport.producer, self.transport)
 			self.aI(self.tcpTransport.streaming, streaming)
 
-			# pauseProducing/resumeProducing calls are sent directly to producer (even when it is a pull producer),
-			# without much thinking
+			# pauseProducing/resumeProducing calls are sent directly to producer
+			# (even when it is a pull producer), without much thinking.
 			self.transport.pauseProducing()
 			self.transport.pauseProducing()
 			self.transport.resumeProducing()
