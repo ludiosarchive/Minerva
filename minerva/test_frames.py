@@ -50,6 +50,17 @@ class HelloFrameTests(unittest.TestCase):
 		self.assertEqual("HelloFrame({'a': 1})", repr(HelloFrame({'a': 1})))
 
 
+	def test_wantsStrings(self):
+		s = _makeHelloFrame()
+		self.assertEqual(False, s.wantsStrings())
+		s.succeedsTransport = None
+		self.assertEqual(True, s.wantsStrings())
+		s.succeedsTransport = 3
+		self.assertEqual(True, s.wantsStrings())
+		del s.succeedsTransport
+		self.assertEqual(False, s.wantsStrings())
+
+
 	def test_decode(self):
 		s = _makeHelloFrame().encode()
 		self	.assertEqual(
@@ -123,65 +134,55 @@ class HelloFrameTests(unittest.TestCase):
 			s = simplejson.dumps(dict(hello._yieldMapping()))
 			self.assertRaises(InvalidHello, lambda: HelloFrame.decode(sf(s)))
 
-#
-#	def test_invalidHelloKeys(self):
-#		"""
-#		Test that all any problem with the helloData keys results in
-#		tk_invalid_frame_type_or_arguments.
-#		"""
-#		def listWithout(alist, without):
-#			l = alist[:]
-#			for w in without:
-#				l.remove(w)
-#			return l
-#
-#		goodHello = _makeHelloFrame()
-#
-#		genericBad = [
-#			-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"],
-#			{}, True, False, None, DeleteProperty]
-#
-#		badMutations = {
-#			Hello_transportNumber: genericBad,
-#			Hello_protocolVersion: [0, 1, "1", 1.001] + genericBad,
-#			Hello_streamId: [
-#				'', '\x00', 'x'*1, u'\ucccc'*25, u'\ucccc'*8,
-#				u'\x80'*25, 'x'*19, 'x'*31, 'x'*3000] + genericBad, # 19 is below limit, 31 is over limit
-#			#Hello_maxReceiveBytes: genericBad, # TODO: test for HTTP
-#			#Hello_maxOpenTime: genericBad, # TODO: test for HTTP
-#			Hello_credentialsData: listWithout(genericBad, [{}]),
-#		}
-#
-#		ran = 0
-#
-#		for mutateProperty, mutateValues in badMutations.iteritems():
-#			for value in mutateValues:
-#				badHello = copy.deepcopy(goodHello)
-#				if value is not DeleteProperty:
-#					badHello[1][mutateProperty] = value
-#				else:
-#					try:
-#						del badHello[1][mutateProperty]
-#					except KeyError:
-#						 # If it wasn't there in the first place, deleting
-#						 # it from badHello can't cause an error later
-#						continue
-#
-#				##print badHello
-#
-#				transport = self._makeTransport()
-#				transport.sendFrames([badHello])
-#				self.aE([
-#					TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()
-#				], transport.getNew())
-#				##print self.decodingTcpTransport
-#				self._testExtraDataReceivedIgnored(transport)
-#
-#				ran += 1
-#
-#		# sanity check; make sure we actually tested things
-#		assert ran == 63, "Ran %d times; change this assert as needed" % (ran,)
 
+	def test_decodeFailedInvalidValues(self):
+		"""
+		If L{HelloFrame} contains invalid values for various properties,
+		L{InvalidHello} is raised.
+		"""
+		def listWithout(alist, without):
+			l = alist[:]
+			for w in without:
+				l.remove(w)
+			return l
+
+		genericBad = [
+			-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"],
+			{}, True, False, None, DeleteProperty]
+
+		badMutations = dict(
+			transportNumber=genericBad,
+			protocolVersion=[0, 1, "1", 1.001] + genericBad,
+			streamId=[
+				'', '\x00', 'x'*1, u'\ucccc'*25, u'\ucccc'*8,
+				u'\x80'*25, 'x'*19, 'x'*31, 'x'*3000] + genericBad, # 19 is below limit, 31 is over limit
+			#maxReceiveBytes=genericBad, # TODO: test for HTTP
+			#maxOpenTime=genericBad, # TODO: test for HTTP
+			credentialsData=listWithout(genericBad, [{}]),
+		)
+
+		ran = 0
+
+		for mutateProperty, mutateValues in badMutations.iteritems():
+			for value in mutateValues:
+				badHello = _makeHelloFrame()
+				if value is not DeleteProperty:
+					setattr(badHello, mutateProperty, value)
+				else:
+					try:
+						delattr(badHello, mutateProperty)
+					except AttributeError:
+						 # It wasn't there in the first place.
+						continue
+
+				##print badHello
+				s = badHello.encode()
+				self.assertRaises(InvalidHello, lambda: HelloFrame.decode(sf(s)))
+
+				ran += 1
+
+		# sanity check; make sure we actually tested things
+		assert ran == 63, "Ran %d times; change this assert as needed" % (ran,)
 
 
 	def test_encode(self):
