@@ -61,7 +61,6 @@ class HelloFrameTests(unittest.TestCase):
 				streamingResponse=True,
 				maxReceiveBytes=2**30,
 				maxOpenTime=2**30,
-				wantsStrings=False,
 				credentialsData={},
 				needPaddingBytes=0,
 				httpFormat=None)),
@@ -195,6 +194,17 @@ class HelloFrameTests(unittest.TestCase):
 	def test_encode(self):
 		hello = HelloFrame(dict(transportNumber=0))
 		self.assertEqual('{"n":0}' + 'H', hello.encode())
+
+
+	def test_encodeDecodeEquality(self):
+		# Need to make some options explicit for equality to work
+		hello = _makeHelloFrame(dict(
+			httpFormat=None,
+			credentialsData={},
+			streamingResponse=True, # for equality, need bool instead of int
+			needPaddingBytes=0))
+		encodedDecodedHello = HelloFrame.decode(sf(hello.encode()))
+		self.assertEqual(hello, encodedDecodedHello)
 
 
 	def test_encodeFailed(self):

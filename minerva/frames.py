@@ -121,8 +121,7 @@ def helloDataToHelloFrame(helloData):
 	# want to get S2C strings over this transport. If None, the client does,
 	# but the transport does not succeed an existing primary transport. If a
 	# number, the transport might succeed an existing primary transport.
-	obj.wantsStrings = Hello_succeedsTransport in helloData
-	if obj.wantsStrings:
+	if Hello_succeedsTransport in helloData:
 		obj.succeedsTransport = helloData[Hello_succeedsTransport]
 		if obj.succeedsTransport is not None:
 			try:
