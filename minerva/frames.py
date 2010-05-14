@@ -194,12 +194,13 @@ class HelloFrame(object):
 		C{frameString} is a L{StringFragment} that ends with "H".
 		"""
 		try:
+			# Reach into the private attributes, we know what we're doing.
 			helloData, stoppedAt = strictDecoder.raw_decode(
-				frameString.string, frameString.pos)
+				frameString._string, frameString._pos)
 		except (JSONDecodeError, ParseError):
 			raise InvalidHello("corrupt JSON")
 		# `- 1` because we expect to stop before the trailing "H"
-		if stoppedAt != frameString.pos + frameString.size - 1:
+		if stoppedAt != frameString._pos + frameString.size - 1:
 			raise InvalidHello("trailing garbage")
 
 		return helloDataToHelloFrame(helloData)
