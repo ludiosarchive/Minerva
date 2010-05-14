@@ -266,7 +266,7 @@ class StreamTests(unittest.TestCase):
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 
-		notManyStrings = [(1, sf(FakeBigString(str(4*1024*1024 + 1))))]
+		notManyStrings = [(1, sf('x' * (4 * 1024 * 1024 + 1)))]
 
 		# box #0 is never given, so it cannot deliver any of them
 
@@ -2759,7 +2759,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 					self.assertEqual(server.NOT_DONE_YET, out)
 
 					encode = DelimitedStringDecoder.encode
-					self.assertEqual(['for(;;);\n', encode(SackFrame(2, ())).encode()], request.written)
+					self.assertEqual(['for(;;);\n', encode(SackFrame(2, ()).encode())], request.written)
 					self.assertEqual(0 if streaming else 1, request.finished)
 
 					stream = self.streamTracker.getStream('x'*26)
