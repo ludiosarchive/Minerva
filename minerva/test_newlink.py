@@ -1396,6 +1396,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 	# TODO: once window.Queue supports SACK, add a test that really uses SACK here
 
 
+	# Disabled because it is slow (~100ms)
 #	def test_writeStringsHugeBoxes(self):
 #		"""
 #		Like test_writeStringsStartNone, except there is a lot of data.
