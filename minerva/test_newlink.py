@@ -1549,52 +1549,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.aE(False, transport.writable.disconnecting)
 
 
-	def test_unknownFrameType(self):
-		transport = self._makeTransport()
-		frame0 = _makeHelloFrame()
-		transport.sendFrames([frame0])
-		transport.sendFrames([_BadFrame('?')])
-		self.aE([TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()], transport.getNew())
-		self._testExtraDataReceivedIgnored(transport)
-
-
-	def test_knownFrameTypeButNotAllowedC2S(self):
-		"""
-		If client sends a known frame type, but one the server does not accept,
-		the transport is killed with C{tk_invalid_frame_type_or_arguments}.
-		"""
-		frames = (
-			TransportKillFrame(tk_invalid_frame_type_or_arguments),
-			PaddingFrame(4096),
-		)
-
-		for frame in frames:
-			transport = self._makeTransport()
-			frame0 = _makeHelloFrame()
-			transport.sendFrames([frame0])
-			self.aE([], transport.getNew())
-			transport.sendFrames([frame])
-			self.aE([
-				TransportKillFrame(tk_invalid_frame_type_or_arguments),
-				YouCloseItFrame()
-			], transport.getNew())
-			self._testExtraDataReceivedIgnored(transport)
-
-
-	def test_firstFrameMustBeHello(self):
-		"""
-		If the first frame has any frame type but `hello`, the transport
-		is killed with C{tk_invalid_frame_type_or_arguments}.
-		"""
-		transport = self._makeTransport()
-		# a completely valid frame
-		transport.sendFrames([StringFrame("box0")])
-		self.aE([
-			TransportKillFrame(tk_invalid_frame_type_or_arguments),
-			YouCloseItFrame()
-		], transport.getNew())
-
-
 	def test_frameCorruption(self):
 		"""
 		If a corrupted frame is received, the transport is killed with
@@ -1647,32 +1601,61 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self._resetStreamTracker()
 
 
-	def test_validHello(self):
-		for streamId in ('\x00'*20, '\x7f'*20):
-			frame0 = _makeHelloFrame()
+	def test_unknownFrameType(self):
+		transport = self._makeTransport()
+		frame0 = _makeHelloFrame()
+		transport.sendFrames([frame0])
+		transport.sendFrames([_BadFrame('?')])
+		self.aE([TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()], transport.getNew())
+		self._testExtraDataReceivedIgnored(transport)
+
+
+	def test_knownFrameTypeButNotAllowedC2S(self):
+		"""
+		If client sends a known frame type, but one the server does not accept,
+		the transport is killed with C{tk_invalid_frame_type_or_arguments}.
+		"""
+		frames = (
+			TransportKillFrame(tk_invalid_frame_type_or_arguments),
+			PaddingFrame(4096),
+		)
+
+		for frame in frames:
 			transport = self._makeTransport()
+			frame0 = _makeHelloFrame()
 			transport.sendFrames([frame0])
 			self.aE([], transport.getNew())
+			transport.sendFrames([frame])
+			self.aE([
+				TransportKillFrame(tk_invalid_frame_type_or_arguments),
+				YouCloseItFrame()
+			], transport.getNew())
+			self._testExtraDataReceivedIgnored(transport)
 
-			self._resetStreamTracker()
 
-
-	def test_validHelloWithCredentials(self):
-		frame0 = _makeHelloFrame(
-			{Hello_credentialsData: {'not_looked_at': True}})
+	def test_firstFrameMustBeHello(self):
+		"""
+		If the first frame has any frame type but `hello`, the transport
+		is killed with C{tk_invalid_frame_type_or_arguments}.
+		"""
 		transport = self._makeTransport()
-		transport.sendFrames([frame0])
-		self.aE([], transport.getNew())
+		# a completely valid frame
+		transport.sendFrames([StringFrame("box0")])
+		self.aE([
+			TransportKillFrame(tk_invalid_frame_type_or_arguments),
+			YouCloseItFrame()
+		], transport.getNew())
 
 
 	def test_validHelloButSentTwice(self):
 		"""
-		Client can only send hello frame once. If they send it more than once, they get
-		tk_invalid_frame_type_or_arguments
+		Client can only send hello frame once. If they send it more than once,
+		they get C{tk_invalid_frame_type_or_arguments}.
 		"""
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
+		self.aE([], transport.getNew())
 		transport.sendFrames([frame0])
 		self.aE([
 			TransportKillFrame(tk_invalid_frame_type_or_arguments),
@@ -1695,11 +1678,29 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		], transport.getNew())
 
 
+	def test_validHello(self):
+		for streamId in ('\x00'*20, '\x7f'*20):
+			frame0 = _makeHelloFrame()
+			transport = self._makeTransport()
+			transport.sendFrames([frame0])
+			self.aE([], transport.getNew())
+
+			self._resetStreamTracker()
+
+
+	def test_validHelloWithCredentials(self):
+		frame0 = _makeHelloFrame(
+			{Hello_credentialsData: {'not_looked_at': True}})
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
+		self.aE([], transport.getNew())
+
+
 	def test_transportNumberDoesntMatter(self):
 		"""
 		transportNumber can be 0 <= transportNumber <= 2**64
 		"""
-		for n in [1, 1000, 10000, 12378912, 1283718237, 2**63]:
+		for n in [1, 1000, 10000, 12378912, 1283718237, 2**64]:
 			frame0 = _makeHelloFrame({Hello_transportNumber: n})
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
