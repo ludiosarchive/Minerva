@@ -1249,7 +1249,8 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
 			frames, code = strictGetNewFrames(self.parser, self.tcpTransport.value())
-			decodedFrames = [strictDecodeOne(f) for f in frames]
+			# f instead of str(f) because BencodeStringDecoder delivers C{str}s
+			decodedFrames = [decodeFrameFromServer(f) for f in frames]
 			self.aE([TransportKillFrame(tk_stream_attach_failure), YouCloseItFrame()], decodedFrames)
 
 
@@ -1273,7 +1274,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
 			frames, code = strictGetNewFrames(self.parser, self.tcpTransport.value())
-			decodedFrames = [strictDecodeOne(str(f)) for f in frames]
+			decodedFrames = [decodeFrameFromServer(str(f)) for f in frames]
 			self.aE([TransportKillFrame(tk_stream_attach_failure), YouCloseItFrame()], decodedFrames)
 
 
@@ -2417,7 +2418,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		stream = self.streamTracker.getStream('x'*26)
 
 		transport0.sendFrames([
-			ResetFrame("reason", True), ResetFrame("x", False), [9999, "whatever"]])
+			ResetFrame("reason", True), ResetFrame("x", False), _BadFrame('?')])
 
 		self.aE([YouCloseItFrame()], transport0.getNew())
 
