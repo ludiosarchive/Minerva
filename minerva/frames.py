@@ -117,7 +117,7 @@ def helloDataToHelloFrame(helloData):
 	if obj.protocolVersion != 2:
 		raise InvalidHello("bad protocolVersion")
 
-	# succeedsTransport is always optional. If missing, the client does not
+	# Hello_succeedsTransport is always optional. If missing, the client does not
 	# want to get S2C strings over this transport. If None, the client does,
 	# but the transport does not succeed an existing primary transport. If a
 	# number, the transport might succeed an existing primary transport.
@@ -216,7 +216,12 @@ class HelloFrame(object):
 		return dumps(out, separators=(',', ':'), allow_nan=False) + 'H'
 
 
-	# TODO: encode
+	def wantsStrings(self):
+		"""
+		Returns a C{bool} indicating whether this HelloFrame indicates that
+		client wants to receive strings.
+		"""
+		return hasattr(self, 'succeedsTransport')
 
 
 

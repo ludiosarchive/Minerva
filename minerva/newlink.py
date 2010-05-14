@@ -1004,7 +1004,7 @@ class SocketTransport(object):
 		d = self.factory.firewall.checkTransport(self, stream)
 
 		# Keep only the variables we need for the cbAuthOkay closure
-		wantsStrings = hasattr(hello, 'succeedsTransport')
+		wantsStrings = hello.wantsStrings()
 		succeedsTransport = hello.succeedsTransport if wantsStrings else None
 
 		def cbAuthOkay(_):
