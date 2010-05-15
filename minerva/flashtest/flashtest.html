@@ -175,7 +175,7 @@ function reconnect() {
 
 function sendAck(n) {
 	logger.warning('sendAck: ' + n);
-	lastFs.writeSerializedFrames_([ser([cw.net.FrameType.sack, n, []])]);
+	lastFs.writeSerializedFrames_(['|' + String(n) + 'A']);
 }
 
 function byId(o) {
