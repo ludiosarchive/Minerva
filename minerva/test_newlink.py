@@ -2745,17 +2745,36 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 					self.assertEqual(0 if streaming else 1, request.finished)
 
 					stream = self.streamTracker.getStream('x'*26)
-					# eecch
-					transport = list(stream._transports)[0]
+					transport = stream.allSeenTransports[-1]
 
-					self.aE([
+					expected = [
 						["notifyFinish"],
 						["transportOnline", transport, True, None],
 						["stringsReceived", transport, [(0, sf('box0')), (1, sf('box1')), (2, sf('box2'))]],
 						["getSACK"],
-					], stream.getNew())
+					]
+
+					if not streaming:
+						expected += [["transportOffline", transport]]
+
+					self.aE(expected, stream.getNew())
 
 					self._resetStreamTracker()
+
+
+	def _sendAnotherString(self, stream, request, streaming, expectedWritten):
+		encode = DelimitedStringDecoder.encode
+
+		stream.sendStrings(['extraBox'])
+		if not streaming:
+			# For non-streaming requests, if another S2C box is sent right
+			# now, it is not written to the request.
+			self.assertEqual(expectedWritten, request.written)
+			self.assertEqual(1, request.finished)
+		else:
+			self.assertEqual(expectedWritten + [
+				encode(StringFrame('extraBox').encode())], request.written)
+			self.assertEqual(0, request.finished)
 
 
 	def test_S2CStringsAlreadyAvailable(self):
@@ -2793,15 +2812,17 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			self.assertEqual(server.NOT_DONE_YET, out)
 
 			encode = DelimitedStringDecoder.encode
-			expected = [
+			expectedWritten = [
 				'for(;;);\n', (
 					encode(SackFrame(0, ()).encode()) +
 					encode(SeqNumFrame(0).encode()) +
 					encode(StringFrame('box0').encode()) +
 					encode(StringFrame('box1').encode()))]
 
-			self.assertEqual(expected, request.written)
+			self.assertEqual(expectedWritten, request.written)
 			self.assertEqual(0 if streaming else 1, request.finished)
+
+			self._sendAnotherString(stream, request, streaming, expectedWritten)
 
 
 	def test_S2CStringsSoonAvailable(self):
@@ -2836,13 +2857,15 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			stream.sendStrings(['box0', 'box1'])
 
 			encode = DelimitedStringDecoder.encode
-			self.assertEqual(
-				['for(;;);\n',
-					encode(SeqNumFrame(0).encode()) +
-					encode(StringFrame('box0').encode()) +
-					encode(StringFrame('box1').encode())],
-				request.written)
+			expectedWritten = ['for(;;);\n',
+				encode(SeqNumFrame(0).encode()) +
+				encode(StringFrame('box0').encode()) +
+				encode(StringFrame('box1').encode())]
+
+			self.assertEqual(expectedWritten, request.written)
 			self.assertEqual(0 if streaming else 1, request.finished)
+
+			self._sendAnotherString(stream, request, streaming, expectedWritten)
 
 
 	def test_responseHasGoodHttpHeaders(self):

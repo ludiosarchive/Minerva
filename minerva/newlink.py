@@ -869,8 +869,8 @@ class SocketTransport(object):
 
 
 	def __repr__(self):
-		return '<%s terminating=%r, stream=%r, paused=%r, lastBoxSent=%r>' % (
-			self.__class__.__name__,
+		return '<%s 0x%x terminating=%r, stream=%r, paused=%r, lastBoxSent=%r>' % (
+			self.__class__.__name__, id(self),
 			self._terminating, self._stream, self._paused, self.lastBoxSent)
 
 
@@ -882,20 +882,22 @@ class SocketTransport(object):
 			self._toSend = ''
 			self.writable.write(toSend)
 
-		if self._terminating:
+		closeNow = self._terminating or (not self._streamingResponse and toSend)
+
+		if closeNow:
 			# Tell Stream this transport is offline. Whether we still have a TCP
 			# connection open to the peer is irrelevant.
 			if self._stream:
 				self._stream.transportOffline(self)
 				self._stream = None
 
-		if self._mode == HTTP and not self._streamingResponse and (toSend or self._terminating):
-			# .finish() is only for Requests
-			self.writable.finish()
+			if self._mode == HTTP:
+				# .finish() is only for Requests
+				self.writable.finish()
 
-		# TODO: for non-HTTP, set timer and close the connection ourselves
-		# in 5-10 seconds
-		##self.transport.loseWriteConnection(), maybe followed by loseConnection later
+			# TODO: for non-HTTP, set timer and close the connection ourselves
+			# in 5-10 seconds
+			##self.transport.loseWriteConnection(), maybe followed by loseConnection later
 
 
 	def _encodeFrame(self, frame):

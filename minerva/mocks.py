@@ -230,6 +230,7 @@ class MockStream(_MockMixin):
 		self._incoming = Incoming()
 		self.queue = Queue()
 		self._transports = set()
+		self.allSeenTransports = []
 
 
 	def sendStrings(self, strings):
@@ -257,6 +258,7 @@ class MockStream(_MockMixin):
 
 
 	def transportOnline(self, transport, wantsStrings, succeedsTransport):
+		self.allSeenTransports.append(transport)
 		self.virgin = False
 		self.log.append(['transportOnline', transport, wantsStrings, succeedsTransport])
 		assert transport not in self._transports
