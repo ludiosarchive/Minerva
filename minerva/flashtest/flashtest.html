@@ -49,6 +49,7 @@ goog.require('goog.debug.DivConsole');
 goog.require('goog.debug.Logger');
 goog.require('goog.async.Deferred');
 goog.require('goog.json.Serializer');
+goog.require('goog.net.XhrIo');
 goog.require('goog.Uri');
 goog.require('swfobject');
 goog.require('cw.net.FrameType');
@@ -126,18 +127,20 @@ function makeHelloData(uaId, transportNumber) {
 	helloData[hp.requestNewStream] = transportNumber == 0 ? 1 : 0;
 	helloData[hp.streamId] = streamId;
 	helloData[hp.credentialsData] = {'uaId': uaId, 'csrf': window.CSRF_TOKEN};
-	helloData[hp.streamingResponse] = 1;
+	helloData[hp.streamingResponse] = Number(mode == 'flash');
 	helloData[hp.maxReceiveBytes] = 9999999;
 	helloData[hp.maxOpenTime] = 3600;
 	helloData[hp.succeedsTransport] = null;
+	helloData[hp.httpFormat] = 2; /* XHR */
 	return helloData;
 }
 
-
+/**
+ * Create an array of frames that will convince the server to send us data.
+ */
 function makeC2SFramesForTesting() {
 	var uaId = cw.whoami.getUaId();
 	var transportNumber = ++transportCount;
-	// TODO: use constant names instead of these single-letter strings
 	var helloData = makeHelloData(uaId, transportNumber);
 	var helloFrame = serializer.serialize(helloData) + 'H';
 	// If the server receives this more than once, it is
@@ -200,19 +203,53 @@ function connectWithFlash(bridge) {
 }
 
 
+function httpRequestDone(e) {
+	logger.info('httpRequestDone: ' + e);
+}
+
+
+function startHttp() {
+	var frames = makeC2SFramesForTesting();
+	for(i=0; i < frames.length; i++) {
+		logger.info('Sending: ' + frames[i]);
+	}
+	var serializedFrames = frames.join('\n') + '\n';
+	goog.net.XhrIo.send('/httpface/', httpRequestDone, 'POST', serializedFrames);
+}
+
+
 function reconnect() {
 	logger.warning('Closing.');
-	lastFlashSocket.close_();
-	connectWithFlash(document.getElementById('appswf'));
+	if(mode == 'flash') {
+		lastFlashSocket.close_();
+		connectWithFlash(document.getElementById('appswf'));
+	} else if(mode == 'http') {
+
+	} else {
+		throw new Error("bad mode " + mode);
+	}
 }
 
 
 function sendAck(n) {
 	logger.warning('sendAck: ' + n);
-	lastFlashSocket.writeSerializedFrames_(['|' + String(n) + 'A']);
+	if(mode == 'flash') {
+		lastFlashSocket.writeSerializedFrames_(['|' + String(n) + 'A']);
+	} else if(mode == 'http') {
+
+	} else {
+		throw new Error("bad mode " + mode);
+	}
 }
 
-loadSWF();
+
+if(mode == 'flash') {
+	loadSWF();
+} else if(mode == 'http') {
+	startHttp();
+} else {
+	throw new Error("bad mode " + mode);
+}
 
 </script>
 
