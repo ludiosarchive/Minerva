@@ -27,7 +27,7 @@ application
 	the application that is using Minerva. An application has both a server-side
 	and client-side component.
 client
-	the thing that connects to a Minerva server. Typically a web browser.
+	the peer that connects to a Minerva server. Typically a web browser.
 stream
 	the stateful object that protocols use to send and receive data. This is sort
 	of like a TCP connection, but better in most ways.
@@ -35,8 +35,8 @@ peer
 	the thing on the other side of the Minerva stream. For a server, it is a client;
 	for a client, the server.
 frame
-	a bytestring is sent over streams. This ecompasses both Minerva-level and
-	application-level data.
+	a framed bytestring sent over streams. This ecompasses both Minerva-level
+	and application-level data.
 string (in the context of Minerva)
 	an atomic piece of application-level data that can be fit into a frame and sent
 	to the peer. Strings have strict restrictions on which bytes/codepoints are
