@@ -49,6 +49,7 @@ goog.require('goog.debug.DivConsole');
 goog.require('goog.debug.Logger');
 goog.require('goog.async.Deferred');
 goog.require('goog.json.Serializer');
+goog.require('goog.Uri');
 goog.require('swfobject');
 goog.require('cw.net.FrameType');
 goog.require('cw.net.FlashSocket');
@@ -67,15 +68,32 @@ logger.setLevel(goog.debug.Logger.Level.ALL);
 
 logger.info('Logger works.');
 
-var serializer = new goog.json.Serializer();
-
-function ser(data) {
-	return serializer.serialize(data);
-}
-
 function getRandom() {
 	return goog.string.getRandomString() + goog.string.getRandomString();
 }
+
+function byId(o) {
+	return document.getElementById(o);
+}
+
+function getTestMode(url) {
+	var queryData = url.getQueryData();
+	var mode = queryData.get('mode');
+	if(mode == 'http') {
+
+	} else {
+		mode = 'flash';
+	}
+	return mode;
+}
+
+var serializer = new goog.json.Serializer();
+
+var url = new goog.Uri(document.location);
+logger.info('My URL is: ' + url.toString());
+var mode = getTestMode(url);
+
+logger.info('Mode is: ' + mode)
 
 var flashKey = goog.string.getRandomString();
 
@@ -86,15 +104,31 @@ function loadSWF() {
 }
 
 function _appswfLoaded() {
-	connect(document.getElementById('appswf'));
+	connectWithFlash(document.getElementById('appswf'));
 }
 
 var transportCount = -1;
 var streamId = getRandom();
 
-var lastFs = null;
+var lastFlashSocket = null;
 
-function connect(bridge) {
+function makeHelloData(uaId, transportNumber) {
+	var hp = cw.net.HelloProperty;
+
+	var helloData = {};
+	helloData[hp.transportNumber] = transportNumber;
+	helloData[hp.protocolVersion] = 2;
+	helloData[hp.requestNewStream] = transportNumber == 0 ? 1 : 0;
+	helloData[hp.streamId] = streamId;
+	helloData[hp.credentialsData] = {'uaId': uaId, 'csrf': window.CSRF_TOKEN};
+	helloData[hp.streamingResponse] = 1;
+	helloData[hp.maxReceiveBytes] = 9999999;
+	helloData[hp.maxOpenTime] = 3600;
+	helloData[hp.succeedsTransport] = null;
+	return helloData;
+}
+
+function connectWithFlash(bridge) {
 	logger.warning('Connecting.');
 	var fs = new cw.net.FlashSocket(bridge);
 	var websiteHostPort = (''+document.location.host).split(':');
@@ -108,18 +142,8 @@ function connect(bridge) {
 			var uaId = cw.whoami.getUaId();
 			var transportNumber = ++transportCount;
 			// TODO: use constant names instead of these single-letter strings
-			var hp = cw.net.HelloProperty;
-			var helloData = {};
-			helloData[hp.transportNumber] = transportNumber;
-			helloData[hp.protocolVersion] = 2;
-			helloData[hp.requestNewStream] = transportNumber == 0 ? 1 : 0;
-			helloData[hp.streamId] = streamId;
-			helloData[hp.credentialsData] = {'uaId': uaId, 'csrf': window.CSRF_TOKEN};
-			helloData[hp.streamingResponse] = 1;
-			helloData[hp.maxReceiveBytes] = 9999999;
-			helloData[hp.maxOpenTime] = 3600;
-			helloData[hp.succeedsTransport] = null;
-			var helloFrame = ser(helloData) + 'H';
+			var helloData = makeHelloData(uaId, transportNumber);
+			var helloFrame = serializer.serialize(helloData) + 'H';
 			// If the server receives this more than once, it is
 			// subsequently ignored because the box # is always 0,
 			// and box 0 was already received.
@@ -156,31 +180,27 @@ function connect(bridge) {
 		logger.info('onframes from '+flashKey+' with '+frames.length+' frame(s). hadError? ' + hadError);
 		for(var i=0; i < frames.length; i++) {
 			var frame = frames[i]; 
-			logger.info('Received: '+ser(frame));
+			logger.info('Received: '+serializer.serialize(frame));
 		}
 	}
 
 	fs.connect_(host, port);
 
-	lastFs = fs;
+	lastFlashSocket = fs;
 }
-
-loadSWF();
 
 function reconnect() {
 	logger.warning('Closing.');
-	lastFs.close_();
-	connect(document.getElementById('appswf'));
+	lastFlashSocket.close_();
+	connectWithFlash(document.getElementById('appswf'));
 }
 
 function sendAck(n) {
 	logger.warning('sendAck: ' + n);
-	lastFs.writeSerializedFrames_(['|' + String(n) + 'A']);
+	lastFlashSocket.writeSerializedFrames_(['|' + String(n) + 'A']);
 }
 
-function byId(o) {
-	return document.getElementById(o);
-}
+loadSWF();
 
 </script>
 
