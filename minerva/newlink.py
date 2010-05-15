@@ -98,6 +98,11 @@ class IMinervaProtocol(Interface):
 		You must *not* raise any exception. Wrap your code in try/except
 		if necessary.
 
+		This is `stringsReceived` instead of `stringReceived` only as an
+		optimization for CPython. The number of strings you will receive at
+		once is subject to variances in TCP activity. Do *not* rely on being
+		called with a certain number of strings.
+
 		@type strings: list
 		@param strings: a list of L{StringFragment} objects. You can convert
 			them to C{str}s by C{str()}ing them. Do *not* keep them around
