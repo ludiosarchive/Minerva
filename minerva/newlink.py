@@ -1164,7 +1164,10 @@ class SocketTransport(object):
 				# Terminating, but we can't even send any type of frame.
 				self._terminating = True
 				# RST them instead of FIN, because they don't look like a well-behaving client anyway.
-				self.writable.abortConnection() # We know that writable is a `transport` here, not a Request.
+				if hasattr(self.writable, 'abortConnection'):
+					self.writable.abortConnection() # We know that writable is a `transport` here, not a Request.
+				else:
+					self.writable.loseConnection()
 				return
 
 			else:

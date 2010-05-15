@@ -352,8 +352,13 @@ def makeMinervaAndHttp(reactor, csrfSecret):
 	socketFace = SocketFace(clock, tracker, firewall, policyString=policyString)
 
 	# the HTTP stuff
-
 	root = Root(reactor, httpFace, csrfStopper, cookieInstaller)
-	httpSite = ConnectionTrackingSite(root, clock=clock)
+
+	try:
+		# Twisted z9trunk
+		httpSite = ConnectionTrackingSite(root, clock=clock)
+	except TypeError:
+		# Twisted
+		httpSite = ConnectionTrackingSite(root)
 
 	return (socketFace, httpSite)

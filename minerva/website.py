@@ -10,7 +10,14 @@ import hashlib
 import hmac
 from twisted.internet import defer
 from twisted.web import resource
-from twisted.python.util import slowStringCompare
+try:
+	from twisted.python.util import slowStringCompare
+except ImportError:
+	print ("minerva.website: DANGER! DANGER! "
+		"No twisted.python.util.slowStringCompare; vulnerable to timing attacks.")
+	def slowStringCompare(s1, s2):
+		return s1 == s2
+
 from zope.interface import implements, Interface
 from collections import defaultdict
 
