@@ -893,7 +893,8 @@ class SocketTransport(object):
 
 			if self._mode == HTTP:
 				# .finish() is only for Requests
-				self.writable.finish()
+				if not self.writable._disconnected:
+					self.writable.finish()
 
 			# TODO: for non-HTTP, set timer and close the connection ourselves
 			# in 5-10 seconds
