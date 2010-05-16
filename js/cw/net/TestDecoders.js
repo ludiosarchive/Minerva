@@ -1,8 +1,8 @@
 /**
- * @fileoverview Tests for cw.net.ResponseTextDecoder
+ * @fileoverview Tests for cw/net/decoders.js
  */
 
-goog.provide('cw.net.TestDecoder');
+goog.provide('cw.net.TestDecoders');
 
 goog.require('cw.UnitTest');
 goog.require('cw.net.ResponseTextDecoder');
@@ -11,7 +11,7 @@ goog.require('cw.net.ResponseTextDecoder');
 // anti-clobbering for JScript
 (function(){
 
-cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestResponseTextDecoderNull').methods(
+cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'TestResponseTextDecoderNull').methods(
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
@@ -208,10 +208,10 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestResponseTextDecoderNull')
  * Because we're passing in null, it doesn't know the length of {@code responseText}
  * in advance, so it should actually test something usefully.
  */
-cw.net.TestDecoder.TestResponseTextDecoderNull.subclass(
-cw.net.TestDecoder, 'TestResponseTextDecoderNullByteAtATime').methods(
+cw.net.TestDecoders.TestResponseTextDecoderNull.subclass(
+cw.net.TestDecoders, 'TestResponseTextDecoderNullByteAtATime').methods(
 	function setUp(self) {
-		cw.net.TestDecoder.TestResponseTextDecoderNullByteAtATime.upcall(self, 'setUp', []);
+		cw.net.TestDecoders.TestResponseTextDecoderNullByteAtATime.upcall(self, 'setUp', []);
 		// The _toSend logic is very tricky because of ParseError exceptions
 		self._toSend = 1;
 	},
@@ -238,8 +238,8 @@ cw.net.TestDecoder, 'TestResponseTextDecoderNullByteAtATime').methods(
 );
 
 
-cw.net.TestDecoder.TestResponseTextDecoderNull.subclass(
-cw.net.TestDecoder, 'TestResponseTextDecoderNumber').methods(
+cw.net.TestDecoders.TestResponseTextDecoderNull.subclass(
+cw.net.TestDecoders, 'TestResponseTextDecoderNumber').methods(
 	/**
 	 * Pretend that this is the number you get when you get XHR onprogress events.
 	 * This test class *does* know how many bytes were received.
@@ -254,10 +254,10 @@ cw.net.TestDecoder, 'TestResponseTextDecoderNumber').methods(
  * it reports a smaller number for {@code responseTextLength} than
  * {@code responseText.length}.
  */
-cw.net.TestDecoder.TestResponseTextDecoderNumber.subclass(
-cw.net.TestDecoder, 'TestResponseTextDecoderNumberMinus1').methods(
+cw.net.TestDecoders.TestResponseTextDecoderNumber.subclass(
+cw.net.TestDecoders, 'TestResponseTextDecoderNumberMinus1').methods(
 	function setUp(self) {
-		cw.net.TestDecoder.TestResponseTextDecoderNumberMinus1.upcall(self, 'setUp', []);
+		cw.net.TestDecoders.TestResponseTextDecoderNumberMinus1.upcall(self, 'setUp', []);
 		self.misreportSubtract = 1;
 	},
 
@@ -280,16 +280,16 @@ cw.net.TestDecoder, 'TestResponseTextDecoderNumberMinus1').methods(
  * corrupted when it reports a smaller number for {@code responseTextLength}
  * than {@code responseText.length}.
  */
-cw.net.TestDecoder.TestResponseTextDecoderNumberMinus1.subclass(
-cw.net.TestDecoder, 'TestResponseTextDecoderNumberMinus2').methods(
+cw.net.TestDecoders.TestResponseTextDecoderNumberMinus1.subclass(
+cw.net.TestDecoders, 'TestResponseTextDecoderNumberMinus2').methods(
 	function setUp(self) {
-		cw.net.TestDecoder.TestResponseTextDecoderNumberMinus2.upcall(self, 'setUp', []);
+		cw.net.TestDecoders.TestResponseTextDecoderNumberMinus2.upcall(self, 'setUp', []);
 		self.misreportSubtract = 2;
 	}
 );
 
 
-cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestIgnoreResponseTextOptimization').methods(
+cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'TestIgnoreResponseTextOptimization').methods(
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
@@ -331,7 +331,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestIgnoreResponseTextOptimiz
  * Test that the decoder does not break when it gets a too-large
  * {@code responseTextLength}.
  */
-cw.UnitTest.TestCase.subclass(cw.net.TestDecoder, 'TestExaggeratedLength').methods(
+cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'TestExaggeratedLength').methods(
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
