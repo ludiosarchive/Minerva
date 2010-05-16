@@ -18,6 +18,7 @@ from twisted.web import server, http
 from twisted.internet import defer, task
 from twisted.internet.interfaces import (
 	IPushProducer, IPullProducer, IProtocol, IProtocolFactory)
+from twisted.internet.error import ConnectionLost
 from mypy import constant
 from mypy.strops import StringFragment
 
@@ -2892,7 +2893,45 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		self.assert_(headers['Server'][0].startswith('DWR-Reverse-Ajax'), headers['Server'])
 
 
-	# TODO: test request aborting
+	def test_clientAbortsRequest(self):
+		"""
+		If client aborts the Request, nothing bad happens, and
+		Stream.transportOffline is called.
+		"""
+		resource = self._makeResource()
+		request = DummyRequest(postpath=[])
+		request.method = 'POST'
+
+		frame0 = _makeHelloFrameHttp(dict(
+			succeedsTransport=None,
+			streamingResponse=False))
+		frames = [frame0]
+
+		request.content = StringIO(
+			'\n'.join(f.encode() for f in frames) + '\n')
+
+		resource.render(request)
+
+		stream = self.streamTracker.getStream('x'*26)
+		transport = stream.allSeenTransports[-1]
+
+		self.aE([
+			["notifyFinish"],
+			["transportOnline", transport, True, None],
+		], stream.getNew())
+
+		# On a real Request, this would be request.connectionLost(ConnectionLost())
+		request.processingFailed(ConnectionLost())
+
+		self.aE([
+			["transportOffline", transport],
+		], stream.getNew())
+
+		# SocketTransport did not call .finish(), because Request was already
+		# disconnected.
+		self.assertEqual(0, request.finished)
+
+	# TODO: test that transports that don't want any boxes are closed very quickly
 
 	# TODO: implement and test minOpenTime
 
