@@ -116,17 +116,10 @@ class Queue(object):
 				"seqNum = %d, len(self._items) = %d, self._seqNumAt0 = %d"
 				% (seqNum, len(self._items), self._seqNumAt0))
 
-		if seqNum - self._seqNumAt0 <= 0:
-			if self.noisy:
-				# If Stream is using removeAllBefore, the client sent a strangely low
-				# S2C ACK; not removing anything from the queue.
-				log.msg("I was asked to remove items up to "
-					"%d but those are long gone. My lowest is %d" % (seqNum, self._seqNumAt0))
-		else:
-			for i in xrange(seqNum - self._seqNumAt0):
-				self._items.popleft()
+		for i in xrange(seqNum - self._seqNumAt0):
+			self._items.popleft()
 
-			self._seqNumAt0 = seqNum
+		self._seqNumAt0 = seqNum
 
 
 
