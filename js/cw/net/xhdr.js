@@ -2,8 +2,8 @@
  * @fileoverview XMLHttpRequest, XMLHTTP, and XDomainRequest wrappers.
  */
 
-goog.provide('cw.net.simpleRequest');
-goog.provide('cw.net.ParseError');
+goog.provide('cw.net.XHRLike');
+goog.provide('cw.net.getXHRObject');
 goog.provide('cw.net.RequestStillActive');
 goog.provide('cw.net.RequestAborted');
 goog.provide('cw.net.NetworkProblem');
@@ -11,8 +11,7 @@ goog.provide('cw.net.Timeout');
 goog.provide('cw.net.IUsableSomething');
 goog.provide('cw.net.UsableXDR');
 goog.provide('cw.net.UsableXHR');
-goog.provide('cw.net.XHRLike');
-goog.provide('cw.net.getXHRObject');
+goog.provide('cw.net.simpleRequest');
 
 goog.require('goog.debug.Error');
 goog.require('goog.async.Deferred');
@@ -363,6 +362,7 @@ cw.net.UsableXDR.prototype.abort_ = function() {
 	}
 }
 
+
 cw.net.UsableXDR.logger = goog.debug.Logger.getLogger('cw.net.UsableXDR');
 cw.net.UsableXDR.logger.setLevel(goog.debug.Logger.Level.ALL);
 
@@ -577,6 +577,7 @@ cw.net.UsableXHR.prototype.handler_onreadystatechange_ = function() {
 		this.finishAndReset_(null);
 	}
 }
+
 
 cw.net.UsableXHR.logger = goog.debug.Logger.getLogger('cw.net.UsableXHR');
 cw.net.UsableXHR.logger.setLevel(goog.debug.Logger.Level.ALL);
