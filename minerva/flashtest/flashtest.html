@@ -272,6 +272,8 @@ function reconnect() {
 		lastFlashSocket.close_();
 		connectWithFlash(document.getElementById('appswf'));
 	} else if(mode == 'http') {
+		// If we don't unlisten, we go into a request-making loop
+		goog.events.unlisten(lastXhr, goog.net.EventType.COMPLETE, httpRequestDone);
 		lastXhr.abort();
 		makeHttpRequest();
 	} else {
