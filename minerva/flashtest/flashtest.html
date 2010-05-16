@@ -128,7 +128,11 @@ function makeHelloData(uaId, transportNumber) {
 	helloData[hp.protocolVersion] = 2;
 	helloData[hp.requestNewStream] = transportNumber == 0 ? 1 : 0;
 	helloData[hp.streamId] = streamId;
-	helloData[hp.credentialsData] = {'uaId': uaId, 'csrf': window.CSRF_TOKEN};
+	// credentialsData is only needed for the transport that initiates
+	// a Stream.
+	if(transportNumber == 0) {
+		helloData[hp.credentialsData] = {'uaId': uaId, 'csrf': window.CSRF_TOKEN};
+	}
 	helloData[hp.streamingResponse] = Number(mode == 'flash');
 	helloData[hp.maxReceiveBytes] = 9999999;
 	helloData[hp.maxOpenTime] = 3600;
