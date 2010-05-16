@@ -232,7 +232,16 @@ function handleFrame(frame) {
 }
 
 
+function terminateLastXhr() {
+	// If we don't unlisten, we go into a request-making loop
+	goog.events.unlisten(lastXhr, goog.net.EventType.COMPLETE, httpRequestDone);
+	lastXhr.dispose();
+	lastXhr = null;
+}
+
+
 function httpRequestDone(e) {
+	lastXhr = null;
 	logger.info('httpRequestDone');
 	var responseText = e.target.getResponseText();
 	var frames = responseText.split('\n');
@@ -251,6 +260,10 @@ function httpRequestDone(e) {
 
 
 function makeHttpRequest() {
+	if(lastXhr !== null) {
+		logger.info('Not starting a new HTTP request; another is active');
+		return;
+	}
 	logger.info('Starting new HTTP request; ackNum=' + ackNum);
 	var frames = makeC2SFramesForTesting();
 	for(i=0; i < frames.length; i++) {
@@ -272,9 +285,7 @@ function reconnect() {
 		lastFlashSocket.close_();
 		connectWithFlash(document.getElementById('appswf'));
 	} else if(mode == 'http') {
-		// If we don't unlisten, we go into a request-making loop
-		goog.events.unlisten(lastXhr, goog.net.EventType.COMPLETE, httpRequestDone);
-		lastXhr.abort();
+		terminateLastXhr();
 		makeHttpRequest();
 	} else {
 		throw new Error("bad mode " + mode);
@@ -287,9 +298,11 @@ function sendAck(n) {
 	if(mode == 'flash') {
 		lastFlashSocket.writeSerializedFrames_(['|' + String(n) + 'A']);
 	} else if(mode == 'http') {
-		// We probably want to open a new HTTP request to send a
-		// SackFrame
-		1/0
+		// Instead of aborting and using just one HTTP request,
+		// perhaps we want to open a second HTTP request instead?
+		// That would match the behavior of the real JavaScript client.
+		ackNum = n;
+		reconnect();
 	} else {
 		throw new Error("bad mode " + mode);
 	}
