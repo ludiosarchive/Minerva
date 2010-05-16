@@ -989,18 +989,18 @@ cw.net.FrameType = {
  * @enum {string}
  */
 cw.net.HelloProperty = {
-	transportNumber: 'n',
-	protocolVersion: 'v',
-	httpFormat: 't',
-	requestNewStream: 'w',
-	streamId: 'i',
-	credentialsData: 'c',
-	streamingResponse: 's',
-	needPaddingBytes: 'p',
-	maxReceiveBytes: 'r',
-	maxOpenTime: 'm',
-	useMyTcpAcks: 'a',
-	succeedsTransport: 'g'
+	transportNumber: 'tnum',
+	protocolVersion: 'ver',
+	httpFormat: 'format',
+	requestNewStream: 'new',
+	streamId: 'id',
+	credentialsData: 'cred',
+	streamingResponse: 'ming',
+	needPaddingBytes: 'pad',
+	maxReceiveBytes: 'maxb',
+	maxOpenTime: 'maxt',
+	useMyTcpAcks: 'tcpack',
+	succeedsTransport: 'eeds'
 }
 
 

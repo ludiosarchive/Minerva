@@ -189,7 +189,7 @@ class HelloFrameTests(unittest.TestCase):
 
 	def test_encode(self):
 		hello = HelloFrame(dict(transportNumber=0))
-		self.assertEqual('{"n":0}' + 'H', hello.encode())
+		self.assertEqual('{"tnum":0}' + 'H', hello.encode())
 
 
 	def test_encodeDecodeEquality(self):
