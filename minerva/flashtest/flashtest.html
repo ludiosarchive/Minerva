@@ -50,6 +50,8 @@ goog.require('goog.debug.Logger');
 goog.require('goog.async.Deferred');
 goog.require('goog.json.Serializer');
 goog.require('goog.net.XhrIo');
+goog.require('goog.net.EventType');
+goog.require('goog.events');
 goog.require('goog.Uri');
 goog.require('swfobject');
 goog.require('cw.net.FrameType');
@@ -119,6 +121,7 @@ var s2cSeqNum = 0;
 var streamId = getRandom();
 
 var lastFlashSocket = null;
+var lastXhr = null;
 
 function makeHelloData(uaId, transportNumber) {
 	var hp = cw.net.HelloProperty;
@@ -239,10 +242,10 @@ function httpRequestDone(e) {
 		logger.info('Received: ' + serializer.serialize(frame));
 		handleFrame(frame)
 	}
-	if(transportCount < 200) {
+	if(transportCount < 100) {
 		setTimeout(makeHttpRequest, 250);
 	} else {
-		logger.warn("Stopped testing because transportCount > 200");
+		logger.warning("Stopped testing because transportCount > 100");
 	}
 }
 
@@ -254,7 +257,12 @@ function makeHttpRequest() {
 		logger.info('Sending: ' + frames[i]);
 	}
 	var serializedFrames = frames.join('\n') + '\n';
-	goog.net.XhrIo.send('/httpface/', httpRequestDone, 'POST', serializedFrames);
+
+	var x = new goog.net.XhrIo();
+	goog.events.listen(x, goog.net.EventType.COMPLETE, httpRequestDone);
+	goog.events.listen(x, goog.net.EventType.READY, goog.partial(goog.net.XhrIo.cleanupSend_, x));
+	x.send('/httpface/', 'POST', serializedFrames);
+	lastXhr = x;
 }
 
 
@@ -264,7 +272,8 @@ function reconnect() {
 		lastFlashSocket.close_();
 		connectWithFlash(document.getElementById('appswf'));
 	} else if(mode == 'http') {
-		1/0
+		lastXhr.abort();
+		makeHttpRequest();
 	} else {
 		throw new Error("bad mode " + mode);
 	}
@@ -276,6 +285,8 @@ function sendAck(n) {
 	if(mode == 'flash') {
 		lastFlashSocket.writeSerializedFrames_(['|' + String(n) + 'A']);
 	} else if(mode == 'http') {
+		// We probably want to open a new HTTP request to send a
+		// SackFrame
 		1/0
 	} else {
 		throw new Error("bad mode " + mode);
