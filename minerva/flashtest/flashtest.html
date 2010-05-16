@@ -114,6 +114,8 @@ function _appswfLoaded() {
 
 
 var transportCount = -1;
+var ackNum = -1;
+var s2cSeqNum = 0;
 var streamId = getRandom();
 
 var lastFlashSocket = null;
@@ -147,8 +149,17 @@ function makeC2SFramesForTesting() {
 	// subsequently ignored because the box # is always 0,
 	// and box 0 was already received.
 	var seqNumFrame = '0' + 'N'; // not really necessary to send
+	var sackFrame = '|' + String(ackNum) + 'A';
+	if(sackFrame != '|-1A') {
+		var frames = [helloFrame, sackFrame, seqNumFrame];
+	} else {
+		// Don't send sackFrame with ackNum -1, it is illegal
+		var frames = [helloFrame, seqNumFrame];
+	}
 	var boxFrame = 'send_demo' + ' ';
-	var frames = [helloFrame, seqNumFrame, boxFrame];
+	if(transportNumber == 0) {
+		frames.push(boxFrame);
+	}
 	return frames;
 }
 
@@ -203,12 +214,33 @@ function connectWithFlash(bridge) {
 }
 
 
-function httpRequestDone(e) {
-	logger.info('httpRequestDone: ' + e);
+function handleFrame(frame) {
+	var lastChar = frame.substr(frame.length - 1, 1);
+	if(lastChar == 'N') { // SeqNumFrame
+		s2cSeqNum = Number(frame.substr(0, frame.length - 1)) - 1;
+	} else if(lastChar == ' ') { // StringFrame
+		s2cSeqNum += 1;
+	}
+	ackNum = s2cSeqNum;
 }
 
 
-function startHttp() {
+function httpRequestDone(e) {
+	logger.info('httpRequestDone');
+	var responseText = e.target.getResponseText();
+	var frames = responseText.split('\n');
+	frames.pop(); // \n is a terminator
+	for(i=0; i < frames.length; i++) {
+		var frame = frames[i];
+		logger.info('Received: ' + serializer.serialize(frame));
+		handleFrame(frame)
+	}
+	setTimeout(makeHttpRequest, 500);
+}
+
+
+function makeHttpRequest() {
+	logger.info('Starting new HTTP request; ackNum=' + ackNum);
 	var frames = makeC2SFramesForTesting();
 	for(i=0; i < frames.length; i++) {
 		logger.info('Sending: ' + frames[i]);
@@ -224,7 +256,7 @@ function reconnect() {
 		lastFlashSocket.close_();
 		connectWithFlash(document.getElementById('appswf'));
 	} else if(mode == 'http') {
-
+		1/0
 	} else {
 		throw new Error("bad mode " + mode);
 	}
@@ -236,7 +268,7 @@ function sendAck(n) {
 	if(mode == 'flash') {
 		lastFlashSocket.writeSerializedFrames_(['|' + String(n) + 'A']);
 	} else if(mode == 'http') {
-
+		1/0
 	} else {
 		throw new Error("bad mode " + mode);
 	}
@@ -246,7 +278,7 @@ function sendAck(n) {
 if(mode == 'flash') {
 	loadSWF();
 } else if(mode == 'http') {
-	startHttp();
+	makeHttpRequest();
 } else {
 	throw new Error("bad mode " + mode);
 }
