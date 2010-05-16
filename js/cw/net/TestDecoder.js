@@ -5,7 +5,7 @@
 goog.provide('cw.net.TestDecoder');
 
 goog.require('cw.UnitTest');
-goog.require('cw.net');
+goog.require('cw.net.ResponseTextDecoder');
 
 
 // anti-clobbering for JScript
