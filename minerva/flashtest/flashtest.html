@@ -239,7 +239,11 @@ function httpRequestDone(e) {
 		logger.info('Received: ' + serializer.serialize(frame));
 		handleFrame(frame)
 	}
-	setTimeout(makeHttpRequest, 500);
+	if(transportCount < 200) {
+		setTimeout(makeHttpRequest, 250);
+	} else {
+		logger.warn("Stopped testing because transportCount > 200");
+	}
 }
 
 
