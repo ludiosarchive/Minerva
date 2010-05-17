@@ -1684,9 +1684,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_transportNumberDoesntMatter(self):
 		"""
-		transportNumber can be 0 <= transportNumber <= 2**64
+		transportNumber can be 0 <= transportNumber <= 2**53
 		"""
-		for n in [1, 1000, 10000, 12378912, 1283718237, 2**64]:
+		for n in [1, 1000, 10000, 12378912, 1283718237, 2**53]:
 			frame0 = _makeHelloFrame(dict(transportNumber=n))
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])

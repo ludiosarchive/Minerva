@@ -84,7 +84,7 @@ class HelloFrameTests(unittest.TestCase):
 		argument causes L{InvalidHello} to be raised.
 		In this case, the stream is never registered with the streamTracker.
 		"""
-		for succeedsTransport in [-1, -2**32, -0.5, 2**64+1, "4", True, False, [], {}]:
+		for succeedsTransport in [-1, -2**32, -0.5, 2**53+1, "4", True, False, [], {}]:
 			s = _makeHelloFrame(dict(
 				succeedsTransport=succeedsTransport)).encode()
 
@@ -147,7 +147,7 @@ class HelloFrameTests(unittest.TestCase):
 			return l
 
 		genericBad = [
-			-2**65, -1, -0.5, 0.5, 2**64+1, "", [], ["something"],
+			-2**65, -1, -0.5, 0.5, 2**53+1, "", [], ["something"],
 			{}, True, False, None]
 
 		badMutations = dict(
@@ -252,11 +252,11 @@ class SeqNumFrameTests(unittest.TestCase):
 
 	def test_repr(self):
 		self.assertEqual("SeqNumFrame(2)", repr(SeqNumFrame(2)))
-		self.assertEqual("SeqNumFrame(%d)" % 2**64, repr(SeqNumFrame(2**64)))
+		self.assertEqual("SeqNumFrame(%d)" % 2**53, repr(SeqNumFrame(2**53)))
 
 
 	def test_decode(self):
-		for seqNum in (0, 1, 2**32, 2**64):
+		for seqNum in (0, 1, 2**32, 2**53):
 			s = str(seqNum) + 'N'
 			self	.assertEqual(
 				SeqNumFrame(seqNum),
@@ -264,7 +264,7 @@ class SeqNumFrameTests(unittest.TestCase):
 
 
 	def test_decodeFailed(self):
-		for s in (str(-1) + 'N', str(-2**64) + 'N', str(2**64 + 1) + 'N', ' ', '0' * 1024):
+		for s in (str(-1) + 'N', str(-2**53) + 'N', str(2**53 + 1) + 'N', ' ', '0' * 1024):
 			self	.assertRaises(
 				InvalidFrame,
 				lambda: SeqNumFrame.decode(sf(s)))
@@ -273,7 +273,7 @@ class SeqNumFrameTests(unittest.TestCase):
 	def test_encode(self):
 		self	.assertEqual('2N', SeqNumFrame(2).encode())
 		self	.assertEqual('0N', SeqNumFrame(0).encode())
-		self	.assertEqual('%dN' % 2**64, SeqNumFrame(2**64).encode())
+		self	.assertEqual('%dN' % 2**53, SeqNumFrame(2**53).encode())
 
 
 
@@ -295,21 +295,21 @@ class SackFrameTests(unittest.TestCase):
 
 
 	def test_decode(self):
-		s = '1,4|%sA' % (2**64,)
+		s = '1,4|%sA' % (2**53,)
 		self	.assertEqual(
-			SackFrame(2**64, (1, 4)),
+			SackFrame(2**53, (1, 4)),
 			SackFrame.decode(sf(s)))
 
 
 	def test_decodeNoSackNumbers(self):
-		s = '|%sA' % (2**64,)
+		s = '|%sA' % (2**53,)
 		self	.assertEqual(
-			SackFrame(2**64, ()),
+			SackFrame(2**53, ()),
 			SackFrame.decode(sf(s)))
 
 
 	def test_decodeFailedAckNumberInvalid(self):
-		for badNum in (2**64+1, -1, 0.5, 1.5):
+		for badNum in (2**53+1, -1, 0.5, 1.5):
 			s = '1,4|%sA' % (badNum,)
 			self	.assertRaises(
 				InvalidFrame,
@@ -317,7 +317,7 @@ class SackFrameTests(unittest.TestCase):
 
 
 	def test_decodeFailedOneSackNumberInvalid(self):
-		for badNum in (2**64+1, -1, 0.5, 1.5):
+		for badNum in (2**53+1, -1, 0.5, 1.5):
 			s = '1,%s|4A' % (badNum,)
 			self	.assertRaises(
 				InvalidFrame,

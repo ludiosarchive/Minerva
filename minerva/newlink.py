@@ -807,8 +807,8 @@ def sanitizeHelloFrame(helloFrame, isHttp):
 	if not isHttp:
 		# For non-HTTP transports, don't allow clients to use these options.
 		helloFrame.streamingResponse = True
-		helloFrame.maxReceiveBytes = 2**64
-		helloFrame.maxOpenTime = 2**64
+		helloFrame.maxReceiveBytes = 2**53
+		helloFrame.maxOpenTime = 2**53
 
 
 

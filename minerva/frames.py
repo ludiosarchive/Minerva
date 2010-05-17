@@ -96,7 +96,7 @@ def helloDataToHelloFrame(helloData):
 			Hello_requestNewStream in helloData else False
 
 		obj.transportNumber = ensureNonNegIntLimit( # e: ValueError, TypeError
-			helloData[Hello_transportNumber], 2**64)
+			helloData[Hello_transportNumber], 2**53)
 
 		obj.protocolVersion = helloData[Hello_protocolVersion]
 
@@ -126,7 +126,7 @@ def helloDataToHelloFrame(helloData):
 		if obj.succeedsTransport is not None:
 			try:
 				obj.succeedsTransport = ensureNonNegIntLimit(
-					obj.succeedsTransport, 2**64)
+					obj.succeedsTransport, 2**53)
 			except (TypeError, ValueError):
 				raise InvalidHello("bad succeedsTransport")
 
@@ -150,17 +150,17 @@ def helloDataToHelloFrame(helloData):
 	# Both are optional and have no limit by default
 	try:
 		obj.maxReceiveBytes = ensureNonNegIntLimit(
-			helloData[Hello_maxReceiveBytes], 2**64) # e: ValueError, TypeError
+			helloData[Hello_maxReceiveBytes], 2**53) # e: ValueError, TypeError
 	except KeyError:
-		obj.maxReceiveBytes = 2**64
+		obj.maxReceiveBytes = 2**53
 	except (TypeError, ValueError):
 		raise InvalidHello("bad maxReceiveBytes")
 
 	try:
 		obj.maxOpenTime = ensureNonNegIntLimit(
-			helloData[Hello_maxOpenTime], 2**64) # e: ValueError, TypeError
+			helloData[Hello_maxOpenTime], 2**53) # e: ValueError, TypeError
 	except KeyError:
-		obj.maxOpenTime = 2**64
+		obj.maxOpenTime = 2**53
 	except (TypeError, ValueError):
 		raise InvalidHello("bad maxOpenTime")
 
@@ -282,7 +282,7 @@ class SeqNumFrame(tuple):
 		C{frameString} is a L{StringFragment} that ends with "N".
 		"""
 		try:
-			seqNum = strToNonNegLimit(str(frameString[:-1]), 2**64)
+			seqNum = strToNonNegLimit(str(frameString[:-1]), 2**53)
 		except ValueError:
 			raise InvalidFrame("bad seqNum")
 		return cls(seqNum)
@@ -319,8 +319,8 @@ class SackFrame(tuple):
 		"""
 		joinedSackList, ackNumberStr = str(frameString[:-1]).rsplit('|', 1)
 		try:
-			sackList = tuple(strToNonNegLimit(s, 2**64) for s in joinedSackList.split(',')) if joinedSackList else ()
-			ackNumber = strToNonNegLimit(ackNumberStr, 2**64)
+			sackList = tuple(strToNonNegLimit(s, 2**53) for s in joinedSackList.split(',')) if joinedSackList else ()
+			ackNumber = strToNonNegLimit(ackNumberStr, 2**53)
 		except ValueError:
 			raise InvalidFrame("bad sackList or ackNumber")
 		return cls(ackNumber, sackList)
