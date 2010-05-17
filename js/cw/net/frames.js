@@ -17,7 +17,6 @@ goog.provide('cw.net.decodeFrameFromServer');
 
 goog.require('goog.debug.Error');
 goog.require('goog.json');
-goog.require('goog.array');
 
 
 /**
@@ -383,16 +382,16 @@ cw.net.TransportKillReason = {
 }
 
 /**
- * @type {!Array.<!cw.net.TransportKillReason>}
+ * @type {!Object.<string, !cw.net.TransportKillReason>}
  *
  * @private
  */
-cw.net.AllTransportKillReasons_ = [
-	cw.net.TransportKillReason.stream_attach_failure,
-	cw.net.TransportKillReason.acked_unsent_strings,
-	cw.net.TransportKillReason.invalid_frame_type_or_arguments,
-	cw.net.TransportKillReason.frame_corruption
-];
+cw.net.AllTransportKillReasons_ = {
+	'stream_attach_failure': cw.net.TransportKillReason.stream_attach_failure,
+	'acked_unsent_strings': cw.net.TransportKillReason.acked_unsent_strings,
+	'invalid_frame_type_or_arguments': cw.net.TransportKillReason.invalid_frame_type_or_arguments,
+	'frame_corruption': cw.net.TransportKillReason.frame_corruption
+};
 
 
 /**
@@ -422,7 +421,8 @@ cw.net.TransportKillFrame.prototype.encode = function() {
  */
 cw.net.TransportKillFrame.decode = function(frameString) {
 	var reason = frameString.substr(0, frameString.length - 1);
-	if(!goog.array.contains(cw.net.AllTransportKillReasons_, reason)) {
+	reason = cw.net.AllTransportKillReasons_[reason];
+	if(reason == null) {
 		throw new cw.net.InvalidFrame("unknown kill reason: " + reason);
 	}
 
