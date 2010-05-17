@@ -3,7 +3,6 @@
  */
 
 goog.provide('cw.net.FrameType');
-goog.provide('cw.net.HelloProperty');
 goog.provide('cw.net.FlashSocket');
 
 goog.require('goog.debug.Error');
@@ -192,27 +191,6 @@ cw.net.FrameType = {
 	tk_frame_corruption: 610,
 	tk_intraframe_corruption: 611,
 	tk_brb: 650
-}
-
-
-/**
- * Hello frame properties. Keep in sync with minerva/newlink.py
- *
- * @enum {string}
- */
-cw.net.HelloProperty = {
-	transportNumber: 'tnum',
-	protocolVersion: 'ver',
-	httpFormat: 'format',
-	requestNewStream: 'new',
-	streamId: 'id',
-	credentialsData: 'cred',
-	streamingResponse: 'ming',
-	needPaddingBytes: 'pad',
-	maxReceiveBytes: 'maxb',
-	maxOpenTime: 'maxt',
-	useMyTcpAcks: 'tcpack',
-	succeedsTransport: 'eeds'
 }
 
 
