@@ -343,7 +343,8 @@ cw.net.ResetFrame.prototype.toString = function() {
  * @return {string} Encoded frame
  */
 cw.net.ResetFrame.prototype.encode = function() {
-	return self.reasonString + '|' + str(int(self.applicationLevel)) + '!'
+	return this.reasonString + '|' + Number(this.applicationLevel) + '!';
+}
 
 
 /**
@@ -430,7 +431,9 @@ cw.net.TransportKillFrame.decode = function(frameString) {
 
 
 /**
- * @type {(HelloFrame|StringFrame|SeqNumFrame|SackFrame|YouCloseItFrame|PaddingFrame|ResetFrame|TransportKillFrame)}
+ * @type {(cw.net.HelloFrame|cw.net.StringFrame|cw.net.SeqNumFrame|
+ * 	cw.net.SackFrame|cw.net.YouCloseItFrame|cw.net.PaddingFrame|
+ * 	cw.net.ResetFrame|cw.net.TransportKillFrame)}
  */
 cw.net.Frame = goog.typedef;
 
