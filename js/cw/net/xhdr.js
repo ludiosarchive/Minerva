@@ -285,7 +285,7 @@ cw.net.UsableXDR.prototype.handler_XDR_onprogress_ = function() {
 	try {
 		this.progressCallback_(this.object_, null, null);
 	} catch(e) {
-		cw.net.UsableXDR.severe('[handler_XDR_onprogress_] Error in progressCallback_', e);
+		cw.net.UsableXDR.logger.severe('[handler_XDR_onprogress_] Error in progressCallback_', e);
 	}
 }
 
@@ -297,7 +297,7 @@ cw.net.UsableXDR.prototype.handler_XDR_onload_ = function() {
 	try {
 		this.progressCallback_(this.object_, null, null);
 	} catch(e) {
-		cw.net.UsableXDR.severe('[handler_XDR_onload_] Error in progressCallback_', e);
+		cw.net.UsableXDR.logger.severe('[handler_XDR_onload_] Error in progressCallback_', e);
 	}
 	this.finishAndReset_(null);
 }
