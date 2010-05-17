@@ -416,7 +416,7 @@ def isValidReasonString(reasonString):
 class ResetFrame(tuple):
 	"""
 	A reset frame indicates this side has given up on the Stream.
-	A reset frame implies a transport kill as well.
+	A reset frame from the server implies a transport kill as well.
 	"""
 	__slots__ = ()
 	__metaclass__ = attachClassMarker('_MARKER')
