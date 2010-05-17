@@ -423,7 +423,7 @@ cw.net.TransportKillFrame.prototype.encode = function() {
 cw.net.TransportKillFrame.decode = function(frameString) {
 	var reason = frameString.substr(0, frameString.length - 1);
 	if(!goog.array.contains(cw.net.AllTransportKillReasons_, reason)) {
-		throw new cw.net.InvalidFrame("unknown kill reason: " + string)
+		throw new cw.net.InvalidFrame("unknown kill reason: " + reason);
 	}
 
 	return new cw.net.TransportKillFrame(reason);
