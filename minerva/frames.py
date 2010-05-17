@@ -441,7 +441,7 @@ class ResetFrame(tuple):
 		"""
 		C{frameString} is a L{StringFragment} that ends with "!".
 		"""
-		reasonString, applicationLevelStr = str(frameString[:-1]).split('|')
+		reasonString, applicationLevelStr = str(frameString[:-1]).rsplit('|', 1)
 		try:
 			applicationLevel = {'0': False, '1': True}[applicationLevelStr]
 		except KeyError:

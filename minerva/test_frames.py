@@ -421,11 +421,11 @@ class ResetFrameTests(unittest.TestCase):
 
 	def test_decode(self):
 		for applicationLevel in (True, False):
-			reasonString = 'the reason'
-			s = reasonString + '|' + str(int(applicationLevel)) + '!'
-			self	.assertEqual(
-				ResetFrame(reasonString, applicationLevel),
-				ResetFrame.decode(sf(s)))
+			for reasonString in ('the reason', 'the | | reason', '', '|', '||'):
+				s = reasonString + '|' + str(int(applicationLevel)) + '!'
+				self	.assertEqual(
+					ResetFrame(reasonString, applicationLevel),
+					ResetFrame.decode(sf(s)))
 
 
 	def test_decodeFailedBadReason(self):
