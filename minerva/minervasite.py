@@ -306,10 +306,10 @@ class Root(BetterResource):
 		self._reactor = reactor
 
 		JSPATH = FilePath(os.environ['JSPATH'])
-		directoryScan = jsimp.DirectoryScan(JSPATH)
 
 		self.putChild('', Index())
-		self.putChild('@tests', testing.TestPage(['cw.net'], directoryScan))
+		self.putChild('JSPATH', static.File(JSPATH.path))
+		self.putChild('@tests', testing.TestPage(['cw.net'], JSPATH))
 
 		# testres_Coreweb always needed for running tests.
 		testres_Coreweb = FilePath(cwtools.__path__[0]).child('testres').path
@@ -322,7 +322,7 @@ class Root(BetterResource):
 
 		self.putChild('httpface', httpFace)
 
-		self.putChild('flashtest', pages.FlashTestPage(csrfStopper, cookieInstaller, directoryScan, JSPATH))
+		self.putChild('flashtest', pages.FlashTestPage(csrfStopper, cookieInstaller))
 
 		# The docs are outside of the minerva package
 		docsDir = FilePath(__file__).parent().parent().child('docs')

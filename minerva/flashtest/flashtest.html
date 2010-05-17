@@ -11,8 +11,6 @@
 		}
 	</style>
 	<script>
-		{{ expandScript('// import cw.autoTitle') }}
-		window.CLOSURE_NO_DEPS = true;
 		window.CSRF_TOKEN = {{ dumps(token) }};
 	</script>
 </head>
@@ -42,9 +40,11 @@
 <div id="log"></div>
 
 <div id="appswf"></div>
-
+<script src="/JSPATH/closure/goog/base.js"></script>
+<script src="/JSPATH/cw_deps.js"></script>
 <script>
-{{ expandScript("""
+//goog.require('cw.autoTitle');
+
 goog.require('goog.debug.DivConsole');
 goog.require('goog.debug.Logger');
 goog.require('goog.async.Deferred');
@@ -58,7 +58,6 @@ goog.require('cw.net.FrameType');
 goog.require('cw.net.FlashSocket');
 goog.require('cw.net.HelloProperty');
 goog.require('cw.whoami');
-""") }}
 </script>
 
 <script>
