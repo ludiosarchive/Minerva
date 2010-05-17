@@ -6,7 +6,7 @@ import cgi
 from twisted.python.filepath import FilePath
 from twisted.web import resource, static
 
-from cwtools.htmltools import expandScript, getTestPageCSS
+from cwtools.htmltools import getTestPageCSS
 
 from webmagic.untwist import BetterResource
 
