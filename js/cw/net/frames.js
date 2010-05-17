@@ -125,6 +125,8 @@ cw.net.StringFrame.prototype.encode = function() {
 
 /**
  * @param {string} frameString A string that ends with " ".
+ *
+ * @return {!cw.net.StringFrame}
  */
 cw.net.StringFrame.decode = function(frameString) {
 	return new cw.net.StringFrame(frameString.substr(0, frameString.length - 1));
@@ -154,14 +156,14 @@ cw.net.SeqNumFrame.prototype.encode = function() {
 
 /**
  * @param {string} frameString A string that ends with "N".
+ *
+ * @return {!cw.net.SeqNumFrame}
  */
 cw.net.SeqNumFrame.decode = function(frameString) {
-	// Not necessary to remove "N" before parseInt, but there may be
-	// buggy JavaScript implementations out there.
-	var withoutN = frameString.substr(0, frameString.length - 1);
-	var seqNum = parseInt(withoutN, 10);
+	// Not necessary to remove "N" before parseInt
+	var seqNum = parseInt(frameString, 10);
 	if(seqNum < 0 || seqNum > cw.net.LARGEST_INTEGER_) {
-		throw new InvalidFrame("bad seqNum " + seqNum);
+		throw new cw.net.InvalidFrame("bad seqNum " + seqNum);
 	}
 	return new cw.net.SeqNumFrame(seqNum);
 }
@@ -191,15 +193,34 @@ cw.net.SackFrame.prototype.encode = function() {
 
 /**
  * @param {string} frameString A string that ends with "A".
+ *
+ * @return {!cw.net.SackFrame}
  */
 cw.net.SackFrame.decode = function(frameString):
-		joinedSackList, ackNumberStr = str(frameString[:-1]).rsplit('|', 1)
-		try:
-			sackList = tuple(strToNonNegLimit(s, 2**53) for s in joinedSackList.split(',')) if joinedSackList else ()
-			ackNumber = strToNonNegLimit(ackNumberStr, 2**53)
-		except ValueError:
-			raise InvalidFrame("bad sackList or ackNumber")
-		return new cw.net.SackFrame(ackNumber, sackList);
+	var parts = frameString.split('|');
+
+	if(parts.length != 2) {
+		throw new cw.net.InvalidFrame("expected 1 split");
+	}
+
+	// Not necessary to remove "A" before parseInt
+	var ackNumber = parseInt(parts[1], 10);
+
+	if(ackNumber < 0 || ackNumber > cw.net.LARGEST_INTEGER_) {
+		throw new cw.net.InvalidFrame("bad ackNumber " + ackNumber);
+	}
+
+	var sackListStrs = parts[0].split(',');
+	var sackList = [];
+	for(var i=0, len=sackListStrs.length; i < len; i++) {
+		var sackNum = sackListStrs[i];
+		if(sackNum < 0 || sackNum > cw.net.LARGEST_INTEGER_) {
+			throw new cw.net.InvalidFrame("bad sackNum " + sackNum);
+		}
+		sackList.push(parseInt(sackNum, 10));
+	}
+
+	return new cw.net.SackFrame(ackNumber, sackList);
 }
 
 
@@ -223,15 +244,17 @@ cw.net.YouCloseItFrame.prototype.encode = function() {
 	return 'Y';
 }
 
-	@classmethod
-	def decode(cls, frameString):
-		"""
-		C{frameString} is a L{StringFragment} that ends with "Y".
-		"""
-		if len(frameString) != 1:
-			raise InvalidFrame("leading garbage")
-		return cls()
-
+/**
+ * @param {string} frameString A string that ends with "Y".
+ *
+ * @return {!cw.net.YouCloseItFrame}
+ */
+cw.net.YouCloseItFrame.decode = function(frameString) {
+	if(frameString.length != 1) {
+		throw new cw.net.InvalidFrame("leading garbage");
+	}
+	return new cw.net.YouCloseItFrame();
+}
 
 
 
@@ -245,23 +268,25 @@ cw.net.PaddingFrame = function(numBytes) {
 }
 
 
-PaddingFrame.prototype.toString = function() {
+cw.net.PaddingFrame.prototype.toString = function() {
 	return 'PaddingFrame(' + this.numBytes + ')';
 }
 
 
-PaddingFrame.prototype.encode = function() {
-	var p = Array(this.numBytes + 1);
+cw.net.PaddingFrame.prototype.encode = function() {
+	var p = Array(this.numBytes);
 	p.push('P');
 	return p.join(' ');
 }
 
-	@classmethod
-	def decode(cls, frameString):
-		"""
-		C{frameString} is a L{StringFragment} that ends with "P".
-		"""
-		return cls(len(frameString) - 1)
+/**
+ * @param {string} frameString A string that ends with "P".
+ *
+ * @return {!cw.net.PaddingFrame}
+ */
+cw.net.PaddingFrame.decode = function(frameString) {
+	return new cw.net.PaddingFrame(frameString.length - 1);
+}
 
 
 
@@ -294,23 +319,27 @@ cw.net.ResetFrame = function(reasonString, applicationLevel) {
 
 
 cw.net.ResetFrame.prototype.toString = function() {
-		return 'ResetFrame(%r, %r)' % (self.__class__.__name__, self[1], self[2])
+	return "ResetFrame('" + this.reasonString.replace(/'/g, "\\'") + "', " + this.applicationLevel + ")";
+}
 
+/**
+ * @param {string} frameString A string that ends with "!".
+ *
+ * @return {!cw.net.ResetFrame}
+ */
+cw.net.ResetFrame.decode = function(frameString) {
+	reasonString, applicationLevelStr = str(frameString[:-1]).split('|')
+	try:
+		applicationLevel = {'0': False, '1': True}[applicationLevelStr]
+	except KeyError:
+		throw new cw.net.InvalidFrame("bad applicationLevel");
+	if(!isValidReasonString(reasonString)) {
+		throw new cw.net.InvalidFrame("illegal bytes in reasonString");
+	}
 
-	@classmethod
-	def decode(cls, frameString):
-		"""
-		C{frameString} is a L{StringFragment} that ends with "!".
-		"""
-		reasonString, applicationLevelStr = str(frameString[:-1]).split('|')
-		try:
-			applicationLevel = {'0': False, '1': True}[applicationLevelStr]
-		except KeyError:
-			raise InvalidFrame("bad applicationLevel")
-		if not isValidReasonString(reasonString):
-			raise InvalidFrame("illegal bytes in reasonString")
+	return cls(reasonString, applicationLevel)
+}
 
-		return cls(reasonString, applicationLevel)
 
 
 cw.net.ResetFrame.prototype.encode = function() {
@@ -399,7 +428,7 @@ cw.net.Frame = goog.typedef;
  */
 cw.net.decodeFrameFromServer = function(frameString) {
 	if(!frameString) {
-		throw new InvalidFrame("0-length frame");
+		throw new cw.net.InvalidFrame("0-length frame");
 	}
 
 	var lastByte = frameString.substr(frameString.length - 1, 1);
@@ -420,6 +449,6 @@ cw.net.decodeFrameFromServer = function(frameString) {
 	} else if(lastByte == "K") {
 		return TransportKillFrame.decode(frameString);
 	} else {
-		throw new InvalidFrame("Invalid frame type " + lastByte);
+		throw new cw.net.InvalidFrame("Invalid frame type " + lastByte);
 	}
 }
