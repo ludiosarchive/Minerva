@@ -3,7 +3,6 @@
  * 	that Minerva client needs.
  */
 
-goog.provide('cw.net.HelloProperty');
 goog.provide('cw.net.HelloFrame');
 goog.provide('cw.net.StringFrame');
 goog.provide('cw.net.SeqNumFrame');
@@ -18,6 +17,7 @@ goog.provide('cw.net.decodeFrameFromServer');
 
 goog.require('goog.debug.Error');
 goog.require('goog.json');
+goog.require('goog.array');
 
 
 /**
@@ -34,6 +34,9 @@ cw.net.InvalidFrame.prototype.name = 'cw.net.InvalidFrame';
 
 
 /**
+ * The largest integer that can be represented in JavaScript without
+ * losing integral precision.
+ *
  * @private
  */
 cw.net.LARGEST_INTEGER_ = Math.pow(2, 53);
@@ -60,8 +63,15 @@ cw.net.HelloProperty = {
 }
 
 
-
-FORMAT_XHR, FORMAT_HTMLFILE = 2, 3
+/**
+ * HTTP format for the Minerva transport
+ *
+ * @enum {number}
+ */
+cw.net.HttpFormat = {
+	FORMAT_XHR: 2,
+	FORMAT_HTMLFILE: 3
+}
 
 
 /**
@@ -88,7 +98,7 @@ cw.net.HelloFrame.prototype.toString = function() {
 /**
  * @private
  */
-cw.net.HelloFrame.prototype.makeCompactMapping_() {
+cw.net.HelloFrame.prototype.makeCompactMapping_ = function() {
 	var map = {};
 	for(var k in this.options) {
 		map[cw.net.HelloProperty[k]] = this.options[k];
@@ -96,7 +106,9 @@ cw.net.HelloFrame.prototype.makeCompactMapping_() {
 	return map;
 }
 
-
+/**
+ * @return {string} Encoded frame
+ */
 cw.net.HelloFrame.prototype.encode = function() {
 	return goog.json.serialize(this.makeCompactMapping_()) + 'H';
 }
@@ -114,10 +126,12 @@ cw.net.StringFrame = function(string) {
 
 
 cw.net.StringFrame.prototype.toString = function() {
-	return "StringFrame(" + this.string.replace("'", "\\'") + "')";
+	return "StringFrame(" + this.string.replace(/'/g, "\\'") + "')";
 }
 
-
+/**
+ * @return {string} Encoded frame
+ */
 cw.net.StringFrame.prototype.encode = function() {
 	return self.string + ' ';
 }
@@ -125,7 +139,6 @@ cw.net.StringFrame.prototype.encode = function() {
 
 /**
  * @param {string} frameString A string that ends with " ".
- *
  * @return {!cw.net.StringFrame}
  */
 cw.net.StringFrame.decode = function(frameString) {
@@ -148,7 +161,9 @@ cw.net.SeqNumFrame.prototype.toString = function() {
 	return 'SeqNumFrame(' + this.seqNum + ')';
 }
 
-
+/**
+ * @return {string} Encoded frame
+ */
 cw.net.SeqNumFrame.prototype.encode = function() {
 	return this.seqNum + 'N';
 }
@@ -156,7 +171,6 @@ cw.net.SeqNumFrame.prototype.encode = function() {
 
 /**
  * @param {string} frameString A string that ends with "N".
- *
  * @return {!cw.net.SeqNumFrame}
  */
 cw.net.SeqNumFrame.decode = function(frameString) {
@@ -186,17 +200,18 @@ cw.net.SackFrame.prototype.toString = function() {
 	return 'SackFrame(' + this.ackNumber + ', [' + this.sackList.join(',') + '])';
 }
 
-
+/**
+ * @return {string} Encoded frame
+ */
 cw.net.SackFrame.prototype.encode = function() {
 	return this.sackList.join(',') + '|' + this.ackNumber + 'A';
 }
 
 /**
  * @param {string} frameString A string that ends with "A".
- *
  * @return {!cw.net.SackFrame}
  */
-cw.net.SackFrame.decode = function(frameString):
+cw.net.SackFrame.decode = function(frameString) {
 	var parts = frameString.split('|');
 
 	if(parts.length != 2) {
@@ -239,14 +254,15 @@ cw.net.YouCloseItFrame.prototype.toString = function() {
 	return 'YouCloseItFrame()';
 }
 
-
+/**
+ * @return {string} Encoded frame
+ */
 cw.net.YouCloseItFrame.prototype.encode = function() {
 	return 'Y';
 }
 
 /**
  * @param {string} frameString A string that ends with "Y".
- *
  * @return {!cw.net.YouCloseItFrame}
  */
 cw.net.YouCloseItFrame.decode = function(frameString) {
@@ -272,7 +288,9 @@ cw.net.PaddingFrame.prototype.toString = function() {
 	return 'PaddingFrame(' + this.numBytes + ')';
 }
 
-
+/**
+ * @return {string} Encoded frame
+ */
 cw.net.PaddingFrame.prototype.encode = function() {
 	var p = Array(this.numBytes);
 	p.push('P');
@@ -281,7 +299,6 @@ cw.net.PaddingFrame.prototype.encode = function() {
 
 /**
  * @param {string} frameString A string that ends with "P".
- *
  * @return {!cw.net.PaddingFrame}
  */
 cw.net.PaddingFrame.decode = function(frameString) {
@@ -292,7 +309,7 @@ cw.net.PaddingFrame.decode = function(frameString) {
 
 /**
  * @param {string} reasonString
- * @return {bool} Whether {@code reasonString} is a valid reset reason.
+ * @return {boolean} Whether {@code reasonString} is a valid reset reason.
  */
 cw.net.isValidReasonString = function(reasonString) {
 	// Inclusive range 0x20 through 0x7E is allowed. 
@@ -307,7 +324,7 @@ cw.net.isValidReasonString = function(reasonString) {
  * @param {string} reasonString Why the Stream reset.
 *	ASCII (0x20-0x7E)-only C{str}, max 255 bytes.
  *
- * @param {bool} applicationLevel Whether the reset was application-level
+ * @param {boolean} applicationLevel Whether the reset was application-level
  * 	(not caused by Minerva internals).
  *
  * @constructor
@@ -323,95 +340,93 @@ cw.net.ResetFrame.prototype.toString = function() {
 }
 
 /**
+ * @return {string} Encoded frame
+ */
+cw.net.ResetFrame.prototype.encode = function() {
+	return self.reasonString + '|' + str(int(self.applicationLevel)) + '!'
+
+
+/**
  * @param {string} frameString A string that ends with "!".
- *
  * @return {!cw.net.ResetFrame}
  */
 cw.net.ResetFrame.decode = function(frameString) {
-	reasonString, applicationLevelStr = str(frameString[:-1]).split('|')
-	try:
-		applicationLevel = {'0': False, '1': True}[applicationLevelStr]
-	except KeyError:
-		throw new cw.net.InvalidFrame("bad applicationLevel");
-	if(!isValidReasonString(reasonString)) {
+	var reasonString = frameString.substr(0, frameString.length - 3);
+
+	if(!cw.net.isValidReasonString(reasonString)) {
 		throw new cw.net.InvalidFrame("illegal bytes in reasonString");
 	}
 
-	return cls(reasonString, applicationLevel)
+	// Either "|0" or "|1"
+	var applicationLevelStr = frameString.substr(frameString.length - 2, 2);
+	var applicationLevel = {'|0': false, '|1': false}[applicationLevelStr];
+	if(applicationLevel == null) {
+		throw new cw.net.InvalidFrame("bad applicationLevel");
+	}
+
+	return new cw.net.ResetFrame(reasonString, applicationLevel);
 }
 
 
 
-cw.net.ResetFrame.prototype.encode = function() {
-		return self.reasonString + '|' + str(int(self.applicationLevel)) + '!'
+/**
+ * Transport kill reasons. Keep in sync with minerva/newlink.py
+ *
+ * @enum {string}
+ */
+cw.net.TransportKillReason = {
+	stream_attach_failure: 'stream_attach_failure',
+	acked_unsent_strings: 'acked_unsent_strings',
+	invalid_frame_type_or_arguments: 'invalid_frame_type_or_arguments',
+	frame_corruption: 'frame_corruption'
+}
+
+/**
+ * @type {!Array.<!cw.net.TransportKillReason>}
+ *
+ * @private
+ */
+cw.net.AllTransportKillReasons_ = [
+	cw.net.TransportKillReason.stream_attach_failure,
+	cw.net.TransportKillReason.acked_unsent_strings,
+	cw.net.TransportKillReason.invalid_frame_type_or_arguments,
+	cw.net.TransportKillReason.frame_corruption
+];
 
 
-
-class _TransportKillReason(Constant):
-	__slots__ = ()
-
-
-
-cw.net.TransportKillFrame = function() {
-	__slots__ = ()
-	__metaclass__ = attachClassMarker('_MARKER')
-
-	reason = property(operator.itemgetter(1))
-
-	# Either because no such Stream, or bad credentialsData
-	stream_attach_failure = _TransportKillReason("stream_attach_failure")
-
-	# Peer acked strings that we never sent
-	acked_unsent_strings = _TransportKillReason("acked_unsent_strings")
-
-	# Peer sent frames that we don't understand
-	invalid_frame_type_or_arguments = _TransportKillReason("invalid_frame_type_or_arguments")
-
-	# Peer sent data that could not even be decoded to frames
-	# (only applies to some decoders).
-	frame_corruption = _TransportKillReason("frame_corruption")
-
-	allReasons = (
-		stream_attach_failure, acked_unsent_strings,
-		 invalid_frame_type_or_arguments, frame_corruption)
-
-	stringToConstant = {}
-	constantToString = {}
-	for _c in allReasons:
-		stringToConstant[_c.value] = _c
-		constantToString[_c] = _c.value
-	del _c
-
-
-	def __new__(cls, reason):
-		"""
-		C{reason} is a one of the L{_TransportKillReason}s defined on
-		this class.
-		"""
-		return tuple.__new__(cls, (cls._MARKER, reason))
+/**
+ * @param {!cw.net.TransportKillReason} reason
+ *
+ * @constructor
+ */
+cw.net.TransportKillFrame = function(reason) {
+	this.reason = reason;
+}
 
 
 cw.net.TransportKillFrame.prototype.toString = function() {
-		return '%s(%r)' % (self.__class__.__name__, self[1])
+	return 'TransportKillFrame(' + this.reason + ')';
+}
 
-
-	@classmethod
-	def decode(cls, frameString):
-		"""
-		C{frameString} is a L{StringFragment} that ends with "K".
-		"""
-		string = str(frameString[:-1])
-		try:
-			reason = cls.stringToConstant[string]
-		except KeyError:
-			raise InvalidFrame("unknown kill reason %r" % string)
-
-		return cls(reason)
-
-
+/**
+ * @return {string} Encoded frame
+ */
 cw.net.TransportKillFrame.prototype.encode = function() {
-		return self.constantToString[self.reason] + 'K'
+	return this.reason + 'K';
+}
 
+/**
+ * @param {string} frameString A string that ends with "K".
+ * @return {!cw.net.TransportKillFrame}
+ */
+cw.net.TransportKillFrame.decode = function(frameString) {
+	var reason = frameString.substr(0, frameString.length - 1);
+	if(!goog.array.contains(cw.net.AllTransportKillReasons_, reason)) {
+		throw new cw.net.InvalidFrame("unknown kill reason: " + string)
+	}
+
+	return new cw.net.TransportKillFrame(reason);
+}
 
 
 /**
@@ -435,19 +450,19 @@ cw.net.decodeFrameFromServer = function(frameString) {
 
 	// Keep this ordered by most-probable first
 	if (lastByte == " ") {
-		return StringFrame.decode(frameString);
+		return cw.net.StringFrame.decode(frameString);
 	} else if(lastByte == "A") {
-		return SackFrame.decode(frameString);
+		return cw.net.SackFrame.decode(frameString);
 	} else if(lastByte == "N") {
-		return SeqNumFrame.decode(frameString);
+		return cw.net.SeqNumFrame.decode(frameString);
 	} else if(lastByte == "Y") {
-		return YouCloseItFrame.decode(frameString);
+		return cw.net.YouCloseItFrame.decode(frameString);
 	} else if(lastByte == "P") {
-		return PaddingFrame.decode(frameString);
+		return cw.net.PaddingFrame.decode(frameString);
 	} else if(lastByte == "!") {
-		return ResetFrame.decode(frameString);
+		return cw.net.ResetFrame.decode(frameString);
 	} else if(lastByte == "K") {
-		return TransportKillFrame.decode(frameString);
+		return cw.net.TransportKillFrame.decode(frameString);
 	} else {
 		throw new cw.net.InvalidFrame("Invalid frame type " + lastByte);
 	}
