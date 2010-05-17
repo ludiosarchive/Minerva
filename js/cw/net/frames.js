@@ -132,7 +132,7 @@ cw.net.StringFrame.prototype.toString = function() {
  * @return {string} Encoded frame
  */
 cw.net.StringFrame.prototype.encode = function() {
-	return self.string + ' ';
+	return this.string + ' ';
 }
 
 
