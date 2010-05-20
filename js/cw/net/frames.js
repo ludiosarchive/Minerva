@@ -17,6 +17,7 @@ goog.provide('cw.net.decodeFrameFromServer');
 
 goog.require('goog.debug.Error');
 goog.require('goog.json');
+goog.require('cw.repr');
 
 
 /**
@@ -90,7 +91,7 @@ cw.net.HelloFrame = function(options) {
 //		return True if type(self) != type(other) else self.__dict__ != other.__dict__
 
 
-cw.net.HelloFrame.prototype.toString = function() {
+cw.net.HelloFrame.prototype.__repr__ = function() {
 	return 'HelloFrame(' + goog.json.serialize(this.options) + ')';
 }
 
@@ -124,8 +125,8 @@ cw.net.StringFrame = function(string) {
 }
 
 
-cw.net.StringFrame.prototype.toString = function() {
-	return "StringFrame(" + this.string.replace(/'/g, "\\'") + "')";
+cw.net.StringFrame.prototype.__repr__ = function() {
+	return "StringFrame(" + cw.repr.repr(this.string) + "')";
 }
 
 /**
@@ -156,7 +157,7 @@ cw.net.SeqNumFrame = function(seqNum) {
 }
 
 
-cw.net.SeqNumFrame.prototype.toString = function() {
+cw.net.SeqNumFrame.prototype.__repr__ = function() {
 	return 'SeqNumFrame(' + this.seqNum + ')';
 }
 
@@ -195,7 +196,7 @@ cw.net.SackFrame = function(ackNumber, sackList) {
 }
 
 
-cw.net.SackFrame.prototype.toString = function() {
+cw.net.SackFrame.prototype.__repr__ = function() {
 	return 'SackFrame(' + this.ackNumber + ', [' + this.sackList.join(',') + '])';
 }
 
@@ -249,7 +250,7 @@ cw.net.YouCloseItFrame = function() {
 }
 
 
-cw.net.YouCloseItFrame.prototype.toString = function() {
+cw.net.YouCloseItFrame.prototype.__repr__ = function() {
 	return 'YouCloseItFrame()';
 }
 
@@ -283,7 +284,7 @@ cw.net.PaddingFrame = function(numBytes) {
 }
 
 
-cw.net.PaddingFrame.prototype.toString = function() {
+cw.net.PaddingFrame.prototype.__repr__ = function() {
 	return 'PaddingFrame(' + this.numBytes + ')';
 }
 
@@ -334,8 +335,8 @@ cw.net.ResetFrame = function(reasonString, applicationLevel) {
 }
 
 
-cw.net.ResetFrame.prototype.toString = function() {
-	return "ResetFrame('" + this.reasonString.replace(/'/g, "\\'") + "', " + this.applicationLevel + ")";
+cw.net.ResetFrame.prototype.__repr__ = function() {
+	return "ResetFrame('" + cw.repr.repr(this.reasonString) + "', " + this.applicationLevel + ")";
 }
 
 /**
@@ -404,7 +405,7 @@ cw.net.TransportKillFrame = function(reason) {
 }
 
 
-cw.net.TransportKillFrame.prototype.toString = function() {
+cw.net.TransportKillFrame.prototype.__repr__ = function() {
 	return 'TransportKillFrame(' + this.reason + ')';
 }
 
