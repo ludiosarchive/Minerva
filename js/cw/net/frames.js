@@ -17,6 +17,7 @@ goog.provide('cw.net.decodeFrameFromServer');
 goog.require('goog.debug.Error');
 goog.require('goog.json');
 goog.require('cw.repr');
+goog.require('cw.eq');
 
 
 /**
@@ -83,12 +84,17 @@ cw.net.HelloFrame = function(options) {
 	this.options = options;
 }
 
-//	def __eq__(self, other):
-//		return False if type(self) != type(other) else self.__dict__ == other.__dict__
-//
-//
-//	def __ne__(self, other):
-//		return True if type(self) != type(other) else self.__dict__ != other.__dict__
+/**
+ * Test two frames for equality.
+ * @param {*} other
+ * @param {!Array.<string>} messages
+ * @return {boolean}
+ */
+cw.net.HelloFrame.prototype.equals = function(other, messages) {
+	return (
+		other instanceof cw.net.HelloFrame &&
+		cw.eq.equals(this.options, other.options, messages));
+}
 
 /**
  * @param {!Array.<string>} sb
@@ -129,6 +135,18 @@ cw.net.StringFrame = function(string) {
 }
 
 /**
+ * Test two frames for equality.
+ * @param {*} other
+ * @param {!Array.<string>} messages
+ * @return {boolean}
+ */
+cw.net.StringFrame.prototype.equals = function(other, messages) {
+	return (
+		other instanceof cw.net.StringFrame &&
+		this.string == other.string);
+}
+
+/**
  * @param {!Array.<string>} sb
  */
 cw.net.StringFrame.prototype.__reprToPieces__ = function(sb) {
@@ -161,6 +179,18 @@ cw.net.StringFrame.decode = function(frameString) {
  */
 cw.net.SeqNumFrame = function(seqNum) {
 	this.seqNum = seqNum;
+}
+
+/**
+ * Test two frames for equality.
+ * @param {*} other
+ * @param {!Array.<string>} messages
+ * @return {boolean}
+ */
+cw.net.SeqNumFrame.prototype.equals = function(other, messages) {
+	return (
+		other instanceof cw.net.SeqNumFrame &&
+		this.seqNum == other.seqNum);
 }
 
 /**
@@ -201,6 +231,19 @@ cw.net.SeqNumFrame.decode = function(frameString) {
 cw.net.SackFrame = function(ackNumber, sackList) {
 	this.ackNumber = ackNumber;
 	this.sackList = sackList;
+}
+
+/**
+ * Test two frames for equality.
+ * @param {*} other
+ * @param {!Array.<string>} messages
+ * @return {boolean}
+ */
+cw.net.SackFrame.prototype.equals = function(other, messages) {
+	return (
+		other instanceof cw.net.SackFrame &&
+		this.ackNumber == other.ackNumber &&
+		cw.eq.equals(this.sackList, other.sackList, messages));
 }
 
 /**
@@ -267,6 +310,16 @@ cw.net.YouCloseItFrame.prototype.__reprToPieces__ = function(sb) {
 }
 
 /**
+ * Test two frames for equality.
+ * @param {*} other
+ * @param {!Array.<string>} messages
+ * @return {boolean}
+ */
+cw.net.YouCloseItFrame.prototype.equals = function(other, messages) {
+	return (other instanceof cw.net.YouCloseItFrame);
+}
+
+/**
  * @return {string} Encoded frame
  */
 cw.net.YouCloseItFrame.prototype.encode = function() {
@@ -292,6 +345,18 @@ cw.net.YouCloseItFrame.decode = function(frameString) {
  */
 cw.net.PaddingFrame = function(numBytes) {
 	this.numBytes = numBytes;
+}
+
+/**
+ * Test two frames for equality.
+ * @param {*} other
+ * @param {!Array.<string>} messages
+ * @return {boolean}
+ */
+cw.net.PaddingFrame.prototype.equals = function(other, messages) {
+	return (
+		other instanceof cw.net.PaddingFrame &&
+		this.numBytes == other.numBytes);
 }
 
 /**
@@ -344,6 +409,19 @@ cw.net.isValidReasonString_ = function(reasonString) {
 cw.net.ResetFrame = function(reasonString, applicationLevel) {
 	this.reasonString = reasonString;
 	this.applicationLevel = applicationLevel;
+}
+
+/**
+ * Test two frames for equality.
+ * @param {*} other
+ * @param {!Array.<string>} messages
+ * @return {boolean}
+ */
+cw.net.ResetFrame.prototype.equals = function(other, messages) {
+	return (
+		other instanceof cw.net.ResetFrame &&
+		this.reasonString == other.reasonString &&
+		this.applicationLevel == other.applicationLevel);
 }
 
 /**
@@ -418,6 +496,18 @@ cw.net.AllTransportKillReasons_ = {
  */
 cw.net.TransportKillFrame = function(reason) {
 	this.reason = reason;
+}
+
+/**
+ * Test two frames for equality.
+ * @param {*} other
+ * @param {!Array.<string>} messages
+ * @return {boolean}
+ */
+cw.net.TransportKillFrame.prototype.equals = function(other, messages) {
+	return (
+		other instanceof cw.net.TransportKillFrame &&
+		this.reason == other.reason);
 }
 
 /**
