@@ -54,30 +54,17 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 
 	function test_repr(self) {
 		self.assertEqual('new HelloFrame({"a": 1})', repr(new HelloFrame({'a': 1})))
-
 	},
 
 	function test_encode(self) {
-		hello = new HelloFrame(dict(transportNumber=0))
+		hello = new HelloFrame({transportNumber: 0})
 		self.assertEqual('{"tnum":0}' + 'H', hello.encode())
 
 	},
 
-	function test_encodeDecodeEquality(self) {
-		// Need to make some options explicit for equality to work
-		hello = _makenew HelloFrame(dict(
-			httpFormat=FORMAT_XHR,
-			credentialsData={},
-			streamingResponse=true, // for equality, need bool instead of int
-			needPaddingBytes=0))
-		encodedDecodedHello = HelloFrame.decode(sf(hello.encode()))
-		self.assertEqual(hello, encodedDecodedHello)
-
-	},
-
 	function test_encodeFailed(self) {
-		hello = new HelloFrame(dict(aMadeUpKey=0))
-		self.assertRaises(CannotEncode, lambda: hello.encode())
+		hello = new HelloFrame({aMadeUpKey: 0})
+		self.assertThrows(Error, function() { hello.encode(); })
 	}
 );
 
@@ -138,9 +125,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SeqNumFrameTests').methods(
 
 	function test_decodeFailed(self) {
 		for s in [String(-1) + 'N', String(-Math.pow(2, 53)) + 'N', String(Math.pow(2, 53) + 1) + 'N', ' ', goog.string.repeat('0', 1024)]:
-			self.assertRaises(
+			self.assertThrows(
 				InvalidFrame,
-				lambda: SeqNumFrame.decode(s))
+				function() { SeqNumFrame.decode(s); })
 	},
 
 	function test_encode(self) {
@@ -185,26 +172,26 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SackFrameTests').methods(
 	function test_decodeFailedAckNumberInvalid(self) {
 		goog.array.forEach([Math.pow(2, 53)+1, -1, 0.5, 1.5], function(badNum) {
 			var s = '1,4|' + badNum + 'A'
-			self.assertRaises(
+			self.assertThrows(
 				InvalidFrame,
-				lambda: SackFrame.decode(s))
+				function() { SackFrame.decode(s); })
 		}
 	},
 
 	function test_decodeFailedOneSackNumberInvalid(self) {
 		goog.array.forEach([Math.pow(2, 53)+1, -1, 0.5, 1.5], function(badNum) {
 			var s = '1,' + badNum + '|4A'
-			self.assertRaises(
+			self.assertThrows(
 				InvalidFrame,
-				lambda: SackFrame.decode(s))
+				function() { SackFrame.decode(s); })
 		})
 	},
 
 	function test_decodeFailedTooManyPipes(self) {
 		var s = '||4A'
-		self.assertRaises(
+		self.assertThrows(
 			InvalidFrame,
-			lambda: SackFrame.decode(s))
+			function() { SackFrame.decode(s); })
 	},
 
 	function test_encode(self) {
@@ -234,9 +221,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'YouCloseItFrameTests').methods
 
 	function test_decodeFailed(self) {
 		var s = 'extra stuff' + 'Y'
-		self.assertRaises(
+		self.assertThrows(
 			InvalidFrame,
-			lambda: YouCloseItFrame.decode(s))
+			function() { YouCloseItFrame.decode(s); })
 	},
 
 	function test_encode(self) {
@@ -307,16 +294,16 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'ResetFrameTests').methods(
 
 	function test_decodeFailedBadReason(self) {
 		var s = '\x7freason|0!'
-		self.assertRaises(
+		self.assertThrows(
 			InvalidFrame,
-			lambda: ResetFrame.decode(s))
+			function() { ResetFrame.decode(s); })
 
 	},
 	function test_decodeFailedBadBoolean(self) {
 		var s = 'reason|2!'
-		self.assertRaises(
+		self.assertThrows(
 			InvalidFrame,
-			lambda: ResetFrame.decode(s))
+			function() { ResetFrame.decode(s); })
 	}
 );
 
@@ -358,9 +345,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'TransportKillFrameTests').meth
 
 	function test_decodeFailed(self) {
 		var s = 'not_a_reasonK'
-		self.assertRaises(
+		self.assertThrows(
 			InvalidFrame,
-			lambda: TransportKillFrame.decode(s))
+			function() { TransportKillFrame.decode(s); })
 	}
 );
 
