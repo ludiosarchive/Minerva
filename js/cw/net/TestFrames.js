@@ -145,7 +145,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SeqNumFrameTests').methods(
 		];
 
 		goog.array.forEach(strings, function(s) {
-			cw.UnitTest.logger.info('SeqNumFrameTests.test_decodeFailed: testing string ' + cw.repr.repr(s));
+			cw.UnitTest.logger.info('SeqNumFrameTests.test_decodeFailed: testing string ' + repr(s));
 			self.assertThrows(
 				InvalidFrame,
 				function() { SeqNumFrame.decode(s); });
@@ -313,9 +313,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'ResetFrameTests').methods(
 				var s = reasonString + '|' + String(Number(applicationLevel)) + '!';
 				cw.UnitTest.logger.info(
 					'ResetFrameTests.test_decode: testing '+
-					'applicationLevel=' + cw.repr.repr(applicationLevel) +
-					', reasonString=' + cw.repr.repr(reasonString) +
-					', s=' + cw.repr.repr(s));
+					'applicationLevel=' + repr(applicationLevel) +
+					', reasonString=' + repr(reasonString) +
+					', s=' + repr(s));
 				self.assertEqual(
 					new ResetFrame(reasonString, applicationLevel),
 					ResetFrame.decode(s));
