@@ -6,6 +6,7 @@
 goog.provide('cw.net.ResponseTextDecoder');
 goog.provide('cw.net.ParseError');
 
+goog.require('cw.string');
 goog.require('cw.net.XHRLike');
 goog.require('goog.debug.Logger');
 goog.require('goog.debug.Error');
@@ -171,7 +172,7 @@ cw.net.ResponseTextDecoder.prototype.getNewStrings_ = function(responseTextLengt
 			var extractedLengthStr = text.substr(this.offset_, colon-this.offset_);
 			// Accept only positive integers with no leading zero.
 			// TODO: maybe disable this check for long-time user agents with no problems
-			if(!/^[1-9]\d*$/.test(extractedLengthStr)) {
+			if(!cw.string.strictPositiveIntegerRe.test(extractedLengthStr)) {
 				throw new cw.net.ParseError("corrupt length: " + extractedLengthStr);
 			}
 			// TODO: check if `+extractedLengthStr' is faster; use it if it is.
