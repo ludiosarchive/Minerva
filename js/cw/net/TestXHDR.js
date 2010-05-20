@@ -109,7 +109,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'GetXHRObjectTests').methods(
 	 */
 	function test_getXHRObject(self) {
 		var object = cw.net.getXHRObject();
-		self.assert(object, 'object must be truthy');
+		self.assertTrue(object, 'object must be truthy');
 	}
 );
 
