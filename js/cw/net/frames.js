@@ -124,6 +124,8 @@ cw.net.HelloFrame.prototype.encode = function() {
 	return goog.json.serialize(this.makeCompactMapping_()) + 'H';
 }
 
+// TODO: .decode, because we'll need to decode {HelloFrame}s in the unit tests.
+
 
 
 /**
@@ -547,6 +549,36 @@ cw.net.TransportKillFrame.decode = function(frameString) {
  * 	cw.net.ResetFrame|cw.net.TransportKillFrame)}
  */
 cw.net.Frame = goog.typedef;
+
+
+/**
+ * Decode a frame received from a Minerva client.
+ *
+ * @param {string} frameString
+ * @return {!cw.net.Frame} Decoded frame
+ */
+cw.net.decodeFrameFromClient = function(frameString) {
+	if(!frameString) {
+		throw new cw.net.InvalidFrame("0-length frame");
+	}
+
+	var lastByte = frameString.substr(frameString.length - 1, 1);
+
+	// Keep this ordered by most-probable first
+	if (lastByte == " ") {
+		return cw.net.StringFrame.decode(frameString);
+	} else if(lastByte == "A") {
+		return cw.net.SackFrame.decode(frameString);
+	} else if(lastByte == "N") {
+		return cw.net.SeqNumFrame.decode(frameString);
+	} else if(lastByte == "H") {
+		return cw.net.HelloFrame.decode(frameString);
+	} else if(lastByte == "!") {
+		return cw.net.ResetFrame.decode(frameString);
+	} else {
+		throw new cw.net.InvalidFrame("Invalid frame type " + lastByte);
+	}
+}
 
 
 /**
