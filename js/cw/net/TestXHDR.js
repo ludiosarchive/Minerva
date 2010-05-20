@@ -625,7 +625,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackTests').metho
 		self.xhr = new cw.net.UsableXHR(self.clock, function(){ return self.mock; });
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
-			calls.push(arguments);
+			calls.push([obj, position, totalSize]);
 		}
 		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
 		self.mock.readyState = 3;
@@ -649,7 +649,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackTests').metho
 		self.xhr = new cw.net.UsableXHR(self.clock, function(){ return self.mock; });
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
-			calls.push(arguments);
+			calls.push([obj, position, totalSize]);
 		}
 		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
 		self.mock.readyState = 3;
@@ -677,7 +677,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackTests').metho
 		self.xhr = new cw.net.UsableXHR(self.clock, function(){ return self.mock; });
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
-			calls.push(arguments);
+			calls.push([obj, position, totalSize]);
 		}
 		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
 		self.mock.readyState = 3;
@@ -703,7 +703,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackTests').metho
 		self.xhr = new cw.net.UsableXHR(self.clock, function(){ return self.mock; });
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
-			calls.push(arguments);
+			calls.push([obj, position, totalSize]);
 		}
 		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
 		self.mock.readyState = 3;
@@ -724,7 +724,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackTests').metho
 		self.xhr = new cw.net.UsableXHR(self.clock, function(){ return self.mock; });
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
-			calls.push(arguments);
+			calls.push([obj, position, totalSize]);
 		}
 		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
 		self.mock.readyState = 3;
@@ -773,7 +773,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackOperaWorkarou
 		self.xhr = new cw.net.UsableXHR(self.clock, function(){ return self.mock; });
 		var calls = []
 		function progressCallback(obj, position, totalSize) {
-			calls.push(arguments);
+			calls.push([obj, position, totalSize]);
 		}
 		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
 		self.mock.readyState = 3;
@@ -796,7 +796,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackOperaWorkarou
 		self.xhr = new cw.net.UsableXHR(self.clock, function(){ return self.mock; });
 		var calls = []
 		function progressCallback(obj, position, totalSize) {
-			calls.push(arguments);
+			calls.push([obj, position, totalSize]);
 		}
 		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
 
@@ -854,7 +854,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XDRProgressCallbackTests').metho
 		self.xhr = new cw.net.UsableXDR(self.clock, function(){return self.mock});
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
-			calls.push(arguments);
+			calls.push([obj, position, totalSize]);
 		}
 		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
 		// note: no usage of readyState, despite its existence
@@ -878,7 +878,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XDRProgressCallbackTests').metho
 		self.xhr = new cw.net.UsableXDR(self.clock, function(){return self.mock});
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
-			calls.push(arguments);
+			calls.push([obj, position, totalSize]);
 		}
 		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
 		// note: no usage of readyState, despite its existence
