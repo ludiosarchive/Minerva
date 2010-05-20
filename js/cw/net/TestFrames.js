@@ -121,7 +121,6 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SeqNumFrameTests').methods(
 	function test_decode(self) {
 		var seqNumStrs = [
 			String(0),
-			goog.string.repeat('0', 1024),
 			String(1),
 			String(Math.pow(2, 32)),
 			String(Math.pow(2, 53))
@@ -140,6 +139,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SeqNumFrameTests').methods(
 			String(-1) + 'N',
 			String(-Math.pow(2, 53)) + 'N',
 			String(cw.net.LARGER_THAN_LARGEST_INTEGER_) + 'N',
+			'00' + 'N',
+			goog.string.repeat('0', 1024),
 			' '
 		]
 
@@ -169,7 +170,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SackFrameTests').methods(
 
 	function test_publicAttr(self) {
 		self.assertEqual(2, new SackFrame(2, [4, 5]).ackNumber)
-		self.assertEqual((4, 5), new SackFrame(2, [4, 5]).sackList)
+		self.assertEqual([4, 5], new SackFrame(2, [4, 5]).sackList)
 	},
 
 	function test_repr(self) {
@@ -278,7 +279,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'PaddingFrameTests').methods(
 	},
 
 	function test_encode(self) {
-		self.assertEqual(' ' * 5 + 'P', new PaddingFrame(5).encode())
+		self.assertEqual(goog.string.repeat(' ', 5) + 'P', new PaddingFrame(5).encode())
 		self.assertEqual('P', new PaddingFrame(0).encode())
 	}
 );

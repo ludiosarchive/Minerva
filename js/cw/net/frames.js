@@ -16,6 +16,7 @@ goog.provide('cw.net.decodeFrameFromServer');
 
 goog.require('goog.debug.Error');
 goog.require('goog.json');
+goog.require('cw.string');
 goog.require('cw.repr');
 goog.require('cw.eq');
 
@@ -222,10 +223,11 @@ cw.net.SeqNumFrame.prototype.encode = function() {
  * @return {!cw.net.SeqNumFrame}
  */
 cw.net.SeqNumFrame.decode = function(frameString) {
-	// Not necessary to remove "N" before parseInt
-	var seqNum = parseInt(frameString, 10);
-	if(seqNum < 0 || seqNum > cw.net.LARGEST_INTEGER_ || isNaN(seqNum)) {
-		throw new cw.net.InvalidFrame("bad seqNum " + seqNum);
+	var seqNum = cw.string.strToNonNegLimit(
+		cw.string.withoutLast(frameString, 1),
+		cw.net.LARGEST_INTEGER_);
+	if(seqNum == null) {
+		throw new cw.net.InvalidFrame("bad seqNum");
 	}
 	return new cw.net.SeqNumFrame(seqNum);
 }
@@ -282,21 +284,25 @@ cw.net.SackFrame.decode = function(frameString) {
 		throw new cw.net.InvalidFrame("expected 1 split");
 	}
 
-	// Not necessary to remove "A" before parseInt
-	var ackNumber = parseInt(parts[1], 10);
+	var ackNumber = cw.string.strToNonNegLimit(
+		cw.string.withoutLast(parts[1], 1),
+		cw.net.LARGEST_INTEGER_);
 
-	if(ackNumber < 0 || ackNumber > cw.net.LARGEST_INTEGER_ || isNaN(ackNumber)) {
-		throw new cw.net.InvalidFrame("bad ackNumber " + ackNumber);
+	if(ackNumber == null) {
+		throw new cw.net.InvalidFrame("bad ackNumber");
 	}
 
-	var sackListStrs = parts[0].split(',');
 	var sackList = [];
-	for(var i=0, len=sackListStrs.length; i < len; i++) {
-		var sackNum = sackListStrs[i];
-		if(sackNum < 0 || sackNum > cw.net.LARGEST_INTEGER_ || isNaN(sackNum)) {
-			throw new cw.net.InvalidFrame("bad sackNum " + sackNum);
+
+	if(parts[0]) {
+		var sackListStrs = parts[0].split(',');
+		for(var i=0, len=sackListStrs.length; i < len; i++) {
+			var sackNum = cw.string.strToNonNegLimit(sackListStrs[i], cw.net.LARGEST_INTEGER_);
+			if(sackNum == null) {
+				throw new cw.net.InvalidFrame("bad sackNum");
+			}
+			sackList.push(sackNum);
 		}
-		sackList.push(parseInt(sackNum, 10));
 	}
 
 	return new cw.net.SackFrame(ackNumber, sackList);
