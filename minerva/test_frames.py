@@ -63,7 +63,7 @@ class HelloFrameTests(unittest.TestCase):
 
 	def test_decode(self):
 		s = _makeHelloFrame().encode()
-		self	.assertEqual(
+		self.assertEqual(
 			HelloFrame(dict(
 				transportNumber=0,
 				requestNewStream=True,
@@ -228,14 +228,14 @@ class StringFrameTests(unittest.TestCase):
 
 	def test_decode(self):
 		s = '\x00unchecked\xfftext' + ' '
-		self	.assertEqual(
+		self.assertEqual(
 			StringFrame(StringFragment(s, 0, len(s) - 1)),
 			StringFrame.decode(sf(s)))
 
 
 	def test_encode(self):
 		s = '\x00unchecked\xfftext'
-		self	.assertEqual(s + ' ', StringFrame(sf(s)).encode())
+		self.assertEqual(s + ' ', StringFrame(sf(s)).encode())
 
 
 
@@ -258,22 +258,22 @@ class SeqNumFrameTests(unittest.TestCase):
 	def test_decode(self):
 		for seqNum in (0, 1, 2**32, 2**53):
 			s = str(seqNum) + 'N'
-			self	.assertEqual(
+			self.assertEqual(
 				SeqNumFrame(seqNum),
 				SeqNumFrame.decode(sf(s)))
 
 
 	def test_decodeFailed(self):
-		for s in (str(-1) + 'N', str(-2**53) + 'N', str(2**53 + 1) + 'N', ' ', '0' * 1024):
-			self	.assertRaises(
+		for s in (str(-1) + 'N', str(-2**53) + 'N', str(2**53 + 1) + 'N', ' ', '00' + 'N', '0' * 1024):
+			self.assertRaises(
 				InvalidFrame,
 				lambda: SeqNumFrame.decode(sf(s)))
 
 
 	def test_encode(self):
-		self	.assertEqual('2N', SeqNumFrame(2).encode())
-		self	.assertEqual('0N', SeqNumFrame(0).encode())
-		self	.assertEqual('%dN' % 2**53, SeqNumFrame(2**53).encode())
+		self.assertEqual('2N', SeqNumFrame(2).encode())
+		self.assertEqual('0N', SeqNumFrame(0).encode())
+		self.assertEqual('%dN' % 2**53, SeqNumFrame(2**53).encode())
 
 
 
@@ -296,14 +296,14 @@ class SackFrameTests(unittest.TestCase):
 
 	def test_decode(self):
 		s = '1,4|%sA' % (2**53,)
-		self	.assertEqual(
+		self.assertEqual(
 			SackFrame(2**53, (1, 4)),
 			SackFrame.decode(sf(s)))
 
 
 	def test_decodeNoSackNumbers(self):
 		s = '|%sA' % (2**53,)
-		self	.assertEqual(
+		self.assertEqual(
 			SackFrame(2**53, ()),
 			SackFrame.decode(sf(s)))
 
@@ -311,7 +311,7 @@ class SackFrameTests(unittest.TestCase):
 	def test_decodeFailedAckNumberInvalid(self):
 		for badNum in (2**53+1, -1, 0.5, 1.5):
 			s = '1,4|%sA' % (badNum,)
-			self	.assertRaises(
+			self.assertRaises(
 				InvalidFrame,
 				lambda: SackFrame.decode(sf(s)))
 
@@ -319,22 +319,22 @@ class SackFrameTests(unittest.TestCase):
 	def test_decodeFailedOneSackNumberInvalid(self):
 		for badNum in (2**53+1, -1, 0.5, 1.5):
 			s = '1,%s|4A' % (badNum,)
-			self	.assertRaises(
+			self.assertRaises(
 				InvalidFrame,
 				lambda: SackFrame.decode(sf(s)))
 
 
 	def test_decodeFailedTooManyPipes(self):
 		s = '||4A'
-		self	.assertRaises(
+		self.assertRaises(
 			InvalidFrame,
 			lambda: SackFrame.decode(sf(s)))
 
 
 	def test_encode(self):
-		self	.assertEqual('1,4|2A', SackFrame(2, (1, 4)).encode())
-		self	.assertEqual('4|2A', SackFrame(2, (4,)).encode())
-		self	.assertEqual('|2A', SackFrame(2, ()).encode())
+		self.assertEqual('1,4|2A', SackFrame(2, (1, 4)).encode())
+		self.assertEqual('4|2A', SackFrame(2, (4,)).encode())
+		self.assertEqual('|2A', SackFrame(2, ()).encode())
 
 
 
@@ -351,20 +351,20 @@ class YouCloseItFrameTests(unittest.TestCase):
 
 	def test_decode(self):
 		s = 'Y'
-		self	.assertEqual(
+		self.assertEqual(
 			YouCloseItFrame(),
 			YouCloseItFrame.decode(sf(s)))
 
 
 	def test_decodeFailed(self):
 		s = 'extra stuff' + 'Y'
-		self	.assertRaises(
+		self.assertRaises(
 			InvalidFrame,
 			lambda: YouCloseItFrame.decode(sf(s)))
 
 
 	def test_encode(self):
-		self	.assertEqual('Y', YouCloseItFrame().encode())
+		self.assertEqual('Y', YouCloseItFrame().encode())
 
 
 
@@ -386,14 +386,14 @@ class PaddingFrameTests(unittest.TestCase):
 	def test_decode(self):
 		s = 'completely ignored stuff' + 'P'
 		n = len(s) - 1
-		self	.assertEqual(
+		self.assertEqual(
 			PaddingFrame(n),
 			PaddingFrame.decode(sf(s)))
 
 
 	def test_encode(self):
-		self	.assertEqual(' ' * 5 + 'P', PaddingFrame(5).encode())
-		self	.assertEqual('P', PaddingFrame(0).encode())
+		self.assertEqual(' ' * 5 + 'P', PaddingFrame(5).encode())
+		self.assertEqual('P', PaddingFrame(0).encode())
 
 
 
@@ -415,29 +415,29 @@ class ResetFrameTests(unittest.TestCase):
 
 
 	def test_encode(self):
-		self	.assertEqual('the reason|0!', ResetFrame("the reason", False).encode())
-		self	.assertEqual('the reason|1!', ResetFrame("the reason", True).encode())
+		self.assertEqual('the reason|0!', ResetFrame("the reason", False).encode())
+		self.assertEqual('the reason|1!', ResetFrame("the reason", True).encode())
 
 
 	def test_decode(self):
 		for applicationLevel in (True, False):
 			for reasonString in ('the reason', 'the | | reason', '', '|', '||'):
 				s = reasonString + '|' + str(int(applicationLevel)) + '!'
-				self	.assertEqual(
+				self.assertEqual(
 					ResetFrame(reasonString, applicationLevel),
 					ResetFrame.decode(sf(s)))
 
 
 	def test_decodeFailedBadReason(self):
 		s = '\x7freason|0!'
-		self	.assertRaises(
+		self.assertRaises(
 			InvalidFrame,
 			lambda: ResetFrame.decode(sf(s)))
 
 
 	def test_decodeFailedBadBoolean(self):
 		s = 'reason|2!'
-		self	.assertRaises(
+		self.assertRaises(
 			InvalidFrame,
 			lambda: ResetFrame.decode(sf(s)))
 
@@ -469,7 +469,7 @@ class TransportKillFrameTests(unittest.TestCase):
 
 
 	def test_encode(self):
-		self	.assertEqual('frame_corruptionK', TransportKillFrame(tk.frame_corruption).encode())
+		self.assertEqual('frame_corruptionK', TransportKillFrame(tk.frame_corruption).encode())
 
 
 	def test_decode(self):
@@ -482,7 +482,7 @@ class TransportKillFrameTests(unittest.TestCase):
 
 	def test_decodeFailed(self):
 		s = 'not_a_reasonK'
-		self	.assertRaises(
+		self.assertRaises(
 			InvalidFrame,
 			lambda: TransportKillFrame.decode(sf(s)))
 
