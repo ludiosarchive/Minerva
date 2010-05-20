@@ -12,7 +12,6 @@ goog.provide('cw.net.PaddingFrame');
 goog.provide('cw.net.ResetFrame');
 goog.provide('cw.net.TransportKillFrame');
 goog.provide('cw.net.InvalidFrame');
-goog.provide('cw.net.HelloProperty');
 goog.provide('cw.net.decodeFrameFromServer');
 
 goog.require('goog.debug.Error');
@@ -46,8 +45,9 @@ cw.net.LARGEST_INTEGER_ = Math.pow(2, 53);
  * Hello frame properties. Keep in sync with minerva/newlink.py
  *
  * @enum {string}
+ * @private
  */
-cw.net.HelloProperty = {
+cw.net.HelloProperty_ = {
 	transportNumber: 'tnum',
 	protocolVersion: 'ver',
 	httpFormat: 'format',
@@ -67,8 +67,9 @@ cw.net.HelloProperty = {
  * HTTP format for the Minerva transport
  *
  * @enum {number}
+ * @private
  */
-cw.net.HttpFormat = {
+cw.net.HttpFormat_ = {
 	FORMAT_XHR: 2,
 	FORMAT_HTMLFILE: 3
 }
@@ -76,7 +77,6 @@ cw.net.HttpFormat = {
 
 /**
  * @param {!Object.<string, *>} options
- *
  * @constructor
  */
 cw.net.HelloFrame = function(options) {
@@ -92,16 +92,17 @@ cw.net.HelloFrame = function(options) {
 
 
 cw.net.HelloFrame.prototype.__repr__ = function() {
-	return 'HelloFrame(' + goog.json.serialize(this.options) + ')';
+	return 'new HelloFrame(' + goog.json.serialize(this.options) + ')';
 }
 
 /**
+ * @return {!Object.<string, *>}
  * @private
  */
 cw.net.HelloFrame.prototype.makeCompactMapping_ = function() {
 	var map = {};
 	for(var k in this.options) {
-		map[cw.net.HelloProperty[k]] = this.options[k];
+		map[cw.net.HelloProperty_[k]] = this.options[k];
 	}
 	return map;
 }
@@ -117,16 +118,17 @@ cw.net.HelloFrame.prototype.encode = function() {
 
 /**
  * @param {string} string
- *
  * @constructor
  */
 cw.net.StringFrame = function(string) {
 	this.string = string;
 }
 
-
+/**
+ * @return {string} Frame representation for debugging
+ */
 cw.net.StringFrame.prototype.__repr__ = function() {
-	return "StringFrame(" + cw.repr.repr(this.string) + "')";
+	return "new StringFrame(" + cw.repr.repr(this.string) + "')";
 }
 
 /**
@@ -149,16 +151,17 @@ cw.net.StringFrame.decode = function(frameString) {
 
 /**
  * @param {number} seqNum
- *
  * @constructor
  */
 cw.net.SeqNumFrame = function(seqNum) {
 	this.seqNum = seqNum;
 }
 
-
+/**
+ * @return {string} Frame representation for debugging
+ */
 cw.net.SeqNumFrame.prototype.__repr__ = function() {
-	return 'SeqNumFrame(' + this.seqNum + ')';
+	return 'new SeqNumFrame(' + this.seqNum + ')';
 }
 
 /**
@@ -187,7 +190,6 @@ cw.net.SeqNumFrame.decode = function(frameString) {
 /**
  * @param {number} ackNumber
  * @param {!Array.<number>} sackList
- *
  * @constructor
  */
 cw.net.SackFrame = function(ackNumber, sackList) {
@@ -195,9 +197,11 @@ cw.net.SackFrame = function(ackNumber, sackList) {
 	this.sackList = sackList;
 }
 
-
+/**
+ * @return {string} Frame representation for debugging
+ */
 cw.net.SackFrame.prototype.__repr__ = function() {
-	return 'SackFrame(' + this.ackNumber + ', [' + this.sackList.join(',') + '])';
+	return 'new SackFrame(' + this.ackNumber + ', [' + this.sackList.join(',') + '])';
 }
 
 /**
@@ -241,17 +245,17 @@ cw.net.SackFrame.decode = function(frameString) {
 
 
 /**
- * No arguments.
- *
  * @constructor
  */
 cw.net.YouCloseItFrame = function() {
 
 }
 
-
+/**
+ * @return {string} Frame representation for debugging
+ */
 cw.net.YouCloseItFrame.prototype.__repr__ = function() {
-	return 'YouCloseItFrame()';
+	return 'new YouCloseItFrame()';
 }
 
 /**
@@ -276,16 +280,17 @@ cw.net.YouCloseItFrame.decode = function(frameString) {
 
 /**
  * @param {number} numBytes How many bytes of padding
- *
  * @constructor
  */
 cw.net.PaddingFrame = function(numBytes) {
 	this.numBytes = numBytes;
 }
 
-
+/**
+ * @return {string} Frame representation for debugging
+ */
 cw.net.PaddingFrame.prototype.__repr__ = function() {
-	return 'PaddingFrame(' + this.numBytes + ')';
+	return 'new PaddingFrame(' + this.numBytes + ')';
 }
 
 /**
@@ -310,8 +315,9 @@ cw.net.PaddingFrame.decode = function(frameString) {
 /**
  * @param {string} reasonString
  * @return {boolean} Whether {@code reasonString} is a valid reset reason.
+ * @private
  */
-cw.net.isValidReasonString = function(reasonString) {
+cw.net.isValidReasonString_ = function(reasonString) {
 	// Inclusive range 0x20 through 0x7E is allowed. 
 	return reasonString.length <= 255 && /^([ -~]*)$/.test(reasonString);
 }
@@ -323,10 +329,8 @@ cw.net.isValidReasonString = function(reasonString) {
  *
  * @param {string} reasonString Why the Stream reset.
 *	ASCII (0x20-0x7E)-only C{str}, max 255 bytes.
- *
  * @param {boolean} applicationLevel Whether the reset was application-level
  * 	(not caused by Minerva internals).
- *
  * @constructor
  */
 cw.net.ResetFrame = function(reasonString, applicationLevel) {
@@ -334,9 +338,11 @@ cw.net.ResetFrame = function(reasonString, applicationLevel) {
 	this.applicationLevel = applicationLevel;
 }
 
-
+/**
+ * @return {string} Frame representation for debugging
+ */
 cw.net.ResetFrame.prototype.__repr__ = function() {
-	return "ResetFrame('" + cw.repr.repr(this.reasonString) + "', " + this.applicationLevel + ")";
+	return "new ResetFrame('" + cw.repr.repr(this.reasonString) + "', " + this.applicationLevel + ")";
 }
 
 /**
@@ -354,7 +360,7 @@ cw.net.ResetFrame.prototype.encode = function() {
 cw.net.ResetFrame.decode = function(frameString) {
 	var reasonString = frameString.substr(0, frameString.length - 3);
 
-	if(!cw.net.isValidReasonString(reasonString)) {
+	if(!cw.net.isValidReasonString_(reasonString)) {
 		throw new cw.net.InvalidFrame("illegal bytes in reasonString");
 	}
 
@@ -404,9 +410,11 @@ cw.net.TransportKillFrame = function(reason) {
 	this.reason = reason;
 }
 
-
+/**
+ * @return {string} Frame representation for debugging
+ */
 cw.net.TransportKillFrame.prototype.__repr__ = function() {
-	return 'TransportKillFrame(' + this.reason + ')';
+	return 'new TransportKillFrame(' + this.reason + ')';
 }
 
 /**
