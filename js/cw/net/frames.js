@@ -430,9 +430,9 @@ cw.net.ResetFrame.prototype.equals = function(other, messages) {
  * @param {!Array.<string>} sb
  */
 cw.net.ResetFrame.prototype.__reprToPieces__ = function(sb) {
-	sb.push("new ResetFrame('");
+	sb.push("new ResetFrame(");
 	cw.repr.reprToPieces(this.reasonString, sb);
-	sb.push("', ", String(this.applicationLevel), ")");
+	sb.push(", ", String(this.applicationLevel), ")");
 }
 
 /**
@@ -455,7 +455,7 @@ cw.net.ResetFrame.decode = function(frameString) {
 	}
 
 	// Either "|0" or "|1"
-	var applicationLevelStr = frameString.substr(frameString.length - 2, 2);
+	var applicationLevelStr = frameString.substr(frameString.length - 3, 2);
 	var applicationLevel = {'|0': false, '|1': false}[applicationLevelStr];
 	if(applicationLevel == null) {
 		throw new cw.net.InvalidFrame("bad applicationLevel");

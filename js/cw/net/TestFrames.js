@@ -6,6 +6,7 @@ goog.provide('cw.net.TestFrames');
 
 goog.require('cw.UnitTest');
 goog.require('goog.array');
+goog.require('goog.object');
 goog.require('goog.string');
 goog.require('cw.repr');
 goog.require('cw.net.HelloFrame');
@@ -352,8 +353,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'TransportKillFrameTests').meth
 	},
 
 	function test_decode(self) {
-		goog.array.forEach(tk.allReasons, function(reason) {
-			var s = reason.value + 'K'
+		goog.array.forEach(goog.object.getKeys(cw.net.AllTransportKillReasons_), function(reason) {
+			var s = reason + 'K'
 			self.assertEqual(
 				new TransportKillFrame(reason),
 				TransportKillFrame.decode(s))
