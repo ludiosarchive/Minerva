@@ -47,7 +47,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 	},
 
 	function test_publicAttr(self) {
-		self.assertEqual("goes", new HelloFrame({"anything": "goes"}).anything)
+		self.assertEqual({"anything": "goes"}, new HelloFrame({"anything": "goes"}).options)
 	},
 
 	function test_repr(self) {
@@ -119,8 +119,16 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SeqNumFrameTests').methods(
 	},
 
 	function test_decode(self) {
-		goog.array.forEach([0, 1, Math.pow(2, 32), Math.pow(2, 53)], function(seqNum) {
-			var s = String(seqNum) + 'N'
+		var seqNumStrs = [
+			String(0),
+			goog.string.repeat('0', 1024),
+			String(1),
+			String(Math.pow(2, 32)),
+			String(Math.pow(2, 53))
+		]
+		goog.array.forEach(seqNumStrs, function(seqNumStr) {
+			var s = seqNumStr + 'N'
+			var seqNum = Number(seqNumStr);
 			self.assertEqual(
 				new SeqNumFrame(seqNum),
 				SeqNumFrame.decode(s))
@@ -131,11 +139,12 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SeqNumFrameTests').methods(
 		var strings = [
 			String(-1) + 'N',
 			String(-Math.pow(2, 53)) + 'N',
-			String(Math.pow(2, 53) + 1) + 'N',
-			' ',
-			goog.string.repeat('0', 1024)]
+			String(cw.net.LARGER_THAN_LARGEST_INTEGER_) + 'N',
+			' '
+		]
 
 		goog.array.forEach(strings, function(s) {
+			cw.UnitTest.logger.info('SeqNumFrameTests.test_decodeFailed: testing string ' + cw.repr.repr(s))
 			self.assertThrows(
 				InvalidFrame,
 				function() { SeqNumFrame.decode(s); })
@@ -145,7 +154,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SeqNumFrameTests').methods(
 	function test_encode(self) {
 		self.assertEqual('2N', new SeqNumFrame(2).encode())
 		self.assertEqual('0N', new SeqNumFrame(0).encode())
-		self.assertEqual('%dN' % Math.pow(2, 53), new SeqNumFrame(Math.pow(2, 53)).encode())
+		self.assertEqual(Math.pow(2, 53) + 'N', new SeqNumFrame(Math.pow(2, 53)).encode())
 	}
 );
 
@@ -182,7 +191,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SackFrameTests').methods(
 	},
 
 	function test_decodeFailedAckNumberInvalid(self) {
-		goog.array.forEach([Math.pow(2, 53)+1, -1, 0.5, 1.5], function(badNum) {
+		goog.array.forEach([cw.net.LARGER_THAN_LARGEST_INTEGER_, -1, 0.5, 1.5], function(badNum) {
 			var s = '1,4|' + badNum + 'A'
 			self.assertThrows(
 				InvalidFrame,
@@ -191,7 +200,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SackFrameTests').methods(
 	},
 
 	function test_decodeFailedOneSackNumberInvalid(self) {
-		goog.array.forEach([Math.pow(2, 53)+1, -1, 0.5, 1.5], function(badNum) {
+		goog.array.forEach([cw.net.LARGER_THAN_LARGEST_INTEGER_, -1, 0.5, 1.5], function(badNum) {
 			var s = '1,' + badNum + '|4A'
 			self.assertThrows(
 				InvalidFrame,

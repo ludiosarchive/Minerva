@@ -43,6 +43,13 @@ cw.net.LARGEST_INTEGER_ = Math.pow(2, 53);
 
 
 /**
+ * A number larger than the largest integer than can be represented
+ * in JavaScript. Note: the ` + 1`ed number is not larger.
+ */
+cw.net.LARGER_THAN_LARGEST_INTEGER_ = cw.net.LARGEST_INTEGER_ + 2;
+
+
+/**
  * Hello frame properties. Keep in sync with minerva/newlink.py
  *
  * @enum {string}
@@ -217,7 +224,7 @@ cw.net.SeqNumFrame.prototype.encode = function() {
 cw.net.SeqNumFrame.decode = function(frameString) {
 	// Not necessary to remove "N" before parseInt
 	var seqNum = parseInt(frameString, 10);
-	if(seqNum < 0 || seqNum > cw.net.LARGEST_INTEGER_) {
+	if(seqNum < 0 || seqNum > cw.net.LARGEST_INTEGER_ || isNaN(seqNum)) {
 		throw new cw.net.InvalidFrame("bad seqNum " + seqNum);
 	}
 	return new cw.net.SeqNumFrame(seqNum);
@@ -278,7 +285,7 @@ cw.net.SackFrame.decode = function(frameString) {
 	// Not necessary to remove "A" before parseInt
 	var ackNumber = parseInt(parts[1], 10);
 
-	if(ackNumber < 0 || ackNumber > cw.net.LARGEST_INTEGER_) {
+	if(ackNumber < 0 || ackNumber > cw.net.LARGEST_INTEGER_ || isNaN(ackNumber)) {
 		throw new cw.net.InvalidFrame("bad ackNumber " + ackNumber);
 	}
 
@@ -286,7 +293,7 @@ cw.net.SackFrame.decode = function(frameString) {
 	var sackList = [];
 	for(var i=0, len=sackListStrs.length; i < len; i++) {
 		var sackNum = sackListStrs[i];
-		if(sackNum < 0 || sackNum > cw.net.LARGEST_INTEGER_) {
+		if(sackNum < 0 || sackNum > cw.net.LARGEST_INTEGER_ || isNaN(sackNum)) {
 			throw new cw.net.InvalidFrame("bad sackNum " + sackNum);
 		}
 		sackList.push(parseInt(sackNum, 10));
