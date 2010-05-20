@@ -40,12 +40,9 @@ var repr = cw.repr.repr;
 cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 
 	function test_eq(self) {
-		self.assertTrue(new HelloFrame({"a": 1}) == new HelloFrame({"a": 1}))
-		self.assertFalse(new HelloFrame({"a": 1}) != new HelloFrame({"a": 1}))
-		self.assertTrue(new HelloFrame({"a": 1}) != new HelloFrame({"a": 2}))
-		self.assertFalse(new HelloFrame({"a": 1}) == new HelloFrame({"a": 2}))
-		self.assertTrue(new HelloFrame({"a": 1}) != new HelloFrame({"a": 1, "b": 1}))
-		self.assertFalse(new HelloFrame({"a": 1}) == new HelloFrame({"a": 1, "b": 1}))
+		self.assertEqual(new HelloFrame({"a": 1}), new HelloFrame({"a": 1}))
+		self.assertNotEqual(new HelloFrame({"a": 1}), new HelloFrame({"a": 2}))
+		self.assertNotEqual(new HelloFrame({"a": 1}), new HelloFrame({"a": 1, "b": 1}))
 	},
 
 	function test_publicAttr(self) {
@@ -56,15 +53,20 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 		self.assertEqual('new HelloFrame({"a": 1})', repr(new HelloFrame({'a': 1})))
 	},
 
+	// TODO: decode tests
+
 	function test_encode(self) {
 		hello = new HelloFrame({transportNumber: 0})
 		self.assertEqual('{"tnum":0}' + 'H', hello.encode())
 
 	},
 
-	function test_encodeFailed(self) {
+	/**
+	 * There's no real error checking if an invalid property is used.
+	 */
+	function test_encodeWithInvalidProperty(self) {
 		hello = new HelloFrame({aMadeUpKey: 0})
-		self.assertThrows(Error, function() { hello.encode(); })
+		self.assertEqual('{"undefined":0}' + 'H', hello.encode())
 	}
 );
 
@@ -116,18 +118,27 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SeqNumFrameTests').methods(
 	},
 
 	function test_decode(self) {
-		for seqNum in (0, 1, 2**32, Math.pow(2, 53)):
+		goog.array.forEach([0, 1, Math.pow(2, 32), Math.pow(2, 53)], function(seqNum) {
 			var s = String(seqNum) + 'N'
 			self.assertEqual(
 				new SeqNumFrame(seqNum),
 				SeqNumFrame.decode(s))
+		});
 	},
 
 	function test_decodeFailed(self) {
-		for s in [String(-1) + 'N', String(-Math.pow(2, 53)) + 'N', String(Math.pow(2, 53) + 1) + 'N', ' ', goog.string.repeat('0', 1024)]:
+		var strings = [
+			String(-1) + 'N',
+			String(-Math.pow(2, 53)) + 'N',
+			String(Math.pow(2, 53) + 1) + 'N',
+			' ',
+			goog.string.repeat('0', 1024)]
+
+		goog.array.forEach(strings, function(s) {
 			self.assertThrows(
 				InvalidFrame,
 				function() { SeqNumFrame.decode(s); })
+		});
 	},
 
 	function test_encode(self) {
@@ -175,7 +186,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SackFrameTests').methods(
 			self.assertThrows(
 				InvalidFrame,
 				function() { SackFrame.decode(s); })
-		}
+		})
 	},
 
 	function test_decodeFailedOneSackNumberInvalid(self) {
@@ -198,14 +209,15 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SackFrameTests').methods(
 		self.assertEqual('1,4|2A', new SackFrame(2, [1, 4]).encode())
 		self.assertEqual('4|2A', new SackFrame(2, [4]).encode())
 		self.assertEqual('|2A', new SackFrame(2, []).encode())
-
+	}
+);
 
 
 cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'YouCloseItFrameTests').methods(
 
 	function test_eq(self) {
 		self.assertEqual(new YouCloseItFrame(), new YouCloseItFrame())
-		self.assertNotEqual(new YouCloseItFrame(), ())
+		self.assertNotEqual(new YouCloseItFrame(), [])
 	},
 
 	function test_repr(self) {
@@ -258,7 +270,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'PaddingFrameTests').methods(
 	function test_encode(self) {
 		self.assertEqual(' ' * 5 + 'P', new PaddingFrame(5).encode())
 		self.assertEqual('P', new PaddingFrame(0).encode())
-	},
+	}
+);
 
 
 cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'ResetFrameTests').methods(
@@ -275,7 +288,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'ResetFrameTests').methods(
 	},
 
 	function test_repr(self) {
-		self.assertEqual("new ResetFrame('why', true)", repr(new ResetFrame("why", true)))
+		self.assertEqual('new ResetFrame("why", true)', repr(new ResetFrame("why", true)))
 	},
 
 	function test_encode(self) {
@@ -284,12 +297,14 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'ResetFrameTests').methods(
 	},
 
 	function test_decode(self) {
-		for applicationLevel in [true, false]:
-			for reasonString in ['the reason', 'the | | reason', '', '|', '||']:
+		goog.array.forEach([true, false], function(applicationLevel) {
+			goog.array.forEach(['the reason', 'the | | reason', '', '|', '||'], function(reasonString) {
 				var s = reasonString + '|' + String(Number(applicationLevel)) + '!'
 				self.assertEqual(
 					new ResetFrame(reasonString, applicationLevel),
 					ResetFrame.decode(s))
+			})
+		})
 	},
 
 	function test_decodeFailedBadReason(self) {
@@ -299,6 +314,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'ResetFrameTests').methods(
 			function() { ResetFrame.decode(s); })
 
 	},
+
 	function test_decodeFailedBadBoolean(self) {
 		var s = 'reason|2!'
 		self.assertThrows(
@@ -327,7 +343,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'TransportKillFrameTests').meth
 
 	function test_repr(self) {
 		self.assertEqual(
-			"new TransportKillFrame('frame_corruption')",
+			'new TransportKillFrame("frame_corruption")',
 			repr(new TransportKillFrame(tk.frame_corruption)))
 	},
 
@@ -336,11 +352,12 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'TransportKillFrameTests').meth
 	},
 
 	function test_decode(self) {
-		for reason in tk.allReasons:
+		goog.array.forEach(tk.allReasons, function(reason) {
 			var s = reason.value + 'K'
-		self.assertEqual(
-			new TransportKillFrame(reason),
-			TransportKillFrame.decode(s))
+			self.assertEqual(
+				new TransportKillFrame(reason),
+				TransportKillFrame.decode(s))
+		})
 	},
 
 	function test_decodeFailed(self) {
