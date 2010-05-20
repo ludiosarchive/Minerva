@@ -90,9 +90,13 @@ cw.net.HelloFrame = function(options) {
 //	def __ne__(self, other):
 //		return True if type(self) != type(other) else self.__dict__ != other.__dict__
 
-
-cw.net.HelloFrame.prototype.__repr__ = function() {
-	return 'new HelloFrame(' + goog.json.serialize(this.options) + ')';
+/**
+ * @param {!Array.<string>} sb
+ */
+cw.net.HelloFrame.prototype.__reprToPieces__ = function(sb) {
+	sb.push('new HelloFrame(');
+	cw.repr.reprToPieces(this.options, sb);
+	sb.push(')');
 }
 
 /**
@@ -125,10 +129,12 @@ cw.net.StringFrame = function(string) {
 }
 
 /**
- * @return {string} Frame representation for debugging
+ * @param {!Array.<string>} sb
  */
-cw.net.StringFrame.prototype.__repr__ = function() {
-	return "new StringFrame(" + cw.repr.repr(this.string) + "')";
+cw.net.StringFrame.prototype.__reprToPieces__ = function(sb) {
+	sb.push("new StringFrame(");
+	cw.repr.reprToPieces(this.string, sb);
+	sb.push(")");
 }
 
 /**
@@ -158,10 +164,10 @@ cw.net.SeqNumFrame = function(seqNum) {
 }
 
 /**
- * @return {string} Frame representation for debugging
+ * @param {!Array.<string>} sb
  */
-cw.net.SeqNumFrame.prototype.__repr__ = function() {
-	return 'new SeqNumFrame(' + this.seqNum + ')';
+cw.net.SeqNumFrame.prototype.__reprToPieces__ = function(sb) {
+	sb.push('new SeqNumFrame(', String(this.seqNum), ')');
 }
 
 /**
@@ -198,10 +204,12 @@ cw.net.SackFrame = function(ackNumber, sackList) {
 }
 
 /**
- * @return {string} Frame representation for debugging
+ * @param {!Array.<string>} sb
  */
-cw.net.SackFrame.prototype.__repr__ = function() {
-	return 'new SackFrame(' + this.ackNumber + ', [' + this.sackList.join(',') + '])';
+cw.net.SackFrame.prototype.__reprToPieces__ = function(sb) {
+	sb.push('new SackFrame(', String(this.ackNumber), ', ');
+	cw.repr.reprToPieces(this.sackList, sb);
+	sb.push(')');
 }
 
 /**
@@ -252,10 +260,10 @@ cw.net.YouCloseItFrame = function() {
 }
 
 /**
- * @return {string} Frame representation for debugging
+ * @param {!Array.<string>} sb
  */
-cw.net.YouCloseItFrame.prototype.__repr__ = function() {
-	return 'new YouCloseItFrame()';
+cw.net.YouCloseItFrame.prototype.__reprToPieces__ = function(sb) {
+	sb.push('new YouCloseItFrame()');
 }
 
 /**
@@ -287,10 +295,10 @@ cw.net.PaddingFrame = function(numBytes) {
 }
 
 /**
- * @return {string} Frame representation for debugging
+ * @param {!Array.<string>} sb
  */
-cw.net.PaddingFrame.prototype.__repr__ = function() {
-	return 'new PaddingFrame(' + this.numBytes + ')';
+cw.net.PaddingFrame.prototype.__reprToPieces__ = function(sb) {
+	sb.push('new PaddingFrame(', String(this.numBytes), ')');
 }
 
 /**
@@ -339,10 +347,12 @@ cw.net.ResetFrame = function(reasonString, applicationLevel) {
 }
 
 /**
- * @return {string} Frame representation for debugging
+ * @param {!Array.<string>} sb
  */
-cw.net.ResetFrame.prototype.__repr__ = function() {
-	return "new ResetFrame('" + cw.repr.repr(this.reasonString) + "', " + this.applicationLevel + ")";
+cw.net.ResetFrame.prototype.__reprToPieces__ = function(sb) {
+	sb.push("new ResetFrame('");
+	cw.repr.reprToPieces(this.reasonString, sb);
+	sb.push("', ", String(this.applicationLevel), ")");
 }
 
 /**
@@ -411,10 +421,12 @@ cw.net.TransportKillFrame = function(reason) {
 }
 
 /**
- * @return {string} Frame representation for debugging
+ * @param {!Array.<string>} sb
  */
-cw.net.TransportKillFrame.prototype.__repr__ = function() {
-	return 'new TransportKillFrame(' + this.reason + ')';
+cw.net.TransportKillFrame.prototype.__reprToPieces__ = function(sb) {
+	sb.push('new TransportKillFrame(');
+	cw.repr.reprToPieces(this.reason, sb);
+	sb.push(')');
 }
 
 /**
