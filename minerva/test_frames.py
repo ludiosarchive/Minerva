@@ -475,9 +475,9 @@ class TransportKillFrameTests(unittest.TestCase):
 	def test_decode(self):
 		for reason in tk.allReasons:
 			s = reason.value + 'K'
-		self	.assertEqual(
-			TransportKillFrame(reason),
-			TransportKillFrame.decode(sf(s)))
+			self.assertEqual(
+				TransportKillFrame(reason),
+				TransportKillFrame.decode(sf(s)))
 
 
 	def test_decodeFailed(self):
