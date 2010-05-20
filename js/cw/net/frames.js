@@ -469,7 +469,7 @@ cw.net.ResetFrame.decode = function(frameString) {
 
 	// Either "|0" or "|1"
 	var applicationLevelStr = frameString.substr(frameString.length - 3, 2);
-	var applicationLevel = {'|0': false, '|1': false}[applicationLevelStr];
+	var applicationLevel = {'|0': false, '|1': true}[applicationLevelStr];
 	if(applicationLevel == null) {
 		throw new cw.net.InvalidFrame("bad applicationLevel");
 	}

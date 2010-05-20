@@ -311,6 +311,11 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'ResetFrameTests').methods(
 		goog.array.forEach([true, false], function(applicationLevel) {
 			goog.array.forEach(['the reason', 'the | | reason', '', '|', '||'], function(reasonString) {
 				var s = reasonString + '|' + String(Number(applicationLevel)) + '!'
+				cw.UnitTest.logger.info(
+					'ResetFrameTests.test_decode: testing '+
+					'applicationLevel=' + cw.repr.repr(applicationLevel) +
+					', reasonString=' + cw.repr.repr(reasonString) +
+					', s=' + cw.repr.repr(s))
 				self.assertEqual(
 					new ResetFrame(reasonString, applicationLevel),
 					ResetFrame.decode(s))
