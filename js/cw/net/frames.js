@@ -283,6 +283,8 @@ cw.net.HelloFrame.prototype.__reprToPieces__ = function(sb) {
 cw.net.HelloFrame.prototype.makeCompactMapping_ = function() {
 	var map = {};
 	for(var k in this.options) {
+		// TODO: need an integration test to verify that this is safe to do
+		// with Closure Compiler's Advanced mode.
 		map[cw.net.HelloProperty_[k]] = this.options[k];
 	}
 	return map;
@@ -295,7 +297,27 @@ cw.net.HelloFrame.prototype.encode = function() {
 	return goog.json.serialize(this.makeCompactMapping_()) + 'H';
 }
 
-// TODO: .decode, because we'll need to decode {HelloFrame}s in the unit tests.
+/**
+ * @param {string} frameString A string that ends with "H".
+ * @return {!cw.net.HelloFrame}
+ */
+cw.net.HelloFrame.decode = function(frameString) {
+	var json = cw.string.withoutLast(frameString, 1);
+	// We want to prohibit JSON that has trailing whitespace (like Python
+	// Minerva does), so we do this test and make a dangerous inference.
+	var endsWithCurly = goog.string.endsWith("}");
+	if(!endsWithCurly || !goog.json.isValid_(json)) {
+		throw new cw.net.InvalidHello("Dangerous JSON or doesn't end with }");
+	}
+	/** @preserveTry */
+	try {
+		var blob = eval('(' + json + ')');
+	} catch(e) {
+		throw new cw.net.InvalidHello("Un-eval'able JSON");
+	}
+
+	return cw.net.helloFrameToHelloData_(blob);
+}
 
 
 
