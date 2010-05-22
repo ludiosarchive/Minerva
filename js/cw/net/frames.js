@@ -16,6 +16,8 @@ goog.provide('cw.net.decodeFrameFromServer');
 
 goog.require('goog.debug.Error');
 goog.require('goog.json');
+goog.require('goog.string');
+goog.require('goog.array');
 goog.require('cw.checktype');
 goog.require('cw.string');
 goog.require('cw.repr');
@@ -133,8 +135,10 @@ cw.net.ensureNonNegIntegralInt_ = function(value) {
 cw.net.helloDataToHelloFrame_ = function(helloData) {
 	var HP = cw.net.HelloProperty_;
 
+	// This check is in most cases redundant with the  "{" "}" character
+	// checking in {@code HelloFrame.decode}.
 	if(!goog.typeOf(helloData) == "object") {
-		throw new cw.net.InvalidHello("helloData not a dict");
+		throw new cw.net.InvalidHello("helloData not an object");
 	}
 
 	var obj = {};
@@ -147,7 +151,7 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	}
 
 	if(!goog.typeOf(obj.credentialsData) == "object") {
-		throw new cw.net.InvalidHello("credentialsData not a dict");
+		throw new cw.net.InvalidHello("credentialsData not an object");
 	}
 
 	// requestNewStream is always optional. If missing or False/0, transport
@@ -303,10 +307,13 @@ cw.net.HelloFrame.prototype.encode = function() {
  */
 cw.net.HelloFrame.decode = function(frameString) {
 	var json = cw.string.withoutLast(frameString, 1);
-	// We want to prohibit JSON that has trailing whitespace (like Python
-	// Minerva does), so we do this test and make a dangerous inference.
-	var endsWithCurly = goog.string.endsWith("}");
-	if(!endsWithCurly || !goog.json.isValid_(json)) {
+	// We want to prohibit JSON that has leading or trailing whitespace
+	// (like Python Minerva does), so we do this test and make a dangerous
+	// inference: if it starts with "{" and ends with "}" and evals successfully,
+	// there was no leading/trailing whitespace.
+	var startsWithCurly = cw.string.startsWithAlt(json, "{");
+	var endsWithCurly = goog.string.endsWith(json, "}");
+	if(!startsWithCurly || !endsWithCurly || !goog.json.isValid_(json)) {
 		throw new cw.net.InvalidHello("Dangerous JSON or doesn't end with }");
 	}
 	/** @preserveTry */
