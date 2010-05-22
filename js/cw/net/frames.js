@@ -124,58 +124,57 @@ cw.net.AllHttpFormats_ = [
  */
 cw.net.helloDataToHelloFrame_ = function(helloData) {
 	if(!goog.typeOf(helloData) == "object") {
-		throw new cw.net.InvalidHello("helloData not a dict")
+		throw new cw.net.InvalidHello("helloData not a dict");
 	}
 
-	var obj = {}
+	var obj = {};
 
 	// credentialsData is always optional
 	if(cw.net.HelloProperty_.credentialsData in helloData) {
-		obj.credentialsData = helloData[cw.net.HelloProperty_.credentialsData]
+		obj.credentialsData = helloData[cw.net.HelloProperty_.credentialsData];
 	} else {
-		obj.credentialsData = {}
+		obj.credentialsData = {};
 	}
 
 	if(!goog.typeOf(obj.credentialsData) == "object") {
-		throw new cw.net.InvalidHello("credentialsData not a dict")
+		throw new cw.net.InvalidHello("credentialsData not a dict");
 	}
-
 
 	// requestNewStream is always optional. If missing or False/0, transport
 	// is intended to attach to an existing stream.
 	if(cw.net.HelloProperty_.requestNewStream in helloData) {
 		obj.requestNewStream = cw.checktype.ensureBool(
-			helloData[cw.net.HelloProperty_.requestNewStream])
+			helloData[cw.net.HelloProperty_.requestNewStream]);
 		if(obj.requestNewStream == null) {
-			throw new cw.net.InvalidHello("bad requestNewStream")
+			throw new cw.net.InvalidHello("bad requestNewStream");
 		}
 	} else {
-		obj.requestNewStream = false
+		obj.requestNewStream = false;
 	}
 
 	obj.transportNumber = cw.checktype.ensureIntInRange(
-		helloData[cw.net.HelloProperty_.transportNumber], 0, cw.net.LARGEST_INTEGER_)
+		helloData[cw.net.HelloProperty_.transportNumber], 0, cw.net.LARGEST_INTEGER_);
 	if(obj.transportNumber == null) {
-		throw new cw.net.InvalidHello("bad transportNumber")
+		throw new cw.net.InvalidHello("bad transportNumber");
 	}
 
-	obj.protocolVersion = helloData[cw.net.HelloProperty_.protocolVersion]
+	obj.protocolVersion = helloData[cw.net.HelloProperty_.protocolVersion];
 	if(obj.protocolVersion !== 2) {
-		throw new cw.net.InvalidHello("bad protocolVersion")
+		throw new cw.net.InvalidHello("bad protocolVersion");
 	}
 
 	obj.streamingResponse = cw.checktype.ensureBool(
-		helloData[cw.net.HelloProperty_.streamingResponse])
+		helloData[cw.net.HelloProperty_.streamingResponse]);
 	if(obj.streamingResponse == null) {
-		throw new cw.net.InvalidHello("bad streamingResponse")
+		throw new cw.net.InvalidHello("bad streamingResponse");
 	}
 
 	// Rules for streamId: must be 20-30 inclusive bytes, must not
 	// contain codepoints > 127
-	obj.streamId = helloData[cw.net.HelloProperty_.streamId]
+	obj.streamId = helloData[cw.net.HelloProperty_.streamId];
 	// ,str is appropriate only because simplejson returns str when possible
 	if(!goog.isString(obj.streamId) || obj.streamId.length < 20 || obj.streamId.length > 30) {
-		throw new cw.net.InvalidHello("bad streamId length: " + obj.streamId.length)
+		throw new cw.net.InvalidHello("bad streamId length: " + obj.streamId.length);
 	}
 
 
@@ -184,19 +183,19 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	// but the transport does not succeed an existing primary transport. If a
 	// number, the transport might succeed an existing primary transport.
 	if(cw.net.HelloProperty_.succeedsTransport in helloData) {
-		obj.succeedsTransport = helloData[cw.net.HelloProperty_.succeedsTransport]
+		obj.succeedsTransport = helloData[cw.net.HelloProperty_.succeedsTransport];
 		if(obj.succeedsTransport !== null) {
 			if(cw.checktype.ensureIntInRange(
 			obj.succeedsTransport, 0, cw.net.LARGEST_INTEGER_) == null) {
-				throw new cw.net.InvalidHello("bad succeedsTransport")
+				throw new cw.net.InvalidHello("bad succeedsTransport");
 			}
 		}
 	}
 
 	if(cw.net.HelloProperty_.httpFormat in helloData) {
-		obj.httpFormat = helloData[cw.net.HelloProperty_.httpFormat]
+		obj.httpFormat = helloData[cw.net.HelloProperty_.httpFormat];
 		if(!goog.array.contains(obj.httpFormat), cw.net.AllHttpFormats_) {
-			throw new cw.net.InvalidHello("bad httpFormat")
+			throw new cw.net.InvalidHello("bad httpFormat");
 		}
 	} else {
 		obj.httpFormat = null;
@@ -205,37 +204,37 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	// needPaddingBytes is always optional. If missing, 0.
 	if(cw.net.HelloProperty_.needPaddingBytes in helloData) {
 		obj.needPaddingBytes = cw.checktype.ensureIntInRange(
-			helloData[cw.net.HelloProperty_.needPaddingBytes], 0, 16*1024)
+			helloData[cw.net.HelloProperty_.needPaddingBytes], 0, 16*1024);
 		if(obj.needPaddingBytes == null) {
-			throw new cw.net.InvalidHello("bad needPaddingBytes")
+			throw new cw.net.InvalidHello("bad needPaddingBytes");
 		}
 	} else {
-		obj.needPaddingBytes = 0
+		obj.needPaddingBytes = 0;
 	}
 
 	// maxReceiveBytes is optional and has no limit by default
 	if(cw.net.HelloProperty_.maxReceiveBytes in helloData) {
 		obj.maxReceiveBytes = cw.checktype.ensureIntInRange(
-			helloData[cw.net.HelloProperty_.maxReceiveBytes], 0, cw.net.LARGEST_INTEGER_)
+			helloData[cw.net.HelloProperty_.maxReceiveBytes], 0, cw.net.LARGEST_INTEGER_);
 		if(obj.maxReceiveBytes == null) {
-			throw new cw.net.InvalidHello("bad maxReceiveBytes")
+			throw new cw.net.InvalidHello("bad maxReceiveBytes");
 		}
 	} else {
-		obj.maxReceiveBytes = cw.net.LARGEST_INTEGER_
+		obj.maxReceiveBytes = cw.net.LARGEST_INTEGER_;
 	}
 
 	// maxOpenTime is optional and has no limit by default
 	if(cw.net.HelloProperty_.maxOpenTime in helloData) {
-		obj.maxReceiveBytes = cw.checktype.ensureIntInRange(
-			helloData[cw.net.HelloProperty_.maxOpenTime], 0, cw.net.LARGEST_INTEGER_)
+		obj.maxOpenTime = cw.checktype.ensureIntInRange(
+			helloData[cw.net.HelloProperty_.maxOpenTime], 0, cw.net.LARGEST_INTEGER_);
 		if(obj.maxOpenTime == null) {
-			throw new cw.net.InvalidHello("bad maxOpenTime")
+			throw new cw.net.InvalidHello("bad maxOpenTime");
 		}
 	} else {
-		obj.maxOpenTime = cw.net.LARGEST_INTEGER_
+		obj.maxOpenTime = cw.net.LARGEST_INTEGER_;
 	}
 
-	return new cw.net.HelloFrame(obj)
+	return new cw.net.HelloFrame(obj);
 }
 
 
