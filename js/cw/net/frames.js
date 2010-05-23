@@ -442,6 +442,41 @@ cw.net.SeqNumFrame.decode = function(frameString) {
 }
 
 
+/**
+ * @param {string} sackString A string containing SACK data.
+ * @return {cw.net.SackFrame}
+ * @private
+ */
+cw.net.sackStringToSackFrame_ = function(sackString) {
+	var parts = sackString.split('|');
+
+	if(parts.length != 2) {
+		return null;
+	}
+
+	var ackNumber = cw.string.strToIntInRange(
+		parts[1], -1, cw.net.LARGEST_INTEGER_);
+
+	if(ackNumber == null) {
+		return null;
+	}
+
+	var sackList = [];
+
+	if(parts[0]) {
+		var sackListStrs = parts[0].split(',');
+		for(var i=0, len=sackListStrs.length; i < len; i++) {
+			var sackNum = cw.string.strToNonNegLimit(sackListStrs[i], cw.net.LARGEST_INTEGER_);
+			if(sackNum == null) {
+				return null;
+			}
+			sackList.push(sackNum);
+		}
+	}
+
+	return new cw.net.SackFrame(ackNumber, sackList);
+}
+
 
 /**
  * @param {number} ackNumber
@@ -487,34 +522,12 @@ cw.net.SackFrame.prototype.encode = function() {
  * @return {!cw.net.SackFrame}
  */
 cw.net.SackFrame.decode = function(frameString) {
-	var parts = frameString.split('|');
-
-	if(parts.length != 2) {
-		throw new cw.net.InvalidFrame("expected 1 split");
+	var frame = cw.net.sackStringToSackFrame_(
+		cw.string.withoutLast(frameString, 1));
+	if(frame == null) {
+		throw new cw.net.InvalidFrame("bad sackString");
 	}
-
-	var ackNumber = cw.string.strToIntInRange(
-		cw.string.withoutLast(parts[1], 1),
-		-1, cw.net.LARGEST_INTEGER_);
-
-	if(ackNumber == null) {
-		throw new cw.net.InvalidFrame("bad ackNumber");
-	}
-
-	var sackList = [];
-
-	if(parts[0]) {
-		var sackListStrs = parts[0].split(',');
-		for(var i=0, len=sackListStrs.length; i < len; i++) {
-			var sackNum = cw.string.strToNonNegLimit(sackListStrs[i], cw.net.LARGEST_INTEGER_);
-			if(sackNum == null) {
-				throw new cw.net.InvalidFrame("bad sackNum");
-			}
-			sackList.push(sackNum);
-		}
-	}
-
-	return new cw.net.SackFrame(ackNumber, sackList);
+	return frame;
 }
 
 
