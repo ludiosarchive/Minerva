@@ -291,7 +291,11 @@ cw.net.HelloFrame.prototype.makeCompactMapping_ = function() {
 	for(var k in this.options) {
 		// TODO: need an integration test to verify that this is safe to do
 		// with Closure Compiler's Advanced mode.
-		map[cw.net.HelloProperty_[k]] = this.options[k];
+		if(this.options[k] instanceof cw.net.SackFrame) {
+			map[cw.net.HelloProperty_[k]] = cw.string.withoutLast(this.options[k].encode(), 1);
+		} else {
+			map[cw.net.HelloProperty_[k]] = this.options[k];
+		}
 	}
 	return map;
 }
