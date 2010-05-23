@@ -41,10 +41,9 @@
 
 <div id="appswf"></div>
 <script src="/JSPATH/closure/goog/base.js"></script>
-<script src="/JSPATH/cw_deps.js"></script>
+<script src="/JSPATH/nongoog_deps.js"></script>
 <script>
-//goog.require('cw.autoTitle');
-
+goog.require('cw.autoTitle');
 goog.require('goog.debug.DivConsole');
 goog.require('goog.debug.Logger');
 goog.require('goog.async.Deferred');
@@ -56,7 +55,7 @@ goog.require('goog.Uri');
 goog.require('swfobject');
 goog.require('cw.net.FrameType');
 goog.require('cw.net.FlashSocket');
-goog.require('cw.net.HelloProperty');
+goog.require('cw.net.HelloFrame'); // we actually want HelloProperty_
 goog.require('cw.whoami');
 </script>
 
@@ -123,7 +122,7 @@ var lastFlashSocket = null;
 var lastXhr = null;
 
 function makeHelloData(uaId, transportNumber) {
-	var hp = cw.net.HelloProperty;
+	var hp = cw.net.HelloProperty_;
 
 	var helloData = {};
 	helloData[hp.transportNumber] = transportNumber;
