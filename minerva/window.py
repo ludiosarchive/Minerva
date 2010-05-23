@@ -213,6 +213,13 @@ class Incoming(object):
 					item = _wasSF(item)
 				self._objSizeCache[num] = totalSizeOf(item)
 
+		# Possible reduce memory use if dicts were previously resized
+		if not self._cached:
+			self._cached = {}
+
+		if not self._objSizeCache:
+			self._objSizeCache = {}
+
 		return alreadyGiven
 
 
