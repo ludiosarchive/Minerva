@@ -155,12 +155,7 @@ function makeC2SFramesForTesting() {
 	// and box 0 was already received.
 	var seqNumFrame = '0' + 'N'; // not really necessary to send
 	var sackFrame = '|' + String(ackNum) + 'A';
-	if(sackFrame != '|-1A') {
-		var frames = [helloFrame, sackFrame, seqNumFrame];
-	} else {
-		// Don't send sackFrame with ackNum -1, it is illegal
-		var frames = [helloFrame, seqNumFrame];
-	}
+	var frames = [helloFrame, sackFrame, seqNumFrame];
 	var boxFrame = 'send_demo' + ' ';
 	if(transportNumber == 0) {
 		frames.push(boxFrame);
