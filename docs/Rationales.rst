@@ -5,6 +5,18 @@ Minerva design rationales
 .. contents:: Table of Contents
 
 
+Why do we make the client upload the last SACK they have seen to
+determine whether server should write client a SACK, instead of just
+having the server send the SACK on every new transport?
+=====
+Because of the long-polling transport, which must close the response
+every time frame(s) are written. The SACK frame counts as a new frame.
+
+We could require client to upload last-SACK-seen only for long polling,
+but that would reduce symmetry in the protocol.
+
+
+
 Should server write out SACK on primary transport, or on the transport the client used to upload boxes?
 =====
 
