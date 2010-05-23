@@ -17,6 +17,7 @@ goog.provide('cw.net.decodeFrameFromServer');
 goog.require('goog.debug.Error');
 goog.require('goog.json');
 goog.require('goog.string');
+goog.require('goog.debug');
 goog.require('goog.array');
 goog.require('cw.checktype');
 goog.require('cw.string');
@@ -302,6 +303,8 @@ cw.net.HelloFrame.prototype.encode = function() {
 }
 
 /**
+ * Decodes a string from an untrusted source to a {@code cw.net.HelloFrame}.
+ *
  * @param {string} frameString A string that ends with "H".
  * @return {!cw.net.HelloFrame}
  */
@@ -320,7 +323,8 @@ cw.net.HelloFrame.decode = function(frameString) {
 	try {
 		var blob = eval('(' + json + ')');
 	} catch(e) {
-		throw new cw.net.InvalidHello("Un-eval'able JSON");
+		e = goog.debug.normalizeErrorObject(e);
+		throw new cw.net.InvalidHello("Un-eval'able JSON: " + e.name + ": " + e.message);
 	}
 
 	return cw.net.helloFrameToHelloData_(blob);
@@ -476,9 +480,9 @@ cw.net.SackFrame.decode = function(frameString) {
 		throw new cw.net.InvalidFrame("expected 1 split");
 	}
 
-	var ackNumber = cw.string.strToNonNegLimit(
+	var ackNumber = cw.string.strToIntInRange(
 		cw.string.withoutLast(parts[1], 1),
-		cw.net.LARGEST_INTEGER_);
+		-1, cw.net.LARGEST_INTEGER_);
 
 	if(ackNumber == null) {
 		throw new cw.net.InvalidFrame("bad ackNumber");

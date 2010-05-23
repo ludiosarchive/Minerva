@@ -178,10 +178,12 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SackFrameTests').methods(
 	},
 
 	function test_decode(self) {
-		var s = '1,4|' + Math.pow(2, 53) + 'A';
-		self.assertEqual(
-			new SackFrame(Math.pow(2, 53), [1, 4]),
-			SackFrame.decode(s));
+		goog.array.forEach([-1, 0, 1, Math.pow(2, 53)], function(ackNum) {
+			var s = '1,4|' + ackNum + 'A';
+			self.assertEqual(
+				new SackFrame(ackNum, [1, 4]),
+				SackFrame.decode(s));
+		});
 	},
 
 	function test_decodeNoSackNumbers(self) {
@@ -192,7 +194,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SackFrameTests').methods(
 	},
 
 	function test_decodeFailedAckNumberInvalid(self) {
-		goog.array.forEach([cw.net.LARGER_THAN_LARGEST_INTEGER_, -1, 0.5, 1.5], function(badNum) {
+		goog.array.forEach([cw.net.LARGER_THAN_LARGEST_INTEGER_, -2, -1.01, 0.5, 1.5], function(badNum) {
 			var s = '1,4|' + badNum + 'A';
 			self.assertThrows(
 				InvalidFrame,

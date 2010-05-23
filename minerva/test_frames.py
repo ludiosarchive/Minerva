@@ -74,7 +74,8 @@ class HelloFrameTests(unittest.TestCase):
 				maxOpenTime=2**30,
 				credentialsData={},
 				needPaddingBytes=0,
-				httpFormat=None)),
+				httpFormat=None,
+				lastS2CSackSeenByClient=SackFrame(-1, ()))),
 			HelloFrame.decode(sf(s)))
 
 
@@ -295,10 +296,11 @@ class SackFrameTests(unittest.TestCase):
 
 
 	def test_decode(self):
-		s = '1,4|%sA' % (2**53,)
-		self.assertEqual(
-			SackFrame(2**53, (1, 4)),
-			SackFrame.decode(sf(s)))
+		for ackNum in (-1, 0, 1, 2**53):
+			s = '1,4|%sA' % (ackNum,)
+			self.assertEqual(
+				SackFrame(ackNum, (1, 4)),
+				SackFrame.decode(sf(s)))
 
 
 	def test_decodeNoSackNumbers(self):
@@ -309,7 +311,7 @@ class SackFrameTests(unittest.TestCase):
 
 
 	def test_decodeFailedAckNumberInvalid(self):
-		for badNum in (2**53+1, -1, 0.5, 1.5):
+		for badNum in (2**53+1, -2, -1.01, 0.5, 1.5):
 			s = '1,4|%sA' % (badNum,)
 			self.assertRaises(
 				InvalidFrame,

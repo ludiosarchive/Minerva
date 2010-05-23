@@ -9,7 +9,8 @@ from simplejson import dumps
 from simplejson.decoder import JSONDecodeError
 
 from mypy.dictops import attrdict
-from mypy.objops import ensureBool, ensureNonNegIntLimit, strToNonNegLimit
+from mypy.objops import (
+	ensureBool, ensureNonNegIntLimit, strToNonNegLimit, strToIntInRange)
 from mypy.strops import StringFragment
 from mypy.constant import Constant, attachClassMarker
 from minerva.decoders import strictDecoder, ParseError
@@ -31,6 +32,7 @@ class HelloFrameArguments(object):
 	maxOpenTime = 'maxt'
 	useMyTcpAcks = 'tcpack'
 	succeedsTransport = 'eeds'
+	lastS2CSackSeenByClient = 'lasts2c'
 
 
 
@@ -48,6 +50,7 @@ Hello_maxReceiveBytes = _hfa.maxReceiveBytes
 Hello_maxOpenTime = _hfa.maxOpenTime
 Hello_useMyTcpAcks = _hfa.useMyTcpAcks
 Hello_succeedsTransport = _hfa.succeedsTransport
+Hello_lastS2CSackSeenByClient = _hfa.lastS2CSackSeenByClient
 del _hfa
 
 
@@ -85,6 +88,14 @@ def helloDataToHelloFrame(helloData):
 
 	if not isinstance(obj.credentialsData, dict):
 		raise InvalidHello("credentialsData not a dict")
+
+	try:
+		lastS2C = helloData[Hello_lastS2CSackSeenByClient]
+		if not isinstance(lastS2C, str):
+			raise TypeError
+		obj.lastS2CSackSeenByClient = sackStringToSackFrame(lastS2C)
+	except (KeyError, TypeError, InvalidSackString):
+		raise InvalidHello("bad lastS2CSackSeenByClient")
 
 	try:
 		# Any line here can raise KeyError; additional exceptions marked with 'e:'
@@ -211,7 +222,10 @@ class HelloFrame(object):
 			argByte = getattr(HelloFrameArguments, k, None)
 			if argByte is None:
 				raise CannotEncode("Don't know argByte for %r" % (k,))
-			yield argByte, v
+			if isinstance(v, SackFrame):
+				yield argByte, v.encode()[:-1]
+			else:
+				yield argByte, v
 
 
 	def encode(self):
@@ -293,6 +307,22 @@ class SeqNumFrame(tuple):
 
 
 
+class InvalidSackString(Exception):
+	pass
+
+
+
+def sackStringToSackFrame(sackString):
+	joinedSackList, ackNumberStr = str(sackString).rsplit('|', 1)
+	try:
+		ackNumber = strToIntInRange(ackNumberStr, -1, 2**53)
+		sackList = tuple(strToNonNegLimit(s, 2**53) for s in joinedSackList.split(',')) if joinedSackList else ()
+	except ValueError:
+		raise InvalidSackString("bad sackList or ackNumber")
+	return SackFrame(ackNumber, sackList)
+
+
+
 class SackFrame(tuple):
 	__slots__ = ()
 	__metaclass__ = attachClassMarker('_MARKER')
@@ -317,13 +347,10 @@ class SackFrame(tuple):
 		"""
 		C{frameString} is a L{StringFragment} that ends with "A".
 		"""
-		joinedSackList, ackNumberStr = str(frameString[:-1]).rsplit('|', 1)
 		try:
-			sackList = tuple(strToNonNegLimit(s, 2**53) for s in joinedSackList.split(',')) if joinedSackList else ()
-			ackNumber = strToNonNegLimit(ackNumberStr, 2**53)
-		except ValueError:
+			return sackStringToSackFrame(frameString[:-1])
+		except InvalidSackString:
 			raise InvalidFrame("bad sackList or ackNumber")
-		return cls(ackNumber, sackList)
 
 
 	def encode(self):
