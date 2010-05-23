@@ -4,7 +4,7 @@ from mypy.strops import StringFragment
 from mypy.objops import totalSizeOf
 
 from minerva.helpers import todo
-from minerva.window import Queue, Incoming, InvalidSACK, WantedItemsTooLowError, _wasSF
+from minerva.window import Queue, Incoming, _wasSF
 
 
 class TestQueue(unittest.TestCase):
@@ -13,12 +13,12 @@ class TestQueue(unittest.TestCase):
 	"""
 	def test_repr(self):
 		q = Queue()
-		self.aE('<Queue with 0 items, first is #0>', repr(q))
+		self.aE('<Queue with 0 item(s), self._counter=#-1>', repr(q))
 		q.extend(['a', 'b'])
-		self.aE('<Queue with 2 items, first is #0>', repr(q))
-		q.removeAllBefore(1)
-		self.aE('<Queue with 1 items, first is #1>', repr(q))
-		
+		self.aE('<Queue with 2 item(s), self._counter=#1>', repr(q))
+		q.handleSACK((0, ()))
+		self.aE('<Queue with 1 item(s), self._counter=#1>', repr(q))
+
 
 	def test_iterEmptyQueue(self):
 		q = Queue()
@@ -52,47 +52,48 @@ class TestQueue(unittest.TestCase):
 		self.assertEqual([], list(q.iterItems(start=3)))
 
 
-	def test_removeAllBefore(self):
+	def test_handleSACK(self):
 		q = Queue()
 		q.append('zero')
 		q.extend(['one', 'two'])
 
-		q.removeAllBefore(1)
-		self.assertRaises(WantedItemsTooLowError, lambda: list(q.iterItems(start=0)))
+		self.assertEqual(False, q.handleSACK((0, ())))
 		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems(start=1)))
 
-		# Removing again should be idempotent (even if it generates a log message)
-		q.removeAllBefore(1)
+		# Removing again is idempotent
+		self.assertEqual(False, q.handleSACK((0, ())))
 		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems(start=1)))
 
 
-	def test_removeAllBeforeTooHigh0(self):
+	def test_ackNumberTooHigh0(self):
 		q = Queue()
-		self.assertRaises(InvalidSACK, lambda: q.removeAllBefore(1))
+		badSACK = q.handleSACK((0, ()))
+		self.assertEqual(True, badSACK)
 
 
-	def test_removeAllBeforeTooHigh1(self):
-		q = Queue()
-		q.append('zero')
-		self.assertRaises(InvalidSACK, lambda: q.removeAllBefore(2))
-
-
-	def test_removeAllBeforeAgain(self):
+	def test_ackNumberTooHigh1(self):
 		q = Queue()
 		q.append('zero')
-		q.removeAllBefore(1)
-
-		# This will print a log message
-		q.removeAllBefore(1)
-
-		self.assertEqual([], list(q.iterItems(start=1)))
+		badSACK = q.handleSACK((1, ()))
+		self.assertEqual(True, badSACK)
+		# Items were still removed, despite it being a bad SACK
+		self.assertEqual([], list(q.iterItems()))
 
 
-	def test_removeAllBeforeToHigherNum(self):
+	def test_sackNumberTooHigh(self):
+		q = Queue()
+		q.extend(['zero', 'one', 'two', 'three'])
+		badSACK = q.handleSACK((0, (2, 5)))
+		self.assertEqual(True, badSACK)
+		# Items were still removed, despite it being a bad SACK
+		self.assertEqual([(1, 'one'), (3, 'three')], list(q.iterItems()))
+
+
+	def test_handleSACKToHigherNum(self):
 		q = Queue()
 		q.extend([0,1,2,3,4,5,6,7,8])
-		q.removeAllBefore(2)
-		q.removeAllBefore(4)
+		self.assertEqual(False, q.handleSACK((1, ())))
+		self.assertEqual(False, q.handleSACK((3, ())))
 
 		# There should be 5 items left in the queue
 		self.assertEqual([(4,4), (5,5), (6,6), (7,7), (8,8)], list(q.iterItems(start=4)))
@@ -106,13 +107,12 @@ class TestQueue(unittest.TestCase):
 		q.append('zero')
 		q.extend(['one', 'two'])
 		self.assertEqual([(0, 'zero'), (1, 'one'), (2, 'two')], list(q.iterItems()))
-		q.handleSACK((-1, []))
+		self.assertEqual(False, q.handleSACK((-1, ())))
 		self.assertEqual([(0, 'zero'), (1, 'one'), (2, 'two')], list(q.iterItems()))
-		q.handleSACK((0, []))
+		self.assertEqual(False, q.handleSACK((0, ())))
 		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems()))
 
 
-	@todo("nice but not essential")
 	def test_handleSACKReallyDoesSACK(self):
 		"""
 		handleSACK actually removes the selectively-acknowledged items from the queue 
@@ -121,13 +121,15 @@ class TestQueue(unittest.TestCase):
 		q.append('zero')
 		q.extend(['one', 'two', 'three'])
 		self.assertEqual([(0, 'zero'), (1, 'one'), (2, 'two'), (3, 'three')], list(q.iterItems()))
-		q.handleSACK((-1, [1]))
+		self.assertEqual(False, q.handleSACK((-1, (1,))))
 		self.assertEqual([(0, 'zero'), (2, 'two'), (3, 'three')], list(q.iterItems()))
-		q.handleSACK((0, [3]))
+		self.assertEqual(False, q.handleSACK((0, (3,))))
 		self.assertEqual([(2, 'two')], list(q.iterItems()))
 		q.append('four')
 		self.assertEqual([(2, 'two'), (4, 'four')], list(q.iterItems()))
-		q.handleSACK((0, [2, 4])) # although this is a very strange SACK (because it should have been (4, [])), it is still legal
+		# although this is a very strange SACK because it should have
+		# been (4, ()), it is still legal
+		self.assertEqual(False, q.handleSACK((0, (2, 4))))
 		self.assertEqual([], list(q.iterItems()))
 		q.append('five')
 		self.assertEqual([(5, 'five')], list(q.iterItems()))

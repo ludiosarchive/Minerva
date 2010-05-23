@@ -21,7 +21,7 @@ from mypy.mailbox import Mailbox, mailboxify
 from minerva import decoders
 from minerva.website import RejectTransport
 from minerva.interfaces import ISimpleConsumer
-from minerva.window import Queue, Incoming, InvalidSACK
+from minerva.window import Queue, Incoming
 from minerva.frames import (
 	HelloFrame, StringFrame, SeqNumFrame, SackFrame, YouCloseItFrame,
 	ResetFrame, PaddingFrame, TransportKillFrame,
@@ -232,20 +232,12 @@ class Stream(object):
 			return
 
 		if self._primaryTransport:
-			if self._pretendAcked is None:
-				start = None
-			else:
-				# In this case, avoid calling writeStrings when there aren't any new strings.
-				# A sample case:
-				# Wrote strings 0, 1 over T#1; T#2 connects and makes _pretendAcked = 1
-				# queue is still _seqNumAt0 == 0, len(self.queue) == 2
-				# This function is called; this is run: (not 0 + 2 > 1 + 1), so return
-				##print self.queue._seqNumAt0 + len(self.queue), self._pretendAcked + 1
-				# TODO: this may need an update when we implement SACK
-				if not self.queue._seqNumAt0 + len(self.queue) > self._pretendAcked + 1:
-					return
-				start = max(self._pretendAcked + 1, self.queue._seqNumAt0)
-			self._primaryTransport.writeStrings(self.queue, start=start)
+			start = None if self._pretendAcked is None else self._pretendAcked + 1
+			# Note: writeStrings may be called even if there's nothing
+			# in the queue to write. See Minerva git history before 2010-05-23
+			# if you're interested in the crazy logic that was here before, to
+			# avoid calling writeStrings when not necessary.
+			self._primaryTransport.writeStrings(self.queue, start)
 
 
 	def _fireNotifications(self):
@@ -370,6 +362,7 @@ class Stream(object):
 		Private. Do not call this.
 		
 		Minerva transports call this when they get a sack frame from client.
+		Returns C{True} if SACK was bad, C{False} otherwise.
 		"""
 		# No need to pretend any more, because we just got a likely-up-to-date sack from the client.
 		# TODO: perhaps have a flag for the sack frame that lets client send a "outdated SACK"
@@ -377,12 +370,15 @@ class Stream(object):
 		wasPretending = self._pretendAcked
 		self._pretendAcked = None
 
-		self.queue.handleSACK(sackInfo)
+		if self.queue.handleSACK(sackInfo):
+			return True # badSACK
 
 		if wasPretending:
 			# Try to send, because the SACK may have indicated that the client
 			# lost strings that were delivered to the older active S2C transport.
 			self._tryToSend()
+
+		return False # not badSACK
 
 
 	def transportOnline(self, transport, wantsStrings, succeedsTransport):
@@ -1100,9 +1096,8 @@ class SocketTransport(object):
 				bunchedStrings[0].append((self._seqNum, frame.string))
 
 			elif frameType == SackFrame:
-				try:
-					self._stream.sackReceived((frame.ackNumber, frame.sackList))
-				except InvalidSACK:
+				if self._stream.sackReceived((frame.ackNumber, frame.sackList)):
+					# badSACK
 					self._closeWith(tk_acked_unsent_strings)
 					break
 

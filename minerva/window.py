@@ -6,6 +6,7 @@ JSON objects instead of a stream of bytes.
 
 import warnings
 from mypy.strops import StringFragment
+from mypy.constant import Constant
 from collections import deque
 
 from twisted.python import log
@@ -15,50 +16,29 @@ from mypy.objops import totalSizeOf
 _postImportVars = vars().keys()
 
 
-
-class InvalidSACK(Exception):
-	"""
-	Could not delete up to a certain seqNum, because that seqNum
-	is too high. (Client sent a bogus S2C ACK number.)
-
-	(or SACK info is otherwise invalid)
-	"""
-
-
-
-class WantedItemsTooLowError(Exception):
-	"""
-	Queue was asked for items that are long gone.
-	"""
-
-
-
 class Queue(object):
 	"""
 	This is a queue that assigns a never-repeating sequence number
 	to each item, and can remove items based on SACK tuples.
 	"""
-
-	# TODO: more features to manipulate a Queue
-	# example: remove specific items that are no longer needed
-	# (a Stream might not have sent them yet, because there were no transports)
-
-	__slots__ = ('_seqNumAt0', '_items')
+	__slots__ = ('_counter', '_items')
 
 	noisy = True
 
 	def __init__(self):
-		# The sequence number of the 0th item in the queue
-		self._seqNumAt0 = 0 # TODO: remove _
-		self._items = deque()
+		self._counter = -1
+		self._items = {}
 
 
 	def append(self, item):
-		return self._items.append(item)
+		self._counter += 1
+		self._items[self._counter] = item
 
 
 	def extend(self, items):
-		return self._items.extend(items)
+		for item in items:
+			self._counter += 1
+			self._items[self._counter] = item
 
 
 	def __len__(self):
@@ -66,7 +46,7 @@ class Queue(object):
 
 
 	def __repr__(self):
-		return '<Queue with %r items, first is #%r>' % (len(self), self._seqNumAt0)
+		return '<Queue with %r item(s), self._counter=#%r>' % (len(self), self._counter)
 
 
 	def iterItems(self, start=None):
@@ -75,51 +55,57 @@ class Queue(object):
 
 		If C{start} is not C{None}, items before L{start} will be skipped.
 		"""
-		baseN = self._seqNumAt0
+		if __debug__:
+			if start is not None:
+				assert start >= 0, start
 
-		if start is not None:
-			assert start >= 0, start
-
-			if start < baseN:
-				raise WantedItemsTooLowError("I was asked for %d+; my lowest item is %d" % (start, baseN))
-
-		# TODO: do we need to list() this to avoid re-entrancy bugs?
-		for n, item in enumerate(self._items):
-			seqNum = baseN + n
+		sortedItems = self._items.items()
+		sortedItems.sort()
+		for seqNum, item in sortedItems:
 			if start is None or seqNum >= start:
 				yield (seqNum, item)
-
-
-	def removeAllBefore(self, seqNum):
-		warnings.warn(
-			"Use handleSACK instead of removeAllBefore",
-			DeprecationWarning,
-			stacklevel=2)
-		return self.handleSACK((seqNum - 1, []))
 
 
 	def handleSACK(self, sackInfo):
 		"""
 		Remove all items that are no longer needed, based on C{sackInfo}.
 
+		Returns C{True} if ackNumber or any sackNumber was higher
+		than the highest seqNum in the queue. This would indicate a
+		"bad SACK". Note that as many items as possible are removed
+		even in the "bad SACK" case. If not bad SACK, returns C{False}.
+
 		@param sackInfo: SACK tuple
 		@type sackInfo: tuple
 		"""
-		seqNum = sackInfo[0] + 1
-		# TODO: actually make SACK work by using a better datastructure
-		# for queue, and using the sackInfo[1] information
+		ackNum = sackInfo[0]
+		assert ackNum >= -1, ackNum
 
-		assert seqNum >= 0, seqNum
+		badSACK = False
 
-		if seqNum > (len(self._items) + self._seqNumAt0):
-			raise InvalidSACK(
-				"seqNum = %d, len(self._items) = %d, self._seqNumAt0 = %d"
-				% (seqNum, len(self._items), self._seqNumAt0))
+		if ackNum > self._counter:
+			badSACK = True
 
-		for i in xrange(seqNum - self._seqNumAt0):
-			self._items.popleft()
+		sortedKeys = self._items.keys()
+		sortedKeys.sort()
 
-		self._seqNumAt0 = seqNum
+		for k in sortedKeys:
+			if ackNum >= k:
+				del self._items[k]
+
+		for sackNum in sackInfo[1]:
+			if sackNum > self._counter:
+				badSACK = True
+			try:
+				del self._items[sackNum]
+			except KeyError:
+				pass
+
+		# Possible reduce memory use, depends on dict implementation
+		if not self._items:
+			self._items = {}
+
+		return badSACK
 
 
 
@@ -213,7 +199,7 @@ class Incoming(object):
 					item = _wasSF(item)
 				self._objSizeCache[num] = totalSizeOf(item)
 
-		# Possible reduce memory use if dicts were previously resized
+		# Possible reduce memory use, depends on dict implementation
 		if not self._cached:
 			self._cached = {}
 

@@ -253,8 +253,11 @@ class MockStream(_MockMixin):
 
 
 	def sackReceived(self, sackInfo):
+		"""
+		Returns C{True} if SACK was bad, C{False} otherwise.
+		"""
 		self.log.append(['sackReceived', sackInfo])
-		self.queue.handleSACK(sackInfo)
+		return self.queue.handleSACK(sackInfo)
 
 
 	def transportOnline(self, transport, wantsStrings, succeedsTransport):

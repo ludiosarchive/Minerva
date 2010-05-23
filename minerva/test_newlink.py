@@ -376,8 +376,9 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t2, True, 30)
 
 		self.aE([['closeGently']], t1.getNew())
-		# Because there are no new boxes yet, writeStrings should not be called yet
-		self.aE([], t2.getNew())
+		# Even though there are no boxes to write yet, writeStrings is called anyway.
+		# (We used to have logic to prevent this; see Minerva git history before 2010-05-23)
+		self.aE([['writeStrings', s.queue, 5]], t2.getNew())
 
 		s.sendStrings(['box5', 'box6'])
 
