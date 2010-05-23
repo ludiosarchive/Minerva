@@ -168,11 +168,7 @@ class Incoming(object):
 	def give(self, numAndItemSeq):
 		"""
 		@param numAndItemSeq: a sequence of optionally-sorted (seqNum, object).
-			C{seqNum} may be an C{int}, C{long}, or C{float}.
-
-		@param howMuch: how much memory the boxes in
-			C{numAndItemSeq} use.
-		@type howMuch: int
+			C{seqNum} may be an C{int}, C{long}, or integral C{float}.
 
 		Returns a list of sequence numbers that were ignored (because items with
 		such sequence numbers were already received - not necessarily delivered).
