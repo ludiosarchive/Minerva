@@ -395,6 +395,10 @@ class DummySocketLikeTransport(_MockMixin):
 		self.log.append(['closeGently'])
 
 
+	def causedRwinOverflow(self):
+		self.log.append(['causedRwinOverflow'])
+
+
 	def writeReset(self, reasonString, applicationLevel):
 		self.log.append(['writeReset', reasonString, applicationLevel])
 

@@ -29,9 +29,10 @@ from minerva.frames import (
 
 # Make globals that pypycpyo.optimizer can optimize away
 tk_stream_attach_failure = TransportKillFrame.stream_attach_failure
-tk_acked_unsent_strings =  TransportKillFrame.acked_unsent_strings
-tk_invalid_frame_type_or_arguments =  TransportKillFrame.invalid_frame_type_or_arguments
-tk_frame_corruption =  TransportKillFrame.frame_corruption
+tk_acked_unsent_strings = TransportKillFrame.acked_unsent_strings
+tk_invalid_frame_type_or_arguments = TransportKillFrame.invalid_frame_type_or_arguments
+tk_frame_corruption = TransportKillFrame.frame_corruption
+tk_rwin_overflow = TransportKillFrame.rwin_overflow
 
 
 _postImportVars = vars().keys()
@@ -185,12 +186,11 @@ class Stream(object):
 	application-level pressure. Applications that want high-volume
 	streaming should implement an application-level producer/consumer system.
 	"""
-
 	# Don't implement IPushProducer or IPullProducer because we don't expect stopProducing
 	implements(ISimpleConsumer)
 
-	maxUndeliveredStrings = 5000 # strings
-	maxUndeliveredBytes = 4 * 1024 * 1024 # bytes
+	maxUndeliveredStrings = 50 # strings
+	maxUndeliveredBytes = 1 * 1024 * 1024 # bytes
 
 	__slots__ = (
 		'_clock', 'streamId', '_streamProtocolFactory', '_protocol', 'virgin', '_primaryTransport',
@@ -354,7 +354,8 @@ class Stream(object):
 		if not self.disconnected and \
 		(self._incoming.getUndeliverableCount() > self.maxUndeliveredStrings or \
 		self._incoming.getMaxConsumption() > self.maxUndeliveredBytes):
-			self._internalReset('resources exhausted')
+			# We used to do an _internalReset here, but now we don't.
+			transport.causedRwinOverflow()
 
 
 	def sackReceived(self, sackInfo):
@@ -766,6 +767,14 @@ class IMinervaTransport(ISimpleConsumer):
 		"""
 
 
+	def causedRwinOverflow():
+		"""
+		Close this transport because it has caused our receive window to
+		overflow. This provides a strong hint to the client that they should
+		connect a new transport and send deliverable strings.
+		"""
+
+
 	def writeReset(reasonString, applicationLevel):
 		"""
 		Write out a reset frame on this transport, to indicate that server is
@@ -926,6 +935,14 @@ class SocketTransport(object):
 		if self._mode != HTTP:
 			self._toSend += self._encodeFrame(YouCloseItFrame())
 		self._terminating = True
+
+
+	# No need for mailboxify because it just calls _closeWith
+	def causedRwinOverflow(self):
+		"""
+		@see L{IMinervaTransport.causedRwinOverflow}
+		"""
+		self._closeWith(tk_rwin_overflow)
 
 
 	@mailboxify('_mailbox')

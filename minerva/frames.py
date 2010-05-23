@@ -512,9 +512,13 @@ class TransportKillFrame(tuple):
 	# (only applies to some decoders).
 	frame_corruption = _TransportKillReason("frame_corruption")
 
+	# Peer has caused our receive window to overflow
+	rwin_overflow = _TransportKillReason("rwin_overflow")
+
 	allReasons = (
 		stream_attach_failure, acked_unsent_strings,
-		 invalid_frame_type_or_arguments, frame_corruption)
+		 invalid_frame_type_or_arguments, frame_corruption,
+		 rwin_overflow)
 
 	stringToConstant = {}
 	constantToString = {}

@@ -710,7 +710,8 @@ cw.net.TransportKillReason = {
 	stream_attach_failure: 'stream_attach_failure',
 	acked_unsent_strings: 'acked_unsent_strings',
 	invalid_frame_type_or_arguments: 'invalid_frame_type_or_arguments',
-	frame_corruption: 'frame_corruption'
+	frame_corruption: 'frame_corruption',
+	rwin_overflow: 'rwin_overflow'
 }
 
 /**
@@ -722,7 +723,8 @@ cw.net.AllTransportKillReasons_ = {
 	'stream_attach_failure': cw.net.TransportKillReason.stream_attach_failure,
 	'acked_unsent_strings': cw.net.TransportKillReason.acked_unsent_strings,
 	'invalid_frame_type_or_arguments': cw.net.TransportKillReason.invalid_frame_type_or_arguments,
-	'frame_corruption': cw.net.TransportKillReason.frame_corruption
+	'frame_corruption': cw.net.TransportKillReason.frame_corruption,
+	'rwin_overflow': cw.net.TransportKillReason.rwin_overflow
 };
 
 

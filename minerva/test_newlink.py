@@ -44,6 +44,7 @@ tk_stream_attach_failure = TransportKillFrame.stream_attach_failure
 tk_acked_unsent_strings =  TransportKillFrame.acked_unsent_strings
 tk_invalid_frame_type_or_arguments =  TransportKillFrame.invalid_frame_type_or_arguments
 tk_frame_corruption =  TransportKillFrame.frame_corruption
+tk_rwin_overflow =  TransportKillFrame.rwin_overflow
 
 from minerva.frames import (
 	FORMAT_XHR, FORMAT_HTMLFILE,
@@ -223,9 +224,10 @@ class StreamTests(unittest.TestCase):
 		self.aE([['stringsReceived', [sf('box0'), sf('box1')]]], i.getNew())
 
 
-	def test_exhaustedIncomingResetsBecauseTooManyStrings(self):
+	def test_exhaustedReceiveWindowTooManyStrings(self):
 		"""
-		If too many strings are stuck in Incoming, the Stream is reset.
+		If too many strings are stuck in Incoming, the transport that received
+		"the last straw" is killed with C{tk_rwin_overflow}.
 		"""
 		factory = MockMinervaProtocolFactory()
 		s = Stream(None, 'some fake id', factory)
@@ -233,17 +235,17 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t, False, None)
 
 		manyStrings = []
-		for n in xrange(1, 5002):
+		for n in xrange(1, 51 + 1):
 			manyStrings.append((n, sf('box')))
-		assert len(manyStrings) == 5001
+		assert len(manyStrings) == 51
 
 		# box #0 is never given, so it cannot deliver any of them
 
 		s.stringsReceived(t, manyStrings)
-		self.aE([['writeReset', 'resources exhausted', False]], t.getNew())
+		self.aE([['causedRwinOverflow']], t.getNew())
 
 
-	def test_exhaustedIncomingResetsBecauseTooManyBytes(self):
+	def test_exhaustedReceiveWindowTooManyBytes(self):
 		"""
 		If too many (estimated) bytes are in Incoming, the Stream is reset.
 		"""
@@ -252,63 +254,12 @@ class StreamTests(unittest.TestCase):
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 
-		notManyStrings = [(1, sf('x' * (4 * 1024 * 1024 + 1)))]
+		notManyStrings = [(1, sf('x' * (1 * 1024 * 1024 + 1)))]
 
 		# box #0 is never given, so it cannot deliver any of them
 
 		s.stringsReceived(t, notManyStrings)
-		self.aE([['writeReset', 'resources exhausted', False]], t.getNew())
-
-
-	def test_exhaustedIncomingTooManyStringsButResetsWithApplicationReason(self): # keywords: reentrant
-		"""
-		If too many strings are in Incoming, but the MinervaProtocol
-		did its own reset during a stringsReceived call, then the 'resource exhausted'
-		reset is not generated.
-		"""
-		class MyFactory(MockMinervaProtocolFactory):
-			def buildProtocol(self):
-				obj = self.protocol(callFrom=('stringsReceived',), callWhat=('reset',))
-				obj.factory = self
-				return obj
-
-		factory = MyFactory()
-		s = Stream(None, 'some fake id', factory)
-		t = DummySocketLikeTransport()
-		s.transportOnline(t, False, None)
-
-		manyStrings = []
-		manyStrings.append((0, 'box0'))
-		for n in xrange(2, 5003):
-			manyStrings.append((n, 'box'))
-		assert len(manyStrings) == 5001 + 1
-
-		s.stringsReceived(t, manyStrings)
-		self.aE([['writeReset', 'reset forced by mock protocol', True]], t.getNew())
-
-
-	def test_exhaustedIncomingTooManyBytesButResetsWithApplicationReason(self): # keywords: reentrant
-		"""
-		If too many (estimated) bytes are in Incoming, but the MinervaProtocol
-		did its own reset during a stringsReceived call, then the 'resource exhausted'
-		reset is not generated.
-		"""
-		class MyFactory(MockMinervaProtocolFactory):
-			def buildProtocol(self):
-				obj = self.protocol(callFrom=('stringsReceived',), callWhat=('reset',))
-				obj.factory = self
-				return obj
-
-		factory = MyFactory()
-		s = Stream(None, 'some fake id', factory)
-		t = DummySocketLikeTransport()
-		s.transportOnline(t, False, None)
-
-		# we don't actually need to make box #2 big; we can lie to the Stream about how big it is
-		notManyStrings = [(0, 'box0'), (2, FakeBigString(str(4*1024*1024 + 1)))]
-
-		s.stringsReceived(t, notManyStrings)
-		self.aE([['writeReset', 'reset forced by mock protocol', True]], t.getNew())
+		self.aE([['causedRwinOverflow']], t.getNew())
 
 
 	def test_sendStringsAndActiveStreams(self):
@@ -1397,6 +1348,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	# TODO: once window.Queue supports SACK, add a test that really uses SACK here
+	# Note: we already have a test in IntegrationTests
 
 
 	# Disabled because it is slow (~100ms)
@@ -1791,6 +1743,13 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		transport.closeGently()
 		self.aE([YouCloseItFrame()], transport.getNew())
+		self._testExtraDataReceivedIgnored(transport)
+
+
+	def test_causedRwinOverflow(self):
+		transport = self._makeTransport()
+		transport.causedRwinOverflow()
+		self.aE([TransportKillFrame(tk_rwin_overflow), YouCloseItFrame()], transport.getNew())
 		self._testExtraDataReceivedIgnored(transport)
 
 
