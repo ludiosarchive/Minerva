@@ -162,7 +162,8 @@ class HelloFrameTests(unittest.TestCase):
 			maxReceiveBytes=genericBad,
 			maxOpenTime=genericBad,
 			credentialsData=[DeleteProperty] + listWithout(genericBad, [{}]),
-			lastSackSeenByClient=[DeleteProperty, SackFrame(-2, ()), SackFrame(-1, (-2,))]
+			# We can pass either a string or a SackFrame
+			lastSackSeenByClient=[DeleteProperty, '', '|', SackFrame(-2, ()), SackFrame(-1, (-2,))]
 		)
 
 		ran = 0
@@ -186,7 +187,7 @@ class HelloFrameTests(unittest.TestCase):
 				ran += 1
 
 		# sanity check; make sure we actually tested things
-		assert ran == 117, "Ran %d times; change this assert as needed" % (ran,)
+		assert ran == 119, "Ran %d times; change this assert as needed" % (ran,)
 
 
 	def test_encode(self):
@@ -327,11 +328,11 @@ class SackFrameTests(unittest.TestCase):
 				lambda: SackFrame.decode(sf(s)))
 
 
-	def test_decodeFailedTooManyPipes(self):
-		s = '||4A'
-		self.assertRaises(
-			InvalidFrame,
-			lambda: SackFrame.decode(sf(s)))
+	def test_decodeFailedBeforeSplit(self):
+		for s in ('||4A', '', ' ', '|'):
+			self.assertRaises(
+				InvalidFrame,
+				lambda: SackFrame.decode(sf(s)))
 
 
 	def test_encode(self):

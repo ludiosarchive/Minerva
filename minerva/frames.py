@@ -222,6 +222,8 @@ class HelloFrame(object):
 			argByte = getattr(HelloFrameArguments, k, None)
 			if argByte is None:
 				raise CannotEncode("Don't know argByte for %r" % (k,))
+			# We allow the user to pass either a string or a SackFrame,
+			# hopefully they'll pass a SackFrame.
 			if isinstance(v, SackFrame):
 				yield argByte, v.encode()[:-1]
 			else:
@@ -313,12 +315,13 @@ class InvalidSackString(Exception):
 
 
 def sackStringToSackFrame(sackString):
-	joinedSackList, ackNumberStr = str(sackString).rsplit('|', 1)
 	try:
+		# If not enough args for split, Python raises ValueError
+		joinedSackList, ackNumberStr = str(sackString).rsplit('|', 1)
 		ackNumber = strToIntInRange(ackNumberStr, -1, 2**53)
 		sackList = tuple(strToNonNegLimit(s, 2**53) for s in joinedSackList.split(',')) if joinedSackList else ()
 	except ValueError:
-		raise InvalidSackString("bad sackList or ackNumber")
+		raise InvalidSackString("bad sackString")
 	return SackFrame(ackNumber, sackList)
 
 
