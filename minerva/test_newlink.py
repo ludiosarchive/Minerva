@@ -2363,6 +2363,45 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		self.aE([SeqNumFrame(2), StringFrame("s2cbox2")], transport1.getNew())
 
 
+	def test_SACKedStringsNotSentAgain(self):
+		"""
+		If client sends a SACK with sackNumbers, server doesn't send the
+		SACKed strings again.
+		"""
+		transport0 = self._makeTransport()
+
+		frame0 = _makeHelloFrame(dict(succeedsTransport=None))
+		transport0.sendFrames([frame0])
+		stream = self.streamTracker.getStream('x'*26)
+
+		self.aE([], transport0.getNew())
+
+		proto = list(self.protocolFactory.instances)[0]
+		stream.sendStrings(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"])
+		self.aE(12 + 1, len(transport0.getNew())) # seqNum and 12 frames
+		transport0.sendFrames([SackFrame(-1, (1, 3, 5, 9))])
+
+		transport1 = self._makeTransport()
+		newHello = _makeHelloFrame(
+			dict(transportNumber=1, succeedsTransport=None))
+		transport1.sendFrames([newHello])
+		self.aE([
+			SeqNumFrame(0),
+			StringFrame("0"),
+			SeqNumFrame(2),
+			StringFrame("2"),
+			SeqNumFrame(4),
+			StringFrame("4"),
+			SeqNumFrame(6),
+			StringFrame("6"),
+			StringFrame("7"),
+			StringFrame("8"),
+			SeqNumFrame(10),
+			StringFrame("10"),
+			StringFrame("11"),
+		], transport1.getNew())
+
+
 	def test_clientSendsAlreadyReceivedBoxes(self):
 		"""
 		Stream ignores strings that were already received, and calls

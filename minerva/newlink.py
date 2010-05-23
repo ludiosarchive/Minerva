@@ -962,9 +962,11 @@ class SocketTransport(object):
 
 		# Even if there's a lot of stuff in the queue, write everything.
 		lastBox = self.lastBoxSent
-		for seqNum, string in queue.iterItems(start=start):
+		for seqNum, string in queue.iterItems(start):
 			##print seqNum, string, lastBox
-			if seqNum <= lastBox: # This might have to change to support SACK.
+			# This might have to change if design change requires that we
+			# sometimes write the same string twice.
+			if seqNum <= lastBox:
 				continue
 			if lastBox == -1 or lastBox + 1 != seqNum:
 				self._toSend += self._encodeFrame(SeqNumFrame(seqNum))
