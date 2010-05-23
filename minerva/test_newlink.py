@@ -1747,15 +1747,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_causedRwinOverflow(self):
-		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
-		transport.sendFrames([frame0]) # Transport needs a _stream for this to work
 		transport.causedRwinOverflow()
-		self.aE([
-			SackFrame(-1, ()),
-			TransportKillFrame(tk_rwin_overflow),
-			YouCloseItFrame(),
-		], transport.getNew())
+		self.aE([TransportKillFrame(tk_rwin_overflow), YouCloseItFrame()], transport.getNew())
 		self._testExtraDataReceivedIgnored(transport)
 
 

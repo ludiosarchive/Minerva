@@ -937,12 +937,11 @@ class SocketTransport(object):
 		self._terminating = True
 
 
-	# No need for mailboxify because it calls _closeWith
+	# No need for mailboxify because it just calls _closeWith
 	def causedRwinOverflow(self):
 		"""
 		@see L{IMinervaTransport.causedRwinOverflow}
 		"""
-		self._toSend += self._encodeFrame(SackFrame(*self._stream.getSACK()))
 		self._closeWith(tk_rwin_overflow)
 
 
