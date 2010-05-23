@@ -239,12 +239,13 @@ class Incoming(object):
 	def getSACK(self):
 		"""
 		@rtype: tuple
-		@return: (lastAck, list of not-yet-deliverable sequence numbers; all are > lastAck)
+		@return: (lastAck, sorted tuple of not-yet-deliverable sequence
+			numbers; all are > lastAck)
 		"""
 		sackNumbers = self._cached.keys()
 		sackNumbers.sort()
 
-		return (self._lastAck, sackNumbers)
+		return (self._lastAck, tuple(sackNumbers))
 
 
 	def getUndeliverableCount(self):

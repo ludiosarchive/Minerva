@@ -837,7 +837,7 @@ class SocketTransport(object):
 		'_terminating', '_paused', '_stream', '_producer', '_parser',
 		'streamId', 'credentialsData', 'transportNumber', 'factory',
 		'transport', '_maxReceiveBytes', '_maxOpenTime',
-		'_streamingResponse', '_needPaddingBytes')
+		'_lastSackSeenByClient', '_streamingResponse', '_needPaddingBytes')
 	# TODO: last 4 attributes above only for an HTTPSocketTransport, to save memory
 
 	maxLength = 1024*1024
@@ -979,10 +979,12 @@ class SocketTransport(object):
 
 
 	@mailboxify('_mailbox')
-	def _maybeWriteInitialSACK(self, lastSackSeenByClient):
-		currentSack = SackFrame(*self._stream.getSACK())
-		if currentSack != lastSackSeenByClient:
-			self._toSend += self._encodeFrame(currentSack)
+	def _maybeWriteInitialSACK(self):
+		if not self._terminating and self._lastSackSeenByClient is not None:
+			currentSack = SackFrame(*self._stream.getSACK())
+			if currentSack != self._lastSackSeenByClient:
+				##print "\n", self, currentSack, self._lastSackSeenByClient
+				self._toSend += self._encodeFrame(currentSack)
 
 
 	def _handleHelloFrame(self, hello):
@@ -996,6 +998,7 @@ class SocketTransport(object):
 		self.credentialsData = hello.credentialsData
 		self.transportNumber = hello.transportNumber
 		self._streamingResponse = hello.streamingResponse
+		self._lastSackSeenByClient = hello.lastSackSeenByClient
 
 		if self._mode == HTTP:
 			self._needPaddingBytes = hello.needPaddingBytes
@@ -1021,7 +1024,6 @@ class SocketTransport(object):
 		# Keep only the variables we need for the cbAuthOkay closure
 		wantsStrings = hello.wantsStrings()
 		succeedsTransport = hello.succeedsTransport if wantsStrings else None
-		lastSackSeenByClient = hello.lastSackSeenByClient
 
 		def cbAuthOkay(_):
 			if self._terminating:
@@ -1029,7 +1031,7 @@ class SocketTransport(object):
 			# Note: self._stream being non-None implies that were are authed,
 			# and that we have called transportOnline (or are calling it right now).
 			self._stream = stream
-			self._maybeWriteInitialSACK(lastSackSeenByClient)
+			self._maybeWriteInitialSACK()
 			self._stream.transportOnline(self, wantsStrings, succeedsTransport)
 			# Remember, a lot of stuff can happen underneath that
 			# transportOnline call because it may construct a MinervaProtocol,
@@ -1056,6 +1058,8 @@ class SocketTransport(object):
 
 			bunchedStrings[0] = []
 			self._toSend += self._encodeFrame(SackFrame(*self._stream.getSACK()))
+			# We no longer need to write the "initial SACK" to client
+			self._lastSackSeenByClient = None
 
 		# Note: keep in mind that _closeWith is mailboxified, so any actual
 		# closing happens after we call `handleStrings` near the end.

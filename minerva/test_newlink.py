@@ -424,13 +424,13 @@ class StreamTests(unittest.TestCase):
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 
-		self.aE((-1, []), s.getSACK())
+		self.aE((-1, ()), s.getSACK())
 		s.stringsReceived(t, [(0, sf('box'))])
-		self.aE((0, []), s.getSACK())
+		self.aE((0, ()), s.getSACK())
 		s.stringsReceived(t, [(4, sf('box'))])
-		self.aE((0, [4]), s.getSACK())
+		self.aE((0, (4,)), s.getSACK())
 		s.stringsReceived(t, [(5, sf('box'))])
-		self.aE((0, [4, 5]), s.getSACK())
+		self.aE((0, (4, 5)), s.getSACK())
 
 
 	def test_noLongerVirgin(self):
@@ -1578,7 +1578,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		stream = self.streamTracker.getStream('x'*26)
 
 		self.aE([], transport.getNew())
-		self.aE([['notifyFinish'], ['transportOnline', transport, False, None]], stream.getNew())
+		self.aE([['notifyFinish'], ['transportOnline', transport, False, None], ['getSACK']], stream.getNew())
 
 		transport.dataReceived('1:xxxxxxxx')
 
@@ -1818,7 +1818,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		stream = self.streamTracker.getStream('x'*26)
 
 		self.aE([], transport.getNew())
-		self.aE([['notifyFinish'], ['transportOnline', transport, False, None]], stream.getNew())
+		self.aE([['notifyFinish'], ['transportOnline', transport, False, None], ['getSACK']], stream.getNew())
 
 		transport.connectionLost(failure.Failure(ValueError(
 			"Just a made-up error in test_connectionLostWithStream")))
@@ -1844,6 +1844,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self.aE([
 				['notifyFinish'],
 				['transportOnline', transport, True, succeedsTransport],
+				['getSACK'],
 			], stream.getNew())
 			self._resetStreamTracker()
 
@@ -1860,7 +1861,8 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		self.aE([
 			['notifyFinish'],
-			['transportOnline', transport, False, None]
+			['transportOnline', transport, False, None],
+			['getSACK'],
 		], stream.getNew())
 		self.aE([], transport.getNew())
 
@@ -1868,7 +1870,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		self.aE([
 			['stringsReceived', transport, [(0, sf("box0"))]],
-			['getSACK']
+			['getSACK'],
 		], stream.getNew())
 		self.aE([SackFrame(0, ())], transport.getNew())
 
@@ -1876,7 +1878,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		self.aE([
 			['stringsReceived', transport, [(2, sf("box2"))]],
-			['getSACK']
+			['getSACK'],
 		], stream.getNew())
 		self.aE([SackFrame(0, (2,))], transport.getNew())
 
@@ -1893,6 +1895,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.aE([
 			['notifyFinish'],
 			['transportOnline', transport, False, None],
+			['getSACK'],
 			['sackReceived', (0, ())],
 		], stream.getNew())
 
@@ -1912,6 +1915,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.aE([
 			['notifyFinish'],
 			['transportOnline', transport, False, None],
+			['getSACK'],
 			['sackReceived', (0, (2,))],
 		], stream.getNew())
 
@@ -1931,6 +1935,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.aE([
 			['notifyFinish'],
 			['transportOnline', transport, False, None],
+			['getSACK'],
 			['sackReceived', (1, ())],
 			['transportOffline', transport],
 		], stream.getNew())
@@ -1953,6 +1958,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				self.aE([
 					['notifyFinish'],
 					['transportOnline', transport, False, None],
+					['getSACK'],
 					['resetFromClient', reason, True],
 					['transportOffline', transport],
 				], stream.getNew())
@@ -2266,7 +2272,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport1 = self._makeTransport()
 
-		frame0 = _makeHelloFrame(dict(succeedsTransport=None)) # TODO: increment transportNumber?
+		frame0 = _makeHelloFrame(dict(
+			succeedsTransport=None,
+			lastSackSeenByClient=SackFrame(3, ()))) # TODO: increment transportNumber?
 		transport1.sendFrames([frame0])
 
 		self.aE([SeqNumFrame(0), StringFrame("s2cbox0"), StringFrame("s2cbox1")], transport1.getNew())
@@ -2282,7 +2290,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport2 = self._makeTransport()
 
-		frame0 = _makeHelloFrame(dict(succeedsTransport=None)) # TODO: increment transportNumber?
+		frame0 = _makeHelloFrame(dict(
+			succeedsTransport=None,
+			lastSackSeenByClient=SackFrame(3, ()))) # TODO: increment transportNumber?
 		transport2.sendFrames([frame0])
 
 		self.aE([], transport2.getNew())
@@ -2384,6 +2394,44 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			['stringsReceived', [sf('box1')]],
 			['stringsReceived', [sf('box2')]],
 		], proto.getNew())
+
+
+	def test_lastSackSeenByClient(self):
+		"""
+		If client's 'lastSackSeenByClient' is not the current SACK, a SACK
+		is written to the client. If it is the current SACK, it is not written to
+		the client.
+		"""
+		for clientLosesSack in (True, False):
+			transport0 = self._makeTransport()
+
+			frame0 = _makeHelloFrame(dict(succeedsTransport=None))
+			transport0.sendFrames([frame0])
+			stream = self.streamTracker.getStream('x'*26)
+
+			self.aE([], transport0.getNew())
+			transport0.sendFrames([StringFrame("box0")])
+			self.aE([
+				# For clientLosesSack == True, imagine that the client
+				# loses this frame due to a connection problem.
+				SackFrame(0, ())
+			], transport0.getNew())
+
+
+			transport1 = self._makeTransport()
+
+			newHello = _makeHelloFrame(dict(
+				transportNumber=1,
+				succeedsTransport=0,
+				lastSackSeenByClient=SackFrame(-1 if clientLosesSack else 0, ())))
+			transport1.sendFrames([newHello])
+
+			if clientLosesSack:
+				self.aE([SackFrame(0, ())], transport1.getNew())
+			else:
+				self.aE([], transport1.getNew())
+
+			self._resetStreamTracker(realObjects=True)
 
 
 	def test_resetAsFirstFrame(self):
@@ -2835,7 +2883,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		request is kept open.
 		"""
 		for streaming in (False, True):
-			##print "streaming: %r" % streaming
+			print "streaming: %r" % streaming
 
 			self._resetStreamTracker(realObjects=True)
 			resource = self._makeResource()
@@ -2919,6 +2967,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		self.aE([
 			["notifyFinish"],
 			["transportOnline", transport, True, None],
+			["getSACK"],
 		], stream.getNew())
 
 		# On a real Request, this would be request.connectionLost(ConnectionLost())

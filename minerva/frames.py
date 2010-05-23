@@ -333,8 +333,9 @@ class SackFrame(tuple):
 	def __new__(cls, ackNumber, sackList):
 		"""
 		C{ackNumber} is an C{int} or C{long}.
-		C{sackList} is a tuple or list of C{int}s and C{long}s.
+		C{sackList} is a tuple of C{int}s and C{long}s.
 		"""
+		assert not isinstance(sackList, list)
 		return tuple.__new__(cls, (cls._MARKER, ackNumber, sackList))
 
 

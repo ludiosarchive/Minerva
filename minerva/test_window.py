@@ -141,7 +141,7 @@ class TestIncoming(unittest.TestCase):
 	def test_SACKNoItems(self):
 		i = Incoming()
 
-		self.assertEqual((-1, []), i.getSACK())
+		self.assertEqual((-1, ()), i.getSACK())
 
 
 	def test_threeItems(self):
@@ -149,7 +149,7 @@ class TestIncoming(unittest.TestCase):
 		i.give([[0, 'box0'], [1, 'box1'], [2, 'box2']])
 
 		self.assertEqual(['box0', 'box1', 'box2'], i.getDeliverableItems())
-		self.assertEqual((2, []), i.getSACK())
+		self.assertEqual((2, ()), i.getSACK())
 
 
 	def test_itemMissing(self):
@@ -157,7 +157,7 @@ class TestIncoming(unittest.TestCase):
 		i.give([[0, 'box0'], [1, 'box1'], [3, 'box3']])
 
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
-		self.assertEqual((1, [3]), i.getSACK())
+		self.assertEqual((1, (3,)), i.getSACK())
 
 
 	def test_twoItemsMissing(self):
@@ -165,7 +165,7 @@ class TestIncoming(unittest.TestCase):
 		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4']])
 
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
-		self.assertEqual((1, [4]), i.getSACK())
+		self.assertEqual((1, (4,)), i.getSACK())
 
 
 	def test_twoRangesMissing(self):
@@ -173,7 +173,7 @@ class TestIncoming(unittest.TestCase):
 		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']])
 
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
-		self.assertEqual((1, [4, 6]), i.getSACK())
+		self.assertEqual((1, (4, 6)), i.getSACK())
 
 
 	def test_twoRangesMissingThenFill(self):
@@ -181,12 +181,12 @@ class TestIncoming(unittest.TestCase):
 		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']])
 
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
-		self.assertEqual((1, [4, 6]), i.getSACK())
+		self.assertEqual((1, (4, 6)), i.getSACK())
 
 		i.give([[2, 'box2'], [3, 'box3'], [5, 'box5']])
 
 		self.assertEqual(['box2', 'box3', 'box4', 'box5', 'box6'], i.getDeliverableItems())
-		self.assertEqual((6, []), i.getSACK())
+		self.assertEqual((6, ()), i.getSACK())
 
 
 	def test_outOfOrder(self):
@@ -194,11 +194,11 @@ class TestIncoming(unittest.TestCase):
 		# 0 missing
 		i.give([[1, 'box1'], [2, 'box2']])
 		self.assertEqual([], i.getDeliverableItems())
-		self.assertEqual((-1, [1, 2]), i.getSACK())
+		self.assertEqual((-1, (1, 2)), i.getSACK())
 		i.give([[0, 'box0']]) # finally deliver it
 		i.give([[3, 'box3']])
 		self.assertEqual(['box0', 'box1', 'box2', 'box3'], i.getDeliverableItems())
-		self.assertEqual((3, []), i.getSACK())
+		self.assertEqual((3, ()), i.getSACK())
 
 
 	def test_outOfOrderJustOneCall(self):
@@ -208,14 +208,14 @@ class TestIncoming(unittest.TestCase):
 		"""
 		i = Incoming()
 		i.give([[1, 'box1'], [0, 'box0']])
-		self.assertEqual((1, []), i.getSACK())
+		self.assertEqual((1, ()), i.getSACK())
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
 
 
 	def test_alreadyGiven1Call(self):
 		i = Incoming()
 		alreadyGiven = i.give([[0, 'box0'], [1, 'box1'], [1, 'boxNEW']])
-		self.assertEqual((1, []), i.getSACK())
+		self.assertEqual((1, ()), i.getSACK())
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
 		self.assertEqual([1], alreadyGiven)
 
@@ -230,7 +230,7 @@ class TestIncoming(unittest.TestCase):
 		self.assertEqual([0], alreadyGivenB)
 		self.assertEqual([1], alreadyGivenC)
 
-		self.assertEqual((1, []), i.getSACK())
+		self.assertEqual((1, ()), i.getSACK())
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
 
 
@@ -244,7 +244,7 @@ class TestIncoming(unittest.TestCase):
 		self.assertEqual([4], alreadyGivenB)
 		self.assertEqual([1, 4], alreadyGivenC)
 
-		self.assertEqual((1, [4]), i.getSACK())
+		self.assertEqual((1, (4,)), i.getSACK())
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
 
 
