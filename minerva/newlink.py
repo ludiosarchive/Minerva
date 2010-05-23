@@ -979,10 +979,10 @@ class SocketTransport(object):
 
 
 	@mailboxify('_mailbox')
-	def _maybeWriteInitialSACK(self, lastS2CSackSeenByClient):
-		s2cSack = SackFrame(*self._stream.getSACK())
-		if s2cSack != lastS2CSackSeenByClient:
-			self._toSend += self._encodeFrame(s2cSack)
+	def _maybeWriteInitialSACK(self, lastSackSeenByClient):
+		currentSack = SackFrame(*self._stream.getSACK())
+		if currentSack != lastSackSeenByClient:
+			self._toSend += self._encodeFrame(currentSack)
 
 
 	def _handleHelloFrame(self, hello):
@@ -1021,7 +1021,7 @@ class SocketTransport(object):
 		# Keep only the variables we need for the cbAuthOkay closure
 		wantsStrings = hello.wantsStrings()
 		succeedsTransport = hello.succeedsTransport if wantsStrings else None
-		lastS2CSackSeenByClient = hello.lastS2CSackSeenByClient
+		lastSackSeenByClient = hello.lastSackSeenByClient
 
 		def cbAuthOkay(_):
 			if self._terminating:
@@ -1029,7 +1029,7 @@ class SocketTransport(object):
 			# Note: self._stream being non-None implies that were are authed,
 			# and that we have called transportOnline (or are calling it right now).
 			self._stream = stream
-			self._maybeWriteInitialSACK(lastS2CSackSeenByClient)
+			self._maybeWriteInitialSACK(lastSackSeenByClient)
 			self._stream.transportOnline(self, wantsStrings, succeedsTransport)
 			# Remember, a lot of stuff can happen underneath that
 			# transportOnline call because it may construct a MinervaProtocol,

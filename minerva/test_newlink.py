@@ -96,7 +96,7 @@ def _makeHelloFrame(extra={}):
 		streamingResponse=1,
 		maxReceiveBytes=2**30,
 		maxOpenTime=2**30,
-		lastS2CSackSeenByClient=SackFrame(-1, ()))
+		lastSackSeenByClient=SackFrame(-1, ()))
 	for k, v in extra.iteritems():
 		if v == DeleteProperty and k in _extra:
 			del _extra[k]

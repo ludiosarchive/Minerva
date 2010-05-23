@@ -75,7 +75,7 @@ class HelloFrameTests(unittest.TestCase):
 				credentialsData={},
 				needPaddingBytes=0,
 				httpFormat=None,
-				lastS2CSackSeenByClient=SackFrame(-1, ()))),
+				lastSackSeenByClient=SackFrame(-1, ()))),
 			HelloFrame.decode(sf(s)))
 
 

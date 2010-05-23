@@ -32,7 +32,7 @@ class HelloFrameArguments(object):
 	maxOpenTime = 'maxt'
 	useMyTcpAcks = 'tcpack'
 	succeedsTransport = 'eeds'
-	lastS2CSackSeenByClient = 'lasts2c'
+	lastSackSeenByClient = 'lastack'
 
 
 
@@ -50,7 +50,7 @@ Hello_maxReceiveBytes = _hfa.maxReceiveBytes
 Hello_maxOpenTime = _hfa.maxOpenTime
 Hello_useMyTcpAcks = _hfa.useMyTcpAcks
 Hello_succeedsTransport = _hfa.succeedsTransport
-Hello_lastS2CSackSeenByClient = _hfa.lastS2CSackSeenByClient
+Hello_lastSackSeenByClient = _hfa.lastSackSeenByClient
 del _hfa
 
 
@@ -90,12 +90,12 @@ def helloDataToHelloFrame(helloData):
 		raise InvalidHello("credentialsData not a dict")
 
 	try:
-		lastS2C = helloData[Hello_lastS2CSackSeenByClient]
-		if not isinstance(lastS2C, str):
+		lastSackSeen = helloData[Hello_lastSackSeenByClient]
+		if not isinstance(lastSackSeen, str):
 			raise TypeError
-		obj.lastS2CSackSeenByClient = sackStringToSackFrame(lastS2C)
+		obj.lastSackSeenByClient = sackStringToSackFrame(lastSackSeen)
 	except (KeyError, TypeError, InvalidSackString):
-		raise InvalidHello("bad lastS2CSackSeenByClient")
+		raise InvalidHello("bad lastSackSeenByClient")
 
 	try:
 		# Any line here can raise KeyError; additional exceptions marked with 'e:'
