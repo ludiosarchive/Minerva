@@ -211,11 +211,12 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SackFrameTests').methods(
 		})
 	},
 
-	function test_decodeFailedTooManyPipes(self) {
-		var s = '||4A';
-		self.assertThrows(
-			InvalidFrame,
-			function() { SackFrame.decode(s); });
+	function test_decodeFailedAtSplit(self) {
+		goog.array.forEach(['||4A', '', ' ', '|'], function(s) {
+			self.assertThrows(
+				InvalidFrame,
+				function() { SackFrame.decode(s); });
+		});
 	},
 
 	function test_encode(self) {

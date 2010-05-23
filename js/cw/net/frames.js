@@ -148,12 +148,20 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	// credentialsData is always optional
 	if(HP.credentialsData in helloData) {
 		obj.credentialsData = helloData[HP.credentialsData];
+		if(!goog.typeOf(obj.credentialsData) == "object") {
+			throw new cw.net.InvalidHello("credentialsData not an object");
+		}
 	} else {
 		obj.credentialsData = {};
 	}
 
-	if(!goog.typeOf(obj.credentialsData) == "object") {
-		throw new cw.net.InvalidHello("credentialsData not an object");
+	var lastSackSeen = helloData[HP.lastSackSeenByClient];
+	if(!goog.isString(lastSackSeen)) {
+		throw new cw.net.InvalidHello("lastSackSeenByClient not a string");
+	}
+	obj.lastSackSeenByClient = cw.net.sackStringToSackFrame_(lastSackSeen);
+	if(obj.lastSackSeenByClient == null) {
+		throw new cw.net.InvalidHello("bad lastSackSeenByClient");
 	}
 
 	// requestNewStream is always optional. If missing or False/0, transport

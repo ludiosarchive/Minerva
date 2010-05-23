@@ -328,7 +328,7 @@ class SackFrameTests(unittest.TestCase):
 				lambda: SackFrame.decode(sf(s)))
 
 
-	def test_decodeFailedBeforeSplit(self):
+	def test_decodeFailedAtSplit(self):
 		for s in ('||4A', '', ' ', '|'):
 			self.assertRaises(
 				InvalidFrame,
