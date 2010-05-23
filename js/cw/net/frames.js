@@ -84,7 +84,8 @@ cw.net.HelloProperty_ = {
 	maxReceiveBytes: 'maxb',
 	maxOpenTime: 'maxt',
 	useMyTcpAcks: 'tcpack',
-	succeedsTransport: 'eeds'
+	succeedsTransport: 'eeds',
+	lastSackSeenByClient: 'lastack'
 }
 
 

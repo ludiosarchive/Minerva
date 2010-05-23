@@ -57,6 +57,7 @@ goog.require('cw.net.FrameType');
 goog.require('cw.net.FlashSocket');
 goog.require('cw.net.HelloFrame'); // we actually want HelloProperty_
 goog.require('cw.whoami');
+goog.require('cw.string');
 </script>
 
 <script>
@@ -116,6 +117,7 @@ function _appswfLoaded() {
 var transportCount = -1;
 var ackNum = -1;
 var s2cSeqNum = 0;
+var lastSackSeenByClient = '|-1';
 var streamId = getRandom();
 
 var lastFlashSocket = null;
@@ -139,6 +141,7 @@ function makeHelloData(uaId, transportNumber) {
 	helloData[HP.maxOpenTime] = 3600;
 	helloData[HP.succeedsTransport] = null;
 	helloData[HP.httpFormat] = 2; /* XHR */
+	helloData[HP.lastSackSeenByClient] = lastSackSeenByClient;
 	return helloData;
 }
 
@@ -217,9 +220,11 @@ function connectWithFlash(bridge) {
 function handleFrame(frame) {
 	var lastChar = frame.substr(frame.length - 1, 1);
 	if(lastChar == 'N') { // SeqNumFrame
-		s2cSeqNum = Number(frame.substr(0, frame.length - 1)) - 1;
+		s2cSeqNum = Number(cw.string.withoutLast(frame, 1)) - 1;
 	} else if(lastChar == ' ') { // StringFrame
 		s2cSeqNum += 1;
+	} else if(lastChar == 'A') { // AckFrame
+		lastSackSeenByClient = cw.string.withoutLast(frame, 1);
 	}
 	ackNum = s2cSeqNum;
 }
