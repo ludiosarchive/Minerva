@@ -122,23 +122,23 @@ var lastFlashSocket = null;
 var lastXhr = null;
 
 function makeHelloData(uaId, transportNumber) {
-	var hp = cw.net.HelloProperty_;
+	var HP = cw.net.HelloProperty_;
 
 	var helloData = {};
-	helloData[hp.transportNumber] = transportNumber;
-	helloData[hp.protocolVersion] = 2;
-	helloData[hp.requestNewStream] = transportNumber == 0 ? 1 : 0;
-	helloData[hp.streamId] = streamId;
+	helloData[HP.transportNumber] = transportNumber;
+	helloData[HP.protocolVersion] = 2;
+	helloData[HP.requestNewStream] = transportNumber == 0 ? 1 : 0;
+	helloData[HP.streamId] = streamId;
 	// credentialsData is only needed for the transport that initiates
 	// a Stream.
 	if(transportNumber == 0) {
-		helloData[hp.credentialsData] = {'uaId': uaId, 'csrf': window.CSRF_TOKEN};
+		helloData[HP.credentialsData] = {'uaId': uaId, 'csrf': window.CSRF_TOKEN};
 	}
-	helloData[hp.streamingResponse] = Number(mode == 'flash');
-	helloData[hp.maxReceiveBytes] = 9999999;
-	helloData[hp.maxOpenTime] = 3600;
-	helloData[hp.succeedsTransport] = null;
-	helloData[hp.httpFormat] = 2; /* XHR */
+	helloData[HP.streamingResponse] = Number(mode == 'flash');
+	helloData[HP.maxReceiveBytes] = 9999999;
+	helloData[HP.maxOpenTime] = 3600;
+	helloData[HP.succeedsTransport] = null;
+	helloData[HP.httpFormat] = 2; /* XHR */
 	return helloData;
 }
 
