@@ -162,6 +162,7 @@ class HelloFrameTests(unittest.TestCase):
 			maxReceiveBytes=genericBad,
 			maxOpenTime=genericBad,
 			credentialsData=[DeleteProperty] + listWithout(genericBad, [{}]),
+			lastSackSeenByClient=[DeleteProperty, SackFrame(-2, ()), SackFrame(-1, (-2,))]
 		)
 
 		ran = 0
@@ -185,7 +186,7 @@ class HelloFrameTests(unittest.TestCase):
 				ran += 1
 
 		# sanity check; make sure we actually tested things
-		assert ran == 114, "Ran %d times; change this assert as needed" % (ran,)
+		assert ran == 117, "Ran %d times; change this assert as needed" % (ran,)
 
 
 	def test_encode(self):
