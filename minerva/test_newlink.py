@@ -2370,6 +2370,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		], transport1.getNew())
 
 
+	# TODO: test that out-of-order StringFrames that might hit the Incoming
+	# item limit do not hit the Incoming item limit because they are sorted
+	# by SocketTransport.
+
+
 	def test_clientSendsAlreadyReceivedBoxes(self):
 		"""
 		Stream ignores strings that were already received, and calls

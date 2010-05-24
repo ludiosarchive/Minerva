@@ -361,12 +361,18 @@ class Stream(object):
 		"""
 		Private. Do not call this.
 		
-		Minerva transports call this when they get a sack frame from client.
+		Minerva transports call this when they get a SackFrame from client.
 		Returns C{True} if SACK was bad, C{False} otherwise.
 		"""
+		# TODO: As an addition to the succeedsTransport parameter, we could
+		# implement a feature to more-quickly remove strings from the server's
+		# send window (Queue):
+		# implement a flag on SackFrame that lets client indicate "outdated SACK",
+		# which causes server to remove old frames from its send window, but
+		# doesn't imply that the client didn't receive strings further-ahead
+		# of the SACK numbers.
+
 		# No need to pretend any more, because we just got a likely-up-to-date sack from the client.
-		# TODO: perhaps have a flag for the sack frame that lets client send a "outdated SACK"
-		# that removes old frames in server's queue, but doesn't imply "I don't have anything else after this"
 		wasPretending = self._pretendAcked
 		self._pretendAcked = None
 
@@ -1125,6 +1131,8 @@ class SocketTransport(object):
 			elif frameType == SeqNumFrame:
 				self._seqNum = frame.seqNum - 1
 
+			# TODO: support "start timestamps", "stop timestamps" frames
+
 			else:
 				# Deliver the strings before processing client's reset frame. This
 				# is an implementation detail that may change.
@@ -1139,9 +1147,7 @@ class SocketTransport(object):
 					self._closeWith(tk_invalid_frame_type_or_arguments)
 					break
 
-				# TODO: support "start timestamps", "stop timestamps" frames
-
-		# TODO: add unit to ensure that we successfully process bunchedStrings
+		# TODO: add test to ensure that we successfully process bunchedStrings
 		# before transport-killing due to a bad frame.
 
 		if bunchedStrings[0]:
