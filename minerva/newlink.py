@@ -344,18 +344,16 @@ class Stream(object):
 		if self.disconnected:
 			return
 
-		self._incoming.give(strings)
-		items = self._incoming.getDeliverableItems()
+		items, hitLimit = self._incoming.give(
+			strings, self.maxUndeliveredStrings, self.maxUndeliveredBytes)
 		if items:
 			self._protocol.stringsReceived(items)
-		# We deliver the deliverable strings before resetting the connection (if necessary),
+		# We deliver the deliverable strings even if the receive window is overflowing,
 		# just in case the client sent something useful.
 		# Note: Underneath the stringsReceived call (above), someone may have
 		# reset the Stream! This is why we check for `not self.disconnected`.
-		if not self.disconnected and \
-		(self._incoming.getUndeliverableCount() > self.maxUndeliveredStrings or \
-		self._incoming.getMaxConsumption() > self.maxUndeliveredBytes):
-			# We used to do an _internalReset here, but now we don't.
+		if not self.disconnected and hitLimit:
+			# Minerva used to do an _internalReset here, but now it kills the transport.
 			transport.causedRwinOverflow()
 
 
