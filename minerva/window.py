@@ -170,8 +170,7 @@ class Incoming(object):
 					##print "del self._cached[%r]" % (num,)
 					del self._cached[self._lastAck + 1]
 					self._lastAck += 1
-					size = totalSizeOf(cachedItem)
-					self._size -= size
+					self._size -= totalSizeOf(cachedItem)
 					self._deliverable.append(cachedItem)
 			else:
 				if itemLimit is not None and len(self._cached) >= itemLimit:

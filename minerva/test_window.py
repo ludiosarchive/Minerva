@@ -239,6 +239,39 @@ class TestIncoming(unittest.TestCase):
 		self.assertEqual(hash(5.0), hash(5))
 
 
+	def test_itemLimit(self):
+		i = Incoming()
+		self.assertEqual(False, i.give([[1, 'box1']], itemLimit=3))
+		self.assertEqual(False, i.give([[2, 'box2']], itemLimit=3))
+		self.assertEqual(False, i.give([[3, 'box3']], itemLimit=3))
+		self.assertEqual(True, i.give([[4, 'box4']], itemLimit=3))
+		self.assertEqual(True, i.give([[5, 'box5']], itemLimit=3))
+
+		# The items we kept giving it past the limit are dropped to the floor
+		self.assertEqual(False, i.give([[0, 'box0']], itemLimit=3))
+		self.assertEqual(['box0', 'box1', 'box2', 'box3'], i.getDeliverableItems())
+
+		self.assertEqual(0, i.getUndeliverableCount())
+		self.assertEqual(0, i.getMaxConsumption())
+
+
+	def test_sizeLimit(self):
+		boxSize = totalSizeOf('box1')
+		i = Incoming()
+		self.assertEqual(False, i.give([[1, 'box1']], sizeLimit=boxSize * 3))
+		self.assertEqual(False, i.give([[2, 'box2']], sizeLimit=boxSize * 3))
+		self.assertEqual(False, i.give([[3, 'box3']], sizeLimit=boxSize * 3))
+		self.assertEqual(True, i.give([[4, 'box4']], sizeLimit=boxSize * 3))
+		self.assertEqual(True, i.give([[5, 'box5']], sizeLimit=boxSize * 3))
+
+		# The items we kept giving it past the limit are dropped to the floor
+		self.assertEqual(False, i.give([[0, 'box0']], sizeLimit=boxSize * 3))
+		self.assertEqual(['box0', 'box1', 'box2', 'box3'], i.getDeliverableItems())
+
+		self.assertEqual(0, i.getUndeliverableCount())
+		self.assertEqual(0, i.getMaxConsumption())
+
+
 
 class TestIncomingConsumption(unittest.TestCase):
 	"""
@@ -272,20 +305,6 @@ class TestIncomingConsumption(unittest.TestCase):
 		items = i.getDeliverableItems()
 		assert 4 == len(items), len(items) # sanity check
 		self.aE(0, i.getMaxConsumption()) # and again, just to make sure
-
-
-	def test_consumptionMapDoesNotLeak(self):
-		"""
-		Test an implementation detail: the _objSizeCache map does not
-		keep around unneeded entries
-		"""
-		i = Incoming()
-		
-		i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
-		self.aE(3, len(i._objSizeCache))
-
-		i.give([[0, 'box0']])
-		self.aE(0, len(i._objSizeCache))
 
 
 	def test_StringFragmentConvertToStr(self):
