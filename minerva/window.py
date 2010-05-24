@@ -31,14 +31,14 @@ class Queue(object):
 
 
 	def append(self, item):
+		self._items[self._counter + 1] = item
 		self._counter += 1
-		self._items[self._counter] = item
 
 
 	def extend(self, items):
 		for item in items:
+			self._items[self._counter + 1] = item
 			self._counter += 1
-			self._items[self._counter] = item
 
 
 	def __len__(self):
