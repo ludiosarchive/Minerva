@@ -2370,14 +2370,6 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		], transport1.getNew())
 
 
-	def test_incomingDoesNotTooManyStrings(self):
-		"""
-		If client sends a ton of undeliverable strings, Incoming only keeps
-		50 of them.
-		"""
-
-
-
 	def test_clientSendsAlreadyReceivedBoxes(self):
 		"""
 		Stream ignores strings that were already received, and calls
@@ -2899,7 +2891,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		request is kept open.
 		"""
 		for streaming in (False, True):
-			print "streaming: %r" % streaming
+			##print "streaming: %r" % streaming
 
 			self._resetStreamTracker(realObjects=True)
 			resource = self._makeResource()
