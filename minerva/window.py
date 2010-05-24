@@ -101,7 +101,7 @@ class Queue(object):
 			except KeyError:
 				pass
 
-		# Possible reduce memory use, depends on dict implementation
+		# Possibly reduce memory use; depends on dict implementation
 		if not self._items:
 			self._items = {}
 
@@ -199,7 +199,7 @@ class Incoming(object):
 				##print "self._cached[%r] = %r" % (num, item)
 				self._cached[num] = item
 
-		# Possible reduce memory use, depends on dict implementation
+		# Possibly reduce memory use; depends on dict implementation
 		if not self._cached:
 			self._cached = {}
 
