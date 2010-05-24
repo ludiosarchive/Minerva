@@ -138,7 +138,7 @@ class Incoming(object):
 	C{str}, which we don't want to keep around. It's also easier to get the
 	size-in-memory of a C{str}.
 	"""
-	__slots__ = ('_lastAck', '_cached', '_deliverable', '_size')
+	__slots__ = ('_lastAck', '_cached', '_size')
 
 	def __init__(self):
 		self._lastAck = -1
@@ -146,8 +146,7 @@ class Incoming(object):
 		# A dictionary to store items given to us, but not yet deliverable
 		# (because there are gaps). This is also used for temporary storage.
 		self._cached = {}
-		
-		self._deliverable = deque()
+
 		self._size = 0
 
 
@@ -155,7 +154,10 @@ class Incoming(object):
 		"""
 		@param numAndItemSeq: a sequence of *already sorted* (seqNum, object).
 			C{seqNum} may be an C{int}, C{long}, or integral C{float}.
+
+		@return: (list of deliverable items, hitLimit?) 
 		"""
+		deliverable = []
 		hitLimit = False
 		for num, item in numAndItemSeq:
 			if num < 0:
@@ -163,15 +165,17 @@ class Incoming(object):
 
 			if num == self._lastAck + 1:
 				self._lastAck += 1
-				##print "self._deliverable.append(%r)" % (item,)
-				self._deliverable.append(item)
+				##print "deliverable.append(%r)" % (item,)
+				deliverable.append(item)
 				while self._lastAck + 1 in self._cached:
 					cachedItem = self._cached[self._lastAck + 1]
 					##print "del self._cached[%r]" % (num,)
 					del self._cached[self._lastAck + 1]
 					self._lastAck += 1
 					self._size -= totalSizeOf(cachedItem)
-					self._deliverable.append(cachedItem)
+					deliverable.append(
+						StringFragment(cachedItem, 0, len(cachedItem)) if \
+						isinstance(cachedItem, _wasSF) else cachedItem)
 			else:
 				if itemLimit is not None and len(self._cached) >= itemLimit:
 					hitLimit = True
@@ -192,23 +196,7 @@ class Incoming(object):
 		if not self._cached:
 			self._cached = {}
 
-		return hitLimit
-
-
-	def getDeliverableItems(self):
-		"""
-		Return a sequence of items for every item that can be delivered.
-		After I return these items, I will not know about them any more. They're your
-		responsibility now.
-		"""
-		yourItems = []
-		for i in self._deliverable:
-			yourItems.append(StringFragment(i, 0, len(i)) if isinstance(i, _wasSF) else i)
-
-		for i in xrange(len(yourItems)):
-			self._deliverable.popleft()
-
-		return yourItems
+		return deliverable, hitLimit
 
 
 	def getSACK(self):

@@ -148,58 +148,45 @@ class TestIncoming(unittest.TestCase):
 
 	def test_threeItems(self):
 		i = Incoming()
-		i.give([[0, 'box0'], [1, 'box1'], [2, 'box2']])
-
-		self.assertEqual(['box0', 'box1', 'box2'], i.getDeliverableItems())
+		self.assertEqual((['box0', 'box1', 'box2'], False), i.give([[0, 'box0'], [1, 'box1'], [2, 'box2']]))
 		self.assertEqual((2, ()), i.getSACK())
 
 
 	def test_itemMissing(self):
 		i = Incoming()
-		i.give([[0, 'box0'], [1, 'box1'], [3, 'box3']])
-
-		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
+		self.assertEqual((['box0', 'box1'], False), i.give([[0, 'box0'], [1, 'box1'], [3, 'box3']]))
 		self.assertEqual((1, (3,)), i.getSACK())
 
 
 	def test_twoItemsMissing(self):
 		i = Incoming()
-		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4']])
-
-		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
+		self.assertEqual((['box0', 'box1'], False), i.give([[0, 'box0'], [1, 'box1'], [4, 'box4']]))
 		self.assertEqual((1, (4,)), i.getSACK())
 
 
 	def test_twoRangesMissing(self):
 		i = Incoming()
-		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']])
-
-		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
+		self.assertEqual((['box0', 'box1'], False), i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']]))
 		self.assertEqual((1, (4, 6)), i.getSACK())
 
 
 	def test_twoRangesMissingThenFill(self):
 		i = Incoming()
-		i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']])
-
-		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
+		self.assertEqual((['box0', 'box1'], False), i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']]))
 		self.assertEqual((1, (4, 6)), i.getSACK())
-
-		i.give([[2, 'box2'], [3, 'box3'], [5, 'box5']])
-
-		self.assertEqual(['box2', 'box3', 'box4', 'box5', 'box6'], i.getDeliverableItems())
+		self.assertEqual((['box2', 'box3', 'box4', 'box5', 'box6'], False), i.give([[2, 'box2'], [3, 'box3'], [5, 'box5']]))
 		self.assertEqual((6, ()), i.getSACK())
 
 
 	def test_outOfOrder(self):
 		i = Incoming()
-		# 0 missing
-		i.give([[1, 'box1'], [2, 'box2']])
-		self.assertEqual([], i.getDeliverableItems())
+		# box0 missing
+		self.assertEqual(([], False), i.give([[1, 'box1'], [2, 'box2']]))
 		self.assertEqual((-1, (1, 2)), i.getSACK())
-		i.give([[0, 'box0']]) # finally deliver it
-		i.give([[3, 'box3']])
-		self.assertEqual(['box0', 'box1', 'box2', 'box3'], i.getDeliverableItems())
+		# finally deliver it
+		self.assertEqual((['box0', 'box1', 'box2'], False), i.give([[0, 'box0']]))
+		# make sure it still works
+		self.assertEqual((['box3'], False), i.give([[3, 'box3']]))
 		self.assertEqual((3, ()), i.getSACK())
 
 
@@ -207,11 +194,14 @@ class TestIncoming(unittest.TestCase):
 		"""
 		L{Incoming} handles all the boxes even when they're given
 		out-of-order in one L{Incoming.give} call.
+
+		You should *not* pass .give unsorted sequences in production code,
+		because you may hit the item/size limit. It will also be slower because
+		it must modify a dictionary more frequently.
 		"""
 		i = Incoming()
-		i.give([[1, 'box1'], [0, 'box0']])
+		self.assertEqual((['box0', 'box1'], False), i.give([[1, 'box1'], [0, 'box0']]))
 		self.assertEqual((1, ()), i.getSACK())
-		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
 
 
 	def test_negativeSequenceNum(self):
@@ -241,15 +231,16 @@ class TestIncoming(unittest.TestCase):
 
 	def test_itemLimit(self):
 		i = Incoming()
-		self.assertEqual(False, i.give([[1, 'box1']], itemLimit=3))
-		self.assertEqual(False, i.give([[2, 'box2']], itemLimit=3))
-		self.assertEqual(False, i.give([[3, 'box3']], itemLimit=3))
-		self.assertEqual(True, i.give([[4, 'box4']], itemLimit=3))
-		self.assertEqual(True, i.give([[5, 'box5']], itemLimit=3))
+		self.assertEqual(([], False), i.give([[1, 'box1']], itemLimit=3))
+		self.assertEqual(([], False), i.give([[2, 'box2']], itemLimit=3))
+		self.assertEqual(([], False), i.give([[3, 'box3']], itemLimit=3))
+		self.assertEqual(([], True), i.give([[4, 'box4']], itemLimit=3))
+		self.assertEqual(([], True), i.give([[5, 'box5']], itemLimit=3))
 
 		# The items we kept giving it past the limit are dropped to the floor
-		self.assertEqual(False, i.give([[0, 'box0']], itemLimit=3))
-		self.assertEqual(['box0', 'box1', 'box2', 'box3'], i.getDeliverableItems())
+		deliverable, hitLimit = i.give([[0, 'box0']], itemLimit=3)
+		self.assertEqual(False, hitLimit)
+		self.assertEqual(['box0', 'box1', 'box2', 'box3'], deliverable)
 
 		self.assertEqual(0, i.getUndeliverableCount())
 		self.assertEqual(0, i.getMaxConsumption())
@@ -258,15 +249,16 @@ class TestIncoming(unittest.TestCase):
 	def test_sizeLimit(self):
 		boxSize = totalSizeOf('box1')
 		i = Incoming()
-		self.assertEqual(False, i.give([[1, 'box1']], sizeLimit=boxSize * 3))
-		self.assertEqual(False, i.give([[2, 'box2']], sizeLimit=boxSize * 3))
-		self.assertEqual(False, i.give([[3, 'box3']], sizeLimit=boxSize * 3))
-		self.assertEqual(True, i.give([[4, 'box4']], sizeLimit=boxSize * 3))
-		self.assertEqual(True, i.give([[5, 'box5']], sizeLimit=boxSize * 3))
+		self.assertEqual(([], False), i.give([[1, 'box1']], sizeLimit=boxSize * 3))
+		self.assertEqual(([], False), i.give([[2, 'box2']], sizeLimit=boxSize * 3))
+		self.assertEqual(([], False), i.give([[3, 'box3']], sizeLimit=boxSize * 3))
+		self.assertEqual(([], True), i.give([[4, 'box4']], sizeLimit=boxSize * 3))
+		self.assertEqual(([], True), i.give([[5, 'box5']], sizeLimit=boxSize * 3))
 
 		# The items we kept giving it past the limit are dropped to the floor
-		self.assertEqual(False, i.give([[0, 'box0']], sizeLimit=boxSize * 3))
-		self.assertEqual(['box0', 'box1', 'box2', 'box3'], i.getDeliverableItems())
+		deliverable, hitLimit = i.give([[0, 'box0']], sizeLimit=boxSize * 3)
+		self.assertEqual(False, hitLimit)
+		self.assertEqual(['box0', 'box1', 'box2', 'box3'], deliverable)
 
 		self.assertEqual(0, i.getUndeliverableCount())
 		self.assertEqual(0, i.getMaxConsumption())
@@ -291,22 +283,6 @@ class TestIncomingConsumption(unittest.TestCase):
 		self.aE(totalSizeOf('box1') * 6, i.getMaxConsumption())
 
 
-	def test_zeroAfterDeliverable(self):
-		"""
-		After the boxes are in the delivered stage, C{getMaxConsumption} does
-		not include them as consuming memory, even they were not grabbed
-		with C{getDeliverableItems} yet.
-		"""
-		i = Incoming()
-		i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
-		self.aE(totalSizeOf('box1') * 3, i.getMaxConsumption())
-		i.give([[0, 'box0']])
-		self.aE(0, i.getMaxConsumption())
-		items = i.getDeliverableItems()
-		assert 4 == len(items), len(items) # sanity check
-		self.aE(0, i.getMaxConsumption()) # and again, just to make sure
-
-
 	def test_StringFragmentConvertToStr(self):
 		"""
 		L{StringFragment}s are converted to C{window._wasSF}s if they are
@@ -328,5 +304,4 @@ class TestIncomingConsumption(unittest.TestCase):
 		s = _wasSF("helloworld" * 100)
 		sf = StringFragment(s, 0, len(s))
 		i.give([[1, sf]])
-		i.give([[0, sf]])
-		self.aE([sf, sf], i.getDeliverableItems())
+		self.aE(([sf, sf], False), i.give([[0, sf]]))
