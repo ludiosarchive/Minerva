@@ -18,8 +18,9 @@ _postImportVars = vars().keys()
 
 class Queue(object):
 	"""
-	This is a queue that assigns a never-repeating sequence number
-	to each item, and can remove items based on SACK tuples.
+	This is a queue that assigns a monotonically increasing integer as
+	a sequence number for each item. You can iterate over items in
+	the queue, and you can batch-remove items with a SACK tuple.
 	"""
 	__slots__ = ('_counter', '_items')
 
