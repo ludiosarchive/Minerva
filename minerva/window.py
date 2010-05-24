@@ -157,6 +157,11 @@ class Incoming(object):
 
 		@return: (list of deliverable items, hitLimit?) 
 		"""
+		# TODO: maybe immediately reject items that have little chance
+		# of delivery (seqNum far above lastAck + itemLimit) to further
+		# reduce the possibility of ACAs. Right now we have enough ACA
+		# protection if itemLimit is no more than ~50.
+
 		deliverable = []
 		hitLimit = False
 		for num, item in numAndItemSeq:
