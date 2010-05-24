@@ -255,10 +255,10 @@ class StreamTests(unittest.TestCase):
 		"""
 		cases = (
 			([(1, sf('x' * (1 * 1024 * 1024 + 1)))], 0),
-			([(1, sf('x' * (400 * 1024))), (1, sf('x' * (400 * 1024))), (1, sf('x' * (400 * 1024)))], 2),
+			([(1, sf('x' * (400 * 1024))), (2, sf('x' * (400 * 1024))), (3, sf('x' * (400 * 1024)))], 2),
 		)
 		for notManyStrings, expectedKept in cases:
-			##print notManyStrings, expectedKept
+			##print len(notManyStrings), expectedKept
 			factory = MockMinervaProtocolFactory()
 			s = Stream(None, 'some fake id', factory)
 			t = DummySocketLikeTransport()
