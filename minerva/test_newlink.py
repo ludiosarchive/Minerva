@@ -227,7 +227,8 @@ class StreamTests(unittest.TestCase):
 	def test_exhaustedReceiveWindowTooManyStrings(self):
 		"""
 		If too many strings are stuck in Incoming, the transport that received
-		"the last straw" is killed with C{tk_rwin_overflow}.
+		"the last straw" is killed with C{tk_rwin_overflow}. Stream._incoming
+		keeps only 50 of them.
 		"""
 		factory = MockMinervaProtocolFactory()
 		s = Stream(None, 'some fake id', factory)
@@ -235,31 +236,39 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t, False, None)
 
 		manyStrings = []
-		for n in xrange(1, 51 + 1):
+		for n in xrange(1, 200 + 1 + 1):
 			manyStrings.append((n, sf('box')))
-		assert len(manyStrings) == 51
+		assert len(manyStrings) == 200 + 1
 
 		# box #0 is never given, so it cannot deliver any of them
 
 		s.stringsReceived(t, manyStrings)
 		self.aE([['causedRwinOverflow']], t.getNew())
+		self.aE(50, s._incoming.getUndeliverableCount())
 
 
 	def test_exhaustedReceiveWindowTooManyBytes(self):
 		"""
-		If too many (estimated) bytes are in Incoming, the Stream is reset.
+		If too many (estimated) bytes are in Incoming, the transport that received
+		"the last straw" is killed with C{tk_rwin_overflow}. Stream._incoming
+		keeps only 1 MB.
 		"""
-		factory = MockMinervaProtocolFactory()
-		s = Stream(None, 'some fake id', factory)
-		t = DummySocketLikeTransport()
-		s.transportOnline(t, False, None)
+		cases = (
+			([(1, sf('x' * (1 * 1024 * 1024 + 1)))], 0),
+			([(1, sf('x' * (400 * 1024))), (1, sf('x' * (400 * 1024))), (1, sf('x' * (400 * 1024)))], 2),
+		)
+		for notManyStrings, expectedKept in cases:
+			##print notManyStrings, expectedKept
+			factory = MockMinervaProtocolFactory()
+			s = Stream(None, 'some fake id', factory)
+			t = DummySocketLikeTransport()
+			s.transportOnline(t, False, None)
 
-		notManyStrings = [(1, sf('x' * (1 * 1024 * 1024 + 1)))]
+			# box #0 is never given, so it cannot deliver any of them
 
-		# box #0 is never given, so it cannot deliver any of them
-
-		s.stringsReceived(t, notManyStrings)
-		self.aE([['causedRwinOverflow']], t.getNew())
+			s.stringsReceived(t, notManyStrings)
+			self.aE([['causedRwinOverflow']], t.getNew())
+			self.aE(expectedKept, s._incoming.getUndeliverableCount())
 
 
 	def test_sendStringsAndActiveStreams(self):
@@ -2359,6 +2368,14 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			StringFrame("10"),
 			StringFrame("11"),
 		], transport1.getNew())
+
+
+	def test_incomingDoesNotTooManyStrings(self):
+		"""
+		If client sends a ton of undeliverable strings, Incoming only keeps
+		50 of them.
+		"""
+
 
 
 	def test_clientSendsAlreadyReceivedBoxes(self):

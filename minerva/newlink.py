@@ -338,7 +338,8 @@ class Stream(object):
 		"""
 		Private. Do not call this.
 
-		Called by a transport to tell me that it has received strings L{strings}.
+		Called by a transport to tell me that it has received *already sorted*
+		strings L{strings}.
 		"""
 		if self.disconnected:
 			return
@@ -1066,6 +1067,9 @@ class SocketTransport(object):
 		# Mutable outside list to work around Python 2.x read-only closures
 		bunchedStrings = [[]]
 		def handleStrings():
+			# bunchedStrings is already sorted 99.99%+ of the time, so this
+			# sort is particularly fast with Timsort.
+			bunchedStrings[0].sort()
 			self._stream.stringsReceived(self, bunchedStrings[0])
 			# Remember that a lot can happen underneath that stringsReceived call,
 			# including a call to our own `reset` or `closeGently` or `writeStrings`

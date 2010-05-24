@@ -138,7 +138,7 @@ class Incoming(object):
 	C{str}, which we don't want to keep around. It's also easier to get the
 	size-in-memory of a C{str}.
 	"""
-	__slots__ = ('_lastAck', '_cached', '_deliverable', '_objSizeCache')
+	__slots__ = ('_lastAck', '_cached', '_deliverable', '_size')
 
 	def __init__(self):
 		self._lastAck = -1
@@ -148,65 +148,52 @@ class Incoming(object):
 		self._cached = {}
 		
 		self._deliverable = deque()
-		self._objSizeCache = {}
+		self._size = 0
 
 
-	def give(self, numAndItemSeq):
+	def give(self, numAndItemSeq, itemLimit=None, sizeLimit=None):
 		"""
-		@param numAndItemSeq: a sequence of optionally-sorted (seqNum, object).
+		@param numAndItemSeq: a sequence of *already sorted* (seqNum, object).
 			C{seqNum} may be an C{int}, C{long}, or integral C{float}.
-
-		Returns a list of sequence numbers that were ignored (because items with
-		such sequence numbers were already received - not necessarily delivered).
 		"""
-		alreadyGiven = []
-		seqNums = []
+		hitLimit = False
 		for num, item in numAndItemSeq:
-			seqNums.append(num)
-
-			# Step 1: check numbers, skip over already-given seqNums
 			if num < 0:
 				raise ValueError("Sequence num must be 0 or above, was %r" % (num,))
 
-			if num in self._cached or num <= self._lastAck:
-				alreadyGiven.append(num)
-				continue
-
-			# Step 2: add to _cached unconditionally
-			self._cached[num] = item
-
-			# Step 3: for everything that can be delivered, move from _cached to _deliverable.
-			# Remove keys from _objSizeCache at the same time.
-
-			# TODO	: need to handle MemoryErrors? Probably not.
-			while self._lastAck + 1 in self._cached:
-				_lastAckP1 = self._lastAck + 1
-				self._deliverable.append(self._cached[_lastAckP1])
-				del self._cached[_lastAckP1]
-				if _lastAckP1 in self._objSizeCache:
-					del self._objSizeCache[_lastAckP1]
-				self._lastAck = _lastAckP1
-
-		# Do this after the above, to avoid getting the memory sizes of
-		# frames in most common case (where all given boxes are moved
-		# to _deliverable immediately)
-
-		for num, item in self._cached.iteritems():
-			if num not in self._objSizeCache:
+			if num == self._lastAck + 1:
+				self._lastAck += 1
+				##print "self._deliverable.append(%r)" % (item,)
+				self._deliverable.append(item)
+				while self._lastAck + 1 in self._cached:
+					cachedItem = self._cached[self._lastAck + 1]
+					##print "del self._cached[%r]" % (num,)
+					del self._cached[self._lastAck + 1]
+					self._lastAck += 1
+					size = totalSizeOf(cachedItem)
+					self._size -= size
+					self._deliverable.append(cachedItem)
+			else:
+				if itemLimit is not None and len(self._cached) >= itemLimit:
+					hitLimit = True
+					break
 				# Do the conversion here so that it applies only to the
 				# undeliverable items.
 				if isinstance(item, StringFragment):
 					item = _wasSF(item)
-				self._objSizeCache[num] = totalSizeOf(item)
+				size = totalSizeOf(item)
+				if sizeLimit is not None and self._size + size > sizeLimit:
+					hitLimit = True
+					break
+				self._size += size
+				##print "self._cached[%r] = %r" % (num, item)
+				self._cached[num] = item
 
 		# Possible reduce memory use, depends on dict implementation
 		if not self._cached:
 			self._cached = {}
 
-		if not self._objSizeCache:
-			self._objSizeCache = {}
-
-		return alreadyGiven
+		return hitLimit
 
 
 	def getDeliverableItems(self):
@@ -260,7 +247,7 @@ class Incoming(object):
 		to the same object, this may overreport how much memory is really
 		being consumed.
 		"""
-		return sum(self._objSizeCache.itervalues())
+		return self._size
 
 
 

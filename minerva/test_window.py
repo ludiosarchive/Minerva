@@ -214,42 +214,6 @@ class TestIncoming(unittest.TestCase):
 		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
 
 
-	def test_alreadyGiven1Call(self):
-		i = Incoming()
-		alreadyGiven = i.give([[0, 'box0'], [1, 'box1'], [1, 'boxNEW']])
-		self.assertEqual((1, ()), i.getSACK())
-		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
-		self.assertEqual([1], alreadyGiven)
-
-
-	def test_alreadyGivenMultipleCalls(self):
-		i = Incoming()
-		alreadyGivenA = i.give([[0, 'box0'], [1, 'box1']])
-		alreadyGivenB = i.give([[0, 'box0NEW']])
-		alreadyGivenC = i.give([[1, 'box1NEW']])
-
-		self.assertEqual([], alreadyGivenA)
-		self.assertEqual([0], alreadyGivenB)
-		self.assertEqual([1], alreadyGivenC)
-
-		self.assertEqual((1, ()), i.getSACK())
-		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
-
-
-	def test_alreadyGivenButUndelivered(self):
-		i = Incoming()
-		alreadyGivenA = i.give([[0, 'box0'], [1, 'box1'], [4, 'box4']])
-		alreadyGivenB = i.give([[4, 'box4NEW']])
-		alreadyGivenC = i.give([[1, 'box1NEW'], [4, 'box4NEW']])
-
-		self.assertEqual([], alreadyGivenA)
-		self.assertEqual([4], alreadyGivenB)
-		self.assertEqual([1, 4], alreadyGivenC)
-
-		self.assertEqual((1, (4,)), i.getSACK())
-		self.assertEqual(['box0', 'box1'], i.getDeliverableItems())
-
-
 	def test_negativeSequenceNum(self):
 		i = Incoming()
 		self.assertRaises(ValueError, lambda: i.give([[-1, 'box']]))
@@ -259,11 +223,11 @@ class TestIncoming(unittest.TestCase):
 	def test_getUndeliverableCount(self):
 		i = Incoming()
 		self.aE(0, i.getUndeliverableCount())
-		i.give([[1, 'box']])
+		i.give([[1, 'box1']])
 		self.aE(1, i.getUndeliverableCount())
-		i.give([[2, 'box']])
+		i.give([[2, 'box2']])
 		self.aE(2, i.getUndeliverableCount())
-		i.give([[0, 'box']])
+		i.give([[0, 'box0']])
 		self.aE(0, i.getUndeliverableCount())
 
 
