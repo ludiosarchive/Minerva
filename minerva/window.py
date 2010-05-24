@@ -181,6 +181,8 @@ class Incoming(object):
 					deliverable.append(
 						StringFragment(cachedItem, 0, len(cachedItem)) if \
 						isinstance(cachedItem, _wasSF) else cachedItem)
+			elif num <= self._lastAck:
+				pass
 			else:
 				if itemLimit is not None and len(self._cached) >= itemLimit:
 					hitLimit = True

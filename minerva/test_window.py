@@ -142,7 +142,6 @@ class TestIncoming(unittest.TestCase):
 	"""
 	def test_SACKNoItems(self):
 		i = Incoming()
-
 		self.assertEqual((-1, ()), i.getSACK())
 
 
@@ -218,6 +217,25 @@ class TestIncoming(unittest.TestCase):
 		i.give([[2, 'box2']])
 		self.aE(2, i.getUndeliverableCount())
 		i.give([[0, 'box0']])
+		self.aE(0, i.getUndeliverableCount())
+
+
+	def test_itemsGivenTwice(self):
+		"""
+		If an already-delivered item is given again, it is completely ignored
+		and does not occupy space in the internal cache.
+		"""
+		i = Incoming()
+		i.give([[0, 'box0'], [1, 'box1']])
+		self.aE(0, i.getUndeliverableCount())
+
+		i.give([[0, 'box0']])
+		self.aE(0, i.getUndeliverableCount())
+		i.give([[1, 'box1']])
+		self.aE(0, i.getUndeliverableCount())
+		i.give([[0, 'box0'], [1, 'box1']])
+		self.aE(0, i.getUndeliverableCount())
+		i.give([[0, 'box0'], [1, 'box1'], [2, 'box2']])
 		self.aE(0, i.getUndeliverableCount())
 
 
