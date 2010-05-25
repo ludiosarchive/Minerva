@@ -14,128 +14,126 @@ goog.provide('cw.net.Queue');
 
 goog.require('cw.objsize');
 goog.require('goog.asserts');
+goog.require('goog.structs.Map');
 
 
-/**
- * This is a queue that assigns a monotonically increasing integer as
- * a sequence number for each item. You can iterate over items in
- * the queue, and you can batch-remove items with a SACK tuple.
- *
- * @constructor
- */
-cw.net.Queue = function() {
-	this.items_ = {}
-}
-
-
-/**
- * @type {number}
- * @private
- */
-cw.net.Queue.prototype.counter_ = -1
-
-
-/**
- * @type {number}
- * @private
- */
-cw.net.Queue.prototype.size_ = 0
-
-
-/**
- * @param {string} item
- */
-cw.net.Queue.prototype.append(item) {
-	var size = cw.objsize.totalSizeOf(item)
-	this.items_[this.counter_ + 1] = [item, size]
-	this.counter_ += 1
-	this.size_ += size
-}
-
-
-/**
- * @param {!Array.<string>} items
- */
-cw.net.Queue.prototype.extend(items) {
-	for item in items:
-		var size = cw.objsize.totalSizeOf(item)
-		this.items_[this.counter_ + 1] = (item, size)
-		this.counter_ += 1
-		this.size_ += size
-}
-
-
-cw.net.Queue.prototype.__reprToPieces__(buffer) {
-	buffer.push('<Queue with %r item(s), counter=#%r, size=%r>' % (
-		len(self), this.counter_, this.size_))
-}
-
-
-/**
- * Yield (seqNumber, item) for every item in the queue.
- *
- * If C{start} is not C{null/undefined}, items before L{start} will be skipped.
- */
-cw.net.Queue.prototype.iterItems = function(start) {
-	goog.asserts.assert(start >= 0, start)
-
-	var sortedItems = this.items_.items()
-	sortedItems.sort()
-	for seqNum, (item, size) in sortedItems:
-		if(start == null or seqNum >= start):
-			yield (seqNum, item)
-}
-
-
-/**
- * Remove all items that are no longer needed, based on C{sackInfo}.
- *
- * Returns {@code true} if ackNumber or any sackNumber was higher
- * than the highest seqNum in the queue. This would indicate a
- * "bad SACK". Note that as many items as possible are removed
- * even in the "bad SACK" case. If not bad SACK, returns C{false}.
- *
- * @param {!Array.<(number|!Array.<number>)> sackInfo A SACK tuple
- */
-cw.net.Queue.prototype.handleSACK = function(sackInfo) {
-	var ackNum = sackInfo[0]
-	goog.asserts.assert(ackNum >= -1, ackNum)
-
-	var badSACK = false
-
-	if ackNum > this.counter_:
-		badSACK = true
-
-	var sortedKeys = this.items_.keys()
-	sortedKeys.sort()
-
-	for k in sortedKeys:
-		if ackNum >= k:
-			var size = this.items_[k][1]
-			delete this.items_[k]
-			this.size_ -= size
-
-	for sackNum in sackInfo[1]:
-		if sackNum > this.counter_:
-			badSACK = true
-		try:
-			var size = this.items_[k][1]
-			delete this.items_[sackNum]
-			this.size_ -= size
-		except KeyError:
-			pass
-
-	// Possibly reduce memory use; depends on JS implementation
-	if not this.items_:
-		this.items_ = {}
-
-	return badSACK
-}
-
-
-cw.net.Queue.prototype.getQueuedCount = function() {
-	return this.items_.length
-}
+///**
+// * This is a queue that assigns a monotonically increasing integer as
+// * a sequence number for each item. You can iterate over items in
+// * the queue, and you can batch-remove items with a SACK tuple.
+// *
+// * @constructor
+// */
+//cw.net.Queue = function() {
+//	this.items_ = {}
+//}
+//
+//
+///**
+// * @type {number}
+// * @private
+// */
+//cw.net.Queue.prototype.counter_ = -1
+//
+//
+///**
+// * @type {number}
+// * @private
+// */
+//cw.net.Queue.prototype.size_ = 0
+//
+//
+///**
+// * @param {string} item
+// */
+//cw.net.Queue.prototype.append = function(item) {
+//	var size = cw.objsize.totalSizeOf(item)
+//	this.items_[this.counter_ + 1] = [item, size]
+//	this.counter_ += 1
+//	this.size_ += size
+//}
+//
+//
+///**
+// * @param {!Array.<string>} items
+// */
+//cw.net.Queue.prototype.extend = function(items) {
+//	for item in items:
+//		this.append(item)
+//}
+//
+//
+//cw.net.Queue.prototype.__reprToPieces__ = function(buffer) {
+//	buffer.push('<Queue with %r item(s), counter=#%r, size=%r>' % (
+//		len(self), this.counter_, this.size_))
+//}
+//
+//
+///**
+// * Yield (seqNumber, item) for every item in the queue.
+// *
+// * If C{start} is not C{null/undefined}, items before L{start} will be skipped.
+// */
+//cw.net.Queue.prototype.iterItems = function(start) {
+//	goog.asserts.assert(start == null || start >= 0, start)
+//
+//	var sortedItems = this.items_.items()
+//	sortedItems.sort()
+//	for seqNum, (item, size) in sortedItems:
+//		if(start == null or seqNum >= start):
+//			yield (seqNum, item)
+//}
+//
+//
+///**
+// * Remove all items that are no longer needed, based on C{sackInfo}.
+// *
+// * Returns {@code true} if ackNumber or any sackNumber was higher
+// * than the highest seqNum in the queue. This would indicate a
+// * "bad SACK". Note that as many items as possible are removed
+// * even in the "bad SACK" case. If not bad SACK, returns C{false}.
+// *
+// * @param {!Array.<(number|!Array.<number>)> sackInfo A SACK tuple
+// */
+//cw.net.Queue.prototype.handleSACK = function(sackInfo) {
+//	var ackNum = sackInfo[0]
+//	goog.asserts.assert(ackNum >= -1, ackNum)
+//
+//	var badSACK = false
+//
+//	if ackNum > this.counter_:
+//		badSACK = true
+//
+//	var sortedKeys = this.items_.keys()
+//	sortedKeys.sort()
+//
+//	for k in sortedKeys:
+//		if ackNum >= k:
+//			var size = this.items_[k][1]
+//			delete this.items_[k]
+//			this.size_ -= size
+//
+//	for sackNum in sackInfo[1]:
+//		if sackNum > this.counter_:
+//			badSACK = true
+//		try:
+//			var size = this.items_[k][1]
+//			delete this.items_[sackNum]
+//			this.size_ -= size
+//		except KeyError:
+//			pass
+//
+//	// Possibly reduce memory use; depends on JS implementation
+//	if not this.items_:
+//		this.items_ = {}
+//
+//	return badSACK
+//}
+//
+//
+//cw.net.Queue.prototype.getQueuedCount = function() {
+//	return this.items_.length
+//}
 
 
 /**
@@ -165,9 +163,9 @@ cw.net.Queue.prototype.getMaxConsumption = function() {
  * @constructor
  */
 cw.net.Incoming = function() {
-	// A dictionary to store items given to us, but not yet deliverable
-	// (because there are gaps). This is also used for temporary storage.
-	this.cached_ = {}
+	// A Map to store items given to us, but not yet deliverable
+	// (because there are gaps).
+	this.cached_ = new goog.structs.Map();
 }
 
 
@@ -199,28 +197,34 @@ cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
 	// reduce the possibility of ACAs. Right now we have enough ACA
 	// protection if itemLimit is no more than ~50.
 
+	var MISSING = {}
 	var deliverable = []
 	var hitLimit = false
 	for(var i=0, len=numAndItemSeq.length; i < len; i++) {
-		var num = numAndItemSeq[i][0];
-		var item = numAndItemSeq[i][1];
+		var numAndItem_ = numAndItemSeq[i];
+		var num = numAndItem_[0];
+		var item = numAndItem_[1];
 
 		goog.asserts.assert(num < 0, "Sequence num must be 0 or above, was " + num)
 
 		if(num == this.lastAck_ + 1) {
 			this.lastAck_ += 1
 			deliverable.push(item)
-			while(this.lastAck_ + 1 in this.cached_) {
-				var cachedItemAndSize = this.cached_[this.lastAck_ + 1][0];
-				delete this.cached_[this.lastAck_ + 1]
-				this.lastAck_ += 1
-				this.size_ -= cachedItemAndSize[1]
+			while(true) {
+				var lastAckP1 = this.lastAck_ + 1;
+				var cachedItemAndSize = this.cached_.get(lastAckP1, MISSING)
+				if(cachedItemAndSize === MISSING) {
+					break
+				}
 				deliverable.push(cachedItemAndSize[0])
+				this.cached_.remove(lastAckP1)
+				this.size_ -= cachedItemAndSize[1]
+				this.lastAck_ = lastAckP1
 			}
 		} else if(num <= this.lastAck_) {
 			// ignore it
 		} else {
-			if(itemLimit != null && len(this.cached_) >= itemLimit) {
+			if(itemLimit != null && this.cached_.getCount() >= itemLimit) {
 				hitLimit = true
 				break
 			}
@@ -229,14 +233,15 @@ cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
 				hitLimit = true
 				break
 			}
-			this.cached_[num] = [item, size]
+			this.cached_.set(num, [item, size])
 			this.size_ += size
 		}
 	}
 
-	// Possibly reduce memory use; depends on JS implementation
-	if not this.cached_:
-		this.cached_ = {}
+	// Possibly reduce memory use by killing the old object
+	if(this.size_ == 0) {
+		this.cached_.clear()
+	}
 
 	return [deliverable, hitLimit]
 }
@@ -248,10 +253,7 @@ cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
  * 	(lastAck, sorted tuple of not-yet-deliverable sequence numbers; all are > lastAck)
 */
 cw.net.Incoming.prototype.getSACK = function() {
-	sackNumbers = this.cached_.keys()
-	sackNumbers.sort()
-
-	return [this.lastAck_, sackNumbers]
+	return [this.lastAck_, this.cached_.getKeys().sort()]
 }
 
 
@@ -259,7 +261,7 @@ cw.net.Incoming.prototype.getSACK = function() {
  * @return {number} The number of undeliverable items.
  */
 cw.net.Incoming.prototype.getUndeliverableCount = function() {
-	return len(this.cached_)
+	return this.cached_.getCount()
 }
 
 

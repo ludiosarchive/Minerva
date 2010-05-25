@@ -166,7 +166,7 @@ class Incoming(object):
 		self._lastAck = -1
 
 		# A dictionary to store items given to us, but not yet deliverable
-		# (because there are gaps). This is also used for temporary storage.
+		# (because there are gaps).
 		self._cached = {}
 
 		self._size = 0
