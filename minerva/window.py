@@ -191,18 +191,21 @@ class Incoming(object):
 				raise ValueError("Sequence num must be 0 or above, was %r" % (num,))
 
 			if num == self._lastAck + 1:
-				self._lastAck += 1
 				##print "deliverable.append(%r)" % (item,)
 				deliverable.append(item)
-				while self._lastAck + 1 in self._cached:
-					cachedItem, cachedSize = self._cached[self._lastAck + 1]
+				self._lastAck += 1
+				while True:
+					lastAckP1 = self._lastAck + 1
+					if not lastAckP1 in self._cached:
+						break
+					cachedItem, cachedSize = self._cached[lastAckP1]
 					##print "del self._cached[%r]" % (num,)
-					del self._cached[self._lastAck + 1]
-					self._lastAck += 1
-					self._size -= cachedSize
 					deliverable.append(
 						StringFragment(cachedItem, 0, len(cachedItem)) if \
 						isinstance(cachedItem, _wasSF) else cachedItem)
+					del self._cached[lastAckP1]
+					self._size -= cachedSize
+					self._lastAck = lastAckP1
 			elif num <= self._lastAck:
 				pass
 			else:
