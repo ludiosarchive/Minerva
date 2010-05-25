@@ -27,6 +27,7 @@ var repr = cw.repr.repr;
  * Tests for {@code window.Queue}
  */
 cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
+
 	function test_repr(self) {
 		var q = new Queue();
 		self.assertEqual('<Queue with 0 item(s), counter=#-1, size=0>', repr(q));
@@ -188,6 +189,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
  * Tests for L{window.Incoming}
  */
 cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingTests').methods(
+
 	function test_SACKNoItems(self) {
 		var i = new Incoming();
 		self.assertEqual([-1, []], i.getSACK());
@@ -238,12 +240,12 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingTests').methods(
 	},
 
 	/**
-	 * 	{@code Incoming} handles all the boxes even when they're given
-		out-of-order in one {@code Incoming.give} call.
-
-		You should *not* pass .give unsorted sequences in production code,
-		because you may hit the item/size limit. It will also be slower because
-		it must modify a dictionary more frequently.
+	 * {@code Incoming} handles all the boxes even when they're given
+	 * out-of-order in one {@code Incoming.give} call.
+	 *
+	 * You should *not* pass .give unsorted sequences in production code,
+	 * because you may hit the item/size limit. It will also be slower because
+	 * it must modify a dictionary more frequently.
 	 */
 	function test_outOfOrderJustOneCall(self) {
 		var i = new Incoming();
@@ -273,8 +275,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingTests').methods(
 	},
 
 	/**
-	 * 	If an already-delivered item is given again, it is completely ignored
-		and does not occupy space in the internal cache.
+	 * If an already-delivered item is given again, it is completely ignored
+	 * and does not occupy space in the internal cache.
 	 */
 	function test_itemsGivenTwice(self) {
 		var i = new Incoming();
@@ -336,6 +338,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingTests').methods(
  * Tests for L{window.Incoming}'s memory-consumption-prevention
  */
 cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingConsumptionTests').methods(
+
 	function test_noBoxesEverGiven(self) {
 		var i = new Incoming();
 		self.assertEqual(0, i.getMaxConsumption());
@@ -348,28 +351,31 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingConsumptionTests').met
 
 		_ = i.give([[4, 'box4'], [5, 'box5'], [6, 'box6']]);
 		self.assertEqual(totalSizeOf('box1') * 6, i.getMaxConsumption());
-	}
+	},
 
 	// TODO: after we allow mutable objects for totalSizeOf, re-enable
 	// and fix this test.
-//	/**
-//	 * 	If the size of an item changed while it was in Incoming,
-//		Incoming does *not* go into an inconsistent state (for example,
-//		thinking that _size is < 0)
-//	 */
-//	function test_itemSizeChangedWhileInIncoming(self) {
-//		var i = new Incoming();
-//		mutable = [];
-//		i.give([[1, mutable]]);
-//		sizeBefore = i.getMaxConsumption();
-//		self.assertTrue(sizeBefore > 0, sizeBefore);
-//
-//		mutable.extend(goog.array.repeat(null, 100));
-//
-//		i.give([[0, "0"]]);
-//		sizeAfter = i.getMaxConsumption();
-//		self.assertEqual(0, sizeAfter);
-//	}
+	/**
+	 * If the size of an item changed while it was in Incoming,
+	 * Incoming does *not* go into an inconsistent state (for example,
+	 * thinking that _size is < 0)
+	 */
+	function test_itemSizeChangedWhileInIncoming(self) {
+		throw new cw.UnitTest.SkipTest(
+			"not yet a problem because Incoming cannot accept mutables items");
+
+		var i = new Incoming();
+		var mutable = [];
+		i.give([[1, mutable]]);
+		var sizeBefore = i.getMaxConsumption();
+		self.assertTrue(sizeBefore > 0, sizeBefore);
+
+		mutable.extend(goog.array.repeat(null, 100));
+
+		i.give([[0, "0"]]);
+		var sizeAfter = i.getMaxConsumption();
+		self.assertEqual(0, sizeAfter);
+	}
 );
 
 })(); // end anti-clobbering for JScript
