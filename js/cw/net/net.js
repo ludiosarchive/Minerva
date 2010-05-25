@@ -10,6 +10,7 @@ goog.require('goog.debug.Logger');
 goog.require('goog.string');
 goog.require('goog.Disposable');
 goog.require('cw.externalinterface');
+goog.require('cw.net.Queue');
 
 
 /**
@@ -264,19 +265,6 @@ cw.net.IMinervaProtocol.prototype.stringsReceived = function(boxes) {
 
 }
 
-
-
-// The initial version of Minerva client won't support a SACK-capable Incoming. It'll
-// just drop boxes that it can't deliver to the client application immediately.
-
-
-/**
- * @constructor
- */
-cw.net.Queue = function() {
-	// basically use a linked list from goog
-	// and a '_posAt0' thing
-}
 
 
 /**
