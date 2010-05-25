@@ -24,7 +24,7 @@ goog.require('goog.structs.Map');
  * // TODO: types for tuples
  * @private
  */
-cw.net.SACKTuple_ = goog.typedef
+cw.net.SACKTuple_ = goog.typedef;
 
 
 /**
@@ -35,33 +35,33 @@ cw.net.SACKTuple_ = goog.typedef
  * @constructor
  */
 cw.net.Queue = function() {
-	this.items_ = new goog.structs.Map()
-}
+	this.items_ = new goog.structs.Map();
+};
 
 
 /**
  * @type {number}
  * @private
  */
-cw.net.Queue.prototype.counter_ = -1
+cw.net.Queue.prototype.counter_ = -1;
 
 
 /**
  * @type {number}
  * @private
  */
-cw.net.Queue.prototype.size_ = 0
+cw.net.Queue.prototype.size_ = 0;
 
 
 /**
  * @param {string} item
  */
 cw.net.Queue.prototype.append = function(item) {
-	var size = cw.objsize.totalSizeOf(item)
-	this.items_.set(this.counter_ + 1, [item, size])
-	this.counter_ += 1
-	this.size_ += size
-}
+	var size = cw.objsize.totalSizeOf(item);
+	this.items_.set(this.counter_ + 1, [item, size]);
+	this.counter_ += 1;
+	this.size_ += size;
+};
 
 
 /**
@@ -69,16 +69,16 @@ cw.net.Queue.prototype.append = function(item) {
  */
 cw.net.Queue.prototype.extend = function(items) {
 	for(var i=0; i < items.length; i++) {
-		this.append(items[i])
+		this.append(items[i]);
 	}
-}
+};
 
 
 cw.net.Queue.prototype.__reprToPieces__ = function(buffer) {
 	buffer.push(goog.string.subs(
 		'<Queue with %s item(s), counter=#%s, size=%s>',
-		this.items_.getCount(), this.counter_, this.size_))
-}
+		this.items_.getCount(), this.counter_, this.size_));
+};
 
 
 /**
@@ -86,12 +86,12 @@ cw.net.Queue.prototype.__reprToPieces__ = function(buffer) {
  * 	item in the queue. Caller *must not* modify the returned Array.
  */
 cw.net.Queue.prototype.getQueuedKeys = function() {
-	this.items_.cleanupKeysArray_()
+	this.items_.cleanupKeysArray_();
 	// goog.structs.Map (probably) doesn't mind having its keys_ sorted.
 	// TODO: file a .sortKeys() feature request upstream.
-	this.items_.keys_.sort()
-	return this.items_.keys_
-}
+	this.items_.keys_.sort();
+	return this.items_.keys_;
+};
 
 
 /**
@@ -109,18 +109,18 @@ cw.net.Queue.prototype.getQueuedKeys = function() {
  */
 cw.net.Queue.prototype.getItems = function(start) {
 	var keys = this.getQueuedKeys();
-	var seqAndItemArray = []
+	var seqAndItemArray = [];
 	for(var i=0; i < keys.length; i++) {
-		var seqNum = keys[i]
+		var seqNum = keys[i];
 		// Dig into map_ for faster key access; avoid two funcalls.
 		// This is safe because we know map_ has the key.
 		// Note: [0] is to get just the item, [1] contains the size
 		if(start == null || seqNum >= start) {
-			seqAndItemArray.push([seqNum, this.items_.map_[seqNum][0]])
+			seqAndItemArray.push([seqNum, this.items_.map_[seqNum][0]]);
 		}
 	}
 	return seqAndItemArray;
-}
+};
 
 
 
@@ -135,53 +135,53 @@ cw.net.Queue.prototype.getItems = function(start) {
  * @param {!cw.net.SACKTuple_} sackInfo A SACK tuple
  */
 cw.net.Queue.prototype.handleSACK = function(sackInfo) {
-	var ackNum = sackInfo[0]
-	goog.asserts.assert(ackNum >= -1, ackNum)
+	var ackNum = sackInfo[0];
+	goog.asserts.assert(ackNum >= -1, ackNum);
 
-	var badSACK = false
+	var badSACK = false;
 
 	if(ackNum > this.counter_) {
-		badSACK = true
+		badSACK = true;
 	}
 
 	var sortedKeys = this.getQueuedKeys().concat();
 
 	for(var i=0; i < sortedKeys.length; i++) {
-		var k = sortedKeys[i]
+		var k = sortedKeys[i];
 		if(k > ackNum) {
-			break
+			break;
 		}
 		// Safe to dig into map_ because we know it exists
-		var size = this.items_.map_[k][1]
-		this.items_.remove(k)
-		this.size_ -= size
+		var size = this.items_.map_[k][1];
+		this.items_.remove(k);
+		this.size_ -= size;
 	}
 
 	for(var i=0; i < sackInfo[1].length; i++) {
 		var sackNum = sackInfo[1][i];
 		if(sackNum > this.counter_) {
-			badSACK = true
+			badSACK = true;
 		}
 		if(this.items_.containsKey(sackNum)) {
 			// Safe to dig into map_ because we know it exists
-			var size = this.items_.map_[sackNum][1]
-			this.items_.remove(sackNum)
-			this.size_ -= size
+			var size = this.items_.map_[sackNum][1];
+			this.items_.remove(sackNum);
+			this.size_ -= size;
 		}
 	}
 
 	// Possibly reduce memory use; depends on JS implementation
 	if(this.items_.isEmpty()) {
-		this.items_.clear()
+		this.items_.clear();
 	}
 
-	return badSACK
-}
+	return badSACK;
+};
 
 
 cw.net.Queue.prototype.getQueuedCount = function() {
-	return this.items_.getCount()
-}
+	return this.items_.getCount();
+};
 
 
 /**
@@ -189,8 +189,8 @@ cw.net.Queue.prototype.getQueuedCount = function() {
  * This only returns a correct number if the items are primitive strings.
  */
 cw.net.Queue.prototype.getMaxConsumption = function() {
-	return this.size_
-}
+	return this.size_;
+};
 
 
 /**
@@ -221,14 +221,14 @@ cw.net.Incoming = function() {
  * @type {number}
  * @private
  */
-cw.net.Incoming.prototype.lastAck_ = -1
+cw.net.Incoming.prototype.lastAck_ = -1;
 
 
 /**
  * @type {number}
  * @private
  */
-cw.net.Incoming.prototype.size_ = 0
+cw.net.Incoming.prototype.size_ = 0;
 
 
 /**
@@ -246,77 +246,77 @@ cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
 	// reduce the possibility of ACAs. Right now we have enough ACA
 	// protection if itemLimit is no more than ~50.
 
-	var deliverable = []
-	var hitLimit = false
+	var deliverable = [];
+	var hitLimit = false;
 	for(var i=0, len=numAndItemSeq.length; i < len; i++) {
 		var numAndItem_ = numAndItemSeq[i];
 		var num = numAndItem_[0];
 		var item = numAndItem_[1];
 
-		goog.asserts.assert(num >= 0, "Sequence num must be 0 or above, was " + num)
+		goog.asserts.assert(num >= 0, "Sequence num must be 0 or above, was " + num);
 
 		if(num == this.lastAck_ + 1) {
-			this.lastAck_ += 1
-			deliverable.push(item)
+			this.lastAck_ += 1;
+			deliverable.push(item);
 			while(true) {
 				var lastAckP1 = this.lastAck_ + 1;
-				var cachedItemAndSize = this.cached_.get(lastAckP1, cw.net.Incoming.MISSING_)
+				var cachedItemAndSize = this.cached_.get(lastAckP1, cw.net.Incoming.MISSING_);
 				if(cachedItemAndSize === cw.net.Incoming.MISSING_) {
-					break
+					break;
 				}
-				deliverable.push(cachedItemAndSize[0])
-				this.cached_.remove(lastAckP1)
-				this.size_ -= cachedItemAndSize[1]
-				this.lastAck_ = lastAckP1
+				deliverable.push(cachedItemAndSize[0]);
+				this.cached_.remove(lastAckP1);
+				this.size_ -= cachedItemAndSize[1];
+				this.lastAck_ = lastAckP1;
 			}
 		} else if(num <= this.lastAck_) {
 			// ignore it
 		} else {
 			if(itemLimit != null && this.cached_.getCount() >= itemLimit) {
-				hitLimit = true
-				break
+				hitLimit = true;
+				break;
 			}
 			var size = cw.objsize.totalSizeOf(item)
 			if(sizeLimit != null && this.size_ + size > sizeLimit) {
-				hitLimit = true
-				break
+				hitLimit = true;
+				break;
 			}
-			this.cached_.set(num, [item, size])
-			this.size_ += size
+			this.cached_.set(num, [item, size]);
+			this.size_ += size;
 		}
 	}
 
 	// Possibly reduce memory use by killing the old object
 	if(this.cached_.isEmpty()) {
-		this.cached_.clear()
+		this.cached_.clear();
 	}
 
-	return [deliverable, hitLimit]
-}
+	return [deliverable, hitLimit];
+};
 
 
 /**
  * @return {!cw.net.SACKTuple_}
  */
 cw.net.Incoming.prototype.getSACK = function() {
-	return [this.lastAck_, this.cached_.getKeys().sort()]
-}
+	return [this.lastAck_, this.cached_.getKeys().sort()];
+};
 
 
 /**
  * @return {number} The number of undeliverable items.
  */
 cw.net.Incoming.prototype.getUndeliverableCount = function() {
-	return this.cached_.getCount()
-}
+	return this.cached_.getCount();
+};
 
 
 /**
  * @return {number} Maximum possible consumption of the undeliverable items.
  */
 cw.net.Incoming.prototype.getMaxConsumption = function() {
-	return this.size_
-}
+	return this.size_;
+};
 
 
 /**
@@ -324,4 +324,4 @@ cw.net.Incoming.prototype.getMaxConsumption = function() {
  * @type {!Object}
  * @private
  */
-cw.net.Incoming.MISSING_ = {}
+cw.net.Incoming.MISSING_ = {};
