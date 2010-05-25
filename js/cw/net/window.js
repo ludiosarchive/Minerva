@@ -112,7 +112,7 @@ cw.net.Queue.prototype.handleSACK = function(sackInfo) {
 	for k in sortedKeys:
 		if ackNum >= k:
 			var size = this.items_[k][1]
-			del this.items_[k]
+			delete this.items_[k]
 			this.size_ -= size
 
 	for sackNum in sackInfo[1]:
@@ -120,7 +120,7 @@ cw.net.Queue.prototype.handleSACK = function(sackInfo) {
 			badSACK = true
 		try:
 			var size = this.items_[k][1]
-			del this.items_[sackNum]
+			delete this.items_[sackNum]
 			this.size_ -= size
 		except KeyError:
 			pass
@@ -201,7 +201,7 @@ cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
 
 	var deliverable = []
 	var hitLimit = false
-	for(var i=0; len=numAndItemSeq.length; i < len; i++) {
+	for(var i=0, len=numAndItemSeq.length; i < len; i++) {
 		var num = numAndItemSeq[i][0];
 		var item = numAndItemSeq[i][1];
 
@@ -212,20 +212,20 @@ cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
 			deliverable.push(item)
 			while(this.lastAck_ + 1 in this.cached_) {
 				var cachedItemAndSize = this.cached_[this.lastAck_ + 1][0];
-				del this.cached_[this.lastAck_ + 1]
+				delete this.cached_[this.lastAck_ + 1]
 				this.lastAck_ += 1
 				this.size_ -= cachedItemAndSize[1]
 				deliverable.push(cachedItemAndSize[0])
 			}
 		} else if(num <= this.lastAck_) {
-			pass
+			// ignore it
 		} else {
-			if(itemLimit != null and len(this.cached_) >= itemLimit) {
+			if(itemLimit != null && len(this.cached_) >= itemLimit) {
 				hitLimit = true
 				break
 			}
 			var size = cw.objsize.totalSizeOf(item)
-			if(sizeLimit != null and this.size_ + size > sizeLimit) {
+			if(sizeLimit != null && this.size_ + size > sizeLimit) {
 				hitLimit = true
 				break
 			}
