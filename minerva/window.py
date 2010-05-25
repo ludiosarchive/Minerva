@@ -174,11 +174,11 @@ class Incoming(object):
 				##print "deliverable.append(%r)" % (item,)
 				deliverable.append(item)
 				while self._lastAck + 1 in self._cached:
-					cachedItem = self._cached[self._lastAck + 1]
+					cachedItem, cachedSize = self._cached[self._lastAck + 1]
 					##print "del self._cached[%r]" % (num,)
 					del self._cached[self._lastAck + 1]
 					self._lastAck += 1
-					self._size -= totalSizeOf(cachedItem)
+					self._size -= cachedSize
 					deliverable.append(
 						StringFragment(cachedItem, 0, len(cachedItem)) if \
 						isinstance(cachedItem, _wasSF) else cachedItem)
@@ -196,9 +196,9 @@ class Incoming(object):
 				if sizeLimit is not None and self._size + size > sizeLimit:
 					hitLimit = True
 					break
-				self._size += size
 				##print "self._cached[%r] = %r" % (num, item)
-				self._cached[num] = item
+				self._cached[num] = (item, size)
+				self._size += size
 
 		# Possibly reduce memory use; depends on dict implementation
 		if not self._cached:

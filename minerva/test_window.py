@@ -323,3 +323,22 @@ class TestIncomingConsumption(unittest.TestCase):
 		sf = StringFragment(s, 0, len(s))
 		i.give([[1, sf]])
 		self.aE(([sf, sf], False), i.give([[0, sf]]))
+
+
+	def test_itemSizeChangedWhileInIncoming(self):
+		"""
+		If the size of an item changed while it was in Incoming,
+		Incoming does *not* go into an inconsistent state (for example,
+		thinking that _size is < 0)
+		"""
+		i = Incoming()
+		mutable = []
+		i.give([[1, mutable]])
+		sizeBefore = i.getMaxConsumption()
+		self.assertTrue(sizeBefore > 0, sizeBefore)
+
+		mutable.extend([None] * 100)
+
+		i.give([[0, "0"]])
+		sizeAfter = i.getMaxConsumption()
+		self.assertEqual(0, sizeAfter)
