@@ -29,8 +29,6 @@ class Queue(object):
 	"""
 	__slots__ = ('_counter', '_items', '_size')
 
-	noisy = True
-
 	def __init__(self):
 		self._counter = -1
 		self._items = {}
