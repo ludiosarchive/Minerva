@@ -136,7 +136,7 @@ cw.net.Queue.prototype.getItems = function(start) {
  */
 cw.net.Queue.prototype.handleSACK = function(sackInfo) {
 	var ackNum = sackInfo[0];
-	goog.asserts.assert(ackNum >= -1, ackNum);
+	goog.asserts.assert(ackNum >= -1, String(ackNum));
 
 	var badSACK = false;
 
@@ -185,8 +185,9 @@ cw.net.Queue.prototype.getQueuedCount = function() {
 
 
 /**
- * @return {int} maximum possible consumption of the queued items.
- * This only returns a correct number if the items are primitive strings.
+ * @return {number} maximum possible consumption of the queued items,
+ * 	in bytes. This only returns a correct number if the items are primitive
+ * 	strings.
  */
 cw.net.Queue.prototype.getMaxConsumption = function() {
 	return this.size_;
@@ -253,7 +254,7 @@ cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
 		var num = numAndItem_[0];
 		var item = numAndItem_[1];
 
-		goog.asserts.assert(num >= 0, "Sequence num must be 0 or above, was " + num);
+		goog.asserts.assert(num >= 0, "Sequence num must be 0 or above, was " + String(num));
 
 		if(num == this.lastAck_ + 1) {
 			this.lastAck_ += 1;

@@ -216,7 +216,7 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 
 	if(HP.httpFormat in helloData) {
 		obj.httpFormat = helloData[HP.httpFormat];
-		if(!goog.array.contains(obj.httpFormat), cw.net.AllHttpFormats_) {
+		if(!goog.array.contains(obj.httpFormat, cw.net.AllHttpFormats_)) {
 			throw new cw.net.InvalidHello("bad httpFormat");
 		}
 	} else {
@@ -340,7 +340,7 @@ cw.net.HelloFrame.decode = function(frameString) {
 		throw new cw.net.InvalidHello("Un-eval'able JSON: " + e.name + ": " + e.message);
 	}
 
-	return cw.net.helloFrameToHelloData_(blob);
+	return cw.net.helloDataToHelloFrame_(blob);
 }
 
 
