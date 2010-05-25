@@ -35,7 +35,6 @@ var TransportKillFrame = cw.net.TransportKillFrame;
 var tk = cw.net.TransportKillReason;
 var InvalidFrame = cw.net.InvalidFrame;
 
-
 var repr = cw.repr.repr;
 
 cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
