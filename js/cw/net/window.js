@@ -13,6 +13,7 @@ goog.provide('cw.net.Incoming');
 goog.provide('cw.net.Queue');
 
 goog.require('cw.objsize');
+goog.require('goog.string');
 goog.require('goog.asserts');
 goog.require('goog.structs.Map');
 
@@ -23,135 +24,173 @@ goog.require('goog.structs.Map');
  * // TODO: types for tuples
  * @private
  */
-cw.net.SACKTuple_ = goog.typedef;
+cw.net.SACKTuple_ = goog.typedef
 
 
-///**
-// * This is a queue that assigns a monotonically increasing integer as
-// * a sequence number for each item. You can iterate over items in
-// * the queue, and you can batch-remove items with a SACK tuple.
-// *
-// * @constructor
-// */
-//cw.net.Queue = function() {
-//	this.items_ = {}
-//}
-//
-//
-///**
-// * @type {number}
-// * @private
-// */
-//cw.net.Queue.prototype.counter_ = -1
-//
-//
-///**
-// * @type {number}
-// * @private
-// */
-//cw.net.Queue.prototype.size_ = 0
-//
-//
-///**
-// * @param {string} item
-// */
-//cw.net.Queue.prototype.append = function(item) {
-//	var size = cw.objsize.totalSizeOf(item)
-//	this.items_[this.counter_ + 1] = [item, size]
-//	this.counter_ += 1
-//	this.size_ += size
-//}
-//
-//
-///**
-// * @param {!Array.<string>} items
-// */
-//cw.net.Queue.prototype.extend = function(items) {
-//	for item in items:
-//		this.append(item)
-//}
-//
-//
-//cw.net.Queue.prototype.__reprToPieces__ = function(buffer) {
-//	buffer.push('<Queue with %r item(s), counter=#%r, size=%r>' % (
-//		len(self), this.counter_, this.size_))
-//}
-//
-//
-///**
-// * Yield (seqNumber, item) for every item in the queue.
-// *
-// * If C{start} is not C{null/undefined}, items before L{start} will be skipped.
-// */
-//cw.net.Queue.prototype.iterItems = function(start) {
-//	goog.asserts.assert(start == null || start >= 0, start)
-//
-//	var sortedItems = this.items_.items()
-//	sortedItems.sort()
-//	for seqNum, (item, size) in sortedItems:
-//		if(start == null or seqNum >= start):
-//			yield (seqNum, item)
-//}
-//
-//
-///**
-// * Remove all items that are no longer needed, based on C{sackInfo}.
-// *
-// * Returns {@code true} if ackNumber or any sackNumber was higher
-// * than the highest seqNum in the queue. This would indicate a
-// * "bad SACK". Note that as many items as possible are removed
-// * even in the "bad SACK" case. If not bad SACK, returns C{false}.
-// *
-// * @param {!cw.net.SACKTuple_} sackInfo A SACK tuple
-// */
-//cw.net.Queue.prototype.handleSACK = function(sackInfo) {
-//	var ackNum = sackInfo[0]
-//	goog.asserts.assert(ackNum >= -1, ackNum)
-//
-//	var badSACK = false
-//
-//	if ackNum > this.counter_:
-//		badSACK = true
-//
-//	var sortedKeys = this.items_.keys()
-//	sortedKeys.sort()
-//
-//	for k in sortedKeys:
-//		if ackNum >= k:
-//			var size = this.items_[k][1]
-//			delete this.items_[k]
-//			this.size_ -= size
-//
-//	for sackNum in sackInfo[1]:
-//		if sackNum > this.counter_:
-//			badSACK = true
-//		try:
-//			var size = this.items_[k][1]
-//			delete this.items_[sackNum]
-//			this.size_ -= size
-//		except KeyError:
-//			pass
-//
-//	// Possibly reduce memory use; depends on JS implementation
-//	if not this.items_:
-//		this.items_ = {}
-//
-//	return badSACK
-//}
-//
-//
-//cw.net.Queue.prototype.getQueuedCount = function() {
-//	return this.items_.length
-//}
-//
-//
-///**
-// * @return {int} maximum possible consumption of the queued items.
-// * This only returns a correct number if the items are primitive strings.
-// */
-//cw.net.Queue.prototype.getMaxConsumption = function() {
-//	return this.size_
-//}
+/**
+ * This is a queue that assigns a monotonically increasing integer as
+ * a sequence number for each item. You can iterate over items in
+ * the queue, and you can batch-remove items with a SACK tuple.
+ *
+ * @constructor
+ */
+cw.net.Queue = function() {
+	this.items_ = new goog.structs.Map()
+}
+
+
+/**
+ * @type {number}
+ * @private
+ */
+cw.net.Queue.prototype.counter_ = -1
+
+
+/**
+ * @type {number}
+ * @private
+ */
+cw.net.Queue.prototype.size_ = 0
+
+
+/**
+ * @param {string} item
+ */
+cw.net.Queue.prototype.append = function(item) {
+	var size = cw.objsize.totalSizeOf(item)
+	this.items_.set(this.counter_ + 1, [item, size])
+	this.counter_ += 1
+	this.size_ += size
+}
+
+
+/**
+ * @param {!Array.<string>} items
+ */
+cw.net.Queue.prototype.extend = function(items) {
+	for(var i=0; i < items.length; i++) {
+		this.append(items[i])
+	}
+}
+
+
+cw.net.Queue.prototype.__reprToPieces__ = function(buffer) {
+	buffer.push(goog.string.subs(
+		'<Queue with %s item(s), counter=#%s, size=%s>',
+		this.items_.getCount(), this.counter_, this.size_))
+}
+
+
+/**
+ * @return {!Array.<number>} Sorted array of seqNums for every
+ * 	item in the queue. Caller *must not* modify the returned Array.
+ */
+cw.net.Queue.prototype.getQueuedKeys = function() {
+	this.items_.cleanupKeysArray_()
+	// goog.structs.Map (probably) doesn't mind having its keys_ sorted.
+	// TODO: file a .sortKeys() feature request upstream.
+	this.items_.keys_.sort()
+	return this.items_.keys_
+}
+
+
+/**
+ * @param {number=} start If not {@code null} or {@code undefined},
+ * 	items before {@code start} will be skipped.
+ *
+ * @return {!Array.<number>} Array of [seqNum, item] for every item
+ * 	in the queue. Caller may modify the returned Array.
+ *
+ * If you care about performance in JScript, you may want to use
+ * {@code getQueuedKeys} and create a for loop similar to the one in
+ * this function body.
+ *
+ * // TODO: types for tuples
+ */
+cw.net.Queue.prototype.getItems = function(start) {
+	var keys = this.getQueuedKeys();
+	var seqAndItemArray = []
+	for(var i=0; i < keys.length; i++) {
+		var seqNum = keys[i]
+		// Dig into map_ for faster key access; avoid two funcalls.
+		// This is safe because we know map_ has the key.
+		// Note: [0] is to get just the item, [1] contains the size
+		if(start == null || seqNum >= start) {
+			seqAndItemArray.push([seqNum, this.items_.map_[seqNum][0]])
+		}
+	}
+	return seqAndItemArray;
+}
+
+
+
+/**
+ * Remove all items that are no longer needed, based on C{sackInfo}.
+ *
+ * Returns {@code true} if ackNumber or any sackNumber was higher
+ * than the highest seqNum in the queue. This would indicate a
+ * "bad SACK". Note that as many items as possible are removed
+ * even in the "bad SACK" case. If not bad SACK, returns C{false}.
+ *
+ * @param {!cw.net.SACKTuple_} sackInfo A SACK tuple
+ */
+cw.net.Queue.prototype.handleSACK = function(sackInfo) {
+	var ackNum = sackInfo[0]
+	goog.asserts.assert(ackNum >= -1, ackNum)
+
+	var badSACK = false
+
+	if(ackNum > this.counter_) {
+		badSACK = true
+	}
+
+	var sortedKeys = this.getQueuedKeys().concat();
+
+	for(var i=0; i < sortedKeys.length; i++) {
+		var k = sortedKeys[i]
+		if(k > ackNum) {
+			break
+		}
+		// Safe to dig into map_ because we know it exists
+		var size = this.items_.map_[k][1]
+		this.items_.remove(k)
+		this.size_ -= size
+	}
+
+	for(var i=0; i < sackInfo[1].length; i++) {
+		var sackNum = sackInfo[1][i];
+		if(sackNum > this.counter_) {
+			badSACK = true
+		}
+		if(this.items_.containsKey(sackNum)) {
+			// Safe to dig into map_ because we know it exists
+			var size = this.items_.map_[sackNum][1]
+			this.items_.remove(sackNum)
+			this.size_ -= size
+		}
+	}
+
+	// Possibly reduce memory use; depends on JS implementation
+	if(this.items_.isEmpty()) {
+		this.items_.clear()
+	}
+
+	return badSACK
+}
+
+
+cw.net.Queue.prototype.getQueuedCount = function() {
+	return this.items_.getCount()
+}
+
+
+/**
+ * @return {int} maximum possible consumption of the queued items.
+ * This only returns a correct number if the items are primitive strings.
+ */
+cw.net.Queue.prototype.getMaxConsumption = function() {
+	return this.size_
+}
 
 
 /**
@@ -248,7 +287,7 @@ cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
 	}
 
 	// Possibly reduce memory use by killing the old object
-	if(this.size_ == 0) {
+	if(this.cached_.isEmpty()) {
 		this.cached_.clear()
 	}
 

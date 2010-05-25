@@ -24,7 +24,7 @@ var repr = cw.repr.repr;
 
 
 /**
- * Tests for L{window.Queue}
+ * Tests for {@code window.Queue}
  */
 cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 	function test_repr(self) {
@@ -59,34 +59,34 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 
 	function test_iterEmptyQueue(self) {
 		var q = new Queue()
-		self.assertEqual([], list(q.iterItems(start=0)))
+		self.assertEqual([], q.getItems(0))
 	},
 
 	function test_appendExtendQueue(self) {
 		var q = new Queue()
 		q.append('zero')
 		q.extend(['one', 'two'])
-		self.assertEqual([[0, 'zero'], [1, 'one'], [2, 'two']], list(q.iterItems(0)))
+		self.assertEqual([[0, 'zero'], [1, 'one'], [2, 'two']], q.getItems(0))
 		// iterItems is idempotent
-		self.assertEqual([[0, 'zero'], [1, 'one'], [2, 'two']], list(q.iterItems(0)))
+		self.assertEqual([[0, 'zero'], [1, 'one'], [2, 'two']], q.getItems(0))
 	},
 
 	function test_appendExtendQueueStart1(self) {
 		var q = new Queue()
 		q.append('zero')
 		q.extend(['one', 'two'])
-		self.assertEqual([[1, 'one'], [2, 'two']], list(q.iterItems(1)))
+		self.assertEqual([[1, 'one'], [2, 'two']], q.getItems(1))
 		// iterItems is idempotent
-		self.assertEqual([[1, 'one'], [2, 'two']], list(q.iterItems(1)))
+		self.assertEqual([[1, 'one'], [2, 'two']], q.getItems(1))
 	},
 
 	function test_appendExtendQueueStart3(self) {
 		var q = new Queue()
 		q.append('zero')
 		q.extend(['one', 'two'])
-		self.assertEqual([], list(q.iterItems(start=3)))
+		self.assertEqual([], q.getItems(3))
 		// iterItems is idempotent
-		self.assertEqual([], list(q.iterItems(start=3)))
+		self.assertEqual([], q.getItems(3))
 	},
 
 	function test_handleSACK(self) {
@@ -95,26 +95,26 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 		q.extend(['one', 'two'])
 
 		self.assertEqual(false, q.handleSACK([0, []]))
-		self.assertEqual([[1, 'one'], [2, 'two']], list(q.iterItems(start=1)))
+		self.assertEqual([[1, 'one'], [2, 'two']], q.getItems(1))
 
 		// Removing again is idempotent
 		self.assertEqual(false, q.handleSACK([0, []]))
-		self.assertEqual([[1, 'one'], [2, 'two']], list(q.iterItems(start=1)))
+		self.assertEqual([[1, 'one'], [2, 'two']], q.getItems(1))
 	},
 
 	function test_ackNumberTooHigh0(self) {
 		var q = new Queue()
-		var badSACK = q.handleSACK((0, []))
+		var badSACK = q.handleSACK([0, []])
 		self.assertEqual(true, badSACK)
 	},
 
 	function test_ackNumberTooHigh1(self) {
 		var q = new Queue()
 		q.append('zero')
-		var badSACK = q.handleSACK((1, []))
+		var badSACK = q.handleSACK([1, []])
 		self.assertEqual(true, badSACK)
 		// Items were still removed, despite it being a bad SACK
-		self.assertEqual([], list(q.iterItems()))
+		self.assertEqual([], q.getItems())
 	},
 
 	function test_sackNumberTooHigh(self) {
@@ -123,17 +123,17 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 		var badSACK = q.handleSACK([0, [2, 5]])
 		self.assertEqual(true, badSACK)
 		// Items were still removed, despite it being a bad SACK
-		self.assertEqual([[1, 'one'], [3, 'three']], list(q.iterItems()))
+		self.assertEqual([[1, 'one'], [3, 'three']], q.getItems())
 	},
 
 	function test_handleSACKToHigherNum(self) {
 		var q = new Queue()
-		q.extend([0,1,2,3,4,5,6,7,8])
+		q.extend([0, 1, 2, 3, 4, 5, 6, 7, 8])
 		self.assertEqual(false, q.handleSACK([1, []]))
 		self.assertEqual(false, q.handleSACK([3, []]))
 
 		// There should be 5 items left in the queue
-		self.assertEqual([[4,4], [5,5], [6,6], [7,7], [8,8]], list(q.iterItems(start=4)))
+		self.assertEqual([[4,4], [5,5], [6,6], [7,7], [8,8]], q.getItems(4))
 	},
 
 	/**
@@ -143,33 +143,43 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 		var q = new Queue()
 		q.append('zero')
 		q.extend(['one', 'two'])
-		self.assertEqual([[0, 'zero'], [1, 'one'], [2, 'two']], list(q.iterItems()))
+		self.assertEqual([[0, 'zero'], [1, 'one'], [2, 'two']], q.getItems())
 		self.assertEqual(false, q.handleSACK([-1, []]))
-		self.assertEqual([[0, 'zero'], [1, 'one'], [2, 'two']], list(q.iterItems()))
+		self.assertEqual([[0, 'zero'], [1, 'one'], [2, 'two']], q.getItems())
 		self.assertEqual(false, q.handleSACK([0, []]))
-		self.assertEqual([[1, 'one'], [2, 'two']], list(q.iterItems()))
+		self.assertEqual([[1, 'one'], [2, 'two']], q.getItems())
 	},
 
 	/**
 	 * handleSACK actually removes the selectively-acknowledged items from the queue
 	 */
-	function test_handleSACKReallyDoesSACK(self) {
+	function test_handleSACK(self) {
 		var q = new Queue()
 		q.append('zero')
 		q.extend(['one', 'two', 'three'])
-		self.assertEqual([[0, 'zero'], [1, 'one'], [2, 'two'], [3, 'three']], list(q.iterItems()))
+		self.assertEqual([[0, 'zero'], [1, 'one'], [2, 'two'], [3, 'three']], q.getItems())
 		self.assertEqual(false, q.handleSACK([-1, [1]]))
-		self.assertEqual([[0, 'zero'], [2, 'two'], [3, 'three']], list(q.iterItems()))
+		self.assertEqual([[0, 'zero'], [2, 'two'], [3, 'three']], q.getItems())
 		self.assertEqual(false, q.handleSACK([0, [3]]))
-		self.assertEqual([[2, 'two']], list(q.iterItems()))
+		self.assertEqual([[2, 'two']], q.getItems())
 		q.append('four')
-		self.assertEqual([[2, 'two'], [4, 'four']], list(q.iterItems()))
+		self.assertEqual([[2, 'two'], [4, 'four']], q.getItems())
 		// although this is a very strange SACK because it should have
 		// been (4, ()), it is still legal
 		self.assertEqual(false, q.handleSACK([0, [2, 4]]))
-		self.assertEqual([], list(q.iterItems()))
+		self.assertEqual([], q.getItems())
 		q.append('five')
-		self.assertEqual([[5, 'five']], list(q.iterItems()))
+		self.assertEqual([[5, 'five']], q.getItems())
+	},
+
+	/**
+	 * handleSACK actually removes the selectively-acknowledged items from the queue
+	 */
+	function test_handleSACKBothAckAndSackNumRemoveItems(self) {
+		var q = new Queue()
+		q.extend(['zero', 'one', 'two', 'three', 'four'])
+		self.assertEqual(false, q.handleSACK([0, [1, 3]]))
+		self.assertEqual([[2, 'two'], [4, 'four']], q.getItems())
 	}
 );
 
@@ -228,8 +238,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingTests').methods(
 	},
 
 	/**
-	 * 	L{Incoming} handles all the boxes even when they're given
-		out-of-order in one L{Incoming.give} call.
+	 * 	{@code Incoming} handles all the boxes even when they're given
+		out-of-order in one {@code Incoming.give} call.
 
 		You should *not* pass .give unsorted sequences in production code,
 		because you may hit the item/size limit. It will also be slower because
