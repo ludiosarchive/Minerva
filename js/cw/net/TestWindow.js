@@ -24,7 +24,7 @@ var repr = cw.repr.repr;
 
 
 /**
- * Tests for {@code window.Queue}
+ * Tests for {@link cw.net.Queue}
  */
 cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 
@@ -138,7 +138,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 	},
 
 	/**
-	 * A L{start} for iterItems is not required.
+	 * A {@code start} for iterItems is not required.
 	 */
 	function test_iterItemsNoStartNumber(self) {
 		var q = new Queue();
@@ -186,7 +186,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 
 
 /**
- * Tests for L{window.Incoming}
+ * Tests for {@link cw.net.Incoming}
  */
 cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingTests').methods(
 
@@ -335,7 +335,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingTests').methods(
 
 
 /**
- * Tests for L{window.Incoming}'s memory-consumption-prevention
+ * Tests for {@link cw.net.Incoming}'s memory-exhaustion-prevention
  */
 cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingConsumptionTests').methods(
 
