@@ -516,7 +516,7 @@ cw.net.UsableXHR.prototype.handler_poll_ = function() {
  * @private
  */
 cw.net.UsableXHR.prototype.handler_onprogress_ = function(ev) {
-	cw.net.UsableXHR.logger.finest('handler_onprogress_: ' + goog.json.serialize(ev));
+	//cw.net.UsableXHR.logger.finest('handler_onprogress_: ' + goog.json.serialize(ev));
 
 	// In Safari 4.0.3 and Firefox 3.5.2/3.0.7, e.totalSize === 4294967295
 	// when length is unknown.
