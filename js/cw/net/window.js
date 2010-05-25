@@ -17,6 +17,15 @@ goog.require('goog.asserts');
 goog.require('goog.structs.Map');
 
 
+/**
+ * A SACK tuple: [ackNumber, [sackNum1, ...]]
+ * @type {Array.<(number|!Array.<number>)>}
+ * // TODO: types for tuples
+ * @private
+ */
+cw.net.SACKTuple_ = goog.typedef;
+
+
 ///**
 // * This is a queue that assigns a monotonically increasing integer as
 // * a sequence number for each item. You can iterate over items in
@@ -93,7 +102,7 @@ goog.require('goog.structs.Map');
 // * "bad SACK". Note that as many items as possible are removed
 // * even in the "bad SACK" case. If not bad SACK, returns C{false}.
 // *
-// * @param {!Array.<(number|!Array.<number>)> sackInfo A SACK tuple
+// * @param {!cw.net.SACKTuple_} sackInfo A SACK tuple
 // */
 //cw.net.Queue.prototype.handleSACK = function(sackInfo) {
 //	var ackNum = sackInfo[0]
@@ -184,12 +193,13 @@ cw.net.Incoming.prototype.size_ = 0
 
 
 /**
- * @param {!Array.<!Array.<number|string>>} numAndItemSeq An Array of
- * 	*already sorted* (seqNum, string) pairs.
+ * @param {!Array.<!Array.<(number|string)>>} numAndItemSeq An Array of
+ * 	*already sorted* (seqNum, string) pairs. // TODO: types for tuples
  * @param {number} itemLimit
  * @param {number} sizeLimit
  *
  * @return {!Array.<(!Array.<string>|boolean)>} (Array of deliverable items, hitLimit?)
+ * // TODO: types for tuples
  */
 cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
 	// TODO: maybe immediately reject items that have little chance
@@ -247,10 +257,8 @@ cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
 
 
 /**
- * @rtype: tuple
- * @return {!Array.<(number|!Array.<number>)> a tuple:
- * 	(lastAck, sorted tuple of not-yet-deliverable sequence numbers; all are > lastAck)
-*/
+ * @return {!cw.net.SACKTuple_}
+ */
 cw.net.Incoming.prototype.getSACK = function() {
 	return [this.lastAck_, this.cached_.getKeys().sort()]
 }
