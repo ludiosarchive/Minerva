@@ -89,7 +89,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 		self.assertEqual([], q.getItems(3));
 	},
 
-	function test_handleSACK(self) {
+	function test_handleSACKOnlyAckNumber(self) {
 		var q = new Queue();
 		q.append('zero');
 		q.extend(['one', 'two']);

@@ -76,7 +76,7 @@ class TestQueue(unittest.TestCase):
 		self.assertEqual([], list(q.iterItems(start=3)))
 
 
-	def test_handleSACK(self):
+	def test_handleSACKOnlyAckNumber(self):
 		q = Queue()
 		q.append('zero')
 		q.extend(['one', 'two'])
