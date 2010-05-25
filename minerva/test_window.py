@@ -299,8 +299,8 @@ class TestIncoming(unittest.TestCase):
 
 		# The items we kept giving it past the limit are dropped to the floor
 		deliverable, hitLimit = i.give([[0, 'box0']], sizeLimit=boxSize * 3)
-		self.assertEqual(False, hitLimit)
 		self.assertEqual(['box0', 'box1', 'box2', 'box3'], deliverable)
+		self.assertEqual(False, hitLimit)
 
 		self.assertEqual(0, i.getUndeliverableCount())
 		self.assertEqual(0, i.getMaxConsumption())

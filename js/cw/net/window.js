@@ -134,15 +134,15 @@ goog.require('goog.structs.Map');
 //cw.net.Queue.prototype.getQueuedCount = function() {
 //	return this.items_.length
 //}
-
-
-/**
- * @return {int} maximum possible consumption of the queued items.
- * This only returns a correct number if the items are primitive strings.
- */
-cw.net.Queue.prototype.getMaxConsumption = function() {
-	return this.size_
-}
+//
+//
+///**
+// * @return {int} maximum possible consumption of the queued items.
+// * This only returns a correct number if the items are primitive strings.
+// */
+//cw.net.Queue.prototype.getMaxConsumption = function() {
+//	return this.size_
+//}
 
 
 /**
@@ -204,7 +204,7 @@ cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
 		var num = numAndItem_[0];
 		var item = numAndItem_[1];
 
-		goog.asserts.assert(num < 0, "Sequence num must be 0 or above, was " + num)
+		goog.asserts.assert(num >= 0, "Sequence num must be 0 or above, was " + num)
 
 		if(num == this.lastAck_ + 1) {
 			this.lastAck_ += 1
