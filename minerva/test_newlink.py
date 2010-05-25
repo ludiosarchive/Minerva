@@ -160,7 +160,7 @@ class StreamTests(unittest.TestCase):
 		self.assertIn('<Stream', r)
 		self.assertIn('streamId=', r)
 		self.assertIn('disconnected=False', r)
-		self.assertIn('len(queue)=0', r)
+		self.assertIn('queue.getQueuedCount()=0', r)
 
 
 	def test_notifyFinishReturnsDeferred(self):
@@ -349,7 +349,7 @@ class StreamTests(unittest.TestCase):
 		# Now, t2 will be called without a start=None parameter and send all unsent boxes.
 
 		s.sackReceived((2, []))
-		assert len(s.queue) == 4, s.queue # box3, box4, box5, box6
+		assert s.queue.getQueuedCount() == 4, s.queue # box3, box4, box5, box6
 		self.aE([['writeStrings', s.queue, None]], t2.getNew())
 
 		# Just to exercise transportOffline

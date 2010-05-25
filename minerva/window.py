@@ -1,7 +1,12 @@
 """
-Send and receive windows for Minerva server. This is similar to what
-you would expect with TCP, except we send and receive a stream of
-JSON objects instead of a stream of bytes.
+Implementations of:
+-	a receive window (Incoming), which can do re-ordering before delivering
+	to the application. It keeps track of how much memory is used
+	by the undeliverable items.
+
+-	a send queue (Queue), which keeps items until they are SACKed,
+	in case the items have to be written multiple times (due to transport
+	failure).
 """
 
 import warnings
@@ -47,13 +52,9 @@ class Queue(object):
 			self._size += size
 
 
-	def __len__(self):
-		return len(self._items)
-
-
 	def __repr__(self):
 		return '<Queue at 0x%x with %r item(s), counter=#%r, size=%r>' % (
-			id(self), len(self), self._counter, self._size)
+			id(self), self.getQueuedCount(), self._counter, self._size)
 
 
 	def iterItems(self, start=None):
@@ -119,6 +120,10 @@ class Queue(object):
 		return badSACK
 
 
+	def getQueuedCount(self):
+		return len(self._items)
+
+
 	def getMaxConsumption(self):
 		"""
 		@rtype: L{int}
@@ -144,16 +149,12 @@ class _wasSF(str):
 class Incoming(object):
 	"""
 	I am a processor for incoming numbered items. I take input through
-	L{give} and provide serialized items via L{getDeliverableItems}.
-
-	If items with identical sequence numbers are given to me, I accept only
-	the earliest-given item.
+	L{give}, which returns the deliverable items.
 
 	One use case is ensuring that boxes are delivered to the Stream reliably
 	and in-order. Caller is responsible for protecting against resource
-	exhaustion attacks by calling L{getUndeliverableCount} or
-	L{getMaxConsumption}, and destroying the Stream if the numbers are too
-	high.
+	exhaustion attacks by checking the `hitLimit` value, or calling
+	L{getUndeliverableCount} or L{getMaxConsumption}.
 
 	Not-currently-deliverable L{StringFragment}s will be be converted to
 	C{str}s while in Incoming, and converted back when you retrieve them.

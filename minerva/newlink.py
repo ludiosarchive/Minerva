@@ -222,13 +222,13 @@ class Stream(object):
 
 
 	def __repr__(self):
-		return ('<%s streamId=%r, len(queue)=%d, disconnected=%r>'
-			% (self.__class__.__name__, self.streamId, len(self.queue), self.disconnected))
+		return ('<%s streamId=%r, queue.getQueuedCount()=%d, disconnected=%r>'
+			% (self.__class__.__name__, self.streamId, self.queue.getQueuedCount(), self.disconnected))
 
 
 	def _tryToSend(self):
 		##print '_tryToSend', self, self._primaryTransport, self.queue
-		if len(self.queue) == 0:
+		if self.queue.getQueuedCount() == 0:
 			return
 
 		if self._primaryTransport:
