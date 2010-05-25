@@ -137,7 +137,7 @@ class TestQueue(unittest.TestCase):
 		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems()))
 
 
-	def test_handleSACKReallyDoesSACK(self):
+	def test_handleSACK(self):
 		"""
 		handleSACK actually removes the selectively-acknowledged items from the queue 
 		"""
@@ -157,6 +157,17 @@ class TestQueue(unittest.TestCase):
 		self.assertEqual([], list(q.iterItems()))
 		q.append('five')
 		self.assertEqual([(5, 'five')], list(q.iterItems()))
+
+
+	def test_handleSACKBothAckAndSackNumRemoveItems(self):
+		"""
+		Another handleSACK test. This covers a wrong-variable-in-loop bug
+		we had.
+		"""
+		q = Queue()
+		q.extend(['zero', 'one', 'two', 'three', 'four'])
+		self.assertEqual(False, q.handleSACK((0, (1, 3))))
+		self.assertEqual([(2, 'two'), (4, 'four')], list(q.iterItems()))
 
 
 

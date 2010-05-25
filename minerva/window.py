@@ -96,16 +96,17 @@ class Queue(object):
 		sortedKeys.sort()
 
 		for k in sortedKeys:
-			if ackNum >= k:
-				size = self._items[k][1]
-				del self._items[k]
-				self._size -= size
+			if k > ackNum:
+				break
+			size = self._items[k][1]
+			del self._items[k]
+			self._size -= size
 
 		for sackNum in sackInfo[1]:
 			if sackNum > self._counter:
 				badSACK = True
 			try:
-				size = self._items[k][1]
+				size = self._items[sackNum][1]
 				del self._items[sackNum]
 				self._size -= size
 			except KeyError:
