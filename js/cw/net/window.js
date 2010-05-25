@@ -197,7 +197,6 @@ cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
 	// reduce the possibility of ACAs. Right now we have enough ACA
 	// protection if itemLimit is no more than ~50.
 
-	var MISSING = {}
 	var deliverable = []
 	var hitLimit = false
 	for(var i=0, len=numAndItemSeq.length; i < len; i++) {
@@ -212,8 +211,8 @@ cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
 			deliverable.push(item)
 			while(true) {
 				var lastAckP1 = this.lastAck_ + 1;
-				var cachedItemAndSize = this.cached_.get(lastAckP1, MISSING)
-				if(cachedItemAndSize === MISSING) {
+				var cachedItemAndSize = this.cached_.get(lastAckP1, cw.net.Incoming.MISSING_)
+				if(cachedItemAndSize === cw.net.Incoming.MISSING_) {
 					break
 				}
 				deliverable.push(cachedItemAndSize[0])
@@ -271,3 +270,11 @@ cw.net.Incoming.prototype.getUndeliverableCount = function() {
 cw.net.Incoming.prototype.getMaxConsumption = function() {
 	return this.size_
 }
+
+
+/**
+ * Marker for values that are missing. Never use this in your application code.
+ * @type {!Object}
+ * @private
+ */
+cw.net.Incoming.MISSING_ = {}
