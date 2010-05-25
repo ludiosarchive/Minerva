@@ -1,14 +1,3 @@
-"""
-Implementations of:
--	a receive window (Incoming), which can do re-ordering before delivering
-	to the application. It keeps track of how much memory is used
-	by the undeliverable items.
-
--	a send queue (Queue), which keeps items until they are SACKed,
-	in case the items have to be written multiple times (due to transport
-	failure).
-"""
-
 import warnings
 from mypy.strops import StringFragment
 from mypy.constant import Constant
@@ -23,9 +12,13 @@ _postImportVars = vars().keys()
 
 class Queue(object):
 	"""
-	This is a queue that assigns a monotonically increasing integer as
-	a sequence number for each item. You can iterate over items in
-	the queue, and you can batch-remove items with a SACK tuple.
+	A send queue which assigns a monotonically increasing integer
+	to each item. It keeps items until they are SACKed.
+
+	Useful if you need to queue items that may need to be sent
+	multiple times (if a connection/transport fails). It keeps track
+	of how much memory the Queue is using, in case you want to
+	do flow control.
 	"""
 	__slots__ = ('_counter', '_items', '_size')
 
@@ -147,13 +140,16 @@ class _wasSF(str):
 
 class Incoming(object):
 	"""
-	I am a processor for incoming numbered items. I take input through
-	L{give}, which returns the deliverable items.
+	A receive window which can accept in-order (but possibly with gaps)
+	numbered items, compute a SACK tuple for those items, and return
+	an Array of in-order deliverable items. It keeps track of how much
+	memory the undeliverable items are using, and can reject items if
+	they would push Incoming over an item or memory size limit.
 
-	One use case is ensuring that boxes are delivered to the Stream reliably
-	and in-order. Caller is responsible for protecting against resource
-	exhaustion attacks by checking the `hitLimit` value, or calling
-	L{getUndeliverableCount} or L{getMaxConsumption}.
+	This is used to ensure that boxes are delivered to the local Stream
+	reliably and in-order. Caller is responsible for protecting against
+	resource exhaustion attacks by checking the `hitLimit` value, or calling
+	{@link #getUndeliverableCount} or {@link #getMaxConsumption}.
 
 	Not-currently-deliverable L{StringFragment}s will be be converted to
 	C{str}s while in Incoming, and converted back when you retrieve them.
@@ -175,6 +171,8 @@ class Incoming(object):
 
 	def give(self, numAndItemSeq, itemLimit=None, sizeLimit=None):
 		"""
+		Simultaneously give new items, and get deliverable items.
+
 		@param numAndItemSeq: a sequence of *already sorted* (seqNum, object).
 			C{seqNum} may be an C{int}, C{long}, or integral C{float}.
 

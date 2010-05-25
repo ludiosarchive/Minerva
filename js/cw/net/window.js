@@ -1,13 +1,7 @@
 /**
-Implementations of:
--	a receive window (Incoming), which can do re-ordering before delivering
-	to the application. It keeps track of how much memory is used
-	by the undeliverable items.
-
--	a send queue (Queue), which keeps items until they are SACKed,
-	in case the items have to be written multiple times (due to transport
-	failure).
-*/
+ * @fileoverview Ports of Python Minerva's {@code window.Queue}
+ * 	and {@code window.Incoming}.
+ */
 
 goog.provide('cw.net.Incoming');
 goog.provide('cw.net.Queue');
@@ -27,13 +21,22 @@ cw.net.SACKTuple_ = goog.typedef;
 
 
 /**
- * This is a queue that assigns a monotonically increasing integer as
- * a sequence number for each item. You can iterate over items in
- * the queue, and you can batch-remove items with a SACK tuple.
+ * A send queue which assigns a monotonically increasing integer
+ * to each item. It keeps items until they are SACKed.
+ *
+ * Useful if you need to queue items that may need to be sent
+ * multiple times (if a connection/transport fails). It keeps track
+ * of how much memory the Queue is using, in case you want to
+ * do flow control.
  *
  * @constructor
  */
 cw.net.Queue = function() {
+	/**
+	 * A Map to store items in the queue that have not been SACKed yet.
+	 * @type {!goog.structs.Map}
+	 * @private
+	 */
 	this.items_ = new goog.structs.Map();
 };
 
@@ -73,6 +76,9 @@ cw.net.Queue.prototype.extend = function(items) {
 };
 
 
+/**
+ * @param {!Array.<string>} sb
+ */
 cw.net.Queue.prototype.__reprToPieces__ = function(buffer) {
 	buffer.push(
 		'<Queue with ', String(this.items_.getCount()) ,' item(s), ' +
@@ -124,14 +130,13 @@ cw.net.Queue.prototype.getItems = function(start) {
 
 
 /**
- * Remove all items that are no longer needed, based on C{sackInfo}.
- *
- * Returns {@code true} if ackNumber or any sackNumber was higher
- * than the highest seqNum in the queue. This would indicate a
- * "bad SACK". Note that as many items as possible are removed
- * even in the "bad SACK" case. If not bad SACK, returns C{false}.
+ * Remove all items that are no longer needed, based on {@code sackInfo}.
  *
  * @param {!cw.net.SACKTuple_} sackInfo A SACK tuple
+ * @return {boolean} True if ackNumber or any sackNumber was higher
+ * than the highest seqNum in the queue. This would indicate a
+ * "bad SACK". Note that as many items as possible are removed
+ * even in the "bad SACK" case. If not bad SACK, return {@code false}.
  */
 cw.net.Queue.prototype.handleSACK = function(sackInfo) {
 	var ackNum = sackInfo[0];
@@ -194,25 +199,26 @@ cw.net.Queue.prototype.getMaxConsumption = function() {
 
 
 /**
- * I am a processor for incoming numbered items. I take input through
- * L{give}, which returns the deliverable items.
+ * A receive window which can accept in-order (but possibly with gaps)
+ * numbered items, compute a SACK tuple for those items, and return
+ * an Array of in-order deliverable items. It keeps track of how much
+ * memory the undeliverable items are using, and can reject items if
+ * they would push Incoming over an item or memory size limit.
  *
- * One use case is ensuring that boxes are delivered to the Stream reliably
- * and in-order. Caller is responsible for protecting against resource
- * exhaustion attacks by checking the `hitLimit` value, or calling
- * L{getUndeliverableCount} or L{getMaxConsumption}.
- *
- * Not-currently-deliverable L{StringFragment}s will be be converted to
- * C{str}s while in Incoming, and converted back when you retrieve them.
- * This is done because L{StringFragment}s may be referencing a giant
- * C{str}, which we don't want to keep around. It's also easier to get the
- * size-in-memory of a C{str}.
+ * This is used to ensure that boxes are delivered to the local Stream
+ * reliably and in-order. Caller is responsible for protecting against
+ * resource exhaustion attacks by checking the `hitLimit` value, or calling
+ * {@link #getUndeliverableCount} or {@link #getMaxConsumption}.
  *
  * @constructor
  */
 cw.net.Incoming = function() {
-	// A Map to store items given to us, but not yet deliverable
-	// (because there are gaps).
+	/**
+	 * A Map to store items given to us, but not yet deliverable
+	 * (because there are gaps).
+	 * @type {!goog.structs.Map}
+	 * @private
+	 */
 	this.cached_ = new goog.structs.Map();
 }
 
@@ -232,6 +238,8 @@ cw.net.Incoming.prototype.size_ = 0;
 
 
 /**
+ * Simultaneously give new items, and get deliverable items.
+ *
  * @param {!Array.<!Array.<(number|string)>>} numAndItemSeq An Array of
  * 	*already sorted* (seqNum, string) pairs. // TODO: types for tuples
  * @param {number} itemLimit
@@ -297,6 +305,8 @@ cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
 
 /**
  * @return {!cw.net.SACKTuple_}
+ *
+ * Caller may modify the returned Array.
  */
 cw.net.Incoming.prototype.getSACK = function() {
 	return [this.lastAck_, this.cached_.getKeys().sort()];
