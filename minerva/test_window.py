@@ -7,7 +7,7 @@ from minerva.helpers import todo
 from minerva.window import Queue, Incoming, _wasSF
 
 
-class TestQueue(unittest.TestCase):
+class QueueTests(unittest.TestCase):
 	"""
 	Tests for L{window.Queue}
 	"""
@@ -171,7 +171,7 @@ class TestQueue(unittest.TestCase):
 
 
 
-class TestIncoming(unittest.TestCase):
+class IncomingTests(unittest.TestCase):
 	"""
 	Tests for L{window.Incoming}
 	"""
@@ -318,9 +318,9 @@ class TestIncoming(unittest.TestCase):
 
 
 
-class TestIncomingConsumption(unittest.TestCase):
+class IncomingConsumptionTests(unittest.TestCase):
 	"""
-	Tests for L{window.Incoming}'s memory-consumption-prevention
+	Tests for L{window.Incoming}'s memory-exhaustion-prevention
 	"""
 	def test_noBoxesEverGiven(self):
 		i = Incoming()
