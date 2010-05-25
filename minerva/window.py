@@ -22,24 +22,29 @@ class Queue(object):
 	a sequence number for each item. You can iterate over items in
 	the queue, and you can batch-remove items with a SACK tuple.
 	"""
-	__slots__ = ('_counter', '_items')
+	__slots__ = ('_counter', '_items', '_size')
 
 	noisy = True
 
 	def __init__(self):
 		self._counter = -1
 		self._items = {}
+		self._size = 0
 
 
 	def append(self, item):
-		self._items[self._counter + 1] = item
+		size = totalSizeOf(item)
+		self._items[self._counter + 1] = (item, size)
 		self._counter += 1
+		self._size += size
 
 
 	def extend(self, items):
 		for item in items:
-			self._items[self._counter + 1] = item
+			size = totalSizeOf(item)
+			self._items[self._counter + 1] = (item, size)
 			self._counter += 1
+			self._size += size
 
 
 	def __len__(self):
@@ -47,7 +52,8 @@ class Queue(object):
 
 
 	def __repr__(self):
-		return '<Queue with %r item(s), self._counter=#%r>' % (len(self), self._counter)
+		return '<Queue at 0x%x with %r item(s), counter=#%r, size=%r>' % (
+			id(self), len(self), self._counter, self._size)
 
 
 	def iterItems(self, start=None):
@@ -62,7 +68,7 @@ class Queue(object):
 
 		sortedItems = self._items.items()
 		sortedItems.sort()
-		for seqNum, item in sortedItems:
+		for seqNum, (item, size) in sortedItems:
 			if start is None or seqNum >= start:
 				yield (seqNum, item)
 
@@ -92,13 +98,17 @@ class Queue(object):
 
 		for k in sortedKeys:
 			if ackNum >= k:
+				size = self._items[k][1]
 				del self._items[k]
+				self._size -= size
 
 		for sackNum in sackInfo[1]:
 			if sackNum > self._counter:
 				badSACK = True
 			try:
+				size = self._items[k][1]
 				del self._items[sackNum]
+				self._size -= size
 			except KeyError:
 				pass
 
@@ -107,6 +117,18 @@ class Queue(object):
 			self._items = {}
 
 		return badSACK
+
+
+	def getMaxConsumption(self):
+		"""
+		@rtype: L{int}
+		@return: maximum possible consumption of the queued items.
+
+		Keep in mind that if queued items have children that point
+		to the same object, this may overreport how much memory is really
+		being consumed.
+		"""
+		return self._size
 
 
 
@@ -223,9 +245,6 @@ class Incoming(object):
 		"""
 		@rtype: L{int}
 		@return: the number of undeliverable items.
-
-		This does not count items that are already deliverable, but not yet
-		retrieved with L{getDeliverableItems}.
 		"""
 		return len(self._cached)
 
@@ -234,9 +253,6 @@ class Incoming(object):
 		"""
 		@rtype: L{int}
 		@return: maximum possible consumption of the undeliverable items.
-
-		This does not count items that are already deliverable, but not yet
-		retrieved with L{getDeliverableItems}.
 
 		Keep in mind that if undeliverable items have children that point
 		to the same object, this may overreport how much memory is really

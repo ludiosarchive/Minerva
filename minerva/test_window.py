@@ -13,11 +13,35 @@ class TestQueue(unittest.TestCase):
 	"""
 	def test_repr(self):
 		q = Queue()
-		self.aE('<Queue with 0 item(s), self._counter=#-1>', repr(q))
+		self.aE('<Queue at 0x%x with 0 item(s), counter=#-1, size=0>' % (
+			id(q),), repr(q))
 		q.extend(['a', 'b'])
-		self.aE('<Queue with 2 item(s), self._counter=#1>', repr(q))
+		self.aE('<Queue at 0x%x with 2 item(s), counter=#1, size=%d>' % (
+			id(q), totalSizeOf('a') * 2), repr(q))
 		q.handleSACK((0, ()))
-		self.aE('<Queue with 1 item(s), self._counter=#1>', repr(q))
+		self.aE('<Queue at 0x%x with 1 item(s), counter=#1, size=%d>' % (
+			id(q), totalSizeOf('a')), repr(q))
+
+
+	def test_getMaxConsumption(self):
+		"""
+		The size of the Queue increases when we extend it or append to it,
+		and decreases when we give it an ackNumber or sackNum that
+		causes it to remove items.
+		"""
+		q = Queue()
+		self.aE(0, q.getMaxConsumption())
+		q.extend(['a', 'b'])
+		self.aE(totalSizeOf('a') * 2, q.getMaxConsumption())
+		q.handleSACK((0, ()))
+		self.aE(totalSizeOf('a'), q.getMaxConsumption())
+		# strange-looking SACK, but it does exercise the code we want to exercise
+		q.handleSACK((0, (1,)))
+		self.aE(0, q.getMaxConsumption())
+		q.handleSACK((1, ()))
+		self.aE(0, q.getMaxConsumption())
+		q.append('cc')
+		self.aE(totalSizeOf('cc'), q.getMaxConsumption())
 
 
 	def test_iterEmptyQueue(self):
