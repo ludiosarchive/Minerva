@@ -57,7 +57,7 @@ class Queue(object):
 
 	def iterItems(self, start=None):
 		"""
-		Yield (seqNumber, item) for every item in the queue.
+		Yield (seqNum, item) for every item in the queue.
 
 		If C{start} is not C{None}, items before L{start} will be skipped.
 		"""

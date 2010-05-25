@@ -115,7 +115,7 @@ class TestQueue(unittest.TestCase):
 
 	def test_handleSACKToHigherNum(self):
 		q = Queue()
-		q.extend([0,1,2,3,4,5,6,7,8])
+		q.extend([0, 1, 2, 3, 4, 5, 6, 7, 8])
 		self.assertEqual(False, q.handleSACK((1, ())))
 		self.assertEqual(False, q.handleSACK((3, ())))
 
