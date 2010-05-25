@@ -13,7 +13,6 @@ goog.provide('cw.net.Incoming');
 goog.provide('cw.net.Queue');
 
 goog.require('cw.objsize');
-goog.require('goog.string');
 goog.require('goog.asserts');
 goog.require('goog.structs.Map');
 
@@ -75,9 +74,9 @@ cw.net.Queue.prototype.extend = function(items) {
 
 
 cw.net.Queue.prototype.__reprToPieces__ = function(buffer) {
-	buffer.push(goog.string.subs(
-		'<Queue with %s item(s), counter=#%s, size=%s>',
-		this.items_.getCount(), this.counter_, this.size_));
+	buffer.push(
+		'<Queue with ', String(this.items_.getCount()) ,' item(s), ' +
+		'counter=#', String(this.counter_), ', size=', String(this.size_) ,'>');
 };
 
 
