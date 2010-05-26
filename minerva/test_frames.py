@@ -141,11 +141,11 @@ class HelloFrameTests(unittest.TestCase):
 		If L{HelloFrame} contains invalid values for various properties,
 		L{InvalidHello} is raised.
 		"""
-		def listWithout(alist, without):
-			l = alist[:]
+		def listWithout(oldList, without):
+			arr = oldList[:]
 			for w in without:
-				l.remove(w)
-			return l
+				arr.remove(w)
+			return arr
 
 		genericBad = [
 			-2**65, -1, -0.5, 0.5, 2**53+1, "", [], ["something"],
