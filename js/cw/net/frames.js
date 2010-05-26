@@ -309,13 +309,6 @@ cw.net.HelloFrame.prototype.makeCompactMapping_ = function() {
 }
 
 /**
- * @return {string} Encoded frame
- */
-cw.net.HelloFrame.prototype.encode = function() {
-	return goog.json.serialize(this.makeCompactMapping_()) + 'H';
-}
-
-/**
  * Decodes a string from an untrusted source to a {@code cw.net.HelloFrame}.
  *
  * @param {string} frameString A string that ends with "H".
@@ -341,6 +334,13 @@ cw.net.HelloFrame.decode = function(frameString) {
 	}
 
 	return cw.net.helloDataToHelloFrame_(blob);
+}
+
+/**
+ * @return {string} Encoded frame
+ */
+cw.net.HelloFrame.prototype.encode = function() {
+	return goog.json.serialize(this.makeCompactMapping_()) + 'H';
 }
 
 
@@ -375,19 +375,18 @@ cw.net.StringFrame.prototype.__reprToPieces__ = function(sb) {
 }
 
 /**
- * @return {string} Encoded frame
- */
-cw.net.StringFrame.prototype.encode = function() {
-	return this.string + ' ';
-}
-
-
-/**
  * @param {string} frameString A string that ends with " ".
  * @return {!cw.net.StringFrame}
  */
 cw.net.StringFrame.decode = function(frameString) {
 	return new cw.net.StringFrame(frameString.substr(0, frameString.length - 1));
+}
+
+/**
+ * @return {string} Encoded frame
+ */
+cw.net.StringFrame.prototype.encode = function() {
+	return this.string + ' ';
 }
 
 
@@ -420,14 +419,6 @@ cw.net.SeqNumFrame.prototype.__reprToPieces__ = function(sb) {
 }
 
 /**
- * @return {string} Encoded frame
- */
-cw.net.SeqNumFrame.prototype.encode = function() {
-	return this.seqNum + 'N';
-}
-
-
-/**
  * @param {string} frameString A string that ends with "N".
  * @return {!cw.net.SeqNumFrame}
  */
@@ -440,6 +431,14 @@ cw.net.SeqNumFrame.decode = function(frameString) {
 	}
 	return new cw.net.SeqNumFrame(seqNum);
 }
+
+/**
+ * @return {string} Encoded frame
+ */
+cw.net.SeqNumFrame.prototype.encode = function() {
+	return this.seqNum + 'N';
+}
+
 
 
 /**
@@ -511,13 +510,6 @@ cw.net.SackFrame.prototype.__reprToPieces__ = function(sb) {
 }
 
 /**
- * @return {string} Encoded frame
- */
-cw.net.SackFrame.prototype.encode = function() {
-	return this.sackList.join(',') + '|' + this.ackNumber + 'A';
-}
-
-/**
  * @param {string} frameString A string that ends with "A".
  * @return {!cw.net.SackFrame}
  */
@@ -529,6 +521,14 @@ cw.net.SackFrame.decode = function(frameString) {
 	}
 	return frame;
 }
+
+/**
+ * @return {string} Encoded frame
+ */
+cw.net.SackFrame.prototype.encode = function() {
+	return this.sackList.join(',') + '|' + this.ackNumber + 'A';
+}
+
 
 
 
@@ -557,13 +557,6 @@ cw.net.YouCloseItFrame.prototype.equals = function(other, messages) {
 }
 
 /**
- * @return {string} Encoded frame
- */
-cw.net.YouCloseItFrame.prototype.encode = function() {
-	return 'Y';
-}
-
-/**
  * @param {string} frameString A string that ends with "Y".
  * @return {!cw.net.YouCloseItFrame}
  */
@@ -573,6 +566,14 @@ cw.net.YouCloseItFrame.decode = function(frameString) {
 	}
 	return new cw.net.YouCloseItFrame();
 }
+
+/**
+ * @return {string} Encoded frame
+ */
+cw.net.YouCloseItFrame.prototype.encode = function() {
+	return 'Y';
+}
+
 
 
 
@@ -604,20 +605,20 @@ cw.net.PaddingFrame.prototype.__reprToPieces__ = function(sb) {
 }
 
 /**
+ * @param {string} frameString A string that ends with "P".
+ * @return {!cw.net.PaddingFrame}
+ */
+cw.net.PaddingFrame.decode = function(frameString) {
+	return new cw.net.PaddingFrame(frameString.length - 1);
+}
+
+/**
  * @return {string} Encoded frame
  */
 cw.net.PaddingFrame.prototype.encode = function() {
 	var p = Array(this.numBytes);
 	p.push('P');
 	return p.join(' ');
-}
-
-/**
- * @param {string} frameString A string that ends with "P".
- * @return {!cw.net.PaddingFrame}
- */
-cw.net.PaddingFrame.decode = function(frameString) {
-	return new cw.net.PaddingFrame(frameString.length - 1);
 }
 
 
@@ -671,14 +672,6 @@ cw.net.ResetFrame.prototype.__reprToPieces__ = function(sb) {
 }
 
 /**
- * @return {string} Encoded frame
- */
-cw.net.ResetFrame.prototype.encode = function() {
-	return this.reasonString + '|' + Number(this.applicationLevel) + '!';
-}
-
-
-/**
  * @param {string} frameString A string that ends with "!".
  * @return {!cw.net.ResetFrame}
  */
@@ -698,6 +691,14 @@ cw.net.ResetFrame.decode = function(frameString) {
 
 	return new cw.net.ResetFrame(reasonString, applicationLevel);
 }
+
+/**
+ * @return {string} Encoded frame
+ */
+cw.net.ResetFrame.prototype.encode = function() {
+	return this.reasonString + '|' + Number(this.applicationLevel) + '!';
+}
+
 
 
 
@@ -759,13 +760,6 @@ cw.net.TransportKillFrame.prototype.__reprToPieces__ = function(sb) {
 }
 
 /**
- * @return {string} Encoded frame
- */
-cw.net.TransportKillFrame.prototype.encode = function() {
-	return this.reason + 'K';
-}
-
-/**
  * @param {string} frameString A string that ends with "K".
  * @return {!cw.net.TransportKillFrame}
  */
@@ -778,6 +772,14 @@ cw.net.TransportKillFrame.decode = function(frameString) {
 
 	return new cw.net.TransportKillFrame(reason);
 }
+
+/**
+ * @return {string} Encoded frame
+ */
+cw.net.TransportKillFrame.prototype.encode = function() {
+	return this.reason + 'K';
+}
+
 
 
 /**
