@@ -8,11 +8,27 @@ from mypy.strops import StringFragment
 from minerva.frames import (
 	HelloFrame, StringFrame, SeqNumFrame, SackFrame, YouCloseItFrame,
 	ResetFrame, PaddingFrame, TransportKillFrame,
-	InvalidFrame, InvalidHello, CannotEncode,
+	InvalidFrame, InvalidHello, UnknownHelloKey, HelloFrameArguments,
 	decodeFrameFromClient, decodeFrameFromServer)
 
 from minerva.frames import (
 	FORMAT_XHR, FORMAT_HTMLFILE,
+)
+
+from minerva.frames import (
+	Hello_transportNumber,
+	Hello_protocolVersion,
+	Hello_httpFormat,
+	Hello_requestNewStream,
+	Hello_streamId,
+	Hello_credentialsData,
+	Hello_streamingResponse,
+	Hello_needPaddingBytes,
+	Hello_maxReceiveBytes,
+	Hello_maxOpenTime,
+	Hello_useMyTcpAcks,
+	Hello_succeedsTransport,
+	Hello_lastSackSeenByClient,
 )
 
 from minerva.test_newlink import _makeHelloFrame, sf
@@ -34,30 +50,48 @@ def dumpToJson7Bit(data):
 class HelloFrameTests(unittest.TestCase):
 
 	def test_eq(self):
-		self.assertTrue(HelloFrame({"a": 1}) == HelloFrame({"a": 1}))
-		self.assertFalse(HelloFrame({"a": 1}) != HelloFrame({"a": 1}))
-		self.assertTrue(HelloFrame({"a": 1}) != HelloFrame({"a": 2}))
-		self.assertFalse(HelloFrame({"a": 1}) == HelloFrame({"a": 2}))
-		self.assertTrue(HelloFrame({"a": 1}) != HelloFrame({"a": 1, "b": 1}))
-		self.assertFalse(HelloFrame({"a": 1}) == HelloFrame({"a": 1, "b": 1}))
+		self.assertTrue(
+			HelloFrame({"succeedsTransport": 1}) ==
+			HelloFrame({"succeedsTransport": 1}))
+		self.assertFalse(
+			HelloFrame({"succeedsTransport": 1}) !=
+			HelloFrame({"succeedsTransport": 1}))
+		self.assertTrue(
+			HelloFrame({"succeedsTransport": 1}) !=
+			HelloFrame({"succeedsTransport": 2}))
+		self.assertFalse(
+			HelloFrame({"succeedsTransport": 1}) ==
+			HelloFrame({"succeedsTransport": 2}))
+		self.assertTrue(
+			HelloFrame({"succeedsTransport": 1}) !=
+			HelloFrame({"succeedsTransport": 1, "maxOpenTime": 1}))
+		self.assertFalse(
+			HelloFrame({"succeedsTransport": 1}) ==
+			HelloFrame({"succeedsTransport": 1, "maxOpenTime": 1}))
 
 
 	def test_publicAttr(self):
-		self.assertEqual("goes", HelloFrame({"anything": "goes"}).anything)
+		self.assertEqual({"maxt": 2}, HelloFrame({"maxOpenTime": 2}).opts)
+
+
+	def test_cannotConstructWithInvalidKey(self):
+		self.assertRaises(UnknownHelloKey, lambda: HelloFrame(dict(aMadeUpKey=0)))
 
 
 	def test_repr(self):
-		self.assertEqual("HelloFrame({'a': 1})", repr(HelloFrame({'a': 1})))
+		self.assertEqual(
+			"<HelloFrame opts={'eeds': 1}>",
+			repr(HelloFrame({'succeedsTransport': 1})))
 
 
 	def test_wantsStrings(self):
 		s = _makeHelloFrame()
 		self.assertEqual(False, s.wantsStrings())
-		s.succeedsTransport = None
+		s.opts[Hello_succeedsTransport] = None
 		self.assertEqual(True, s.wantsStrings())
-		s.succeedsTransport = 3
+		s.opts[Hello_succeedsTransport] = 3
 		self.assertEqual(True, s.wantsStrings())
-		del s.succeedsTransport
+		del s.opts[Hello_succeedsTransport]
 		self.assertEqual(False, s.wantsStrings())
 
 
@@ -132,7 +166,7 @@ class HelloFrameTests(unittest.TestCase):
 		"""
 		for bad in (nan, inf, neginf):
 			hello = _makeHelloFrame(dict(credentialsData={'somekey': bad}))
-			s = simplejson.dumps(dict(hello._yieldMapping()))
+			s = simplejson.dumps(dict(hello._yieldJsonMapping()))
 			self.assertRaises(InvalidHello, lambda: HelloFrame.decode(sf(s)))
 
 
@@ -173,10 +207,10 @@ class HelloFrameTests(unittest.TestCase):
 			for value in mutateValues:
 				badHello = _makeHelloFrame()
 				if value is not DeleteProperty:
-					setattr(badHello, mutateProperty, value)
+					badHello.opts[getattr(HelloFrameArguments, mutateProperty)] = value
 				else:
 					try:
-						delattr(badHello, mutateProperty)
+						del badHello.opts[getattr(HelloFrameArguments, mutateProperty)]
 					except AttributeError:
 						 # It wasn't there in the first place.
 						pass
@@ -208,12 +242,6 @@ class HelloFrameTests(unittest.TestCase):
 			needPaddingBytes=0))
 		encodedDecodedHello = HelloFrame.decode(sf(hello.encode()))
 		self.assertEqual(hello, encodedDecodedHello)
-
-
-	def test_encodeFailed(self):
-		hello = HelloFrame(dict(aMadeUpKey=0))
-		self.assertRaises(CannotEncode, lambda: hello.encode())
-
 
 
 

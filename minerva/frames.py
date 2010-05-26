@@ -67,7 +67,7 @@ class InvalidHello(InvalidFrame):
 
 
 
-class CannotEncode(Exception):
+class UnknownHelloKey(Exception):
 	pass
 
 
@@ -175,7 +175,7 @@ def helloDataToHelloFrame(helloData):
 	except (TypeError, ValueError):
 		raise InvalidHello("bad maxOpenTime")
 
-	return HelloFrame(obj)
+	return HelloFrame(dict(**obj))
 
 
 
@@ -184,7 +184,7 @@ def helloDataToHelloFrame(helloData):
 class HelloFrame(object):
 
 	def __init__(self, obj):
-		self.__dict__ = obj
+		self.opts = dict(self._yieldMapping(obj))
 
 
 	def __eq__(self, other):
@@ -196,7 +196,7 @@ class HelloFrame(object):
 
 
 	def __repr__(self):
-		return '%s(%r)' % (self.__class__.__name__, self.__dict__)
+		return '<%s opts=%r>' % (self.__class__.__name__, self.opts)
 
 
 	@classmethod
@@ -217,21 +217,27 @@ class HelloFrame(object):
 		return helloDataToHelloFrame(helloData)
 
 
-	def _yieldMapping(self):
-		for k, v in self.__dict__.iteritems():
-			argByte = getattr(HelloFrameArguments, k, None)
-			if argByte is None:
-				raise CannotEncode("Don't know argByte for %r" % (k,))
+	def _yieldMapping(self, obj):
+		for k, v in obj.iteritems():
+			compactArg = getattr(HelloFrameArguments, k, None)
+			if compactArg is None:
+				raise UnknownHelloKey("Don't know compactArg for %r" % (k,))
 			# We allow the user to pass either a string or a SackFrame,
 			# hopefully they'll pass a SackFrame.
+			yield compactArg, v
+
+
+	def _yieldJsonMapping(self):
+		for compactArg, v in self.opts.iteritems():
 			if isinstance(v, SackFrame):
-				yield argByte, v.encode()[:-1]
+				yield compactArg, v.encode()[:-1]
 			else:
-				yield argByte, v
+				yield compactArg, v
 
 
 	def encode(self):
-		return dumps(dict(self._yieldMapping()), separators=(',', ':'), allow_nan=False) + 'H'
+		kwargs = dict(separators=(',', ':'), allow_nan=False)
+		return dumps(dict(self._yieldJsonMapping()), **kwargs) + 'H'
 
 
 	def wantsStrings(self):
@@ -239,7 +245,7 @@ class HelloFrame(object):
 		Returns a C{bool} indicating whether this HelloFrame indicates that
 		client wants to receive strings.
 		"""
-		return hasattr(self, 'succeedsTransport')
+		return Hello_succeedsTransport in self.opts
 
 
 
