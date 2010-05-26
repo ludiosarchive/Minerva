@@ -37,6 +37,38 @@ var InvalidFrame = cw.net.InvalidFrame;
 
 var repr = cw.repr.repr;
 
+
+var DeleteProperty = {};
+
+cw.net.TestFrames.makeHelloFrame_ = function(extra) {
+	if(extra === undefined) {
+		extra = {};
+	}
+	var _extra = {
+		transportNumber: 0,
+		requestNewStream: 1,
+		protocolVersion: 2,
+		streamId: goog.string.repeat('x', 26),
+		streamingResponse: 1,
+		maxReceiveBytes: Math.pow(2, 30),
+		maxOpenTime: Math.pow(2, 30),
+		lastSackSeenByClient: SackFrame(-1, [])
+	}
+	for(var k in extra) {
+		if(!Object.prototype.hasOwnProperty.call(extra, k)) {
+			continue;
+		}
+		var v = extra[k];
+		if(v === DeleteProperty && _extra.hasOwnProperty(k)) {
+			delete _extra[k];
+		} else {
+			_extra[k] = v;
+		}
+	}
+	return new HelloFrame(_extra);
+}
+
+
 cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 
 	function test_eq(self) {
@@ -51,6 +83,17 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 
 	function test_repr(self) {
 		self.assertEqual('new HelloFrame({"a": 1})', repr(new HelloFrame({'a': 1})));
+	},
+
+	function test_wantsStrings(self) {
+		var s = cw.net.TestFrames.makeHelloFrame_();
+		self.assertEqual(false, s.wantsStrings());
+		s.options.succeedsTransport = null;
+		self.assertEqual(true, s.wantsStrings());
+		s.options.succeedsTransport = 3;
+		self.assertEqual(true, s.wantsStrings());
+		delete s.options.succeedsTransport;
+		self.assertEqual(false, s.wantsStrings());
 	},
 
 	// TODO: decode tests

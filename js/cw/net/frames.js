@@ -343,6 +343,17 @@ cw.net.HelloFrame.prototype.encode = function() {
 	return goog.json.serialize(this.makeCompactMapping_()) + 'H';
 }
 
+/**
+ * @return {boolean} True if this HelloFrame indicates that
+ *	client wants to receive strings, else false.
+ */
+cw.net.HelloFrame.prototype.wantsStrings = function() {
+	// TODO: use Object.prototype.hasOwnProperty.call (or goog.structs.Map.hasKey_),
+	// but how? Closure Compiler won't rename the property name in the string.
+	// Maybe we should just use a goog.structs.Map instead of a {}.
+	return this.options.succeedsTransport !== undefined;
+}
+
 
 
 /**
