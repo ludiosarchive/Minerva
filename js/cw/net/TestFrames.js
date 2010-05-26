@@ -121,9 +121,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 	},
 
 	/**
-	 * 	A too-low or too-high transport number (or a wrong type) for the 'eeds'
-		argument causes L{InvalidHello} to be raised.
-		In this case, the stream is never registered with the streamTracker.
+	 * A too-low or too-high transport number (or a wrong type) for the 'eeds'
+	 * argument causes {@code InvalidHello} to be thrown.
+	 * In this case, the stream is never registered with the streamTracker.
 	 */
 	function test_decodeFailedBadEedsArgument(self) {
 		var badEedsArguments = [
@@ -139,8 +139,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 	},
 
 	/**
-	 * 	If the L{HelloFrame} has too much nesting of objects,
-		L{InvalidHello} is raised.
+	 * If the {@code HelloFrame} has too much nesting of objects,
+	 * {@code InvalidHello} is thrown.
 	 */
 	function test_decodeFailedTooMuchNestingObject(self) {
 		// Some browsers (Opera) might abort JavaScript execution if the
@@ -153,8 +153,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 	},
 
 	/**
-	 * 	If the L{HelloFrame} has too much nesting of arrays,
-		L{InvalidHello} is raised.
+	 * If the {@code HelloFrame} has too much nesting of arrays,
+	 * {@code InvalidHello} is thrown.
 	 */
 	function test_decodeFailedTooMuchNestingArray(self) {
 		// See comment for test_decodeFailedTooMuchNestingObject
@@ -165,8 +165,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 	},
 
 	/**
-	 * 	If L{HelloFrame} has trailing garbage 'x' after the JSON,
-		L{InvalidHello} is raised.
+	 * If {@code HelloFrame} has trailing garbage 'x' after the JSON,
+	 * {@code InvalidHello} is thrown.
 	 */
 	function test_decodeFailedTrailingGarbage(self) {
 		var encoded =  cw.net.TestFrames.makeHelloFrame_().encode();
@@ -178,8 +178,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 	// that a simplejson-specific feature is disabled.
 
 	/**
-	 * 	If L{HelloFrame} contains invalid values for various properties,
-		L{InvalidHello} is raised.
+	 * If {@code HelloFrame} contains invalid values for various properties,
+	 * {@code InvalidHello} is thrown.
 	 */
 	function test_decodeFailedInvalidValues(self) {
 		var listWithout = function(oldList, without) {
@@ -251,7 +251,6 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 		goog.asserts.assert(ran == 119, "Ran " + ran + " times; change this assert as needed");
 	},
 
-
 	function test_encode(self) {
 		var hello = new HelloFrame({transportNumber: 0});
 		self.assertEqual('{"tnum":0}' + 'H', hello.encode());
@@ -271,7 +270,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 	},
 
 	/**
-	 * There's no real error checking if an invalid property is used.
+	 * Unlike in Python Minerva, there is no error checking if an
+	 * invalid property is used.
 	 */
 	function test_encodeWithInvalidProperty(self) {
 		var hello = new HelloFrame({aMadeUpKey: 0});
