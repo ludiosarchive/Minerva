@@ -119,7 +119,7 @@ def helloDataToHelloFrame(helloData):
 		obj.streamId = helloData[Hello_streamId]
 		# ,str is appropriate only because simplejson returns str when possible
 		if not isinstance(obj.streamId, str) or not 20 <= len(obj.streamId) <= 30:
-			raise InvalidHello("bad streamId length: %d" % len(obj.streamId))
+			raise InvalidHello("bad streamId")
 	except (KeyError, TypeError, ValueError):
 		raise InvalidHello(
 			"problem with requestNewStream, transportNumber, "
