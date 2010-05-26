@@ -161,10 +161,11 @@ class HelloFrameTests(unittest.TestCase):
 			streamingResponse=[2, 3] + listWithout(genericBad, [True, False]),
 			maxReceiveBytes=genericBad,
 			maxOpenTime=genericBad,
-			credentialsData=[DeleteProperty] + listWithout(genericBad, [{}]),
+			credentialsData=listWithout(genericBad, [{}]),
 			# We can pass either a string or a SackFrame
 			lastSackSeenByClient=[DeleteProperty, '', '|', SackFrame(-2, ()), SackFrame(-1, (-2,))]
 		)
+		##print badMutations
 
 		ran = 0
 
@@ -178,7 +179,7 @@ class HelloFrameTests(unittest.TestCase):
 						delattr(badHello, mutateProperty)
 					except AttributeError:
 						 # It wasn't there in the first place.
-						continue
+						pass
 
 				##print badHello
 				s = badHello.encode()
