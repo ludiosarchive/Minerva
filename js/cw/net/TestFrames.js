@@ -8,7 +8,9 @@ goog.require('cw.UnitTest');
 goog.require('goog.array');
 goog.require('goog.object');
 goog.require('goog.string');
+goog.require('goog.asserts');
 goog.require('cw.repr');
+goog.require('cw.string');
 goog.require('cw.net.HelloFrame');
 goog.require('cw.net.StringFrame');
 goog.require('cw.net.SeqNumFrame');
@@ -34,9 +36,13 @@ var ResetFrame = cw.net.ResetFrame;
 var TransportKillFrame = cw.net.TransportKillFrame;
 var tk = cw.net.TransportKillReason;
 var InvalidFrame = cw.net.InvalidFrame;
+var InvalidHello = cw.net.InvalidHello;
+
+var FORMAT_XHR = cw.net.HttpFormat_.FORMAT_XHR;
+var FORMAT_HTMLFILE = cw.net.HttpFormat_.FORMAT_HTMLFILE;
 
 var repr = cw.repr.repr;
-
+var rep = goog.string.repeat;
 
 var DeleteProperty = {};
 
@@ -52,7 +58,7 @@ cw.net.TestFrames.makeHelloFrame_ = function(extra) {
 		streamingResponse: 1,
 		maxReceiveBytes: Math.pow(2, 30),
 		maxOpenTime: Math.pow(2, 30),
-		lastSackSeenByClient: SackFrame(-1, [])
+		lastSackSeenByClient: new SackFrame(-1, [])
 	}
 	for(var k in extra) {
 		if(!Object.prototype.hasOwnProperty.call(extra, k)) {
@@ -96,12 +102,158 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 		self.assertEqual(false, s.wantsStrings());
 	},
 
-	// TODO: decode tests
+	function test_decode(self) {
+		var s = cw.net.TestFrames.makeHelloFrame_().encode();
+		self.assertEqual(
+			new HelloFrame({
+				transportNumber: 0,
+				requestNewStream: true,
+				protocolVersion: 2,
+				streamId: goog.string.repeat('x', 26),
+				streamingResponse: true,
+				maxReceiveBytes: Math.pow(2, 30),
+				maxOpenTime: Math.pow(2, 30),
+				credentialsData: {},
+				needPaddingBytes: 0,
+				httpFormat: null,
+				lastSackSeenByClient: new SackFrame(-1, [])
+			}, HelloFrame.decode(s)));
+	},
+
+	/**
+	 * 	A too-low or too-high transport number (or a wrong type) for the 'eeds'
+		argument causes L{InvalidHello} to be raised.
+		In this case, the stream is never registered with the streamTracker.
+	 */
+	function test_decodeFailedBadEedsArgument(self) {
+		var badEedsArguments = [
+			-1, -Math.pow(2, 32), -0.5,
+			cw.net.LARGER_THAN_LARGEST_INTEGER_, "4", true, false, [], {}];
+
+		goog.array.forEach(badEedsArguments, function(succeedsTransport) {
+			var s = cw.net.TestFrames.makeHelloFrame_({
+				succeedsTransport: succeedsTransport}).encode()
+
+			self.assertThrows(InvalidHello, function() { HelloFrame.decode(s); })
+		});
+	},
+
+	/**
+	 * 	If the L{HelloFrame} has too much nesting of objects,
+		L{InvalidHello} is raised.
+	 */
+	function test_decodeFailedTooMuchNestingObject(self) {
+		// Some browsers (Opera) might abort JavaScript execution if the
+		// stack overflows, so it is critical to do depth-checking if those
+		// browsers are decoding untrusted JSON.
+		throw new cw.UnitTest.SkipTest("not yet implemented, necessity uncertain");
+		var nestingLimit = 32;
+		var s = rep('{"":', nestingLimit) + '1' + rep('}', nestingLimit);
+		self.assertThrows(InvalidHello, function() { HelloFrame.decode(s); });
+	},
+
+	/**
+	 * 	If the L{HelloFrame} has too much nesting of arrays,
+		L{InvalidHello} is raised.
+	 */
+	function test_decodeFailedTooMuchNestingArray(self) {
+		// See comment for test_decodeFailedTooMuchNestingObject
+		throw new cw.UnitTest.SkipTest("not yet implemented, necessity uncertain");
+		var nestingLimit = 32;
+		var s = rep('[', nestingLimit) + '1' + rep(']', nestingLimit);
+		self.assertThrows(InvalidHello, function() { HelloFrame.decode(s); });
+	},
+
+	/**
+	 * 	If L{HelloFrame} has trailing garbage 'x' after the JSON,
+		L{InvalidHello} is raised.
+	 */
+	function test_decodeFailedTrailingGarbage(self) {
+		var encoded =  cw.net.TestFrames.makeHelloFrame_().encode();
+		var s = cw.string.withoutLast(encoded, 1) + 'x' + 'H';
+		self.assertThrows(InvalidHello, function() { HelloFrame.decode(s); });
+	},
+
+	// No need for test_decodeFailed_nan_inf_neginf, which really tests
+	// that a simplejson-specific feature is disabled.
+
+	/**
+	 * 	If L{HelloFrame} contains invalid values for various properties,
+		L{InvalidHello} is raised.
+	 */
+	function test_decodeFailedInvalidValues(self) {
+		var listWithout = function(alist, without) {
+			var l = alist.concat();
+			goog.array.forEach(without, function(w) {
+				goog.array.remove(l, w);
+			});
+			return l;
+		}
+
+		var genericBad = [
+			-Math.pow(2, 65), -1, -0.5, 0.5,
+			cw.net.LARGER_THAN_LARGEST_INTEGER_, "", [], ["something"],
+			{}, true, false, null];
+
+		var concat = goog.array.concat;
+
+		var badMutations = {
+			transportNumber: concat([DeleteProperty], genericBad),
+			protocolVersion: concat([DeleteProperty, 0, 1, "1", 1.001], genericBad),
+			 // a streamId of length 19 is below limit, 31 is over limit
+			streamId: concat([
+				DeleteProperty, '', '\x00', 'x', rep('\ucccc', 25), rep('\ucccc', 8),
+				rep('\x80', 25), rep('x', 19), rep('x', 31), rep('x', 3000)], genericBad),
+			httpFormat: concat([4, 1, 0], genericBad),
+			streamingResponse: concat([2, 3], listWithout(genericBad, [true, false])),
+			maxReceiveBytes: genericBad,
+			maxOpenTime: genericBad,
+			credentialsData: concat([DeleteProperty], listWithout(genericBad, [{}])),
+			// We can pass either a string or a SackFrame
+			lastSackSeenByClient: [DeleteProperty, '', '|', new SackFrame(-2, []), new SackFrame(-1, [-2])]
+		};
+
+		var ran = 0;
+
+		for(var mutateProperty in badMutations) {
+			if(!Object.prototype.hasOwnProperty.call(badMutations, mutateProperty)) {
+				continue;
+			}
+			var mutateValues = badMutations[mutateProperty];
+			goog.array.forEach(mutateValues, function(value) {
+				var badHello = cw.net.TestFrames.makeHelloFrame_();
+				if(value !== DeleteProperty) {
+					badHello.options[mutateProperty] = value;
+				} else {
+					delete badHello.options[mutateProperty];
+				}
+
+				var s = badHello.encode();
+				self.assertThrows(InvalidHello, function() { HelloFrame.decode(s); })
+
+				ran += 1;
+			});
+		}
+
+		// sanity check; make sure we actually tested things
+		goog.asserts.assert(ran == 119, "Ran " + ran + " times; change this assert as needed");
+	},
+
 
 	function test_encode(self) {
 		var hello = new HelloFrame({transportNumber: 0});
 		self.assertEqual('{"tnum":0}' + 'H', hello.encode());
+	},
 
+	function test_encodeDecodeEquality(self) {
+		// Need to make some options explicit for equality to work
+		var hello = cw.net.TestFrames.makeHelloFrame_({
+			httpFormat: FORMAT_XHR,
+			credentialsData: {},
+			streamingResponse: true, // for equality, need bool instead of int
+			needPaddingBytes: 0});
+		var encodedDecodedHello = HelloFrame.decode(hello.encode());
+		self.assertEqual(hello, encodedDecodedHello);
 	},
 
 	/**

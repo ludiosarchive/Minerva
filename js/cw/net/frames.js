@@ -157,7 +157,8 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 
 	var lastSackSeen = helloData[HP.lastSackSeenByClient];
 	if(!goog.isString(lastSackSeen)) {
-		throw new cw.net.InvalidHello("lastSackSeenByClient not a string");
+		throw new cw.net.InvalidHello("lastSackSeenByClient not a string, is a " +
+			goog.typeOf(lastSackSeen));
 	}
 	obj.lastSackSeenByClient = cw.net.sackStringToSackFrame_(lastSackSeen);
 	if(obj.lastSackSeenByClient == null) {
@@ -297,6 +298,9 @@ cw.net.HelloFrame.prototype.__reprToPieces__ = function(sb) {
 cw.net.HelloFrame.prototype.makeCompactMapping_ = function() {
 	var map = {};
 	for(var k in this.options) {
+		if(!Object.prototype.hasOwnProperty.call(this.options, k)) {
+			continue;
+		}
 		// TODO: need an integration test to verify that this is safe to do
 		// with Closure Compiler's Advanced mode.
 		if(this.options[k] instanceof cw.net.SackFrame) {

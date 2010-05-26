@@ -79,9 +79,9 @@ class HelloFrameTests(unittest.TestCase):
 			HelloFrame.decode(sf(s)))
 
 
-	def test_decodeFailedBadGArgument(self):
+	def test_decodeFailedBadEedsArgument(self):
 		"""
-		A too-low or too-high transport number (or a wrong type) for the 'g'
+		A too-low or too-high transport number (or a wrong type) for the 'eeds'
 		argument causes L{InvalidHello} to be raised.
 		In this case, the stream is never registered with the streamTracker.
 		"""
