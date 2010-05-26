@@ -200,7 +200,10 @@ class HelloFrameTests(unittest.TestCase):
 		hello = _makeHelloFrame(dict(
 			httpFormat=FORMAT_XHR,
 			credentialsData={},
-			streamingResponse=True, # for equality, need bool instead of int
+			# for equality in JS, need boolean instead of number. Do the
+			# same here for consistency.
+			requestNewStream=True,
+			streamingResponse=True,
 			needPaddingBytes=0))
 		encodedDecodedHello = HelloFrame.decode(sf(hello.encode()))
 		self.assertEqual(hello, encodedDecodedHello)

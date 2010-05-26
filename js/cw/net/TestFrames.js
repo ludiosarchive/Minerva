@@ -117,7 +117,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 				needPaddingBytes: 0,
 				httpFormat: null,
 				lastSackSeenByClient: new SackFrame(-1, [])
-			}, HelloFrame.decode(s)));
+			}), HelloFrame.decode(s));
 	},
 
 	/**
@@ -250,7 +250,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 		var hello = cw.net.TestFrames.makeHelloFrame_({
 			httpFormat: FORMAT_XHR,
 			credentialsData: {},
-			streamingResponse: true, // for equality, need bool instead of int
+			// for equality in JS, need boolean instead of number
+			requestNewStream: true,
+			streamingResponse: true,
 			needPaddingBytes: 0});
 		var encodedDecodedHello = HelloFrame.decode(hello.encode());
 		self.assertEqual(hello, encodedDecodedHello);

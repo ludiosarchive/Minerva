@@ -217,7 +217,7 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 
 	if(HP.httpFormat in helloData) {
 		obj.httpFormat = helloData[HP.httpFormat];
-		if(!goog.array.contains(obj.httpFormat, cw.net.AllHttpFormats_)) {
+		if(!goog.array.contains(cw.net.AllHttpFormats_, obj.httpFormat)) {
 			throw new cw.net.InvalidHello("bad httpFormat");
 		}
 	} else {
