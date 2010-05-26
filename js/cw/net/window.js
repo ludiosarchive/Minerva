@@ -79,8 +79,8 @@ cw.net.Queue.prototype.extend = function(items) {
 /**
  * @param {!Array.<string>} sb
  */
-cw.net.Queue.prototype.__reprToPieces__ = function(buffer) {
-	buffer.push(
+cw.net.Queue.prototype.__reprToPieces__ = function(sb) {
+	sb.push(
 		'<Queue with ', String(this.items_.getCount()) ,' item(s), ' +
 		'counter=#', String(this.counter_), ', size=', String(this.size_) ,'>');
 };
