@@ -16,6 +16,7 @@ goog.provide('cw.net.decodeFrameFromServer');
 
 goog.require('goog.debug.Error');
 goog.require('goog.json');
+goog.require('goog.structs.Map');
 goog.require('goog.string');
 goog.require('goog.debug');
 goog.require('goog.array');
@@ -131,34 +132,24 @@ cw.net.ensureNonNegIntegralInt_ = function(value) {
  * 	  all numbers are floats anyway. In the Python code we were concerned
  *     about converting floats to ints/longs.
  *
- * @param {*} helloData Blob of objects
+ * @param {!goog.structs.Map} helloData a Map of a blob of objects
  * @return {!cw.net.HelloFrame}
  */
 cw.net.helloDataToHelloFrame_ = function(helloData) {
 	var HP = cw.net.HelloProperty_;
-
-	// This check is in most cases redundant with the  "{" "}" character
-	// checking in {@code HelloFrame.decode}.
-	if(!goog.typeOf(helloData) == "object") {
-		throw new cw.net.InvalidHello("helloData not an object");
-	}
+	var MISSING_ = {};
 
 	var obj = {};
 
 	// credentialsData is always optional
-	if(HP.credentialsData in helloData) {
-		obj.credentialsData = helloData[HP.credentialsData];
-		if(!(goog.typeOf(obj.credentialsData) == "object")) {
-			throw new cw.net.InvalidHello("credentialsData not an object");
-		}
-	} else {
-		obj.credentialsData = {};
+	obj.credentialsData = helloData.get(HP.credentialsData, {});
+	if(!(goog.typeOf(obj.credentialsData) == "object")) {
+		throw new cw.net.InvalidHello("credentialsData not an object");
 	}
 
-	var lastSackSeen = helloData[HP.lastSackSeenByClient];
-	if(!goog.isString(lastSackSeen)) {
-		throw new cw.net.InvalidHello("lastSackSeenByClient not a string, is a " +
-			goog.typeOf(lastSackSeen));
+	var lastSackSeen = helloData.get(HP.lastSackSeenByClient, MISSING_);
+	if(lastSackSeen == MISSING_ || !goog.isString(lastSackSeen)) {
+		throw new cw.net.InvalidHello("lastSackSeenByClient missing or not a string");
 	}
 	obj.lastSackSeenByClient = cw.net.sackStringToSackFrame_(lastSackSeen);
 	if(obj.lastSackSeenByClient == null) {
@@ -167,36 +158,31 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 
 	// requestNewStream is always optional. If missing or False/0, transport
 	// is intended to attach to an existing stream.
-	if(HP.requestNewStream in helloData) {
-		obj.requestNewStream = cw.checktype.ensureBool(
-			helloData[HP.requestNewStream]);
-		if(obj.requestNewStream == null) {
-			throw new cw.net.InvalidHello("bad requestNewStream");
-		}
-	} else {
-		obj.requestNewStream = false;
+	obj.requestNewStream = cw.checktype.ensureBool(helloData.get(HP.requestNewStream, false));
+	if(obj.requestNewStream == null) {
+		throw new cw.net.InvalidHello("bad requestNewStream");
 	}
 
 	obj.transportNumber = cw.net.ensureNonNegIntegralInt_(
-		helloData[HP.transportNumber]);
+		helloData.get(HP.transportNumber));
 	if(obj.transportNumber == null) {
 		throw new cw.net.InvalidHello("bad transportNumber");
 	}
 
-	obj.protocolVersion = helloData[HP.protocolVersion];
+	obj.protocolVersion = helloData.get(HP.protocolVersion);
 	if(obj.protocolVersion !== 2) {
 		throw new cw.net.InvalidHello("bad protocolVersion");
 	}
 
 	obj.streamingResponse = cw.checktype.ensureBool(
-		helloData[HP.streamingResponse]);
+		helloData.get(HP.streamingResponse));
 	if(obj.streamingResponse == null) {
 		throw new cw.net.InvalidHello("bad streamingResponse");
 	}
 
 	// Rules for streamId: must be 20-30 inclusive bytes, must not
 	// contain codepoints > 127
-	obj.streamId = helloData[HP.streamId];
+	obj.streamId = helloData.get(HP.streamId);
 	// In Python Minerva, instead of the \x00-\x7F check, we just
 	// check that simplejson gave us a `str` instead of a `unicode`.
 	if(!goog.isString(obj.streamId) ||
@@ -207,71 +193,65 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	}
 
 	// succeedsTransport is always optional. If missing, the client does not
-	// want to get S2C strings over this transport. If None, the client does,
+	// want to get S2C strings over this transport. If null, the client does,
 	// but the transport does not succeed an existing primary transport. If a
 	// number, the transport might succeed an existing primary transport.
-	if(HP.succeedsTransport in helloData) {
-		obj.succeedsTransport = helloData[HP.succeedsTransport];
-		if(obj.succeedsTransport !== null) {
-			if(cw.net.ensureNonNegIntegralInt_(obj.succeedsTransport) == null) {
+	var eeds = helloData.get(HP.succeedsTransport, MISSING_);
+	if(eeds != MISSING_) {
+		// If not exactly null, it must be a non-negative integral number.
+		if(eeds !== null) {
+			if(cw.net.ensureNonNegIntegralInt_(eeds) == null) {
 				throw new cw.net.InvalidHello("bad succeedsTransport");
 			}
 		}
+		obj.succeedsTransport = eeds;
 	}
 
-	if(HP.httpFormat in helloData) {
-		obj.httpFormat = helloData[HP.httpFormat];
-		if(!goog.array.contains(cw.net.AllHttpFormats_, obj.httpFormat)) {
+	var httpFormat = helloData.get(HP.httpFormat, MISSING_);
+	if(httpFormat != MISSING_) {
+		if(!goog.array.contains(cw.net.AllHttpFormats_, httpFormat)) {
 			throw new cw.net.InvalidHello("bad httpFormat");
 		}
+		obj.httpFormat = httpFormat;
 	} else {
 		obj.httpFormat = null;
 	}
 
 	// needPaddingBytes is always optional. If missing, 0.
-	if(HP.needPaddingBytes in helloData) {
-		obj.needPaddingBytes = cw.checktype.ensureIntInRange(
-			helloData[HP.needPaddingBytes], 0, 16*1024);
-		if(obj.needPaddingBytes == null) {
-			throw new cw.net.InvalidHello("bad needPaddingBytes");
-		}
-	} else {
-		obj.needPaddingBytes = 0;
+	obj.needPaddingBytes = cw.checktype.ensureIntInRange(
+		helloData.get(HP.needPaddingBytes, 0), 0, 16*1024);
+	if(obj.needPaddingBytes == null) {
+		throw new cw.net.InvalidHello("bad needPaddingBytes");
 	}
 
 	// maxReceiveBytes is optional and has no limit by default
-	if(HP.maxReceiveBytes in helloData) {
-		obj.maxReceiveBytes = cw.net.ensureNonNegIntegralInt_(
-			helloData[HP.maxReceiveBytes]);
-		if(obj.maxReceiveBytes == null) {
-			throw new cw.net.InvalidHello("bad maxReceiveBytes");
-		}
-	} else {
-		obj.maxReceiveBytes = cw.net.LARGEST_INTEGER_;
+	obj.maxReceiveBytes = cw.net.ensureNonNegIntegralInt_(
+		helloData.get(HP.maxReceiveBytes, cw.net.LARGEST_INTEGER_));
+	if(obj.maxReceiveBytes == null) {
+		throw new cw.net.InvalidHello("bad maxReceiveBytes");
 	}
 
 	// maxOpenTime is optional and has no limit by default
-	if(HP.maxOpenTime in helloData) {
-		obj.maxOpenTime = cw.net.ensureNonNegIntegralInt_(
-			helloData[HP.maxOpenTime]);
-		if(obj.maxOpenTime == null) {
-			throw new cw.net.InvalidHello("bad maxOpenTime");
-		}
-	} else {
-		obj.maxOpenTime = cw.net.LARGEST_INTEGER_;
+	obj.maxOpenTime = cw.net.ensureNonNegIntegralInt_(
+		helloData.get(HP.maxOpenTime, cw.net.LARGEST_INTEGER_));
+	if(obj.maxOpenTime == null) {
+		throw new cw.net.InvalidHello("bad maxOpenTime");
 	}
 
-	return new cw.net.HelloFrame(obj);
+	return new cw.net.HelloFrame(new goog.structs.Map(obj));
 }
 
 
 
 /**
- * @param {!Object.<string, *>} options
+ * @param {!goog.structs.Map} options
  * @constructor
  */
 cw.net.HelloFrame = function(options) {
-	this.options = options;
+	/**
+	 * @type {!Object.<*>}
+	 */
+	this.opts = this.makeCompactMapping_(options);
 }
 
 /**
@@ -283,37 +263,37 @@ cw.net.HelloFrame = function(options) {
 cw.net.HelloFrame.prototype.equals = function(other, messages) {
 	return (
 		other instanceof cw.net.HelloFrame &&
-		cw.eq.equals(this.options, other.options, messages));
+		cw.eq.equals(this.opts, other.opts, messages));
 }
 
 /**
  * @param {!Array.<string>} sb
  */
 cw.net.HelloFrame.prototype.__reprToPieces__ = function(sb) {
-	sb.push('new HelloFrame(');
-	cw.repr.reprToPieces(this.options, sb);
-	sb.push(')');
+	sb.push('<HelloFrame opts=');
+	cw.repr.reprToPieces(this.opts, sb);
+	sb.push('>');
 }
 
 /**
  * @return {!Object.<string, *>}
  * @private
  */
-cw.net.HelloFrame.prototype.makeCompactMapping_ = function() {
-	var map = {};
-	for(var k in this.options) {
-		if(!Object.prototype.hasOwnProperty.call(this.options, k)) {
-			continue;
-		}
+cw.net.HelloFrame.prototype.makeCompactMapping_ = function(options) {
+	var compact = {};
+	var keys = options.getKeys();
+	for(var i=0; i < keys.length; i++) {
+		var key = keys[i];
+		var value = options.map_[key];
 		// TODO: need an integration test to verify that this is safe to do
 		// with Closure Compiler's Advanced mode.
-		if(this.options[k] instanceof cw.net.SackFrame) {
-			map[cw.net.HelloProperty_[k]] = cw.string.withoutLast(this.options[k].encode(), 1);
+		if(value instanceof cw.net.SackFrame) {
+			compact[cw.net.HelloProperty_[key]] = cw.string.withoutLast(value.encode(), 1);
 		} else {
-			map[cw.net.HelloProperty_[k]] = this.options[k];
+			compact[cw.net.HelloProperty_[key]] = value;
 		}
 	}
-	return map;
+	return compact;
 }
 
 /**
@@ -341,14 +321,16 @@ cw.net.HelloFrame.decode = function(frameString) {
 		throw new cw.net.InvalidHello("Un-eval'able JSON: " + e.name + ": " + e.message);
 	}
 
-	return cw.net.helloDataToHelloFrame_(blob);
+	// We know it is an !Object because of the careful "{" checking above.
+	return cw.net.helloDataToHelloFrame_(
+		new goog.structs.Map(/** @type {!Object.<*>} */ (blob)));
 }
 
 /**
  * @return {string} Encoded frame
  */
 cw.net.HelloFrame.prototype.encode = function() {
-	return goog.json.serialize(this.makeCompactMapping_()) + 'H';
+	return goog.json.serialize(this.opts) + 'H';
 }
 
 /**
@@ -356,10 +338,8 @@ cw.net.HelloFrame.prototype.encode = function() {
  *	client wants to receive strings, else false.
  */
 cw.net.HelloFrame.prototype.wantsStrings = function() {
-	// TODO: use Object.prototype.hasOwnProperty.call (or goog.structs.Map.hasKey_),
-	// but how? Closure Compiler won't rename the property name in the string.
-	// Maybe we should just use a goog.structs.Map instead of a {}.
-	return this.options.succeedsTransport !== undefined;
+	return Object.prototype.hasOwnProperty.call(
+		this.opts, cw.net.HelloProperty_.succeedsTransport);
 }
 
 

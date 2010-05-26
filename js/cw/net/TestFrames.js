@@ -9,6 +9,7 @@ goog.require('goog.array');
 goog.require('goog.object');
 goog.require('goog.string');
 goog.require('goog.asserts');
+goog.require('goog.structs.Map');
 goog.require('cw.repr');
 goog.require('cw.string');
 goog.require('cw.net.HelloFrame');
@@ -37,12 +38,14 @@ var TransportKillFrame = cw.net.TransportKillFrame;
 var tk = cw.net.TransportKillReason;
 var InvalidFrame = cw.net.InvalidFrame;
 var InvalidHello = cw.net.InvalidHello;
+var HP = cw.net.HelloProperty_;
 
 var FORMAT_XHR = cw.net.HttpFormat_.FORMAT_XHR;
 var FORMAT_HTMLFILE = cw.net.HttpFormat_.FORMAT_HTMLFILE;
 
 var repr = cw.repr.repr;
 var rep = goog.string.repeat;
+var gsMap = function(o) { return new goog.structs.Map(o); };
 
 var DeleteProperty = {'DeleteProperty': 'JUST_A_CONSTANT'};
 
@@ -71,41 +74,51 @@ cw.net.TestFrames.makeHelloFrame_ = function(extra) {
 			_extra[k] = v;
 		}
 	}
-	return new HelloFrame(_extra);
+	return new HelloFrame(gsMap(_extra));
 }
 
 
 cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 
 	function test_eq(self) {
-		self.assertEqual(new HelloFrame({"a": 1}), new HelloFrame({"a": 1}));
-		self.assertNotEqual(new HelloFrame({"a": 1}), new HelloFrame({"a": 2}));
-		self.assertNotEqual(new HelloFrame({"a": 1}), new HelloFrame({"a": 1, "b": 1}));
+		self.assertEqual(
+			new HelloFrame(gsMap({"succeedsTransport": 1})),
+			new HelloFrame(gsMap({"succeedsTransport": 1})));
+		self.assertNotEqual(
+			new HelloFrame(gsMap({"succeedsTransport": 1})),
+			new HelloFrame(gsMap({"succeedsTransport": 2})));
+		self.assertNotEqual(
+			new HelloFrame(gsMap({"succeedsTransport": 1})),
+			new HelloFrame(gsMap({"succeedsTransport": 1, "maxOpenTime": 1})));
 	},
 
 	function test_publicAttr(self) {
-		self.assertEqual({"anything": "goes"}, new HelloFrame({"anything": "goes"}).options);
+		self.assertEqual(
+			{"eeds": 3},
+			new HelloFrame(gsMap({"succeedsTransport": 3})).opts);
 	},
 
 	function test_repr(self) {
-		self.assertEqual('new HelloFrame({"a": 1})', repr(new HelloFrame({'a': 1})));
+		self.assertEqual(
+			'<HelloFrame opts={"eeds": 1}>',
+			repr(new HelloFrame(gsMap({"succeedsTransport": 1}))));
 	},
 
 	function test_wantsStrings(self) {
 		var s = cw.net.TestFrames.makeHelloFrame_();
 		self.assertEqual(false, s.wantsStrings());
-		s.options.succeedsTransport = null;
+		s.opts[HP.succeedsTransport] = null;
 		self.assertEqual(true, s.wantsStrings());
-		s.options.succeedsTransport = 3;
+		s.opts[HP.succeedsTransport] = 3;
 		self.assertEqual(true, s.wantsStrings());
-		delete s.options.succeedsTransport;
+		delete s.opts[HP.succeedsTransport];
 		self.assertEqual(false, s.wantsStrings());
 	},
 
 	function test_decode(self) {
 		var s = cw.net.TestFrames.makeHelloFrame_().encode();
 		self.assertEqual(
-			new HelloFrame({
+			new HelloFrame(gsMap({
 				transportNumber: 0,
 				requestNewStream: true,
 				protocolVersion: 2,
@@ -117,7 +130,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 				needPaddingBytes: 0,
 				httpFormat: null,
 				lastSackSeenByClient: new SackFrame(-1, [])
-			}), HelloFrame.decode(s));
+			})), HelloFrame.decode(s));
 	},
 
 	/**
@@ -233,9 +246,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 					mutateProperty + ' to ' + cw.repr.repr(value));
 				var badHello = cw.net.TestFrames.makeHelloFrame_();
 				if(value !== DeleteProperty) {
-					badHello.options[mutateProperty] = value;
+					badHello.opts[HP[mutateProperty]] = value;
 				} else {
-					delete badHello.options[mutateProperty];
+					delete badHello.opts[HP[mutateProperty]];
 				}
 
 				var s = badHello.encode();
@@ -252,7 +265,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 	},
 
 	function test_encode(self) {
-		var hello = new HelloFrame({transportNumber: 0});
+		var hello = new HelloFrame(gsMap({transportNumber: 0}));
 		self.assertEqual('{"tnum":0}' + 'H', hello.encode());
 	},
 
@@ -274,7 +287,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 	 * invalid property is used.
 	 */
 	function test_encodeWithInvalidProperty(self) {
-		var hello = new HelloFrame({aMadeUpKey: 0});
+		var hello = new HelloFrame(gsMap({aMadeUpKey: 0}));
 		self.assertEqual('{"undefined":0}' + 'H', hello.encode());
 	}
 );
