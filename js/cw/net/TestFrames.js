@@ -44,7 +44,7 @@ var FORMAT_HTMLFILE = cw.net.HttpFormat_.FORMAT_HTMLFILE;
 var repr = cw.repr.repr;
 var rep = goog.string.repeat;
 
-var DeleteProperty = {};
+var DeleteProperty = {'DeleteProperty': 'JUST_A_CONSTANT'};
 
 cw.net.TestFrames.makeHelloFrame_ = function(extra) {
 	if(extra === undefined) {
@@ -182,18 +182,21 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 		L{InvalidHello} is raised.
 	 */
 	function test_decodeFailedInvalidValues(self) {
-		var listWithout = function(alist, without) {
-			var l = alist.concat();
+		var listWithout = function(oldList, without) {
+			var arr = oldList.concat();
 			goog.array.forEach(without, function(w) {
-				goog.array.remove(l, w);
+				goog.array.remove(arr, w);
 			});
-			return l;
+			return arr;
 		}
+
+		// Must use the same object in our `listWithout` call.
+		var anObject = {};
 
 		var genericBad = [
 			-Math.pow(2, 65), -1, -0.5, 0.5,
 			cw.net.LARGER_THAN_LARGEST_INTEGER_, "", [], ["something"],
-			{}, true, false, null];
+			anObject, true, false, null];
 
 		var concat = goog.array.concat;
 
@@ -208,10 +211,14 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 			streamingResponse: concat([2, 3], listWithout(genericBad, [true, false])),
 			maxReceiveBytes: genericBad,
 			maxOpenTime: genericBad,
-			credentialsData: concat([DeleteProperty], listWithout(genericBad, [{}])),
+			credentialsData: listWithout(genericBad, [anObject]),
 			// We can pass either a string or a SackFrame
-			lastSackSeenByClient: [DeleteProperty, '', '|', new SackFrame(-2, []), new SackFrame(-1, [-2])]
+			lastSackSeenByClient: [
+				DeleteProperty, '', '|', new SackFrame(-2, []), new SackFrame(-1, [-2])]
 		};
+
+		cw.UnitTest.logger.info('test_decodeFailedInvalidValues: badMutations: ' +
+			cw.repr.repr(badMutations));
 
 		var ran = 0;
 
@@ -221,6 +228,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 			}
 			var mutateValues = badMutations[mutateProperty];
 			goog.array.forEach(mutateValues, function(value) {
+				cw.UnitTest.logger.info(
+					'test_decodeFailedInvalidValues: Mutating ' +
+					mutateProperty + ' to ' + cw.repr.repr(value));
 				var badHello = cw.net.TestFrames.makeHelloFrame_();
 				if(value !== DeleteProperty) {
 					badHello.options[mutateProperty] = value;
@@ -229,6 +239,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 				}
 
 				var s = badHello.encode();
+				cw.UnitTest.logger.info(
+					'test_decodeFailedInvalidValues: now decoding: ' + s);
 				self.assertThrows(InvalidHello, function() { HelloFrame.decode(s); })
 
 				ran += 1;

@@ -148,7 +148,7 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	// credentialsData is always optional
 	if(HP.credentialsData in helloData) {
 		obj.credentialsData = helloData[HP.credentialsData];
-		if(!goog.typeOf(obj.credentialsData) == "object") {
+		if(!(goog.typeOf(obj.credentialsData) == "object")) {
 			throw new cw.net.InvalidHello("credentialsData not an object");
 		}
 	} else {
@@ -197,9 +197,13 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	// Rules for streamId: must be 20-30 inclusive bytes, must not
 	// contain codepoints > 127
 	obj.streamId = helloData[HP.streamId];
-	// ,str is appropriate only because simplejson returns str when possible
-	if(!goog.isString(obj.streamId) || obj.streamId.length < 20 || obj.streamId.length > 30) {
-		throw new cw.net.InvalidHello("bad streamId length: " + obj.streamId.length);
+	// In Python Minerva, instead of the \x00-\x7F check, we just
+	// check that simplejson gave us a `str` instead of a `unicode`.
+	if(!goog.isString(obj.streamId) ||
+	obj.streamId.length < 20 ||
+	obj.streamId.length > 30 ||
+	!/^([\x00-\x7F]*)$/.test(obj.streamId)) {
+		throw new cw.net.InvalidHello("bad streamId");
 	}
 
 	// succeedsTransport is always optional. If missing, the client does not
