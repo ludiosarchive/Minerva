@@ -346,10 +346,10 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingConsumptionTests').met
 
 	function test_simple(self) {
 		var i = new Incoming();
-		_ = i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']]);
+		var _ = i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']]);
 		self.assertEqual(totalSizeOf('box1') * 3, i.getMaxConsumption());
 
-		_ = i.give([[4, 'box4'], [5, 'box5'], [6, 'box6']]);
+		var _ = i.give([[4, 'box4'], [5, 'box5'], [6, 'box6']]);
 		self.assertEqual(totalSizeOf('box1') * 6, i.getMaxConsumption());
 	},
 

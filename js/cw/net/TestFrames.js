@@ -56,7 +56,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 	// TODO: decode tests
 
 	function test_encode(self) {
-		hello = new HelloFrame({transportNumber: 0});
+		var hello = new HelloFrame({transportNumber: 0});
 		self.assertEqual('{"tnum":0}' + 'H', hello.encode());
 
 	},
@@ -65,7 +65,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 	 * There's no real error checking if an invalid property is used.
 	 */
 	function test_encodeWithInvalidProperty(self) {
-		hello = new HelloFrame({aMadeUpKey: 0});
+		var hello = new HelloFrame({aMadeUpKey: 0});
 		self.assertEqual('{"undefined":0}' + 'H', hello.encode());
 	}
 );
