@@ -27,22 +27,6 @@ from minerva.frames import (
 	ResetFrame, PaddingFrame, TransportKillFrame,
 	WhoReset, InvalidFrame, decodeFrameFromClient)
 
-from minerva.frames import (
-	Hello_transportNumber,
-	Hello_protocolVersion,
-	Hello_httpFormat,
-	Hello_requestNewStream,
-	Hello_streamId,
-	Hello_credentialsData,
-	Hello_streamingResponse,
-	Hello_needPaddingBytes,
-	Hello_maxReceiveBytes,
-	Hello_maxOpenTime,
-	Hello_useMyTcpAcks,
-	Hello_succeedsTransport,
-	Hello_lastSackSeenByClient,
-)
-
 # Make globals that pypycpyo.optimizer can optimize away
 tk_stream_attach_failure = TransportKillFrame.stream_attach_failure
 tk_acked_unsent_strings = TransportKillFrame.acked_unsent_strings
@@ -832,9 +816,9 @@ def sanitizeHelloFrame(helloFrame, isHttp):
 	"""
 	if not isHttp:
 		# For non-HTTP transports, don't allow clients to use these options.
-		helloFrame.opts[Hello_streamingResponse] = True
-		helloFrame.opts[Hello_maxReceiveBytes] = 2**53
-		helloFrame.opts[Hello_maxOpenTime] = 2**53
+		helloFrame.streamingResponse = True
+		helloFrame.maxReceiveBytes = 2**53
+		helloFrame.maxOpenTime = 2**53
 
 
 
@@ -1030,16 +1014,16 @@ class SocketTransport(object):
 		sanitizeHelloFrame(hello, self._mode == HTTP)
 
 		# self._protocolVersion = protocolVersion # Not needed at the moment
-		self.streamId = hello.opts[Hello_streamId]
-		self.credentialsData = hello.opts[Hello_credentialsData]
-		self.transportNumber = hello.opts[Hello_transportNumber]
-		self._streamingResponse = hello.opts[Hello_streamingResponse]
-		self._lastSackSeenByClient = hello.opts[Hello_lastSackSeenByClient]
+		self.streamId = hello.streamId
+		self.credentialsData = hello.credentialsData
+		self.transportNumber = hello.transportNumber
+		self._streamingResponse = hello.streamingResponse
+		self._lastSackSeenByClient = hello.lastSackSeenByClient
 
 		if self._mode == HTTP:
-			self._needPaddingBytes = hello.opts[Hello_needPaddingBytes]
-			self._maxReceiveBytes = hello.opts[Hello_maxReceiveBytes]
-			self._maxOpenTime = hello.opts[Hello_maxOpenTime]
+			self._needPaddingBytes = hello.needPaddingBytes
+			self._maxReceiveBytes = hello.maxReceiveBytes
+			self._maxOpenTime = hello.maxOpenTime
 
 		# We get/build a Stream instance before the firewall checkTransport
 		# because the firewall needs to know if we're working with a virgin
@@ -1047,7 +1031,7 @@ class SocketTransport(object):
 		# doing the buildStream/getStream stuff, because requestNewStream=True
 		# doesn't always imply that a new stream will actually be created.
 
-		if hello.opts[Hello_requestNewStream]:
+		if hello.requestNewStream:
 			try:
 				stream = self.factory.streamTracker.buildStream(self.streamId)
 			except StreamAlreadyExists:
@@ -1059,7 +1043,7 @@ class SocketTransport(object):
 
 		# Keep only the variables we need for the cbAuthOkay closure
 		wantsStrings = hello.wantsStrings()
-		succeedsTransport = hello.opts[Hello_succeedsTransport] if wantsStrings else None
+		succeedsTransport = hello.succeedsTransport if wantsStrings else None
 
 		def cbAuthOkay(_):
 			if self._terminating:

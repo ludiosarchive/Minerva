@@ -285,7 +285,13 @@ cw.net.HelloFrame.prototype.makeCompactMapping_ = function(options) {
 	for(var i=0; i < keys.length; i++) {
 		var key = keys[i];
 		var value = options.map_[key];
-		compact[cw.net.HelloProperty_[key]] = value;
+		// TODO: need an integration test to verify that this is safe to do
+		// with Closure Compiler's Advanced mode.
+		if(value instanceof cw.net.SackFrame) {
+			compact[cw.net.HelloProperty_[key]] = cw.string.withoutLast(value.encode(), 1);
+		} else {
+			compact[cw.net.HelloProperty_[key]] = value;
+		}
 	}
 	return compact;
 }
@@ -324,26 +330,7 @@ cw.net.HelloFrame.decode = function(frameString) {
  * @return {string} Encoded frame
  */
 cw.net.HelloFrame.prototype.encode = function() {
-	// We may need to convert one SackFrame to a string before JSON-encoding.
-	// That's really the only reason for this mess.
-	try {
-		var Hello_lastSackSeenByClient = cw.net.HelloProperty_.lastSackSeenByClient;
-		var hasProperty = Object.prototype.hasOwnProperty.call(
-			this.opts, Hello_lastSackSeenByClient);
-
-		if(hasProperty) {
-			var orig = this.opts[Hello_lastSackSeenByClient];
-			// TODO: maybe require it to be a SackFrame; ban strings?
-			if(!goog.isString(orig)) {
-				this.opts[Hello_lastSackSeenByClient] = cw.string.withoutLast(orig.encode(), 1);
-			}
-		}
-		return goog.json.serialize(this.opts) + 'H';
-	} finally {
-		if(hasProperty) {
-			this.opts[cw.net.HelloProperty_.lastSackSeenByClient] = orig;
-		}
-	}
+	return goog.json.serialize(this.opts) + 'H';
 }
 
 /**
