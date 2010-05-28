@@ -49,20 +49,25 @@ var gsMap = function(o) { return new goog.structs.Map(o); };
 
 var DeleteProperty = {'DeleteProperty': 'JUST_A_CONSTANT'};
 
-cw.net.TestFrames.makeHelloFrame_ = function(extra) {
+cw.net.TestFrames.makeHelloFrame_ = function(extra, noDefaults) {
 	if(extra === undefined) {
 		extra = {};
 	}
-	var _extra = {
-		transportNumber: 0,
-		requestNewStream: 1,
-		protocolVersion: 2,
-		streamId: goog.string.repeat('x', 26),
-		streamingResponse: 1,
-		maxReceiveBytes: Math.pow(2, 30),
-		maxOpenTime: Math.pow(2, 30),
-		lastSackSeenByClient: new SackFrame(-1, [])
+
+	var _extra = {};
+	if(!noDefaults) {
+		var _extra = {
+			'transportNumber': 0,
+			'requestNewStream': 1,
+			'protocolVersion': 2,
+			'streamId': goog.string.repeat('x', 26),
+			'streamingResponse': 1,
+			'maxReceiveBytes': Math.pow(2, 30),
+			'maxOpenTime': Math.pow(2, 30),
+			'lastSackSeenByClient': new SackFrame(-1, [])
+		}
 	}
+
 	for(var k in extra) {
 		if(!Object.prototype.hasOwnProperty.call(extra, k)) {
 			continue;
@@ -74,7 +79,17 @@ cw.net.TestFrames.makeHelloFrame_ = function(extra) {
 			_extra[k] = v;
 		}
 	}
-	return new HelloFrame(gsMap(_extra));
+
+	var hello = new HelloFrame();
+
+	for(var k in _extra) {
+		// This only works for the uncompiled code (before ADVANCED_OPTIMIZATIONS)
+		// TODO: use goog.getCompiledPropertyName (if it exists)
+		// https://code.google.com/p/closure-compiler/issues/detail?id=167
+		hello[k] = _extra[k];
+	}
+
+	return hello;
 }
 
 
@@ -82,55 +97,41 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 
 	function test_eq(self) {
 		self.assertEqual(
-			new HelloFrame(gsMap({"succeedsTransport": 1})),
-			new HelloFrame(gsMap({"succeedsTransport": 1})));
+			cw.net.TestFrames.makeHelloFrame_({"succeedsTransport": 1}, true),
+			cw.net.TestFrames.makeHelloFrame_({"succeedsTransport": 1}, true));
 		self.assertNotEqual(
-			new HelloFrame(gsMap({"succeedsTransport": 1})),
-			new HelloFrame(gsMap({"succeedsTransport": 2})));
+			cw.net.TestFrames.makeHelloFrame_({"succeedsTransport": 1}, true),
+			cw.net.TestFrames.makeHelloFrame_({"succeedsTransport": 2}, true));
 		self.assertNotEqual(
-			new HelloFrame(gsMap({"succeedsTransport": 1})),
-			new HelloFrame(gsMap({"succeedsTransport": 1, "maxOpenTime": 1})));
+			cw.net.TestFrames.makeHelloFrame_({"succeedsTransport": 1}, true),
+			cw.net.TestFrames.makeHelloFrame_({"succeedsTransport": 1, "maxOpenTime": 1}, true));
 	},
 
+	/**
+	 * This test is a bit useless now, feel free to remove it.
+	 */
 	function test_publicAttr(self) {
-		self.assertEqual(
-			{"eeds": 3},
-			new HelloFrame(gsMap({"succeedsTransport": 3})).opts);
+		var helloFrame = new HelloFrame();
+		helloFrame.succeedsTransport = 3;
+		self.assertEqual(3, helloFrame.succeedsTransport);
 	},
 
 	function test_repr(self) {
-		self.assertEqual(
-			'<HelloFrame opts={"eeds": 1}>',
-			repr(new HelloFrame(gsMap({"succeedsTransport": 1}))));
+		self.assertTrue(
+			goog.string.startsWith(repr(
+				cw.net.TestFrames.makeHelloFrame_(
+					{"succeedsTransport": 1}, true)), '<HelloFrame properties='));
 	},
 
 	function test_wantsStrings(self) {
 		var s = cw.net.TestFrames.makeHelloFrame_();
 		self.assertEqual(false, s.wantsStrings());
-		s.opts[HP.succeedsTransport] = null;
+		s.succeedsTransport = null;
 		self.assertEqual(true, s.wantsStrings());
-		s.opts[HP.succeedsTransport] = 3;
+		s.succeedsTransport = 3;
 		self.assertEqual(true, s.wantsStrings());
-		delete s.opts[HP.succeedsTransport];
+		delete s.succeedsTransport;
 		self.assertEqual(false, s.wantsStrings());
-	},
-
-	function test_decode(self) {
-		var s = cw.net.TestFrames.makeHelloFrame_().encode();
-		self.assertEqual(
-			new HelloFrame(gsMap({
-				transportNumber: 0,
-				requestNewStream: true,
-				protocolVersion: 2,
-				streamId: goog.string.repeat('x', 26),
-				streamingResponse: true,
-				maxReceiveBytes: Math.pow(2, 30),
-				maxOpenTime: Math.pow(2, 30),
-				credentialsData: {},
-				needPaddingBytes: 0,
-				httpFormat: null,
-				lastSackSeenByClient: new SackFrame(-1, [])
-			})), HelloFrame.decode(s));
 	},
 
 	/**
@@ -145,7 +146,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 
 		goog.array.forEach(badEedsArguments, function(succeedsTransport) {
 			var s = cw.net.TestFrames.makeHelloFrame_({
-				succeedsTransport: succeedsTransport}).encode()
+				'succeedsTransport': succeedsTransport}).encode()
 
 			self.assertThrows(InvalidHello, function() { HelloFrame.decode(s); })
 		});
@@ -214,19 +215,19 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 		var concat = goog.array.concat;
 
 		var badMutations = {
-			transportNumber: concat([DeleteProperty], genericBad),
-			protocolVersion: concat([DeleteProperty, 0, 1, "1", 1.001], genericBad),
+			'transportNumber': concat([DeleteProperty], genericBad),
+			'protocolVersion': concat([DeleteProperty, 0, 1, "1", 1.001], genericBad),
 			 // a streamId of length 19 is below limit, 31 is over limit
-			streamId: concat([
+			'streamId': concat([
 				DeleteProperty, '', '\x00', 'x', rep('\ucccc', 25), rep('\ucccc', 8),
 				rep('\x80', 25), rep('x', 19), rep('x', 31), rep('x', 3000)], genericBad),
-			httpFormat: concat([4, 1, 0], genericBad),
-			streamingResponse: concat([2, 3], listWithout(genericBad, [true, false])),
-			maxReceiveBytes: genericBad,
-			maxOpenTime: genericBad,
-			credentialsData: listWithout(genericBad, [anObject]),
+			'httpFormat': concat([4, 1, 0], genericBad),
+			'streamingResponse': concat([2, 3], listWithout(genericBad, [true, false])),
+			'maxReceiveBytes': genericBad,
+			'maxOpenTime': genericBad,
+			'credentialsData': listWithout(genericBad, [anObject]),
 			// We can pass either a string or a SackFrame
-			lastSackSeenByClient: [
+			'lastSackSeenByClient': [
 				DeleteProperty, '', '|', new SackFrame(-2, []), new SackFrame(-1, [-2])]
 		};
 
@@ -246,9 +247,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 					mutateProperty + ' to ' + cw.repr.repr(value));
 				var badHello = cw.net.TestFrames.makeHelloFrame_();
 				if(value !== DeleteProperty) {
-					badHello.opts[HP[mutateProperty]] = value;
+					badHello[mutateProperty] = value;
 				} else {
-					delete badHello.opts[HP[mutateProperty]];
+					delete badHello[mutateProperty];
 				}
 
 				var s = badHello.encode();
@@ -265,19 +266,19 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 	},
 
 	function test_encode(self) {
-		var hello = new HelloFrame(gsMap({transportNumber: 0}));
+		var hello = cw.net.TestFrames.makeHelloFrame_({'transportNumber': 0}, true);
 		self.assertEqual('{"tnum":0}' + 'H', hello.encode());
 	},
 
 	function test_encodeDecodeEquality(self) {
 		// Need to make some options explicit for equality to work
 		var hello = cw.net.TestFrames.makeHelloFrame_({
-			httpFormat: FORMAT_XHR,
-			credentialsData: {},
+			'httpFormat': FORMAT_XHR,
+			'credentialsData': {},
 			// for equality in JS, need boolean instead of number
-			requestNewStream: true,
-			streamingResponse: true,
-			needPaddingBytes: 0});
+			'requestNewStream': true,
+			'streamingResponse': true,
+			'needPaddingBytes': 0});
 		var encodedDecodedHello = HelloFrame.decode(hello.encode());
 		self.assertEqual(hello, encodedDecodedHello);
 	},
@@ -287,8 +288,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 	 * invalid property is used.
 	 */
 	function test_encodeWithInvalidProperty(self) {
-		var hello = new HelloFrame(gsMap({aMadeUpKey: 0}));
-		self.assertEqual('{"undefined":0}' + 'H', hello.encode());
+		var hello = cw.net.TestFrames.makeHelloFrame_({'aMadeUpKey': 0}, true);
+		self.assertEqual('{}' + 'H', hello.encode());
 	}
 );
 

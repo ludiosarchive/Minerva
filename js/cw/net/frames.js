@@ -139,7 +139,7 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	var HP = cw.net.HelloProperty_;
 	var MISSING_ = {};
 
-	var obj = {};
+	var obj = new cw.net.HelloFrame();
 
 	// credentialsData is always optional
 	obj.credentialsData = helloData.get(HP.credentialsData, {});
@@ -235,20 +235,31 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 		throw new cw.net.InvalidHello("bad maxOpenTime");
 	}
 
-	return new cw.net.HelloFrame(new goog.structs.Map(obj));
+	return obj;
 }
 
 
 
 /**
- * @param {!goog.structs.Map} options
+ * We do nothing in this constructor. Caller is responsible for setting
+ * the correct properties.
  * @constructor
  */
-cw.net.HelloFrame = function(options) {
-	/**
-	 * @type {!Object.<*>}
-	 */
-	this.opts = this.makeCompactMapping_(options);
+cw.net.HelloFrame = function() {
+	// TODO: add @type for each
+	this.transportNumber;
+	this.protocolVersion;
+	this.httpFormat;
+	this.requestNewStream;
+	this.streamId;
+	this.credentialsData;
+	this.streamingResponse;
+	this.needPaddingBytes;
+	this.maxReceiveBytes;
+	this.maxOpenTime;
+	this.useMyTcpAcks;
+	this.succeedsTransport;
+	this.lastSackSeenByClient;
 }
 
 /**
@@ -258,39 +269,23 @@ cw.net.HelloFrame = function(options) {
  * @return {boolean}
  */
 cw.net.HelloFrame.prototype.equals = function(other, messages) {
+	var myProperties = cw.net.HelloFrame.makePropertyArray_(this);
+	var otherProperties = cw.net.HelloFrame.makePropertyArray_(other);
+
 	return (
 		other instanceof cw.net.HelloFrame &&
-		cw.eq.equals(this.opts, other.opts, messages));
+		cw.eq.equals(myProperties, otherProperties, messages));
 }
 
 /**
  * @param {!Array.<string>} sb
  */
 cw.net.HelloFrame.prototype.__reprToPieces__ = function(sb) {
-	sb.push('<HelloFrame opts=');
-	cw.repr.reprToPieces(this.opts, sb);
+	// TODO: Make it actually human-readable, perhaps we need
+	// an ordered HelloProperty_ list
+	sb.push('<HelloFrame properties=');
+	cw.repr.reprToPieces(cw.net.HelloFrame.makePropertyArray_(this), sb);
 	sb.push('>');
-}
-
-/**
- * @return {!Object.<string, *>}
- * @private
- */
-cw.net.HelloFrame.prototype.makeCompactMapping_ = function(options) {
-	var compact = {};
-	var keys = options.getKeys();
-	for(var i=0; i < keys.length; i++) {
-		var key = keys[i];
-		var value = options.map_[key];
-		// TODO: need an integration test to verify that this is safe to do
-		// with Closure Compiler's Advanced mode.
-		if(value instanceof cw.net.SackFrame) {
-			compact[cw.net.HelloProperty_[key]] = cw.string.withoutLast(value.encode(), 1);
-		} else {
-			compact[cw.net.HelloProperty_[key]] = value;
-		}
-	}
-	return compact;
 }
 
 /**
@@ -324,10 +319,65 @@ cw.net.HelloFrame.decode = function(frameString) {
 }
 
 /**
+ * @private
+ * @param {!cw.net.HelloFrame} helloFrame
+ * @return {!Array.<*>}
+ */
+cw.net.HelloFrame.makePropertyArray_ = function(helloFrame) {
+	return [
+		helloFrame.transportNumber,
+		helloFrame.protocolVersion,
+		helloFrame.httpFormat,
+		helloFrame.requestNewStream,
+		helloFrame.streamId,
+		helloFrame.credentialsData,
+		helloFrame.streamingResponse,
+		helloFrame.needPaddingBytes,
+		helloFrame.maxReceiveBytes,
+		helloFrame.maxOpenTime,
+		helloFrame.useMyTcpAcks,
+		helloFrame.succeedsTransport,
+		helloFrame.lastSackSeenByClient
+	];
+}
+
+/**
  * @return {string} Encoded frame
  */
 cw.net.HelloFrame.prototype.encode = function() {
-	return goog.json.serialize(this.opts) + 'H';
+	var HP = cw.net.HelloProperty_;
+
+	var compact = {};
+	compact[HP.transportNumber] = this.transportNumber;
+	compact[HP.protocolVersion] = this.protocolVersion;
+	compact[HP.httpFormat] = this.httpFormat;
+	compact[HP.requestNewStream] = this.requestNewStream;
+	compact[HP.streamId] = this.streamId;
+	compact[HP.credentialsData] = this.credentialsData;
+	compact[HP.streamingResponse] = this.streamingResponse;
+	compact[HP.needPaddingBytes] = this.needPaddingBytes;
+	compact[HP.maxReceiveBytes] = this.maxReceiveBytes;
+	compact[HP.maxOpenTime] = this.maxOpenTime;
+	compact[HP.useMyTcpAcks] = this.useMyTcpAcks;
+	compact[HP.succeedsTransport] = this.succeedsTransport;
+	//compact[HP.lastSackSeenByClient] = this.lastSackSeenByClient;
+
+	// TODO: require this.lastSackSeenByClient to be a "sack tuple" as defined by that typedef
+	if(this.lastSackSeenByClient instanceof cw.net.SackFrame) {
+		compact[HP.lastSackSeenByClient] = cw.string.withoutLast(this.lastSackSeenByClient.encode(), 1);
+	} else {
+		compact[HP.lastSackSeenByClient] = this.lastSackSeenByClient;
+	}
+
+
+	// Remove the "undefined" values; TODO: don't do this
+	for(var k in compact) {
+		if(compact[k] === undefined) {
+			delete compact[k];
+		}
+	}
+
+	return goog.json.serialize(compact) + 'H';
 }
 
 /**
@@ -335,8 +385,8 @@ cw.net.HelloFrame.prototype.encode = function() {
  *	client wants to receive strings, else false.
  */
 cw.net.HelloFrame.prototype.wantsStrings = function() {
-	return Object.prototype.hasOwnProperty.call(
-		this.opts, cw.net.HelloProperty_.succeedsTransport);
+	// TODO: be safe against Object.prototype mutations?
+	return this.succeedsTransport !== undefined;
 }
 
 
