@@ -185,10 +185,7 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	obj.streamId = helloData.get(HP.streamId);
 	// In Python Minerva, instead of the \x00-\x7F check, we just
 	// check that simplejson gave us a `str` instead of a `unicode`.
-	if(!goog.isString(obj.streamId) ||
-	obj.streamId.length < 20 ||
-	obj.streamId.length > 30 ||
-	!/^([\x00-\x7F]*)$/.test(obj.streamId)) {
+	if(!goog.isString(obj.streamId) || !/^([\x00-\x7F]{20,30})$/.test(obj.streamId)) {
 		throw new cw.net.InvalidHello("bad streamId");
 	}
 
