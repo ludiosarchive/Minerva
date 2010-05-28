@@ -9,6 +9,7 @@ goog.require('goog.array');
 goog.require('goog.object');
 goog.require('goog.string');
 goog.require('goog.asserts');
+goog.require('goog.reflect');
 goog.require('goog.structs.Map');
 goog.require('cw.repr');
 goog.require('cw.string');
@@ -45,7 +46,6 @@ var FORMAT_HTMLFILE = cw.net.HttpFormat_.FORMAT_HTMLFILE;
 
 var repr = cw.repr.repr;
 var rep = goog.string.repeat;
-var gsMap = function(o) { return new goog.structs.Map(o); };
 
 var DeleteProperty = {'DeleteProperty': 'JUST_A_CONSTANT'};
 
@@ -56,7 +56,7 @@ cw.net.TestFrames.makeHelloFrame_ = function(extra, noDefaults) {
 
 	var _extra = {};
 	if(!noDefaults) {
-		var _extra = {
+		_extra = goog.reflect.object(cw.net.HelloFrame, {
 			'transportNumber': 0,
 			'requestNewStream': 1,
 			'protocolVersion': 2,
@@ -65,7 +65,7 @@ cw.net.TestFrames.makeHelloFrame_ = function(extra, noDefaults) {
 			'maxReceiveBytes': Math.pow(2, 30),
 			'maxOpenTime': Math.pow(2, 30),
 			'lastSackSeenByClient': new SackFrame(-1, [])
-		}
+		});
 	}
 
 	for(var k in extra) {
@@ -80,12 +80,12 @@ cw.net.TestFrames.makeHelloFrame_ = function(extra, noDefaults) {
 		}
 	}
 
+	// Make this code survive ADVANCED_OPTIMIZATIONS
+	// See https://code.google.com/p/closure-compiler/issues/detail?id=167
+	var reflectedProperties = goog.reflect.object(cw.net.HelloFrame, _extra);
 	var hello = new HelloFrame();
 
 	for(var k in _extra) {
-		// This only works for the uncompiled code (before ADVANCED_OPTIMIZATIONS)
-		// TODO: use goog.getCompiledPropertyName (if it exists)
-		// https://code.google.com/p/closure-compiler/issues/detail?id=167
 		hello[k] = _extra[k];
 	}
 
@@ -97,14 +97,22 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 
 	function test_eq(self) {
 		self.assertEqual(
-			cw.net.TestFrames.makeHelloFrame_({"succeedsTransport": 1}, true),
-			cw.net.TestFrames.makeHelloFrame_({"succeedsTransport": 1}, true));
+			cw.net.TestFrames.makeHelloFrame_(
+				goog.reflect.object(cw.net.HelloFrame, {"succeedsTransport": 1}), true),
+			cw.net.TestFrames.makeHelloFrame_(
+				goog.reflect.object(cw.net.HelloFrame, {"succeedsTransport": 1}), true));
+
 		self.assertNotEqual(
-			cw.net.TestFrames.makeHelloFrame_({"succeedsTransport": 1}, true),
-			cw.net.TestFrames.makeHelloFrame_({"succeedsTransport": 2}, true));
+			cw.net.TestFrames.makeHelloFrame_(
+				goog.reflect.object(cw.net.HelloFrame, {"succeedsTransport": 1}), true),
+			cw.net.TestFrames.makeHelloFrame_(
+				goog.reflect.object(cw.net.HelloFrame, {"succeedsTransport": 2}), true));
+
 		self.assertNotEqual(
-			cw.net.TestFrames.makeHelloFrame_({"succeedsTransport": 1}, true),
-			cw.net.TestFrames.makeHelloFrame_({"succeedsTransport": 1, "maxOpenTime": 1}, true));
+			cw.net.TestFrames.makeHelloFrame_(
+				goog.reflect.object(cw.net.HelloFrame, {"succeedsTransport": 1}), true),
+			cw.net.TestFrames.makeHelloFrame_(
+				goog.reflect.object(cw.net.HelloFrame, {"succeedsTransport": 1, "maxOpenTime": 1}), true));
 	},
 
 	/**
@@ -120,7 +128,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 		self.assertTrue(
 			goog.string.startsWith(repr(
 				cw.net.TestFrames.makeHelloFrame_(
-					{"succeedsTransport": 1}, true)), '<HelloFrame properties='));
+					goog.reflect.object(cw.net.HelloFrame,
+						{"succeedsTransport": 1}), true)), '<HelloFrame properties='));
 	},
 
 	function test_wantsStrings(self) {
@@ -145,8 +154,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 			cw.net.LARGER_THAN_LARGEST_INTEGER_, "4", true, false, [], {}];
 
 		goog.array.forEach(badEedsArguments, function(succeedsTransport) {
-			var s = cw.net.TestFrames.makeHelloFrame_({
-				'succeedsTransport': succeedsTransport}).encode()
+			var s = cw.net.TestFrames.makeHelloFrame_(
+				goog.reflect.object(cw.net.HelloFrame,
+					{'succeedsTransport': succeedsTransport})).encode()
 
 			self.assertThrows(InvalidHello, function() { HelloFrame.decode(s); })
 		});
@@ -214,7 +224,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 
 		var concat = goog.array.concat;
 
-		var badMutations = {
+		var badMutations = goog.reflect.object(cw.net.HelloFrame, {
 			'transportNumber': concat([DeleteProperty], genericBad),
 			'protocolVersion': concat([DeleteProperty, 0, 1, "1", 1.001], genericBad),
 			 // a streamId of length 19 is below limit, 31 is over limit
@@ -229,7 +239,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 			// We can pass either a string or a SackFrame
 			'lastSackSeenByClient': [
 				DeleteProperty, '', '|', new SackFrame(-2, []), new SackFrame(-1, [-2])]
-		};
+		});
 
 		cw.UnitTest.logger.info('test_decodeFailedInvalidValues: badMutations: ' +
 			cw.repr.repr(badMutations));
@@ -266,19 +276,21 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 	},
 
 	function test_encode(self) {
-		var hello = cw.net.TestFrames.makeHelloFrame_({'transportNumber': 0}, true);
+		var hello = cw.net.TestFrames.makeHelloFrame_(
+			goog.reflect.object(cw.net.HelloFrame, {'transportNumber': 0}), true);
 		self.assertEqual('{"tnum":0}' + 'H', hello.encode());
 	},
 
 	function test_encodeDecodeEquality(self) {
 		// Need to make some options explicit for equality to work
-		var hello = cw.net.TestFrames.makeHelloFrame_({
-			'httpFormat': FORMAT_XHR,
-			'credentialsData': {},
-			// for equality in JS, need boolean instead of number
-			'requestNewStream': true,
-			'streamingResponse': true,
-			'needPaddingBytes': 0});
+		var hello = cw.net.TestFrames.makeHelloFrame_(
+			goog.reflect.object(cw.net.HelloFrame, {
+				'httpFormat': FORMAT_XHR,
+				'credentialsData': {},
+				// for equality in JS, need boolean instead of number
+				'requestNewStream': true,
+				'streamingResponse': true,
+				'needPaddingBytes': 0}));
 		var encodedDecodedHello = HelloFrame.decode(hello.encode());
 		self.assertEqual(hello, encodedDecodedHello);
 	},
