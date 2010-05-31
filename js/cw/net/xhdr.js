@@ -61,7 +61,7 @@ cw.net.getXHRObject = function() {
 	var objectName = things[n - 1];
 	cw.net.xhrObjectName_ = objectName;
 	return object;
-},
+};
 
 
 
