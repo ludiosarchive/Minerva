@@ -207,7 +207,9 @@ class _UAExtractorMixin(object):
 	__slots__ = ()
 
 	def _getUserAgentFromRequest(self, request):
-		raw = request.getCookie(self.secureCookieName if request.isSecure() else self.insecureCookieName) # raw may be None at this point
+		raw = request.getCookie(
+			self.secureCookieName if request.isSecure() else self.insecureCookieName)
+		# raw may be None at this point
 		try:
 			return binascii.a2b_base64(raw)
 		except (TypeError, binascii.Error):
@@ -219,7 +221,8 @@ class _UAExtractorMixin(object):
 		try:
 			return binascii.a2b_base64(raw)
 		except (TypeError, binascii.Error):
-			raise RejectTransport("missing credentialsData[%r] or corrupt base64" % (self.uaKeyInCred,))
+			raise RejectTransport("missing credentialsData[%r] "
+				"or corrupt base64" % (self.uaKeyInCred,))
 
 
 	def _getUserAgentId(self, transport):
