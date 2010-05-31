@@ -1,6 +1,3 @@
-
-# XXX use makeLayeredFirewall / layered firewall
-
 from twisted.python import log
 from twisted.internet import reactor
 from twisted.web import resource, server
@@ -8,7 +5,8 @@ from twisted.web import resource, server
 from minerva.newlink import BasicMinervaProtocol, BasicMinervaFactory, StreamTracker
 from minerva.newlink import HttpFace, SocketFace
 
-from minerva.website import makeLayeredFirewall, CsrfTransportFirewall, NoopTransportFirewall, UAToStreamsCorrelator, CsrfStopper
+from minerva.website import (
+	CsrfTransportFirewall, NoopTransportFirewall, CsrfStopper)
 
 from minerva.sample import secrets
 
@@ -82,11 +80,8 @@ def makeFace(clock=reactor):
 <cross-domain-policy><allow-access-from domain="*" to-ports="*"/></cross-domain-policy>'''.strip()
 
 	csrfStopper = CsrfStopper(secrets.CSRF_SECRET)
-	##uaToStreams = UAToStreamsCorrelator()
-	##firewall = makeLayeredFirewall(csrfStopper, uaToStreams)
 	firewall = CsrfTransportFirewall(NoopTransportFirewall(), csrfStopper)
 	tracker = StreamTracker(reactor, clock, DemoFactory(clock))
-	##tracker.observeStreams(firewall)
 
 	root = Root(clock, tracker, firewall)
 

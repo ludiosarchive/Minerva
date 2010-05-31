@@ -134,7 +134,8 @@ function makeHelloData(uaId, transportNumber) {
 	// credentialsData is only needed for the transport that initiates
 	// a Stream.
 	if(transportNumber == 0) {
-		helloData[HP.credentialsData] = {'uaId': uaId, 'csrf': window.CSRF_TOKEN};
+		// Both uaId and CSRF_TOKEN are already base64-encoded.
+		helloData[HP.credentialsData] = uaId + '|' + window.CSRF_TOKEN;
 	}
 	helloData[HP.streamingResponse] = Number(mode == 'flash');
 	helloData[HP.maxReceiveBytes] = 9999999;

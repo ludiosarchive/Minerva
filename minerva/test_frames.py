@@ -72,7 +72,7 @@ class HelloFrameTests(unittest.TestCase):
 				streamingResponse=True,
 				maxReceiveBytes=2**30,
 				maxOpenTime=2**30,
-				credentialsData={},
+				credentialsData="",
 				needPaddingBytes=0,
 				httpFormat=None,
 				lastSackSeenByClient=SackFrame(-1, ()))),
@@ -131,7 +131,7 @@ class HelloFrameTests(unittest.TestCase):
 		L{InvalidHello} is raised.
 		"""
 		for bad in (nan, inf, neginf):
-			hello = _makeHelloFrame(dict(credentialsData={'somekey': bad}))
+			hello = _makeHelloFrame(dict(transportNumber=bad))
 			s = simplejson.dumps(dict(hello._yieldMapping()))
 			self.assertRaises(InvalidHello, lambda: HelloFrame.decode(sf(s)))
 
@@ -161,7 +161,7 @@ class HelloFrameTests(unittest.TestCase):
 			streamingResponse=[2, 3] + listWithout(genericBad, [True, False]),
 			maxReceiveBytes=genericBad,
 			maxOpenTime=genericBad,
-			credentialsData=listWithout(genericBad, [{}]),
+			credentialsData=["x" * 256, '\t', u'\ucccc'] + listWithout(genericBad, [""]),
 			# We can pass either a string or a SackFrame
 			lastSackSeenByClient=[DeleteProperty, '', '|', SackFrame(-2, ()), SackFrame(-1, (-2,))]
 		)
@@ -188,7 +188,7 @@ class HelloFrameTests(unittest.TestCase):
 				ran += 1
 
 		# sanity check; make sure we actually tested things
-		assert ran == 119, "Ran %d times; change this assert as needed" % (ran,)
+		assert ran == 122, "Ran %d times; change this assert as needed" % (ran,)
 
 
 	def test_encode(self):
@@ -200,7 +200,7 @@ class HelloFrameTests(unittest.TestCase):
 		# Need to make some options explicit for equality to work
 		hello = _makeHelloFrame(dict(
 			httpFormat=FORMAT_XHR,
-			credentialsData={},
+			credentialsData="",
 			# for equality in JS, need boolean instead of number. Do the
 			# same here for consistency.
 			requestNewStream=True,

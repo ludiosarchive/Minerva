@@ -13,10 +13,19 @@ from minerva.mocks import (
 
 from minerva.website import (
 	RejectTransport, ITransportFirewall, CsrfTransportFirewall,
-	NoopTransportFirewall, AntiHijackTransportFirewall,
-	ICsrfStopper, CsrfStopper, RejectToken,
-	IStreamNotificationReceiver, makeLayeredFirewall, UAToStreamsCorrelator
+	NoopTransportFirewall, ICsrfStopper, CsrfStopper, RejectToken,
+	IStreamNotificationReceiver
 )
+
+
+def _makeCredentialsData(uaId, csrfTokenStr):
+	credentialsData = ""
+	if uaId is not None:
+		credentialsData += base64.b64encode(uaId)
+	if csrfTokenStr is not None:
+		credentialsData += "|" + csrfTokenStr
+	return credentialsData
+
 
 
 class CsrfStopperTests(unittest.TestCase):
@@ -131,27 +140,14 @@ class _CsrfTransportFirewallTests(object):
 
 	timeout = 3
 
-	def setUp(self):
-		self.insecureCookieName = '__'
-		self.secureCookieName = '_s'
-		self.cookieName = self.secureCookieName if self.isSecure else self.insecureCookieName
-
-
 	def _makeThings(self, stopper, uaId, csrfTokenStr):
 		firewall = CsrfTransportFirewall(NoopTransportFirewall(), stopper)
 		request = DummyRequest([])
 		request.isSecure = lambda: self.isSecure
-		if uaId is not None:
-			request.received_cookies[self.cookieName] = base64.b64encode(uaId)
 		transport = DummySocketLikeTransport(request)
 		transport.writable = request
-		if csrfTokenStr is not None:
-			transport.credentialsData['csrf'] = csrfTokenStr
+		transport.credentialsData = _makeCredentialsData(uaId, csrfTokenStr)
 		return firewall, transport
-
-
-	def _setUaIdString(self, transport, string):
-		transport.writable.received_cookies[self.cookieName] = string
 
 
 	def test_implements(self):
@@ -212,8 +208,8 @@ class _CsrfTransportFirewallTests(object):
 		stopper = CsrfStopper("secret string")
 		uaId = "id of funny length probably"
 		token = stopper.makeToken(uaId)
-		firewall, transport = self._makeThings(stopper, uaId, token)
-		self._setUaIdString(transport, 'AAA' + base64.b64encode(uaId)[3:])
+		newUaId =  'AAA' + base64.b64encode(uaId)[3:]
+		firewall, transport = self._makeThings(stopper, newUaId, token)
 		ms = MockStream()
 
 		def check(f):
@@ -237,34 +233,11 @@ class CsrfTransportFirewallTestsHttpTransport(_CsrfTransportFirewallTests, unitt
 
 	isSecure = False
 
-	def test_insecureCookieNotUsed(self):
-		"""For HTTP requests, the cookie that should arrive only in HTTPS requests is not read."""
-		stopper = CsrfStopper("secret string")
-		uaId = "id of funny length probably"
-		token = stopper.makeToken(uaId)
-		firewall, transport = self._makeThings(stopper, None, token)
-		transport.writable.received_cookies[self.secureCookieName] = base64.b64encode(uaId)
-		ms = MockStream()
-		act = lambda: firewall.checkTransport(transport, ms)
-		return self.assertFailure(act(), RejectTransport)
-
-
 
 
 class CsrfTransportFirewallTestsHttpsTransport(_CsrfTransportFirewallTests, unittest.TestCase):
 
 	isSecure = True
-
-	def test_insecureCookieNotUsed(self):
-		"""The cookie sent for HTTP+HTTPS is not used for HTTPS requests."""
-		stopper = CsrfStopper("secret string")
-		uaId = "id of funny length probably"
-		token = stopper.makeToken(uaId)
-		firewall, transport = self._makeThings(stopper, None, token)
-		transport.writable.received_cookies[self.insecureCookieName] = base64.b64encode(uaId)
-		ms = MockStream()
-		act = lambda: firewall.checkTransport(transport, ms)
-		return self.assertFailure(act(), RejectTransport)
 
 
 
@@ -275,32 +248,5 @@ class CsrfTransportFirewallTestsSocketLikeTransport(_CsrfTransportFirewallTests,
 	def _makeThings(self, stopper, uaId, csrfTokenStr):
 		firewall = CsrfTransportFirewall(NoopTransportFirewall(), stopper)
 		transport = DummySocketLikeTransport()
-		if uaId is not None:
-			transport.credentialsData['uaId'] = base64.b64encode(uaId)
-		if csrfTokenStr is not None:
-			transport.credentialsData['csrf'] = csrfTokenStr
+		transport.credentialsData = _makeCredentialsData(uaId, csrfTokenStr)
 		return firewall, transport
-
-
-	def _setUaIdString(self, transport, string):
-		transport.credentialsData['uaId'] = string
-
-
-
-class AntiHijackFirewallTests(unittest.TestCase):
-
-	def test_implements(self):
-		# but IRL, nobody will be using this antihijack firewall without the CSRF firewall
-		firewall = AntiHijackTransportFirewall(NoopTransportFirewall(), uaToStreams=None)
-		verify.verifyObject(ITransportFirewall, firewall)
-		verify.verifyObject(IStreamNotificationReceiver, firewall)
-
-
-
-class LayeredFirewallTests(unittest.TestCase):
-
-	def test_makeLayeredFirewall(self):
-		uaToStreams = UAToStreamsCorrelator()
-		stopper = CsrfStopper("secret string")
-		firewall = makeLayeredFirewall(stopper, uaToStreams)
-		verify.verifyObject(ITransportFirewall, firewall)

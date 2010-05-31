@@ -15,8 +15,7 @@ from minerva.newlink import (
 	BasicMinervaProtocol, BasicMinervaFactory, StreamTracker, HttpFace, SocketFace)
 
 from minerva.website import (
-	makeLayeredFirewall, CsrfTransportFirewall, NoopTransportFirewall,
-	UAToStreamsCorrelator, CsrfStopper)
+	CsrfTransportFirewall, NoopTransportFirewall, CsrfStopper)
 
 from minerva.flashtest import pages
 

@@ -142,9 +142,10 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	var obj = new cw.net.HelloFrame();
 
 	// credentialsData is always optional
-	obj.credentialsData = helloData.get(HP.credentialsData, {});
-	if(!(goog.typeOf(obj.credentialsData) == "object")) {
-		throw new cw.net.InvalidHello("credentialsData not an object");
+	obj.credentialsData = helloData.get(HP.credentialsData, "");
+	if(!(goog.isString(obj.credentialsData)) ||
+	!(cw.net.isValidShortRestrictedString_(obj.credentialsData))) {
+		throw new cw.net.InvalidHello("bad credentialsData");
 	}
 
 	var lastSackSeen = helloData.get(HP.lastSackSeenByClient, MISSING_);
@@ -670,13 +671,13 @@ cw.net.PaddingFrame.prototype.encode = function() {
 
 
 /**
- * @param {string} reasonString
- * @return {boolean} Whether {@code reasonString} is a valid reset reason.
+ * @param {string} string
+ * @return {boolean} Return true if {@code string} has 0-255 characters,
+ *	and all bytes are within inclusive range 0x20 " " - 0x7E "~".
  * @private
  */
-cw.net.isValidReasonString_ = function(reasonString) {
-	// Inclusive range 0x20 through 0x7E is allowed. 
-	return reasonString.length <= 255 && /^([ -~]*)$/.test(reasonString);
+cw.net.isValidShortRestrictedString_ = function(string) {
+	return string.length <= 255 && /^([ -~]*)$/.test(string);
 }
 
 
@@ -724,7 +725,7 @@ cw.net.ResetFrame.prototype.__reprToPieces__ = function(sb) {
 cw.net.ResetFrame.decode = function(frameString) {
 	var reasonString = frameString.substr(0, frameString.length - 3);
 
-	if(!cw.net.isValidReasonString_(reasonString)) {
+	if(!cw.net.isValidShortRestrictedString_(reasonString)) {
 		throw new cw.net.InvalidFrame("illegal bytes in reasonString");
 	}
 

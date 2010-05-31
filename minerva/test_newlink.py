@@ -1638,8 +1638,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_validHelloWithCredentials(self):
-		frame0 = _makeHelloFrame(
-			dict(credentialsData={'not_looked_at': True}))
+		frame0 = _makeHelloFrame(dict(credentialsData='not_looked_at'))
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		self.aE([], transport.getNew())

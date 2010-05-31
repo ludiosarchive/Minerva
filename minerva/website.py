@@ -26,14 +26,6 @@ from minerva.interfaces import IStreamNotificationReceiver
 _postImportVars = vars().keys()
 
 
-class UAToStreamsCorrelator(defaultdict):
-	"""
-	This is really only implemented here because it's necessary
-	for L{ProtectingTransportFirewall}
-	"""
-
-
-
 # Web browsers are annoying and send the user's cookie to the website
 # even when a page on another domain initiates the request. So, this is why
 # we need to generate CSRF tokens, output them to webpages, and verify
@@ -203,41 +195,10 @@ class NoopTransportFirewall(object):
 
 
 
-class _UAExtractorMixin(object):
-	__slots__ = ()
-
-	def _getUserAgentFromRequest(self, request):
-		raw = request.getCookie(
-			self.secureCookieName if request.isSecure() else self.insecureCookieName)
-		# raw may be None at this point
-		try:
-			return binascii.a2b_base64(raw)
-		except (TypeError, binascii.Error):
-			raise RejectTransport("missing cookie or corrupt base64")
-
-
-	def _getUserAgentFromCredentialsData(self, credentialsData):
-		raw = credentialsData.get(self.uaKeyInCred) # raw be None at this point
-		try:
-			return binascii.a2b_base64(raw)
-		except (TypeError, binascii.Error):
-			raise RejectTransport("missing credentialsData[%r] "
-				"or corrupt base64" % (self.uaKeyInCred,))
-
-
-	def _getUserAgentId(self, transport):
-		# side note: nginx userid module uses non-url-safe base64 alphabet
-		if transport.isHttp():
-			return self._getUserAgentFromRequest(transport.writable)
-		else:
-			return self._getUserAgentFromCredentialsData(transport.credentialsData)
-
-
-
 # The object composition pattern used by L{CsrfTransportFirewall} is inspired by
 # http://twistedmatrix.com/trac/browser/branches/expressive-http-client-886/high-level-http-client.py?rev=25721
 
-class CsrfTransportFirewall(_UAExtractorMixin):
+class CsrfTransportFirewall(object):
 	"""
 	This is an implementation of L{ITransportFirewall} that protects
 	against CSRF attacks for both HTTP and Socket-style faces.
@@ -248,15 +209,18 @@ class CsrfTransportFirewall(_UAExtractorMixin):
 	streamId is unguessable, the CSRF token is not needed for subsequent
 	transports. This means that the web application must protect both
 	CSRF tokens *and* streamId's.
+
+	Design note: we could get uaId from a browser cookie instead of
+	credentialsData, but we do not, because:
+		- It is simpler and less-coupled to use only credentialsData.
+		- credentialsData only needs to be sent over the first transport anyway,
+		  so we're not wasting much bandwidth.
+		- We want it to work even if there was a browser or application
+		  problem that caused cookies to be cleared.
 	"""
 
 	implements(ITransportFirewall)
 	__slots__ = ('_parentFirewall', '_csrfStopper')
-
-	insecureCookieName = '__' # only for http
-	secureCookieName = '_s' # only for https
-	uaKeyInCred = 'uaId' # only for non-http transports
-	csrfKeyInCred = 'csrf' # both http(s) and socket-like transports
 
 	def __init__(self, parentFirewall, csrfStopper):
 		self._parentFirewall = parentFirewall
@@ -274,13 +238,19 @@ class CsrfTransportFirewall(_UAExtractorMixin):
 			# where attacker tries to set up a new Stream. This is why we check
 			# only virgin Streams for a CSRF token. 
 			if stream.virgin:
-				uuid = self._getUserAgentId(transport)
+				try:
+					# uuidEnc is base64-encoded
+					# tokenEnc is URL-safe-base64-encoded
+					uuidEnc, tokenEnc = transport.credentialsData.split('|', 1)
+				except ValueError:
+					raise RejectTransport("could not 1-split credentialsData")
 
-				if not self.csrfKeyInCred in transport.credentialsData:
-					raise RejectTransport("no csrf token in credentialsData")
+				try:
+					uuid = binascii.a2b_base64(uuidEnc)
+				except (TypeError, binascii.Error):
+					raise RejectTransport("corrupt base64 for uuid")
 
-				token = transport.credentialsData[self.csrfKeyInCred]
-				d = defer.maybeDeferred(self._csrfStopper.checkToken, uuid, token)
+				d = defer.maybeDeferred(self._csrfStopper.checkToken, uuid, tokenEnc)
 				def rejectTokenToRejectTransport(f):
 					f.trap(RejectToken)
 					raise RejectTransport("got RejectToken")
@@ -292,53 +262,10 @@ class CsrfTransportFirewall(_UAExtractorMixin):
 
 
 
-class AntiHijackTransportFirewall(_UAExtractorMixin):
-	"""
-	This firewall provides weak protection against hijackers who try
-	to use someone else's Stream without cloning their cookie.
-
-	After instantiating me, you must tell the L{StreamTracker} to call
-	my L{streamUp} and L{streamDown} methods when streams go up
-	or down. See L{StreamTracker.observeStreams}
-	"""
-
-	implements(ITransportFirewall, IStreamNotificationReceiver)
-	__slots__ = ('_parentFirewall', '_uaToStreams')
-
-	def __init__(self, parentFirewall, uaToStreams):
-		self._parentFirewall = parentFirewall
-		self._uaToStreams = uaToStreams
-
-
-	def streamUp(self, stream):
-		# Need the uaId on a transport, but stream doesn't have any transport yet.
-		1/0
-
-
-	def streamDown(self, stream):
-		1/0
-
-
-	def checkTransport(self, transport, stream):
-		def cbChecked(_):
-			if not stream.virgin:
-				uuid = self._getUserAgentId(transport)
-
-				# This is a weak HTTP hijacking-prevention check
-				if not transport.streamId in self._uaToStreams[uuid]:
-					raise RejectTransport("uaId changed between transports for the same stream")
-
-		return self._parentFirewall.checkTransport(transport, stream).addCallback(cbChecked)
-
-
-
-def makeLayeredFirewall(csrfStopper, uaToStreams):
-	layeredTransportFirewall = \
-		AntiHijackTransportFirewall(
-			CsrfTransportFirewall(NoopTransportFirewall(), csrfStopper),
-			uaToStreams)
-
-	return layeredTransportFirewall
+# Back when we read the uaId from a cookie (for HTTP transports), we thought
+# we it might be a good idea to provide additional protection with an
+# "AntiHijackTransportFirewall".
+# See Minerva git history before 2010-05-31 for this feature.
 
 
 from pypycpyo import optimizer

@@ -84,10 +84,10 @@ def helloDataToHelloFrame(helloData):
 
 	# credentialsData is always optional
 	obj.credentialsData = helloData[Hello_credentialsData] if \
-		Hello_credentialsData in helloData else {}
-
-	if not isinstance(obj.credentialsData, dict):
-		raise InvalidHello("credentialsData not a dict")
+		Hello_credentialsData in helloData else ""
+	if not isinstance(obj.credentialsData, str) or \
+	not isValidShortRestrictedString(obj.credentialsData):
+		raise InvalidHello("bad credentialsData")
 
 	try:
 		lastSackSeen = helloData[Hello_lastSackSeenByClient]
@@ -430,15 +430,16 @@ class WhoReset(object):
 
 
 
-def isValidReasonString(reasonString):
+def isValidShortRestrictedString(string):
 	"""
-	Return C{True} if C{reasonString} is a valid reset reason.
-	C{reasonString} is assumed to be a C{str}; no other assumptions
-	are made.
+	Return C{True} if C{str} C{string} has 0-255 bytes,
+	and all bytes are within inclusive range 0x20 " " - 0x7E "~"
+
+	C{string} is assumed to be a C{str}.
 	"""
-	if len(reasonString) > 255:
+	if len(string) > 255:
 		return False
-	for c in reasonString:
+	for c in string:
 		if not ' ' <= c <= '~':
 			return False
 	return True
@@ -477,7 +478,7 @@ class ResetFrame(tuple):
 			applicationLevel = {'0': False, '1': True}[applicationLevelStr]
 		except KeyError:
 			raise InvalidFrame("bad applicationLevel")
-		if not isValidReasonString(reasonString):
+		if not isValidShortRestrictedString(reasonString):
 			raise InvalidFrame("illegal bytes in reasonString")
 
 		return cls(reasonString, applicationLevel)
