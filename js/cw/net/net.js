@@ -2,7 +2,6 @@
  * @fileoverview Minerva client and related functionality
  */
 
-goog.provide('cw.net.FrameType');
 goog.provide('cw.net.FlashSocket');
 
 goog.require('goog.debug.Error');
@@ -163,36 +162,6 @@ cw.net.IEndpointLocator.prototype.locate = function(type) {
  * @type {number}
  */
 cw.net.protocolVersion_ = 2;
-
-
-/**
- * Frame types. Keep in sync with minerva/newlink.py
- * 
- * @enum {number}
- */
-cw.net.FrameType = {
-	string: 1,
-	seqnum: 2,
-
-	sack: 4,
-	hello: 5,
-
-	timestamp: 8,
-	reset: 10,
-
-	you_close_it: 11,
-	start_timestamps: 12,
-	stop_timestamps: 13,
-
-	padding: 20,
-
-	tk_stream_attach_failure: 601,
-	tk_acked_unsent_boxes: 602,
-	tk_invalid_frame_type_or_arguments: 603,
-	tk_frame_corruption: 610,
-	tk_intraframe_corruption: 611,
-	tk_brb: 650
-}
 
 
 /**
