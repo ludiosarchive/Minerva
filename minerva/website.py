@@ -246,8 +246,8 @@ class CsrfTransportFirewall(_UAExtractorMixin):
 	the first transport can lead to the creation of a Stream (and this
 	Stream can have "any" streamId chosen by the client). Because the
 	streamId is unguessable, the CSRF token is not needed for subsequent
-	transports. But, this does mean that a web application has to protect
-	the CSRF token *and* all the streamId's.
+	transports. This means that the web application must protect both
+	CSRF tokens *and* streamId's.
 
 	It also provides some weak protection against hijackers who try
 	to use someone else's Stream without cloning their cookie.
