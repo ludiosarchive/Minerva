@@ -248,9 +248,6 @@ class CsrfTransportFirewall(_UAExtractorMixin):
 	streamId is unguessable, the CSRF token is not needed for subsequent
 	transports. This means that the web application must protect both
 	CSRF tokens *and* streamId's.
-
-	It also provides some weak protection against hijackers who try
-	to use someone else's Stream without cloning their cookie.
 	"""
 
 	implements(ITransportFirewall)
