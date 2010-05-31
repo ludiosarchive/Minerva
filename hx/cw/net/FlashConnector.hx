@@ -154,7 +154,7 @@ class FlashConnection {
 		}
 	}
 
-	public function writeSerializedFrames(msgs:Array<String>) {
+	public function writeFrames(msgs:Array<String>) {
 		if (!socket.connected) {
 			return false;
 		}
@@ -249,12 +249,12 @@ class FlashConnector {
 	/**
 	 * Write an already-serialized frame `msg` to a socket. Returns `true` if write succeeded.
 	 */
-	public static inline function writeSerializedFrames(instance_id:String, msgs:Array<String>) {
+	public static inline function writeFrames(instance_id:String, msgs:Array<String>) {
 		var conn = connections.get(instance_id);
 		if(conn == null) {
 			return false;
 		}
-		return conn.writeSerializedFrames(msgs);
+		return conn.writeFrames(msgs);
 	}
 
 	public static inline function loadPolicyFile(path:String):Void {
@@ -268,7 +268,7 @@ class FlashConnector {
 
 		ExternalInterface.addCallback("__FC_connect", connect);
 		ExternalInterface.addCallback("__FC_close", close);
-		ExternalInterface.addCallback("__FC_writeSerializedFrames", writeSerializedFrames);
+		ExternalInterface.addCallback("__FC_writeFrames", writeFrames);
 	}
 
 	public static function main() {
