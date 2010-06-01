@@ -10,6 +10,17 @@ goog.require('goog.string');
 goog.require('goog.Disposable');
 goog.require('cw.net.Queue');
 goog.require('cw.net.Incoming');
+goog.require('cw.net.HelloFrame');
+goog.require('cw.net.StringFrame');
+goog.require('cw.net.SeqNumFrame');
+goog.require('cw.net.SackFrame');
+goog.require('cw.net.YouCloseItFrame');
+goog.require('cw.net.PaddingFrame');
+goog.require('cw.net.ResetFrame');
+goog.require('cw.net.TransportKillFrame');
+goog.require('cw.net.InvalidFrame');
+goog.require('cw.net.decodeFrameFromServer');
+
 
 
 
@@ -205,25 +216,57 @@ cw.net.makeStreamId_ = function() {
 
 
 /**
- * @param {!Object} clock Something that provides IWindowTime. TODO XXX use CallQueue instead?
+ * @param {!Object} clock Something that provides IWindowTime. TODO: use CallQueue instead?
  * @param {!Object} protocol
- * @param {!Object} locator
+ * @param {string} httpEndpoint
  *
  * @constructor
  * @extends {goog.Disposable}
  */
-cw.net.Stream = function(clock, protocol, locator) {
+cw.net.Stream = function(clock, protocol, httpEndpoint) {
 	goog.Disposable.call(this);
 
 	this.clock_ = clock;
+
+	/**
+	 * @type {!Object}
+	 */
 	this.protocol_ = protocol;
-	this.locator_ = locator;
+
+	/**
+	 * @type {string}
+	 */
+	this.httpEndpoint_ = httpEndpoint;
+
+	/**
+	 * @type {string}
+	 */
 	this.streamId_ = cw.net.makeStreamId_();
+
+	/**
+	 * @type {!cw.net.SackFrame}
+	 */
+	this.lastSackSeenByClient_ = new cw.net.SackFrame(-1, []);
+
+	/**
+	 * The send queue.
+	 * @type {!cw.net.Queue}
+	 */
+	this.queue_ = new cw.net.Queue();
+
+	/**
+	 * The receive window.
+	 * @type {!cw.net.Incoming}
+	 */
+	this.incoming_ = new cw.net.Incoming();
+
+	// Call streamStarted before we even connect one transport successfully.
+	this.protocol_.streamStarted(this);
 }
 goog.inherits(cw.net.Stream, goog.Disposable);
 
 /**
- *  Counter to uniquely identify the transports in this Stream
+ * Counter to uniquely identify the transports in this Stream
  * @type {number}
  */
 cw.net.Stream.prototype.transportCount_ = -1;
@@ -231,9 +274,14 @@ cw.net.Stream.prototype.transportCount_ = -1;
 /**
  * The primary transport, for receiving S2C strings.
  * @type {Object}
+ * @private
  */
 cw.net.Stream.prototype.primaryTransport_ = null;
 
+
+cw.net.Stream.prototype.tryToSend_ = function() {
+	1/0
+};
 
 /**
  * Send strings `strings` to the peer.
@@ -241,18 +289,22 @@ cw.net.Stream.prototype.primaryTransport_ = null;
  * @param {!Array.<*>} strings Strings to send.
  *
  */
-cw.net.Stream.prototype.sendStrings_ = function(strings) {
-	1/0
-}
+cw.net.Stream.prototype.sendStrings = function(strings) {
+	if(!strings) {
+		return;
+	}
+	this.queue_.extend(strings);
+	this.tryToSend_();
+};
 
 /**
  * Reset (disconnect) with reason `reasonString`.
  *
  * @param {string} reasonString Reason why resetting the stream
  */
-cw.net.Stream.prototype.reset_ = function(reasonString) {
+cw.net.Stream.prototype.reset = function(reasonString) {
 	1/0
-}
+};
 
 /**
  * Called by transports to tell me that it has received boxes.
@@ -260,9 +312,9 @@ cw.net.Stream.prototype.reset_ = function(reasonString) {
  * @param {!Object} transport The transport that received these boxes.
  * @param {Array.<*>} boxes In-order boxes that transport has received.
  */
-cw.net.Stream.prototype.stringsReceived_ = function(transport, boxes) {
+cw.net.Stream.prototype.stringsReceived = function(transport, boxes) {
 	1/0
-}
+};
 
 /**
  * Called by transports to tell me that server has received at least some of
@@ -270,9 +322,14 @@ cw.net.Stream.prototype.stringsReceived_ = function(transport, boxes) {
  *
  * @param {!Array.<*>} sackInfo
  */
-cw.net.Stream.prototype.sackReceived_ = function(sackInfo) {
+cw.net.Stream.prototype.sackReceived = function(sackInfo) {
 	1/0
-}
+};
+
+cw.net.Stream.prototype.disposeInternal = function() {
+	cw.net.Stream.superClass_.disposeInternal.call(this);
+	//
+};
 
 // notifyFinish?
 // producers?
