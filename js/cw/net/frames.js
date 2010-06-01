@@ -270,12 +270,14 @@ cw.net.HelloFrame = function() {
  * @return {boolean}
  */
 cw.net.HelloFrame.prototype.equals = function(other, messages) {
+	if(!(other instanceof cw.net.HelloFrame)) {
+		return false;
+	}
+
 	var myProperties = cw.net.HelloFrame.makePropertyArray_(this);
 	var otherProperties = cw.net.HelloFrame.makePropertyArray_(other);
 
-	return (
-		other instanceof cw.net.HelloFrame &&
-		cw.eq.equals(myProperties, otherProperties, messages));
+	return cw.eq.equals(myProperties, otherProperties, messages);
 }
 
 /**

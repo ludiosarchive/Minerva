@@ -113,6 +113,12 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 				goog.reflect.object(cw.net.HelloFrame, {"succeedsTransport": 1}), true),
 			cw.net.TestFrames.makeHelloFrame_(
 				goog.reflect.object(cw.net.HelloFrame, {"succeedsTransport": 1, "maxOpenTime": 1}), true));
+
+		// `null.someprop` throws TypeError, which is why we test this worst case.
+		self.assertNotEqual(
+			cw.net.TestFrames.makeHelloFrame_(
+				goog.reflect.object(cw.net.HelloFrame, {"succeedsTransport": 1}), true),
+			null);
 	},
 
 	/**

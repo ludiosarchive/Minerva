@@ -40,6 +40,8 @@ class HelloFrameTests(unittest.TestCase):
 		self.assertFalse(HelloFrame({"a": 1}) == HelloFrame({"a": 2}))
 		self.assertTrue(HelloFrame({"a": 1}) != HelloFrame({"a": 1, "b": 1}))
 		self.assertFalse(HelloFrame({"a": 1}) == HelloFrame({"a": 1, "b": 1}))
+		self.assertTrue(HelloFrame({"a": 1}) != None)
+		self.assertFalse(HelloFrame({"a": 1}) == None)
 
 
 	def test_publicAttr(self):
