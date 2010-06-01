@@ -422,6 +422,7 @@ cw.net.HelloFrame.prototype.wantsStrings = function() {
  * @constructor
  */
 cw.net.StringFrame = function(string) {
+	/** @type {string} */
 	this.string = string;
 }
 
@@ -468,6 +469,7 @@ cw.net.StringFrame.prototype.encode = function() {
  * @constructor
  */
 cw.net.SeqNumFrame = function(seqNum) {
+	/** @type {number} */
 	this.seqNum = seqNum;
 }
 
@@ -555,7 +557,9 @@ cw.net.sackStringToSackFrame_ = function(sackString) {
  * @constructor
  */
 cw.net.SackFrame = function(ackNumber, sackList) {
+	/** @type {number} */
 	this.ackNumber = ackNumber;
+	/** @type {!Array.<number>} */
 	this.sackList = sackList;
 }
 
@@ -654,6 +658,7 @@ cw.net.YouCloseItFrame.prototype.encode = function() {
  * @constructor
  */
 cw.net.PaddingFrame = function(numBytes) {
+	/** @type {number} */
 	this.numBytes = numBytes;
 }
 
@@ -717,7 +722,9 @@ cw.net.isValidShortRestrictedString_ = function(string) {
  * @constructor
  */
 cw.net.ResetFrame = function(reasonString, applicationLevel) {
+	/** @type {string} */
 	this.reasonString = reasonString;
+	/** @type {boolean} */
 	this.applicationLevel = applicationLevel;
 }
 
@@ -807,6 +814,7 @@ cw.net.AllTransportKillReasons_ = {
  * @constructor
  */
 cw.net.TransportKillFrame = function(reason) {
+	/** @type {!cw.net.TransportKillReason} */
 	this.reason = reason;
 }
 
