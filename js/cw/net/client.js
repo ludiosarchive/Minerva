@@ -7,7 +7,9 @@ goog.provide('cw.net.IMinervaProtocol');
 goog.provide('cw.net.Stream');
 
 goog.require('goog.string');
+goog.require('goog.Disposable');
 goog.require('cw.net.Queue');
+goog.require('cw.net.Incoming');
 
 
 
@@ -194,6 +196,13 @@ cw.net.IMinervaTransport.prototype.reset_ = function(reasonString) {
 }
 
 
+/**
+ * @return {string} A random streamId, usually with 25 or 26 characters.
+ */
+cw.net.makeStreamId_ = function() {
+	return goog.string.getRandomString() + goog.string.getRandomString();
+}
+
 
 /**
  * @param {!Object} clock Something that provides IWindowTime. TODO XXX use CallQueue instead?
@@ -201,15 +210,17 @@ cw.net.IMinervaTransport.prototype.reset_ = function(reasonString) {
  * @param {!Object} locator
  *
  * @constructor
- *
- * TODO: make Stream a Disposable and add dispose methods?
+ * @extends {goog.Disposable}
  */
 cw.net.Stream = function(clock, protocol, locator) {
+	goog.Disposable.call(this);
+
 	this.clock_ = clock;
 	this.protocol_ = protocol;
 	this.locator_ = locator;
-	this.streamId_ = goog.string.getRandomString() + goog.string.getRandomString(); // usually 25 or 26 characters
+	this.streamId_ = cw.net.makeStreamId_();
 }
+goog.inherits(cw.net.Stream, goog.Disposable);
 
 /**
  *  Counter to uniquely identify the transports in this Stream
@@ -218,19 +229,19 @@ cw.net.Stream = function(clock, protocol, locator) {
 cw.net.Stream.prototype.transportCount_ = -1;
 
 /**
- * The primary transport (getting S2C boxes)
+ * The primary transport, for receiving S2C strings.
  * @type {Object}
  */
 cw.net.Stream.prototype.primaryTransport_ = null;
 
 
 /**
- * Send boxes `boxes` to the peer.
+ * Send strings `strings` to the peer.
  *
- * @param {!Array.<*>} boxes Boxes to send.
+ * @param {!Array.<*>} strings Strings to send.
  *
  */
-cw.net.Stream.prototype.sendStrings_ = function(boxes) {
+cw.net.Stream.prototype.sendStrings_ = function(strings) {
 	1/0
 }
 
