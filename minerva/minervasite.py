@@ -17,7 +17,8 @@ from minerva.newlink import (
 from minerva.website import (
 	CsrfTransportFirewall, NoopTransportFirewall, CsrfStopper)
 
-from minerva.flashtest import pages
+from minerva.flashtest.pages import FlashTestPage
+from minerva.chatapp.pages import ChatAppPage
 
 from webmagic.untwist import (
 	CookieInstaller, BetterResource, HelpfulNoResource)
@@ -215,9 +216,14 @@ GET.
 
 class DemoProtocol(BasicMinervaProtocol):
 
+	counter = 0
+
 	def __init__(self, clock):
 		self._clock = clock
 		self._reset = False
+		self._chatting = False
+		self._id = DemoProtocol.counter
+		DemoProtocol.counter += 1
 
 
 	def _sendDemo(self, iteration):
@@ -254,6 +260,19 @@ class DemoProtocol(BasicMinervaProtocol):
 				self.stream.sendStrings(['starting_send_demo'])
 				self._sendDemo(1)
 
+			elif s == 'begin_chat':
+				self.chatting = True
+				self.factory.chatters.add(self)
+
+			elif s.startswith('broadcast:'):
+				text = s.replace('broadcast:', '', 1)
+				for c in self.factory.chatters:
+					# We assume text contains only characters in the " " - "~" range.
+					c.stream.sendBoxes(["TEXT|" + str(self._id) + '|' + text])
+
+			else:
+				send.append('unknown_message_type')
+
 			# else ignore other boxes
 
 		# ugh
@@ -263,6 +282,8 @@ class DemoProtocol(BasicMinervaProtocol):
 	def streamReset(self, whoReset, reasonString):
 		self._reset = True
 		log.msg("Stream reset: %r, %r" % (whoReset, reasonString))
+		if self.chatting:
+			self.factory.chatters.remove(self)
 
 
 
@@ -271,6 +292,7 @@ class DemoFactory(BasicMinervaFactory):
 
 	def __init__(self, clock):
 		self._clock = clock
+		self.chatters = set()
 
 
 	def buildProtocol(self):
@@ -321,7 +343,8 @@ class Root(BetterResource):
 
 		self.putChild('httpface', httpFace)
 
-		self.putChild('flashtest', pages.FlashTestPage(csrfStopper, cookieInstaller))
+		self.putChild('flashtest', FlashTestPage(csrfStopper, cookieInstaller))
+		self.putChild('chatapp', ChatAppPage(csrfStopper, cookieInstaller))
 
 		# The docs are outside of the minerva package
 		docsDir = FilePath(__file__).parent().parent().child('docs')

@@ -19,9 +19,9 @@ class Index(BetterResource):
 		self._cookieInstaller = cookieInstaller
 
 		self._jinja2Env = jinja2.Environment()
-		self._basePath = FilePath(__file__).parent() # this is minerva/flashtest/
-		
-		self._fileName = 'flashtest.html'
+		self._basePath = FilePath(__file__).parent() # this is minerva/chatapp/
+
+		self._fileName = 'chatapp.html'
 
 
 	def render_GET(self, request):
@@ -39,10 +39,9 @@ class Index(BetterResource):
 
 
 
-class FlashTestPage(BetterResource):
+class ChatAppPage(BetterResource):
 
 	def __init__(self, csrfStopper, cookieInstaller):
 		BetterResource.__init__(self)
 
 		self.putChild('', Index(csrfStopper, cookieInstaller))
-		self.putChild('app.swf', static.File(FilePath(__file__).parent().child('app.swf').path))

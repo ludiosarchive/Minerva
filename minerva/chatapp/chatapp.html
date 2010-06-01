@@ -1,0 +1,157 @@
+<!doctype html>
+<html>
+<head>
+	<meta http-equiv="charset" content="text/html; charset=utf-8">
+	<title></title>
+	<style>
+		{{ getTestPageCSS() }}
+
+		#controls tr td {
+			padding: 0.5em 0 0.5em 0;
+		}
+	</style>
+	<script>
+		window.CSRF_TOKEN = {{ dumps(token) }};
+	</script>
+</head>
+<body>
+
+<div id="doc">
+</div>
+
+<table id="controls">
+<tr>
+	<td>Reconnect:</td>
+	<td>
+		<input type="submit" value="Disconnect and connect new stream" onclick="chatapp.reconnectStream();return false">
+	</td>
+</tr>
+<tr>
+<td>
+	Send text:
+</td>
+<td>
+	<input type="text" name="textinput" id="textinput">
+	<input type="submit" value="Send" onclick="chatapp.sendText(+byId('textinput').value);return false">
+</td>
+</tr>
+</table>
+
+<div id="log"></div>
+
+<script src="/JSPATH/closure/goog/base.js"></script>
+<script src="/JSPATH/nongoog_deps.js"></script>
+<script>
+goog.provide('chatapp');
+
+goog.require('cw.autoTitle');
+goog.require('goog.debug.DivConsole');
+goog.require('goog.debug.Logger');
+goog.require('cw.string');
+goog.require('cw.net.newStream');
+goog.require('cw.whoami');
+goog.require('cw.repr');
+</script>
+
+<script>
+var logDiv = document.getElementById('log');
+var divConsole = new goog.debug.DivConsole(logDiv);
+divConsole.setCapturing(true);
+
+var logger = goog.debug.Logger.getLogger('logger');
+logger.setLevel(goog.debug.Logger.Level.ALL);
+
+logger.info('Logger works.');
+
+function byId(o) {
+	return document.getElementById(o);
+}
+
+/**
+ * @constructor
+ */
+chatapp.ChatProtocol = function() {
+
+};
+
+chatapp.ChatProtocol.prototype.streamStarted = function(stream) {
+	this.stream_ = stream;
+	logger.info('streamStarted');
+	this.stream_.sendStrings(['begin_chat']);
+};
+
+chatapp.ChatProtocol.prototype.streamReset = function(whoReset, reasonString) {
+	logger.info('streamReset: ' + whoReset + ', ' + reasonString);
+};
+
+chatapp.ChatProtocol.prototype.handleString_ = function(s) {
+	function fail() {
+		logger.severe('Could not handle string: ' + cw.repr.repr(s));
+	}
+
+	var splitted = cw.string.split(s, '|', 2);
+	if(splitted.length != 3) {
+		return fail();
+	}
+	var type = splitted[0];
+	var uaId = splitted[1];
+	var text = splitted[2];
+	if(type != "TEXT") {
+		return fail();
+	}
+
+	// TODO: add timestamp
+	logger.info(cw.string.subs('<{0}> {1}', uaId, text));
+};
+
+chatapp.ChatProtocol.prototype.stringsReceived = function(strings) {
+	for(var i=0; i < strings.length; i++) {
+		var s = strings[i];
+		this.handleString_(s);
+	}
+};
+
+chatapp.ChatProtocol.prototype.reset = function() {
+	this.stream_.reset();
+};
+
+chatapp.ChatProtocol.prototype.sendText = function(text) {
+	this.stream_.sendStrings(["broadcast:" + text]);
+};
+
+
+chatapp.makeCredentialsData = function() {
+	// Already base64-url-safe encoded
+	var uaId = cw.whoami.getUaId();
+	return uaId + '|' + window.CSRF_TOKEN;
+};
+
+
+/**
+ * @type {?chatapp.ChatProtocol}
+ */
+chatapp.lastProto = null;
+
+chatapp.startStream = function() {
+	chatapp.lastProto = new chatapp.ChatProtocol();
+	cw.net.newStream(chatapp.lastProto, '/httpface/', chatapp.makeCredentialsData);
+};
+
+
+chatapp.reconnectStream = function() {
+	chatapp.lastProto.reset();
+	chatapp.startStream();
+};
+
+
+chatapp.sendText = function(text) {
+	chatapp.lastProto.sendText(text);
+};
+
+
+chatapp.startStream();
+
+</script>
+
+</body>
+</html>
