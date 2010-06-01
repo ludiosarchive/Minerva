@@ -142,53 +142,60 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	var obj = new cw.net.HelloFrame();
 
 	// credentialsData is always optional
-	obj.credentialsData = helloData.get(HP.credentialsData, "");
-	if(!(goog.isString(obj.credentialsData)) ||
-	!(cw.net.isValidShortRestrictedString_(obj.credentialsData))) {
+	var credentialsData = helloData.get(HP.credentialsData, "");
+	if(!(goog.isString(credentialsData)) ||
+	!(cw.net.isValidShortRestrictedString_(credentialsData))) {
 		throw new cw.net.InvalidHello("bad credentialsData");
 	}
+	obj.credentialsData = /** @type {string} */ (credentialsData);
 
 	var lastSackSeen = helloData.get(HP.lastSackSeenByClient, MISSING_);
 	if(lastSackSeen == MISSING_ || !goog.isString(lastSackSeen)) {
 		throw new cw.net.InvalidHello("lastSackSeenByClient missing or not a string");
 	}
-	obj.lastSackSeenByClient = cw.net.sackStringToSackFrame_(lastSackSeen);
-	if(obj.lastSackSeenByClient == null) {
+	lastSackSeen = cw.net.sackStringToSackFrame_(lastSackSeen);
+	if(lastSackSeen == null) {
 		throw new cw.net.InvalidHello("bad lastSackSeenByClient");
 	}
+	obj.lastSackSeenByClient = lastSackSeen;
 
 	// requestNewStream is always optional. If missing or False/0, transport
 	// is intended to attach to an existing stream.
-	obj.requestNewStream = cw.checktype.ensureBool(helloData.get(HP.requestNewStream, false));
-	if(obj.requestNewStream == null) {
+	var requestNewStream = cw.checktype.ensureBool(helloData.get(HP.requestNewStream, false));
+	if(requestNewStream == null) {
 		throw new cw.net.InvalidHello("bad requestNewStream");
 	}
+	obj.requestNewStream = requestNewStream;
 
-	obj.transportNumber = cw.net.ensureNonNegIntegralInt_(
+	var transportNumber = cw.net.ensureNonNegIntegralInt_(
 		helloData.get(HP.transportNumber));
-	if(obj.transportNumber == null) {
+	if(transportNumber == null) {
 		throw new cw.net.InvalidHello("bad transportNumber");
 	}
+	obj.transportNumber = transportNumber;
 
-	obj.protocolVersion = helloData.get(HP.protocolVersion);
-	if(obj.protocolVersion !== 2) {
+	var protocolVersion = helloData.get(HP.protocolVersion);
+	if(protocolVersion !== 2) {
 		throw new cw.net.InvalidHello("bad protocolVersion");
 	}
+	obj.protocolVersion = protocolVersion;
 
-	obj.streamingResponse = cw.checktype.ensureBool(
+	var streamingResponse = cw.checktype.ensureBool(
 		helloData.get(HP.streamingResponse));
-	if(obj.streamingResponse == null) {
+	if(streamingResponse == null) {
 		throw new cw.net.InvalidHello("bad streamingResponse");
 	}
+	obj.streamingResponse = streamingResponse;
 
 	// Rules for streamId: must be 20-30 inclusive bytes, must not
 	// contain codepoints > 127
-	obj.streamId = helloData.get(HP.streamId);
+	var streamId = helloData.get(HP.streamId);
 	// In Python Minerva, instead of the \x00-\x7F check, we just
 	// check that simplejson gave us a `str` instead of a `unicode`.
-	if(!goog.isString(obj.streamId) || !/^([\x00-\x7F]{20,30})$/.test(obj.streamId)) {
+	if(!goog.isString(streamId) || !/^([\x00-\x7F]{20,30})$/.test(streamId)) {
 		throw new cw.net.InvalidHello("bad streamId");
 	}
+	obj.streamId = streamId;
 
 	// succeedsTransport is always optional. If missing, the client does not
 	// want to get S2C strings over this transport. If null, the client does,
@@ -202,7 +209,7 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 				throw new cw.net.InvalidHello("bad succeedsTransport");
 			}
 		}
-		obj.succeedsTransport = eeds;
+		obj.succeedsTransport = /** @type {?number} */ (eeds);
 	}
 
 	var httpFormat = helloData.get(HP.httpFormat, MISSING_);
@@ -210,31 +217,34 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 		if(!goog.array.contains(cw.net.AllHttpFormats_, httpFormat)) {
 			throw new cw.net.InvalidHello("bad httpFormat");
 		}
-		obj.httpFormat = httpFormat;
+		obj.httpFormat = /** @type {cw.net.HttpFormat_} */ (httpFormat);
 	} else {
 		obj.httpFormat = null;
 	}
 
 	// needPaddingBytes is always optional. If missing, 0.
-	obj.needPaddingBytes = cw.checktype.ensureIntInRange(
+	var needPaddingBytes = cw.checktype.ensureIntInRange(
 		helloData.get(HP.needPaddingBytes, 0), 0, 16*1024);
-	if(obj.needPaddingBytes == null) {
+	if(needPaddingBytes == null) {
 		throw new cw.net.InvalidHello("bad needPaddingBytes");
 	}
+	obj.needPaddingBytes = needPaddingBytes;
 
 	// maxReceiveBytes is optional and has no limit by default
-	obj.maxReceiveBytes = cw.net.ensureNonNegIntegralInt_(
+	var maxReceiveBytes = cw.net.ensureNonNegIntegralInt_(
 		helloData.get(HP.maxReceiveBytes, cw.net.LARGEST_INTEGER_));
-	if(obj.maxReceiveBytes == null) {
+	if(maxReceiveBytes == null) {
 		throw new cw.net.InvalidHello("bad maxReceiveBytes");
 	}
+	obj.maxReceiveBytes = maxReceiveBytes;
 
 	// maxOpenTime is optional and has no limit by default
-	obj.maxOpenTime = cw.net.ensureNonNegIntegralInt_(
+	var maxOpenTime = cw.net.ensureNonNegIntegralInt_(
 		helloData.get(HP.maxOpenTime, cw.net.LARGEST_INTEGER_));
-	if(obj.maxOpenTime == null) {
+	if(maxOpenTime == null) {
 		throw new cw.net.InvalidHello("bad maxOpenTime");
 	}
+	obj.maxOpenTime = maxOpenTime;
 
 	return obj;
 }
@@ -247,19 +257,31 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
  * @constructor
  */
 cw.net.HelloFrame = function() {
-	// TODO: add @type for each
+	/** @type {number} */
 	this.transportNumber;
+	/** @type {number} */
 	this.protocolVersion;
+	/** @type {?cw.net.HttpFormat_} */
 	this.httpFormat;
+	/** @type {boolean} */
 	this.requestNewStream;
+	/** @type {string} */
 	this.streamId;
+	/** @type {string} */
 	this.credentialsData;
+	/** @type {boolean} */
 	this.streamingResponse;
+	/** @type {number} */
 	this.needPaddingBytes;
+	/** @type {number} */
 	this.maxReceiveBytes;
+	/** @type {number} */
 	this.maxOpenTime;
+	/** @type {boolean} */
 	this.useMyTcpAcks;
+	/** @type {undefined|?number} */
 	this.succeedsTransport;
+	/** @type {string|!cw.net.SackFrame} */
 	this.lastSackSeenByClient;
 }
 
@@ -366,6 +388,7 @@ cw.net.HelloFrame.prototype.encode = function() {
 	//compact[HP.lastSackSeenByClient] = this.lastSackSeenByClient;
 
 	// TODO: require this.lastSackSeenByClient to be a "sack tuple" as defined by that typedef
+	// When this change is made, also change @type at HelloFrame constructor.
 	if(this.lastSackSeenByClient instanceof cw.net.SackFrame) {
 		compact[HP.lastSackSeenByClient] = cw.string.withoutLast(this.lastSackSeenByClient.encode(), 1);
 	} else {
