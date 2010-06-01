@@ -103,7 +103,7 @@ cw.net.Queue.prototype.getQueuedKeys = function() {
  * @param {number=} start If not {@code null} or {@code undefined},
  * 	items before {@code start} will be skipped.
  *
- * @return {!Array.<number>} Array of [seqNum, item] for every item
+ * @return {!Array.<!Array.<number|*>>} Array of [seqNum, item] for every item
  * 	in the queue. Caller may modify the returned Array.
  *
  * If you care about performance in JScript, you may want to use
