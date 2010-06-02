@@ -613,7 +613,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackTests').metho
 		self.target = new cw.uri.URL(String(window.location));
 		self.target.update_('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestXHDR.MockXHR();
-		// Never advance_ the clock, to prevent Opera from doing a call at 50ms intervals.
+		// Never .advance the clock, to prevent Opera from doing a call at 50ms intervals.
 		self.clock = new cw.clock.Clock();
 	},
 
@@ -778,8 +778,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackOperaWorkarou
 		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
 		self.mock.readyState = 3;
 		self.assertIdentical(0, calls.length);
-		self.clock.advance_(50);
-		self.clock.advance_(50);
+		self.clock.advance(50);
+		self.clock.advance(50);
 		// Opera should not know the position
 		self.assertEqual([
 			[self.mock, null, null],
@@ -801,19 +801,19 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackOperaWorkarou
 		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
 
 		self.mock.readyState = 0;
-		self.clock.advance_(100);
+		self.clock.advance(100);
 		self.assertIdentical(0, calls.length);
 
 		self.mock.readyState = 1;
-		self.clock.advance_(100);
+		self.clock.advance(100);
 		self.assertIdentical(0, calls.length);
 
 		self.mock.readyState = 2;
-		self.clock.advance_(100);
+		self.clock.advance(100);
 		self.assertIdentical(0, calls.length);
 
 		self.mock.readyState = 4;
-		self.clock.advance_(100);
+		self.clock.advance(100);
 		self.assertIdentical(0, calls.length);
 	},
 
@@ -826,7 +826,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackOperaWorkarou
 		self.xhr.request_('GET', self.target.getString(), '', null);
 		self.assertEqual(0, self.clock.getCallsArray_().length);
 		self.mock.readyState = 3;
-		self.clock.advance_(100);
+		self.clock.advance(100);
 		self.assertEqual(0, self.clock.getCallsArray_().length);
 	}
 );
