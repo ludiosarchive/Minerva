@@ -33,13 +33,13 @@ cw.net.ParseError.prototype.name = 'cw.net.ParseError';
  *    - accessing the object's {@code responseText} only when necessary
  * 		to avoid memory-copying and excessive CPU use in some browsers
  * 		(Firefox, maybe others). This optimization is optional; see docstring
- * 		for {@code getNewStrings_}.
+ * 		for {@code getNewStrings}.
  *
  * In Firefox, accessing an XHR object's {@code responseText} or
  * {@code responseText.length} repeatedly may cause it to copy all the
  * data in memory, causing memory usage fluctuations of ~50-80MB.
  *
- * This decoder must be manually "pushed" by calling {@code getNewStrings_}.
+ * This decoder must be manually "pushed" by calling {@code getNewStrings}.
  *
  * {@code xObject.responseText} is assumed to have unicode/byte equivalence.
  * Non-ASCII characters are forbidden, because of our optimizations,
@@ -137,7 +137,7 @@ cw.net.ResponseTextDecoder.prototype.setMaxLength_ = function(maxLength) {
  *
  * @return {!Array.<string>} an array of new strings
  */
-cw.net.ResponseTextDecoder.prototype.getNewStrings_ = function(responseTextLength) {
+cw.net.ResponseTextDecoder.prototype.getNewStrings = function(responseTextLength) {
 	if(responseTextLength !== null && responseTextLength < this.ignoreUntil_) {
 		// There certainly isn't enough data in responseText yet, so return.
 		return [];
