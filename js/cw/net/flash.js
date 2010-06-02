@@ -18,6 +18,7 @@ goog.require('cw.externalinterface');
  *
  * @param {string} retval Serialized return value from {@code CallFunction}.
  * @return {boolean}
+ * @private
  */
 cw.net.retValToBoolean_ = function(retval) {
 	if(retval == 'true') {
