@@ -25,7 +25,7 @@ goog.require('cw.net.InvalidFrame');
 goog.require('cw.net.decodeFrameFromServer');
 
 
-// anti-clobbering for JScript; also local aliases
+// anti-clobbering for JScript; aliases
 (function(){
 
 var HelloFrame = cw.net.HelloFrame;

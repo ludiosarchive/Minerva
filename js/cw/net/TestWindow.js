@@ -13,7 +13,7 @@ goog.require('cw.net.Incoming');
 
 
 
-// anti-clobbering for JScript; also local aliases
+// anti-clobbering for JScript; aliases
 (function(){
 
 var Queue = cw.net.Queue;
