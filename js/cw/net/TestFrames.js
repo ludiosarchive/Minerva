@@ -80,9 +80,6 @@ cw.net.TestFrames.makeHelloFrame_ = function(extra, noDefaults) {
 		}
 	}
 
-	// Make this code survive ADVANCED_OPTIMIZATIONS
-	// See https://code.google.com/p/closure-compiler/issues/detail?id=167
-	var reflectedProperties = goog.reflect.object(cw.net.HelloFrame, _extra);
 	var hello = new HelloFrame();
 
 	for(var k in _extra) {
