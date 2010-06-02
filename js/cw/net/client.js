@@ -226,37 +226,47 @@ cw.net.makeStreamId_ = function() {
 cw.net.Stream = function(clock, protocol, httpEndpoint) {
 	goog.Disposable.call(this);
 
+	/**
+	 * @type {!Object}
+	 * @private
+	 */
 	this.clock_ = clock;
 
 	/**
 	 * @type {!Object}
+	 * @private
 	 */
 	this.protocol_ = protocol;
 
 	/**
 	 * @type {string}
+	 * @private
 	 */
 	this.httpEndpoint_ = httpEndpoint;
 
 	/**
 	 * @type {string}
+	 * @private
 	 */
 	this.streamId_ = cw.net.makeStreamId_();
 
 	/**
 	 * @type {!cw.net.SackFrame}
+	 * @private
 	 */
 	this.lastSackSeenByClient_ = new cw.net.SackFrame(-1, []);
 
 	/**
 	 * The send queue.
 	 * @type {!cw.net.Queue}
+	 * @private
 	 */
 	this.queue_ = new cw.net.Queue();
 
 	/**
 	 * The receive window.
 	 * @type {!cw.net.Incoming}
+	 * @private
 	 */
 	this.incoming_ = new cw.net.Incoming();
 
@@ -268,6 +278,7 @@ goog.inherits(cw.net.Stream, goog.Disposable);
 /**
  * Counter to uniquely identify the transports in this Stream
  * @type {number}
+ * @private
  */
 cw.net.Stream.prototype.transportCount_ = -1;
 
@@ -278,7 +289,9 @@ cw.net.Stream.prototype.transportCount_ = -1;
  */
 cw.net.Stream.prototype.primaryTransport_ = null;
 
-
+/**
+ * @private
+ */
 cw.net.Stream.prototype.tryToSend_ = function() {
 	1/0
 };
@@ -287,7 +300,6 @@ cw.net.Stream.prototype.tryToSend_ = function() {
  * Send strings `strings` to the peer.
  *
  * @param {!Array.<*>} strings Strings to send.
- *
  */
 cw.net.Stream.prototype.sendStrings = function(strings) {
 	if(!strings) {

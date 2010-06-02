@@ -328,7 +328,7 @@ cw.net.UsableXDR.prototype.request_ = function(verb, url, post, progressCallback
 	 *
 	 * When reusing the object, the crash happens at `this.finishAndReset_()'
 	 * in {@code handler_XDR_onload_}. It crashes persist, change code to
-	 * liberally use {@code CallQueue.eventually_}
+	 * liberally use {@code CallQueue.eventually}
 	 */
 
 	this.object_ = this.objectFactory_();
