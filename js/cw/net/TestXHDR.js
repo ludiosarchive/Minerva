@@ -31,7 +31,7 @@ cw.net.TestXHDR.hasXDomainRequest = function hasXDomainRequest() {
 	} catch(e) {
 		return false;
 	}
-}
+};
 
 
 

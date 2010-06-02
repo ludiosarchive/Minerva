@@ -87,7 +87,7 @@ cw.net.HelloProperty_ = {
 	useMyTcpAcks: 'tcpack',
 	succeedsTransport: 'eeds',
 	lastSackSeenByClient: 'lastack'
-}
+};
 
 
 /**
@@ -98,7 +98,7 @@ cw.net.HelloProperty_ = {
 cw.net.HttpFormat_ = {
 	FORMAT_XHR: 2,
 	FORMAT_HTMLFILE: 3
-}
+};
 
 
 /**
@@ -115,7 +115,7 @@ cw.net.AllHttpFormats_ = [
  */
 cw.net.ensureNonNegIntegralInt_ = function(value) {
 	return cw.checktype.ensureIntInRange(value, 0, cw.net.LARGEST_INTEGER_);
-}
+};
 
 
 /**
@@ -247,7 +247,7 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	obj.maxOpenTime = maxOpenTime;
 
 	return obj;
-}
+};
 
 
 
@@ -283,7 +283,7 @@ cw.net.HelloFrame = function() {
 	this.succeedsTransport;
 	/** @type {string|!cw.net.SackFrame} */
 	this.lastSackSeenByClient;
-}
+};
 
 /**
  * Test two frames for equality.
@@ -300,7 +300,7 @@ cw.net.HelloFrame.prototype.equals = function(other, messages) {
 	var otherProperties = cw.net.HelloFrame.makePropertyArray_(other);
 
 	return cw.eq.equals(myProperties, otherProperties, messages);
-}
+};
 
 /**
  * @param {!Array.<string>} sb
@@ -311,7 +311,7 @@ cw.net.HelloFrame.prototype.__reprToPieces__ = function(sb) {
 	sb.push('<HelloFrame properties=');
 	cw.repr.reprToPieces(cw.net.HelloFrame.makePropertyArray_(this), sb);
 	sb.push('>');
-}
+};
 
 /**
  * Decodes a string from an untrusted source to a {@code cw.net.HelloFrame}.
@@ -341,7 +341,7 @@ cw.net.HelloFrame.decode = function(frameString) {
 	// We know it is an !Object because of the careful "{" checking above.
 	return cw.net.helloDataToHelloFrame_(
 		new goog.structs.Map(/** @type {!Object.<*>} */ (blob)));
-}
+};
 
 /**
  * @private
@@ -364,7 +364,7 @@ cw.net.HelloFrame.makePropertyArray_ = function(helloFrame) {
 		helloFrame.succeedsTransport,
 		helloFrame.lastSackSeenByClient
 	];
-}
+};
 
 /**
  * @return {string} Encoded frame
@@ -404,7 +404,7 @@ cw.net.HelloFrame.prototype.encode = function() {
 	}
 
 	return goog.json.serialize(compact) + 'H';
-}
+};
 
 /**
  * @return {boolean} True if this HelloFrame indicates that
@@ -413,7 +413,7 @@ cw.net.HelloFrame.prototype.encode = function() {
 cw.net.HelloFrame.prototype.wantsStrings = function() {
 	// TODO: be safe against Object.prototype mutations?
 	return this.succeedsTransport !== undefined;
-}
+};
 
 
 
@@ -424,7 +424,7 @@ cw.net.HelloFrame.prototype.wantsStrings = function() {
 cw.net.StringFrame = function(string) {
 	/** @type {string} */
 	this.string = string;
-}
+};
 
 /**
  * Test two frames for equality.
@@ -436,7 +436,7 @@ cw.net.StringFrame.prototype.equals = function(other, messages) {
 	return (
 		other instanceof cw.net.StringFrame &&
 		this.string == other.string);
-}
+};
 
 /**
  * @param {!Array.<string>} sb
@@ -445,7 +445,7 @@ cw.net.StringFrame.prototype.__reprToPieces__ = function(sb) {
 	sb.push("new StringFrame(");
 	cw.repr.reprToPieces(this.string, sb);
 	sb.push(")");
-}
+};
 
 /**
  * @param {string} frameString A string that ends with " ".
@@ -453,14 +453,14 @@ cw.net.StringFrame.prototype.__reprToPieces__ = function(sb) {
  */
 cw.net.StringFrame.decode = function(frameString) {
 	return new cw.net.StringFrame(frameString.substr(0, frameString.length - 1));
-}
+};
 
 /**
  * @return {string} Encoded frame
  */
 cw.net.StringFrame.prototype.encode = function() {
 	return this.string + ' ';
-}
+};
 
 
 
@@ -471,7 +471,7 @@ cw.net.StringFrame.prototype.encode = function() {
 cw.net.SeqNumFrame = function(seqNum) {
 	/** @type {number} */
 	this.seqNum = seqNum;
-}
+};
 
 /**
  * Test two frames for equality.
@@ -483,14 +483,14 @@ cw.net.SeqNumFrame.prototype.equals = function(other, messages) {
 	return (
 		other instanceof cw.net.SeqNumFrame &&
 		this.seqNum == other.seqNum);
-}
+};
 
 /**
  * @param {!Array.<string>} sb
  */
 cw.net.SeqNumFrame.prototype.__reprToPieces__ = function(sb) {
 	sb.push('new SeqNumFrame(', String(this.seqNum), ')');
-}
+};
 
 /**
  * @param {string} frameString A string that ends with "N".
@@ -504,14 +504,14 @@ cw.net.SeqNumFrame.decode = function(frameString) {
 		throw new cw.net.InvalidFrame("bad seqNum");
 	}
 	return new cw.net.SeqNumFrame(seqNum);
-}
+};
 
 /**
  * @return {string} Encoded frame
  */
 cw.net.SeqNumFrame.prototype.encode = function() {
 	return this.seqNum + 'N';
-}
+};
 
 
 
@@ -548,7 +548,7 @@ cw.net.sackStringToSackFrame_ = function(sackString) {
 	}
 
 	return new cw.net.SackFrame(ackNumber, sackList);
-}
+};
 
 
 /**
@@ -561,7 +561,7 @@ cw.net.SackFrame = function(ackNumber, sackList) {
 	this.ackNumber = ackNumber;
 	/** @type {!Array.<number>} */
 	this.sackList = sackList;
-}
+};
 
 /**
  * Test two frames for equality.
@@ -574,7 +574,7 @@ cw.net.SackFrame.prototype.equals = function(other, messages) {
 		other instanceof cw.net.SackFrame &&
 		this.ackNumber == other.ackNumber &&
 		cw.eq.equals(this.sackList, other.sackList, messages));
-}
+};
 
 /**
  * @param {!Array.<string>} sb
@@ -583,7 +583,7 @@ cw.net.SackFrame.prototype.__reprToPieces__ = function(sb) {
 	sb.push('new SackFrame(', String(this.ackNumber), ', ');
 	cw.repr.reprToPieces(this.sackList, sb);
 	sb.push(')');
-}
+};
 
 /**
  * @param {string} frameString A string that ends with "A".
@@ -596,14 +596,14 @@ cw.net.SackFrame.decode = function(frameString) {
 		throw new cw.net.InvalidFrame("bad sackString");
 	}
 	return frame;
-}
+};
 
 /**
  * @return {string} Encoded frame
  */
 cw.net.SackFrame.prototype.encode = function() {
 	return this.sackList.join(',') + '|' + this.ackNumber + 'A';
-}
+};
 
 
 
@@ -613,14 +613,14 @@ cw.net.SackFrame.prototype.encode = function() {
  */
 cw.net.YouCloseItFrame = function() {
 
-}
+};
 
 /**
  * @param {!Array.<string>} sb
  */
 cw.net.YouCloseItFrame.prototype.__reprToPieces__ = function(sb) {
 	sb.push('new YouCloseItFrame()');
-}
+};
 
 /**
  * Test two frames for equality.
@@ -630,7 +630,7 @@ cw.net.YouCloseItFrame.prototype.__reprToPieces__ = function(sb) {
  */
 cw.net.YouCloseItFrame.prototype.equals = function(other, messages) {
 	return (other instanceof cw.net.YouCloseItFrame);
-}
+};
 
 /**
  * @param {string} frameString A string that ends with "Y".
@@ -641,14 +641,14 @@ cw.net.YouCloseItFrame.decode = function(frameString) {
 		throw new cw.net.InvalidFrame("leading garbage");
 	}
 	return new cw.net.YouCloseItFrame();
-}
+};
 
 /**
  * @return {string} Encoded frame
  */
 cw.net.YouCloseItFrame.prototype.encode = function() {
 	return 'Y';
-}
+};
 
 
 
@@ -660,7 +660,7 @@ cw.net.YouCloseItFrame.prototype.encode = function() {
 cw.net.PaddingFrame = function(numBytes) {
 	/** @type {number} */
 	this.numBytes = numBytes;
-}
+};
 
 /**
  * Test two frames for equality.
@@ -672,14 +672,14 @@ cw.net.PaddingFrame.prototype.equals = function(other, messages) {
 	return (
 		other instanceof cw.net.PaddingFrame &&
 		this.numBytes == other.numBytes);
-}
+};
 
 /**
  * @param {!Array.<string>} sb
  */
 cw.net.PaddingFrame.prototype.__reprToPieces__ = function(sb) {
 	sb.push('new PaddingFrame(', String(this.numBytes), ')');
-}
+};
 
 /**
  * @param {string} frameString A string that ends with "P".
@@ -687,7 +687,7 @@ cw.net.PaddingFrame.prototype.__reprToPieces__ = function(sb) {
  */
 cw.net.PaddingFrame.decode = function(frameString) {
 	return new cw.net.PaddingFrame(frameString.length - 1);
-}
+};
 
 /**
  * @return {string} Encoded frame
@@ -696,7 +696,7 @@ cw.net.PaddingFrame.prototype.encode = function() {
 	var p = Array(this.numBytes);
 	p.push('P');
 	return p.join(' ');
-}
+};
 
 
 
@@ -708,7 +708,7 @@ cw.net.PaddingFrame.prototype.encode = function() {
  */
 cw.net.isValidShortRestrictedString_ = function(string) {
 	return string.length <= 255 && /^([ -~]*)$/.test(string);
-}
+};
 
 
 /**
@@ -726,7 +726,7 @@ cw.net.ResetFrame = function(reasonString, applicationLevel) {
 	this.reasonString = reasonString;
 	/** @type {boolean} */
 	this.applicationLevel = applicationLevel;
-}
+};
 
 /**
  * Test two frames for equality.
@@ -739,7 +739,7 @@ cw.net.ResetFrame.prototype.equals = function(other, messages) {
 		other instanceof cw.net.ResetFrame &&
 		this.reasonString == other.reasonString &&
 		this.applicationLevel == other.applicationLevel);
-}
+};
 
 /**
  * @param {!Array.<string>} sb
@@ -748,7 +748,7 @@ cw.net.ResetFrame.prototype.__reprToPieces__ = function(sb) {
 	sb.push("new ResetFrame(");
 	cw.repr.reprToPieces(this.reasonString, sb);
 	sb.push(", ", String(this.applicationLevel), ")");
-}
+};
 
 /**
  * @param {string} frameString A string that ends with "!".
@@ -769,14 +769,14 @@ cw.net.ResetFrame.decode = function(frameString) {
 	}
 
 	return new cw.net.ResetFrame(reasonString, applicationLevel);
-}
+};
 
 /**
  * @return {string} Encoded frame
  */
 cw.net.ResetFrame.prototype.encode = function() {
 	return this.reasonString + '|' + Number(this.applicationLevel) + '!';
-}
+};
 
 
 
@@ -792,7 +792,7 @@ cw.net.TransportKillReason = {
 	invalid_frame_type_or_arguments: 'invalid_frame_type_or_arguments',
 	frame_corruption: 'frame_corruption',
 	rwin_overflow: 'rwin_overflow'
-}
+};
 
 /**
  * @type {!Object.<string, !cw.net.TransportKillReason>}
@@ -816,7 +816,7 @@ cw.net.AllTransportKillReasons_ = {
 cw.net.TransportKillFrame = function(reason) {
 	/** @type {!cw.net.TransportKillReason} */
 	this.reason = reason;
-}
+};
 
 /**
  * Test two frames for equality.
@@ -828,7 +828,7 @@ cw.net.TransportKillFrame.prototype.equals = function(other, messages) {
 	return (
 		other instanceof cw.net.TransportKillFrame &&
 		this.reason == other.reason);
-}
+};
 
 /**
  * @param {!Array.<string>} sb
@@ -837,7 +837,7 @@ cw.net.TransportKillFrame.prototype.__reprToPieces__ = function(sb) {
 	sb.push('new TransportKillFrame(');
 	cw.repr.reprToPieces(this.reason, sb);
 	sb.push(')');
-}
+};
 
 /**
  * @param {string} frameString A string that ends with "K".
@@ -851,14 +851,14 @@ cw.net.TransportKillFrame.decode = function(frameString) {
 	}
 
 	return new cw.net.TransportKillFrame(reason);
-}
+};
 
 /**
  * @return {string} Encoded frame
  */
 cw.net.TransportKillFrame.prototype.encode = function() {
 	return this.reason + 'K';
-}
+};
 
 
 
@@ -897,7 +897,7 @@ cw.net.decodeFrameFromClient = function(frameString) {
 	} else {
 		throw new cw.net.InvalidFrame("Invalid frame type " + lastByte);
 	}
-}
+};
 
 
 /**
@@ -931,4 +931,4 @@ cw.net.decodeFrameFromServer = function(frameString) {
 	} else {
 		throw new cw.net.InvalidFrame("Invalid frame type " + lastByte);
 	}
-}
+};

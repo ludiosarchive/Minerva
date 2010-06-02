@@ -150,7 +150,7 @@ cw.net.Timeout.prototype.name = 'cw.net.Timeout';
  */
 cw.net.IUsableSomething = function(clock, objectFactory) {
 
-}
+};
 
 /**
  * @return {boolean} Whether this object is technically capable of
@@ -158,7 +158,7 @@ cw.net.IUsableSomething = function(clock, objectFactory) {
  */
 cw.net.IUsableSomething.prototype.canCrossDomains_ = function() {
 
-}
+};
 
 
 /**
@@ -190,14 +190,14 @@ cw.net.IUsableSomething.prototype.canCrossDomains_ = function() {
  */
 cw.net.IUsableSomething.prototype.request_ = function(verb, url, post, progressCallback) {
 
-}
+};
 
 /**
  * Abort the current request. If none is active, or request was already aborted, this is a no-op.
  */
 cw.net.IUsableSomething.prototype.abort_ = function() {
 
-}
+};
 
 
 /*
@@ -230,11 +230,11 @@ cw.net.UsableXDR = function(clock, objectFactory) {
 	this.clock_ = clock;
 	this.objectFactory_ = objectFactory;
 	this.requestActive_ = false;
-}
+};
 
 cw.net.UsableXDR.prototype.canCrossDomains_ = function() {
 	return true;
-}
+};
 
 /**
  * @private
@@ -255,7 +255,7 @@ cw.net.UsableXDR.prototype.finishAndReset_ = function(errorOrNull) {
 	} else {
 		this.requestDoneD_.errback(errorOrNull);
 	}
-}
+};
 
 /**
  * @private
@@ -263,7 +263,7 @@ cw.net.UsableXDR.prototype.finishAndReset_ = function(errorOrNull) {
 cw.net.UsableXDR.prototype.handler_XDR_onerror_ = function() {
 	cw.net.UsableXDR.logger.fine('handler_XDR_onerror_');
 	this.finishAndReset_(new cw.net.NetworkProblem());
-}
+};
 
 /**
  * @private
@@ -273,7 +273,7 @@ cw.net.UsableXDR.prototype.handler_XDR_ontimeout_ = function() {
 	// Even though our XDR timeout is very high and should never be
 	// reached, we'll treat it the same as an official timeout.
 	this.finishAndReset_(new cw.net.Timeout());
-}
+};
 
 /**
  * @private
@@ -287,7 +287,7 @@ cw.net.UsableXDR.prototype.handler_XDR_onprogress_ = function() {
 	} catch(e) {
 		cw.net.UsableXDR.logger.severe('[handler_XDR_onprogress_] Error in progressCallback_', e);
 	}
-}
+};
 
 /**
  * @private
@@ -300,7 +300,7 @@ cw.net.UsableXDR.prototype.handler_XDR_onload_ = function() {
 		cw.net.UsableXDR.logger.severe('[handler_XDR_onload_] Error in progressCallback_', e);
 	}
 	this.finishAndReset_(null);
-}
+};
 
 cw.net.UsableXDR.prototype.request_ = function(verb, url, post, progressCallback) {
 	if(this.requestActive_) {
@@ -348,7 +348,7 @@ cw.net.UsableXDR.prototype.request_ = function(verb, url, post, progressCallback
 	x.send(post ? post : "");
 
 	return this.requestDoneD_;
-}
+};
 
 /**
  * See cw.net.IUsableSomething.abort
@@ -360,7 +360,7 @@ cw.net.UsableXDR.prototype.abort_ = function() {
 		this.object_.abort();
 		this.finishAndReset_(new cw.net.RequestAborted());
 	}
-}
+};
 
 
 cw.net.UsableXDR.logger = goog.debug.Logger.getLogger('cw.net.UsableXDR');
@@ -384,14 +384,14 @@ cw.net.UsableXHR = function(clock, objectFactory) {
 	this.clock_ = clock;
 	this.objectFactory_ = objectFactory;
 	this.requestActive_ = false;
-}
+};
 
 /**
  * {@see cw.net.IUsableSomething.canCrossDomains_}
  */
 cw.net.UsableXHR.prototype.canCrossDomains_ = function() {
 	return (typeof this.objectFactory_().withCredentials === "boolean");
-}
+};
 
 /**
  * {@see cw.net.IUsableSomething.request_}
@@ -454,7 +454,7 @@ cw.net.UsableXHR.prototype.request_ = function(verb, url, post, progressCallback
 	x.send(post ? post : "");
 
 	return this.requestDoneD_;
-}
+};
 
 /**
  * @private
@@ -480,7 +480,7 @@ cw.net.UsableXHR.prototype.finishAndReset_ = function(errorOrNull) {
 	} else {
 		this.requestDoneD_.errback(errorOrNull);
 	}
-}
+};
 
 /**
  * See cw.net.IUsableSomething.abort
@@ -496,7 +496,7 @@ cw.net.UsableXHR.prototype.abort_ = function() {
 		// to give on up reusing XMLHttpRequest objects.
 		this.finishAndReset_(new cw.net.RequestAborted());
 	}
-}
+};
 
 /**
  * Only used by Opera, to work around its one-shot readyState 3.
@@ -510,7 +510,7 @@ cw.net.UsableXHR.prototype.handler_poll_ = function() {
 			cw.net.UsableXHR.logger.severe('[handler_poll_] Error in progressCallback_', e);
 		}
 	}
-}
+};
 
 /**
  * @private
@@ -543,7 +543,7 @@ cw.net.UsableXHR.prototype.handler_onprogress_ = function(ev) {
 			cw.net.UsableXHR.logger.severe('[handler_onprogress_] Error in progressCallback_', e);
 		}
 	}
-}
+};
 
 /**
  * @private
@@ -576,7 +576,7 @@ cw.net.UsableXHR.prototype.handler_onreadystatechange_ = function() {
 		this.object_.onreadystatechange = goog.nullFunction;
 		this.finishAndReset_(null);
 	}
-}
+};
 
 
 cw.net.UsableXHR.logger = goog.debug.Logger.getLogger('cw.net.UsableXHR');
@@ -602,7 +602,7 @@ cw.net.simpleRequest = function(verb, url, post) {
 		return obj.responseText;
 	});
 	return d;
-}
+};
 
 
 // TODO: synchronous XHR / XMLHTTP (not possible for XDR)

@@ -49,7 +49,7 @@ cw.net.EndpointType = {
  */
 cw.net.IEndpointLocator = function() {
 
-}
+};
 
 // XXX TODO: this API feels wrong. What if there are multiple available endpoints
 // for an EndpointType? Remember: endpoints may change during runtime,
@@ -75,7 +75,7 @@ cw.net.IEndpointLocator = function() {
  */
 cw.net.IEndpointLocator.prototype.locate = function(type) {
 
-}
+};
 
 
 // TODO: need some kind of interface to allow applications to control
@@ -100,7 +100,7 @@ cw.net.WhoReset = {
 	server_app: 2,
 	client_minerva: 3,
 	client_app: 4
-}
+};
 
 
 // Note: a tk_stream_attach_failure, or tk_acked_unsent_boxes, or tk_invalid_frame_type_or_arguments from server
@@ -130,7 +130,7 @@ cw.net.WhoReset = {
  */
 cw.net.IMinervaProtocol = function() {
 
-}
+};
 
 /**
  * Called when this stream has just started.
@@ -141,7 +141,7 @@ cw.net.IMinervaProtocol = function() {
  */
 cw.net.IMinervaProtocol.prototype.streamStarted = function(stream) {
 
-}
+};
 
 /**
  * Called when this stream has ended.
@@ -151,7 +151,7 @@ cw.net.IMinervaProtocol.prototype.streamStarted = function(stream) {
  */
 cw.net.IMinervaProtocol.prototype.streamReset = function(whoReset, reasonString) {
 
-}
+};
 
 /**
  * Called whenever box(es) are received.
@@ -160,7 +160,7 @@ cw.net.IMinervaProtocol.prototype.streamReset = function(whoReset, reasonString)
  */
 cw.net.IMinervaProtocol.prototype.stringsReceived = function(boxes) {
 
-}
+};
 
 
 
@@ -174,7 +174,7 @@ cw.net.IMinervaProtocol.prototype.stringsReceived = function(boxes) {
  */
 cw.net.IMinervaTransport = function() {
 
-}
+};
 // lastBoxSent attribute?
 
 /**
@@ -186,7 +186,7 @@ cw.net.IMinervaTransport = function() {
  */
 cw.net.IMinervaTransport.prototype.writeStrings_ = function(queue) { // No 'start' argument unlike newlink.py
 
-}
+};
 
 /**
  * Close this transport. Usually happens if the transport is no longer
@@ -194,7 +194,7 @@ cw.net.IMinervaTransport.prototype.writeStrings_ = function(queue) { // No 'star
  */
 cw.net.IMinervaTransport.prototype.closeGently_ = function() {
 
-}
+};
 
 /**
  * The stream that this transport is related to is resetting. Transport
@@ -204,7 +204,7 @@ cw.net.IMinervaTransport.prototype.closeGently_ = function() {
  */
 cw.net.IMinervaTransport.prototype.reset_ = function(reasonString) {
 
-}
+};
 
 
 /**
@@ -212,7 +212,7 @@ cw.net.IMinervaTransport.prototype.reset_ = function(reasonString) {
  */
 cw.net.makeStreamId_ = function() {
 	return goog.string.getRandomString() + goog.string.getRandomString();
-}
+};
 
 
 /**
@@ -262,7 +262,7 @@ cw.net.Stream = function(clock, protocol, httpEndpoint) {
 
 	// Call streamStarted before we even connect one transport successfully.
 	this.protocol_.streamStarted(this);
-}
+};
 goog.inherits(cw.net.Stream, goog.Disposable);
 
 /**

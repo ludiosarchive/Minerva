@@ -220,7 +220,7 @@ cw.net.Incoming = function() {
 	 * @private
 	 */
 	this.cached_ = new goog.structs.Map();
-}
+};
 
 
 /**

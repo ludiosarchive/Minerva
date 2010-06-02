@@ -63,7 +63,7 @@ cw.net.ResponseTextDecoder = function(xObject, maxLength) {
 	if(maxLength) {
 		this.setMaxLength_(maxLength);
 	}
-}
+};
 
 /**
  * The next location decoder will read
@@ -114,7 +114,7 @@ cw.net.ResponseTextDecoder.prototype.maxLengthLen_ = String(
 cw.net.ResponseTextDecoder.prototype.setMaxLength_ = function(maxLength) {
 	this.maxLength_ = maxLength;
 	this.maxLengthLen_ = String(maxLength).length;
-}
+};
 
 /**
  * Check for new data in {@code xObject.responseText} and return an array
@@ -201,7 +201,7 @@ cw.net.ResponseTextDecoder.prototype.getNewStrings_ = function(responseTextLengt
 	}
 	////console.log('ignoreUntil_ now', this.ignoreUntil_);
 	return strings;
-}
+};
 
 
 cw.net.ResponseTextDecoder.logger = goog.debug.Logger.getLogger('cw.net.ResponseTextDecoder');

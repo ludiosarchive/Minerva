@@ -90,7 +90,7 @@ cw.net.TestFrames.makeHelloFrame_ = function(extra, noDefaults) {
 	}
 
 	return hello;
-}
+};
 
 
 cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
