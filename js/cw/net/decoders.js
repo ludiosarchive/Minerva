@@ -155,7 +155,7 @@ cw.net.ResponseTextDecoder.prototype.getNewStrings_ = function(responseTextLengt
 	}
 
 	var strings = [];
-	for(;;) {
+	while(true) {
 		if(this.modeOrReadLength_ === 0) { // mode LENGTH
 			var colon = text.indexOf(':', this.offset_);
 			if(colon === -1) {
