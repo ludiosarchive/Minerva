@@ -121,7 +121,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'GetXHRObjectTests').methods(
 cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseUsableXHDRLogicTests').methods(
 
 	function setUp(self) {
-		self.target = new cw.uri.URL(String(window.location)).update_('fragment', null);
+		self.target = new cw.uri.URL(String(window.location)).setUrlProperty('fragment', null);
 	},
 
 	// Subclasses override _setupDummies
@@ -135,7 +135,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseUsableXHDRLogicTests').meth
 		self._setupDummies();
 		self.assertThrows(
 			cw.net.RequestStillActive,
-			function() { self.xhdr.request_('GET', self.target.getString()) },
+			function() { self.xhdr.request_('GET', self.target.toString()) },
 			"Wait for the Deferred to fire before making another request.");
 	},
 
@@ -152,13 +152,13 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseUsableXHDRLogicTests').meth
 		self.requestD.addErrback(function(e){cw.net.TestXHDR.logger.info('Ignoring error in requestD Deferred: ' + e)});
 
 		// Make the second request
-		self.requestD = self.xhdr.request_('POST', self.target.getString(), 'second');
+		self.requestD = self.xhdr.request_('POST', self.target.toString(), 'second');
 		self._finishRequest();
 
 		//cw.net.TestXHDR.logger.info(goog.debug.expose(self.mock.log));
 		self.assertEqual([
-			['open', 'POST', self.target.getString(), true], ['send', ''], ['abort'],
-			['open', 'POST', self.target.getString(), true], ['send', 'second']
+			['open', 'POST', self.target.toString(), true], ['send', ''], ['abort'],
+			['open', 'POST', self.target.toString(), true], ['send', 'second']
 		], self.mock.log);
 	},
 
@@ -171,7 +171,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseUsableXHDRLogicTests').meth
 	 */
 	function test_abortReason(self) {
 		self._setupDummies();
-		self.assertEqual(self.mock.log, [['open', 'POST', self.target.getString(), true], ['send', '']]);
+		self.assertEqual(self.mock.log, [['open', 'POST', self.target.toString(), true], ['send', '']]);
 
 		var d = self.assertFailure(self.requestD, [cw.net.RequestAborted]);
 
@@ -194,7 +194,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseUsableXHDRLogicTests').meth
 		self._setupDummies();
 		self.xhdr.abort_();
 		self.xhdr.abort_();
-		self.assertEqual(self.mock.log, [['open', 'POST', self.target.getString(), true], ['send', ''], ['abort']]);
+		self.assertEqual(self.mock.log, [['open', 'POST', self.target.toString(), true], ['send', ''], ['abort']]);
 		self.requestD.addErrback(function(e){cw.net.TestXHDR.logger.info('Ignoring error in requestD Deferred: ' + e)});
 	}
 
@@ -208,10 +208,10 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseUsableXHDRLogicTests').meth
 cw.net.TestXHDR._BaseUsableXHDRLogicTests.subclass(cw.net.TestXHDR, 'UsableXHRLogicTests').methods(
 
 	function _setupDummies(self) {
-		self.target.update_('path', '/@testres_Minerva/404/');
+		self.target.setUrlProperty('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestXHDR.MockXHR();
 		self.xhdr = new cw.net.UsableXHR(window, function(){return self.mock});
-		self.requestD = self.xhdr.request_('POST', self.target.getString(), '');
+		self.requestD = self.xhdr.request_('POST', self.target.toString(), '');
 	},
 
 
@@ -270,10 +270,10 @@ cw.net.TestXHDR._BaseUsableXHDRLogicTests.subclass(cw.net.TestXHDR, 'UsableXHRLo
 cw.net.TestXHDR._BaseUsableXHDRLogicTests.subclass(cw.net.TestXHDR, 'UsableXDRLogicTests').methods(
 
 	function _setupDummies(self) {
-		self.target.update_('path', '/@testres_Minerva/404/');
+		self.target.setUrlProperty('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestXHDR.MockXDR();
 		self.xhdr = new cw.net.UsableXDR(window, function(){return self.mock});
-		self.requestD = self.xhdr.request_('POST', self.target.getString());
+		self.requestD = self.xhdr.request_('POST', self.target.toString());
 	},
 
 
@@ -289,8 +289,8 @@ cw.net.TestXHDR._BaseUsableXHDRLogicTests.subclass(cw.net.TestXHDR, 'UsableXDRLo
 cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 
 	function test_simpleResponseGET(self) {
-		self.target.update_('path', '/@testres_Minerva/SimpleResponse/?a=0');
-		var d = self.xhdr.request_('GET', self.target.getString());
+		self.target.setUrlProperty('path', '/@testres_Minerva/SimpleResponse/?a=0');
+		var d = self.xhdr.request_('GET', self.target.toString());
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_sent_args": {"a": ["0"]}}', obj.responseText);
 		});
@@ -299,8 +299,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 
 
 	function test_simpleResponsePOST(self) {
-		self.target.update_('path', '/@testres_Minerva/SimpleResponse/');
-		var d = self.xhdr.request_('POST', self.target.getString(), 'hello\u00ff');
+		self.target.setUrlProperty('path', '/@testres_Minerva/SimpleResponse/');
+		var d = self.xhdr.request_('POST', self.target.toString(), 'hello\u00ff');
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_posted_utf8": "hello\\u00ff"}', obj.responseText);
 		});
@@ -314,8 +314,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 	 * If it fails to work around it, you'll see {"a": ["0#ignored1"]} instead of {"a": ["0"]}
 	 */
 	function test_fragmentIsIgnoredGET(self) {
-		self.target.update_('path', '/@testres_Minerva/SimpleResponse/?a=0').update_('fragment', 'ignored1');
-		var d = self.xhdr.request_('GET', self.target.getString());
+		self.target.setUrlProperty('path', '/@testres_Minerva/SimpleResponse/?a=0').setUrlProperty('fragment', 'ignored1');
+		var d = self.xhdr.request_('GET', self.target.toString());
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_sent_args": {"a": ["0"]}}', obj.responseText);
 		});
@@ -329,8 +329,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 	 * If it fails to work around it, you'll see {"a": ["0#ignored2"]} instead of {"a": ["0"]}
 	 */
 	function test_fragmentIsIgnoredPOST(self) {
-		self.target.update_('path', '/@testres_Minerva/SimpleResponse/?a=0').update_('fragment', 'ignored2');
-		var d = self.xhdr.request_('GET', self.target.getString());
+		self.target.setUrlProperty('path', '/@testres_Minerva/SimpleResponse/?a=0').setUrlProperty('fragment', 'ignored2');
+		var d = self.xhdr.request_('GET', self.target.toString());
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_sent_args": {"a": ["0"]}}', obj.responseText);
 		});
@@ -340,14 +340,14 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 
 	function test_simpleReuseGET(self) {
 		var responses = [];
-		self.target.update_('path', '/@testres_Minerva/SimpleResponse/?b=0');
+		self.target.setUrlProperty('path', '/@testres_Minerva/SimpleResponse/?b=0');
 
-		var d = self.xhdr.request_('GET', self.target.getString());
+		var d = self.xhdr.request_('GET', self.target.toString());
 
 		d.addCallback(function(obj){
 			responses.push(obj.responseText);
 			// This mutation is okay
-			var d2 = self.xhdr.request_('GET', self.target.update_('path', '/@testres_Minerva/SimpleResponse/?b=1').getString());
+			var d2 = self.xhdr.request_('GET', self.target.setUrlProperty('path', '/@testres_Minerva/SimpleResponse/?b=1').toString());
 			d2.addCallback(function(obj2){
 				responses.push(obj2.responseText);
 			});
@@ -367,14 +367,14 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 
 	function test_simpleReusePOST(self) {
 		var responses = [];
-		self.target.update_('path', '/@testres_Minerva/SimpleResponse/');
+		self.target.setUrlProperty('path', '/@testres_Minerva/SimpleResponse/');
 
-		var d = self.xhdr.request_('POST', self.target.getString(), 'A');
+		var d = self.xhdr.request_('POST', self.target.toString(), 'A');
 
 		d.addCallback(function(obj){
 			responses.push(obj.responseText);
 			// This mutation is okay
-			var d2 = self.xhdr.request_('POST', self.target.update_('path', '/@testres_Minerva/SimpleResponse/').getString(), 'B');
+			var d2 = self.xhdr.request_('POST', self.target.setUrlProperty('path', '/@testres_Minerva/SimpleResponse/').toString(), 'B');
 			d2.addCallback(function(obj2){
 				responses.push(obj2.responseText);
 			});
@@ -401,8 +401,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 	 * really fast, and are done before you call .abort_().
 	 */
 	function test_abort(self) {
-		self.target.update_('path', '/@testres_Minerva/404/');
-		var requestD = self.xhdr.request_('POST', self.target.getString(), '');
+		self.target.setUrlProperty('path', '/@testres_Minerva/404/');
+		var requestD = self.xhdr.request_('POST', self.target.toString(), '');
 
 		self.assertIdentical(undefined, self.xhdr.abort_());
 		self.assertIdentical(undefined, self.xhdr.abort_());
@@ -445,8 +445,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 			buffer.push(String.fromCharCode(i));
 		}
 		var expected = buffer.join('');
-		self.target.update_('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-126');
-		var requestD = self.xhdr.request_('POST', self.target.getString(), '');
+		self.target.setUrlProperty('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-126');
+		var requestD = self.xhdr.request_('POST', self.target.toString(), '');
 		requestD.addCallback(function(obj){
 			var text = obj.responseText;
 			self._complainAboutMismatches(expected, text);
@@ -484,8 +484,8 @@ cw.net.TestXHDR._BaseRealRequestTests.subclass(cw.net.TestXHDR, 'UsableXHRRealRe
 			buffer.push(String.fromCharCode(i));
 		}
 		var expected = buffer.join('');
-		self.target.update_('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-65533');
-		var requestD = self.xhdr.request_('POST', self.target.getString(), '');
+		self.target.setUrlProperty('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-65533');
+		var requestD = self.xhdr.request_('POST', self.target.toString(), '');
 		requestD.addCallback(function(obj){
 			var text = obj.responseText;
 			self._complainAboutMismatches(expected, text);
@@ -546,8 +546,8 @@ cw.net.TestXHDR._BaseRealRequestTests.subclass(cw.net.TestXHDR, 'UsableXDRRealRe
 			buffer.push(String.fromCharCode(i));
 		}
 		var expected = buffer.join('');
-		self.target.update_('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-64975,65008-65519,65529-65533');
-		var requestD = self.xhdr.request_('POST', self.target.getString(), '');
+		self.target.setUrlProperty('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-64975,65008-65519,65529-65533');
+		var requestD = self.xhdr.request_('POST', self.target.toString(), '');
 		requestD.addCallback(function(obj){
 			var text = obj.responseText;
 			self._complainAboutMismatches(expected, text);
@@ -575,8 +575,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XDRErrorsTests').methods(
 	 * causes a {@code NetworkProblem}.
 	 */
 	function test_networkProblemGET(self) {
-		self.target.update_('path', '/@testres_Minerva/NoOriginHeader/');
-		var requestD = self.xdr.request_('GET', self.target.getString());
+		self.target.setUrlProperty('path', '/@testres_Minerva/NoOriginHeader/');
+		var requestD = self.xdr.request_('GET', self.target.toString());
 		var d = self.assertFailure(requestD, [cw.net.NetworkProblem]);
 		return d;
 	},
@@ -587,8 +587,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XDRErrorsTests').methods(
 	 * causes a {@code NetworkProblem}.
 	 */
 	function test_networkProblemPOST(self) {
-		self.target.update_('path', '/@testres_Minerva/NoOriginHeader/');
-		var requestD = self.xdr.request_('POST', self.target.getString());
+		self.target.setUrlProperty('path', '/@testres_Minerva/NoOriginHeader/');
+		var requestD = self.xdr.request_('POST', self.target.toString());
 		var d = self.assertFailure(requestD, [cw.net.NetworkProblem]);
 		return d;
 	},
@@ -598,8 +598,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XDRErrorsTests').methods(
 	 * Requesting something on 0.0.0.0 causes a {@code NetworkProblem}.
 	 */
 	function test_networkProblemBadIP(self) {
-		self.target.update_('host', '0.0.0.0');
-		var requestD = self.xdr.request_('GET', self.target.getString());
+		self.target.setUrlProperty('host', '0.0.0.0');
+		var requestD = self.xdr.request_('GET', self.target.toString());
 		var d = self.assertFailure(requestD, [cw.net.NetworkProblem]);
 		return d;
 	}
@@ -611,7 +611,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackTests').metho
 
 	function setUp(self) {
 		self.target = new cw.uri.URL(String(window.location));
-		self.target.update_('path', '/@testres_Minerva/404/');
+		self.target.setUrlProperty('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestXHDR.MockXHR();
 		// Never .advance the clock, to prevent Opera from doing a call at 50ms intervals.
 		self.clock = new cw.clock.Clock();
@@ -627,7 +627,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackTests').metho
 		function progressCallback(obj, position, totalSize) {
 			calls.push([obj, position, totalSize]);
 		}
-		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
+		self.xhr.request_('GET', self.target.toString(), '', progressCallback);
 		self.mock.readyState = 3;
 		self.mock.responseText = null; // responseText should not be looked at
 		self.mock.onreadystatechange(null);
@@ -651,7 +651,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackTests').metho
 		function progressCallback(obj, position, totalSize) {
 			calls.push([obj, position, totalSize]);
 		}
-		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
+		self.xhr.request_('GET', self.target.toString(), '', progressCallback);
 		self.mock.readyState = 3;
 		self.mock.responseText = null; // responseText should not be looked at
 		self.mock.onprogress({position: 1, totalSize: 10});
@@ -679,7 +679,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackTests').metho
 		function progressCallback(obj, position, totalSize) {
 			calls.push([obj, position, totalSize]);
 		}
-		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
+		self.xhr.request_('GET', self.target.toString(), '', progressCallback);
 		self.mock.readyState = 3;
 		self.mock.responseText = null; // responseText should not be looked at
 		self.mock.onprogress({position: 1, totalSize: 10});
@@ -705,7 +705,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackTests').metho
 		function progressCallback(obj, position, totalSize) {
 			calls.push([obj, position, totalSize]);
 		}
-		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
+		self.xhr.request_('GET', self.target.toString(), '', progressCallback);
 		self.mock.readyState = 3;
 		self.mock.responseText = null; // responseText should not be looked at
 		self.mock.onprogress({position: 0, totalSize: 0});
@@ -726,7 +726,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackTests').metho
 		function progressCallback(obj, position, totalSize) {
 			calls.push([obj, position, totalSize]);
 		}
-		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
+		self.xhr.request_('GET', self.target.toString(), '', progressCallback);
 		self.mock.readyState = 3;
 		self.mock.responseText = null; // responseText should not be looked at
 		self.mock.onreadystatechange(null);
@@ -760,7 +760,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackOperaWorkarou
 		self.clock = new cw.clock.Clock();
 
 		self.target = new cw.uri.URL(String(window.location));
-		self.target.update_('path', '/@testres_Minerva/404/');
+		self.target.setUrlProperty('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestXHDR.MockXHR();
 
 	},
@@ -775,7 +775,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackOperaWorkarou
 		function progressCallback(obj, position, totalSize) {
 			calls.push([obj, position, totalSize]);
 		}
-		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
+		self.xhr.request_('GET', self.target.toString(), '', progressCallback);
 		self.mock.readyState = 3;
 		self.assertIdentical(0, calls.length);
 		self.clock.advance(50);
@@ -798,7 +798,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackOperaWorkarou
 		function progressCallback(obj, position, totalSize) {
 			calls.push([obj, position, totalSize]);
 		}
-		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
+		self.xhr.request_('GET', self.target.toString(), '', progressCallback);
 
 		self.mock.readyState = 0;
 		self.clock.advance(100);
@@ -823,7 +823,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackOperaWorkarou
 	 */
 	function test_noProgressCallbackNoPoller(self) {
 		self.xhr = new cw.net.UsableXHR(self.clock, function(){ return self.mock; });
-		self.xhr.request_('GET', self.target.getString(), '', null);
+		self.xhr.request_('GET', self.target.toString(), '', null);
 		self.assertEqual(0, self.clock.getCallsArray_().length);
 		self.mock.readyState = 3;
 		self.clock.advance(100);
@@ -841,7 +841,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XDRProgressCallbackTests').metho
 			throw new cw.UnitTest.SkipTest("XDomainRequest is required for this test.");
 		}
 		self.target = new cw.uri.URL(String(window.location));
-		self.target.update_('path', '/@testres_Minerva/404/');
+		self.target.setUrlProperty('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestXHDR.MockXHR();
 		self.clock = new cw.clock.Clock();
 	},
@@ -856,7 +856,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XDRProgressCallbackTests').metho
 		function progressCallback(obj, position, totalSize) {
 			calls.push([obj, position, totalSize]);
 		}
-		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
+		self.xhr.request_('GET', self.target.toString(), '', progressCallback);
 		// note: no usage of readyState, despite its existence
 		self.mock.responseText = null; // responseText should not be looked at
 		self.mock.onprogress();
@@ -880,7 +880,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XDRProgressCallbackTests').metho
 		function progressCallback(obj, position, totalSize) {
 			calls.push([obj, position, totalSize]);
 		}
-		self.xhr.request_('GET', self.target.getString(), '', progressCallback);
+		self.xhr.request_('GET', self.target.toString(), '', progressCallback);
 		// note: no usage of readyState, despite its existence
 		self.mock.responseText = null; // responseText should not be looked at
 		self.mock.onprogress();
@@ -903,8 +903,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XDRProgressCallbackTests').metho
 cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'SimpleRequestTests').methods(
 	function test_simpleRequest(self) {
 		self.target = new cw.uri.URL(String(window.location));
-		self.target.update_('path', '/@testres_Minerva/SimpleResponse/?a=hello');
-		var d = cw.net.simpleRequest('GET', self.target.getString(), "");
+		self.target.setUrlProperty('path', '/@testres_Minerva/SimpleResponse/?a=hello');
+		var d = cw.net.simpleRequest('GET', self.target.toString(), "");
 		d.addCallback(function(response) {
 			self.assertEqual('{"you_sent_args": {"a": ["hello"]}}', response);
 		});
