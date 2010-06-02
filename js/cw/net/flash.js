@@ -9,7 +9,7 @@ goog.require('cw.externalinterface');
 
 /**
  * Instead of eval()ing any random return value from
- * [flash object].CallFunction, we decode only `true` and `false`.
+ * [flash object].CallFunction, we decode only "true" and "false".
  *
  * This has the added advantage that if we get an unexpected value, we have
  * it in serialized form, so it is easier to display and debug.
