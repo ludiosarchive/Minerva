@@ -1266,7 +1266,7 @@ class TransportIsHttpTests(unittest.TestCase):
 	def test_isHttpPositive(self):
 		transport = ServerTransport()
 		request = http.Request(DummyChannel(), False)
-		request.content = StringIO("yow")
+		request.content = StringIO("yow \n")
 		transport.requestStarted(request)
 		self.aE(True, transport.isHttp())
 
@@ -2777,51 +2777,82 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		and even if the last delimiter is missing.
 		"""
 		for separator in ('\n', '\r\n'):
-			for missingLastSep in (False, True):
-				for streaming in (False, True):
-					##print "missingLastSep: %r" % missingLastSep, \
-					##	"separator: %r" % separator, "streaming: %r" % streaming
-					resource = self._makeResource()
-					request = DummyRequest(postpath=[])
-					request.method = 'POST'
+			for streaming in (False, True):
+				##print "separator: %r" % separator, "streaming: %r" % streaming
+				resource = self._makeResource()
+				request = DummyRequest(postpath=[])
+				request.method = 'POST'
 
-					frame0 = _makeHelloFrameHttp(dict(
-						succeedsTransport=None,
-						streamingResponse=streaming))
-					frames = [
-						frame0,
-						StringFrame("box0"),
-						StringFrame("box1"),
-						StringFrame("box2"),
-					]
+				frame0 = _makeHelloFrameHttp(dict(
+					succeedsTransport=None,
+					streamingResponse=streaming))
+				frames = [
+					frame0,
+					StringFrame("box0"),
+					StringFrame("box1"),
+					StringFrame("box2"),
+				]
 
-					request.content = StringIO(
-						separator.join(f.encode() for f in frames) +
-						(separator if not missingLastSep else ''))
+				request.content = StringIO(
+					separator.join(f.encode() for f in frames) + separator)
 
-					out = resource.render(request)
-					self.assertEqual(server.NOT_DONE_YET, out)
+				out = resource.render(request)
+				self.assertEqual(server.NOT_DONE_YET, out)
 
-					encode = DelimitedStringDecoder.encode
-					self.assertEqual(['for(;;);\n', encode(SackFrame(2, ()).encode())], request.written)
-					self.assertEqual(0 if streaming else 1, request.finished)
+				encode = DelimitedStringDecoder.encode
+				self.assertEqual(['for(;;);\n', encode(SackFrame(2, ()).encode())], request.written)
+				self.assertEqual(0 if streaming else 1, request.finished)
 
-					stream = self.streamTracker.getStream('x'*26)
-					transport = stream.allSeenTransports[-1]
+				stream = self.streamTracker.getStream('x'*26)
+				transport = stream.allSeenTransports[-1]
 
-					expected = [
-						["notifyFinish"],
-						["transportOnline", transport, True, None],
-						["stringsReceived", transport, [(0, sf('box0')), (1, sf('box1')), (2, sf('box2'))]],
-						["getSACK"],
-					]
+				expected = [
+					["notifyFinish"],
+					["transportOnline", transport, True, None],
+					["stringsReceived", transport, [(0, sf('box0')), (1, sf('box1')), (2, sf('box2'))]],
+					["getSACK"],
+				]
 
-					if not streaming:
-						expected += [["transportOffline", transport]]
+				if not streaming:
+					expected += [["transportOffline", transport]]
 
-					self.aE(expected, stream.getNew())
+				self.aE(expected, stream.getNew())
 
-					self._resetStreamTracker()
+				self._resetStreamTracker()
+
+
+	def test_postBodyDoesNotEndInNewline(self):
+		"""
+		If the POST body does not end in a newline, the last non-terminated
+		"line" is ignored.
+		"""
+		resource = self._makeResource()
+		request = DummyRequest(postpath=[])
+		request.method = 'POST'
+
+		frame0 = _makeHelloFrameHttp(dict(
+			succeedsTransport=None,
+			streamingResponse=True))
+		frames = [
+			frame0,
+			StringFrame("box0"),
+			StringFrame("box1"),
+		]
+
+		request.content = StringIO(
+			'\n'.join(f.encode() for f in frames))
+
+		resource.render(request)
+		stream = self.streamTracker.getStream('x'*26)
+		transport = stream.allSeenTransports[-1]
+
+		expected = [
+			["notifyFinish"],
+			["transportOnline", transport, True, None],
+			["stringsReceived", transport, [(0, sf('box0'))]],
+			["getSACK"],
+		]
+		self.aE(expected, stream.getNew())
 
 
 	def _sendAnotherString(self, stream, request, streaming, expectedWritten):
@@ -2912,7 +2943,6 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 			out = resource.render(request)
 			self.assertEqual(server.NOT_DONE_YET, out)
-
 			self.assertEqual(['for(;;);\n'], request.written)
 
 			stream = self.streamTracker.getStream('x'*26)
@@ -2972,7 +3002,6 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			'\n'.join(f.encode() for f in frames) + '\n')
 
 		resource.render(request)
-
 		stream = self.streamTracker.getStream('x'*26)
 		transport = stream.allSeenTransports[-1]
 

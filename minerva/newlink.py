@@ -1294,7 +1294,8 @@ class ServerTransport(object):
 		# Proxies *might* strip whitespace around the request body, so add
 		# a newline if necessary.
 		if body and body[-1] != '\n':
-			body += '\n'
+			log.msg("Unusual: POST body did not end in newline for "
+				"%r from %r" % (request, request.client))
 
 		if '\r\n' in body:
 			body = body.replace('\r\n', '\n')
