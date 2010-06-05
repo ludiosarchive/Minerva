@@ -40,7 +40,7 @@ _postImportVars = vars().keys()
 
 class IMinervaProtocol(Interface):
 	"""
-	An interface for frame-based communication that abstracts
+	An interface for string-based communication that abstracts
 	away the Comet logic and transports.
 
 	This interface is analogous to L{twisted.internet.interfaces.IProtocol}
@@ -55,8 +55,8 @@ class IMinervaProtocol(Interface):
 	call stream.reset("reason why")
 
 	The simplest way to end dead Streams is to use an application-level
-	ping message that your client sends (say every 55 seconds), and
-	end the Stream if no such message has been received for 2 minutes.
+	ping message that your client application sends (say every 55 seconds),
+	and end the Stream if no such message has been received for 2 minutes.
 
 	TODO: expose a `primaryOnline` and `primaryOffline` or a similar
 	scheme to know some information about whether the client is even
@@ -78,8 +78,9 @@ class IMinervaProtocol(Interface):
 
 	def streamReset(whoReset, reasonString):
 		"""
-		Call when this stream has reset, either internally by Minerva server's Stream, or
-		a call to Stream.reset, or by a reset frame from the peer.
+		Called when this stream has reset, either internally by Minerva
+		server's Stream, or a call to Stream.reset, or by a reset frame
+		from the peer.
 
 		You must *not* raise any exception. Wrap your code in try/except if necessary.
 
@@ -87,8 +88,9 @@ class IMinervaProtocol(Interface):
 		C{WhoReset.{server_minerva,server_app,client_minerva,client_app}}.
 		@type whoReset: int
 
-		@param reasonString: why the L{Stream} has reset.
-		@type reasonString: ASCII (0x20-0x7E)-only C{str}
+		@param reasonString: textual reason why stream has reset.
+			String contains only bytes in inclusive range 0x20 - 0x7E.
+		@type reasonString: str
 		"""
 
 
@@ -97,7 +99,7 @@ class IMinervaProtocol(Interface):
 		Called whenever one or more strings are received.
 
 		You must *not* raise any exception. Wrap your code in try/except
-		if necessary.
+		if necessary. You may mutate the list and keep references to it.
 
 		This is `stringsReceived` instead of `stringReceived` only as an
 		optimization for CPython. The number of strings you will receive at

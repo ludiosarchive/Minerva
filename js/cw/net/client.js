@@ -109,20 +109,27 @@ cw.net.WhoReset = {
 
 
 /**
- * An interface for frame-based communication that abstracts
+ * An interface for string-based communication that abstracts
  * away the Comet logic and transports.
  *
  * This interface is analogous to {@code twisted.internet.interfaces.IProtocol}
  *
- * Your Minerva protocols should implement this.
- *
- * Note: if you call stream.reset, some (or all) of the boxes you
+ * Note: if you call stream.reset, some (or all) of the strings you
  * have recently sent may be lost. If you need a proper close, use
- * your own boxes to determine that it is safe to close, then call reset.
+ * your own application-level strings to determine that it is safe to
+ * close, then call reset.
  *
  * Note: the stream never ends due to inactivity (there
  * are no timeouts in Stream). If you want to end the stream,
  * call stream.reset("reason why")
+
+ * The simplest way to end dead Streams is to use an application-level
+ * ping message that your server application sends (say every 55 seconds),
+ * and end the Stream if no such message has been received for 2 minutes.
+ *
+ * TODO: expose a `primaryOnline` and `primaryOffline` or a similar
+ * scheme to know some information about whether the client is even
+ * connected to Minerva server.
  *
  * @interface
  */
@@ -135,6 +142,8 @@ cw.net.IMinervaProtocol = function() {
  *
  * You'll want to keep the stream around with {@code this.stream = stream}.
  *
+ * You must *not* raise any exception. Wrap your code in try/catch if necessary.
+ *
  * @param {!cw.net.Stream} stream the Stream that was just started.
  */
 cw.net.IMinervaProtocol.prototype.streamStarted = function(stream) {
@@ -142,21 +151,34 @@ cw.net.IMinervaProtocol.prototype.streamStarted = function(stream) {
 };
 
 /**
- * Called when this stream has ended.
+ * Called when this stream has reset, either internally by Minerva client's
+ * Stream, or a call to Stream.reset, or by a reset frame from the peer.
+ *
+ * You must *not* raise any Error. Wrap your code in try/catch if necessary.
  *
  * @param {!cw.net.WhoReset} whoReset Who reset the stream?
- * @param {string} reasonString The reason why stream has reset.
+ * @param {string} reasonString textual reason why stream has reset.
+ * 	String contains only characters in inclusive range 0x20 - 0x7E.
  */
 cw.net.IMinervaProtocol.prototype.streamReset = function(whoReset, reasonString) {
 
 };
 
 /**
- * Called whenever box(es) are received.
+ * Called whenever one or more strings are received.
  *
- * @param {!Array.<*>} boxes The received boxes.
+ * You must *not* throw any Error. Wrap your code in try/catch
+ * if necessary. You may mutate the Array and keep references
+ * to the Array and strings.
+ *
+ * This is `stringsReceived` instead of `stringReceived` only as an
+ * optimization for JScript. The number of strings you will receive at
+ * once is subject to variances in TCP activity. Do *not* rely on being
+ * called with a certain number of strings.
+ *
+ * @param {!Array.<string>} strings Array of received strings.
  */
-cw.net.IMinervaProtocol.prototype.stringsReceived = function(boxes) {
+cw.net.IMinervaProtocol.prototype.stringsReceived = function(strings) {
 
 };
 
