@@ -8,6 +8,7 @@ goog.provide('cw.net.Stream');
 
 goog.require('goog.string');
 goog.require('goog.Disposable');
+goog.require('cw.math');
 goog.require('cw.net.Queue');
 goog.require('cw.net.Incoming');
 goog.require('cw.net.HelloFrame');
@@ -365,3 +366,84 @@ cw.net.Stream.prototype.disposeInternal = function() {
 
 // notifyFinish?
 // producers?
+
+
+
+/**
+ * @enum {number}
+ * @private
+ */
+cw.net.TransportType_ = {
+	BROWSER_HTTP: 1,
+	FLASH_SOCKET: 2,
+	WEBSOCKET: 3
+};
+
+
+/**
+ * @param {!Object} clock Something that provides IWindowTime. TODO: use CallQueue instead?
+ * @param {!cw.net.TransportType_} transportType
+ * @param {string} endpoint
+ *
+ * @constructor
+ * @extends {goog.Disposable}
+ * @private
+ */
+cw.net.Transport = function(clock, transportType, endpoint) {
+	goog.Disposable.call(this);
+
+	/**
+	 * @type {!Object}
+	 * @private
+	 */
+	this.clock_ = clock;
+
+	/**
+	 * @type {!cw.net.TransportType_}
+	 * @private
+	 */
+	this.transportType_ = transportType;
+
+	/**
+	 * @type {string}
+	 * @private
+	 */
+	this.endpoint_ = endpoint;
+
+	/**
+	 * Very temporary send buffer, always [] before returning control
+	 * to browser event loop.
+	 * @type {!Array.<string>}
+	 * @private
+	 */
+	this.toSend_ = [];
+};
+goog.inherits(cw.net.Stream, goog.Disposable);
+
+/**
+ * The number of frames we have received from the peer, minus 1.
+ * @type {number}
+ * @private
+ */
+cw.net.Transport.prototype.receivedCounter_ = -1;
+
+/**
+ * The seqNum of the next string we might send to the peer, minus 1.
+ * @type {number}
+ * @private
+ */
+cw.net.Transport.prototype.lastBoxSent_ = -1;
+
+/**
+ * The seqNum of the next string we might receive from the peer, minus 1.
+ * @type {number}
+ * @private
+ */
+cw.net.Transport.prototype.seqNum_ = -1;
+
+/**
+ * The value of the last `start` parameter passed to `Transport.writeStrings`.
+ * @type {number}
+ * @private
+ */
+cw.net.Transport.prototype.lastStartParam_ = cw.math.LARGER_THAN_LARGEST_INTEGER;
