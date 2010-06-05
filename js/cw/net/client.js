@@ -5,6 +5,7 @@
 goog.provide('cw.net.WhoReset');
 goog.provide('cw.net.IMinervaProtocol');
 goog.provide('cw.net.Stream');
+goog.provide('cw.net.ClientTransport');
 
 goog.require('goog.string');
 goog.require('goog.Disposable');
@@ -381,6 +382,9 @@ cw.net.TransportType_ = {
 
 
 /**
+ * Differences between Py Minerva's SocketTransport and JS Minerva's Transport:
+ * 	- ...
+ *
  * @param {!Object} clock Something that provides IWindowTime. TODO: use CallQueue instead?
  * @param {!cw.net.TransportType_} transportType
  * @param {string} endpoint
@@ -389,7 +393,7 @@ cw.net.TransportType_ = {
  * @extends {goog.Disposable}
  * @private
  */
-cw.net.Transport = function(clock, transportType, endpoint) {
+cw.net.ClientTransport = function(clock, transportType, endpoint) {
 	goog.Disposable.call(this);
 
 	/**
@@ -418,32 +422,32 @@ cw.net.Transport = function(clock, transportType, endpoint) {
 	 */
 	this.toSend_ = [];
 };
-goog.inherits(cw.net.Stream, goog.Disposable);
+goog.inherits(cw.net.ClientTransport, goog.Disposable);
 
 /**
  * The number of frames we have received from the peer, minus 1.
  * @type {number}
  * @private
  */
-cw.net.Transport.prototype.receivedCounter_ = -1;
+cw.net.ClientTransport.prototype.receivedCounter_ = -1;
 
 /**
  * The seqNum of the next string we might send to the peer, minus 1.
  * @type {number}
  * @private
  */
-cw.net.Transport.prototype.lastBoxSent_ = -1;
+cw.net.ClientTransport.prototype.lastBoxSent_ = -1;
 
 /**
  * The seqNum of the next string we might receive from the peer, minus 1.
  * @type {number}
  * @private
  */
-cw.net.Transport.prototype.seqNum_ = -1;
+cw.net.ClientTransport.prototype.seqNum_ = -1;
 
 /**
- * The value of the last `start` parameter passed to `Transport.writeStrings`.
+ * The value of the last `start` parameter passed to `ClientTransport.writeStrings`.
  * @type {number}
  * @private
  */
-cw.net.Transport.prototype.lastStartParam_ = cw.math.LARGER_THAN_LARGEST_INTEGER;
+cw.net.ClientTransport.prototype.lastStartParam_ = cw.math.LARGER_THAN_LARGEST_INTEGER;
