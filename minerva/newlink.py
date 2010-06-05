@@ -914,10 +914,7 @@ class SocketTransport(object):
 
 
 	def _encodeFrame(self, frame):
-		if self._mode == HTTP:
-			return frame.encode() + '\n'
-		elif self._mode in (BENCODE, INT32):
-			return self._parser.encode(frame.encode())
+		return self._parser.encode(frame.encode())
 
 
 	@mailboxify('_mailbox')
