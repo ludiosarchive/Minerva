@@ -984,19 +984,16 @@ class ServerTransport(object):
 			self._lastStartParam = start
 
 		# Even if there's a lot of stuff in the queue, write everything.
-		lastBox = self.ourSeqNum
 		for seqNum, string in queue.iterItems(start):
-			##print seqNum, string, lastBox
+			##print seqNum, string, self.ourSeqNum
 			# This might have to change if design change requires that we
 			# sometimes write the same string twice.
-			if seqNum <= lastBox:
+			if seqNum <= self.ourSeqNum:
 				continue
-			if lastBox == -1 or lastBox + 1 != seqNum:
+			if self.ourSeqNum == -1 or self.ourSeqNum + 1 != seqNum:
 				self._toSend += self._encodeFrame(SeqNumFrame(seqNum))
 			self._toSend += self._encodeFrame(StringFrame(string))
-			lastBox = seqNum
-
-		self.ourSeqNum = lastBox
+			self.ourSeqNum = seqNum
 
 
 	@mailboxify('_mailbox')
