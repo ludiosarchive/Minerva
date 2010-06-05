@@ -861,7 +861,7 @@ class SocketTransport(object):
 		self.lastBoxSent = \
 		self._seqNum = \
 		self.receivedCounter = -1
-		self._lastStartParam = 2**128
+		self._lastStartParam = 2**64
 		self._mode = UNKNOWN
 		# _initialBuffer buffers data while determining the mode
 		self._initialBuffer = \
