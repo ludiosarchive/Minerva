@@ -23,6 +23,7 @@ goog.require('goog.array');
 goog.require('cw.checktype');
 goog.require('cw.string');
 goog.require('cw.repr');
+goog.require('cw.math');
 goog.require('cw.eq');
 
 
@@ -50,22 +51,6 @@ cw.net.InvalidHello = function(msg) {
 };
 goog.inherits(cw.net.InvalidHello, cw.net.InvalidFrame);
 cw.net.InvalidHello.prototype.name = 'cw.net.InvalidHello';
-
-
-/**
- * The largest integer that can be represented in JavaScript without
- * losing integral precision.
- * @private
- */
-cw.net.LARGEST_INTEGER_ = Math.pow(2, 53);
-
-
-/**
- * A number larger than the largest integer than can be represented
- * in JavaScript. Note: the ` + 1`ed number is not larger.
- * @private
- */
-cw.net.LARGER_THAN_LARGEST_INTEGER_ = cw.net.LARGEST_INTEGER_ + 2;
 
 
 /**
@@ -114,7 +99,7 @@ cw.net.AllHttpFormats_ = [
  * @private
  */
 cw.net.ensureNonNegIntegralInt_ = function(value) {
-	return cw.checktype.ensureIntInRange(value, 0, cw.net.LARGEST_INTEGER_);
+	return cw.checktype.ensureIntInRange(value, 0, cw.math.LARGEST_INTEGER);
 };
 
 
@@ -232,7 +217,7 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 
 	// maxReceiveBytes is optional and has no limit by default
 	var maxReceiveBytes = cw.net.ensureNonNegIntegralInt_(
-		helloData.get(HP.maxReceiveBytes, cw.net.LARGEST_INTEGER_));
+		helloData.get(HP.maxReceiveBytes, cw.math.LARGEST_INTEGER));
 	if(maxReceiveBytes == null) {
 		throw new cw.net.InvalidHello("bad maxReceiveBytes");
 	}
@@ -240,7 +225,7 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 
 	// maxOpenTime is optional and has no limit by default
 	var maxOpenTime = cw.net.ensureNonNegIntegralInt_(
-		helloData.get(HP.maxOpenTime, cw.net.LARGEST_INTEGER_));
+		helloData.get(HP.maxOpenTime, cw.math.LARGEST_INTEGER));
 	if(maxOpenTime == null) {
 		throw new cw.net.InvalidHello("bad maxOpenTime");
 	}
@@ -499,7 +484,7 @@ cw.net.SeqNumFrame.prototype.__reprToPieces__ = function(sb) {
 cw.net.SeqNumFrame.decode = function(frameString) {
 	var seqNum = cw.string.strToNonNegLimit(
 		cw.string.withoutLast(frameString, 1),
-		cw.net.LARGEST_INTEGER_);
+		cw.math.LARGEST_INTEGER);
 	if(seqNum == null) {
 		throw new cw.net.InvalidFrame("bad seqNum");
 	}
@@ -528,7 +513,7 @@ cw.net.sackStringToSackFrame_ = function(sackString) {
 	}
 
 	var ackNumber = cw.string.strToIntInRange(
-		parts[1], -1, cw.net.LARGEST_INTEGER_);
+		parts[1], -1, cw.math.LARGEST_INTEGER);
 
 	if(ackNumber == null) {
 		return null;
@@ -539,7 +524,7 @@ cw.net.sackStringToSackFrame_ = function(sackString) {
 	if(parts[0]) {
 		var sackListStrs = parts[0].split(',');
 		for(var i=0, len=sackListStrs.length; i < len; i++) {
-			var sackNum = cw.string.strToNonNegLimit(sackListStrs[i], cw.net.LARGEST_INTEGER_);
+			var sackNum = cw.string.strToNonNegLimit(sackListStrs[i], cw.math.LARGEST_INTEGER);
 			if(sackNum == null) {
 				return null;
 			}

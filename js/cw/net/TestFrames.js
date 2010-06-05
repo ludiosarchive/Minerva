@@ -11,6 +11,7 @@ goog.require('goog.string');
 goog.require('goog.asserts');
 goog.require('goog.reflect');
 goog.require('goog.structs.Map');
+goog.require('cw.math');
 goog.require('cw.repr');
 goog.require('cw.string');
 goog.require('cw.net.HelloFrame');
@@ -154,7 +155,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 	function test_decodeFailedBadEedsArgument(self) {
 		var badEedsArguments = [
 			-1, -Math.pow(2, 32), -0.5,
-			cw.net.LARGER_THAN_LARGEST_INTEGER_, "4", true, false, [], {}];
+			cw.math.LARGER_THAN_LARGEST_INTEGER, "4", true, false, [], {}];
 
 		goog.array.forEach(badEedsArguments, function(succeedsTransport) {
 			var s = cw.net.TestFrames.makeHelloFrame_(
@@ -222,7 +223,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 
 		var genericBad = [
 			-Math.pow(2, 65), -1, -0.5, 0.5,
-			cw.net.LARGER_THAN_LARGEST_INTEGER_, "", [], ["something"],
+			cw.math.LARGER_THAN_LARGEST_INTEGER, "", [], ["something"],
 			anObject, true, false, null];
 
 		var concat = goog.array.concat;
@@ -375,7 +376,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SeqNumFrameTests').methods(
 		var strings = [
 			String(-1) + 'N',
 			String(-Math.pow(2, 53)) + 'N',
-			String(cw.net.LARGER_THAN_LARGEST_INTEGER_) + 'N',
+			String(cw.math.LARGER_THAN_LARGEST_INTEGER) + 'N',
 			'00' + 'N',
 			goog.string.repeat('0', 1024),
 			' '
@@ -431,7 +432,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SackFrameTests').methods(
 	},
 
 	function test_decodeFailedAckNumberInvalid(self) {
-		goog.array.forEach([cw.net.LARGER_THAN_LARGEST_INTEGER_, -2, -1.01, 0.5, 1.5], function(badNum) {
+		goog.array.forEach([cw.math.LARGER_THAN_LARGEST_INTEGER, -2, -1.01, 0.5, 1.5], function(badNum) {
 			var s = '1,4|' + badNum + 'A';
 			self.assertThrows(
 				InvalidFrame,
@@ -440,7 +441,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SackFrameTests').methods(
 	},
 
 	function test_decodeFailedOneSackNumberInvalid(self) {
-		goog.array.forEach([cw.net.LARGER_THAN_LARGEST_INTEGER_, -1, 0.5, 1.5], function(badNum) {
+		goog.array.forEach([cw.math.LARGER_THAN_LARGEST_INTEGER, -1, 0.5, 1.5], function(badNum) {
 			var s = '1,' + badNum + '|4A';
 			self.assertThrows(
 				InvalidFrame,
