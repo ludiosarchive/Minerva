@@ -1317,7 +1317,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.assertIn('terminating=False', r)
 		self.assertIn('stream=None', r)
 		self.assertIn('paused=False', r)
-		self.assertIn('lastBoxSent=-1', r)
+		self.assertIn('ourSeqNum=-1', r)
 
 
 	def test_writeStringsStartNone(self):

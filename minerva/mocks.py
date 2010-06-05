@@ -368,7 +368,7 @@ class MockMinervaProtocolFactory(object):
 class DummySocketLikeTransport(_MockMixin):
 	request = None
 	globalCounter = [-1]
-	lastBoxSent = -1
+	ourSeqNum = -1
 	_paused = False
 
 	def __init__(self, request=None):
@@ -406,14 +406,14 @@ class DummySocketLikeTransport(_MockMixin):
 	def writeStrings(self, queue, start):
 		self.log.append(['writeStrings', queue, start])
 
-		lastBox = self.lastBoxSent
+		lastBox = self.ourSeqNum
 		for seqNum, string in queue.iterItems(start=start):
 			if lastBox == -1 or lastBox + 1 != seqNum:
 				pass
 				##toSend += self._encodeFrame(SeqNumFrame(seqNum))
 			##toSend += self._encodeFrame(StringFrame(string))
 			lastBox = seqNum
-		self.lastBoxSent = lastBox
+		self.ourSeqNum = lastBox
 
 
 	def registerProducer(self, producer, streaming):

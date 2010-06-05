@@ -423,14 +423,14 @@ cw.net.ClientTransport.prototype.receivedCounter_ = -1;
  * @type {number}
  * @private
  */
-cw.net.ClientTransport.prototype.lastBoxSent_ = -1;
+cw.net.ClientTransport.prototype.ourSeqNum_ = -1;
 
 /**
  * The seqNum of the next string we might receive from the peer, minus 1.
  * @type {number}
  * @private
  */
-cw.net.ClientTransport.prototype.seqNum_ = -1;
+cw.net.ClientTransport.prototype.peerSeqNum_ = -1;
 
 /**
  * The value of the last `start` parameter passed to `ClientTransport.writeStrings`.

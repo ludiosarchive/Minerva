@@ -416,7 +416,7 @@ class Stream(object):
 		# Remember streamStarted can do anything to us, including reset or sendStrings.
 
 		# TODO: do we really need _primaryTransport to still be connected?
-		# Can't we just remember what its transportNumber and lastBoxSent were?
+		# Can't we just remember what its transportNumber and ourSeqNum were?
 		# That way, a transport can succeed the older even if it was disconnected
 		# in the meantime.
 		if wantsStrings and not self.disconnected:
@@ -424,8 +424,8 @@ class Stream(object):
 			succeedsTransport is not None and \
 			self._primaryTransport and \
 			succeedsTransport == self._primaryTransport.transportNumber and \
-			self._primaryTransport.lastBoxSent != -1:
-				self._pretendAcked = self._primaryTransport.lastBoxSent
+			self._primaryTransport.ourSeqNum != -1:
+				self._pretendAcked = self._primaryTransport.ourSeqNum
 			self._newPrimary(transport)
 			self._tryToSend()
 
@@ -750,7 +750,7 @@ class StreamTracker(object):
 # It could, in theory, buffer all the information it gets without caring about TCP pressure at all.
 class IMinervaTransport(ISimpleConsumer):
 
-	lastBoxSent = Attribute(
+	ourSeqNum = Attribute(
 		"Sequence number of the last string written to the socket/request, "
 		"or -1 if no strings ever written")
 
@@ -846,7 +846,7 @@ class ServerTransport(object):
 	implements(IMinervaTransport, IPushProducer, IPullProducer) # Almost an IProtocol, but has no connectionMade
 
 	__slots__ = (
-		'_mailbox', 'lastBoxSent', '_lastStartParam', '_mode', '_seqNum',
+		'_mailbox', 'ourSeqNum', '_lastStartParam', '_mode', '_peerSeqNum',
 		'_initialBuffer', '_toSend', 'writable', 'connected', 'receivedCounter',
 		'_terminating', '_paused', '_stream', '_producer', '_parser',
 		'streamId', 'credentialsData', 'transportNumber', 'factory',
@@ -860,8 +860,8 @@ class ServerTransport(object):
 	def __init__(self):
 		self._mailbox = Mailbox(self._stoppedSpinning)
 
-		self.lastBoxSent = \
-		self._seqNum = \
+		self.ourSeqNum = \
+		self._peerSeqNum = \
 		self.receivedCounter = -1
 		self._lastStartParam = 2**64
 		self._mode = UNKNOWN
@@ -883,9 +883,9 @@ class ServerTransport(object):
 
 
 	def __repr__(self):
-		return '<%s 0x%x terminating=%r, stream=%r, paused=%r, lastBoxSent=%r>' % (
+		return '<%s 0x%x terminating=%r, stream=%r, paused=%r, ourSeqNum=%r>' % (
 			self.__class__.__name__, id(self),
-			self._terminating, self._stream, self._paused, self.lastBoxSent)
+			self._terminating, self._stream, self._paused, self.ourSeqNum)
 
 
 	def _stoppedSpinning(self):
@@ -980,11 +980,11 @@ class ServerTransport(object):
 		# See test_writeStringsConnectionInterleavingSupport
 		# Remember that None < any number
 		if start < self._lastStartParam:
-			self.lastBoxSent = -1
+			self.ourSeqNum = -1
 			self._lastStartParam = start
 
 		# Even if there's a lot of stuff in the queue, write everything.
-		lastBox = self.lastBoxSent
+		lastBox = self.ourSeqNum
 		for seqNum, string in queue.iterItems(start):
 			##print seqNum, string, lastBox
 			# This might have to change if design change requires that we
@@ -996,7 +996,7 @@ class ServerTransport(object):
 			self._toSend += self._encodeFrame(StringFrame(string))
 			lastBox = seqNum
 
-		self.lastBoxSent = lastBox
+		self.ourSeqNum = lastBox
 
 
 	@mailboxify('_mailbox')
@@ -1117,11 +1117,11 @@ class ServerTransport(object):
 					break
 
 			elif frameType == StringFrame:
-				self._seqNum += 1
+				self._peerSeqNum += 1
 				# Because we may have received multiple Minerva strings, collect
 				# them into a list and then deliver them all at once to Stream.
 				# This does *not* add any latency. It does reduce the number of funcalls.
-				bunchedStrings[0].append((self._seqNum, frame.string))
+				bunchedStrings[0].append((self._peerSeqNum, frame.string))
 
 			elif frameType == SackFrame:
 				if self._stream.sackReceived((frame.ackNumber, frame.sackList)):
@@ -1130,7 +1130,7 @@ class ServerTransport(object):
 					break
 
 			elif frameType == SeqNumFrame:
-				self._seqNum = frame.seqNum - 1
+				self._peerSeqNum = frame.seqNum - 1
 
 			# TODO: support "start timestamps", "stop timestamps" frames
 
