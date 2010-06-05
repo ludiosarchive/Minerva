@@ -43,7 +43,7 @@ class IMinervaProtocol(Interface):
 	An interface for frame-based communication that abstracts
 	away the Comet logic and transports.
 
-	I'm analogous to L{twisted.internet.interfaces.IProtocol}
+	This interface is analogous to L{twisted.internet.interfaces.IProtocol}
 
 	Note: if you call stream.reset, some (or all) of the strings you
 	have recently sent may be lost. If you need a proper close, use
@@ -52,7 +52,7 @@ class IMinervaProtocol(Interface):
 
 	Note: the stream never ends due to inactivity (there
 	are no timeouts in Stream). If you want to end the stream,
-	call stream.reset(u"reason why")
+	call stream.reset("reason why")
 
 	The simplest way to end dead Streams is to use an application-level
 	ping message that your client sends (say every 55 seconds), and

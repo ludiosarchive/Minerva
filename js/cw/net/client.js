@@ -109,10 +109,10 @@ cw.net.WhoReset = {
 
 
 /**
- * (copied from minerva/newlink.py)
- *
  * An interface for frame-based communication that abstracts
  * away the Comet logic and transports.
+ *
+ * This interface is analogous to {@code twisted.internet.interfaces.IProtocol}
  *
  * Your Minerva protocols should implement this.
  *
@@ -122,9 +122,7 @@ cw.net.WhoReset = {
  *
  * Note: the stream never ends due to inactivity (there
  * are no timeouts in Stream). If you want to end the stream,
- * call stream.reset(u"reason why")
- *
- * I'm analogous to {@code twisted.internet.interfaces.IProtocol}
+ * call stream.reset("reason why")
  *
  * @interface
  */
