@@ -758,7 +758,9 @@ class IMinervaTransport(ISimpleConsumer):
 	def writeStrings(queue, start):
 		"""
 		Write strings in queue C{queue} to the peer.
-		This never writes strings that were already written to the peer.
+		This usually does not write strings that were already written to
+		the peer over this transport. The exception is when `start` is
+		now lower (or None) compared to the previous `start`.
 
 		@param queue: an L{abstract.Queue}
 		@param start: where to start in the queue, or C{None}
