@@ -187,50 +187,8 @@ cw.net.IMinervaProtocol.prototype.stringsReceived = function(strings) {
 
 
 /**
- * Implemented by Minerva transports. You shouldn't need this.
- *
- * @private
- * @interface
- *
- * TODO: all transports must be Disposable?
- */
-cw.net.IMinervaTransport = function() {
-
-};
-// lastBoxSent attribute?
-
-/**
- * Write boxes in queue `queue` to the peer.
- * This never writes boxes that were already written to the peer over this transport
- * (because all transports are TCP-reliable).
- *
- * @param {!cw.net.Queue} queue
- */
-cw.net.IMinervaTransport.prototype.writeStrings_ = function(queue) { // No 'start' argument unlike newlink.py
-
-};
-
-/**
- * Close this transport. Usually happens if the transport is no longer
- * useful.
- */
-cw.net.IMinervaTransport.prototype.closeGently_ = function() {
-
-};
-
-/**
- * The stream that this transport is related to is resetting. Transport
- * must notify peer of the reset.
- *
- * @param {string} reasonString A plain-English reason why the stream is resetting
- */
-cw.net.IMinervaTransport.prototype.reset_ = function(reasonString) {
-
-};
-
-
-/**
  * @return {string} A random streamId, usually with 25 or 26 characters.
+ * @private
  */
 cw.net.makeStreamId_ = function() {
 	return goog.string.getRandomString() + goog.string.getRandomString();
@@ -321,7 +279,7 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 /**
  * Send strings `strings` to the peer.
  *
- * @param {!Array.<*>} strings Strings to send.
+ * @param {!Array.<string>} strings Strings to send.
  */
 cw.net.Stream.prototype.sendStrings = function(strings) {
 	if(!strings) {
@@ -341,10 +299,10 @@ cw.net.Stream.prototype.reset = function(reasonString) {
 };
 
 /**
- * Called by transports to tell me that it has received boxes.
+ * Called by transports to tell me that it has received strings.
  *
  * @param {!Object} transport The transport that received these boxes.
- * @param {Array.<*>} boxes In-order boxes that transport has received.
+ * @param {Array.<string>} boxes In-order strings that transport has received.
  */
 cw.net.Stream.prototype.stringsReceived = function(transport, boxes) {
 	1/0
@@ -352,9 +310,9 @@ cw.net.Stream.prototype.stringsReceived = function(transport, boxes) {
 
 /**
  * Called by transports to tell me that server has received at least some of
- * our C2S boxes.
+ * our C2S strings.
  *
- * @param {!Array.<*>} sackInfo
+ * @param {!cw.net.SACKTuple} sackInfo
  */
 cw.net.Stream.prototype.sackReceived = function(sackInfo) {
 	1/0
@@ -383,6 +341,7 @@ cw.net.TransportType_ = {
 
 /**
  * Differences between Py Minerva's ServerTransport and JS Minerva's ClientTransport:
+ * 	- We have no Interface defined for ClientTransport.
  * 	- ClientTransport makes connections, ServerTransport receives connections.
  * 	- ClientTransport deals with unicode strings (though restricted in range),
  * 		ServerTransport deals with bytes.
@@ -390,12 +349,14 @@ cw.net.TransportType_ = {
  * @param {!Object} clock Something that provides IWindowTime. TODO: use CallQueue instead?
  * @param {!cw.net.TransportType_} transportType
  * @param {string} endpoint
+ * @param {boolean} becomePrimary Should this transport try to become primary
+ * 	transport?
  *
  * @constructor
  * @extends {goog.Disposable}
  * @private
  */
-cw.net.ClientTransport = function(clock, transportType, endpoint) {
+cw.net.ClientTransport = function(clock, transportType, endpoint, becomePrimary) {
 	goog.Disposable.call(this);
 
 	/**
@@ -423,6 +384,30 @@ cw.net.ClientTransport = function(clock, transportType, endpoint) {
 	 * @private
 	 */
 	this.toSend_ = [];
+
+	/**
+	 * Should this transport try to become primary transport?
+	 * If true, we'll send a HelloFrame that says we want to receive strings,
+	 * 	and the transport may or may not stay open for a while.
+	 * If false,
+	 * 	for HTTP transports: we'll make a request (possibly with some
+	 * 		C2S strings) and the server will close it because the transport
+	 * 		is not receiving strings.
+	 * 	for non-HTTP transports: we'll make a connection. Stream will
+	 * 		be able to continue to send strings over it. Stream can
+	 * 		call ClientTransport.close_ to close it at any time.
+	 * @type {boolean}
+	 * @private
+	 */
+	this.becomePrimary_ = becomePrimary;
+
+	/**
+	 * Can this transport send more strings after it has been started?
+	 * @type {boolean}
+	 * @private
+	 */
+	this.canSendMoreAfterStarted_ = (
+		transportType != cw.net.TransportType_.BROWSER_HTTP);
 };
 goog.inherits(cw.net.ClientTransport, goog.Disposable);
 
@@ -453,3 +438,44 @@ cw.net.ClientTransport.prototype.seqNum_ = -1;
  * @private
  */
 cw.net.ClientTransport.prototype.lastStartParam_ = cw.math.LARGER_THAN_LARGEST_INTEGER;
+
+/**
+ * Start the transport. Make the initial connection/HTTP request.
+ * @param {!cw.net.Queue} queue Queue containing strings to send.
+ * 	For transports that support streaming upload (not HTTP), you can send
+ * 	more items later with {@link #writeStrings}.
+ * @private
+ */
+cw.net.ClientTransport.prototype.start_ = function(queue) {
+	1/0
+};
+
+/**
+ * Write boxes in queue `queue` to the peer.
+ * This never writes boxes that were already written to the peer over this transport
+ * (because all transports are TCP-reliable).
+ *
+ * @param {!cw.net.Queue} queue Queue containing strings to send.
+ * @param {?number} start
+ * @private
+ */
+cw.net.ClientTransport.prototype.writeStrings_ = function(queue, start) {
+	1/0
+};
+
+/**
+ * Close this transport for any reason.
+ * @private
+ */
+cw.net.ClientTransport.prototype.close_ = function() {
+	1/0
+};
+
+/**
+ * Send a reset frame over this transport, then close.
+ * @param {string} reasonString Textual reason why Stream is resetting.
+ * @private
+ */
+cw.net.ClientTransport.prototype.reset_ = function(reasonString) {
+	1/0
+};

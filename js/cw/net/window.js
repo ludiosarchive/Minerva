@@ -5,6 +5,7 @@
 
 goog.provide('cw.net.Incoming');
 goog.provide('cw.net.Queue');
+goog.provide('cw.net.SACKTuple')
 
 goog.require('cw.objsize');
 goog.require('goog.asserts');
@@ -17,7 +18,7 @@ goog.require('goog.structs.Map');
  * // TODO: types for tuples
  * @private
  */
-cw.net.SACKTuple_ = goog.typedef;
+cw.net.SACKTuple = goog.typedef;
 
 
 /**
@@ -132,7 +133,7 @@ cw.net.Queue.prototype.getItems = function(start) {
 /**
  * Remove all items that are no longer needed, based on {@code sackInfo}.
  *
- * @param {!cw.net.SACKTuple_} sackInfo A SACK tuple
+ * @param {!cw.net.SACKTuple} sackInfo A SACK tuple
  * @return {boolean} True if ackNumber or any sackNumber was higher
  * than the highest seqNum in the queue. This would indicate a
  * "bad SACK". Note that as many items as possible are removed
@@ -304,7 +305,7 @@ cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
 
 
 /**
- * @return {!cw.net.SACKTuple_}
+ * @return {!cw.net.SACKTuple}
  *
  * Caller may modify the returned Array.
  */
