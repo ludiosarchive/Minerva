@@ -665,7 +665,7 @@ usually know about each other (have references).
 
 *	MinervaProtocol
 *	Stream
-*	\*Transport (i.e. SocketTransport, XhrTransport, ScriptTransport)
+*	ServerTransport
 *	(Twisted) - refers to either the TCP transport or to a ``twisted.web.http.Request``.
 	Both have a ``registerProducer`` method.
 

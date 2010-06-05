@@ -382,8 +382,10 @@ cw.net.TransportType_ = {
 
 
 /**
- * Differences between Py Minerva's SocketTransport and JS Minerva's Transport:
- * 	- ...
+ * Differences between Py Minerva's ServerTransport and JS Minerva's ClientTransport:
+ * 	- ClientTransport makes connections, ServerTransport receives connections.
+ * 	- ClientTransport deals with unicode strings (though restricted in range),
+ * 		ServerTransport deals with bytes.
  *
  * @param {!Object} clock Something that provides IWindowTime. TODO: use CallQueue instead?
  * @param {!cw.net.TransportType_} transportType

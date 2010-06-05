@@ -33,7 +33,7 @@ from minerva.newlink import (
 	Stream, StreamTracker, NoSuchStream, WhoReset,
 	StreamAlreadyExists, ISimpleConsumer, IMinervaProtocol,
 	IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
-	IMinervaTransport, SocketTransport, SocketFace, HttpFace,
+	IMinervaTransport, ServerTransport, SocketFace, HttpFace,
 )
 
 from minerva.frames import (
@@ -59,7 +59,7 @@ from minerva.mocks import (
 )
 
 
-class SlotlessSocketTransport(SocketTransport):
+class SlotlessSocketTransport(ServerTransport):
 	# No __slots__ so that .getNew can be assigned on it
 	pass
 
@@ -1157,7 +1157,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 	def test_unknownModeCausesClose(self):
 		"""
 		If we send a bunch of nonsense during the mode-detection stage,
-		the SocketTransport disconnects us, without writing anything.
+		the ServerTransport disconnects us, without writing anything.
 		"""
 		toSend = ' ' * 512
 		for packetSize in [1, 2, 200, 511, 512]:
@@ -1253,18 +1253,18 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 class TransportIsHttpTests(unittest.TestCase):
 
 	def test_isHttpUnknown(self):
-		transport = SocketTransport()
+		transport = ServerTransport()
 		self.aR(RuntimeError, lambda: transport.isHttp())
 
 
 	def test_isHttpNegative(self):
-		transport = SocketTransport()
+		transport = ServerTransport()
 		transport.makeConnection(DummyTCPTransport())
 		self.aE(False, transport.isHttp())
 
 
 	def test_isHttpPositive(self):
-		transport = SocketTransport()
+		transport = ServerTransport()
 		request = http.Request(DummyChannel(), False)
 		request.content = StringIO("yow")
 		transport.requestStarted(request)
@@ -1936,7 +1936,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_transportOfflineNotCalledIfNeverAuthed(self):
 		"""
-		A regression test: make sure SocketTransport only calls transportOffline
+		A regression test: make sure ServerTransport only calls transportOffline
 		if it called transportOnline.
 		"""
 		frame0 = _makeHelloFrame()
@@ -2015,7 +2015,7 @@ class SocketTransportTestsWithInt32(_BaseSocketTransportTests, unittest.TestCase
 
 class TransportProducerTests(unittest.TestCase):
 	"""
-	Tests for L{newlink.SocketTransport}'s producer logic.
+	Tests for L{newlink.ServerTransport}'s producer logic.
 	"""
 	def setUp(self):
 		reactor = FakeReactor()
@@ -2179,7 +2179,7 @@ class BasicMinervaFactoryTests(unittest.TestCase):
 
 class IntegrationTests(_BaseHelpers, unittest.TestCase):
 	"""
-	Test SocketFace/SocketTransport/StreamTracker/Stream integration.
+	Test SocketFace/ServerTransport/StreamTracker/Stream integration.
 	"""
 	def _makeTransport(self):
 		parser = Int32StringDecoder(maxLength=1024*1024)
@@ -2371,7 +2371,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 	# TODO: test that out-of-order StringFrames that might hit the Incoming
 	# item limit do not hit the Incoming item limit because they are sorted
-	# by SocketTransport.
+	# by ServerTransport.
 
 
 	def test_clientSendsAlreadyReceivedBoxes(self):
@@ -2989,7 +2989,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			["transportOffline", transport],
 		], stream.getNew())
 
-		# SocketTransport did not call .finish(), because Request was already
+		# ServerTransport did not call .finish(), because Request was already
 		# disconnected.
 		self.assertEqual(0, request.finished)
 

@@ -824,14 +824,14 @@ def sanitizeHelloFrame(helloFrame, isHttp):
 
 
 
-# Acceptable protocol modes for SocketTransport to be in. Int32* are for Flash Socket.
+# Acceptable protocol modes for ServerTransport to be in. Int32* are for Flash Socket.
 UNKNOWN, POLICYFILE, INT32, INT32CRYPTO, WEBSOCKET, BENCODE, HTTP = range(7)
 
 # TODO: We'll need to make sure it's impossible for an attacker to downgrade "int32+crypto"
 # down to "int32"
 
 
-class SocketTransport(object):
+class ServerTransport(object):
 	"""
 	This is private. Use SocketFace, which will build this Protocol.
 
@@ -1369,7 +1369,7 @@ class SocketFace(protocol.ServerFactory):
 	implements(IProtocolFactory)
 	__slots__ = ('_clock', 'streamTracker', 'firewall', 'policyStringWithNull')
 
-	protocol = SocketTransport
+	protocol = ServerTransport
 
 	def __init__(self, clock, streamTracker, firewall, policyString=None):
 		"""
@@ -1422,7 +1422,7 @@ class SocketFace(protocol.ServerFactory):
 class HttpFace(resource.Resource):
 	__slots__ = ('_clock', 'streamTracker', 'firewall')
 	isLeaf = True
-	protocol = SocketTransport
+	protocol = ServerTransport
 
 	def __init__(self, clock, streamTracker, firewall):
 		resource.Resource.__init__(self)
