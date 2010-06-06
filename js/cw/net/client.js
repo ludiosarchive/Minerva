@@ -301,11 +301,23 @@ cw.net.Stream.prototype.sendStrings = function(strings) {
 };
 
 /**
- * Reset (disconnect) with reason `reasonString`.
+ * Reset with reason `reasonString`.
  *
  * @param {string} reasonString Reason why resetting the stream
  */
 cw.net.Stream.prototype.reset = function(reasonString) {
+	1/0
+};
+
+/**
+ * ClientTransport calls this when it gets a reset frame from client.
+ * ClientTransport still needs to call transportOffline after this.
+ *
+ * @param {string} reasonString
+ * @param {boolean} applicationLevel
+ * @private
+ */
+cw.net.Stream.prototype.resetFromClient_ = function(reasonString, applicationLevel) {
 	1/0
 };
 
@@ -472,6 +484,14 @@ cw.net.ClientTransport.prototype.peerSeqNum_ = -1;
 cw.net.ClientTransport.prototype.lastStartParam_ = cw.math.LARGER_THAN_LARGEST_INTEGER;
 
 /**
+ * @param {!Array.<string>} strings
+ * @private
+ */
+cw.net.ClientTransport.prototype.handleStrings_ = function(strings) {
+
+};
+
+/**
  * @param {!Array.<string>} frames
  * @private
  */
@@ -497,10 +517,20 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 				logger.finest("closing soon because got YouCloseItFrame");
 				closeSoon = true;
 				break;
-			} else if(frame instanceof cw.net.ResetFrame) {
-				1/0
 			} else if(frame instanceof cw.net.TransportKillFrame) {
 				1/0
+			} else if(frame instanceof cw.net.PaddingFrame) {
+				// Ignore it
+			} else {
+				if(strings) {
+					this.handleStrings_(strings);
+				}
+				if(frame instanceof cw.net.ResetFrame) {
+					this.stream_.resetFromPeer_(frame.reasonString, frame.applicationLevel);
+					break;
+				} else {
+					throw Error("unexpected state in framesReceived_");
+				}
 			}
 			// completely ignore PaddingFrame
 		} catch(e) {
@@ -513,7 +543,9 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 		}
 	}
 
-	// TODO: strings
+	if(strings) {
+		this.handleStrings_(strings);
+	}
 	// TODO: closeSoon
 };
 
@@ -551,9 +583,12 @@ cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
 	xhr.send(this.endpoint_, 'POST', payload);
 };
 
-cw.net.ClientTransport.prototype.writeHelloFrame_ = function() {
+/**
+ * @return {!cw.net.HelloFrame}
+ * @private
+ */
+cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 	var hello = new cw.net.HelloFrame();
-
 	hello.transportNumber = this.transportNumber;
 	hello.protocolVersion = cw.net.protocolVersion_;
 	hello.httpFormat = cw.net.HttpFormat.FORMAT_XHR;
@@ -564,26 +599,33 @@ cw.net.ClientTransport.prototype.writeHelloFrame_ = function() {
 		// even when it's not a new Stream?
 		hello.credentialsData = this.stream_.makeCredentialsCallable_();
 	}
-	/** @type {boolean} */
-	hello.streamingResponse;
+	hello.streamingResponse = false;
 	hello.needPaddingBytes = 4096;
-	/** @type {number} */
-	hello.maxReceiveBytes;
-	/** @type {number} */
-	hello.maxOpenTime;
-	/** @type {boolean} */
-	hello.useMyTcpAcks;
-	/** @type {undefined|?number} */
-	hello.succeedsTransport;
-	/** @type {string|!cw.net.SackFrame} */
-	hello.lastSackSeenByClient;
+	// TODO: investigate if any browsers are thrashing CPU by copying
+	// the whole thing during XHR streaming.
+	hello.maxReceiveBytes = 300000;
+	hello.maxOpenTime = 55;
+	hello.useMyTcpAcks = false;
+	hello.succeedsTransport = null;
+	hello.lastSackSeenByClient = this.stream_.lastSackSeenByClient;
+	return hello;
+}
+
+/**
+ * @private
+ */
+cw.net.ClientTransport.prototype.writeHelloFrame_ = function() {
+	var hello = this.makeHelloFrame_();
+	this.toSend_.push(hello.encode());
 };
 
 /**
  * Start the transport. Make the initial connection/HTTP request.
  *
  * This can be called after calling {@link #writeStrings_} and/or
- * {@link #writeReset_} on a non-started transport.
+ * {@link #writeReset_} on a non-started transport. For transports
+ * with streaming upload, you can of course also call those methods
+ * after starting.
  *
  * @private
  */
