@@ -267,6 +267,27 @@ cw.net.Stream = function(clock, protocol, httpEndpoint, makeCredentialsCallable)
 goog.inherits(cw.net.Stream, goog.Disposable);
 
 /**
+ * Maximum number of undelivered strings allowed in {@code this.incoming_},
+ * before ignoring further strings over the offending transport (and closing it).
+ * @type {number}
+ */
+cw.net.Stream.prototype.maxUndeliveredStrings = 50;
+
+/**
+ * Maximum number of undelivered bytes allowed in {@code this.incoming_},
+ * before ignoring further strings over the offending transport (and closing it).
+ * @type {number}
+ */
+cw.net.Stream.prototype.maxUndeliveredBytes = 1 * 1024 * 1024;
+
+/**
+ * Is this Stream disconnected? (Due to any kind of reset).
+ * @type {boolean}
+ * @private
+ */
+cw.net.Stream.prototype.disconnected_ = false;
+
+/**
  * Counter to uniquely identify the transports in this Stream
  * @type {number}
  * @private
@@ -310,25 +331,45 @@ cw.net.Stream.prototype.reset = function(reasonString) {
 };
 
 /**
- * ClientTransport calls this when it gets a reset frame from client.
+ * ClientTransport calls this when it gets a reset frame from server.
  * ClientTransport still needs to call transportOffline after this.
  *
  * @param {string} reasonString
  * @param {boolean} applicationLevel
  * @private
  */
-cw.net.Stream.prototype.resetFromClient_ = function(reasonString, applicationLevel) {
+cw.net.Stream.prototype.resetFromPeer_ = function(reasonString, applicationLevel) {
 	1/0
 };
 
 /**
  * Called by transports to tell me that it has received strings.
  *
- * @param {!Object} transport The transport that received these boxes.
- * @param {Array.<string>} boxes In-order strings that transport has received.
+ * @param {!cw.net.ClientTransport} transport The transport that received
+ * 	these boxes.
+ * @param {!Array.<number|string>} pairs (seqNum, string) pairs that
+ * 	transport has received.
  */
-cw.net.Stream.prototype.stringsReceived = function(transport, boxes) {
-	1/0
+cw.net.Stream.prototype.stringsReceived = function(transport, pairs) {
+	if(this.disconnected_) {
+		return;
+	}
+
+	var _ = this.incoming_.give(
+		pairs, this.maxUndeliveredStrings, this.maxUndeliveredBytes);
+	var items = _[0];
+	var hitLimit = _[1];
+	if(items) {
+		this.protocol_.stringsReceived(items);
+	}
+	// We deliver the deliverable strings even if the receive window is overflowing,
+	// just in case the peer sent something useful.
+	// Note: Underneath the stringsReceived call (above), someone may have
+	// reset the Stream! This is why we check for `not this.disconnected_`.
+	if(!this.disconnected_ && hitLimit) {
+		// Minerva used to do an _internalReset here, but now it kills the transport.
+		transport.causedRwinOverflow_();
+	}
 };
 
 /**
@@ -477,18 +518,16 @@ cw.net.ClientTransport.prototype.ourSeqNum_ = -1;
 cw.net.ClientTransport.prototype.peerSeqNum_ = -1;
 
 /**
- * The value of the last `start` parameter passed to `ClientTransport.writeStrings`.
- * @type {number}
+ * @param {!Array.<string>} bunchedStrings
  * @private
  */
-cw.net.ClientTransport.prototype.lastStartParam_ = cw.math.LARGER_THAN_LARGEST_INTEGER;
-
-/**
- * @param {!Array.<string>} strings
- * @private
- */
-cw.net.ClientTransport.prototype.handleStrings_ = function(strings) {
-
+cw.net.ClientTransport.prototype.handleStrings_ = function(bunchedStrings) {
+	// bunchedStrings is already sorted 99.99%+ of the time
+	bunchedStrings.sort();
+	this.stream_.stringsReceived(this, bunchedStrings);
+	// Remember that a lot can happen underneath that stringsReceived call,
+	// including a call to our own `reset` or `closeGently` or `writeStrings`
+	// (though those are all mailboxify'ed).
 };
 
 /**
@@ -498,13 +537,17 @@ cw.net.ClientTransport.prototype.handleStrings_ = function(strings) {
 cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 	var logger = cw.net.ClientTransport.logger;
 	var closeSoon = false;
-	var strings = [];
+	var bunchedStrings = [];
 	for(var i=0, len=frames.length; i < len; i++) {
 		/** @type {!cw.net.Frame} Decoded frame */
 		try {
 			var frame = cw.net.decodeFrameFromServer(frames[i]);
 			if(frame instanceof cw.net.StringFrame) {
-				strings.push(frame.string);
+				this.peerSeqNum_ += 1;
+				// Because we may have received multiple Minerva strings, collect
+				// them into a Array and then deliver them all at once to Stream.
+				// This does *not* add any latency. It does reduce the number of funcalls.
+				bunchedStrings.push([this.peerSeqNum_, frame.string])
 			} else if(frame instanceof cw.net.SackFrame) {
 				if(this.stream_.sackReceived([frame.ackNumber, frame.sackList])) {
 					logger.warning("closing soon because got bad SackFrame");
@@ -522,8 +565,9 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 			} else if(frame instanceof cw.net.PaddingFrame) {
 				// Ignore it
 			} else {
-				if(strings) {
-					this.handleStrings_(strings);
+				if(bunchedStrings) {
+					this.handleStrings_(bunchedStrings);
+					bunchedStrings = [];
 				}
 				if(frame instanceof cw.net.ResetFrame) {
 					this.stream_.resetFromPeer_(frame.reasonString, frame.applicationLevel);
@@ -543,8 +587,9 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 		}
 	}
 
-	if(strings) {
-		this.handleStrings_(strings);
+	if(bunchedStrings) {
+		this.handleStrings_(bunchedStrings);
+		bunchedStrings = [];
 	}
 	// TODO: closeSoon
 };
@@ -607,16 +652,26 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 	hello.maxOpenTime = 55;
 	hello.useMyTcpAcks = false;
 	hello.succeedsTransport = null;
-	hello.lastSackSeenByClient = this.stream_.lastSackSeenByClient;
+	hello.lastSackSeenByClient = this.stream_.lastSackSeenByClient_;
 	return hello;
 }
+
+/**
+ * Serialize {@code frame} and append a transport-encoded frame to the
+ * 	internal send buffer.
+ * @param {!cw.net.Frame} frame
+ * @private
+ */
+cw.net.ClientTransport.prototype.writeFrame_ = function(frame) {
+	frame.encodeToPieces(this.toSend_);
+	this.toSend_.push('\n');
+};
 
 /**
  * @private
  */
 cw.net.ClientTransport.prototype.writeHelloFrame_ = function() {
-	var hello = this.makeHelloFrame_();
-	hello.encodeToPieces(this.toSend_);
+	this.writeFrame_(this.makeHelloFrame_());
 };
 
 /**
@@ -662,7 +717,21 @@ cw.net.ClientTransport.prototype.writeStrings_ = function(queue, start) {
 	if(!this.started_ && !this.toSend_) {
 		this.writeHelloFrame_();
 	}
-	1/0
+
+	var queueStart = Math.max(start, this.ourSeqNum_ + 1);
+	// Even if there's a lot of stuff in the queue, write everything.
+	var pairs = queue.getItems(queueStart);
+	for(var i=0, len=pairs.length; i < len; i++) {
+		var pair = pairs[i];
+		var seqNum = /** @type {number} */ (pair[0]);
+		var string = /** @type {string} */ (pair[1]);
+		if(this.ourSeqNum_ == -1 || this.ourSeqNum_ + 1 != seqNum) {
+			this.writeFrame_(new cw.net.SeqNumFrame(seqNum));
+		}
+		// Avoid instantiating a cw.net.StringFrame because this will get called a lot.
+		this.toSend_.push(string, '\n');
+		this.ourSeqNum_ = seqNum;
+	}
 };
 
 /**
@@ -671,6 +740,18 @@ cw.net.ClientTransport.prototype.writeStrings_ = function(queue, start) {
  */
 cw.net.ClientTransport.prototype.close_ = function() {
 	1/0
+};
+
+/**
+ * Close this transport because it has caused our receive window to
+ * overflow. We don't want to keep the transport open because otherwise
+ * the server will assume that the strings it sent over the transport
+ * will eventually get ACKed.
+ * @private
+ */
+cw.net.ClientTransport.prototype.causedRwinOverflow_ = function() {
+	cw.net.ClientTransport.logger.severe("peer caused rwin overflow");
+	this.close_();
 };
 
 /**
@@ -684,7 +765,8 @@ cw.net.ClientTransport.prototype.writeReset_ = function(reasonString, applicatio
 	if(!this.started_ && !this.toSend_) {
 		this.writeHelloFrame_();
 	}
-	1/0
+	var resetFrame = new cw.net.ResetFrame(reasonString, applicationLevel);
+	this.writeFrame_(resetFrame);
 };
 
 
