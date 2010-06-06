@@ -65,7 +65,7 @@ cw.net.TestFrames.makeHelloFrame_ = function(extra, noDefaults) {
 			'streamingResponse': 1,
 			'maxReceiveBytes': Math.pow(2, 30),
 			'maxOpenTime': Math.pow(2, 30),
-			'lastSackSeenByClient': new SackFrame(-1, [])
+			'lastSackSeenByClient': [-1, []]
 		});
 	}
 
@@ -240,9 +240,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 			'maxReceiveBytes': genericBad,
 			'maxOpenTime': genericBad,
 			'credentialsData': concat([rep('x', 256), '\t', '\ucccc'], listWithout(genericBad, [""])),
-			// We can pass either a string or a SackFrame
+			// We can pass either a string or an Array
 			'lastSackSeenByClient': [
-				DeleteProperty, '', '|', new SackFrame(-2, []), new SackFrame(-1, [-2])]
+				DeleteProperty, '', '|', [-2, []], [-1, [-2]]]
 		});
 
 		cw.UnitTest.logger.info('test_decodeFailedInvalidValues: badMutations: ' +

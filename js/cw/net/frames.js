@@ -26,6 +26,7 @@ goog.require('cw.string');
 goog.require('cw.repr');
 goog.require('cw.math');
 goog.require('cw.eq');
+goog.require('cw.net.SACKTuple');
 
 
 /**
@@ -142,7 +143,7 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	if(lastSackSeen == null) {
 		throw new cw.net.InvalidHello("bad lastSackSeenByClient");
 	}
-	obj.lastSackSeenByClient = lastSackSeen;
+	obj.lastSackSeenByClient = [lastSackSeen.ackNumber, lastSackSeen.sackList];
 
 	// requestNewStream is always optional. If missing or False/0, transport
 	// is intended to attach to an existing stream.
@@ -276,7 +277,7 @@ cw.net.HelloFrame = function() {
 	this.useMyTcpAcks;
 	/** @type {undefined|?number} */
 	this.succeedsTransport;
-	/** @type {string|!cw.net.SackFrame} */
+	/** @type {string|!cw.net.SACKTuple} */
 	this.lastSackSeenByClient;
 };
 
@@ -382,12 +383,13 @@ cw.net.HelloFrame.prototype.encodeToPieces = function(sb) {
 	compact[HP.maxOpenTime] = this.maxOpenTime;
 	compact[HP.useMyTcpAcks] = this.useMyTcpAcks;
 	compact[HP.succeedsTransport] = this.succeedsTransport;
-	//compact[HP.lastSackSeenByClient] = this.lastSackSeenByClient;
 
-	// TODO: require this.lastSackSeenByClient to be a "sack tuple" as defined by that typedef
-	// When this change is made, also change @type at HelloFrame constructor.
-	if(this.lastSackSeenByClient instanceof cw.net.SackFrame) {
-		compact[HP.lastSackSeenByClient] = cw.string.withoutLast(this.lastSackSeenByClient.encode(), 1);
+	if(goog.isArray(this.lastSackSeenByClient)) {
+		compact[HP.lastSackSeenByClient] =
+			cw.string.withoutLast(
+				new cw.net.SackFrame(
+					this.lastSackSeenByClient[0], this.lastSackSeenByClient[1]
+				).encode(), 1);
 	} else {
 		compact[HP.lastSackSeenByClient] = this.lastSackSeenByClient;
 	}
