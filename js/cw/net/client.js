@@ -526,8 +526,7 @@ cw.net.ClientTransport.prototype.handleStrings_ = function(bunchedStrings) {
 	bunchedStrings.sort();
 	this.stream_.stringsReceived(this, bunchedStrings);
 	// Remember that a lot can happen underneath that stringsReceived call,
-	// including a call to our own `reset` or `closeGently` or `writeStrings`
-	// (though those are all mailboxify'ed).
+	// including a call to our own `reset_` or `close_` or `writeStrings_`
 };
 
 /**
@@ -561,7 +560,10 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 				closeSoon = true;
 				break;
 			} else if(frame instanceof cw.net.TransportKillFrame) {
-				1/0
+				// TODO: adjust our behavior based on the type of TK we got
+				logger.finest("closing soon because got TransportKillFrame");
+				closeSoon = true;
+				break;
 			} else if(frame instanceof cw.net.PaddingFrame) {
 				// Ignore it
 			} else {
@@ -576,7 +578,6 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 					throw Error("unexpected state in framesReceived_");
 				}
 			}
-			// completely ignore PaddingFrame
 		} catch(e) {
 			if(!(e instanceof cw.net.InvalidFrame)) {
 				throw e;
@@ -591,7 +592,9 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 		this.handleStrings_(bunchedStrings);
 		bunchedStrings = [];
 	}
-	// TODO: closeSoon
+	if(closeSoon) {
+		this.close_();
+	}
 };
 
 /**
@@ -654,7 +657,7 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 	hello.succeedsTransport = null;
 	hello.lastSackSeenByClient = this.stream_.lastSackSeenByClient_;
 	return hello;
-}
+};
 
 /**
  * Serialize {@code frame} and append a transport-encoded frame to the
