@@ -983,13 +983,10 @@ class ServerTransport(object):
 			self.ourSeqNum = -1
 			self._lastStartParam = start
 
+		queueStart = max(start, self.ourSeqNum + 1)
 		# Even if there's a lot of stuff in the queue, write everything.
-		for seqNum, string in queue.iterItems(start):
+		for seqNum, string in queue.iterItems(queueStart):
 			##print seqNum, string, self.ourSeqNum
-			# This might have to change if design change requires that we
-			# sometimes write the same string twice.
-			if seqNum <= self.ourSeqNum:
-				continue
 			if self.ourSeqNum == -1 or self.ourSeqNum + 1 != seqNum:
 				self._toSend += self._encodeFrame(SeqNumFrame(seqNum))
 			self._toSend += self._encodeFrame(StringFrame(string))
