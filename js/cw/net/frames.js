@@ -381,7 +381,7 @@ cw.net.HelloFrame.prototype.encode = function() {
 	}
 
 
-	// Remove the "undefined" values; TODO: don't do this
+	// Remove the "undefined" values; TODO: don't do this so inefficiently
 	for(var k in compact) {
 		if(compact[k] === undefined) {
 			delete compact[k];
