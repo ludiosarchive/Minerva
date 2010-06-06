@@ -616,7 +616,7 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
  */
 cw.net.ClientTransport.prototype.writeHelloFrame_ = function() {
 	var hello = this.makeHelloFrame_();
-	this.toSend_.push(hello.encode());
+	hello.encodeToPieces(this.toSend_);
 };
 
 /**
