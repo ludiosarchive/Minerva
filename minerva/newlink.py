@@ -336,22 +336,22 @@ class Stream(object):
 			del self._protocol
 
 
-	def stringsReceived(self, transport, strings):
+	def stringsReceived(self, transport, pairs):
 		"""
 		Private. Do not call this.
 
 		Called by a transport to tell me that it has received *already sorted*
-		strings L{strings}.
+		(seqNum, string) L{pairs}.
 		"""
 		if self.disconnected:
 			return
 
 		items, hitLimit = self._incoming.give(
-			strings, self.maxUndeliveredStrings, self.maxUndeliveredBytes)
+			pairs, self.maxUndeliveredStrings, self.maxUndeliveredBytes)
 		if items:
 			self._protocol.stringsReceived(items)
 		# We deliver the deliverable strings even if the receive window is overflowing,
-		# just in case the client sent something useful.
+		# just in case the peer sent something useful.
 		# Note: Underneath the stringsReceived call (above), someone may have
 		# reset the Stream! This is why we check for `not self.disconnected`.
 		if not self.disconnected and hitLimit:
