@@ -235,6 +235,16 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 };
 
 
+/**
+ * @this {cw.net.Frame}
+ * @return {string} The encoded frame
+ */
+cw.net.frameEncodeMethod_ = function() {
+	var sb = [];
+	this.encodeToPieces(sb);
+	return sb.join('');
+};
+
 
 /**
  * We do nothing in this constructor. Caller is responsible for setting
@@ -351,10 +361,12 @@ cw.net.HelloFrame.makePropertyArray_ = function(helloFrame) {
 	];
 };
 
+cw.net.HelloFrame.prototype.encode = cw.net.frameEncodeMethod_;
+
 /**
- * @return {string} Encoded frame
+ * @param {!Array.<string>} sb
  */
-cw.net.HelloFrame.prototype.encode = function() {
+cw.net.HelloFrame.prototype.encodeToPieces = function(sb) {
 	var HP = cw.net.HelloProperty_;
 
 	var compact = {};
@@ -388,7 +400,7 @@ cw.net.HelloFrame.prototype.encode = function() {
 		}
 	}
 
-	return goog.json.serialize(compact) + 'H';
+	sb.push(goog.json.serialize(compact), 'H');
 };
 
 /**
@@ -440,12 +452,15 @@ cw.net.StringFrame.decode = function(frameString) {
 	return new cw.net.StringFrame(frameString.substr(0, frameString.length - 1));
 };
 
+cw.net.StringFrame.prototype.encode = cw.net.frameEncodeMethod_;
+
 /**
- * @return {string} Encoded frame
+ * @param {!Array.<string>} sb
  */
-cw.net.StringFrame.prototype.encode = function() {
-	return this.string + ' ';
+cw.net.StringFrame.prototype.encodeToPieces = function(sb) {
+	sb.push(this.string, ' ');
 };
+
 
 
 
@@ -491,11 +506,13 @@ cw.net.SeqNumFrame.decode = function(frameString) {
 	return new cw.net.SeqNumFrame(seqNum);
 };
 
+cw.net.SeqNumFrame.prototype.encode = cw.net.frameEncodeMethod_;
+
 /**
- * @return {string} Encoded frame
+ * @param {!Array.<string>} sb
  */
-cw.net.SeqNumFrame.prototype.encode = function() {
-	return this.seqNum + 'N';
+cw.net.SeqNumFrame.prototype.encodeToPieces = function(sb) {
+	sb.push(String(this.seqNum), 'N');
 };
 
 
@@ -583,11 +600,13 @@ cw.net.SackFrame.decode = function(frameString) {
 	return frame;
 };
 
+cw.net.SackFrame.prototype.encode = cw.net.frameEncodeMethod_;
+
 /**
- * @return {string} Encoded frame
+ * @param {!Array.<string>} sb
  */
-cw.net.SackFrame.prototype.encode = function() {
-	return this.sackList.join(',') + '|' + this.ackNumber + 'A';
+cw.net.SackFrame.prototype.encodeToPieces = function(sb) {
+	sb.push(this.sackList.join(','), '|', String(this.ackNumber) + 'A');
 };
 
 
@@ -628,11 +647,13 @@ cw.net.YouCloseItFrame.decode = function(frameString) {
 	return new cw.net.YouCloseItFrame();
 };
 
+cw.net.YouCloseItFrame.prototype.encode = cw.net.frameEncodeMethod_;
+
 /**
- * @return {string} Encoded frame
+ * @param {!Array.<string>} sb
  */
-cw.net.YouCloseItFrame.prototype.encode = function() {
-	return 'Y';
+cw.net.YouCloseItFrame.prototype.encodeToPieces = function(sb) {
+	sb.push('Y');
 };
 
 
@@ -674,13 +695,13 @@ cw.net.PaddingFrame.decode = function(frameString) {
 	return new cw.net.PaddingFrame(frameString.length - 1);
 };
 
+cw.net.PaddingFrame.prototype.encode = cw.net.frameEncodeMethod_;
+
 /**
- * @return {string} Encoded frame
+ * @param {!Array.<string>} sb
  */
-cw.net.PaddingFrame.prototype.encode = function() {
-	var p = Array(this.numBytes);
-	p.push('P');
-	return p.join(' ');
+cw.net.PaddingFrame.prototype.encodeToPieces = function(sb) {
+	sb.push(goog.string.repeat(' ', this.numBytes), 'P');
 };
 
 
@@ -756,11 +777,13 @@ cw.net.ResetFrame.decode = function(frameString) {
 	return new cw.net.ResetFrame(reasonString, applicationLevel);
 };
 
+cw.net.ResetFrame.prototype.encode = cw.net.frameEncodeMethod_;
+
 /**
- * @return {string} Encoded frame
+ * @param {!Array.<string>} sb
  */
-cw.net.ResetFrame.prototype.encode = function() {
-	return this.reasonString + '|' + Number(this.applicationLevel) + '!';
+cw.net.ResetFrame.prototype.encodeToPieces = function(sb) {
+	sb.push(this.reasonString, '|', String(Number(this.applicationLevel)), '!');
 };
 
 
@@ -838,11 +861,13 @@ cw.net.TransportKillFrame.decode = function(frameString) {
 	return new cw.net.TransportKillFrame(reason);
 };
 
+cw.net.TransportKillFrame.prototype.encode = cw.net.frameEncodeMethod_;
+
 /**
- * @return {string} Encoded frame
+ * @param {!Array.<string>} sb
  */
-cw.net.TransportKillFrame.prototype.encode = function() {
-	return this.reason + 'K';
+cw.net.TransportKillFrame.prototype.encodeToPieces = function(sb) {
+	sb.push(this.reason, 'K');
 };
 
 
