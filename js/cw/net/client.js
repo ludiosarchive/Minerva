@@ -9,6 +9,8 @@ goog.provide('cw.net.ClientTransport');
 
 goog.require('goog.string');
 goog.require('goog.Disposable');
+goog.require('goog.net.XhrIo');
+goog.require('goog.net.EventType');
 goog.require('cw.math');
 goog.require('cw.net.Queue');
 goog.require('cw.net.Incoming');
@@ -21,6 +23,7 @@ goog.require('cw.net.PaddingFrame');
 goog.require('cw.net.ResetFrame');
 goog.require('cw.net.TransportKillFrame');
 goog.require('cw.net.InvalidFrame');
+goog.require('cw.net.HttpFormat');
 goog.require('cw.net.decodeFrameFromServer');
 
 
@@ -199,11 +202,13 @@ cw.net.makeStreamId_ = function() {
  * @param {!Object} clock Something that provides IWindowTime. TODO: use CallQueue instead?
  * @param {!Object} protocol
  * @param {string} httpEndpoint
+ * @param {function(): string} makeCredentialsCallable Function that returns a
+ * 	credentialsData string.
  *
  * @constructor
  * @extends {goog.Disposable}
  */
-cw.net.Stream = function(clock, protocol, httpEndpoint) {
+cw.net.Stream = function(clock, protocol, httpEndpoint, makeCredentialsCallable) {
 	goog.Disposable.call(this);
 
 	/**
@@ -225,10 +230,15 @@ cw.net.Stream = function(clock, protocol, httpEndpoint) {
 	this.httpEndpoint_ = httpEndpoint;
 
 	/**
-	 * @type {string}
+	 * @type {function(): string}
 	 * @private
 	 */
-	this.streamId_ = cw.net.makeStreamId_();
+	this.makeCredentialsCallable_ = makeCredentialsCallable;
+
+	/**
+	 * @type {string}
+	 */
+	this.streamId = cw.net.makeStreamId_();
 
 	/**
 	 * @type {!cw.net.SackFrame}
@@ -345,6 +355,8 @@ cw.net.TransportType_ = {
  * 	- ClientTransport makes connections, ServerTransport receives connections.
  * 	- ClientTransport deals with unicode strings (though restricted in range),
  * 		ServerTransport deals with bytes.
+ * 	- ClientTransport may have subtly different ResetFrame behavior (more
+ * 		StringFrames make it through? TODO: describe)
  *
  * @param {!Object} clock Something that provides IWindowTime. TODO: use CallQueue instead?
  * @param {!cw.net.TransportType_} transportType
@@ -356,7 +368,7 @@ cw.net.TransportType_ = {
  * @extends {goog.Disposable}
  * @private
  */
-cw.net.ClientTransport = function(clock, transportType, endpoint, becomePrimary) {
+cw.net.ClientTransport = function(clock, stream, transportNumber, transportType, endpoint, becomePrimary) {
 	goog.Disposable.call(this);
 
 	/**
@@ -364,6 +376,17 @@ cw.net.ClientTransport = function(clock, transportType, endpoint, becomePrimary)
 	 * @private
 	 */
 	this.clock_ = clock;
+
+	/**
+	 * @type {!cw.net.Stream}
+	 * @private
+	 */
+	this.stream_ = stream;
+
+	/**
+	 * @type {number}
+	 */
+	this.transportNumber = transportNumber;
 
 	/**
 	 * @type {!cw.net.TransportType_}
@@ -412,6 +435,13 @@ cw.net.ClientTransport = function(clock, transportType, endpoint, becomePrimary)
 goog.inherits(cw.net.ClientTransport, goog.Disposable);
 
 /**
+ * Whether the underlying TCP connection or HTTP request has been made.
+ * @type {boolean}
+ * @private
+ */
+cw.net.ClientTransport.prototype.started_ = false;
+
+/**
  * The number of frames we have received from the peer, minus 1.
  * @type {number}
  * @private
@@ -440,26 +470,107 @@ cw.net.ClientTransport.prototype.peerSeqNum_ = -1;
 cw.net.ClientTransport.prototype.lastStartParam_ = cw.math.LARGER_THAN_LARGEST_INTEGER;
 
 /**
- * Start the transport. Make the initial connection/HTTP request.
- * @param {!cw.net.Queue} queue Queue containing strings to send.
- * 	For transports that support streaming upload (not HTTP), you can send
- * 	more items later with {@link #writeStrings}.
+ * @param {!Array.<string>} frames
  * @private
  */
-cw.net.ClientTransport.prototype.start_ = function(queue) {
+cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 	1/0
 };
 
 /**
- * Write boxes in queue `queue` to the peer.
- * This never writes boxes that were already written to the peer over this transport
- * (because all transports are TCP-reliable).
+ * @private
+ */
+cw.net.ClientTransport.prototype.httpResponseReceived_ = function(e) {
+	var xhr = e.target;
+	var responseText = xhr.getResponseText();
+	// Proxies might convert \n to \r\n, so convert terminators if necessary.
+	if(responseText.indexOf('\r\n') != -1) {
+		responseText = responseText.replace(/\r\n/g, '\n');
+	}
+	var frames = responseText.split('\n');
+	this.framesReceived_(frames);
+};
+
+/**
+ * @param {string} payload
+ * @private
+ */
+cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
+	var xhr = new goog.net.XhrIo();
+	goog.events.listen(xhr, goog.net.EventType.COMPLETE,
+		goog.bind(this.httpResponseReceived_, this));
+	xhr.send(this.endpoint_, 'POST', payload);
+};
+
+cw.net.ClientTransport.prototype.writeHelloFrame_ = function() {
+	var hello = new cw.net.HelloFrame();
+
+	hello.transportNumber = this.transportNumber;
+	hello.protocolVersion = cw.net.protocolVersion_;
+	hello.httpFormat = cw.net.HttpFormat.FORMAT_XHR;
+	hello.requestNewStream = (this.transportNumber == 0);
+	hello.streamId = this.stream_.streamId;
+	if(hello.requestNewStream) {
+		// TODO: maybe sometimes client needs to send credentialsData
+		// even when it's not a new Stream?
+		hello.credentialsData = this.stream_.makeCredentialsCallable_();
+	}
+	/** @type {boolean} */
+	hello.streamingResponse;
+	hello.needPaddingBytes = 4096;
+	/** @type {number} */
+	hello.maxReceiveBytes;
+	/** @type {number} */
+	hello.maxOpenTime;
+	/** @type {boolean} */
+	hello.useMyTcpAcks;
+	/** @type {undefined|?number} */
+	hello.succeedsTransport;
+	/** @type {string|!cw.net.SackFrame} */
+	hello.lastSackSeenByClient;
+};
+
+/**
+ * Start the transport. Make the initial connection/HTTP request.
+ *
+ * This can be called after calling {@link #writeStrings_} and/or
+ * {@link #writeReset_} on a non-started transport.
+ *
+ * @private
+ */
+cw.net.ClientTransport.prototype.start_ = function() {
+	if(this.started_) {
+		throw Error("already started");
+	}
+	this.started_ = true;
+
+	if(!this.toSend_) {
+		this.writeHelloFrame_();
+	}
+
+	var toSendStr = this.toSend_.join('');
+	this.toSend_ = [];
+
+	if(this.transportType_ == cw.net.TransportType_.BROWSER_HTTP) {
+		this.makeHttpRequest_(toSendStr);
+	} else {
+		throw Error("don't know what to do for this transportType");
+	}
+};
+
+/**
+ * Write boxes in queue {@code queue} to the peer.
+ * TODO: copy docstring from Py Minerva
  *
  * @param {!cw.net.Queue} queue Queue containing strings to send.
- * @param {?number} start
+ * @param {?number} start Which item in queue to start at, or null (to not
+ * 	skip any).
  * @private
  */
 cw.net.ClientTransport.prototype.writeStrings_ = function(queue, start) {
+	if(!this.started_ && !this.toSend_) {
+		this.writeHelloFrame_();
+	}
 	1/0
 };
 
@@ -474,8 +585,13 @@ cw.net.ClientTransport.prototype.close_ = function() {
 /**
  * Send a reset frame over this transport, then close.
  * @param {string} reasonString Textual reason why Stream is resetting.
+ * @param {boolean} applicationLevel Whether this reset was made by the
+ * 	application.
  * @private
  */
-cw.net.ClientTransport.prototype.reset_ = function(reasonString) {
+cw.net.ClientTransport.prototype.writeReset_ = function(reasonString, applicationLevel) {
+	if(!this.started_ && !this.toSend_) {
+		this.writeHelloFrame_();
+	}
 	1/0
 };

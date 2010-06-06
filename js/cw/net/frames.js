@@ -12,6 +12,7 @@ goog.provide('cw.net.PaddingFrame');
 goog.provide('cw.net.ResetFrame');
 goog.provide('cw.net.TransportKillFrame');
 goog.provide('cw.net.InvalidFrame');
+goog.provide('cw.net.HttpFormat');
 goog.provide('cw.net.decodeFrameFromServer');
 
 goog.require('goog.debug.Error');
@@ -78,9 +79,8 @@ cw.net.HelloProperty_ = {
 /**
  * HTTP format for the Minerva transport
  * @enum {number}
- * @private
  */
-cw.net.HttpFormat_ = {
+cw.net.HttpFormat = {
 	FORMAT_XHR: 2,
 	FORMAT_HTMLFILE: 3
 };
@@ -90,8 +90,8 @@ cw.net.HttpFormat_ = {
  * @private
  */
 cw.net.AllHttpFormats_ = [
-	cw.net.HttpFormat_.FORMAT_XHR,
-	cw.net.HttpFormat_.FORMAT_HTMLFILE
+	cw.net.HttpFormat.FORMAT_XHR,
+	cw.net.HttpFormat.FORMAT_HTMLFILE
 ];
 
 
@@ -202,7 +202,7 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 		if(!goog.array.contains(cw.net.AllHttpFormats_, httpFormat)) {
 			throw new cw.net.InvalidHello("bad httpFormat");
 		}
-		obj.httpFormat = /** @type {cw.net.HttpFormat_} */ (httpFormat);
+		obj.httpFormat = /** @type {cw.net.HttpFormat} */ (httpFormat);
 	} else {
 		obj.httpFormat = null;
 	}
@@ -246,7 +246,7 @@ cw.net.HelloFrame = function() {
 	this.transportNumber;
 	/** @type {number} */
 	this.protocolVersion;
-	/** @type {?cw.net.HttpFormat_} */
+	/** @type {?cw.net.HttpFormat} */
 	this.httpFormat;
 	/** @type {boolean} */
 	this.requestNewStream;

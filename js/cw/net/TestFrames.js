@@ -42,8 +42,8 @@ var InvalidFrame = cw.net.InvalidFrame;
 var InvalidHello = cw.net.InvalidHello;
 var HP = cw.net.HelloProperty_;
 
-var FORMAT_XHR = cw.net.HttpFormat_.FORMAT_XHR;
-var FORMAT_HTMLFILE = cw.net.HttpFormat_.FORMAT_HTMLFILE;
+var FORMAT_XHR = cw.net.HttpFormat.FORMAT_XHR;
+var FORMAT_HTMLFILE = cw.net.HttpFormat.FORMAT_HTMLFILE;
 
 var repr = cw.repr.repr;
 var rep = goog.string.repeat;
