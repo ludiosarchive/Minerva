@@ -7,7 +7,9 @@ goog.provide('cw.net.IMinervaProtocol');
 goog.provide('cw.net.Stream');
 goog.provide('cw.net.ClientTransport');
 
+goog.require('goog.asserts');
 goog.require('goog.string');
+goog.require('goog.structs.Set');
 goog.require('goog.debug.Logger');
 goog.require('goog.Disposable');
 goog.require('goog.net.XhrIo');
@@ -15,6 +17,7 @@ goog.require('goog.net.EventType');
 goog.require('cw.math');
 goog.require('cw.net.Queue');
 goog.require('cw.net.Incoming');
+goog.require('cw.net.FlashSocket');
 goog.require('cw.net.HelloFrame');
 goog.require('cw.net.StringFrame');
 goog.require('cw.net.SeqNumFrame');
@@ -237,6 +240,11 @@ cw.net.Stream = function(clock, protocol, httpEndpoint, makeCredentialsCallable)
 	this.makeCredentialsCallable_ = makeCredentialsCallable;
 
 	/**
+	 * @type {!goog.structs.Set}
+	 */
+	this.transports_ = new goog.structs.Set();
+
+	/**
 	 * @type {string}
 	 */
 	this.streamId = cw.net.makeStreamId_();
@@ -310,7 +318,6 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 
 /**
  * Send strings `strings` to the peer.
- *
  * @param {!Array.<string>} strings Strings to send.
  */
 cw.net.Stream.prototype.sendStrings = function(strings) {
@@ -322,8 +329,37 @@ cw.net.Stream.prototype.sendStrings = function(strings) {
 };
 
 /**
+ * @param {boolean} becomePrimary Whether this transport should become
+ * 	primary transport.
+ */
+cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
+	this.transportCount_ += 1;
+	var transportType = cw.net.TransportType_.BROWSER_HTTP;
+	var endpoint = this.httpEndpoint_;
+	var transport = new cw.net.ClientTransport(
+		this.clock_, this, this.transportCount_, transportType, endpoint, becomePrimary);
+	this.transports_.add(transport);
+	transport.writeStrings_(this.queue_, null);
+	transport.start_();
+};
+
+/**
+ * ClientTransport calls this to tell Stream that it has disconnected.
+ * @param {!cw.net.ClientTransport} transport
+ * @private
+ */
+cw.net.Stream.prototype.transportOffline_ = function(transport) {
+	var removed = this.transports_.remove(transport);
+	if(!removed) {
+		throw Error("transport was not removed?");
+	}
+	if(transport == cw.net.Stream.prototype.primaryTransport_) {
+		this.createNewTransport_(true);
+	}
+};
+
+/**
  * Reset with reason `reasonString`.
- *
  * @param {string} reasonString Reason why resetting the stream
  */
 cw.net.Stream.prototype.reset = function(reasonString) {
@@ -333,7 +369,6 @@ cw.net.Stream.prototype.reset = function(reasonString) {
 /**
  * ClientTransport calls this when it gets a reset frame from server.
  * ClientTransport still needs to call transportOffline after this.
- *
  * @param {string} reasonString
  * @param {boolean} applicationLevel
  * @private
@@ -343,8 +378,7 @@ cw.net.Stream.prototype.resetFromPeer_ = function(reasonString, applicationLevel
 };
 
 /**
- * Called by transports to tell me that it has received strings.
- *
+ * ClientTransport calls this to tell Stream about received strings.
  * @param {!cw.net.ClientTransport} transport The transport that received
  * 	these boxes.
  * @param {!Array.<number|string>} pairs (seqNum, string) pairs that
@@ -374,13 +408,23 @@ cw.net.Stream.prototype.stringsReceived = function(transport, pairs) {
 
 /**
  * Called by transports to tell me that server has received at least some of
- * our C2S strings.
- *
+ *	our C2S strings. This method possibly removes some queued items from
+ * 	our send queue.
  * @param {!cw.net.SACKTuple} sackInfo
+ * @private
  */
-cw.net.Stream.prototype.sackReceived = function(sackInfo) {
+cw.net.Stream.prototype.sackReceived_ = function(sackInfo) {
 	this.lastSackSeenByClient_ = sackInfo;
 	return this.queue_.handleSACK(sackInfo);
+};
+
+/**
+ * @return {!cw.net.SACKTuple} A SACK that represents the state of our
+ * 	receive window.
+ * @private
+ */
+cw.net.Stream.prototype.getSACK_ = function() {
+	return this.incoming_.getSACK();
 };
 
 cw.net.Stream.prototype.disposeInternal = function() {
@@ -405,6 +449,10 @@ cw.net.TransportType_ = {
 
 
 /**
+ * One ClientTransport is instantiated for every HTTP request we make
+ * (for HTTP endpoints), or for every TCP connection we make (for
+ * Flash Socket/WebSocket endpoints).
+ *
  * Differences between Py Minerva's ServerTransport and JS Minerva's ClientTransport:
  * 	- We have no Interface defined for ClientTransport.
  * 	- ClientTransport makes connections, ServerTransport receives connections.
@@ -461,7 +509,7 @@ cw.net.ClientTransport = function(clock, stream, transportNumber, transportType,
 	 * @type {!Array.<string>}
 	 * @private
 	 */
-	this.toSend_ = [];
+	this.toSendStrings_ = [];
 
 	/**
 	 * Should this transport try to become primary transport?
@@ -488,6 +536,12 @@ cw.net.ClientTransport = function(clock, stream, transportNumber, transportType,
 		transportType != cw.net.TransportType_.BROWSER_HTTP);
 };
 goog.inherits(cw.net.ClientTransport, goog.Disposable);
+
+/**
+ * The underlying object used to send and receive frames.
+ * @type {goog.net.XhrIo|cw.net.FlashSocket}
+ */
+cw.net.ClientTransport.prototype.underlying_ = null;
 
 /**
  * Whether the underlying TCP connection or HTTP request has been made.
@@ -548,7 +602,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 				// This does *not* add any latency. It does reduce the number of funcalls.
 				bunchedStrings.push([this.peerSeqNum_, frame.string])
 			} else if(frame instanceof cw.net.SackFrame) {
-				if(this.stream_.sackReceived([frame.ackNumber, frame.sackList])) {
+				if(this.stream_.sackReceived_([frame.ackNumber, frame.sackList])) {
 					logger.warning("closing soon because got bad SackFrame");
 					closeSoon = true;
 					break;
@@ -600,9 +654,8 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 /**
  * @private
  */
-cw.net.ClientTransport.prototype.httpResponseReceived_ = function(e) {
-	var xhr = e.target;
-	var responseText = xhr.getResponseText();
+cw.net.ClientTransport.prototype.httpResponseReceived_ = function() {
+	var responseText = this.underlying_.getResponseText();
 	// Proxies might convert \n to \r\n, so convert terminators if necessary.
 	if(responseText.indexOf('\r\n') != -1) {
 		responseText = responseText.replace(/\r\n/g, '\n');
@@ -628,7 +681,9 @@ cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
 	var xhr = new goog.net.XhrIo();
 	goog.events.listen(xhr, goog.net.EventType.COMPLETE,
 		goog.bind(this.httpResponseReceived_, this));
-	xhr.send(this.endpoint_, 'POST', payload);
+	goog.asserts.assert(this.underlying_ === null, 'already have an underlying_');
+	this.underlying_ = xhr;
+	this.underlying_.send(this.endpoint_, 'POST', payload);
 };
 
 /**
@@ -660,21 +715,31 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 };
 
 /**
+ * @return {!cw.net.SackFrame}
+ * @private
+ */
+cw.net.ClientTransport.prototype.makeSackFrame_ = function() {
+	var sackTuple = this.stream_.getSACK_();
+	var sackFrame = new cw.net.SackFrame(sackTuple[0], sackTuple[1]);
+	return sackFrame;
+};
+
+/**
  * Serialize {@code frame} and append a transport-encoded frame to the
  * 	internal send buffer.
  * @param {!cw.net.Frame} frame
  * @private
  */
 cw.net.ClientTransport.prototype.writeFrame_ = function(frame) {
-	frame.encodeToPieces(this.toSend_);
-	this.toSend_.push('\n');
+	this.toSendStrings_.push(frame.encode());
 };
 
 /**
  * @private
  */
-cw.net.ClientTransport.prototype.writeHelloFrame_ = function() {
+cw.net.ClientTransport.prototype.writeInitialFrames_ = function() {
 	this.writeFrame_(this.makeHelloFrame_());
+	this.writeFrame_(this.makeSackFrame_());
 };
 
 /**
@@ -693,17 +758,16 @@ cw.net.ClientTransport.prototype.start_ = function() {
 	}
 	this.started_ = true;
 
-	if(!this.toSend_) {
-		this.writeHelloFrame_();
+	if(!this.toSendStrings_) {
+		this.writeInitialFrames_();
 	}
 
-	var toSendStr = this.toSend_.join('');
-	this.toSend_ = [];
-
 	if(this.transportType_ == cw.net.TransportType_.BROWSER_HTTP) {
-		this.makeHttpRequest_(toSendStr);
+		var payload = this.toSendStrings_.join('\n');
+		this.toSendStrings_ = [];
+		this.makeHttpRequest_(payload);
 	} else {
-		throw Error("don't know what to do for this transportType");
+		throw Error("start_: don't know what to do for this transportType");
 	}
 };
 
@@ -717,8 +781,8 @@ cw.net.ClientTransport.prototype.start_ = function() {
  * @private
  */
 cw.net.ClientTransport.prototype.writeStrings_ = function(queue, start) {
-	if(!this.started_ && !this.toSend_) {
-		this.writeHelloFrame_();
+	if(!this.started_ && !this.toSendStrings_) {
+		this.writeInitialFrames_();
 	}
 
 	var queueStart = Math.max(start, this.ourSeqNum_ + 1);
@@ -731,8 +795,7 @@ cw.net.ClientTransport.prototype.writeStrings_ = function(queue, start) {
 		if(this.ourSeqNum_ == -1 || this.ourSeqNum_ + 1 != seqNum) {
 			this.writeFrame_(new cw.net.SeqNumFrame(seqNum));
 		}
-		// Avoid instantiating a cw.net.StringFrame because this will get called a lot.
-		this.toSend_.push(string, '\n');
+		this.writeFrame_(new cw.net.StringFrame(string));
 		this.ourSeqNum_ = seqNum;
 	}
 };
@@ -742,7 +805,12 @@ cw.net.ClientTransport.prototype.writeStrings_ = function(queue, start) {
  * @private
  */
 cw.net.ClientTransport.prototype.close_ = function() {
-	1/0
+	if(this.transportType_ == cw.net.TransportType_.BROWSER_HTTP) {
+		this.underlying_.dispose();
+	} else {
+		throw Error("close_: don't know what to do for this transportType");
+	}
+	this.stream_.transportOffline_(this);
 };
 
 /**
@@ -765,12 +833,19 @@ cw.net.ClientTransport.prototype.causedRwinOverflow_ = function() {
  * @private
  */
 cw.net.ClientTransport.prototype.writeReset_ = function(reasonString, applicationLevel) {
-	if(!this.started_ && !this.toSend_) {
-		this.writeHelloFrame_();
+	if(!this.started_ && !this.toSendStrings_) {
+		this.writeInitialFrames_();
 	}
 	var resetFrame = new cw.net.ResetFrame(reasonString, applicationLevel);
 	this.writeFrame_(resetFrame);
+	this.close_();
 };
+
+cw.net.ClientTransport.prototype.disposeInternal = function() {
+	cw.net.ClientTransport.superClass_.disposeInternal.call(this);
+	this.close_();
+};
+
 
 
 cw.net.ClientTransport.logger = goog.debug.Logger.getLogger('cw.net.ClientTransport');
