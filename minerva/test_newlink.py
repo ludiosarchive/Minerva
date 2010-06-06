@@ -503,7 +503,7 @@ class StreamTests(unittest.TestCase):
 		# original reset caused by a transport
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
-		s.resetFromClient('reason', True)
+		s.resetFromPeer('reason', True)
 		self.aR(RuntimeError, lambda: s.reset('reason'))
 		self.aR(RuntimeError, lambda: s.reset('reason'))
 
@@ -523,7 +523,7 @@ class StreamTests(unittest.TestCase):
 		# original reset caused by a transport
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
-		s.resetFromClient('reason', True)
+		s.resetFromPeer('reason', True)
 		self.aR(RuntimeError, lambda: s.sendStrings(["somebox"]))
 		self.aR(RuntimeError, lambda: s.sendStrings(["somebox"]))
 
@@ -544,9 +544,9 @@ class StreamTests(unittest.TestCase):
 		self.aE([], t1.getNew())
 
 
-	def test_resetFromClient(self):
+	def test_resetFromPeer(self):
 		"""
-		If L{Stream.resetFromClient} is called (which is normally done by a
+		If L{Stream.resetFromPeer} is called (which is normally done by a
 		transport that receives a reset frame from a client), it calls
 		C{streamReset} on the protocol, and all of the L{Stream}'s
 		transports are closed gently.
@@ -558,7 +558,7 @@ class StreamTests(unittest.TestCase):
 			s.transportOnline(t2, False, None)
 
 			self.aE(False, s.disconnected)
-			s.resetFromClient('the reason', applicationLevel)
+			s.resetFromPeer('the reason', applicationLevel)
 			self.aE(True, s.disconnected)
 
 			i = list(factory.instances)[0]
@@ -1912,7 +1912,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 	def test_resetValid(self):
 		"""
 		If client sends a valid reset frame, the transport calls
-		L{Stream.resetFromClient}.
+		L{Stream.resetFromPeer}.
 		"""
 		for applicationLevel in (True, False):
 			for reason in ('the reason', ''):
@@ -1927,7 +1927,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 					['notifyFinish'],
 					['transportOnline', transport, False, None],
 					['getSACK'],
-					['resetFromClient', reason, True],
+					['resetFromPeer', reason, True],
 					['transportOffline', transport],
 				], stream.getNew())
 

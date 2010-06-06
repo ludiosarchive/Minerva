@@ -297,12 +297,12 @@ class Stream(object):
 
 	# Called by transports.
 	# This assumes _protocol has been instantiated.
-	def resetFromClient(self, reasonString, applicationLevel):
+	def resetFromPeer(self, reasonString, applicationLevel):
 		"""
 		Private. Do not call this.
 
-		Minerva transports call this when they get a reset frame from client.
-		Transport still needs to call transportOffline after this.
+		ServerTransport calls this when it gets a reset frame from client.
+		ServerTransport still needs to call transportOffline after this.
 		"""
 		if self.disconnected:
 			return
@@ -1138,7 +1138,7 @@ class ServerTransport(object):
 					handleStrings()
 
 				if frameType == ResetFrame:
-					self._stream.resetFromClient(frame.reasonString, frame.applicationLevel)
+					self._stream.resetFromPeer(frame.reasonString, frame.applicationLevel)
 					break # No need to process any frames after the reset frame
 
 				else:

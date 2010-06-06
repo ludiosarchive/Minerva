@@ -241,8 +241,8 @@ class MockStream(_MockMixin):
 		self.log.append(['reset', reasonString])
 
 
-	def resetFromClient(self, reasonString, applicationLevel):
-		self.log.append(['resetFromClient', reasonString, applicationLevel])
+	def resetFromPeer(self, reasonString, applicationLevel):
+		self.log.append(['resetFromPeer', reasonString, applicationLevel])
 		for t in self._transports.copy():
 			t.closeGently()
 
