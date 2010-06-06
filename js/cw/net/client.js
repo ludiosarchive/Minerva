@@ -8,6 +8,7 @@ goog.provide('cw.net.Stream');
 goog.provide('cw.net.ClientTransport');
 
 goog.require('goog.string');
+goog.require('goog.debug.Logger');
 goog.require('goog.Disposable');
 goog.require('goog.net.XhrIo');
 goog.require('goog.net.EventType');
@@ -241,10 +242,10 @@ cw.net.Stream = function(clock, protocol, httpEndpoint, makeCredentialsCallable)
 	this.streamId = cw.net.makeStreamId_();
 
 	/**
-	 * @type {!cw.net.SackFrame}
+	 * @type {!cw.net.SACKTuple}
 	 * @private
 	 */
-	this.lastSackSeenByClient_ = new cw.net.SackFrame(-1, []);
+	this.lastSackSeenByClient_ = [-1, []];
 
 	/**
 	 * The send queue.
@@ -325,7 +326,8 @@ cw.net.Stream.prototype.stringsReceived = function(transport, boxes) {
  * @param {!cw.net.SACKTuple} sackInfo
  */
 cw.net.Stream.prototype.sackReceived = function(sackInfo) {
-	1/0
+	this.lastSackSeenByClient_ = sackInfo;
+	return this.queue_.handleSACK(sackInfo);
 };
 
 cw.net.Stream.prototype.disposeInternal = function() {
@@ -474,7 +476,45 @@ cw.net.ClientTransport.prototype.lastStartParam_ = cw.math.LARGER_THAN_LARGEST_I
  * @private
  */
 cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
-	1/0
+	var logger = cw.net.ClientTransport.logger;
+	var closeSoon = false;
+	var strings = [];
+	for(var i=0, len=frames.length; i < len; i++) {
+		/** @type {!cw.net.Frame} Decoded frame */
+		try {
+			var frame = cw.net.decodeFrameFromServer(frames[i]);
+			if(frame instanceof cw.net.StringFrame) {
+				strings.push(frame.string);
+			} else if(frame instanceof cw.net.SackFrame) {
+				if(this.stream_.sackReceived([frame.ackNumber, frame.sackList])) {
+					logger.warning("closing soon because got bad SackFrame");
+					closeSoon = true;
+					break;
+				}
+			} else if(frame instanceof cw.net.SeqNumFrame) {
+				this.peerSeqNum_ = frame.seqNum - 1;
+			} else if(frame instanceof cw.net.YouCloseItFrame) {
+				logger.finest("closing soon because got YouCloseItFrame");
+				closeSoon = true;
+				break;
+			} else if(frame instanceof cw.net.ResetFrame) {
+				1/0
+			} else if(frame instanceof cw.net.TransportKillFrame) {
+				1/0
+			}
+			// completely ignore PaddingFrame
+		} catch(e) {
+			if(!(e instanceof cw.net.InvalidFrame)) {
+				throw e;
+			}
+			logger.warning("closing soon because got InvalidFrame");
+			closeSoon = true;
+			break;
+		}
+	}
+
+	// TODO: strings
+	// TODO: closeSoon
 };
 
 /**
@@ -488,6 +528,15 @@ cw.net.ClientTransport.prototype.httpResponseReceived_ = function(e) {
 		responseText = responseText.replace(/\r\n/g, '\n');
 	}
 	var frames = responseText.split('\n');
+	var last = frames.pop();
+	if(last != "") {
+		// This isn't really a big deal, because Streams survive broken
+		// transports.
+		cw.net.ClientTransport.logger.warning("got incomplete http response");
+		// Note: response might be incomplete even if this case
+		// is not run, because the response might have beeen abruptly
+		// terminated after a newline.
+	}
 	this.framesReceived_(frames);
 };
 
@@ -595,3 +644,7 @@ cw.net.ClientTransport.prototype.writeReset_ = function(reasonString, applicatio
 	}
 	1/0
 };
+
+
+cw.net.ClientTransport.logger = goog.debug.Logger.getLogger('cw.net.ClientTransport');
+cw.net.ClientTransport.logger.setLevel(goog.debug.Logger.Level.ALL);
