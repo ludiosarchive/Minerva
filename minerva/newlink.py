@@ -354,7 +354,7 @@ class Stream(object):
 		# just in case the peer sent something useful.
 		# Note: Underneath the stringsReceived call (above), someone may have
 		# reset the Stream! This is why we check for `not self.disconnected`.
-		if not self.disconnected and hitLimit:
+		if hitLimit and not self.disconnected:
 			# Minerva used to do an _internalReset here, but now it kills the transport.
 			transport.causedRwinOverflow()
 
