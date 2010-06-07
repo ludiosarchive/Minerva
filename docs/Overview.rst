@@ -10,6 +10,8 @@ Other available documentation
 
 This isn't the only documentation. There's also:
 
+*	`scope_overview.xlsx`_, which describes the flow of data through Minerva's components.
+
 *	`protocol.xlsx`_, which describes the various frames used in the Minerva protocol.
 
 *	``minerva/sample/`` in the source tree contains a demo application. **TODO:** How to run it? Should there be a twistd plugin for it?
