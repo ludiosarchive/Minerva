@@ -277,13 +277,15 @@ class Stream(object):
 	# This assumes _protocol has been instantiated.
 	def reset(self, reasonString):
 		"""
-		Reset (disconnect) with reason C{reasonString}.
+		Reset (disconnect) with reason C{reasonString}. This writes a reset
+		frame once over all open transports, so the client may never
+		actually receive a reset frame. If this happens, the client may
+		soon try to connect to a nonexistent Stream, at which point Minerva
+		server will send a C{tk_stream_attach_failure}.
 		"""
 		if self.disconnected:
 			raise RuntimeError("Cannot reset disconnected Stream %r" % (self,))
 		self.disconnected = True
-		# Note: If no transports are connected, client will not get the reset frame. If client tries
-		# to connect a transport to a dead stream, they will get a tk_stream_attach_failure.
 		# .copy() because _transports shrinks as transports call Stream.transportOffline
 		for t in self._transports.copy():
 			t.writeReset(reasonString, applicationLevel=True)

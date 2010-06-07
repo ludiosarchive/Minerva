@@ -49,6 +49,7 @@ goog.require('goog.debug.DivConsole');
 goog.require('goog.debug.Logger');
 goog.require('cw.string');
 goog.require('cw.net.Stream');
+goog.require('cw.net.IMinervaProtocol');
 goog.require('cw.whoami');
 goog.require('cw.repr');
 goog.require('cw.string');
@@ -69,6 +70,7 @@ function byId(o) {
 }
 
 /**
+ * @implements {cw.net.IMinervaProtocol}
  * @constructor
  */
 chatapp.ChatProtocol = function() {

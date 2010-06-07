@@ -84,6 +84,22 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 	 */
 	function test_disposeDisposesAllTransports(self) {
 		1/0
+	},
+	
+	function test_sendStringsOverSecondaryTransport(self) {
+
+	},
+
+	function test_sendStringsOverPrimaryTransport(self) {
+
+	},
+
+	function test_resetOverSecondaryTransport(self) {
+
+	},
+
+	function test_resetOverPrimaryTransport(self) {
+
 	}
 );
 

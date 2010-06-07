@@ -385,7 +385,9 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 };
 
 /**
- * Reset with reason `reasonString`.
+ * Reset with reason `reasonString`. This tries to send a reset frame once,
+ * 	either over the existing primary transport, or over a new secondary
+ * 	transport. The server might never receive a reset frame.
  * @param {string} reasonString Reason why resetting the stream
  */
 cw.net.Stream.prototype.reset = function(reasonString) {
