@@ -268,7 +268,7 @@ class DemoProtocol(BasicMinervaProtocol):
 				text = s.replace('broadcast:', '', 1)
 				for c in self.factory.chatters:
 					# We assume text contains only characters in the " " - "~" range.
-					c.stream.sendBoxes(["TEXT|" + str(self._id) + '|' + text])
+					c.stream.sendStrings(["TEXT|" + str(self._id) + '|' + text])
 
 			else:
 				send.append('unknown_message_type')

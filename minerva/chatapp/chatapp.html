@@ -32,7 +32,7 @@
 </td>
 <td>
 	<input type="text" name="textinput" id="textinput">
-	<input type="submit" value="Send" onclick="chatapp.sendText(+byId('textinput').value);return false">
+	<input type="submit" value="Send" onclick="chatapp.sendText(byId('textinput').value);return false">
 </td>
 </tr>
 </table>
@@ -48,9 +48,10 @@ goog.require('cw.autoTitle');
 goog.require('goog.debug.DivConsole');
 goog.require('goog.debug.Logger');
 goog.require('cw.string');
-goog.require('cw.net.newStream');
+goog.require('cw.net.Stream');
 goog.require('cw.whoami');
 goog.require('cw.repr');
+goog.require('cw.string');
 </script>
 
 <script>
@@ -101,7 +102,7 @@ chatapp.ChatProtocol.prototype.handleString_ = function(s) {
 	}
 
 	// TODO: add timestamp
-	logger.info(cw.string.subs('<{0}> {1}', uaId, text));
+	logger.info(cw.string.format('<{0}> {1}', uaId, text));
 };
 
 chatapp.ChatProtocol.prototype.stringsReceived = function(strings) {
@@ -116,6 +117,7 @@ chatapp.ChatProtocol.prototype.reset = function() {
 };
 
 chatapp.ChatProtocol.prototype.sendText = function(text) {
+	logger.info('sendText: ' + text);
 	this.stream_.sendStrings(["broadcast:" + text]);
 };
 
@@ -134,7 +136,9 @@ chatapp.lastProto = null;
 
 chatapp.startStream = function() {
 	chatapp.lastProto = new chatapp.ChatProtocol();
-	cw.net.newStream(chatapp.lastProto, '/httpface/', chatapp.makeCredentialsData);
+	var stream = new cw.net.Stream(
+		window, chatapp.lastProto, '/httpface/', chatapp.makeCredentialsData);
+	stream.start();
 };
 
 

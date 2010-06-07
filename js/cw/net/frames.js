@@ -13,6 +13,7 @@ goog.provide('cw.net.ResetFrame');
 goog.provide('cw.net.TransportKillFrame');
 goog.provide('cw.net.InvalidFrame');
 goog.provide('cw.net.HttpFormat');
+goog.provide('cw.net.decodeFrameFromClient');
 goog.provide('cw.net.decodeFrameFromServer');
 
 goog.require('goog.debug.Error');

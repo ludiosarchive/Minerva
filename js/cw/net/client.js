@@ -6,6 +6,7 @@ goog.provide('cw.net.WhoReset');
 goog.provide('cw.net.IMinervaProtocol');
 goog.provide('cw.net.Stream');
 goog.provide('cw.net.ClientTransport');
+goog.provide('cw.net.TransportType_');
 
 goog.require('goog.asserts');
 goog.require('goog.string');
@@ -15,9 +16,11 @@ goog.require('goog.Disposable');
 goog.require('goog.net.XhrIo');
 goog.require('goog.net.EventType');
 goog.require('cw.math');
+goog.require('cw.repr');
 goog.require('cw.net.Queue');
 goog.require('cw.net.Incoming');
 goog.require('cw.net.FlashSocket');
+
 goog.require('cw.net.HelloFrame');
 goog.require('cw.net.StringFrame');
 goog.require('cw.net.SeqNumFrame');
@@ -203,6 +206,18 @@ cw.net.makeStreamId_ = function() {
 
 
 /**
+ * States that a Stream can be in.
+ * @enum {number}
+ * @private
+ */
+cw.net.StreamState_ = {
+	UNSTARTED: 1,
+	STARTED: 2,
+	DISCONNECTED: 3
+};
+
+
+/**
  * @param {!Object} clock Something that provides IWindowTime. TODO: use CallQueue instead?
  * @param {!Object} protocol
  * @param {string} httpEndpoint
@@ -268,9 +283,6 @@ cw.net.Stream = function(clock, protocol, httpEndpoint, makeCredentialsCallable)
 	 * @private
 	 */
 	this.incoming_ = new cw.net.Incoming();
-
-	// Call streamStarted before we even connect one transport successfully.
-	this.protocol_.streamStarted(this);
 };
 goog.inherits(cw.net.Stream, goog.Disposable);
 
@@ -289,11 +301,11 @@ cw.net.Stream.prototype.maxUndeliveredStrings = 50;
 cw.net.Stream.prototype.maxUndeliveredBytes = 1 * 1024 * 1024;
 
 /**
- * Is this Stream disconnected? (Due to any kind of reset).
- * @type {boolean}
+ * State the stream is in.
+ * @type {!cw.net.StreamState_}
  * @private
  */
-cw.net.Stream.prototype.disconnected_ = false;
+cw.net.Stream.prototype.state_ = cw.net.StreamState_.UNSTARTED;
 
 /**
  * Counter to uniquely identify the transports in this Stream
@@ -313,11 +325,21 @@ cw.net.Stream.prototype.primaryTransport_ = null;
  * @private
  */
 cw.net.Stream.prototype.tryToSend_ = function() {
-	1/0
+	if(this.state_ == cw.net.StreamState_.UNSTARTED) {
+		return;
+	}
+	// After we're in STARTED, we always have a primary transport,
+	// even if its underlying object hasn't connected yet.
+	if(this.primaryTransport_.canSendMoreAfterStarted_) {
+		this.primaryTransport_.writeStrings_(this.queue_, null);
+	} else {
+		this.createNewTransport_(false);
+	}
 };
 
 /**
- * Send strings `strings` to the peer.
+ * Send strings `strings` to the peer. You may call this even before the
+ * 	Stream is started with {@link #start}.
  * @param {!Array.<string>} strings Strings to send.
  */
 cw.net.Stream.prototype.sendStrings = function(strings) {
@@ -339,6 +361,9 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
 	var transport = new cw.net.ClientTransport(
 		this.clock_, this, this.transportCount_, transportType, endpoint, becomePrimary);
 	this.transports_.add(transport);
+	if(becomePrimary) {
+		this.primaryTransport_ = transport;
+	}
 	transport.writeStrings_(this.queue_, null);
 	transport.start_();
 };
@@ -353,7 +378,8 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 	if(!removed) {
 		throw Error("transport was not removed?");
 	}
-	if(transport == cw.net.Stream.prototype.primaryTransport_) {
+	if(transport == this.primaryTransport_) {
+		this.primaryTransport_ = null;
 		this.createNewTransport_(true);
 	}
 };
@@ -383,11 +409,12 @@ cw.net.Stream.prototype.resetFromPeer_ = function(reasonString, applicationLevel
  * 	these boxes.
  * @param {!Array.<number|string>} pairs (seqNum, string) pairs that
  * 	transport has received.
+ * @private
  */
-cw.net.Stream.prototype.stringsReceived = function(transport, pairs) {
-	if(this.disconnected_) {
-		return;
-	}
+cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs) {
+	//if(this.state_ == cw.net.StreamState_.DISCONNECTED) {
+	//	return;
+	//}
 
 	var _ = this.incoming_.give(
 		pairs, this.maxUndeliveredStrings, this.maxUndeliveredBytes);
@@ -399,8 +426,8 @@ cw.net.Stream.prototype.stringsReceived = function(transport, pairs) {
 	// We deliver the deliverable strings even if the receive window is overflowing,
 	// just in case the peer sent something useful.
 	// Note: Underneath the stringsReceived call (above), someone may have
-	// reset the Stream! This is why we check for `not this.disconnected_`.
-	if(!this.disconnected_ && hitLimit) {
+	// reset the Stream! This is why we check that we're not disconnected.
+	if(hitLimit && this.state_ == cw.net.StreamState_.STARTED) {
 		// Minerva used to do an _internalReset here, but now it kills the transport.
 		transport.causedRwinOverflow_();
 	}
@@ -425,6 +452,21 @@ cw.net.Stream.prototype.sackReceived_ = function(sackInfo) {
  */
 cw.net.Stream.prototype.getSACK_ = function() {
 	return this.incoming_.getSACK();
+};
+
+/**
+ * Start the stream.
+ */
+cw.net.Stream.prototype.start = function() {
+	goog.asserts.assert(
+		this.state_ == cw.net.StreamState_.UNSTARTED,
+		'start_: bad Stream state_: ' + this.state_);
+
+	// Call streamStarted before we even connect one transport successfully.
+	this.protocol_.streamStarted(this);
+
+	this.state_ = cw.net.StreamState_.STARTED;
+	this.createNewTransport_(true);
 };
 
 cw.net.Stream.prototype.disposeInternal = function() {
@@ -578,7 +620,7 @@ cw.net.ClientTransport.prototype.peerSeqNum_ = -1;
 cw.net.ClientTransport.prototype.handleStrings_ = function(bunchedStrings) {
 	// bunchedStrings is already sorted 99.99%+ of the time
 	bunchedStrings.sort();
-	this.stream_.stringsReceived(this, bunchedStrings);
+	this.stream_.stringsReceived_(this, bunchedStrings);
 	// Remember that a lot can happen underneath that stringsReceived call,
 	// including a call to our own `reset_` or `close_` or `writeStrings_`
 };
@@ -636,7 +678,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 			if(!(e instanceof cw.net.InvalidFrame)) {
 				throw e;
 			}
-			logger.warning("closing soon because got InvalidFrame");
+			logger.warning("closing soon because got InvalidFrame: " + cw.repr.repr(frames[i]));
 			closeSoon = true;
 			break;
 		}
@@ -665,12 +707,13 @@ cw.net.ClientTransport.prototype.httpResponseReceived_ = function() {
 	if(last != "") {
 		// This isn't really a big deal, because Streams survive broken
 		// transports.
-		cw.net.ClientTransport.logger.warning("got incomplete http response");
 		// Note: response might be incomplete even if this case
 		// is not run, because the response might have beeen abruptly
 		// terminated after a newline.
+		cw.net.ClientTransport.logger.warning("got incomplete http response");
 	}
 	this.framesReceived_(frames);
+	this.stream_.transportOffline_(this);
 };
 
 /**
@@ -758,14 +801,18 @@ cw.net.ClientTransport.prototype.start_ = function() {
 	}
 	this.started_ = true;
 
-	if(!this.toSendStrings_) {
+	if(!this.toSendStrings_.length) {
 		this.writeInitialFrames_();
 	}
 
 	if(this.transportType_ == cw.net.TransportType_.BROWSER_HTTP) {
+		// push a "" because we want a trailing newline.
+		this.toSendStrings_.push("");
 		var payload = this.toSendStrings_.join('\n');
 		this.toSendStrings_ = [];
-		this.makeHttpRequest_(payload);
+		// TODO XXX IMPORTANT: remove this forced delay
+		var that = this;
+		this.clock_.setTimeout(function() { that.makeHttpRequest_(payload) }, 500);
 	} else {
 		throw Error("start_: don't know what to do for this transportType");
 	}
@@ -781,7 +828,11 @@ cw.net.ClientTransport.prototype.start_ = function() {
  * @private
  */
 cw.net.ClientTransport.prototype.writeStrings_ = function(queue, start) {
-	if(!this.started_ && !this.toSendStrings_) {
+	// This function behaves very badly if `start` is undefined.
+	goog.asserts.assert(
+		start !== undefined, "writeStrings_: Did you forget `start` argument?");
+
+	if(!this.started_ && !this.toSendStrings_.length) {
 		this.writeInitialFrames_();
 	}
 
@@ -833,7 +884,7 @@ cw.net.ClientTransport.prototype.causedRwinOverflow_ = function() {
  * @private
  */
 cw.net.ClientTransport.prototype.writeReset_ = function(reasonString, applicationLevel) {
-	if(!this.started_ && !this.toSendStrings_) {
+	if(!this.started_ && !this.toSendStrings_.length) {
 		this.writeInitialFrames_();
 	}
 	var resetFrame = new cw.net.ResetFrame(reasonString, applicationLevel);
