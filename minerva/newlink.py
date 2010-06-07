@@ -23,8 +23,8 @@ from minerva.website import RejectTransport
 from minerva.interfaces import ISimpleConsumer
 from minerva.window import Queue, Incoming
 from minerva.frames import (
-	HelloFrame, StringFrame, SeqNumFrame, SackFrame, YouCloseItFrame,
-	ResetFrame, PaddingFrame, TransportKillFrame,
+	HelloFrame, StringFrame, SeqNumFrame, SackFrame, StreamCreatedFrame,
+	YouCloseItFrame, ResetFrame, PaddingFrame, TransportKillFrame,
 	WhoReset, InvalidFrame, decodeFrameFromClient)
 
 # Make globals that pypycpyo.optimizer can optimize away
@@ -996,8 +996,16 @@ class ServerTransport(object):
 
 
 	@mailboxify('_mailbox')
-	def _maybeWriteInitialSACK(self):
-		if not self._terminating and self._lastSackSeenByClient is not None:
+	def _writeInitialFrames(self, requestNewStream):
+		if self._terminating:
+			return
+
+		if requestNewStream:
+			self._toSend += self._encodeFrame(StreamCreatedFrame())
+
+		# Write the initial SACK if we have not already written a SACK,
+		# but only if the client has an out-of-date impression of the SACK.
+		if self._lastSackSeenByClient is not None:
 			currentSack = SackFrame(*self._stream.getSACK())
 			if currentSack != self._lastSackSeenByClient:
 				##print "\n", self, currentSack, self._lastSackSeenByClient
@@ -1028,7 +1036,8 @@ class ServerTransport(object):
 		# doing the buildStream/getStream stuff, because requestNewStream=True
 		# doesn't always imply that a new stream will actually be created.
 
-		if hello.requestNewStream:
+		requestNewStream = hello.requestNewStream
+		if requestNewStream:
 			try:
 				stream = self.factory.streamTracker.buildStream(self.streamId)
 			except StreamAlreadyExists:
@@ -1036,6 +1045,7 @@ class ServerTransport(object):
 		else:
 			stream = self.factory.streamTracker.getStream(self.streamId)
 
+		# Check every transport, not just those with `requestNewStream`.
 		d = self.factory.firewall.checkTransport(self, stream)
 
 		# Keep only the variables we need for the cbAuthOkay closure
@@ -1048,7 +1058,7 @@ class ServerTransport(object):
 			# Note: self._stream being non-None implies that were are authed,
 			# and that we have called transportOnline (or are calling it right now).
 			self._stream = stream
-			self._maybeWriteInitialSACK()
+			self._writeInitialFrames(requestNewStream)
 			self._stream.transportOnline(self, wantsStrings, succeedsTransport)
 			# Remember, a lot of stuff can happen underneath that
 			# transportOnline call because it may construct a MinervaProtocol,

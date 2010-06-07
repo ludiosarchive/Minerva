@@ -301,6 +301,13 @@ cw.net.Stream.prototype.maxUndeliveredStrings = 50;
 cw.net.Stream.prototype.maxUndeliveredBytes = 1 * 1024 * 1024;
 
 /**
+ * Does the server know about the Stream yet? If not, the transports we make
+ * must have HelloFrame with `requestNewStream` and `credentialsData`.
+ * @type {boolean}
+ */
+cw.net.Stream.prototype.streamExistsAtServer_ = false;
+
+/**
  * State the stream is in.
  * @type {!cw.net.StreamState_}
  * @private
@@ -366,6 +373,17 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
 	}
 	transport.writeStrings_(this.queue_, null);
 	transport.start_();
+};
+
+/**
+ * Called by a transport which has received indication that the Stream has
+ * been successfully created. The server sends StreamCreatedFrame over
+ * *every* transport with `requestNewStream`, so this method might be
+ * called more than once. This method is idempotent.
+ * @private
+ */
+cw.net.Stream.prototype.streamSuccessfullyCreated_ = function() {
+	this.streamExistsAtServer_ = true;
 };
 
 /**
@@ -664,6 +682,8 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 				break;
 			} else if(frame instanceof cw.net.PaddingFrame) {
 				// Ignore it
+			} else if(frame instanceof cw.net.StreamCreatedFrame) {
+				this.stream_.streamSuccessfullyCreated_();
 			} else {
 				if(bunchedStrings) {
 					this.handleStrings_(bunchedStrings);
@@ -740,13 +760,13 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 	hello.transportNumber = this.transportNumber;
 	hello.protocolVersion = cw.net.protocolVersion_;
 	hello.httpFormat = cw.net.HttpFormat.FORMAT_XHR;
-	hello.requestNewStream = (this.transportNumber == 0); ///////////////// wrong, could be > 0
-	hello.streamId = this.stream_.streamId;
-	if(hello.requestNewStream) {
+	if(!this.stream_.streamExistsAtServer_) {
+		hello.requestNewStream = true;
 		// TODO: maybe sometimes client needs to send credentialsData
 		// even when it's not a new Stream?
 		hello.credentialsData = this.stream_.makeCredentialsCallable_();
 	}
+	hello.streamId = this.stream_.streamId;
 	hello.streamingResponse = false;
 	if(hello.streamingResponse) {
 		hello.needPaddingBytes = 4096;

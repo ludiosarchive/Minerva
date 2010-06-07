@@ -48,6 +48,7 @@ var BROWSER_HTTP = cw.net.TransportType_.BROWSER_HTTP;
  * @constructor
  */
 cw.net.TestClient.MockStream = function() {
+	this.streamExistsAtServer_ = false;
 	this.makeCredentialsCallable_ = function() { return "MockStream-credentials"; };
 	this.lastSackSeenByClient_ = [-1, []];
 	this.streamId = goog.string.repeat('x', 26);
