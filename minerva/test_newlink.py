@@ -1331,6 +1331,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		q.extend(['box0', 'box1'])
 		transport.writeStrings(q, start=None)
 		self.aE([
+			StreamCreatedFrame(),
 			SeqNumFrame(0),
 			StringFrame('box0'),
 			StringFrame('box1'),
@@ -1349,6 +1350,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		q.extend(['box0', 'box1', 'box2'])
 		transport.writeStrings(q, start=1)
 		self.aE([
+			StreamCreatedFrame(),
 			SeqNumFrame(1),
 			StringFrame('box1'),
 			StringFrame('box2'),
@@ -1394,7 +1396,12 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		q.extend(['box0', 'box1'])
 		transport.writeStrings(q, start=None)
 		transport.writeStrings(q, start=None)
-		self.aE([SeqNumFrame(0), StringFrame('box0'), StringFrame('box1')], transport.getNew())
+		self.aE([
+			StreamCreatedFrame(),
+			SeqNumFrame(0),
+			StringFrame('box0'),
+			StringFrame('box1')
+		], transport.getNew())
 
 		q.extend(['box2'])
 		transport.writeStrings(q, start=None)
@@ -1421,6 +1428,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport.writeStrings(q, start=None)
 		transport.writeStrings(q, start=None) # doing it again is pretty much a no-op
 		self.aE([
+			StreamCreatedFrame(),
 			SeqNumFrame(3),
 			StringFrame('box3'),
 			StringFrame('box4'),
@@ -1449,6 +1457,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport.writeStrings(q, start=1)
 		transport.writeStrings(q, start=1) # doing it again is pretty much a no-op
 		self.aE([
+			StreamCreatedFrame(),
 			SeqNumFrame(3),
 			StringFrame('box3'),
 			StringFrame('box4'),
@@ -1535,10 +1544,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
+		self.aE([StreamCreatedFrame()], transport.getNew())
 
 		stream = self.streamTracker.getStream('x'*26)
 
-		self.aE([], transport.getNew())
 		self.aE([['notifyFinish'], ['transportOnline', transport, False, None], ['getSACK']], stream.getNew())
 
 		transport.dataReceived('1:xxxxxxxx')
@@ -1553,6 +1562,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		frame0 = _makeHelloFrame()
 		transport.sendFrames([frame0])
+		self.aE([StreamCreatedFrame()], transport.getNew())
 		transport.sendFrames([_BadFrame('?')])
 		self.aE([TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()], transport.getNew())
 		self._testExtraDataReceivedIgnored(transport)
@@ -1572,7 +1582,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			transport = self._makeTransport()
 			frame0 = _makeHelloFrame()
 			transport.sendFrames([frame0])
-			self.aE([], transport.getNew())
+			self.aE([StreamCreatedFrame()], transport.getNew())
 			transport.sendFrames([frame])
 			self.aE([
 				TransportKillFrame(tk_invalid_frame_type_or_arguments),
@@ -1603,7 +1613,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
-		self.aE([], transport.getNew())
+		self.aE([StreamCreatedFrame()], transport.getNew())
 		transport.sendFrames([frame0])
 		self.aE([
 			TransportKillFrame(tk_invalid_frame_type_or_arguments),
@@ -1621,6 +1631,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		transport.sendFrames([frame0, frame0])
 		self.aE([
+			StreamCreatedFrame(),
 			TransportKillFrame(tk_invalid_frame_type_or_arguments),
 			YouCloseItFrame()
 		], transport.getNew())
@@ -1631,7 +1642,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			frame0 = _makeHelloFrame()
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
-			self.aE([], transport.getNew())
+			self.aE([StreamCreatedFrame()], transport.getNew())
 
 			self._resetStreamTracker()
 
@@ -1640,7 +1651,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame(dict(credentialsData='not_looked_at'))
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
-		self.aE([], transport.getNew())
+		self.aE([StreamCreatedFrame()], transport.getNew())
 
 
 	def test_transportNumberDoesntMatter(self):
@@ -1651,7 +1662,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			frame0 = _makeHelloFrame(dict(transportNumber=n))
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
-			self.aE([], transport.getNew())
+			self.aE([StreamCreatedFrame()], transport.getNew())
 
 
 	def test_validHelloButNoSuchStream(self):
@@ -1713,7 +1724,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			frame0 = _makeHelloFrame()
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
-			self.aE([], transport.getNew())
+			self.aE([StreamCreatedFrame()], transport.getNew())
 		act()
 
 		# sanity check, make sure streamTracker still knows about stream '\x00'*16
@@ -1782,6 +1793,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
+		self.aE([StreamCreatedFrame()], transport.getNew())
 		stream = self.streamTracker.getStream('x'*26)
 
 		self.aE([], transport.getNew())
@@ -1804,6 +1816,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				dict(succeedsTransport=succeedsTransport))
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
+			self.aE([StreamCreatedFrame()], transport.getNew())
 			stream = self.streamTracker.getStream('x'*26)
 
 			assert [] == transport.getNew(), self.decodingTcpTransport.log
@@ -1831,7 +1844,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			['transportOnline', transport, False, None],
 			['getSACK'],
 		], stream.getNew())
-		self.aE([], transport.getNew())
+		self.aE([StreamCreatedFrame()], transport.getNew())
 
 		transport.sendFrames([StringFrame("box0")])
 
@@ -1854,6 +1867,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
+		self.aE([StreamCreatedFrame()], transport.getNew())
 		stream = self.streamTracker.getStream('x'*26)
 		stream.queue.append("box0")
 
@@ -1874,6 +1888,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
+		self.aE([StreamCreatedFrame()], transport.getNew())
 		stream = self.streamTracker.getStream('x'*26)
 		stream.queue.extend(["box0", "box1", "box2"])
 
@@ -1891,6 +1906,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
+		self.aE([StreamCreatedFrame()], transport.getNew())
 		stream = self.streamTracker.getStream('x'*26)
 		stream.queue.append("box0")
 
@@ -2202,10 +2218,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		frame0 = _makeHelloFrame(dict(succeedsTransport=None))
 		transport0.sendFrames([frame0])
+		self.aE([StreamCreatedFrame()], transport0.getNew())
+
 		stream = self.streamTracker.getStream('x'*26)
-
-		self.aE([], transport0.getNew())
-
 		proto = list(self.protocolFactory.instances)[0]
 
 
@@ -2240,6 +2255,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		transport1 = self._makeTransport()
 
 		frame0 = _makeHelloFrame(dict(
+			requestNewStream=DeleteProperty,
 			succeedsTransport=None,
 			lastSackSeenByClient=SackFrame(3, ()))) # TODO: increment transportNumber?
 		transport1.sendFrames([frame0])
@@ -2258,6 +2274,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		transport2 = self._makeTransport()
 
 		frame0 = _makeHelloFrame(dict(
+			requestNewStream=DeleteProperty,
 			succeedsTransport=None,
 			lastSackSeenByClient=SackFrame(3, ()))) # TODO: increment transportNumber?
 		transport2.sendFrames([frame0])
@@ -2288,10 +2305,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		frame0 = _makeHelloFrame(dict(succeedsTransport=None))
 		transport0.sendFrames([frame0])
+		self.aE([StreamCreatedFrame()], transport0.getNew())
+
 		stream = self.streamTracker.getStream('x'*26)
-
-		self.aE([], transport0.getNew())
-
 		proto = list(self.protocolFactory.instances)[0]
 
 
@@ -2313,8 +2329,10 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport1 = self._makeTransport()
 
-		newHello = _makeHelloFrame(
-			dict(transportNumber=1, succeedsTransport=0))
+		newHello = _makeHelloFrame(dict(
+			requestNewStream=DeleteProperty,
+			transportNumber=1,
+			succeedsTransport=0))
 		transport1.sendFrames([newHello])
 
 		self.aE([], transport1.getNew())
@@ -2338,9 +2356,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		frame0 = _makeHelloFrame(dict(succeedsTransport=None))
 		transport0.sendFrames([frame0])
+		self.aE([StreamCreatedFrame()], transport0.getNew())
 		stream = self.streamTracker.getStream('x'*26)
-
-		self.aE([], transport0.getNew())
 
 		proto = list(self.protocolFactory.instances)[0]
 		stream.sendStrings(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"])
@@ -2348,8 +2365,10 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		transport0.sendFrames([SackFrame(-1, (1, 3, 5, 9))])
 
 		transport1 = self._makeTransport()
-		newHello = _makeHelloFrame(
-			dict(transportNumber=1, succeedsTransport=None))
+		newHello = _makeHelloFrame(dict(
+			requestNewStream=DeleteProperty,
+			transportNumber=1,
+			succeedsTransport=None))
 		transport1.sendFrames([newHello])
 		self.aE([
 			SeqNumFrame(0),
@@ -2382,10 +2401,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		frame0 = _makeHelloFrame(dict(succeedsTransport=None))
 		transport0.sendFrames([frame0])
+		self.aE([StreamCreatedFrame()], transport0.getNew())
+
 		stream = self.streamTracker.getStream('x'*26)
-
-		self.aE([], transport0.getNew())
-
 		proto = list(self.protocolFactory.instances)[0]
 
 		transport0.sendFrames([SeqNumFrame(0), StringFrame("box0")])
@@ -2418,9 +2436,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			frame0 = _makeHelloFrame(dict(succeedsTransport=None))
 			transport0.sendFrames([frame0])
-			stream = self.streamTracker.getStream('x'*26)
+			self.aE([StreamCreatedFrame()], transport0.getNew())
 
-			self.aE([], transport0.getNew())
 			transport0.sendFrames([StringFrame("box0")])
 			self.aE([
 				# For clientLosesSack == True, imagine that the client
@@ -2432,6 +2449,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			transport1 = self._makeTransport()
 
 			newHello = _makeHelloFrame(dict(
+				requestNewStream=DeleteProperty,
 				transportNumber=1,
 				succeedsTransport=0,
 				lastSackSeenByClient=SackFrame(-1 if clientLosesSack else 0, ())))
@@ -2455,12 +2473,14 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		transport0 = self._makeTransport()
 
 		transport0.sendFrames([_makeHelloFrame()])
-		self.aE([], transport0.getNew())
+		self.aE([StreamCreatedFrame()], transport0.getNew())
 
 		stream = self.streamTracker.getStream('x'*26)
 
 		transport0.sendFrames([
-			ResetFrame("reason", True), ResetFrame("x", False), _BadFrame('?')])
+			ResetFrame("reason", True),
+			ResetFrame("x", False),
+			_BadFrame('?')])
 
 		self.aE([YouCloseItFrame()], transport0.getNew())
 
@@ -2488,7 +2508,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		]
 		transport0.sendFrames(frames)
 
-		self.aE([SackFrame(1, ()), YouCloseItFrame()], transport0.getNew())
+		self.aE([
+			SackFrame(1, ()),
+			StreamCreatedFrame(),
+			YouCloseItFrame()
+		], transport0.getNew())
 
 		proto = list(self.protocolFactory.instances)[0]
 		self.aE([
@@ -2508,14 +2532,14 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		transport0 = self._makeTransport()
 
 		transport0.sendFrames([_makeHelloFrame()])
-		self.aE([], transport0.getNew())
+		self.aE([StreamCreatedFrame()], transport0.getNew())
 
 		stream = self.streamTracker.getStream('x'*26)
 
 		transport1 = self._makeTransport()
 
 		transport1.sendFrames([_makeHelloFrame()])
-		self.aE([], transport1.getNew())
+		self.aE([StreamCreatedFrame()], transport1.getNew())
 
 		transport0.sendFrames([ResetFrame("reason", True)])
 		transport1.sendFrames([ResetFrame("reason", False)])
@@ -2560,6 +2584,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 #				StringFrame("s2cbox0"),
 #				StringFrame("s2cbox1"),
 #				StringFrame("s2cbox2"),
+				StreamCreatedFrame(),
 				ResetFrame('reset forced by mock protocol', True),
 				YouCloseItFrame()
 			], transport0.getNew())
@@ -2595,6 +2620,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			transport0.sendFrames(frames)
 
 			expected = [
+				StreamCreatedFrame(),
 				SeqNumFrame(0),
 				StringFrame("s2cbox0"),
 				StringFrame("s2cbox1"),
@@ -2642,6 +2668,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			self.aE([
 				SackFrame(1, ()),
+				StreamCreatedFrame(),
 				SeqNumFrame(0),
 				StringFrame("s2cbox0"),
 				StringFrame("s2cbox1"),
@@ -2687,6 +2714,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			expected = [
 				SackFrame(1, ()),
+				StreamCreatedFrame(),
 				SeqNumFrame(0),
 				StringFrame("s2cbox0"),
 				StringFrame("s2cbox1"),
@@ -2741,6 +2769,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			expected = [
 				SackFrame(2, ()),
+				StreamCreatedFrame(),
 				ResetFrame('reset forced by mock protocol', True),
 				YouCloseItFrame(),
 			]
