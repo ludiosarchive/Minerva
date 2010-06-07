@@ -6,8 +6,8 @@ from mypy.constant import Constant
 from mypy.strops import StringFragment
 
 from minerva.frames import (
-	HelloFrame, StringFrame, SeqNumFrame, SackFrame, YouCloseItFrame,
-	ResetFrame, PaddingFrame, TransportKillFrame,
+	HelloFrame, StreamCreatedFrame, StringFrame, SeqNumFrame,
+	SackFrame, YouCloseItFrame, ResetFrame, PaddingFrame, TransportKillFrame,
 	InvalidFrame, InvalidHello, CannotEncode,
 	decodeFrameFromClient, decodeFrameFromServer)
 
@@ -218,7 +218,6 @@ class HelloFrameTests(unittest.TestCase):
 
 
 
-
 class StringFrameTests(unittest.TestCase):
 
 	def test_eq(self):
@@ -345,6 +344,36 @@ class SackFrameTests(unittest.TestCase):
 		self.assertEqual('1,4|2A', SackFrame(2, (1, 4)).encode())
 		self.assertEqual('4|2A', SackFrame(2, (4,)).encode())
 		self.assertEqual('|2A', SackFrame(2, ()).encode())
+
+
+
+class StreamCreatedFrameTests(unittest.TestCase):
+
+	def test_eq(self):
+		self.assertEqual(StreamCreatedFrame(), StreamCreatedFrame())
+		self.assertNotEqual(StreamCreatedFrame(), ())
+
+
+	def test_repr(self):
+		self.assertEqual("StreamCreatedFrame()", repr(StreamCreatedFrame()))
+
+
+	def test_decode(self):
+		s = 'C'
+		self.assertEqual(
+			StreamCreatedFrame(),
+			StreamCreatedFrame.decode(sf(s)))
+
+
+	def test_decodeFailed(self):
+		s = 'extra stuff' + 'C'
+		self.assertRaises(
+			InvalidFrame,
+			lambda: StreamCreatedFrame.decode(sf(s)))
+
+
+	def test_encode(self):
+		self.assertEqual('C', StreamCreatedFrame().encode())
 
 
 

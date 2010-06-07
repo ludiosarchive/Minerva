@@ -18,6 +18,7 @@ goog.require('cw.net.HelloFrame');
 goog.require('cw.net.StringFrame');
 goog.require('cw.net.SeqNumFrame');
 goog.require('cw.net.SackFrame');
+goog.require('cw.net.StreamCreatedFrame');
 goog.require('cw.net.YouCloseItFrame');
 goog.require('cw.net.PaddingFrame');
 goog.require('cw.net.ResetFrame');
@@ -33,10 +34,12 @@ var HelloFrame = cw.net.HelloFrame;
 var StringFrame = cw.net.StringFrame;
 var SeqNumFrame = cw.net.SeqNumFrame;
 var SackFrame = cw.net.SackFrame;
+var StreamCreatedFrame = cw.net.StreamCreatedFrame;
 var YouCloseItFrame = cw.net.YouCloseItFrame;
 var PaddingFrame = cw.net.PaddingFrame;
 var ResetFrame = cw.net.ResetFrame;
 var TransportKillFrame = cw.net.TransportKillFrame;
+
 var tk = cw.net.TransportKillReason;
 var InvalidFrame = cw.net.InvalidFrame;
 var InvalidHello = cw.net.InvalidHello;
@@ -461,6 +464,37 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SackFrameTests').methods(
 		self.assertEqual('1,4|2A', new SackFrame(2, [1, 4]).encode());
 		self.assertEqual('4|2A', new SackFrame(2, [4]).encode());
 		self.assertEqual('|2A', new SackFrame(2, []).encode());
+	}
+);
+
+
+cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'StreamCreatedFrameTests').methods(
+
+	function test_eq(self) {
+		self.assertEqual(new StreamCreatedFrame(), new StreamCreatedFrame());
+		self.assertNotEqual(new StreamCreatedFrame(), []);
+	},
+
+	function test_repr(self) {
+		self.assertEqual("new StreamCreatedFrame()", repr(new StreamCreatedFrame()));
+	},
+
+	function test_decode(self) {
+		var s = 'C';
+		self.assertEqual(
+			new StreamCreatedFrame(),
+			StreamCreatedFrame.decode(s));
+	},
+
+	function test_decodeFailed(self) {
+		var s = 'extra stuff' + 'C';
+		self.assertThrows(
+			InvalidFrame,
+			function() { StreamCreatedFrame.decode(s); });
+	},
+
+	function test_encode(self) {
+		self.assertEqual('C', new StreamCreatedFrame().encode());
 	}
 );
 

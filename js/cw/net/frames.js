@@ -7,6 +7,7 @@ goog.provide('cw.net.HelloFrame');
 goog.provide('cw.net.StringFrame');
 goog.provide('cw.net.SeqNumFrame');
 goog.provide('cw.net.SackFrame');
+goog.provide('cw.net.StreamCreatedFrame');
 goog.provide('cw.net.YouCloseItFrame');
 goog.provide('cw.net.PaddingFrame');
 goog.provide('cw.net.ResetFrame');
@@ -618,6 +619,53 @@ cw.net.SackFrame.prototype.encodeToPieces = function(sb) {
 /**
  * @constructor
  */
+cw.net.StreamCreatedFrame = function() {
+
+};
+
+/**
+ * @param {!Array.<string>} sb
+ */
+cw.net.StreamCreatedFrame.prototype.__reprToPieces__ = function(sb) {
+	sb.push('new StreamCreatedFrame()');
+};
+
+/**
+ * Test two frames for equality.
+ * @param {*} other
+ * @param {!Array.<string>} messages
+ * @return {boolean}
+ */
+cw.net.StreamCreatedFrame.prototype.equals = function(other, messages) {
+	return (other instanceof cw.net.StreamCreatedFrame);
+};
+
+/**
+ * @param {string} frameString A string that ends with "C".
+ * @return {!cw.net.StreamCreatedFrame}
+ */
+cw.net.StreamCreatedFrame.decode = function(frameString) {
+	if(frameString.length != 1) {
+		throw new cw.net.InvalidFrame("leading garbage");
+	}
+	return new cw.net.StreamCreatedFrame();
+};
+
+cw.net.StreamCreatedFrame.prototype.encode = cw.net.frameEncodeMethod_;
+
+/**
+ * @param {!Array.<string>} sb
+ */
+cw.net.StreamCreatedFrame.prototype.encodeToPieces = function(sb) {
+	sb.push('C');
+};
+
+
+
+
+/**
+ * @constructor
+ */
 cw.net.YouCloseItFrame = function() {
 
 };
@@ -937,6 +985,8 @@ cw.net.decodeFrameFromServer = function(frameString) {
 		return cw.net.YouCloseItFrame.decode(frameString);
 	} else if(lastByte == "P") {
 		return cw.net.PaddingFrame.decode(frameString);
+	} else if(lastByte == "C") {
+		return cw.net.StreamCreatedFrame.decode(frameString);
 	} else if(lastByte == "!") {
 		return cw.net.ResetFrame.decode(frameString);
 	} else if(lastByte == "K") {

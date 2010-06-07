@@ -362,6 +362,36 @@ class SackFrame(tuple):
 
 
 
+class StreamCreatedFrame(tuple):
+	__slots__ = ()
+	__metaclass__ = attachClassMarker('_MARKER')
+
+	def __new__(cls):
+		"""
+		No arguments.
+		"""
+		return tuple.__new__(cls, (cls._MARKER,))
+
+
+	def __repr__(self):
+		return '%s()' % (self.__class__.__name__,)
+
+
+	@classmethod
+	def decode(cls, frameString):
+		"""
+		C{frameString} is a L{StringFragment} that ends with "C".
+		"""
+		if len(frameString) != 1:
+			raise InvalidFrame("leading garbage")
+		return cls()
+
+
+	def encode(self):
+		return 'C'
+
+
+
 class YouCloseItFrame(tuple):
 	__slots__ = ()
 	__metaclass__ = attachClassMarker('_MARKER')
@@ -564,6 +594,7 @@ class TransportKillFrame(tuple):
 #	' ': StringFrame,
 #	'N': SeqNumFrame,
 #	'A': SackFrame,
+#	'C': StreamCreatedFrame,
 #	'Y': YouCloseItFrame,
 #	'P': PaddingFrame,
 #	'!': ResetFrame,
@@ -619,6 +650,8 @@ def decodeFrameFromServer(frameString):
 		return YouCloseItFrame.decode(frameString)
 	elif lastByte == "P":
 		return PaddingFrame.decode(frameString)
+	elif lastByte == "C":
+		return StreamCreatedFrame.decode(frameString)
 	elif lastByte == "!":
 		return ResetFrame.decode(frameString)
 	elif lastByte == "K":
