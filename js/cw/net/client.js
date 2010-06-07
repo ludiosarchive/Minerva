@@ -740,7 +740,7 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 	hello.transportNumber = this.transportNumber;
 	hello.protocolVersion = cw.net.protocolVersion_;
 	hello.httpFormat = cw.net.HttpFormat.FORMAT_XHR;
-	hello.requestNewStream = (this.transportNumber == 0);
+	hello.requestNewStream = (this.transportNumber == 0); ///////////////// wrong, could be > 0
 	hello.streamId = this.stream_.streamId;
 	if(hello.requestNewStream) {
 		// TODO: maybe sometimes client needs to send credentialsData
