@@ -1320,7 +1320,8 @@ class ServerTransport(object):
 		headers['server'] = ['DWR-Reverse-Ajax Z/1']
 
 		# http://code.google.com/p/doctype/wiki/ArticleScriptInclusion
-		request.write('for(;;);\n')
+		request.write('for(;;);/*P\n') # "P" to indicate padding frame.
+		# Note that "/*" is very weak because any frame could close the comment.
 
 		self.dataReceived(body)
 

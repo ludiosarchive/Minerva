@@ -2800,7 +2800,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				self.assertEqual(server.NOT_DONE_YET, out)
 
 				encode = DelimitedStringDecoder.encode
-				self.assertEqual(['for(;;);\n', encode(SackFrame(2, ()).encode())], request.written)
+				self.assertEqual([encode('for(;;);/*P'), encode(SackFrame(2, ()).encode())], request.written)
 				self.assertEqual(0 if streaming else 1, request.finished)
 
 				stream = self.streamTracker.getStream('x'*26)
@@ -2906,7 +2906,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 			encode = DelimitedStringDecoder.encode
 			expectedWritten = [
-				'for(;;);\n', (
+				encode("for(;;);/*P"), (
 					encode(SackFrame(0, ()).encode()) +
 					encode(SeqNumFrame(0).encode()) +
 					encode(StringFrame('box0').encode()) +
@@ -2943,16 +2943,18 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 			out = resource.render(request)
 			self.assertEqual(server.NOT_DONE_YET, out)
-			self.assertEqual(['for(;;);\n'], request.written)
+
+			encode = DelimitedStringDecoder.encode
+			self.assertEqual([encode("for(;;);/*P")], request.written)
 
 			stream = self.streamTracker.getStream('x'*26)
 			stream.sendStrings(['box0', 'box1'])
 
-			encode = DelimitedStringDecoder.encode
-			expectedWritten = ['for(;;);\n',
-				encode(SeqNumFrame(0).encode()) +
-				encode(StringFrame('box0').encode()) +
-				encode(StringFrame('box1').encode())]
+			expectedWritten = [
+				encode("for(;;);/*P"), (
+					encode(SeqNumFrame(0).encode()) +
+					encode(StringFrame('box0').encode()) +
+					encode(StringFrame('box1').encode()))]
 
 			self.assertEqual(expectedWritten, request.written)
 			self.assertEqual(0 if streaming else 1, request.finished)
