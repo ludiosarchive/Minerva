@@ -76,6 +76,17 @@ cw.net.TestClient.decodeFramesFromHttpClient_ = function(payload) {
 
 
 
+cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
+	// TODO: test for what happens if you `reset` a Stream before you `start it`.
+
+	/**
+	 * Calling stream.dispose() makes it call dispose() on all of its transports.
+	 */
+	function test_disposeDisposesAllTransports(self) {
+		1/0
+	}
+);
+
 
 cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods(
 	/**
@@ -113,6 +124,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 			new StringFrame('c2s_1')];
 		self.assertEqual(expected, decoded);
 	}
+
+	// TODO: test if ClientTransport(becomePrimary=false), HelloFrame does not have an 'eeds' argument
 );
+
 
 })(); // end anti-clobbering for JScript

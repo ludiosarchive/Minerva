@@ -746,13 +746,17 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 		hello.credentialsData = this.stream_.makeCredentialsCallable_();
 	}
 	hello.streamingResponse = false;
-	hello.needPaddingBytes = 4096;
+	if(hello.streamingResponse) {
+		hello.needPaddingBytes = 4096;
+	}
 	// TODO: investigate if any browsers are thrashing CPU by copying
 	// the whole thing during XHR streaming.
 	hello.maxReceiveBytes = 300000;
 	hello.maxOpenTime = 55;
 	hello.useMyTcpAcks = false;
-	hello.succeedsTransport = null;
+	if(this.becomePrimary_) {
+		hello.succeedsTransport = null;
+	}
 	hello.lastSackSeenByClient = this.stream_.lastSackSeenByClient_;
 	return hello;
 };
