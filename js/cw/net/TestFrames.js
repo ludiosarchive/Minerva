@@ -77,8 +77,10 @@ cw.net.TestFrames.makeHelloFrame_ = function(extra, noDefaults) {
 			continue;
 		}
 		var v = extra[k];
-		if(v === DeleteProperty && _extra.hasOwnProperty(k)) {
-			delete _extra[k];
+		if(v === DeleteProperty) {
+			if(_extra.hasOwnProperty(k)) {
+				delete _extra[k];
+			}
 		} else {
 			_extra[k] = v;
 		}

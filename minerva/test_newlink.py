@@ -37,8 +37,9 @@ from minerva.newlink import (
 )
 
 from minerva.frames import (
-	HelloFrame, StringFrame, SeqNumFrame, SackFrame, YouCloseItFrame,
-	ResetFrame, PaddingFrame, TransportKillFrame, decodeFrameFromServer)
+	HelloFrame, StringFrame, SeqNumFrame, SackFrame, StreamCreatedFrame,
+	YouCloseItFrame, ResetFrame, PaddingFrame, TransportKillFrame,
+	decodeFrameFromServer)
 
 tk_stream_attach_failure = TransportKillFrame.stream_attach_failure
 tk_acked_unsent_strings =  TransportKillFrame.acked_unsent_strings
@@ -99,23 +100,21 @@ def _makeHelloFrame(extra={}):
 		maxOpenTime=2**30,
 		lastSackSeenByClient=SackFrame(-1, ()))
 	for k, v in extra.iteritems():
-		if v == DeleteProperty and k in _extra:
-			del _extra[k]
+		if v == DeleteProperty:
+			if k in _extra:
+				del _extra[k]
 		else:
 			_extra[k] = v
 	return HelloFrame(_extra)
 
 
 def _makeHelloFrameHttp(extra={}):
-	_extra = dict(
-		httpFormat=FORMAT_XHR,
-		streamingResponse=0)
-	for k, v in extra.iteritems():
-		if v == DeleteProperty and k in _extra:
-			del _extra[k]
-		else:
-			_extra[k] = v
-	return _makeHelloFrame(_extra)
+	extra = extra.copy()
+	if not 'httpFormat' in extra:
+		extra['httpFormat'] = FORMAT_XHR
+	if not 'streamingResponse' in extra:
+		extra['streamingResponse'] = 0
+	return _makeHelloFrame(extra)
 
 
 def _makeTransportWithDecoder(parser, faceFactory):
@@ -2800,7 +2799,11 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				self.assertEqual(server.NOT_DONE_YET, out)
 
 				encode = DelimitedStringDecoder.encode
-				self.assertEqual([encode('for(;;);/*P'), encode(SackFrame(2, ()).encode())], request.written)
+				self.assertEqual([
+					encode('for(;;);/*P'), (
+						encode(SackFrame(2, ()).encode()) +
+						encode(StreamCreatedFrame().encode()))
+				], request.written)
 				self.assertEqual(0 if streaming else 1, request.finished)
 
 				stream = self.streamTracker.getStream('x'*26)
@@ -2908,6 +2911,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			expectedWritten = [
 				encode("for(;;);/*P"), (
 					encode(SackFrame(0, ()).encode()) +
+					encode(StreamCreatedFrame().encode()) +
 					encode(SeqNumFrame(0).encode()) +
 					encode(StringFrame('box0').encode()) +
 					encode(StringFrame('box1').encode()))]
@@ -2940,26 +2944,66 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 			request.content = StringIO(
 				'\n'.join(f.encode() for f in frames) + '\n')
-
-			out = resource.render(request)
-			self.assertEqual(server.NOT_DONE_YET, out)
+			resource.render(request)
 
 			encode = DelimitedStringDecoder.encode
-			self.assertEqual([encode("for(;;);/*P")], request.written)
+			self.assertEqual([
+				encode("for(;;);/*P"),
+				encode(StreamCreatedFrame().encode())
+			], request.written)
 
 			stream = self.streamTracker.getStream('x'*26)
-			stream.sendStrings(['box0', 'box1'])
 
-			expectedWritten = [
-				encode("for(;;);/*P"), (
-					encode(SeqNumFrame(0).encode()) +
-					encode(StringFrame('box0').encode()) +
-					encode(StringFrame('box1').encode()))]
+			if streaming:
+				stream.sendStrings(['box0', 'box1'])
 
-			self.assertEqual(expectedWritten, request.written)
-			self.assertEqual(0 if streaming else 1, request.finished)
+				expectedWritten = [
+					encode("for(;;);/*P"),
+					encode(StreamCreatedFrame().encode()), (
+						encode(SeqNumFrame(0).encode()) +
+						encode(StringFrame('box0').encode()) +
+						encode(StringFrame('box1').encode()))]
 
-			self._sendAnotherString(stream, request, streaming, expectedWritten)
+				self.assertEqual(expectedWritten, request.written)
+				self.assertEqual(0, request.finished)
+
+				self._sendAnotherString(stream, request, streaming, expectedWritten)
+			else:
+				# Our first request is now finished, because it was used to
+				# create a Stream, and server sent StreamCreatedFrame.
+				self.assertEqual(1, request.finished)
+
+				# Create a new request that will hang until some S2C boxes are sent.
+				request2 = DummyRequest(postpath=[])
+				request2.method = 'POST'
+
+				frame0 = _makeHelloFrameHttp(dict(
+					succeedsTransport=None,
+					credentialsData=DeleteProperty,
+					requestNewStream=DeleteProperty,
+					streamingResponse=streaming))
+				frames = [frame0]
+
+				request2.content = StringIO(
+					'\n'.join(f.encode() for f in frames) + '\n')
+				resource.render(request2)
+
+				self.assertEqual([
+					encode("for(;;);/*P")
+				], request2.written)
+
+				stream.sendStrings(['box0', 'box1'])
+
+				expectedWritten = [
+					encode("for(;;);/*P"), (
+						encode(SeqNumFrame(0).encode()) +
+						encode(StringFrame('box0').encode()) +
+						encode(StringFrame('box1').encode()))]
+
+				self.assertEqual(expectedWritten, request2.written)
+				self.assertEqual(1, request2.finished)
+
+				self._sendAnotherString(stream, request2, streaming, expectedWritten)
 
 
 	def test_responseHasGoodHttpHeaders(self):
@@ -2995,9 +3039,11 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		request = DummyRequest(postpath=[])
 		request.method = 'POST'
 
+		# Use streamingResponse because we don't want the StreamCreatedFrame
+		# to close the request.
 		frame0 = _makeHelloFrameHttp(dict(
 			succeedsTransport=None,
-			streamingResponse=False))
+			streamingResponse=True))
 		frames = [frame0]
 
 		request.content = StringIO(
