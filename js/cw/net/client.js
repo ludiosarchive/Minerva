@@ -329,18 +329,38 @@ cw.net.Stream.prototype.transportCount_ = -1;
 cw.net.Stream.prototype.primaryTransport_ = null;
 
 /**
+ * The secondary transport, for sending S2C strings (especially if primary
+ * 	cannot after it has been created).
+ * @type {Object}
+ * @private
+ */
+cw.net.Stream.prototype.secondaryTransport_ = null;
+
+/**
  * @private
  */
 cw.net.Stream.prototype.tryToSend_ = function() {
+	if(!this.streamExistsAtServer_) {
+		goog.asserts.assert(
+			this.queue_.getQueuedCount() == 0 ||
+			this.queue_.getQueuedKeys()[0] !== undefined,
+			"Stream does not exist at server, but we have already " +
+			"removed item #0 from our queue?");
+	}
 	if(this.state_ == cw.net.StreamState_.UNSTARTED) {
+		return;
+	}
+	if(this.queue_.getQueuedCount() == 0) {
 		return;
 	}
 	// After we're in STARTED, we always have a primary transport,
 	// even if its underlying object hasn't connected yet.
 	if(this.primaryTransport_.canSendMoreAfterStarted_) {
 		this.primaryTransport_.writeStrings_(this.queue_, null);
-	} else {
-		this.createNewTransport_(false);
+	// For robustness reasons, wait until we know that Stream
+	// exists on server before creating secondary transports.
+	} else if(this.streamExistsAtServer_ && this.secondaryTransport_ == null) {
+		this.secondaryTransport_ = this.createNewTransport_(false);
 	}
 };
 
@@ -360,6 +380,7 @@ cw.net.Stream.prototype.sendStrings = function(strings) {
 /**
  * @param {boolean} becomePrimary Whether this transport should become
  * 	primary transport.
+ * @return {!cw.net.ClientTransport} The newly-created transport.
  */
 cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
 	this.transportCount_ += 1;
@@ -368,11 +389,9 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
 	var transport = new cw.net.ClientTransport(
 		this.clock_, this, this.transportCount_, transportType, endpoint, becomePrimary);
 	this.transports_.add(transport);
-	if(becomePrimary) {
-		this.primaryTransport_ = transport;
-	}
 	transport.writeStrings_(this.queue_, null);
 	transport.start_();
+	return transport;
 };
 
 /**
@@ -384,6 +403,7 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
  */
 cw.net.Stream.prototype.streamSuccessfullyCreated_ = function() {
 	this.streamExistsAtServer_ = true;
+	this.tryToSend_();
 };
 
 /**
@@ -397,8 +417,12 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 		throw Error("transport was not removed?");
 	}
 	if(transport == this.primaryTransport_) {
-		this.primaryTransport_ = null;
-		this.createNewTransport_(true);
+		this.primaryTransport_ = this.createNewTransport_(true);
+	} else if(transport == this.secondaryTransport_) {
+		this.secondaryTransport_ = null;
+		// More data might have been queued while the secondary transport
+		// was getting a response.
+		this.tryToSend_();
 	}
 };
 
@@ -458,9 +482,19 @@ cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs) {
  *	our C2S strings. This method possibly removes some queued items from
  * 	our send queue.
  * @param {!cw.net.SACKTuple} sackInfo
+ * @return {boolean} Whether the SACK was bad
  * @private
  */
 cw.net.Stream.prototype.sackReceived_ = function(sackInfo) {
+	// We absolutely need to do this, because server sometimes sends
+	// a SackFrame before it sends a StreamCreatedFrame. If we're
+	// removing items from our send queue, we definitely need to
+	// update our `streamExistsAtServer_` flag. In very rare cases,
+	// bad things could happen if we didn't.
+	this.streamExistsAtServer_ = true;
+	// Do not tryToSend_ because if primary transport breaks, we'll
+	// just connect a new primary, which will upload strings if necessary.
+
 	this.lastSackSeenByClient_ = sackInfo;
 	return this.queue_.handleSACK(sackInfo);
 };
@@ -486,7 +520,7 @@ cw.net.Stream.prototype.start = function() {
 	this.protocol_.streamStarted(this);
 
 	this.state_ = cw.net.StreamState_.STARTED;
-	this.createNewTransport_(true);
+	this.primaryTransport_ = this.createNewTransport_(true);
 };
 
 cw.net.Stream.prototype.disposeInternal = function() {
