@@ -34,6 +34,7 @@ from minerva.newlink import (
 	StreamAlreadyExists, ISimpleConsumer, IMinervaProtocol,
 	IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
 	IMinervaTransport, ServerTransport, SocketFace, HttpFace,
+	HTTP_RESPONSE_PREAMBLE,
 )
 
 from minerva.frames import (
@@ -2829,7 +2830,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 				encode = DelimitedStringDecoder.encode
 				self.assertEqual([
-					encode('for(;;);/*P'), (
+					encode(HTTP_RESPONSE_PREAMBLE), (
 						encode(SackFrame(2, ()).encode()) +
 						encode(StreamCreatedFrame().encode()))
 				], request.written)
@@ -2938,7 +2939,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 			encode = DelimitedStringDecoder.encode
 			expectedWritten = [
-				encode("for(;;);/*P"), (
+				encode(HTTP_RESPONSE_PREAMBLE), (
 					encode(SackFrame(0, ()).encode()) +
 					encode(StreamCreatedFrame().encode()) +
 					encode(SeqNumFrame(0).encode()) +
@@ -2977,7 +2978,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 			encode = DelimitedStringDecoder.encode
 			self.assertEqual([
-				encode("for(;;);/*P"),
+				encode(HTTP_RESPONSE_PREAMBLE),
 				encode(StreamCreatedFrame().encode())
 			], request.written)
 
@@ -2987,7 +2988,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				stream.sendStrings(['box0', 'box1'])
 
 				expectedWritten = [
-					encode("for(;;);/*P"),
+					encode(HTTP_RESPONSE_PREAMBLE),
 					encode(StreamCreatedFrame().encode()), (
 						encode(SeqNumFrame(0).encode()) +
 						encode(StringFrame('box0').encode()) +
@@ -3018,13 +3019,13 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				resource.render(request2)
 
 				self.assertEqual([
-					encode("for(;;);/*P")
+					encode(HTTP_RESPONSE_PREAMBLE)
 				], request2.written)
 
 				stream.sendStrings(['box0', 'box1'])
 
 				expectedWritten = [
-					encode("for(;;);/*P"), (
+					encode(HTTP_RESPONSE_PREAMBLE), (
 						encode(SeqNumFrame(0).encode()) +
 						encode(StringFrame('box0').encode()) +
 						encode(StringFrame('box1').encode()))]

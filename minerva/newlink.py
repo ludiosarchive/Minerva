@@ -831,6 +831,8 @@ def sanitizeHelloFrame(helloFrame, isHttp):
 # Acceptable protocol modes for ServerTransport to be in. Int32* are for Flash Socket.
 UNKNOWN, POLICYFILE, INT32, INT32CRYPTO, WEBSOCKET, BENCODE, HTTP = range(7)
 
+HTTP_RESPONSE_PREAMBLE = ";)]}P" # "P" to indicate a PaddingFrame.
+
 # TODO: We'll need to make sure it's impossible for an attacker to downgrade "int32+crypto"
 # down to "int32"
 
@@ -1331,9 +1333,12 @@ class ServerTransport(object):
 		# with a Server: Lightstreamer[...] header, remove this if it's unnecesary.
 		headers['server'] = ['DWR-Reverse-Ajax Z/1']
 
-		# http://code.google.com/p/doctype/wiki/ArticleScriptInclusion
-		request.write('for(;;);/*P\n') # "P" to indicate padding frame.
-		# Note that "/*" is very weak because any frame could close the comment.
+		# Note that we have protection against all CSRF attacks with
+		# streamId and credentialsData. We use script-inclusion protection
+		# to reduce the chance of private information being leaked over
+		# "GET" HTTP transports.
+		# See http://code.google.com/p/doctype/wiki/ArticleScriptInclusion
+		request.write(HTTP_RESPONSE_PREAMBLE + "\n")
 
 		self.dataReceived(body)
 
