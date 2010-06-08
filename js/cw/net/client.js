@@ -688,9 +688,23 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 	var closeSoon = false;
 	var bunchedStrings = [];
 	for(var i=0, len=frames.length; i < len; i++) {
-		/** @type {!cw.net.Frame} Decoded frame */
+		var frameStr = frames[i];
+		this.receivedCounter_ += 1;
+
+		// For BROWSER_HTTP, first frame must be the anti-script-inclusion preamble.
+		// This provides decent protection against us parsing and reading frames
+		// from a page returned by an intermediary like a proxy or a WiFi access paywall.
+		if(this.receivedCounter_ == 0 &&
+		this.transportType_ == cw.net.TransportType_.BROWSER_HTTP &&
+		frameStr != ";)]}P") {
+			logger.warning("closing soon because got bad premable: " + cw.repr.repr(frameStr));
+			closeSoon = true;
+			break;
+		}
+
 		try {
-			var frame = cw.net.decodeFrameFromServer(frames[i]);
+			/** @type {!cw.net.Frame} Decoded frame */
+			var frame = cw.net.decodeFrameFromServer(frameStr);
 			if(frame instanceof cw.net.StringFrame) {
 				this.peerSeqNum_ += 1;
 				// Because we may have received multiple Minerva strings, collect
@@ -734,7 +748,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 			if(!(e instanceof cw.net.InvalidFrame)) {
 				throw e;
 			}
-			logger.warning("closing soon because got InvalidFrame: " + cw.repr.repr(frames[i]));
+			logger.warning("closing soon because got InvalidFrame: " + cw.repr.repr(frameStr));
 			closeSoon = true;
 			break;
 		}
