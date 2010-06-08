@@ -2952,6 +2952,36 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			self._sendAnotherString(stream, request, streaming, expectedWritten)
 
 
+	def _attachFirstHttpTransportWithFrames(self, resource, frames, streaming):
+		"""
+		Send a request to C{resource} that does nothing but create a new
+		Stream (and assert a few things we expect to see after doing this).
+		"""
+		request = DummyRequest(postpath=[])
+		request.method = 'POST'
+
+		frame0 = _makeHelloFrameHttp(dict(
+			succeedsTransport=None,
+			streamingResponse=streaming))
+		frames = [frame0] + frames
+
+		request.content = StringIO(
+			'\n'.join(f.encode() for f in frames) + '\n')
+
+		out = resource.render(request)
+		self.assertEqual(server.NOT_DONE_YET, out)
+
+		encode = DelimitedStringDecoder.encode
+		self.assertEqual([
+			encode(HTTP_RESPONSE_PREAMBLE),
+			encode(StreamCreatedFrame().encode())
+		], request.written)
+
+		# The first request is now finished, because it was used to
+		# create a Stream, and server sent StreamCreatedFrame.
+		self.assertEqual(0 if streaming else 1, request.finished)
+
+
 	def test_S2CStringsSoonAvailable(self):
 		r"""
 		If S2C strings become available after the transport connects, and if
@@ -2964,11 +2994,26 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 			self._resetStreamTracker(realObjects=True)
 			resource = self._makeResource()
+
+			# Make an initial request that only creates the Stream. This
+			# makes the rest of this test case simpler because we don't
+			# have to worry about first transport being closed (in the
+			# non-streaming case) due to StreamCreatedFrame being written.
+			# See Minerva git history before 2010-06-08 02:40 UTC to see
+			# what mess it was before.
+			self._attachFirstHttpTransportWithFrames(
+				resource, [], streaming=streaming)
+
+			stream = self.streamTracker.getStream('x'*26)
+
+			# Create a new request that will hang until some S2C boxes are sent.
 			request = DummyRequest(postpath=[])
 			request.method = 'POST'
 
 			frame0 = _makeHelloFrameHttp(dict(
 				succeedsTransport=None,
+				credentialsData=DeleteProperty,
+				requestNewStream=DeleteProperty,
 				streamingResponse=streaming))
 			frames = [frame0]
 
@@ -2978,62 +3023,21 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 			encode = DelimitedStringDecoder.encode
 			self.assertEqual([
-				encode(HTTP_RESPONSE_PREAMBLE),
-				encode(StreamCreatedFrame().encode())
+				encode(HTTP_RESPONSE_PREAMBLE)
 			], request.written)
 
-			stream = self.streamTracker.getStream('x'*26)
+			stream.sendStrings(['box0', 'box1'])
 
-			if streaming:
-				stream.sendStrings(['box0', 'box1'])
+			expectedWritten = [
+				encode(HTTP_RESPONSE_PREAMBLE), (
+					encode(SeqNumFrame(0).encode()) +
+					encode(StringFrame('box0').encode()) +
+					encode(StringFrame('box1').encode()))]
 
-				expectedWritten = [
-					encode(HTTP_RESPONSE_PREAMBLE),
-					encode(StreamCreatedFrame().encode()), (
-						encode(SeqNumFrame(0).encode()) +
-						encode(StringFrame('box0').encode()) +
-						encode(StringFrame('box1').encode()))]
+			self.assertEqual(expectedWritten, request.written)
+			self.assertEqual(0 if streaming else 1, request.finished)
 
-				self.assertEqual(expectedWritten, request.written)
-				self.assertEqual(0, request.finished)
-
-				self._sendAnotherString(stream, request, streaming, expectedWritten)
-			else:
-				# Our first request is now finished, because it was used to
-				# create a Stream, and server sent StreamCreatedFrame.
-				self.assertEqual(1, request.finished)
-
-				# Create a new request that will hang until some S2C boxes are sent.
-				request2 = DummyRequest(postpath=[])
-				request2.method = 'POST'
-
-				frame0 = _makeHelloFrameHttp(dict(
-					succeedsTransport=None,
-					credentialsData=DeleteProperty,
-					requestNewStream=DeleteProperty,
-					streamingResponse=streaming))
-				frames = [frame0]
-
-				request2.content = StringIO(
-					'\n'.join(f.encode() for f in frames) + '\n')
-				resource.render(request2)
-
-				self.assertEqual([
-					encode(HTTP_RESPONSE_PREAMBLE)
-				], request2.written)
-
-				stream.sendStrings(['box0', 'box1'])
-
-				expectedWritten = [
-					encode(HTTP_RESPONSE_PREAMBLE), (
-						encode(SeqNumFrame(0).encode()) +
-						encode(StringFrame('box0').encode()) +
-						encode(StringFrame('box1').encode()))]
-
-				self.assertEqual(expectedWritten, request2.written)
-				self.assertEqual(1, request2.finished)
-
-				self._sendAnotherString(stream, request2, streaming, expectedWritten)
+			self._sendAnotherString(stream, request, streaming, expectedWritten)
 
 
 	def test_responseHasGoodHttpHeaders(self):
