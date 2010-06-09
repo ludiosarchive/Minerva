@@ -340,7 +340,7 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 	if(!this.streamExistsAtServer_) {
 		goog.asserts.assert(
 			this.queue_.getQueuedCount() == 0 ||
-			this.queue_.getQueuedKeys()[0] !== undefined,
+			this.queue_.getQueuedKeys()[0] === 0,
 			"Stream does not exist at server, but we have already " +
 			"removed item #0 from our queue?");
 	}
