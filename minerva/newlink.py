@@ -57,10 +57,6 @@ class IMinervaProtocol(Interface):
 	The simplest way to end dead Streams is to use an application-level
 	ping message that your client application sends (say every 55 seconds),
 	and end the Stream if no such message has been received for 2 minutes.
-
-	TODO: expose a `primaryOnline` and `primaryOffline` or a similar
-	scheme to know some information about whether the client is even
-	connected to Minerva server.
 	"""
 
 	def streamStarted(stream):
