@@ -21,7 +21,7 @@ from minerva.flashtest.pages import FlashTestPage
 from minerva.chatapp.pages import ChatAppPage
 
 from webmagic.untwist import (
-	CookieInstaller, BetterResource, HelpfulNoResource)
+	CookieInstaller, BetterResource, BetterFile, HelpfulNoResource)
 
 
 class ConnectionTrackingHTTPChannel(http.HTTPChannel):
@@ -329,12 +329,12 @@ class Root(BetterResource):
 		JSPATH = FilePath(os.environ['JSPATH'])
 
 		self.putChild('', Index())
-		self.putChild('JSPATH', static.File(JSPATH.path))
+		self.putChild('JSPATH', BetterFile(JSPATH.path))
 		self.putChild('@tests', testing.TestPage(['cw.net'], JSPATH))
 
 		# testres_Coreweb always needed for running tests.
 		testres_Coreweb = FilePath(cwtools.__path__[0]).child('testres').path
-		self.putChild('@testres_Coreweb', static.File(testres_Coreweb))
+		self.putChild('@testres_Coreweb', BetterFile(testres_Coreweb))
 
 		testres_Minerva = ResourcesForTest(reactor)
 		self.putChild('@testres_Minerva', testres_Minerva)
@@ -349,7 +349,7 @@ class Root(BetterResource):
 		# The docs are outside of the minerva package
 		docsDir = FilePath(__file__).parent().parent().child('docs')
 		if(docsDir.exists()):
-			self.putChild('docs', static.File(docsDir.path))
+			self.putChild('docs', BetterFile(docsDir.path))
 
 
 
