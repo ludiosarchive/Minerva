@@ -796,7 +796,12 @@ cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
 		goog.bind(this.httpResponseReceived_, this));
 	goog.asserts.assert(this.underlying_ === null, 'already have an underlying_');
 	this.underlying_ = xhr;
-	this.underlying_.send(this.endpoint_, 'POST', payload);
+	// Use "application/octet-stream" instead of
+	// "application/x-www-form-urlencoded;charset=utf-8" because we don't
+	// want Minerva server or intermediaries to try to urldecode the POST body.
+	this.underlying_.send(
+		this.endpoint_, 'POST', payload,
+		{'Content-Type': 'application/octet-stream'});
 };
 
 /**
