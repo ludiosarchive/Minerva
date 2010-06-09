@@ -19,6 +19,7 @@ goog.require('cw.net.HelloFrame');
 goog.require('cw.net.StringFrame');
 goog.require('cw.net.SeqNumFrame');
 goog.require('cw.net.SackFrame');
+goog.require('cw.net.StreamStatusFrame');
 goog.require('cw.net.StreamCreatedFrame');
 goog.require('cw.net.YouCloseItFrame');
 goog.require('cw.net.PaddingFrame');
@@ -35,6 +36,7 @@ var HelloFrame = cw.net.HelloFrame;
 var StringFrame = cw.net.StringFrame;
 var SeqNumFrame = cw.net.SeqNumFrame;
 var SackFrame = cw.net.SackFrame;
+var StreamStatusFrame = cw.net.StreamStatusFrame;
 var StreamCreatedFrame = cw.net.StreamCreatedFrame;
 var YouCloseItFrame = cw.net.YouCloseItFrame;
 var PaddingFrame = cw.net.PaddingFrame;
@@ -474,6 +476,42 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SackFrameTests').methods(
 		self.assertEqual('1,4|2A', new SackFrame(SK(2, [1, 4])).encode());
 		self.assertEqual('4|2A', new SackFrame(SK(2, [4])).encode());
 		self.assertEqual('|2A', new SackFrame(SK(2, [])).encode());
+	}
+);
+
+
+/**
+ * StreamStatusFrame is roughly equivalent to SackFrame, so we omit many of
+ * the tests.
+ */
+cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'StreamStatusFrameTests').methods(
+
+	function test_eq(self) {
+		self.assertEqual(new StreamStatusFrame(SK(2, [])), new StreamStatusFrame(SK(2, [])));
+		self.assertNotEqual(new StreamStatusFrame(SK(2, [])), new StreamStatusFrame(SK(3, [])));
+	},
+
+	function test_publicAttr(self) {
+		self.assertEqual(SK(2, [4, 5]), new StreamStatusFrame(SK(2, [4, 5])).lastSackSeen);
+	},
+
+	function test_repr(self) {
+		self.assertEqual(
+			"new StreamStatusFrame(new SACK(2, [1, 4]))",
+			repr(new StreamStatusFrame(SK(2, [1, 4]))));
+	},
+
+	function test_decode(self) {
+		goog.array.forEach([-1, 0, 1, Math.pow(2, 53)], function(ackNum) {
+			var s = '1,4|' + ackNum + 'T';
+			self.assertEqual(
+				new StreamStatusFrame(SK(ackNum, [1, 4])),
+				StreamStatusFrame.decode(s));
+		});
+	},
+
+	function test_encode(self) {
+		self.assertEqual('1,4|2T', new StreamStatusFrame(SK(2, [1, 4])).encode());
 	}
 );
 

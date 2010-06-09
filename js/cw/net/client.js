@@ -26,6 +26,7 @@ goog.require('cw.net.HelloFrame');
 goog.require('cw.net.StringFrame');
 goog.require('cw.net.SeqNumFrame');
 goog.require('cw.net.SackFrame');
+goog.require('cw.net.StreamStatusFrame');
 goog.require('cw.net.YouCloseItFrame');
 goog.require('cw.net.PaddingFrame');
 goog.require('cw.net.ResetFrame');
@@ -347,6 +348,7 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 	if(this.state_ == cw.net.StreamState_.UNSTARTED) {
 		return;
 	}
+	// TODO: WRONG! we may need to send a SACK!
 	if(this.queue_.getQueuedCount() == 0) {
 		return;
 	}

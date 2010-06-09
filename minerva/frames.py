@@ -325,7 +325,7 @@ def sackStringToSack(sackString):
 		ackNumber = strToIntInRange(ackNumberStr, -1, 2**53)
 		sackList = tuple(strToNonNegLimit(s, 2**53) for s in joinedSackList.split(',')) if joinedSackList else ()
 	except ValueError:
-		raise InvalidSackString("bad sackString")
+		raise InvalidSackString("bad sack")
 	return SACK(ackNumber, sackList)
 
 
@@ -367,6 +367,40 @@ class SackFrame(tuple):
 
 	def encode(self):
 		return sackToSackString(self.sack) + 'A'
+
+
+
+class StreamStatusFrame(tuple):
+	__slots__ = ()
+	__metaclass__ = attachClassMarker('_MARKER')
+
+	lastSackSeen = property(operator.itemgetter(1))
+
+	def __new__(cls, lastSackSeen):
+		"""
+		C{lastSackSeen} is a {window.SACK}
+		"""
+		assert isinstance(lastSackSeen, SACK), type(lastSackSeen)
+		return tuple.__new__(cls, (cls._MARKER, lastSackSeen))
+
+
+	def __repr__(self):
+		return '%s(%r)' % (self.__class__.__name__, self[1])
+
+
+	@classmethod
+	def decode(cls, frameString):
+		"""
+		C{frameString} is a L{StringFragment} that ends with "A".
+		"""
+		try:
+			return cls(sackStringToSack(str(frameString[:-1])))
+		except InvalidSackString:
+			raise InvalidFrame("bad sackList or ackNumber")
+
+
+	def encode(self):
+		return sackToSackString(self.lastSackSeen) + 'T'
 
 
 

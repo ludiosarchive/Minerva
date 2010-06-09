@@ -7,6 +7,7 @@ goog.provide('cw.net.HelloFrame');
 goog.provide('cw.net.StringFrame');
 goog.provide('cw.net.SeqNumFrame');
 goog.provide('cw.net.SackFrame');
+goog.provide('cw.net.StreamStatusFrame');
 goog.provide('cw.net.StreamCreatedFrame');
 goog.provide('cw.net.YouCloseItFrame');
 goog.provide('cw.net.PaddingFrame');
@@ -604,7 +605,7 @@ cw.net.SackFrame.decode = function(frameString) {
 	var withoutTrailingChar = cw.string.withoutLast(frameString, 1);
 	var sack = cw.net.sackStringToSack_(withoutTrailingChar);
 	if(sack == null) {
-		throw new cw.net.InvalidFrame("bad sackString");
+		throw new cw.net.InvalidFrame("bad sack");
 	}
 	return new cw.net.SackFrame(sack);
 };
@@ -617,6 +618,62 @@ cw.net.SackFrame.prototype.encode = cw.net.frameEncodeMethod_;
 cw.net.SackFrame.prototype.encodeToPieces = function(sb) {
 	cw.net.sackToSackStringPieces_(this.sack, sb);
 	sb.push('A');
+};
+
+
+
+
+/**
+ * @param {!cw.net.SACK} lastSackSeen
+ * @constructor
+ */
+cw.net.StreamStatusFrame = function(lastSackSeen) {
+	/** @type {!cw.net.SACK} */
+	this.lastSackSeen = lastSackSeen;
+};
+
+/**
+ * Test two frames for equality.
+ * @param {*} other
+ * @param {!Array.<string>} messages
+ * @return {boolean}
+ */
+cw.net.StreamStatusFrame.prototype.equals = function(other, messages) {
+	return (
+		other instanceof cw.net.StreamStatusFrame &&
+		cw.eq.equals(this.lastSackSeen, other.lastSackSeen, messages));
+};
+
+/**
+ * @param {!Array.<string>} sb
+ */
+cw.net.StreamStatusFrame.prototype.__reprToPieces__ = function(sb) {
+	sb.push('new StreamStatusFrame(');
+	cw.repr.reprToPieces(this.lastSackSeen, sb);
+	sb.push(')');
+};
+
+/**
+ * @param {string} frameString A string that ends with "A".
+ * @return {!cw.net.StreamStatusFrame}
+ */
+cw.net.StreamStatusFrame.decode = function(frameString) {
+	var withoutTrailingChar = cw.string.withoutLast(frameString, 1);
+	var sack = cw.net.sackStringToSack_(withoutTrailingChar);
+	if(sack == null) {
+		throw new cw.net.InvalidFrame("bad lastSackSeen");
+	}
+	return new cw.net.StreamStatusFrame(sack);
+};
+
+cw.net.StreamStatusFrame.prototype.encode = cw.net.frameEncodeMethod_;
+
+/**
+ * @param {!Array.<string>} sb
+ */
+cw.net.StreamStatusFrame.prototype.encodeToPieces = function(sb) {
+	cw.net.sackToSackStringPieces_(this.lastSackSeen, sb);
+	sb.push('T');
 };
 
 
@@ -930,9 +987,18 @@ cw.net.TransportKillFrame.prototype.encodeToPieces = function(sb) {
 
 
 /**
- * @type {(cw.net.HelloFrame|cw.net.StringFrame|cw.net.SeqNumFrame|
- * 	cw.net.SackFrame|cw.net.StreamCreatedFrame|cw.net.YouCloseItFrame|
- * 	cw.net.PaddingFrame|cw.net.ResetFrame|cw.net.TransportKillFrame)}
+ * @type {(
+ * 	cw.net.HelloFrame|
+ * 	cw.net.StringFrame|
+ * 	cw.net.SeqNumFrame|
+ * 	cw.net.SackFrame|
+ * 	cw.net.StreamStatusFrame|
+ * 	cw.net.StreamCreatedFrame|
+ * 	cw.net.YouCloseItFrame|
+ * 	cw.net.PaddingFrame|
+ * 	cw.net.ResetFrame|
+ * 	cw.net.TransportKillFrame
+ * 	)}
  */
 cw.net.Frame = goog.typedef;
 
@@ -987,6 +1053,8 @@ cw.net.decodeFrameFromServer = function(frameString) {
 		return cw.net.SackFrame.decode(frameString);
 	} else if(lastByte == "N") {
 		return cw.net.SeqNumFrame.decode(frameString);
+	} else if(lastByte == "T") {
+		return cw.net.StreamStatusFrame.decode(frameString);
 	} else if(lastByte == "Y") {
 		return cw.net.YouCloseItFrame.decode(frameString);
 	} else if(lastByte == "P") {

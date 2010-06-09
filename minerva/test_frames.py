@@ -7,8 +7,8 @@ from mypy.strops import StringFragment
 
 from minerva.frames import (
 	HelloFrame, StreamCreatedFrame, StringFrame, SeqNumFrame,
-	SackFrame, YouCloseItFrame, ResetFrame, PaddingFrame, TransportKillFrame,
-	InvalidFrame, InvalidHello, CannotEncode,
+	SackFrame, StreamStatusFrame, YouCloseItFrame, ResetFrame, PaddingFrame,
+	TransportKillFrame, InvalidFrame, InvalidHello, CannotEncode,
 	decodeFrameFromClient, decodeFrameFromServer)
 
 from minerva.frames import (
@@ -346,6 +346,37 @@ class SackFrameTests(unittest.TestCase):
 		self.assertEqual('1,4|2A', SackFrame(SACK(2, (1, 4))).encode())
 		self.assertEqual('4|2A', SackFrame(SACK(2, (4,))).encode())
 		self.assertEqual('|2A', SackFrame(SACK(2, ())).encode())
+
+
+
+class StreamStatusFrameTests(unittest.TestCase):
+	"""
+	StreamStatusFrame is roughly equivalent to SackFrame, so we omit
+	many of the tests.
+	"""
+	def test_eq(self):
+		self.assertEqual(StreamStatusFrame(SACK(2, ())), StreamStatusFrame(SACK(2, ())))
+		self.assertNotEqual(StreamStatusFrame(SACK(2, ())), StreamStatusFrame(SACK(3, ())))
+
+
+	def test_publicAttr(self):
+		self.assertEqual(SACK(2, (4, 5)), StreamStatusFrame(SACK(2, (4, 5))).lastSackSeen)
+
+
+	def test_repr(self):
+		self.assertEqual("StreamStatusFrame(SACK(2, (1, 4)))", repr(StreamStatusFrame(SACK(2, (1, 4)))))
+
+
+	def test_decode(self):
+		for ackNum in (-1, 0, 1, 2**53):
+			s = '1,4|%sT' % (ackNum,)
+			self.assertEqual(
+				StreamStatusFrame(SACK(ackNum, (1, 4))),
+				StreamStatusFrame.decode(sf(s)))
+
+
+	def test_encode(self):
+		self.assertEqual('1,4|2T', StreamStatusFrame(SACK(2, (1, 4))).encode())
 
 
 

@@ -23,9 +23,9 @@ from minerva.website import RejectTransport
 from minerva.interfaces import ISimpleConsumer
 from minerva.window import Queue, Incoming
 from minerva.frames import (
-	HelloFrame, StringFrame, SeqNumFrame, SackFrame, StreamCreatedFrame,
-	YouCloseItFrame, ResetFrame, PaddingFrame, TransportKillFrame,
-	WhoReset, InvalidFrame, decodeFrameFromClient)
+	HelloFrame, StringFrame, SeqNumFrame, SackFrame, StreamStatusFrame,
+	StreamCreatedFrame, YouCloseItFrame, ResetFrame, PaddingFrame,
+	TransportKillFrame, WhoReset, InvalidFrame, decodeFrameFromClient)
 
 # Make globals that pypycpyo.optimizer can optimize away
 tk_stream_attach_failure = TransportKillFrame.stream_attach_failure
