@@ -94,7 +94,7 @@ def helloDataToHelloFrame(helloData):
 		lastSackSeen = helloData[Hello_lastSackSeenByClient]
 		if not isinstance(lastSackSeen, str):
 			raise TypeError
-		obj.lastSackSeenByClient = sackStringToSACK(lastSackSeen)
+		obj.lastSackSeenByClient = sackStringToSack(lastSackSeen)
 	except (KeyError, TypeError, InvalidSackString):
 		raise InvalidHello("bad lastSackSeenByClient")
 
@@ -315,16 +315,25 @@ class InvalidSackString(Exception):
 
 
 
-def sackStringToSACK(sackString):
+def sackStringToSack(sackString):
+	"""
+	C{sackString} is a C{str}. Returns a L{window.SACK}.
+	"""
 	try:
 		# If not enough args for split, Python raises ValueError
-		joinedSackList, ackNumberStr = str(sackString).rsplit('|', 1)
+		joinedSackList, ackNumberStr = sackString.rsplit('|', 1)
 		ackNumber = strToIntInRange(ackNumberStr, -1, 2**53)
 		sackList = tuple(strToNonNegLimit(s, 2**53) for s in joinedSackList.split(',')) if joinedSackList else ()
 	except ValueError:
 		raise InvalidSackString("bad sackString")
 	return SACK(ackNumber, sackList)
 
+
+def sackToSackString(sack):
+	"""
+	C{sack} is a L{window.SACK}. Returns a C{str}.
+	"""
+	return ','.join(str(s) for s in sack.sackList) + '|' + str(sack.ackNumber)
 
 
 class SackFrame(tuple):
@@ -351,13 +360,13 @@ class SackFrame(tuple):
 		C{frameString} is a L{StringFragment} that ends with "A".
 		"""
 		try:
-			return cls(sackStringToSACK(frameString[:-1]))
+			return cls(sackStringToSack(str(frameString[:-1])))
 		except InvalidSackString:
 			raise InvalidFrame("bad sackList or ackNumber")
 
 
 	def encode(self):
-		return ','.join(str(s) for s in self.sack.sackList) + '|' + str(self.sack.ackNumber) + 'A'
+		return sackToSackString(self.sack) + 'A'
 
 
 

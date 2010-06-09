@@ -141,7 +141,7 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	if(lastSackSeen == MISSING_ || !goog.isString(lastSackSeen)) {
 		throw new cw.net.InvalidHello("lastSackSeenByClient missing or not a string");
 	}
-	lastSackSeen = cw.net.sackStringToSACK_(lastSackSeen);
+	lastSackSeen = cw.net.sackStringToSack_(lastSackSeen);
 	if(lastSackSeen == null) {
 		throw new cw.net.InvalidHello("bad lastSackSeenByClient");
 	}
@@ -524,7 +524,7 @@ cw.net.SeqNumFrame.prototype.encodeToPieces = function(sb) {
  * @return {cw.net.SACK}
  * @private
  */
-cw.net.sackStringToSACK_ = function(sackString) {
+cw.net.sackStringToSack_ = function(sackString) {
 	var parts = sackString.split('|');
 
 	if(parts.length != 2) {
@@ -552,6 +552,17 @@ cw.net.sackStringToSACK_ = function(sackString) {
 	}
 
 	return new cw.net.SACK(ackNumber, sackList);
+};
+
+
+/**
+ * @param {cw.net.SACK} sack
+ * @param {!Array.<string>} sb
+ * @return {string} A serialized SACK.
+ * @private
+ */
+cw.net.sackToSackStringPieces_ = function(sack, sb) {
+	sb.push(sack.sackList.join(','), '|', String(sack.ackNumber));
 };
 
 
@@ -591,7 +602,7 @@ cw.net.SackFrame.prototype.__reprToPieces__ = function(sb) {
  */
 cw.net.SackFrame.decode = function(frameString) {
 	var withoutTrailingChar = cw.string.withoutLast(frameString, 1);
-	var sack = cw.net.sackStringToSACK_(withoutTrailingChar);
+	var sack = cw.net.sackStringToSack_(withoutTrailingChar);
 	if(sack == null) {
 		throw new cw.net.InvalidFrame("bad sackString");
 	}
@@ -604,7 +615,8 @@ cw.net.SackFrame.prototype.encode = cw.net.frameEncodeMethod_;
  * @param {!Array.<string>} sb
  */
 cw.net.SackFrame.prototype.encodeToPieces = function(sb) {
-	sb.push(this.sack.sackList.join(','), '|', String(this.sack.ackNumber) + 'A');
+	cw.net.sackToSackStringPieces_(this.sack, sb);
+	sb.push('A');
 };
 
 
