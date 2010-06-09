@@ -141,11 +141,11 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	if(lastSackSeen == MISSING_ || !goog.isString(lastSackSeen)) {
 		throw new cw.net.InvalidHello("lastSackSeenByClient missing or not a string");
 	}
-	lastSackSeen = cw.net.sackStringToSackFrame_(lastSackSeen);
+	lastSackSeen = cw.net.sackStringToSACK_(lastSackSeen);
 	if(lastSackSeen == null) {
 		throw new cw.net.InvalidHello("bad lastSackSeenByClient");
 	}
-	obj.lastSackSeenByClient = lastSackSeen.sack;
+	obj.lastSackSeenByClient = lastSackSeen;
 
 	// requestNewStream is always optional. If missing or False/0, transport
 	// is intended to attach to an existing stream.
@@ -521,10 +521,10 @@ cw.net.SeqNumFrame.prototype.encodeToPieces = function(sb) {
 
 /**
  * @param {string} sackString A string containing SACK data.
- * @return {cw.net.SackFrame}
+ * @return {cw.net.SACK}
  * @private
  */
-cw.net.sackStringToSackFrame_ = function(sackString) {
+cw.net.sackStringToSACK_ = function(sackString) {
 	var parts = sackString.split('|');
 
 	if(parts.length != 2) {
@@ -551,7 +551,7 @@ cw.net.sackStringToSackFrame_ = function(sackString) {
 		}
 	}
 
-	return new cw.net.SackFrame(new cw.net.SACK(ackNumber, sackList));
+	return new cw.net.SACK(ackNumber, sackList);
 };
 
 
@@ -590,12 +590,12 @@ cw.net.SackFrame.prototype.__reprToPieces__ = function(sb) {
  * @return {!cw.net.SackFrame}
  */
 cw.net.SackFrame.decode = function(frameString) {
-	var frame = cw.net.sackStringToSackFrame_(
-		cw.string.withoutLast(frameString, 1));
-	if(frame == null) {
+	var withoutTrailingChar = cw.string.withoutLast(frameString, 1);
+	var sack = cw.net.sackStringToSACK_(withoutTrailingChar);
+	if(sack == null) {
 		throw new cw.net.InvalidFrame("bad sackString");
 	}
-	return frame;
+	return new cw.net.SackFrame(sack);
 };
 
 cw.net.SackFrame.prototype.encode = cw.net.frameEncodeMethod_;

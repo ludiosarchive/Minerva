@@ -14,6 +14,7 @@ from mypy.objops import (
 from mypy.strops import StringFragment
 from mypy.constant import Constant, attachClassMarker
 from minerva.decoders import strictDecoder, ParseError
+from minerva.window import SACK
 
 _postImportVars = vars().keys()
 
@@ -93,7 +94,7 @@ def helloDataToHelloFrame(helloData):
 		lastSackSeen = helloData[Hello_lastSackSeenByClient]
 		if not isinstance(lastSackSeen, str):
 			raise TypeError
-		obj.lastSackSeenByClient = sackStringToSackFrame(lastSackSeen)
+		obj.lastSackSeenByClient = sackStringToSACK(lastSackSeen)
 	except (KeyError, TypeError, InvalidSackString):
 		raise InvalidHello("bad lastSackSeenByClient")
 
@@ -222,10 +223,10 @@ class HelloFrame(object):
 			argByte = getattr(HelloFrameArguments, k, None)
 			if argByte is None:
 				raise CannotEncode("Don't know argByte for %r" % (k,))
-			# We allow the user to pass either a string or a SackFrame,
-			# hopefully they'll pass a SackFrame.
-			if isinstance(v, SackFrame):
-				yield argByte, v.encode()[:-1]
+			# We allow the user to pass either a string or a SACK,
+			# hopefully they'll pass a SACK.
+			if isinstance(v, SACK):
+				yield argByte, SackFrame(v).encode()[:-1]
 			else:
 				yield argByte, v
 
@@ -314,7 +315,7 @@ class InvalidSackString(Exception):
 
 
 
-def sackStringToSackFrame(sackString):
+def sackStringToSACK(sackString):
 	try:
 		# If not enough args for split, Python raises ValueError
 		joinedSackList, ackNumberStr = str(sackString).rsplit('|', 1)
@@ -322,7 +323,7 @@ def sackStringToSackFrame(sackString):
 		sackList = tuple(strToNonNegLimit(s, 2**53) for s in joinedSackList.split(',')) if joinedSackList else ()
 	except ValueError:
 		raise InvalidSackString("bad sackString")
-	return SackFrame(ackNumber, sackList)
+	return SACK(ackNumber, sackList)
 
 
 
@@ -330,20 +331,18 @@ class SackFrame(tuple):
 	__slots__ = ()
 	__metaclass__ = attachClassMarker('_MARKER')
 
-	ackNumber = property(operator.itemgetter(1))
-	sackList = property(operator.itemgetter(2))
+	sack = property(operator.itemgetter(1))
 
-	def __new__(cls, ackNumber, sackList):
+	def __new__(cls, sack):
 		"""
-		C{ackNumber} is an C{int} or C{long}.
-		C{sackList} is a tuple of C{int}s and C{long}s.
+		C{sack} is a {window.SACK}
 		"""
-		assert not isinstance(sackList, list)
-		return tuple.__new__(cls, (cls._MARKER, ackNumber, sackList))
+		assert isinstance(sack, SACK), type(sack)
+		return tuple.__new__(cls, (cls._MARKER, sack))
 
 
 	def __repr__(self):
-		return '%s(%d, %r)' % (self.__class__.__name__, self[1], self[2])
+		return '%s(%r)' % (self.__class__.__name__, self[1])
 
 
 	@classmethod
@@ -352,13 +351,13 @@ class SackFrame(tuple):
 		C{frameString} is a L{StringFragment} that ends with "A".
 		"""
 		try:
-			return sackStringToSackFrame(frameString[:-1])
+			return cls(sackStringToSACK(frameString[:-1]))
 		except InvalidSackString:
 			raise InvalidFrame("bad sackList or ackNumber")
 
 
 	def encode(self):
-		return ','.join(str(s) for s in self.sackList) + '|' + str(self.ackNumber) + 'A'
+		return ','.join(str(s) for s in self.sack.sackList) + '|' + str(self.sack.ackNumber) + 'A'
 
 
 

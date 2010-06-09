@@ -417,6 +417,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SackFrameTests').methods(
 	},
 
 	function test_publicAttr(self) {
+		self.assertEqual(SK(2, [4, 5]), new SackFrame(SK(2, [4, 5])).sack);
 		self.assertEqual(2, new SackFrame(SK(2, [4, 5])).sack.ackNumber);
 		self.assertEqual([4, 5], new SackFrame(SK(2, [4, 5])).sack.sackList);
 	},

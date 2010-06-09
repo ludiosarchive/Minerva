@@ -1,3 +1,4 @@
+import operator
 import warnings
 from mypy.strops import StringFragment
 from mypy.constant import Constant
@@ -6,8 +7,33 @@ from collections import deque
 from twisted.python import log
 
 from mypy.objops import totalSizeOf
+from mypy.constant import attachClassMarker
 
 _postImportVars = vars().keys()
+
+
+class SACK(tuple):
+	"""
+	Represents a SACK.
+	"""
+	__slots__ = ()
+	__metaclass__ = attachClassMarker('_MARKER')
+
+	ackNumber = property(operator.itemgetter(1))
+	sackList = property(operator.itemgetter(2))
+
+	def __new__(cls, ackNumber, sackList):
+		"""
+		C{ackNumber} is an C{int} or C{long}.
+		C{sackList} is a tuple of C{int}s and C{long}s.
+		"""
+		assert not isinstance(sackList, list)
+		return tuple.__new__(cls, (cls._MARKER, ackNumber, sackList))
+
+
+	def __repr__(self):
+		return '%s(%d, %r)' % (self.__class__.__name__, self[1], self[2])
+
 
 
 class Queue(object):
@@ -65,19 +91,19 @@ class Queue(object):
 				yield (seqNum, item)
 
 
-	def handleSACK(self, sackInfo):
+	def handleSACK(self, sack):
 		"""
-		Remove all items that are no longer needed, based on C{sackInfo}.
+		Remove all items that are no longer needed, based on C{sack}.
 
 		Returns C{True} if ackNumber or any sackNumber was higher
 		than the highest seqNum in the queue. This would indicate a
 		"bad SACK". Note that as many items as possible are removed
 		even in the "bad SACK" case. If not bad SACK, returns C{False}.
 
-		@param sackInfo: SACK tuple
-		@type sackInfo: tuple
+		@param sack: SACK information
+		@type sack: L{SACK}
 		"""
-		ackNum = sackInfo[0]
+		ackNum = sack.ackNumber
 		assert ackNum >= -1, ackNum
 
 		badSACK = False
@@ -95,7 +121,7 @@ class Queue(object):
 			del self._items[k]
 			self._size -= size
 
-		for sackNum in sackInfo[1]:
+		for sackNum in sack.sackList:
 			if sackNum > self._counter:
 				badSACK = True
 			try:
@@ -232,14 +258,13 @@ class Incoming(object):
 
 	def getSACK(self):
 		"""
-		@rtype: tuple
-		@return: (lastAck, sorted tuple of not-yet-deliverable sequence
-			numbers; all are > lastAck)
+		@rtype: L{SACK}
+		@return: A SACK that represents which items Incoming has received.
 		"""
 		sackNumbers = self._cached.keys()
 		sackNumbers.sort()
 
-		return (self._lastAck, tuple(sackNumbers))
+		return SACK(self._lastAck, tuple(sackNumbers))
 
 
 	def getUndeliverableCount(self):

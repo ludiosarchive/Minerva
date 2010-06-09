@@ -15,6 +15,7 @@ from minerva.frames import (
 	FORMAT_XHR, FORMAT_HTMLFILE,
 )
 
+from minerva.window import SACK
 from minerva.test_newlink import _makeHelloFrame, sf
 
 # simplejson.loads('NaN') always works, but float('nan') => 0
@@ -77,7 +78,7 @@ class HelloFrameTests(unittest.TestCase):
 				credentialsData="",
 				needPaddingBytes=0,
 				httpFormat=None,
-				lastSackSeenByClient=SackFrame(-1, ()))),
+				lastSackSeenByClient=SACK(-1, ()))),
 			HelloFrame.decode(sf(s)))
 
 
@@ -164,8 +165,8 @@ class HelloFrameTests(unittest.TestCase):
 			maxReceiveBytes=genericBad,
 			maxOpenTime=genericBad,
 			credentialsData=["x" * 256, '\t', u'\ucccc'] + listWithout(genericBad, [""]),
-			# We can pass either a string or a SackFrame
-			lastSackSeenByClient=[DeleteProperty, '', '|', SackFrame(-2, ()), SackFrame(-1, (-2,))]
+			# We can pass either a string or a SACK
+			lastSackSeenByClient=[DeleteProperty, '', '|', SACK(-2, ()), SACK(-1, (-2,))]
 		)
 		##print badMutations
 
@@ -288,32 +289,33 @@ class SeqNumFrameTests(unittest.TestCase):
 class SackFrameTests(unittest.TestCase):
 
 	def test_eq(self):
-		self.assertEqual(SackFrame(2, ()), SackFrame(2, ()))
-		self.assertNotEqual(SackFrame(2, (1,)), SackFrame(3, (2,)))
-		self.assertNotEqual(SackFrame(2, ()), SackFrame(3, ()))
+		self.assertEqual(SackFrame(SACK(2, ())), SackFrame(SACK(2, ())))
+		self.assertNotEqual(SackFrame(SACK(2, (1,))), SackFrame(SACK(3, (2,))))
+		self.assertNotEqual(SackFrame(SACK(2, ())), SackFrame(SACK(3, ())))
 
 
 	def test_publicAttr(self):
-		self.assertEqual(2, SackFrame(2, (4, 5)).ackNumber)
-		self.assertEqual((4, 5), SackFrame(2, (4, 5)).sackList)
+		self.assertEqual(SACK(2, (4, 5)), SackFrame(SACK(2, (4, 5))).sack)
+		self.assertEqual(2, SackFrame(SACK(2, (4, 5))).sack.ackNumber)
+		self.assertEqual((4, 5), SackFrame(SACK(2, (4, 5))).sack.sackList)
 
 
 	def test_repr(self):
-		self.assertEqual("SackFrame(2, (1, 4))", repr(SackFrame(2, (1, 4))))
+		self.assertEqual("SackFrame(SACK(2, (1, 4)))", repr(SackFrame(SACK(2, (1, 4)))))
 
 
 	def test_decode(self):
 		for ackNum in (-1, 0, 1, 2**53):
 			s = '1,4|%sA' % (ackNum,)
 			self.assertEqual(
-				SackFrame(ackNum, (1, 4)),
+				SackFrame(SACK(ackNum, (1, 4))),
 				SackFrame.decode(sf(s)))
 
 
 	def test_decodeNoSackNumbers(self):
 		s = '|%sA' % (2**53,)
 		self.assertEqual(
-			SackFrame(2**53, ()),
+			SackFrame(SACK(2**53, ())),
 			SackFrame.decode(sf(s)))
 
 
@@ -341,9 +343,9 @@ class SackFrameTests(unittest.TestCase):
 
 
 	def test_encode(self):
-		self.assertEqual('1,4|2A', SackFrame(2, (1, 4)).encode())
-		self.assertEqual('4|2A', SackFrame(2, (4,)).encode())
-		self.assertEqual('|2A', SackFrame(2, ()).encode())
+		self.assertEqual('1,4|2A', SackFrame(SACK(2, (1, 4))).encode())
+		self.assertEqual('4|2A', SackFrame(SACK(2, (4,))).encode())
+		self.assertEqual('|2A', SackFrame(SACK(2, ())).encode())
 
 
 

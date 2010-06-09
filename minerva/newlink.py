@@ -357,10 +357,11 @@ class Stream(object):
 			transport.causedRwinOverflow()
 
 
-	def sackReceived(self, sackInfo):
+	def sackReceived(self, sack):
 		"""
 		Private. Do not call this.
-		
+
+		C{sack} is a L{window.SACK}
 		Minerva transports call this when they get a SackFrame from client.
 		Returns C{True} if SACK was bad, C{False} otherwise.
 		"""
@@ -376,7 +377,7 @@ class Stream(object):
 		wasPretending = self._pretendAcked
 		self._pretendAcked = None
 
-		if self.queue.handleSACK(sackInfo):
+		if self.queue.handleSACK(sack):
 			return True # badSACK
 
 		if wasPretending:
@@ -1004,10 +1005,10 @@ class ServerTransport(object):
 		# Write the initial SACK if we have not already written a SACK,
 		# but only if the client has an out-of-date impression of the SACK.
 		if self._lastSackSeenByClient is not None:
-			currentSack = SackFrame(*self._stream.getSACK())
+			currentSack = self._stream.getSACK()
 			if currentSack != self._lastSackSeenByClient:
 				##print "\n", self, currentSack, self._lastSackSeenByClient
-				self._toSend += self._encodeFrame(currentSack)
+				self._toSend += self._encodeFrame(SackFrame(currentSack))
 
 
 	def _handleHelloFrame(self, hello):
@@ -1085,7 +1086,7 @@ class ServerTransport(object):
 			# (though those are all mailboxify'ed).
 
 			bunchedStrings[0] = []
-			self._toSend += self._encodeFrame(SackFrame(*self._stream.getSACK()))
+			self._toSend += self._encodeFrame(SackFrame(self._stream.getSACK()))
 			# We no longer need to write the "initial SACK" to client
 			self._lastSackSeenByClient = None
 
@@ -1128,7 +1129,7 @@ class ServerTransport(object):
 				bunchedStrings[0].append((self._peerSeqNum, frame.string))
 
 			elif frameType == SackFrame:
-				if self._stream.sackReceived((frame.ackNumber, frame.sackList)):
+				if self._stream.sackReceived(frame.sack):
 					# badSACK
 					self._closeWith(tk_acked_unsent_strings)
 					break

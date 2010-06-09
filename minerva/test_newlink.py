@@ -22,7 +22,7 @@ from twisted.internet.error import ConnectionLost
 from mypy import constant
 from mypy.strops import StringFragment
 
-from minerva.window import Queue
+from minerva.window import SACK, Queue
 from minerva.helpers import todo
 from minerva.test_decoders import diceString
 
@@ -99,7 +99,7 @@ def _makeHelloFrame(extra={}):
 		streamingResponse=1,
 		maxReceiveBytes=2**30,
 		maxOpenTime=2**30,
-		lastSackSeenByClient=SackFrame(-1, ()))
+		lastSackSeenByClient=SACK(-1, ()))
 	for k, v in extra.iteritems():
 		if v == DeleteProperty:
 			if k in _extra:
@@ -348,7 +348,7 @@ class StreamTests(unittest.TestCase):
 		# Oh no... client actually lost box3 and box4, and it sends a correct SACK.
 		# Now, t2 will be called without a start=None parameter and send all unsent boxes.
 
-		s.sackReceived((2, []))
+		s.sackReceived(SACK(2, ()))
 		assert s.queue.getQueuedCount() == 4, s.queue # box3, box4, box5, box6
 		self.aE([['writeStrings', s.queue, None]], t2.getNew())
 
@@ -385,13 +385,13 @@ class StreamTests(unittest.TestCase):
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 
-		self.aE((-1, ()), s.getSACK())
+		self.aE(SACK(-1, ()), s.getSACK())
 		s.stringsReceived(t, [(0, sf('box'))])
-		self.aE((0, ()), s.getSACK())
+		self.aE(SACK(0, ()), s.getSACK())
 		s.stringsReceived(t, [(4, sf('box'))])
-		self.aE((0, (4,)), s.getSACK())
+		self.aE(SACK(0, (4,)), s.getSACK())
 		s.stringsReceived(t, [(5, sf('box'))])
-		self.aE((0, (4, 5)), s.getSACK())
+		self.aE(SACK(0, (4, 5)), s.getSACK())
 
 
 	def test_noLongerVirgin(self):
@@ -1853,7 +1853,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			['stringsReceived', transport, [(0, sf("box0"))]],
 			['getSACK'],
 		], stream.getNew())
-		self.aE([SackFrame(0, ())], transport.getNew())
+		self.aE([SackFrame(SACK(0, ()))], transport.getNew())
 
 		transport.sendFrames([SeqNumFrame(2), StringFrame("box2")])
 
@@ -1861,7 +1861,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			['stringsReceived', transport, [(2, sf("box2"))]],
 			['getSACK'],
 		], stream.getNew())
-		self.aE([SackFrame(0, (2,))], transport.getNew())
+		self.aE([SackFrame(SACK(0, (2,)))], transport.getNew())
 
 
 	def test_sackFrameValid(self):
@@ -1872,13 +1872,13 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		stream = self.streamTracker.getStream('x'*26)
 		stream.queue.append("box0")
 
-		transport.sendFrames([SackFrame(0, ())])
+		transport.sendFrames([SackFrame(SACK(0, ()))])
 		self.aE([], transport.getNew())
 		self.aE([
 			['notifyFinish'],
 			['transportOnline', transport, False, None],
 			['getSACK'],
-			['sackReceived', (0, ())],
+			['sackReceived', SACK(0, ())],
 		], stream.getNew())
 
 
@@ -1893,13 +1893,13 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		stream = self.streamTracker.getStream('x'*26)
 		stream.queue.extend(["box0", "box1", "box2"])
 
-		transport.sendFrames([SackFrame(0, (2,))])
+		transport.sendFrames([SackFrame(SACK(0, (2,)))])
 		self.aE([], transport.getNew())
 		self.aE([
 			['notifyFinish'],
 			['transportOnline', transport, False, None],
 			['getSACK'],
-			['sackReceived', (0, (2,))],
+			['sackReceived', SACK(0, (2,))],
 		], stream.getNew())
 
 
@@ -1911,7 +1911,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		stream = self.streamTracker.getStream('x'*26)
 		stream.queue.append("box0")
 
-		transport.sendFrames([SackFrame(1, ())])
+		transport.sendFrames([SackFrame(SACK(1, ()))])
 		self.aE([
 			TransportKillFrame(tk_acked_unsent_strings),
 			YouCloseItFrame()
@@ -1920,7 +1920,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			['notifyFinish'],
 			['transportOnline', transport, False, None],
 			['getSACK'],
-			['sackReceived', (1, ())],
+			['sackReceived', SACK(1, ())],
 			['transportOffline', transport],
 		], stream.getNew())
 
@@ -2230,7 +2230,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport0.sendFrames([StringFrame("box0"), SeqNumFrame(2), StringFrame("box2")])
 
-		self.aE([SackFrame(0, (2,))], transport0.getNew())
+		self.aE([SackFrame(SACK(0, (2,)))], transport0.getNew())
 		self.aE([["streamStarted", stream], ["stringsReceived", [sf("box0")]]], proto.getNew())
 
 
@@ -2239,7 +2239,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport0.sendFrames([SeqNumFrame(1), StringFrame("box1"), SeqNumFrame(3), StringFrame("box3")])
 
-		self.aE([SackFrame(3, ())], transport0.getNew())
+		self.aE([SackFrame(SACK(3, ()))], transport0.getNew())
 		self.aE([["stringsReceived", [sf("box1"), sf("box2"), sf("box3")]]], proto.getNew())
 
 
@@ -2258,7 +2258,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		frame0 = _makeHelloFrame(dict(
 			requestNewStream=DeleteProperty,
 			succeedsTransport=None,
-			lastSackSeenByClient=SackFrame(3, ()))) # TODO: increment transportNumber?
+			lastSackSeenByClient=SACK(3, ()))) # TODO: increment transportNumber?
 		transport1.sendFrames([frame0])
 
 		self.aE([SeqNumFrame(0), StringFrame("s2cbox0"), StringFrame("s2cbox1")], transport1.getNew())
@@ -2270,14 +2270,14 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		# those S2C strings are *not* received; make sure transport1 is
 		# terminating;
 
-		transport1.sendFrames([SackFrame(1, ())])
+		transport1.sendFrames([SackFrame(SACK(1, ()))])
 
 		transport2 = self._makeTransport()
 
 		frame0 = _makeHelloFrame(dict(
 			requestNewStream=DeleteProperty,
 			succeedsTransport=None,
-			lastSackSeenByClient=SackFrame(3, ()))) # TODO: increment transportNumber?
+			lastSackSeenByClient=SACK(3, ()))) # TODO: increment transportNumber?
 		transport2.sendFrames([frame0])
 
 		self.aE([], transport2.getNew())
@@ -2363,7 +2363,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		proto = list(self.protocolFactory.instances)[0]
 		stream.sendStrings(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"])
 		self.aE(12 + 1, len(transport0.getNew())) # seqNum and 12 frames
-		transport0.sendFrames([SackFrame(-1, (1, 3, 5, 9))])
+		transport0.sendFrames([SackFrame(SACK(-1, (1, 3, 5, 9)))])
 
 		transport1 = self._makeTransport()
 		newHello = _makeHelloFrame(dict(
@@ -2408,15 +2408,15 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		proto = list(self.protocolFactory.instances)[0]
 
 		transport0.sendFrames([SeqNumFrame(0), StringFrame("box0")])
-		self.aE([SackFrame(0, ())], transport0.getNew())
+		self.aE([SackFrame(SACK(0, ()))], transport0.getNew())
 
 		# 0 was already received, 1 was not.
 		transport0.sendFrames([SeqNumFrame(0), StringFrame("box0"), StringFrame("box1")])
-		self.aE([SackFrame(1, ())], transport0.getNew())
+		self.aE([SackFrame(SACK(1, ()))], transport0.getNew())
 
 		# 0 and 1 were already received, 2 was not.
 		transport0.sendFrames([SeqNumFrame(0), StringFrame("box0"), StringFrame("box1"), StringFrame("box2")])
-		self.aE([SackFrame(2, ())], transport0.getNew())
+		self.aE([SackFrame(SACK(2, ()))], transport0.getNew())
 
 		self.aE([
 			['streamStarted', stream],
@@ -2443,7 +2443,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self.aE([
 				# For clientLosesSack == True, imagine that the client
 				# loses this frame due to a connection problem.
-				SackFrame(0, ())
+				SackFrame(SACK(0, ()))
 			], transport0.getNew())
 
 
@@ -2453,11 +2453,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				requestNewStream=DeleteProperty,
 				transportNumber=1,
 				succeedsTransport=0,
-				lastSackSeenByClient=SackFrame(-1 if clientLosesSack else 0, ())))
+				lastSackSeenByClient=SACK(-1 if clientLosesSack else 0, ())))
 			transport1.sendFrames([newHello])
 
 			if clientLosesSack:
-				self.aE([SackFrame(0, ())], transport1.getNew())
+				self.aE([SackFrame(SACK(0, ()))], transport1.getNew())
 			else:
 				self.aE([], transport1.getNew())
 
@@ -2510,7 +2510,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		transport0.sendFrames(frames)
 
 		self.aE([
-			SackFrame(1, ()),
+			SackFrame(SACK(1, ())),
 			StreamCreatedFrame(),
 			YouCloseItFrame()
 		], transport0.getNew())
@@ -2668,7 +2668,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			transport0.sendFrames(frames)
 
 			self.aE([
-				SackFrame(1, ()),
+				SackFrame(SACK(1, ())),
 				StreamCreatedFrame(),
 				SeqNumFrame(0),
 				StringFrame("s2cbox0"),
@@ -2714,7 +2714,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			transport0.sendFrames(frames)
 
 			expected = [
-				SackFrame(1, ()),
+				SackFrame(SACK(1, ())),
 				StreamCreatedFrame(),
 				SeqNumFrame(0),
 				StringFrame("s2cbox0"),
@@ -2769,7 +2769,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			transport0.sendFrames(frames)
 
 			expected = [
-				SackFrame(2, ()),
+				SackFrame(SACK(2, ())),
 				StreamCreatedFrame(),
 				ResetFrame('reset forced by mock protocol', True),
 				YouCloseItFrame(),
@@ -2831,7 +2831,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				encode = DelimitedStringDecoder.encode
 				self.assertEqual([
 					encode(HTTP_RESPONSE_PREAMBLE), (
-						encode(SackFrame(2, ()).encode()) +
+						encode(SackFrame(SACK(2, ())).encode()) +
 						encode(StreamCreatedFrame().encode()))
 				], request.written)
 				self.assertEqual(0 if streaming else 1, request.finished)
@@ -2940,7 +2940,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			encode = DelimitedStringDecoder.encode
 			expectedWritten = [
 				encode(HTTP_RESPONSE_PREAMBLE), (
-					encode(SackFrame(0, ()).encode()) +
+					encode(SackFrame(SACK(0, ())).encode()) +
 					encode(StreamCreatedFrame().encode()) +
 					encode(SeqNumFrame(0).encode()) +
 					encode(StringFrame('box0').encode()) +

@@ -162,7 +162,7 @@ cw.net.Queue.prototype.getItems = function(start) {
 
 
 /**
- * Remove all items that are no longer needed, based on {@code sackInfo}.
+ * Remove all items that are no longer needed, based on {@code sack}.
  *
  * @param {!cw.net.SACK} sack
  * @return {boolean} True if ackNumber or any sackNumber was higher

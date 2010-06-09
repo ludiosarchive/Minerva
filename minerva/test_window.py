@@ -4,7 +4,7 @@ from mypy.strops import StringFragment
 from mypy.objops import totalSizeOf
 
 from minerva.helpers import todo
-from minerva.window import Queue, Incoming, _wasSF
+from minerva.window import SACK, Queue, Incoming, _wasSF
 
 
 class QueueTests(unittest.TestCase):
@@ -18,7 +18,7 @@ class QueueTests(unittest.TestCase):
 		q.extend(['a', 'b'])
 		self.aE('<Queue at 0x%x with 2 item(s), counter=#1, size=%d>' % (
 			id(q), totalSizeOf('a') * 2), repr(q))
-		q.handleSACK((0, ()))
+		q.handleSACK(SACK(0, ()))
 		self.aE('<Queue at 0x%x with 1 item(s), counter=#1, size=%d>' % (
 			id(q), totalSizeOf('a')), repr(q))
 
@@ -33,12 +33,12 @@ class QueueTests(unittest.TestCase):
 		self.aE(0, q.getMaxConsumption())
 		q.extend(['a', 'b'])
 		self.aE(totalSizeOf('a') * 2, q.getMaxConsumption())
-		q.handleSACK((0, ()))
+		q.handleSACK(SACK(0, ()))
 		self.aE(totalSizeOf('a'), q.getMaxConsumption())
 		# strange-looking SACK, but it does exercise the code we want to exercise
-		q.handleSACK((0, (1,)))
+		q.handleSACK(SACK(0, (1,)))
 		self.aE(0, q.getMaxConsumption())
-		q.handleSACK((1, ()))
+		q.handleSACK(SACK(1, ()))
 		self.aE(0, q.getMaxConsumption())
 		q.append('cc')
 		self.aE(totalSizeOf('cc'), q.getMaxConsumption())
@@ -81,24 +81,24 @@ class QueueTests(unittest.TestCase):
 		q.append('zero')
 		q.extend(['one', 'two'])
 
-		self.assertEqual(False, q.handleSACK((0, ())))
+		self.assertEqual(False, q.handleSACK(SACK(0, ())))
 		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems(start=1)))
 
 		# Removing again is idempotent
-		self.assertEqual(False, q.handleSACK((0, ())))
+		self.assertEqual(False, q.handleSACK(SACK(0, ())))
 		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems(start=1)))
 
 
 	def test_ackNumberTooHigh0(self):
 		q = Queue()
-		badSACK = q.handleSACK((0, ()))
+		badSACK = q.handleSACK(SACK(0, ()))
 		self.assertEqual(True, badSACK)
 
 
 	def test_ackNumberTooHigh1(self):
 		q = Queue()
 		q.append('zero')
-		badSACK = q.handleSACK((1, ()))
+		badSACK = q.handleSACK(SACK(1, ()))
 		self.assertEqual(True, badSACK)
 		# Items were still removed, despite it being a bad SACK
 		self.assertEqual([], list(q.iterItems()))
@@ -107,7 +107,7 @@ class QueueTests(unittest.TestCase):
 	def test_sackNumberTooHigh(self):
 		q = Queue()
 		q.extend(['zero', 'one', 'two', 'three'])
-		badSACK = q.handleSACK((0, (2, 5)))
+		badSACK = q.handleSACK(SACK(0, (2, 5)))
 		self.assertEqual(True, badSACK)
 		# Items were still removed, despite it being a bad SACK
 		self.assertEqual([(1, 'one'), (3, 'three')], list(q.iterItems()))
@@ -116,8 +116,8 @@ class QueueTests(unittest.TestCase):
 	def test_handleSACKToHigherNum(self):
 		q = Queue()
 		q.extend([0, 1, 2, 3, 4, 5, 6, 7, 8])
-		self.assertEqual(False, q.handleSACK((1, ())))
-		self.assertEqual(False, q.handleSACK((3, ())))
+		self.assertEqual(False, q.handleSACK(SACK(1, ())))
+		self.assertEqual(False, q.handleSACK(SACK(3, ())))
 
 		# There should be 5 items left in the queue
 		self.assertEqual([(4,4), (5,5), (6,6), (7,7), (8,8)], list(q.iterItems(start=4)))
@@ -131,9 +131,9 @@ class QueueTests(unittest.TestCase):
 		q.append('zero')
 		q.extend(['one', 'two'])
 		self.assertEqual([(0, 'zero'), (1, 'one'), (2, 'two')], list(q.iterItems()))
-		self.assertEqual(False, q.handleSACK((-1, ())))
+		self.assertEqual(False, q.handleSACK(SACK(-1, ())))
 		self.assertEqual([(0, 'zero'), (1, 'one'), (2, 'two')], list(q.iterItems()))
-		self.assertEqual(False, q.handleSACK((0, ())))
+		self.assertEqual(False, q.handleSACK(SACK(0, ())))
 		self.assertEqual([(1, 'one'), (2, 'two')], list(q.iterItems()))
 
 
@@ -145,15 +145,15 @@ class QueueTests(unittest.TestCase):
 		q.append('zero')
 		q.extend(['one', 'two', 'three'])
 		self.assertEqual([(0, 'zero'), (1, 'one'), (2, 'two'), (3, 'three')], list(q.iterItems()))
-		self.assertEqual(False, q.handleSACK((-1, (1,))))
+		self.assertEqual(False, q.handleSACK(SACK(-1, (1,))))
 		self.assertEqual([(0, 'zero'), (2, 'two'), (3, 'three')], list(q.iterItems()))
-		self.assertEqual(False, q.handleSACK((0, (3,))))
+		self.assertEqual(False, q.handleSACK(SACK(0, (3,))))
 		self.assertEqual([(2, 'two')], list(q.iterItems()))
 		q.append('four')
 		self.assertEqual([(2, 'two'), (4, 'four')], list(q.iterItems()))
 		# although this is a very strange SACK because it should have
 		# been (4, ()), it is still legal
-		self.assertEqual(False, q.handleSACK((0, (2, 4))))
+		self.assertEqual(False, q.handleSACK(SACK(0, (2, 4))))
 		self.assertEqual([], list(q.iterItems()))
 		q.append('five')
 		self.assertEqual([(5, 'five')], list(q.iterItems()))
@@ -166,7 +166,7 @@ class QueueTests(unittest.TestCase):
 		"""
 		q = Queue()
 		q.extend(['zero', 'one', 'two', 'three', 'four'])
-		self.assertEqual(False, q.handleSACK((0, (1, 3))))
+		self.assertEqual(False, q.handleSACK(SACK(0, (1, 3))))
 		self.assertEqual([(2, 'two'), (4, 'four')], list(q.iterItems()))
 
 
@@ -177,51 +177,51 @@ class IncomingTests(unittest.TestCase):
 	"""
 	def test_SACKNoItems(self):
 		i = Incoming()
-		self.assertEqual((-1, ()), i.getSACK())
+		self.assertEqual(SACK(-1, ()), i.getSACK())
 
 
 	def test_threeItems(self):
 		i = Incoming()
 		self.assertEqual((['box0', 'box1', 'box2'], False), i.give([[0, 'box0'], [1, 'box1'], [2, 'box2']]))
-		self.assertEqual((2, ()), i.getSACK())
+		self.assertEqual(SACK(2, ()), i.getSACK())
 
 
 	def test_itemMissing(self):
 		i = Incoming()
 		self.assertEqual((['box0', 'box1'], False), i.give([[0, 'box0'], [1, 'box1'], [3, 'box3']]))
-		self.assertEqual((1, (3,)), i.getSACK())
+		self.assertEqual(SACK(1, (3,)), i.getSACK())
 
 
 	def test_twoItemsMissing(self):
 		i = Incoming()
 		self.assertEqual((['box0', 'box1'], False), i.give([[0, 'box0'], [1, 'box1'], [4, 'box4']]))
-		self.assertEqual((1, (4,)), i.getSACK())
+		self.assertEqual(SACK(1, (4,)), i.getSACK())
 
 
 	def test_twoRangesMissing(self):
 		i = Incoming()
 		self.assertEqual((['box0', 'box1'], False), i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']]))
-		self.assertEqual((1, (4, 6)), i.getSACK())
+		self.assertEqual(SACK(1, (4, 6)), i.getSACK())
 
 
 	def test_twoRangesMissingThenFill(self):
 		i = Incoming()
 		self.assertEqual((['box0', 'box1'], False), i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']]))
-		self.assertEqual((1, (4, 6)), i.getSACK())
+		self.assertEqual(SACK(1, (4, 6)), i.getSACK())
 		self.assertEqual((['box2', 'box3', 'box4', 'box5', 'box6'], False), i.give([[2, 'box2'], [3, 'box3'], [5, 'box5']]))
-		self.assertEqual((6, ()), i.getSACK())
+		self.assertEqual(SACK(6, ()), i.getSACK())
 
 
 	def test_outOfOrder(self):
 		i = Incoming()
 		# box0 missing
 		self.assertEqual(([], False), i.give([[1, 'box1'], [2, 'box2']]))
-		self.assertEqual((-1, (1, 2)), i.getSACK())
+		self.assertEqual(SACK(-1, (1, 2)), i.getSACK())
 		# finally deliver it
 		self.assertEqual((['box0', 'box1', 'box2'], False), i.give([[0, 'box0']]))
 		# make sure it still works
 		self.assertEqual((['box3'], False), i.give([[3, 'box3']]))
-		self.assertEqual((3, ()), i.getSACK())
+		self.assertEqual(SACK(3, ()), i.getSACK())
 
 
 	def test_outOfOrderJustOneCall(self):
@@ -235,7 +235,7 @@ class IncomingTests(unittest.TestCase):
 		"""
 		i = Incoming()
 		self.assertEqual((['box0', 'box1'], False), i.give([[1, 'box1'], [0, 'box0']]))
-		self.assertEqual((1, ()), i.getSACK())
+		self.assertEqual(SACK(1, ()), i.getSACK())
 
 
 	def test_negativeSequenceNum(self):
