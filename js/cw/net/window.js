@@ -5,20 +5,51 @@
 
 goog.provide('cw.net.Incoming');
 goog.provide('cw.net.Queue');
-goog.provide('cw.net.SACKTuple')
+goog.provide('cw.net.SACK')
 
+goog.require('cw.eq');
+goog.require('cw.repr');
 goog.require('cw.objsize');
 goog.require('goog.asserts');
 goog.require('goog.structs.Map');
 
 
 /**
- * A SACK tuple: [ackNumber, [sackNum1, ...]]
- * @type {Array.<(number|!Array.<number>)>}
- * // TODO: types for tuples
- * @private
+ * Represents a SACK.
+ * @param {number} ackNumber
+ * @param {!Array.<number>} sackList
+ * @constructor
  */
-cw.net.SACKTuple = goog.typedef;
+cw.net.SACK = function(ackNumber, sackList) {
+	/** @type {number} */
+	this.ackNumber = ackNumber;
+	/** @type {!Array.<number>} */
+	this.sackList = sackList;
+};
+
+/**
+ * Test two SACKs for equality.
+ * @param {*} other
+ * @param {!Array.<string>} messages
+ * @return {boolean}
+ */
+cw.net.SACK.prototype.equals = function(other, messages) {
+	return (
+		other instanceof cw.net.SACK &&
+		this.ackNumber == other.ackNumber &&
+		cw.eq.equals(this.sackList, other.sackList, messages));
+};
+
+/**
+ * @param {!Array.<string>} sb
+ */
+cw.net.SACK.prototype.__reprToPieces__ = function(sb) {
+	sb.push('new SACK(', String(this.ackNumber), ', ');
+	cw.repr.reprToPieces(this.sackList, sb);
+	sb.push(')');
+};
+
+
 
 
 /**
@@ -133,14 +164,14 @@ cw.net.Queue.prototype.getItems = function(start) {
 /**
  * Remove all items that are no longer needed, based on {@code sackInfo}.
  *
- * @param {!cw.net.SACKTuple} sackInfo A SACK tuple
+ * @param {!cw.net.SACK} sack
  * @return {boolean} True if ackNumber or any sackNumber was higher
  * than the highest seqNum in the queue. This would indicate a
  * "bad SACK". Note that as many items as possible are removed
  * even in the "bad SACK" case. If not bad SACK, return {@code false}.
  */
-cw.net.Queue.prototype.handleSACK = function(sackInfo) {
-	var ackNum = sackInfo[0];
+cw.net.Queue.prototype.handleSACK = function(sack) {
+	var ackNum = sack.ackNumber;
 	goog.asserts.assert(ackNum >= -1, String(ackNum));
 
 	var badSACK = false;
@@ -162,8 +193,8 @@ cw.net.Queue.prototype.handleSACK = function(sackInfo) {
 		this.size_ -= size;
 	}
 
-	for(var i=0; i < sackInfo[1].length; i++) {
-		var sackNum = sackInfo[1][i];
+	for(var i=0; i < sack.sackList.length; i++) {
+		var sackNum = sack.sackList[i];
 		if(sackNum > this.counter_) {
 			badSACK = true;
 		}
@@ -305,12 +336,12 @@ cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
 
 
 /**
- * @return {!cw.net.SACKTuple}
+ * @return {!cw.net.SACK}
  *
- * Caller may modify the returned Array.
+ * Caller may modify the Array in the returned SACK object.
  */
 cw.net.Incoming.prototype.getSACK = function() {
-	return [this.lastAck_, this.cached_.getKeys().sort()];
+	return new cw.net.SACK(this.lastAck_, this.cached_.getKeys().sort());
 };
 
 

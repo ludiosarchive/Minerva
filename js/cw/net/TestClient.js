@@ -12,7 +12,7 @@ goog.require('cw.repr');
 goog.require('cw.clock');
 goog.require('cw.net.Queue');
 goog.require('cw.net.TransportType_');
-goog.require('cw.net.SACKTuple');
+goog.require('cw.net.SACK');
 goog.require('cw.net.Stream');
 goog.require('cw.net.ClientTransport');
 
@@ -43,6 +43,8 @@ var TransportKillFrame = cw.net.TransportKillFrame;
 
 var BROWSER_HTTP = cw.net.TransportType_.BROWSER_HTTP;
 
+var SACK = cw.net.SACK;
+
 
 /**
  * @constructor
@@ -50,15 +52,15 @@ var BROWSER_HTTP = cw.net.TransportType_.BROWSER_HTTP;
 cw.net.TestClient.MockStream = function() {
 	this.streamExistsAtServer_ = false;
 	this.makeCredentialsCallable_ = function() { return "MockStream-credentials"; };
-	this.lastSackSeenByClient_ = [-1, []];
+	this.lastSackSeenByClient_ = new SACK(-1, []);
 	this.streamId = goog.string.repeat('x', 26);
 };
 
 /**
- * @return {!cw.net.SACKTuple}
+ * @return {!cw.net.SACK}
  */
 cw.net.TestClient.MockStream.prototype.getSACK_ = function() {
-	return [-1, []];
+	return new SACK(-1, []);
 };
 
 
@@ -137,7 +139,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 
 		goog.array.splice(decoded, 0, 1);
 		var expected = [
-			new SackFrame(-1, []),
+			new SackFrame(new SACK(-1, [])),
 			new SeqNumFrame(0),
 			new StringFrame('c2s_0'),
 			new StringFrame('c2s_1')];

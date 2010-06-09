@@ -17,6 +17,7 @@ goog.require('goog.net.XhrIo');
 goog.require('goog.net.EventType');
 goog.require('cw.math');
 goog.require('cw.repr');
+goog.require('cw.net.SACK');
 goog.require('cw.net.Queue');
 goog.require('cw.net.Incoming');
 goog.require('cw.net.FlashSocket');
@@ -265,10 +266,10 @@ cw.net.Stream = function(clock, protocol, httpEndpoint, makeCredentialsCallable)
 	this.streamId = cw.net.makeStreamId_();
 
 	/**
-	 * @type {!cw.net.SACKTuple}
+	 * @type {!cw.net.SACK}
 	 * @private
 	 */
-	this.lastSackSeenByClient_ = [-1, []];
+	this.lastSackSeenByClient_ = new cw.net.SACK(-1, []);
 
 	/**
 	 * The send queue.
@@ -481,11 +482,11 @@ cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs) {
  * Called by transports to tell me that server has received at least some of
  *	our C2S strings. This method possibly removes some queued items from
  * 	our send queue.
- * @param {!cw.net.SACKTuple} sackInfo
+ * @param {!cw.net.SACK} sack
  * @return {boolean} Whether the SACK was bad
  * @private
  */
-cw.net.Stream.prototype.sackReceived_ = function(sackInfo) {
+cw.net.Stream.prototype.sackReceived_ = function(sack) {
 	// We absolutely need to do this, because server sometimes sends
 	// a SackFrame before it sends a StreamCreatedFrame. If we're
 	// removing items from our send queue, we definitely need to
@@ -495,12 +496,12 @@ cw.net.Stream.prototype.sackReceived_ = function(sackInfo) {
 	// Do not tryToSend_ because if primary transport breaks, we'll
 	// just connect a new primary, which will upload strings if necessary.
 
-	this.lastSackSeenByClient_ = sackInfo;
-	return this.queue_.handleSACK(sackInfo);
+	this.lastSackSeenByClient_ = sack;
+	return this.queue_.handleSACK(sack);
 };
 
 /**
- * @return {!cw.net.SACKTuple} A SACK that represents the state of our
+ * @return {!cw.net.SACK} A SACK that represents the state of our
  * 	receive window.
  * @private
  */
@@ -712,7 +713,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 				// This does *not* add any latency. It does reduce the number of funcalls.
 				bunchedStrings.push([this.peerSeqNum_, frame.string])
 			} else if(frame instanceof cw.net.SackFrame) {
-				if(this.stream_.sackReceived_([frame.ackNumber, frame.sackList])) {
+				if(this.stream_.sackReceived_(frame.sack)) {
 					logger.warning("closing soon because got bad SackFrame");
 					closeSoon = true;
 					break;
@@ -841,9 +842,7 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
  * @private
  */
 cw.net.ClientTransport.prototype.makeSackFrame_ = function() {
-	var sackTuple = this.stream_.getSACK_();
-	var sackFrame = new cw.net.SackFrame(sackTuple[0], sackTuple[1]);
-	return sackFrame;
+	return new cw.net.SackFrame(this.stream_.getSACK_());
 };
 
 /**

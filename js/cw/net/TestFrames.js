@@ -14,6 +14,7 @@ goog.require('goog.structs.Map');
 goog.require('cw.math');
 goog.require('cw.repr');
 goog.require('cw.string');
+goog.require('cw.net.SACK');
 goog.require('cw.net.HelloFrame');
 goog.require('cw.net.StringFrame');
 goog.require('cw.net.SeqNumFrame');
@@ -48,6 +49,10 @@ var HP = cw.net.HelloProperty_;
 var FORMAT_XHR = cw.net.HttpFormat.FORMAT_XHR;
 var FORMAT_HTMLFILE = cw.net.HttpFormat.FORMAT_HTMLFILE;
 
+var SK = function(ackNumber, sackList) {
+	return new cw.net.SACK(ackNumber, sackList);
+};
+
 var repr = cw.repr.repr;
 var rep = goog.string.repeat;
 
@@ -68,7 +73,7 @@ cw.net.TestFrames.makeHelloFrame_ = function(extra, noDefaults) {
 			'streamingResponse': 1,
 			'maxReceiveBytes': Math.pow(2, 30),
 			'maxOpenTime': Math.pow(2, 30),
-			'lastSackSeenByClient': [-1, []]
+			'lastSackSeenByClient': SK(-1, [])
 		});
 	}
 
@@ -245,9 +250,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 			'maxReceiveBytes': genericBad,
 			'maxOpenTime': genericBad,
 			'credentialsData': concat([rep('x', 256), '\t', '\ucccc'], listWithout(genericBad, [""])),
-			// We can pass either a string or an Array
+			// We can pass either a string or a !cw.net.SACK
 			'lastSackSeenByClient': [
-				DeleteProperty, '', '|', [-2, []], [-1, [-2]]]
+				DeleteProperty, '', '|', SK(-2, []), SK(-1, [-2])]
 		});
 
 		cw.UnitTest.logger.info('test_decodeFailedInvalidValues: badMutations: ' +
@@ -406,25 +411,27 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SeqNumFrameTests').methods(
 cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SackFrameTests').methods(
 
 	function test_eq(self) {
-		self.assertEqual(new SackFrame(2, []), new SackFrame(2, []));
-		self.assertNotEqual(new SackFrame(2, [1]), new SackFrame(3, [2]));
-		self.assertNotEqual(new SackFrame(2, []), new SackFrame(3, []));
+		self.assertEqual(new SackFrame(SK(2, [])), new SackFrame(SK(2, [])));
+		self.assertNotEqual(new SackFrame(SK(2, [1])), new SackFrame(SK(3, [2])));
+		self.assertNotEqual(new SackFrame(SK(2, [])), new SackFrame(SK(3, [])));
 	},
 
 	function test_publicAttr(self) {
-		self.assertEqual(2, new SackFrame(2, [4, 5]).ackNumber);
-		self.assertEqual([4, 5], new SackFrame(2, [4, 5]).sackList);
+		self.assertEqual(2, new SackFrame(SK(2, [4, 5])).sack.ackNumber);
+		self.assertEqual([4, 5], new SackFrame(SK(2, [4, 5])).sack.sackList);
 	},
 
 	function test_repr(self) {
-		self.assertEqual("new SackFrame(2, [1, 4])", repr(new SackFrame(2, [1, 4])));
+		self.assertEqual(
+			"new SackFrame(new SACK(2, [1, 4]))",
+			repr(new SackFrame(SK(2, [1, 4]))));
 	},
 
 	function test_decode(self) {
 		goog.array.forEach([-1, 0, 1, Math.pow(2, 53)], function(ackNum) {
 			var s = '1,4|' + ackNum + 'A';
 			self.assertEqual(
-				new SackFrame(ackNum, [1, 4]),
+				new SackFrame(SK(ackNum, [1, 4])),
 				SackFrame.decode(s));
 		});
 	},
@@ -432,7 +439,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SackFrameTests').methods(
 	function test_decodeNoSackNumbers(self) {
 		var s = '|' + Math.pow(2, 53) + 'A';
 		self.assertEqual(
-			new SackFrame(Math.pow(2, 53), []),
+			new SackFrame(SK(Math.pow(2, 53), [])),
 			SackFrame.decode(s));
 	},
 
@@ -463,9 +470,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'SackFrameTests').methods(
 	},
 
 	function test_encode(self) {
-		self.assertEqual('1,4|2A', new SackFrame(2, [1, 4]).encode());
-		self.assertEqual('4|2A', new SackFrame(2, [4]).encode());
-		self.assertEqual('|2A', new SackFrame(2, []).encode());
+		self.assertEqual('1,4|2A', new SackFrame(SK(2, [1, 4])).encode());
+		self.assertEqual('4|2A', new SackFrame(SK(2, [4])).encode());
+		self.assertEqual('|2A', new SackFrame(SK(2, [])).encode());
 	}
 );
 

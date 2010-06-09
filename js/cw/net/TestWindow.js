@@ -8,6 +8,7 @@ goog.require('cw.UnitTest');
 goog.require('cw.repr');
 goog.require('cw.objsize');
 goog.require('goog.array');
+goog.require('cw.net.SACK');
 goog.require('cw.net.Queue');
 goog.require('cw.net.Incoming');
 
@@ -22,6 +23,9 @@ var Incoming = cw.net.Incoming;
 var totalSizeOf = cw.objsize.totalSizeOf;
 var repr = cw.repr.repr;
 
+var SK = function(ackNumber, sackList) {
+	return new cw.net.SACK(ackNumber, sackList);
+};
 
 /**
  * Tests for {@link cw.net.Queue}
@@ -33,7 +37,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 		self.assertEqual('<Queue with 0 item(s), counter=#-1, size=0>', repr(q));
 		q.extend(['a', 'b']);
 		self.assertEqual('<Queue with 2 item(s), counter=#1, size=' + totalSizeOf('a') * 2 + '>', repr(q));
-		q.handleSACK([0, []]);
+		q.handleSACK(SK(0, []));
 		self.assertEqual('<Queue with 1 item(s), counter=#1, size=' + totalSizeOf('a') + '>', repr(q));
 	},
 
@@ -47,12 +51,12 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 		self.assertEqual(0, q.getMaxConsumption());
 		q.extend(['a', 'b']);
 		self.assertEqual(totalSizeOf('a') * 2, q.getMaxConsumption());
-		q.handleSACK([0, []]);
+		q.handleSACK(SK(0, []));
 		self.assertEqual(totalSizeOf('a'), q.getMaxConsumption());
 		// strange-looking SACK, but it does exercise the code we want to exercise
-		q.handleSACK([0, [1]]);
+		q.handleSACK(SK(0, [1]));
 		self.assertEqual(0, q.getMaxConsumption());
-		q.handleSACK([1, []]);
+		q.handleSACK(SK(1, []));
 		self.assertEqual(0, q.getMaxConsumption());
 		q.append('cc');
 		self.assertEqual(totalSizeOf('cc'), q.getMaxConsumption());
@@ -95,24 +99,24 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 		q.append('zero');
 		q.extend(['one', 'two']);
 
-		self.assertEqual(false, q.handleSACK([0, []]));
+		self.assertEqual(false, q.handleSACK(SK(0, [])));
 		self.assertEqual([[1, 'one'], [2, 'two']], q.getItems(1));
 
 		// Removing again is idempotent
-		self.assertEqual(false, q.handleSACK([0, []]));
+		self.assertEqual(false, q.handleSACK(SK(0, [])));
 		self.assertEqual([[1, 'one'], [2, 'two']], q.getItems(1));
 	},
 
 	function test_ackNumberTooHigh0(self) {
 		var q = new Queue();
-		var badSACK = q.handleSACK([0, []]);
+		var badSACK = q.handleSACK(SK(0, []));
 		self.assertEqual(true, badSACK);
 	},
 
 	function test_ackNumberTooHigh1(self) {
 		var q = new Queue();
 		q.append('zero');
-		var badSACK = q.handleSACK([1, []]);
+		var badSACK = q.handleSACK(SK(1, []));
 		self.assertEqual(true, badSACK);
 		// Items were still removed, despite it being a bad SACK
 		self.assertEqual([], q.getItems());
@@ -121,7 +125,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 	function test_sackNumberTooHigh(self) {
 		var q = new Queue();
 		q.extend(['zero', 'one', 'two', 'three']);
-		var badSACK = q.handleSACK([0, [2, 5]]);
+		var badSACK = q.handleSACK(SK(0, [2, 5]));
 		self.assertEqual(true, badSACK);
 		// Items were still removed, despite it being a bad SACK
 		self.assertEqual([[1, 'one'], [3, 'three']], q.getItems());
@@ -130,8 +134,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 	function test_handleSACKToHigherNum(self) {
 		var q = new Queue();
 		q.extend([0, 1, 2, 3, 4, 5, 6, 7, 8]);
-		self.assertEqual(false, q.handleSACK([1, []]));
-		self.assertEqual(false, q.handleSACK([3, []]));
+		self.assertEqual(false, q.handleSACK(SK(1, [])));
+		self.assertEqual(false, q.handleSACK(SK(3, [])));
 
 		// There should be 5 items left in the queue
 		self.assertEqual([[4,4], [5,5], [6,6], [7,7], [8,8]], q.getItems(4));
@@ -145,9 +149,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 		q.append('zero');
 		q.extend(['one', 'two']);
 		self.assertEqual([[0, 'zero'], [1, 'one'], [2, 'two']], q.getItems());
-		self.assertEqual(false, q.handleSACK([-1, []]));
+		self.assertEqual(false, q.handleSACK(SK(-1, [])));
 		self.assertEqual([[0, 'zero'], [1, 'one'], [2, 'two']], q.getItems());
-		self.assertEqual(false, q.handleSACK([0, []]));
+		self.assertEqual(false, q.handleSACK(SK(0, [])));
 		self.assertEqual([[1, 'one'], [2, 'two']], q.getItems());
 	},
 
@@ -159,15 +163,15 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 		q.append('zero');
 		q.extend(['one', 'two', 'three']);
 		self.assertEqual([[0, 'zero'], [1, 'one'], [2, 'two'], [3, 'three']], q.getItems());
-		self.assertEqual(false, q.handleSACK([-1, [1]]));
+		self.assertEqual(false, q.handleSACK(SK(-1, [1])));
 		self.assertEqual([[0, 'zero'], [2, 'two'], [3, 'three']], q.getItems());
-		self.assertEqual(false, q.handleSACK([0, [3]]));
+		self.assertEqual(false, q.handleSACK(SK(0, [3])));
 		self.assertEqual([[2, 'two']], q.getItems());
 		q.append('four');
 		self.assertEqual([[2, 'two'], [4, 'four']], q.getItems());
 		// although this is a very strange SACK because it should have
 		// been (4, ()), it is still legal
-		self.assertEqual(false, q.handleSACK([0, [2, 4]]));
+		self.assertEqual(false, q.handleSACK(SK(0, [2, 4])));
 		self.assertEqual([], q.getItems());
 		q.append('five');
 		self.assertEqual([[5, 'five']], q.getItems());
@@ -179,7 +183,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 	function test_handleSACKBothAckAndSackNumRemoveItems(self) {
 		var q = new Queue();
 		q.extend(['zero', 'one', 'two', 'three', 'four']);
-		self.assertEqual(false, q.handleSACK([0, [1, 3]]));
+		self.assertEqual(false, q.handleSACK(SK(0, [1, 3])));
 		self.assertEqual([[2, 'two'], [4, 'four']], q.getItems());
 	}
 );
@@ -192,51 +196,51 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingTests').methods(
 
 	function test_SACKNoItems(self) {
 		var i = new Incoming();
-		self.assertEqual([-1, []], i.getSACK());
+		self.assertEqual(SK(-1, []), i.getSACK());
 	},
 
 	function test_threeItems(self) {
 		var i = new Incoming();
 		self.assertEqual([['box0', 'box1', 'box2'], false], i.give([[0, 'box0'], [1, 'box1'], [2, 'box2']]));
-		self.assertEqual([2, []], i.getSACK());
+		self.assertEqual(SK(2, []), i.getSACK());
 	},
 
 	function test_itemMissing(self) {
 		var i = new Incoming();
 		self.assertEqual([['box0', 'box1'], false], i.give([[0, 'box0'], [1, 'box1'], [3, 'box3']]));
-		self.assertEqual([1, [3]], i.getSACK());
+		self.assertEqual(SK(1, [3]), i.getSACK());
 	},
 
 	function test_twoItemsMissing(self) {
 		var i = new Incoming();
 		self.assertEqual([['box0', 'box1'], false], i.give([[0, 'box0'], [1, 'box1'], [4, 'box4']]));
-		self.assertEqual([1, [4]], i.getSACK());
+		self.assertEqual(SK(1, [4]), i.getSACK());
 	},
 
 	function test_twoRangesMissing(self) {
 		var i = new Incoming();
 		self.assertEqual([['box0', 'box1'], false], i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']]));
-		self.assertEqual([1, [4, 6]], i.getSACK());
+		self.assertEqual(SK(1, [4, 6]), i.getSACK());
 	},
 
 	function test_twoRangesMissingThenFill(self) {
 		var i = new Incoming();
 		self.assertEqual([['box0', 'box1'], false], i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']]));
-		self.assertEqual([1, [4, 6]], i.getSACK());
+		self.assertEqual(SK(1, [4, 6]), i.getSACK());
 		self.assertEqual([['box2', 'box3', 'box4', 'box5', 'box6'], false], i.give([[2, 'box2'], [3, 'box3'], [5, 'box5']]));
-		self.assertEqual([6, []], i.getSACK());
+		self.assertEqual(SK(6, []), i.getSACK());
 	},
 
 	function test_outOfOrder(self) {
 		var i = new Incoming();
 		// box0 missing
 		self.assertEqual([[], false], i.give([[1, 'box1'], [2, 'box2']]));
-		self.assertEqual([-1, [1, 2]], i.getSACK());
+		self.assertEqual(SK(-1, [1, 2]), i.getSACK());
 		// finally deliver it
 		self.assertEqual([['box0', 'box1', 'box2'], false], i.give([[0, 'box0']]));
 		// make sure it still works
 		self.assertEqual([['box3'], false], i.give([[3, 'box3']]));
-		self.assertEqual([3, []], i.getSACK());
+		self.assertEqual(SK(3, []), i.getSACK());
 	},
 
 	/**
@@ -250,7 +254,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingTests').methods(
 	function test_outOfOrderJustOneCall(self) {
 		var i = new Incoming();
 		self.assertEqual([['box0', 'box1'], false], i.give([[1, 'box1'], [0, 'box0']]));
-		self.assertEqual([1, []], i.getSACK());
+		self.assertEqual(SK(1, []), i.getSACK());
 	},
 
 	/**

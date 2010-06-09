@@ -28,7 +28,7 @@ goog.require('cw.string');
 goog.require('cw.repr');
 goog.require('cw.math');
 goog.require('cw.eq');
-goog.require('cw.net.SACKTuple');
+goog.require('cw.net.SACK');
 
 
 /**
@@ -145,7 +145,7 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	if(lastSackSeen == null) {
 		throw new cw.net.InvalidHello("bad lastSackSeenByClient");
 	}
-	obj.lastSackSeenByClient = [lastSackSeen.ackNumber, lastSackSeen.sackList];
+	obj.lastSackSeenByClient = lastSackSeen.sack;
 
 	// requestNewStream is always optional. If missing or False/0, transport
 	// is intended to attach to an existing stream.
@@ -279,7 +279,7 @@ cw.net.HelloFrame = function() {
 	this.useMyTcpAcks;
 	/** @type {undefined|?number} */
 	this.succeedsTransport;
-	/** @type {string|!cw.net.SACKTuple} */
+	/** @type {string|!cw.net.SACK} */
 	this.lastSackSeenByClient;
 };
 
@@ -386,12 +386,10 @@ cw.net.HelloFrame.prototype.encodeToPieces = function(sb) {
 	compact[HP.useMyTcpAcks] = this.useMyTcpAcks;
 	compact[HP.succeedsTransport] = this.succeedsTransport;
 
-	if(goog.isArray(this.lastSackSeenByClient)) {
+	if(this.lastSackSeenByClient instanceof cw.net.SACK) {
 		compact[HP.lastSackSeenByClient] =
 			cw.string.withoutLast(
-				new cw.net.SackFrame(
-					this.lastSackSeenByClient[0], this.lastSackSeenByClient[1]
-				).encode(), 1);
+				new cw.net.SackFrame(this.lastSackSeenByClient).encode(), 1);
 	} else {
 		compact[HP.lastSackSeenByClient] = this.lastSackSeenByClient;
 	}
@@ -553,20 +551,17 @@ cw.net.sackStringToSackFrame_ = function(sackString) {
 		}
 	}
 
-	return new cw.net.SackFrame(ackNumber, sackList);
+	return new cw.net.SackFrame(new cw.net.SACK(ackNumber, sackList));
 };
 
 
 /**
- * @param {number} ackNumber
- * @param {!Array.<number>} sackList
+ * @param {!cw.net.SACK} sack
  * @constructor
  */
-cw.net.SackFrame = function(ackNumber, sackList) {
-	/** @type {number} */
-	this.ackNumber = ackNumber;
-	/** @type {!Array.<number>} */
-	this.sackList = sackList;
+cw.net.SackFrame = function(sack) {
+	/** @type {!cw.net.SACK} */
+	this.sack = sack;
 };
 
 /**
@@ -578,16 +573,15 @@ cw.net.SackFrame = function(ackNumber, sackList) {
 cw.net.SackFrame.prototype.equals = function(other, messages) {
 	return (
 		other instanceof cw.net.SackFrame &&
-		this.ackNumber == other.ackNumber &&
-		cw.eq.equals(this.sackList, other.sackList, messages));
+		cw.eq.equals(this.sack, other.sack, messages));
 };
 
 /**
  * @param {!Array.<string>} sb
  */
 cw.net.SackFrame.prototype.__reprToPieces__ = function(sb) {
-	sb.push('new SackFrame(', String(this.ackNumber), ', ');
-	cw.repr.reprToPieces(this.sackList, sb);
+	sb.push('new SackFrame(');
+	cw.repr.reprToPieces(this.sack, sb);
 	sb.push(')');
 };
 
@@ -610,7 +604,7 @@ cw.net.SackFrame.prototype.encode = cw.net.frameEncodeMethod_;
  * @param {!Array.<string>} sb
  */
 cw.net.SackFrame.prototype.encodeToPieces = function(sb) {
-	sb.push(this.sackList.join(','), '|', String(this.ackNumber) + 'A');
+	sb.push(this.sack.sackList.join(','), '|', String(this.sack.ackNumber) + 'A');
 };
 
 
