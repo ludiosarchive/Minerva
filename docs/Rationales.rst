@@ -22,7 +22,7 @@ but that would reduce symmetry in the protocol.
 How does the SACK feature work?
 =====
 Minerva SACK allows us to keep strings in our receive window
-that we cannot deliver yet. In our SackFrame, we send sackNums
+that we cannot deliver yet. In our SackFrame, we send sackList
 to the peer so that they know which strings were queued in the window.
 For wire protocol simplicity, if the window is overflowing, the transport
 is torn down (the Stream is kept alive).
