@@ -13,13 +13,13 @@ class QueueTests(unittest.TestCase):
 	"""
 	def test_repr(self):
 		q = Queue()
-		self.aE('<Queue at 0x%x with 0 item(s), counter=#-1, size=0>' % (
+		self.assertEqual('<Queue at 0x%x with 0 item(s), counter=#-1, size=0>' % (
 			id(q),), repr(q))
 		q.extend(['a', 'b'])
-		self.aE('<Queue at 0x%x with 2 item(s), counter=#1, size=%d>' % (
+		self.assertEqual('<Queue at 0x%x with 2 item(s), counter=#1, size=%d>' % (
 			id(q), totalSizeOf('a') * 2), repr(q))
 		q.handleSACK(SACK(0, ()))
-		self.aE('<Queue at 0x%x with 1 item(s), counter=#1, size=%d>' % (
+		self.assertEqual('<Queue at 0x%x with 1 item(s), counter=#1, size=%d>' % (
 			id(q), totalSizeOf('a')), repr(q))
 
 
@@ -30,18 +30,18 @@ class QueueTests(unittest.TestCase):
 		causes it to remove items.
 		"""
 		q = Queue()
-		self.aE(0, q.getMaxConsumption())
+		self.assertEqual(0, q.getMaxConsumption())
 		q.extend(['a', 'b'])
-		self.aE(totalSizeOf('a') * 2, q.getMaxConsumption())
+		self.assertEqual(totalSizeOf('a') * 2, q.getMaxConsumption())
 		q.handleSACK(SACK(0, ()))
-		self.aE(totalSizeOf('a'), q.getMaxConsumption())
+		self.assertEqual(totalSizeOf('a'), q.getMaxConsumption())
 		# strange-looking SACK, but it does exercise the code we want to exercise
 		q.handleSACK(SACK(0, (1,)))
-		self.aE(0, q.getMaxConsumption())
+		self.assertEqual(0, q.getMaxConsumption())
 		q.handleSACK(SACK(1, ()))
-		self.aE(0, q.getMaxConsumption())
+		self.assertEqual(0, q.getMaxConsumption())
 		q.append('cc')
-		self.aE(totalSizeOf('cc'), q.getMaxConsumption())
+		self.assertEqual(totalSizeOf('cc'), q.getMaxConsumption())
 
 
 	def test_iterEmptyQueue(self):
@@ -246,13 +246,13 @@ class IncomingTests(unittest.TestCase):
 
 	def test_getUndeliverableCount(self):
 		i = Incoming()
-		self.aE(0, i.getUndeliverableCount())
+		self.assertEqual(0, i.getUndeliverableCount())
 		i.give([[1, 'box1']])
-		self.aE(1, i.getUndeliverableCount())
+		self.assertEqual(1, i.getUndeliverableCount())
 		i.give([[2, 'box2']])
-		self.aE(2, i.getUndeliverableCount())
+		self.assertEqual(2, i.getUndeliverableCount())
 		i.give([[0, 'box0']])
-		self.aE(0, i.getUndeliverableCount())
+		self.assertEqual(0, i.getUndeliverableCount())
 
 
 	def test_itemsGivenTwice(self):
@@ -262,16 +262,16 @@ class IncomingTests(unittest.TestCase):
 		"""
 		i = Incoming()
 		i.give([[0, 'box0'], [1, 'box1']])
-		self.aE(0, i.getUndeliverableCount())
+		self.assertEqual(0, i.getUndeliverableCount())
 
 		i.give([[0, 'box0']])
-		self.aE(0, i.getUndeliverableCount())
+		self.assertEqual(0, i.getUndeliverableCount())
 		i.give([[1, 'box1']])
-		self.aE(0, i.getUndeliverableCount())
+		self.assertEqual(0, i.getUndeliverableCount())
 		i.give([[0, 'box0'], [1, 'box1']])
-		self.aE(0, i.getUndeliverableCount())
+		self.assertEqual(0, i.getUndeliverableCount())
 		i.give([[0, 'box0'], [1, 'box1'], [2, 'box2']])
-		self.aE(0, i.getUndeliverableCount())
+		self.assertEqual(0, i.getUndeliverableCount())
 
 
 	def test_hashFloatEqualsHashInt(self):
@@ -324,16 +324,16 @@ class IncomingConsumptionTests(unittest.TestCase):
 	"""
 	def test_noBoxesEverGiven(self):
 		i = Incoming()
-		self.aE(0, i.getMaxConsumption())
+		self.assertEqual(0, i.getMaxConsumption())
 
 
 	def test_simple(self):
 		i = Incoming()
 		_ = i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
-		self.aE(totalSizeOf('box1') * 3, i.getMaxConsumption())
+		self.assertEqual(totalSizeOf('box1') * 3, i.getMaxConsumption())
 
 		_ = i.give([[4, 'box4'], [5, 'box5'], [6, 'box6']])
-		self.aE(totalSizeOf('box1') * 6, i.getMaxConsumption())
+		self.assertEqual(totalSizeOf('box1') * 6, i.getMaxConsumption())
 
 
 	def test_StringFragmentConvertToStr(self):
@@ -345,7 +345,7 @@ class IncomingConsumptionTests(unittest.TestCase):
 		s = _wasSF("helloworld" * 100)
 		sf = StringFragment(s, 0, len(s))
 		i.give([[1, sf]])
-		self.aE(totalSizeOf(s), i.getMaxConsumption())
+		self.assertEqual(totalSizeOf(s), i.getMaxConsumption())
 
 
 	def test_strConvertedBackToStringFragment(self):
@@ -357,7 +357,7 @@ class IncomingConsumptionTests(unittest.TestCase):
 		s = _wasSF("helloworld" * 100)
 		sf = StringFragment(s, 0, len(s))
 		i.give([[1, sf]])
-		self.aE(([sf, sf], False), i.give([[0, sf]]))
+		self.assertEqual(([sf, sf], False), i.give([[0, sf]]))
 
 
 	def test_itemSizeChangedWhileInIncoming(self):

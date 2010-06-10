@@ -166,7 +166,7 @@ class StreamTests(unittest.TestCase):
 	def test_notifyFinishReturnsDeferred(self):
 		s = Stream(None, 'some fake id', None)
 		d = s.notifyFinish()
-		self.aE(defer.Deferred, type(d))
+		self.assertEqual(defer.Deferred, type(d))
 
 
 	def test_notifyFinishActuallyCalled(self):
@@ -181,7 +181,7 @@ class StreamTests(unittest.TestCase):
 		d = s.notifyFinish()
 		called = [False]
 		def cb(val):
-			self.aI(None, val)
+			self.assertIs(None, val)
 			called[0] = True
 		d.addCallback(cb)
 		s.reset('because we want to see if the notifyFinish deferreds get called')
@@ -197,13 +197,13 @@ class StreamTests(unittest.TestCase):
 		"""
 		factory = MockMinervaProtocolFactory()
 		s = Stream(None, 'some fake id', factory)
-		self.aE(0, len(factory.instances))
+		self.assertEqual(0, len(factory.instances))
 
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 		i = list(factory.instances)[0]
 
-		self.aE([['streamStarted', s]], i.getNew())
+		self.assertEqual([['streamStarted', s]], i.getNew())
 
 
 	def test_stringsReceived(self):
@@ -218,10 +218,10 @@ class StreamTests(unittest.TestCase):
 
 		s.stringsReceived(t, [(1, sf('box1'))])
 		i = list(factory.instances)[0]
-		self.aE([['streamStarted', s]], i.getNew())
+		self.assertEqual([['streamStarted', s]], i.getNew())
 
 		s.stringsReceived(t, [(0, sf('box0'))])
-		self.aE([['stringsReceived', [sf('box0'), sf('box1')]]], i.getNew())
+		self.assertEqual([['stringsReceived', [sf('box0'), sf('box1')]]], i.getNew())
 
 
 	def test_exhaustedReceiveWindowTooManyStrings(self):
@@ -243,8 +243,8 @@ class StreamTests(unittest.TestCase):
 		# box #0 is never given, so it cannot deliver any of them
 
 		s.stringsReceived(t, manyStrings)
-		self.aE([['causedRwinOverflow']], t.getNew())
-		self.aE(50, s._incoming.getUndeliverableCount())
+		self.assertEqual([['causedRwinOverflow']], t.getNew())
+		self.assertEqual(50, s._incoming.getUndeliverableCount())
 
 
 	def test_exhaustedReceiveWindowTooManyBytes(self):
@@ -267,8 +267,8 @@ class StreamTests(unittest.TestCase):
 			# box #0 is never given, so it cannot deliver any of them
 
 			s.stringsReceived(t, notManyStrings)
-			self.aE([['causedRwinOverflow']], t.getNew())
-			self.aE(expectedKept, s._incoming.getUndeliverableCount())
+			self.assertEqual([['causedRwinOverflow']], t.getNew())
+			self.assertEqual(expectedKept, s._incoming.getUndeliverableCount())
 
 
 	def test_sendStringsAndActiveStreams(self):
@@ -289,7 +289,7 @@ class StreamTests(unittest.TestCase):
 			s.sendStrings(['box0', 'box1'])
 			s.transportOnline(t1, True, None)
 
-			self.aE([['writeStrings', s.queue, None]], t1.getNew())
+			self.assertEqual([['writeStrings', s.queue, None]], t1.getNew())
 
 			# Now connect a new transport
 			t2 = DummySocketLikeTransport()
@@ -297,9 +297,9 @@ class StreamTests(unittest.TestCase):
 			s.transportOnline(t2, True, succeedsTransportArgFor2ndTransport)
 
 			# box2 and box3 also went to t1 because t2 wasn't yet connected/primary
-			self.aE([['writeStrings', s.queue, None], ['closeGently']], t1.getNew())
+			self.assertEqual([['writeStrings', s.queue, None], ['closeGently']], t1.getNew())
 
-			self.aE([['writeStrings', s.queue, None]], t2.getNew())
+			self.assertEqual([['writeStrings', s.queue, None]], t2.getNew())
 
 			# Just to exercise transportOffline
 			s.transportOffline(t1)
@@ -328,21 +328,21 @@ class StreamTests(unittest.TestCase):
 		s.sendStrings(['box0', 'box1', 'box2', 'box3', 'box4'])
 		s.transportOnline(t1, True, None)
 
-		self.aE([['writeStrings', s.queue, None]], t1.getNew())
+		self.assertEqual([['writeStrings', s.queue, None]], t1.getNew())
 
 		# Now connect a new transport and make it primary
 		t2 = DummySocketLikeTransport()
 		t2.transportNumber = 31
 		s.transportOnline(t2, True, 30)
 
-		self.aE([['closeGently']], t1.getNew())
+		self.assertEqual([['closeGently']], t1.getNew())
 		# Even though there are no boxes to write yet, writeStrings is called anyway.
 		# (We used to have logic to prevent this; see Minerva git history before 2010-05-23)
-		self.aE([['writeStrings', s.queue, 5]], t2.getNew())
+		self.assertEqual([['writeStrings', s.queue, 5]], t2.getNew())
 
 		s.sendStrings(['box5', 'box6'])
 
-		self.aE([['writeStrings', s.queue, 5]], t2.getNew())
+		self.assertEqual([['writeStrings', s.queue, 5]], t2.getNew())
 
 
 		# Oh no... client actually lost box3 and box4, and it sends a correct SACK.
@@ -350,7 +350,7 @@ class StreamTests(unittest.TestCase):
 
 		s.sackReceived(SACK(2, ()))
 		assert s.queue.getQueuedCount() == 4, s.queue # box3, box4, box5, box6
-		self.aE([['writeStrings', s.queue, None]], t2.getNew())
+		self.assertEqual([['writeStrings', s.queue, None]], t2.getNew())
 
 		# Just to exercise transportOffline
 		s.transportOffline(t1)
@@ -376,7 +376,7 @@ class StreamTests(unittest.TestCase):
 			s.sendStrings(['box0', 'box1'])
 			s.transportOnline(t1, True, 9999)
 
-			self.aE([['writeStrings', s.queue, None]], t1.getNew())
+			self.assertEqual([['writeStrings', s.queue, None]], t1.getNew())
 
 
 	def test_getSACK(self):
@@ -385,13 +385,13 @@ class StreamTests(unittest.TestCase):
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 
-		self.aE(SACK(-1, ()), s.getSACK())
+		self.assertEqual(SACK(-1, ()), s.getSACK())
 		s.stringsReceived(t, [(0, sf('box'))])
-		self.aE(SACK(0, ()), s.getSACK())
+		self.assertEqual(SACK(0, ()), s.getSACK())
 		s.stringsReceived(t, [(4, sf('box'))])
-		self.aE(SACK(0, (4,)), s.getSACK())
+		self.assertEqual(SACK(0, (4,)), s.getSACK())
 		s.stringsReceived(t, [(5, sf('box'))])
-		self.aE(SACK(0, (4, 5)), s.getSACK())
+		self.assertEqual(SACK(0, (4, 5)), s.getSACK())
 
 
 	def test_noLongerVirgin(self):
@@ -400,19 +400,19 @@ class StreamTests(unittest.TestCase):
 		"""
 		s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
 
-		self.aI(True, s. virgin)
+		self.assertIs(True, s. virgin)
 
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
-		self.aI(False, s.virgin)
+		self.assertIs(False, s.virgin)
 
 		# no longer a virgin ever
 		s.transportOffline(t)
-		self.aI(False, s.virgin)
+		self.assertIs(False, s.virgin)
 
 		t2 = DummySocketLikeTransport()
 		s.transportOnline(t2, False, None)
-		self.aI(False, s.virgin)
+		self.assertIs(False, s.virgin)
 
 
 	def test_transportOnline(self):
@@ -438,7 +438,7 @@ class StreamTests(unittest.TestCase):
 		clock = task.Clock()
 		s = Stream(clock, 'some fake id', MockMinervaProtocolFactory())
 		t = DummySocketLikeTransport()
-		self.aR(RuntimeError, lambda: s.transportOffline(t))
+		self.assertRaises(RuntimeError, lambda: s.transportOffline(t))
 
 	# TODO: probably have better tests that test more for online/offline
 
@@ -462,11 +462,11 @@ class StreamTests(unittest.TestCase):
 		t2 = DummySocketLikeTransport()
 		s.transportOnline(t2, False, None)
 
-		self.aE(False, s.disconnected)
+		self.assertEqual(False, s.disconnected)
 		s.reset('the reason')
-		self.aE(True, s.disconnected)
-		self.aE([["writeReset", 'the reason', True]], t1.getNew())
-		self.aE([["writeReset", 'the reason', True]], t2.getNew())
+		self.assertEqual(True, s.disconnected)
+		self.assertEqual([["writeReset", 'the reason', True]], t1.getNew())
+		self.assertEqual([["writeReset", 'the reason', True]], t2.getNew())
 
 
 	def test_internalResetCallsAllTransports(self):
@@ -481,11 +481,11 @@ class StreamTests(unittest.TestCase):
 		t2 = DummySocketLikeTransport()
 		s.transportOnline(t2, False, None)
 
-		self.aE(False, s.disconnected)
+		self.assertEqual(False, s.disconnected)
 		s._internalReset('the reason')
-		self.aE(True, s.disconnected)
-		self.aE([["writeReset", 'the reason', False]], t1.getNew())
-		self.aE([["writeReset", 'the reason', False]], t2.getNew())
+		self.assertEqual(True, s.disconnected)
+		self.assertEqual([["writeReset", 'the reason', False]], t1.getNew())
+		self.assertEqual([["writeReset", 'the reason', False]], t2.getNew())
 
 
 	def test_cannotResetDisconnectedStream(self):
@@ -497,15 +497,15 @@ class StreamTests(unittest.TestCase):
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
 		s.reset('reason')
-		self.aR(RuntimeError, lambda: s.reset('reason'))
-		self.aR(RuntimeError, lambda: s.reset('reason'))
+		self.assertRaises(RuntimeError, lambda: s.reset('reason'))
+		self.assertRaises(RuntimeError, lambda: s.reset('reason'))
 
 		# original reset caused by a transport
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
 		s.resetFromPeer('reason', True)
-		self.aR(RuntimeError, lambda: s.reset('reason'))
-		self.aR(RuntimeError, lambda: s.reset('reason'))
+		self.assertRaises(RuntimeError, lambda: s.reset('reason'))
+		self.assertRaises(RuntimeError, lambda: s.reset('reason'))
 
 
 	def test_cannotSendStringsDisconnectedStream(self):
@@ -517,15 +517,15 @@ class StreamTests(unittest.TestCase):
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
 		s.reset('reason')
-		self.aR(RuntimeError, lambda: s.sendStrings(["somebox"]))
-		self.aR(RuntimeError, lambda: s.sendStrings(["somebox"]))
+		self.assertRaises(RuntimeError, lambda: s.sendStrings(["somebox"]))
+		self.assertRaises(RuntimeError, lambda: s.sendStrings(["somebox"]))
 
 		# original reset caused by a transport
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
 		s.resetFromPeer('reason', True)
-		self.aR(RuntimeError, lambda: s.sendStrings(["somebox"]))
-		self.aR(RuntimeError, lambda: s.sendStrings(["somebox"]))
+		self.assertRaises(RuntimeError, lambda: s.sendStrings(["somebox"]))
+		self.assertRaises(RuntimeError, lambda: s.sendStrings(["somebox"]))
 
 
 	def test_ignoreCallToSendStringsZeroStrings(self):
@@ -537,11 +537,11 @@ class StreamTests(unittest.TestCase):
 		factory, clock, s, t1 = self._makeStuff()
 		s.transportOnline(t1, True, None)
 		s.sendStrings(['box0'])
-		self.aE([['writeStrings', s.queue, None]], t1.getNew())
+		self.assertEqual([['writeStrings', s.queue, None]], t1.getNew())
 		s.sendStrings([])
-		self.aE([], t1.getNew())
+		self.assertEqual([], t1.getNew())
 		s.sendStrings(None) # implementation detail, hopefully no one relies on this
-		self.aE([], t1.getNew())
+		self.assertEqual([], t1.getNew())
 
 
 	def test_resetFromPeer(self):
@@ -557,16 +557,16 @@ class StreamTests(unittest.TestCase):
 			t2 = DummySocketLikeTransport()
 			s.transportOnline(t2, False, None)
 
-			self.aE(False, s.disconnected)
+			self.assertEqual(False, s.disconnected)
 			s.resetFromPeer('the reason', applicationLevel)
-			self.aE(True, s.disconnected)
+			self.assertEqual(True, s.disconnected)
 
 			i = list(factory.instances)[0]
 			who = WhoReset.client_app if applicationLevel else WhoReset.client_minerva
-			self.aE([["streamStarted", s], ["streamReset", who, 'the reason']], i.getNew())
+			self.assertEqual([["streamStarted", s], ["streamReset", who, 'the reason']], i.getNew())
 
-			self.aE([["closeGently"]], t1.getNew())
-			self.aE([["closeGently"]], t2.getNew())
+			self.assertEqual([["closeGently"]], t1.getNew())
+			self.assertEqual([["closeGently"]], t2.getNew())
 
 
 	def test_registerUnregisterProducerWithNoActiveTransport(self):
@@ -584,9 +584,9 @@ class StreamTests(unittest.TestCase):
 		# Register
 		s.registerProducer(producer1, streaming=True)
 		# Registering again raises RuntimeError
-		self.aR(RuntimeError, lambda: s.registerProducer(producer1, streaming=True))
+		self.assertRaises(RuntimeError, lambda: s.registerProducer(producer1, streaming=True))
 		# ...even if it's not anything like a producer
-		self.aR(RuntimeError, lambda: s.registerProducer(None, streaming=False))
+		self.assertRaises(RuntimeError, lambda: s.registerProducer(None, streaming=False))
 
 		# Unregister
 		s.unregisterProducer()
@@ -615,7 +615,7 @@ class StreamTests(unittest.TestCase):
 			s.pauseProducing()
 			s.resumeProducing()
 			s.resumeProducing()
-			self.aE(
+			self.assertEqual(
 				[['pauseProducing'], ['pauseProducing'], ['resumeProducing'], ['resumeProducing']],
 				producer1.getNew())
 
@@ -640,20 +640,20 @@ class StreamTests(unittest.TestCase):
 
 		producer1 = MockProducer()
 		s.registerProducer(producer1, streaming=True)
-		self.aE([['pauseProducing']], producer1.getNew())
+		self.assertEqual([['pauseProducing']], producer1.getNew())
 
 		# ... and it still happens if a completely new producer is registered
 		s.unregisterProducer()
 		producer2 = MockProducer()
 		s.registerProducer(producer2, streaming=True)
-		self.aE([['pauseProducing']], producer2.getNew())
+		self.assertEqual([['pauseProducing']], producer2.getNew())
 
 		# ... stops happening (for push producers) if the Stream is unpaused
 		s.resumeProducing()
 		s.unregisterProducer()
 		producer3 = MockProducer()
 		s.registerProducer(producer3, streaming=True)
-		self.aE([], producer3.getNew())
+		self.assertEqual([], producer3.getNew())
 
 
 	def test_pausedStreamDoesNotPauseNewPullProducer(self):
@@ -668,7 +668,7 @@ class StreamTests(unittest.TestCase):
 		s.unregisterProducer()
 		pullProducer = MockProducer()
 		s.registerProducer(pullProducer, streaming=False)
-		self.aE([], pullProducer.getNew())
+		self.assertEqual([], pullProducer.getNew())
 
 
 	def test_lackOfPrimaryTransportPausesPushProducer(self):
@@ -682,17 +682,17 @@ class StreamTests(unittest.TestCase):
 
 		producer1 = MockProducer()
 		s.registerProducer(producer1, streaming=True)
-		self.aE([
+		self.assertEqual([
 			['pauseProducing'],
 		], producer1.getNew())
 
 		s.transportOnline(t1, True, None)
 
-		self.aE([['resumeProducing']], producer1.getNew())
+		self.assertEqual([['resumeProducing']], producer1.getNew())
 
 		s.transportOffline(t1)
 
-		self.aE([['pauseProducing']], producer1.getNew())
+		self.assertEqual([['pauseProducing']], producer1.getNew())
 
 
 	def test_lackOfPrimaryTransportPausesPushProducer2(self):
@@ -714,13 +714,13 @@ class StreamTests(unittest.TestCase):
 
 		# Push producer
 		s.registerProducer(producer1, streaming=True)
-		self.aE([['pauseProducing']], producer1.getNew())
+		self.assertEqual([['pauseProducing']], producer1.getNew())
 
 		s.unregisterProducer()
 		# Pull producer
 		producer2 = MockProducer()
 		s.registerProducer(producer2, streaming=False)
-		self.aE([], producer2.getNew())
+		self.assertEqual([], producer2.getNew())
 
 
 	def test_newPrimaryTransportDoesNotPauseProducer(self):
@@ -740,7 +740,7 @@ class StreamTests(unittest.TestCase):
 		t2 = DummySocketLikeTransport()
 		s.transportOnline(t2, True, None)
 
-		self.aE([], producer1.getNew())
+		self.assertEqual([], producer1.getNew())
 
 
 	def test_newPrimaryTransportResumesIfNecessary(self):
@@ -756,12 +756,12 @@ class StreamTests(unittest.TestCase):
 		s.registerProducer(producer1, streaming=True)
 		s.pauseProducing() # pretend that primary transport t1 called this
 
-		self.aE([['pauseProducing']], producer1.getNew())
+		self.assertEqual([['pauseProducing']], producer1.getNew())
 
 		t2 = DummySocketLikeTransport()
 		s.transportOnline(t2, True, None)
 
-		self.aE([['resumeProducing']], producer1.getNew())
+		self.assertEqual([['resumeProducing']], producer1.getNew())
 
 
 	def test_newPrimaryTransportResumesAndLeavesGoodState(self):
@@ -777,25 +777,25 @@ class StreamTests(unittest.TestCase):
 		producer1 = MockProducer()
 		s.registerProducer(producer1, streaming=True)
 
-		self.aE([], producer1.getNew())
+		self.assertEqual([], producer1.getNew())
 
 		s.pauseProducing() # pretend that t1 called this
 
-		self.aE([['pauseProducing']], producer1.getNew())
+		self.assertEqual([['pauseProducing']], producer1.getNew())
 
 		t2 = DummySocketLikeTransport()
 		s.transportOnline(t2, True, None)
 
-		self.aE([['registerProducer', s, True], ['unregisterProducer'], ['closeGently']], t1.getNew())
-		self.aE([['registerProducer', s, True]], t2.getNew())
-		self.aE([['resumeProducing']], producer1.getNew())
+		self.assertEqual([['registerProducer', s, True], ['unregisterProducer'], ['closeGently']], t1.getNew())
+		self.assertEqual([['registerProducer', s, True]], t2.getNew())
+		self.assertEqual([['resumeProducing']], producer1.getNew())
 
 		t3 = DummySocketLikeTransport()
 		s.transportOnline(t3, True, None)
 
-		self.aE([['unregisterProducer'], ['closeGently']], t2.getNew())
-		self.aE([['registerProducer', s, True]], t3.getNew())
-		self.aE([], producer1.getNew())
+		self.assertEqual([['unregisterProducer'], ['closeGently']], t2.getNew())
+		self.assertEqual([['registerProducer', s, True]], t3.getNew())
+		self.assertEqual([], producer1.getNew())
 
 
 	def test_lackOfTransportsIgnoresPullProducer(self):
@@ -812,7 +812,7 @@ class StreamTests(unittest.TestCase):
 
 		s.transportOffline(t1)
 
-		self.aE([], producer1.getNew())
+		self.assertEqual([], producer1.getNew())
 
 
 	def test_transportOfflineOnlyPausesIfTransportIsPrimary(self):
@@ -827,7 +827,7 @@ class StreamTests(unittest.TestCase):
 		s.transportOnline(t2, False, None)
 		s.transportOffline(t2)
 
-		self.aE([], producer1.getNew())
+		self.assertEqual([], producer1.getNew())
 
 
 	def test_registerUnregisterPushProducerThenNewPrimary(self):
@@ -855,16 +855,16 @@ class StreamTests(unittest.TestCase):
 			# Stream already has a producer before transport attaches and becomes primary
 			s.transportOnline(t1, True, None)
 
-			self.aE([['registerProducer', s, streaming]], t1.getNew())
+			self.assertEqual([['registerProducer', s, streaming]], t1.getNew())
 
 			s.unregisterProducer()
 
-			self.aE([['unregisterProducer']], t1.getNew())
+			self.assertEqual([['unregisterProducer']], t1.getNew())
 
 			# Now attach again
 			s.registerProducer(producer1, streaming=streaming)
 
-			self.aE([['registerProducer', s, streaming]], t1.getNew())
+			self.assertEqual([['registerProducer', s, streaming]], t1.getNew())
 
 
 	def test_producerRegistrationWithNewPrimaryTransport(self):
@@ -879,19 +879,19 @@ class StreamTests(unittest.TestCase):
 			# and becomes primary
 			s.transportOnline(t1, True, None)
 
-			self.aE([
+			self.assertEqual([
 				['registerProducer', s, streaming],
 			], t1.getNew())
 
 			t2 = DummySocketLikeTransport()
 			s.transportOnline(t2, True, None)
 
-			self.aE([
+			self.assertEqual([
 				['unregisterProducer'],
 				['closeGently'],
 			], t1.getNew())
 
-			self.aE([
+			self.assertEqual([
 				['registerProducer', s, streaming],
 			], t2.getNew())
 
@@ -910,11 +910,11 @@ class StreamTests(unittest.TestCase):
 		producer2 = MockProducer()
 		s.registerProducer(producer2, streaming=True)
 
-		self.aE([['registerProducer', s, True], ['unregisterProducer']], t1.getNew())
+		self.assertEqual([['registerProducer', s, True], ['unregisterProducer']], t1.getNew())
 
 		t2 = DummySocketLikeTransport() # not the primary transport
 		s.transportOnline(t2, True, None)
-		self.aE([['registerProducer', s, True]], t2.getNew())
+		self.assertEqual([['registerProducer', s, True]], t2.getNew())
 
 
 
@@ -936,7 +936,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		st = StreamTracker(reactor, None, None)
 		o = MockObserver()
 		st.observeStreams(o)
-		self.aE([], o.getNew())
+		self.assertEqual([], o.getNew())
 
 
 	def test_observeStreamsTwiceOkay(self):
@@ -950,7 +950,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		st.observeStreams(o)
 		st.observeStreams(o)
 		stream = st.buildStream('some fake id')
-		self.aE([['streamUp', stream]], o.getNew())
+		self.assertEqual([['streamUp', stream]], o.getNew())
 
 
 	def test_observeAndUnobserve(self):
@@ -962,12 +962,12 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		o = MockObserver()
 		st.observeStreams(o)
 		stream = st.buildStream('some fake id')
-		self.aE([['streamUp', stream]], o.getNew())
+		self.assertEqual([['streamUp', stream]], o.getNew())
 
 		st.unobserveStreams(o)
 		# Since it's not observing, it shouldn't get any notification of this new Stream
 		_anotherStream = st.buildStream('another fake id')
-		self.aE([], o.getNew())
+		self.assertEqual([], o.getNew())
 
 
 	def test_unobserveUnknownRaisesError(self):
@@ -978,7 +978,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, None, None)
 		o = MockObserver()
-		self.aR(RuntimeError, lambda: st.unobserveStreams(o))
+		self.assertRaises(RuntimeError, lambda: st.unobserveStreams(o))
 
 
 	def test_unobserveTwiceRaisesError(self):
@@ -990,7 +990,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		o = MockObserver()
 		st.observeStreams(o)
 		st.unobserveStreams(o)
-		self.aR(RuntimeError, lambda: st.unobserveStreams(o))
+		self.assertRaises(RuntimeError, lambda: st.unobserveStreams(o))
 
 
 	def test_manyObservers(self):
@@ -1011,7 +1011,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		stream = st.buildStream('some fake id')
 
 		for o in observers:
-			self.aE([['streamUp', stream]], o.getNew())
+			self.assertEqual([['streamUp', stream]], o.getNew())
 
 
 	def test_unobserveRemovesCorrectObserver(self):
@@ -1045,10 +1045,10 @@ class StreamTrackerObserverTests(unittest.TestCase):
 
 		# 2000 observers got the message
 		for o in irrelevantObservers:
-			self.aE([['streamUp', stream]], o.getNew())
+			self.assertEqual([['streamUp', stream]], o.getNew())
 
 		# the one that was removed did not
-		self.aE([], toRemove.getNew())
+		self.assertEqual([], toRemove.getNew())
 
 
 	def test_streamDown_calledWhenStreamDone(self):
@@ -1060,10 +1060,10 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		o = MockObserver()
 		st.observeStreams(o)
 		stream = st.buildStream('some fake id')
-		self.aE([['streamUp', stream]], o.getNew())
+		self.assertEqual([['streamUp', stream]], o.getNew())
 
 		stream._pretendFinish()
-		self.aE([['streamDown', stream]], o.getNew())
+		self.assertEqual([['streamDown', stream]], o.getNew())
 
 
 	def test_brokenObserverExceptionBubblesUp(self):
@@ -1074,7 +1074,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		st = StreamTrackerWithMockStream(reactor, None, None)
 		o = BrokenMockObserver()
 		st.observeStreams(o)
-		self.aR(BrokenOnPurposeError, lambda: st.buildStream('some fake id'))
+		self.assertRaises(BrokenOnPurposeError, lambda: st.buildStream('some fake id'))
 
 
 	def test_brokenObserverExceptionRemovesStreamReference(self):
@@ -1087,8 +1087,8 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		o = BrokenMockObserver()
 		st.observeStreams(o)
 		id = 'some fake id'
-		self.aR(BrokenOnPurposeError, lambda: st.buildStream(id))
-		self.aR(NoSuchStream, lambda: st.getStream(id))
+		self.assertRaises(BrokenOnPurposeError, lambda: st.buildStream(id))
+		self.assertRaises(NoSuchStream, lambda: st.getStream(id))
 
 
 
@@ -1102,7 +1102,7 @@ class StreamTrackerTests(unittest.TestCase):
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, None, None)
 		stream = st.buildStream('some fake id')
-		self.aI(Stream, type(stream))
+		self.assertIs(Stream, type(stream))
 
 
 	def test_buildStreamCannotBuildWithSameId(self):
@@ -1115,7 +1115,7 @@ class StreamTrackerTests(unittest.TestCase):
 		id = 'some fake id'
 		act = lambda: st.buildStream(id)
 		act()
-		self.aR(StreamAlreadyExists, act)
+		self.assertRaises(StreamAlreadyExists, act)
 
 
 	def test_antiACAImplementation(self):
@@ -1129,7 +1129,7 @@ class StreamTrackerTests(unittest.TestCase):
 		id = 'some fake id'
 		act = lambda: st.buildStream(id)
 		act()
-		self.aE(len(id) + 6, len(st._streams.keys()[0]))
+		self.assertEqual(len(id) + 6, len(st._streams.keys()[0]))
 
 
 
@@ -1165,10 +1165,10 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			assert self.tcpTransport.disconnecting == False
 			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
-			self.aE('', self.tcpTransport.value())
-			self.aE(True, self.tcpTransport.disconnecting)
+			self.assertEqual('', self.tcpTransport.value())
+			self.assertEqual(True, self.tcpTransport.disconnecting)
 			# In the real world, this implies a TCP RST sent to the peer.
-			self.aE(True, self.tcpTransport.aborted)
+			self.assertEqual(True, self.tcpTransport.aborted)
 
 
 	def _serializeFrames(self, frames):
@@ -1198,7 +1198,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			frames, code = strictGetNewFrames(self.parser, self.tcpTransport.value())
 			# f instead of str(f) because BencodeStringDecoder delivers C{str}s
 			decodedFrames = [decodeFrameFromServer(f) for f in frames]
-			self.aE([TransportKillFrame(tk_stream_attach_failure), YouCloseItFrame()], decodedFrames)
+			self.assertEqual([TransportKillFrame(tk_stream_attach_failure), YouCloseItFrame()], decodedFrames)
 
 
 	# copy/paste from test_modeBencode
@@ -1222,7 +1222,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 				self.transport.dataReceived(s)
 			frames, code = strictGetNewFrames(self.parser, self.tcpTransport.value())
 			decodedFrames = [decodeFrameFromServer(str(f)) for f in frames]
-			self.aE([TransportKillFrame(tk_stream_attach_failure), YouCloseItFrame()], decodedFrames)
+			self.assertEqual([TransportKillFrame(tk_stream_attach_failure), YouCloseItFrame()], decodedFrames)
 
 
 	def test_modePolicyFile(self):
@@ -1231,8 +1231,8 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			self._resetConnection()
 			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
-			self.aE('<nonsense-policy/>\x00', self.tcpTransport.value())
-			self.aE(False, self.tcpTransport.disconnecting)
+			self.assertEqual('<nonsense-policy/>\x00', self.tcpTransport.value())
+			self.assertEqual(False, self.tcpTransport.disconnecting)
 
 
 	def test_modePolicyFilePlusGarbage(self):
@@ -1245,8 +1245,8 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			self._resetConnection()
 			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
-			self.aE('<nonsense-policy/>\x00', self.tcpTransport.value())
-			self.aE(False, self.tcpTransport.disconnecting)
+			self.assertEqual('<nonsense-policy/>\x00', self.tcpTransport.value())
+			self.assertEqual(False, self.tcpTransport.disconnecting)
 
 
 
@@ -1254,13 +1254,13 @@ class TransportIsHttpTests(unittest.TestCase):
 
 	def test_isHttpUnknown(self):
 		transport = ServerTransport()
-		self.aR(RuntimeError, lambda: transport.isHttp())
+		self.assertRaises(RuntimeError, lambda: transport.isHttp())
 
 
 	def test_isHttpNegative(self):
 		transport = ServerTransport()
 		transport.makeConnection(DummyTCPTransport())
-		self.aE(False, transport.isHttp())
+		self.assertEqual(False, transport.isHttp())
 
 
 	def test_isHttpPositive(self):
@@ -1268,7 +1268,7 @@ class TransportIsHttpTests(unittest.TestCase):
 		request = http.Request(DummyChannel(), False)
 		request.content = StringIO("yow \n")
 		transport.requestStarted(request)
-		self.aE(True, transport.isHttp())
+		self.assertEqual(True, transport.isHttp())
 
 
 
@@ -1335,7 +1335,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		q = Queue()
 		q.extend(['box0', 'box1'])
 		transport.writeStrings(q, start=None)
-		self.aE([
+		self.assertEqual([
 			StreamCreatedFrame(),
 			SeqNumFrame(0),
 			StringFrame('box0'),
@@ -1354,7 +1354,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		q = Queue()
 		q.extend(['box0', 'box1', 'box2'])
 		transport.writeStrings(q, start=1)
-		self.aE([
+		self.assertEqual([
 			StreamCreatedFrame(),
 			SeqNumFrame(1),
 			StringFrame('box1'),
@@ -1382,7 +1382,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 #		box1 = 'c'*int(0.6*1024*1024)
 #		q.extend([box0, box1])
 #		transport.writeStrings(q, start=None)
-#		self.aE([
+#		self.assertEqual([
 #			SeqNumFrame(0),
 #			StringFrame(box0),
 #			StringFrame(box1),
@@ -1401,7 +1401,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		q.extend(['box0', 'box1'])
 		transport.writeStrings(q, start=None)
 		transport.writeStrings(q, start=None)
-		self.aE([
+		self.assertEqual([
 			StreamCreatedFrame(),
 			SeqNumFrame(0),
 			StringFrame('box0'),
@@ -1410,7 +1410,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		q.extend(['box2'])
 		transport.writeStrings(q, start=None)
-		self.aE([StringFrame('box2')], transport.getNew())
+		self.assertEqual([StringFrame('box2')], transport.getNew())
 
 
 	def test_writeStringsConnectionInterleavingSupport(self):
@@ -1432,7 +1432,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport.writeStrings(q, start=3) # doing it again is pretty much a no-op
 		transport.writeStrings(q, start=None)
 		transport.writeStrings(q, start=None) # doing it again is pretty much a no-op
-		self.aE([
+		self.assertEqual([
 			StreamCreatedFrame(),
 			SeqNumFrame(3),
 			StringFrame('box3'),
@@ -1461,7 +1461,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport.writeStrings(q, start=3) # doing it again is pretty much a no-op
 		transport.writeStrings(q, start=1)
 		transport.writeStrings(q, start=1) # doing it again is pretty much a no-op
-		self.aE([
+		self.assertEqual([
 			StreamCreatedFrame(),
 			SeqNumFrame(3),
 			StringFrame('box3'),
@@ -1507,8 +1507,8 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frames or something), it will silently ignore any data it receives.
 		"""
 		transport.sendFrames([_BadFrame('?')])
-		self.aE([], transport.getNew())
-		self.aE(False, transport.writable.disconnecting)
+		self.assertEqual([], transport.getNew())
+		self.assertEqual(False, transport.writable.disconnecting)
 
 
 	def test_frameCorruption(self):
@@ -1520,7 +1520,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		transport = self._makeTransport()
 		transport.dataReceived('1:xxxxxxxx')
-		self.aE([TransportKillFrame(tk_frame_corruption), YouCloseItFrame()], transport.getNew())
+		self.assertEqual([TransportKillFrame(tk_frame_corruption), YouCloseItFrame()], transport.getNew())
 		self._testExtraDataReceivedIgnored(transport)
 
 
@@ -1534,7 +1534,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		# TODO: no early detection of "too long" for WebSocket or HTTP. Only run for Bencode and int32?
 		transport = self._makeTransport()
 		transport.dataReceived('%d:' % (1024*1024 + 1,))
-		self.aE([TransportKillFrame(tk_frame_corruption), YouCloseItFrame()], transport.getNew())
+		self.assertEqual([TransportKillFrame(tk_frame_corruption), YouCloseItFrame()], transport.getNew())
 		self._testExtraDataReceivedIgnored(transport)
 
 
@@ -1549,22 +1549,22 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
-		self.aE([StreamCreatedFrame()], transport.getNew())
+		self.assertEqual([StreamCreatedFrame()], transport.getNew())
 
 		stream = self.streamTracker.getStream('x'*26)
 
-		self.aE([
+		self.assertEqual([
 			['transportOnline', transport, False, None]
 		], withoutUnimportantStreamCalls(stream.getNew()))
 
 		transport.dataReceived('1:xxxxxxxx')
 
-		self.aE([
+		self.assertEqual([
 			StreamStatusFrame(SACK(-1, ())),
 			TransportKillFrame(tk_frame_corruption),
 			YouCloseItFrame(),
 		], transport.getNew())
-		self.aE([
+		self.assertEqual([
 			['transportOffline', transport]
 		], withoutUnimportantStreamCalls(stream.getNew()))
 
@@ -1575,9 +1575,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		frame0 = _makeHelloFrame()
 		transport.sendFrames([frame0])
-		self.aE([StreamCreatedFrame()], transport.getNew())
+		self.assertEqual([StreamCreatedFrame()], transport.getNew())
 		transport.sendFrames([_BadFrame('?')])
-		self.aE([
+		self.assertEqual([
 			StreamStatusFrame(SACK(-1, ())),
 			TransportKillFrame(tk_invalid_frame_type_or_arguments),
 			YouCloseItFrame(),
@@ -1599,9 +1599,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			transport = self._makeTransport()
 			frame0 = _makeHelloFrame()
 			transport.sendFrames([frame0])
-			self.aE([StreamCreatedFrame()], transport.getNew())
+			self.assertEqual([StreamCreatedFrame()], transport.getNew())
 			transport.sendFrames([frame])
-			self.aE([
+			self.assertEqual([
 				StreamStatusFrame(SACK(-1, ())),
 				TransportKillFrame(tk_invalid_frame_type_or_arguments),
 				YouCloseItFrame()
@@ -1617,7 +1617,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		# a completely valid frame
 		transport.sendFrames([StringFrame("box0")])
-		self.aE([
+		self.assertEqual([
 			TransportKillFrame(tk_invalid_frame_type_or_arguments),
 			YouCloseItFrame()
 		], transport.getNew())
@@ -1631,9 +1631,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
-		self.aE([StreamCreatedFrame()], transport.getNew())
+		self.assertEqual([StreamCreatedFrame()], transport.getNew())
 		transport.sendFrames([frame0])
-		self.aE([
+		self.assertEqual([
 			StreamStatusFrame(SACK(-1, ())),
 			TransportKillFrame(tk_invalid_frame_type_or_arguments),
 			YouCloseItFrame()
@@ -1649,7 +1649,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0, frame0])
-		self.aE([
+		self.assertEqual([
 			StreamCreatedFrame(),
 			StreamStatusFrame(SACK(-1, ())),
 			TransportKillFrame(tk_invalid_frame_type_or_arguments),
@@ -1662,7 +1662,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			frame0 = _makeHelloFrame()
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
-			self.aE([StreamCreatedFrame()], transport.getNew())
+			self.assertEqual([StreamCreatedFrame()], transport.getNew())
 
 			self._resetStreamTracker()
 
@@ -1671,7 +1671,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame(dict(credentialsData='not_looked_at'))
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
-		self.aE([StreamCreatedFrame()], transport.getNew())
+		self.assertEqual([StreamCreatedFrame()], transport.getNew())
 
 
 	def test_transportNumberDoesntMatter(self):
@@ -1682,7 +1682,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			frame0 = _makeHelloFrame(dict(transportNumber=n))
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
-			self.aE([StreamCreatedFrame()], transport.getNew())
+			self.assertEqual([StreamCreatedFrame()], transport.getNew())
 
 
 	def test_validHelloButNoSuchStream(self):
@@ -1695,7 +1695,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			frame0 = _makeHelloFrame(dict(requestNewStream=requestNewStream))
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
-			self.aE([
+			self.assertEqual([
 				TransportKillFrame(tk_stream_attach_failure),
 				YouCloseItFrame()
 			], transport.getNew())
@@ -1712,7 +1712,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport(rejectAll=True)
 		transport.sendFrames([frame0])
-		self.aE([TransportKillFrame(tk_stream_attach_failure), YouCloseItFrame()], transport.getNew())
+		self.assertEqual([TransportKillFrame(tk_stream_attach_failure), YouCloseItFrame()], transport.getNew())
 		self._testExtraDataReceivedIgnored(transport)
 
 
@@ -1724,9 +1724,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport(rejectAll=True, firewallActionTime=1.0)
 		transport.sendFrames([frame0])
-		self.aE([], transport.getNew())
+		self.assertEqual([], transport.getNew())
 		self._clock.advance(1.0)
-		self.aE([TransportKillFrame(tk_stream_attach_failure), YouCloseItFrame()], transport.getNew())
+		self.assertEqual([TransportKillFrame(tk_stream_attach_failure), YouCloseItFrame()], transport.getNew())
 		self._testExtraDataReceivedIgnored(transport)
 
 
@@ -1738,16 +1738,16 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport(firewallActionTime=1.0)
 		transport.sendFrames([frame0, StringFrame("c2s_0"), StringFrame("c2s_1")])
-		self.aE([], transport.getNew())
+		self.assertEqual([], transport.getNew())
 		transport.sendFrames([StringFrame("c2s_2")])
-		self.aE([], transport.getNew())
+		self.assertEqual([], transport.getNew())
 
 		self._clock.advance(1.0)
-		self.aE([StreamCreatedFrame(), SackFrame(SACK(2, ()))], transport.getNew())
+		self.assertEqual([StreamCreatedFrame(), SackFrame(SACK(2, ()))], transport.getNew())
 
 		# Make sure Stream received all of those strings
 		stream = self.streamTracker.getStream('x'*26)
-		self.aE([
+		self.assertEqual([
 			['transportOnline', transport, False, None],
 			['stringsReceived', transport, [(0, sf("c2s_0")), (1, sf("c2s_1")), (2, sf("c2s_2"))]],
 		], withoutUnimportantStreamCalls(stream.getNew()))
@@ -1770,7 +1770,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			frame0 = _makeHelloFrame()
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
-			self.aE([StreamCreatedFrame()], transport.getNew())
+			self.assertEqual([StreamCreatedFrame()], transport.getNew())
 		act()
 
 		# sanity check, make sure streamTracker still knows about stream '\x00'*16
@@ -1786,7 +1786,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		transport = self._makeTransport()
 		transport.sendFrames([HelloFrame({})]) # nothing in it
-		self.aE([
+		self.assertEqual([
 			TransportKillFrame(tk_invalid_frame_type_or_arguments),
 			YouCloseItFrame()
 		], transport.getNew())
@@ -1800,7 +1800,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		has TCP_NODELAY enabled.
 		"""
 		transport = self._makeTransport()
-		self.aE(True, transport.writable.noDelayEnabled)
+		self.assertEqual(True, transport.writable.noDelayEnabled)
 
 
 	def test_closeGently(self):
@@ -1808,7 +1808,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		transport.closeGently()
-		self.aE([
+		self.assertEqual([
 			StreamCreatedFrame(),
 			StreamStatusFrame(SACK(-1, ())),
 			YouCloseItFrame()
@@ -1828,21 +1828,21 @@ class _BaseSocketTransportTests(_BaseHelpers):
 	def test_causedRwinOverflow(self):
 		transport = self._makeTransport()
 		transport.causedRwinOverflow()
-		self.aE([TransportKillFrame(tk_rwin_overflow), YouCloseItFrame()], transport.getNew())
+		self.assertEqual([TransportKillFrame(tk_rwin_overflow), YouCloseItFrame()], transport.getNew())
 		self._testExtraDataReceivedIgnored(transport)
 
 
 	def test_writeReset(self):
 		transport = self._makeTransport()
 		transport.writeReset("the reason", applicationLevel=True)
-		self.aE([ResetFrame("the reason", True), YouCloseItFrame()], transport.getNew())
+		self.assertEqual([ResetFrame("the reason", True), YouCloseItFrame()], transport.getNew())
 		self._testExtraDataReceivedIgnored(transport)
 
 
 	def test_writeResetNotApplicationLevel(self):
 		transport = self._makeTransport()
 		transport.writeReset("the reason", applicationLevel=False)
-		self.aE([ResetFrame("the reason", False), YouCloseItFrame()], transport.getNew())
+		self.assertEqual([ResetFrame("the reason", False), YouCloseItFrame()], transport.getNew())
 		self._testExtraDataReceivedIgnored(transport)
 
 
@@ -1854,19 +1854,19 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
-		self.aE([StreamCreatedFrame()], transport.getNew())
+		self.assertEqual([StreamCreatedFrame()], transport.getNew())
 		stream = self.streamTracker.getStream('x'*26)
 
-		self.aE([], transport.getNew())
-		self.aE([
+		self.assertEqual([], transport.getNew())
+		self.assertEqual([
 			['transportOnline', transport, False, None]
 		], withoutUnimportantStreamCalls(stream.getNew()))
 
 		transport.connectionLost(failure.Failure(ValueError(
 			"Just a made-up error in test_connectionLostWithStream")))
 
-		self.aE([], transport.getNew())
-		self.aE([
+		self.assertEqual([], transport.getNew())
+		self.assertEqual([
 			['transportOffline', transport]
 		], withoutUnimportantStreamCalls(stream.getNew()))
 
@@ -1881,12 +1881,12 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				dict(succeedsTransport=succeedsTransport))
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
-			self.aE([StreamCreatedFrame()], transport.getNew())
+			self.assertEqual([StreamCreatedFrame()], transport.getNew())
 			stream = self.streamTracker.getStream('x'*26)
 
 			assert [] == transport.getNew(), self.decodingTcpTransport.log
 
-			self.aE([
+			self.assertEqual([
 				['transportOnline', transport, True, succeedsTransport],
 			], withoutUnimportantStreamCalls(stream.getNew()))
 			self._resetStreamTracker()
@@ -1902,37 +1902,37 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport.sendFrames([frame0])
 		stream = self.streamTracker.getStream('x'*26)
 
-		self.aE([
+		self.assertEqual([
 			['transportOnline', transport, False, None],
 		], withoutUnimportantStreamCalls(stream.getNew()))
-		self.aE([StreamCreatedFrame()], transport.getNew())
+		self.assertEqual([StreamCreatedFrame()], transport.getNew())
 
 		transport.sendFrames([StringFrame("box0")])
 
-		self.aE([
+		self.assertEqual([
 			['stringsReceived', transport, [(0, sf("box0"))]],
 		], withoutUnimportantStreamCalls(stream.getNew()))
-		self.aE([SackFrame(SACK(0, ()))], transport.getNew())
+		self.assertEqual([SackFrame(SACK(0, ()))], transport.getNew())
 
 		transport.sendFrames([SeqNumFrame(2), StringFrame("box2")])
 
-		self.aE([
+		self.assertEqual([
 			['stringsReceived', transport, [(2, sf("box2"))]],
 		], withoutUnimportantStreamCalls(stream.getNew()))
-		self.aE([SackFrame(SACK(0, (2,)))], transport.getNew())
+		self.assertEqual([SackFrame(SACK(0, (2,)))], transport.getNew())
 
 
 	def test_sackFrameValid(self):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
-		self.aE([StreamCreatedFrame()], transport.getNew())
+		self.assertEqual([StreamCreatedFrame()], transport.getNew())
 		stream = self.streamTracker.getStream('x'*26)
 		stream.queue.append("box0")
 
 		transport.sendFrames([SackFrame(SACK(0, ()))])
-		self.aE([], transport.getNew())
-		self.aE([
+		self.assertEqual([], transport.getNew())
+		self.assertEqual([
 			['transportOnline', transport, False, None],
 			['sackReceived', SACK(0, ())],
 		], withoutUnimportantStreamCalls(stream.getNew()))
@@ -1945,13 +1945,13 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
-		self.aE([StreamCreatedFrame()], transport.getNew())
+		self.assertEqual([StreamCreatedFrame()], transport.getNew())
 		stream = self.streamTracker.getStream('x'*26)
 		stream.queue.extend(["box0", "box1", "box2"])
 
 		transport.sendFrames([SackFrame(SACK(0, (2,)))])
-		self.aE([], transport.getNew())
-		self.aE([
+		self.assertEqual([], transport.getNew())
+		self.assertEqual([
 			['transportOnline', transport, False, None],
 			['sackReceived', SACK(0, (2,))],
 		], withoutUnimportantStreamCalls(stream.getNew()))
@@ -1961,17 +1961,17 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
-		self.aE([StreamCreatedFrame()], transport.getNew())
+		self.assertEqual([StreamCreatedFrame()], transport.getNew())
 		stream = self.streamTracker.getStream('x'*26)
 		stream.queue.append("box0")
 
 		transport.sendFrames([SackFrame(SACK(1, ()))])
-		self.aE([
+		self.assertEqual([
 			StreamStatusFrame(SACK(1, ())),
 			TransportKillFrame(tk_acked_unsent_strings),
 			YouCloseItFrame()
 		], transport.getNew())
-		self.aE([
+		self.assertEqual([
 			['transportOnline', transport, False, None],
 			['sackReceived', SACK(1, ())],
 			['transportOffline', transport],
@@ -1992,7 +1992,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 				transport.sendFrames([ResetFrame(reason, True)])
 
-				self.aE([
+				self.assertEqual([
 					['transportOnline', transport, False, None],
 					['resetFromPeer', reason, True],
 					['transportOffline', transport],
@@ -2009,12 +2009,12 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport(rejectAll=False, firewallActionTime=1.0)
 		transport.sendFrames([frame0])
-		self.aE([], transport.getNew())
+		self.assertEqual([], transport.getNew())
 		transport.connectionLost(ValueError("testing"))
 
 		stream = self.streamTracker.getStream('x'*26)
 
-		self.aE([], withoutUnimportantStreamCalls(stream.getNew()))
+		self.assertEqual([], withoutUnimportantStreamCalls(stream.getNew()))
 
 
 	def test_causeTerminationDuringAuthentication(self):
@@ -2049,7 +2049,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				frame0 = _makeHelloFrame()
 				transport = self._makeTransport(rejectAll=rejectAll, firewallActionTime=1.0)
 				transport.sendFrames([frame0])
-				self.aE([], transport.getNew())
+				self.assertEqual([], transport.getNew())
 				if terminationMethod == 'bad_frame':
 					transport.sendFrames([_BadFrame('?')])
 				elif terminationMethod == 'client_closed':
@@ -2057,27 +2057,27 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				else:
 					1/0
 
-				self.aE([], transport.getNew())
+				self.assertEqual([], transport.getNew())
 
 				stream = self.streamTracker.getStream('x'*26)
 
-				self.aE([], withoutUnimportantStreamCalls(stream.getNew()))
+				self.assertEqual([], withoutUnimportantStreamCalls(stream.getNew()))
 
 				self._clock.advance(1.0)
-				self.aE(expectedFrames, transport.getNew())
+				self.assertEqual(expectedFrames, transport.getNew())
 
 				if rejectAll == False and terminationMethod == 'bad_frame':
 					# Because the transport authenticated, we tell Stream about it.
 					# Then we deal with the buffered frames. One is a bad frame,
 					# so the transport promptly terminates and calls Stream.transportOffline
-					self.aE([
+					self.assertEqual([
 						['transportOnline', transport, False, None],
 						['transportOffline', transport],
 					], withoutUnimportantStreamCalls(stream.getNew()))
 				else:
 					# Because the transport was disconnect during authentication,
 					# we don't even tell Stream that it ever went online.
-					self.aE([], withoutUnimportantStreamCalls(stream.getNew()))
+					self.assertEqual([], withoutUnimportantStreamCalls(stream.getNew()))
 
 
 
@@ -2130,8 +2130,8 @@ class TransportProducerTests(unittest.TestCase):
 			producer1 = MockProducer()
 			self.transport.registerProducer(producer1, streaming=streaming)
 			# The Minerva transport is registered, not the producer itself
-			self.aI(self.tcpTransport.producer, self.transport)
-			self.aI(self.tcpTransport.streaming, streaming)
+			self.assertIs(self.tcpTransport.producer, self.transport)
+			self.assertIs(self.tcpTransport.streaming, streaming)
 
 			# pauseProducing/resumeProducing calls are sent directly to producer
 			# (even when it is a pull producer), without much thinking.
@@ -2139,7 +2139,7 @@ class TransportProducerTests(unittest.TestCase):
 			self.transport.pauseProducing()
 			self.transport.resumeProducing()
 			self.transport.resumeProducing()
-			self.aE([
+			self.assertEqual([
 				['pauseProducing'], ['pauseProducing'], ['resumeProducing'], ['resumeProducing']
 			], producer1.getNew())
 
@@ -2162,15 +2162,15 @@ class TransportProducerTests(unittest.TestCase):
 		# stopProducing without a producer registered does nothing
 		orig = getState(self.transport)
 		self.transport.stopProducing()
-		self.aE(orig, getState(self.transport))
+		self.assertEqual(orig, getState(self.transport))
 
 		# stopProducing with a producer registered does nothing
 		producer1 = MockProducer()
 		self.transport.registerProducer(producer1, streaming=True)
 		orig = getState(self.transport)
 		self.transport.stopProducing()
-		self.aE(orig, getState(self.transport))
-		self.aE([], producer1.getNew())
+		self.assertEqual(orig, getState(self.transport))
+		self.assertEqual([], producer1.getNew())
 
 
 	def test_transportPausedRegisterStreamingProducer(self):
@@ -2183,7 +2183,7 @@ class TransportProducerTests(unittest.TestCase):
 
 		producer1 = MockProducer()
 		self.transport.registerProducer(producer1, streaming=True)
-		self.aE([['pauseProducing']], producer1.getNew())
+		self.assertEqual([['pauseProducing']], producer1.getNew())
 
 
 	def test_transportPausedRegisterPullProducer(self):
@@ -2196,7 +2196,7 @@ class TransportProducerTests(unittest.TestCase):
 
 		producer1 = MockProducer()
 		self.transport.registerProducer(producer1, streaming=False)
-		self.aE([], producer1.getNew())
+		self.assertEqual([], producer1.getNew())
 
 
 	def test_cannotRegisterProducerIfRegistered(self):
@@ -2209,8 +2209,8 @@ class TransportProducerTests(unittest.TestCase):
 
 		producer2 = MockProducer()
 
-		self.aR(RuntimeError, lambda: self.transport.registerProducer(producer1, streaming=True))
-		self.aR(RuntimeError, lambda: self.transport.registerProducer(producer2, streaming=True))
+		self.assertRaises(RuntimeError, lambda: self.transport.registerProducer(producer1, streaming=True))
+		self.assertRaises(RuntimeError, lambda: self.transport.registerProducer(producer2, streaming=True))
 
 
 
@@ -2225,13 +2225,13 @@ class SocketFaceTests(unittest.TestCase):
 
 	def test_policyStringCannotBeUnicode(self):
 		face = SocketFace(clock=None, streamTracker=None, firewall=DummyFirewall())
-		self.aR(TypeError, lambda: face.setPolicyString(u'hi'))
+		self.assertRaises(TypeError, lambda: face.setPolicyString(u'hi'))
 
 
 	def test_policyStringCannotContainNull(self):
 		face = SocketFace(clock=None, streamTracker=None, firewall=DummyFirewall())
-		self.aR(ValueError, lambda: face.setPolicyString("hello\x00"))
-		self.aR(ValueError, lambda: face.setPolicyString("\x00"))
+		self.assertRaises(ValueError, lambda: face.setPolicyString("hello\x00"))
+		self.assertRaises(ValueError, lambda: face.setPolicyString("\x00"))
 
 
 
@@ -2263,7 +2263,7 @@ class BasicMinervaFactoryTests(unittest.TestCase):
 
 	def test_unmodifiedFactoryIsNotCallable(self):
 		f = BasicMinervaFactory()
-		self.aR(TypeError, lambda: f.buildProtocol())
+		self.assertRaises(TypeError, lambda: f.buildProtocol())
 
 
 
@@ -2293,7 +2293,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		frame0 = _makeHelloFrame(dict(succeedsTransport=None))
 		transport0.sendFrames([frame0])
-		self.aE([StreamCreatedFrame()], transport0.getNew())
+		self.assertEqual([StreamCreatedFrame()], transport0.getNew())
 
 		stream = self.streamTracker.getStream('x'*26)
 		proto = list(self.protocolFactory.instances)[0]
@@ -2304,8 +2304,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport0.sendFrames([StringFrame("box0"), SeqNumFrame(2), StringFrame("box2")])
 
-		self.aE([SackFrame(SACK(0, (2,)))], transport0.getNew())
-		self.aE([["streamStarted", stream], ["stringsReceived", [sf("box0")]]], proto.getNew())
+		self.assertEqual([SackFrame(SACK(0, (2,)))], transport0.getNew())
+		self.assertEqual([["streamStarted", stream], ["stringsReceived", [sf("box0")]]], proto.getNew())
 
 
 		# Send box1 and box3; make sure the protocol gets strings 1, 2, 3;
@@ -2313,15 +2313,15 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport0.sendFrames([SeqNumFrame(1), StringFrame("box1"), SeqNumFrame(3), StringFrame("box3")])
 
-		self.aE([SackFrame(SACK(3, ()))], transport0.getNew())
-		self.aE([["stringsReceived", [sf("box1"), sf("box2"), sf("box3")]]], proto.getNew())
+		self.assertEqual([SackFrame(SACK(3, ()))], transport0.getNew())
+		self.assertEqual([["stringsReceived", [sf("box1"), sf("box2"), sf("box3")]]], proto.getNew())
 
 
 		# Send two strings S2C; make sure we get them.
 
 		stream.sendStrings(["s2cbox0", "s2cbox1"])
 
-		self.aE([SeqNumFrame(0), StringFrame("s2cbox0"), StringFrame("s2cbox1")], transport0.getNew())
+		self.assertEqual([SeqNumFrame(0), StringFrame("s2cbox0"), StringFrame("s2cbox1")], transport0.getNew())
 
 
 		# Don't ACK those strings; connect a new transport; make sure we get
@@ -2335,9 +2335,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			lastSackSeenByClient=SACK(3, ()))) # TODO: increment transportNumber?
 		transport1.sendFrames([frame0])
 
-		self.aE([SeqNumFrame(0), StringFrame("s2cbox0"), StringFrame("s2cbox1")], transport1.getNew())
+		self.assertEqual([SeqNumFrame(0), StringFrame("s2cbox0"), StringFrame("s2cbox1")], transport1.getNew())
 
-		self.aE([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport0.getNew())
+		self.assertEqual([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport0.getNew())
 
 
 		# Finally ACK those strings; connect a new transport; make sure
@@ -2354,9 +2354,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			lastSackSeenByClient=SACK(3, ()))) # TODO: increment transportNumber?
 		transport2.sendFrames([frame0])
 
-		self.aE([], transport2.getNew())
+		self.assertEqual([], transport2.getNew())
 
-		self.aE([StreamStatusFrame(SACK(1, ())), YouCloseItFrame()], transport1.getNew())
+		self.assertEqual([StreamStatusFrame(SACK(1, ())), YouCloseItFrame()], transport1.getNew())
 
 
 		# Send a reset over transport2; make sure transport2 is
@@ -2365,12 +2365,12 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport2.sendFrames([ResetFrame("testing", True)])
 
-		self.aE([StreamStatusFrame(SACK(1, ())), YouCloseItFrame()], transport2.getNew())
+		self.assertEqual([StreamStatusFrame(SACK(1, ())), YouCloseItFrame()], transport2.getNew())
 
-		self.aE([["streamReset", WhoReset.client_app, "testing"]], proto.getNew())
+		self.assertEqual([["streamReset", WhoReset.client_app, "testing"]], proto.getNew())
 
-		self.aE([], transport0.getNew())
-		self.aE([], transport1.getNew())
+		self.assertEqual([], transport0.getNew())
+		self.assertEqual([], transport1.getNew())
 
 
 	def test_stringSendingAndNewTransportWithSucceedsTransport(self):
@@ -2380,7 +2380,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		frame0 = _makeHelloFrame(dict(succeedsTransport=None))
 		transport0.sendFrames([frame0])
-		self.aE([StreamCreatedFrame()], transport0.getNew())
+		self.assertEqual([StreamCreatedFrame()], transport0.getNew())
 
 		stream = self.streamTracker.getStream('x'*26)
 		proto = list(self.protocolFactory.instances)[0]
@@ -2390,7 +2390,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		stream.sendStrings(["s2cbox0", "s2cbox1"])
 
-		self.aE([
+		self.assertEqual([
 			SeqNumFrame(0),
 			StringFrame("s2cbox0"),
 			StringFrame("s2cbox1")
@@ -2410,16 +2410,16 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			succeedsTransport=0))
 		transport1.sendFrames([newHello])
 
-		self.aE([], transport1.getNew())
+		self.assertEqual([], transport1.getNew())
 
-		self.aE([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport0.getNew())
+		self.assertEqual([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport0.getNew())
 
 
 		# Send another string S2C and make sure it is written to transport1
 
 		stream.sendStrings(["s2cbox2"])
 
-		self.aE([SeqNumFrame(2), StringFrame("s2cbox2")], transport1.getNew())
+		self.assertEqual([SeqNumFrame(2), StringFrame("s2cbox2")], transport1.getNew())
 
 
 	def test_SACKedStringsNotSentAgain(self):
@@ -2431,12 +2431,12 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		frame0 = _makeHelloFrame(dict(succeedsTransport=None))
 		transport0.sendFrames([frame0])
-		self.aE([StreamCreatedFrame()], transport0.getNew())
+		self.assertEqual([StreamCreatedFrame()], transport0.getNew())
 		stream = self.streamTracker.getStream('x'*26)
 
 		proto = list(self.protocolFactory.instances)[0]
 		stream.sendStrings(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"])
-		self.aE(12 + 1, len(transport0.getNew())) # seqNum and 12 frames
+		self.assertEqual(12 + 1, len(transport0.getNew())) # seqNum and 12 frames
 		transport0.sendFrames([SackFrame(SACK(-1, (1, 3, 5, 9)))])
 
 		transport1 = self._makeTransport()
@@ -2445,7 +2445,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			transportNumber=1,
 			succeedsTransport=None))
 		transport1.sendFrames([newHello])
-		self.aE([
+		self.assertEqual([
 			SeqNumFrame(0),
 			StringFrame("0"),
 			SeqNumFrame(2),
@@ -2476,23 +2476,23 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		frame0 = _makeHelloFrame(dict(succeedsTransport=None))
 		transport0.sendFrames([frame0])
-		self.aE([StreamCreatedFrame()], transport0.getNew())
+		self.assertEqual([StreamCreatedFrame()], transport0.getNew())
 
 		stream = self.streamTracker.getStream('x'*26)
 		proto = list(self.protocolFactory.instances)[0]
 
 		transport0.sendFrames([SeqNumFrame(0), StringFrame("box0")])
-		self.aE([SackFrame(SACK(0, ()))], transport0.getNew())
+		self.assertEqual([SackFrame(SACK(0, ()))], transport0.getNew())
 
 		# 0 was already received, 1 was not.
 		transport0.sendFrames([SeqNumFrame(0), StringFrame("box0"), StringFrame("box1")])
-		self.aE([SackFrame(SACK(1, ()))], transport0.getNew())
+		self.assertEqual([SackFrame(SACK(1, ()))], transport0.getNew())
 
 		# 0 and 1 were already received, 2 was not.
 		transport0.sendFrames([SeqNumFrame(0), StringFrame("box0"), StringFrame("box1"), StringFrame("box2")])
-		self.aE([SackFrame(SACK(2, ()))], transport0.getNew())
+		self.assertEqual([SackFrame(SACK(2, ()))], transport0.getNew())
 
-		self.aE([
+		self.assertEqual([
 			['streamStarted', stream],
 			['stringsReceived', [sf('box0')]],
 			['stringsReceived', [sf('box1')]],
@@ -2511,10 +2511,10 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			frame0 = _makeHelloFrame(dict(succeedsTransport=None))
 			transport0.sendFrames([frame0])
-			self.aE([StreamCreatedFrame()], transport0.getNew())
+			self.assertEqual([StreamCreatedFrame()], transport0.getNew())
 
 			transport0.sendFrames([StringFrame("box0")])
-			self.aE([
+			self.assertEqual([
 				# For clientLosesSack == True, imagine that the client
 				# loses this frame due to a connection problem.
 				SackFrame(SACK(0, ()))
@@ -2531,9 +2531,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			transport1.sendFrames([newHello])
 
 			if clientLosesSack:
-				self.aE([SackFrame(SACK(0, ()))], transport1.getNew())
+				self.assertEqual([SackFrame(SACK(0, ()))], transport1.getNew())
 			else:
-				self.aE([], transport1.getNew())
+				self.assertEqual([], transport1.getNew())
 
 			self._resetStreamTracker(realObjects=True)
 
@@ -2548,7 +2548,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		transport0 = self._makeTransport()
 
 		transport0.sendFrames([_makeHelloFrame()])
-		self.aE([StreamCreatedFrame()], transport0.getNew())
+		self.assertEqual([StreamCreatedFrame()], transport0.getNew())
 
 		stream = self.streamTracker.getStream('x'*26)
 
@@ -2557,10 +2557,10 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			ResetFrame("x", False),
 			_BadFrame('?')])
 
-		self.aE([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport0.getNew())
+		self.assertEqual([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport0.getNew())
 
 		proto = list(self.protocolFactory.instances)[0]
-		self.aE([
+		self.assertEqual([
 			["streamStarted", stream],
 			["streamReset", WhoReset.client_app, "reason"]
 		], proto.getNew())
@@ -2583,7 +2583,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		]
 		transport0.sendFrames(frames)
 
-		self.aE([
+		self.assertEqual([
 			StreamCreatedFrame(),
 			SackFrame(SACK(1, ())),
 			StreamStatusFrame(SACK(-1, ())),
@@ -2591,7 +2591,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		], transport0.getNew())
 
 		proto = list(self.protocolFactory.instances)[0]
-		self.aE([
+		self.assertEqual([
 			["stringsReceived", [sf("box0"), sf("box1")]],
 			["streamReset", WhoReset.client_app, ''],
 		], proto.getNew()[1:])
@@ -2608,23 +2608,23 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		transport0 = self._makeTransport()
 
 		transport0.sendFrames([_makeHelloFrame()])
-		self.aE([StreamCreatedFrame()], transport0.getNew())
+		self.assertEqual([StreamCreatedFrame()], transport0.getNew())
 
 		stream = self.streamTracker.getStream('x'*26)
 
 		transport1 = self._makeTransport()
 
 		transport1.sendFrames([_makeHelloFrame()])
-		self.aE([StreamCreatedFrame()], transport1.getNew())
+		self.assertEqual([StreamCreatedFrame()], transport1.getNew())
 
 		transport0.sendFrames([ResetFrame("reason", True)])
 		transport1.sendFrames([ResetFrame("reason", False)])
 
-		self.aE([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport0.getNew())
-		self.aE([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport1.getNew())
+		self.assertEqual([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport0.getNew())
+		self.assertEqual([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport1.getNew())
 
 		proto = list(self.protocolFactory.instances)[0]
-		self.aE([
+		self.assertEqual([
 			["streamStarted", stream],
 			["streamReset", WhoReset.client_app, "reason"],
 		], proto.getNew())
@@ -2655,7 +2655,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			# The S2C strings are lost, possibly because of an implementation detail.
 
-			self.aE([
+			self.assertEqual([
 #				SeqNumFrame(0),
 #				StringFrame("s2cbox0"),
 #				StringFrame("s2cbox1"),
@@ -2666,7 +2666,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			], transport0.getNew())
 
 			proto = list(self.protocolFactory.instances)[0]
-			self.aE([
+			self.assertEqual([
 				["streamReset", WhoReset.server_app, 'reset forced by mock protocol'],
 			], proto.getNew()[1:])
 
@@ -2706,13 +2706,13 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			if clientResetsImmediately:
 				expected.extend([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()])
 
-			self.aE(expected, transport0.getNew())
+			self.assertEqual(expected, transport0.getNew())
 
 			proto = list(self.protocolFactory.instances)[0]
 			if clientResetsImmediately:
-				self.aE([["streamReset", WhoReset.client_app, '']], proto.getNew()[1:])
+				self.assertEqual([["streamReset", WhoReset.client_app, '']], proto.getNew()[1:])
 			else:
-				self.aE([], proto.getNew()[1:])
+				self.assertEqual([], proto.getNew()[1:])
 
 
 	def test_sendStringsAndResetUnderneathStringsReceivedCall(self): # keywords: reentrant
@@ -2742,7 +2742,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				frames.append(ResetFrame('', True))
 			transport0.sendFrames(frames)
 
-			self.aE([
+			self.assertEqual([
 				StreamCreatedFrame(),
 				SackFrame(SACK(1, ())),
 				SeqNumFrame(0),
@@ -2754,7 +2754,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			], transport0.getNew())
 
 			proto = list(self.protocolFactory.instances)[0]
-			self.aE([
+			self.assertEqual([
 				["stringsReceived", [sf("box0"), sf("box1")]],
 				["streamReset", WhoReset.server_app, 'reset forced by mock protocol']
 			], proto.getNew()[1:])
@@ -2800,16 +2800,16 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			if clientResetsImmediately:
 				expected.extend([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()])
 
-			self.aE(expected, transport0.getNew())
+			self.assertEqual(expected, transport0.getNew())
 
 			proto = list(self.protocolFactory.instances)[0]
 			if clientResetsImmediately:
-				self.aE([
+				self.assertEqual([
 					["stringsReceived", [sf("box0"), sf("box1")]],
 					["streamReset", WhoReset.client_app, ''],
 				], proto.getNew()[1:])
 			else:
-				self.aE([
+				self.assertEqual([
 					["stringsReceived", [sf("box0"), sf("box1")]],
 				], proto.getNew()[1:])
 
@@ -2852,10 +2852,10 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				YouCloseItFrame(),
 			]
 
-			self.aE(expected, transport0.getNew())
+			self.assertEqual(expected, transport0.getNew())
 
 			proto = list(self.protocolFactory.instances)[0]
-			self.aE([
+			self.assertEqual([
 				["stringsReceived", [sf("box0"), sf("box1"), sf("box2")]],
 				["streamReset", WhoReset.server_app, 'reset forced by mock protocol'],
 			], proto.getNew()[1:])
@@ -2926,7 +2926,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				if not streaming:
 					expected += [["transportOffline", transport]]
 
-				self.aE(expected, withoutUnimportantStreamCalls(stream.getNew()))
+				self.assertEqual(expected, withoutUnimportantStreamCalls(stream.getNew()))
 
 				self._resetStreamTracker()
 
@@ -2960,7 +2960,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			["transportOnline", transport, True, None],
 			["stringsReceived", transport, [(0, sf('box0'))]],
 		]
-		self.aE(expected, withoutUnimportantStreamCalls(stream.getNew()))
+		self.assertEqual(expected, withoutUnimportantStreamCalls(stream.getNew()))
 
 
 	def _sendAnotherString(self, stream, request, streaming, expectedWritten):
@@ -3169,14 +3169,14 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		stream = self.streamTracker.getStream('x'*26)
 		transport = stream.allSeenTransports[-1]
 
-		self.aE([
+		self.assertEqual([
 			["transportOnline", transport, True, None],
 		], withoutUnimportantStreamCalls(stream.getNew()))
 
 		# On a real Request, this would be request.connectionLost(ConnectionLost())
 		request.processingFailed(ConnectionLost())
 
-		self.aE([
+		self.assertEqual([
 			["transportOffline", transport],
 		], withoutUnimportantStreamCalls(stream.getNew()))
 

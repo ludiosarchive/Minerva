@@ -78,11 +78,11 @@ class CommonTests(object):
 			for s in diceString(toSend, packetSize):
 				##print 'sending', repr(s)
 				out, code = a.getNewFrames(s)
-				self.aE(decoders.OK, code)
+				self.assertEqual(decoders.OK, code)
 				got.extend(out)
 
 			got = fragmentsToStr(got)
-			self.aE(self.strings, got)
+			self.assertEqual(self.strings, got)
 
 
 	def test_illegalWithPacketSizes(self):
@@ -114,7 +114,7 @@ class CommonTests(object):
 
 					##print 'Sending in pieces', repr(sequence), 'packetSize=', packetSize
 					out, code = sendData(a, sequence, packetSize)
-					self.aE(expectedCode, code)
+					self.assertEqual(expectedCode, code)
 
 
 
@@ -141,9 +141,9 @@ class NetStringDecoderTests(CommonTests, unittest.TestCase):
 
 	def test_encode(self):
 		big = 'x' * 100
-		self.aE("100:%s%s" % (big, self.trailingComma), self.receiver.encode(big))
-		self.aE("5:hello" + self.trailingComma, self.receiver.encode("hello"))
-		self.aE("0:" + self.trailingComma, self.receiver.encode(""))
+		self.assertEqual("100:%s%s" % (big, self.trailingComma), self.receiver.encode(big))
+		self.assertEqual("5:hello" + self.trailingComma, self.receiver.encode("hello"))
+		self.assertEqual("0:" + self.trailingComma, self.receiver.encode(""))
 
 
 	def test_zeroLengthString(self):
@@ -151,12 +151,12 @@ class NetStringDecoderTests(CommonTests, unittest.TestCase):
 		0-length strings are okay and should be delivered when : or :, arrives
 		"""
 		r = self.receiver(maxLength=0)
-		self.aE(([], decoders.OK), r.getNewFrames('0'))
+		self.assertEqual(([], decoders.OK), r.getNewFrames('0'))
 		if not self.trailingComma:
-			self.aE(([''], decoders.OK), r.getNewFrames(':'))
+			self.assertEqual(([''], decoders.OK), r.getNewFrames(':'))
 		else:
-			self.aE(([], decoders.OK), r.getNewFrames(':'))
-			self.aE(([''], decoders.OK), r.getNewFrames(','))
+			self.assertEqual(([], decoders.OK), r.getNewFrames(':'))
+			self.assertEqual(([''], decoders.OK), r.getNewFrames(','))
 
 
 	def test_illegalPartialLength(self):
@@ -166,7 +166,7 @@ class NetStringDecoderTests(CommonTests, unittest.TestCase):
 		"""
 		a = self.receiver(maxLength=10)
 		a.getNewFrames('5')
-		self.aE(([], decoders.FRAME_CORRUPTION), a.getNewFrames('x'))
+		self.assertEqual(([], decoders.FRAME_CORRUPTION), a.getNewFrames('x'))
 
 
 	def test_lotsOfSmallStrings(self):
@@ -187,8 +187,8 @@ class NetStringDecoderTests(CommonTests, unittest.TestCase):
 		#encoded = ''.join(self.receiver.encode(s) for s in strings)
 		a = self.receiver(maxLength=1)
 		got, code = a.getNewFrames(encoded)
-		self.aE(decoders.OK, code)
-		self.aE(strings, got)
+		self.assertEqual(decoders.OK, code)
+		self.assertEqual(strings, got)
 		##For speed comparison:
 		##for s in strings:
 		##	a.getNewFrames(receiver.encode(s))
@@ -233,12 +233,12 @@ class DelimitedStringDecoderTests(CommonTests, unittest.TestCase):
 
 
 	def test_encode(self):
-		self.aE('\n', self.receiver.encode(""))
-		self.aE('h\n', self.receiver.encode("h"))
-		self.aE('a longer string\n', self.receiver.encode("a longer string"))
+		self.assertEqual('\n', self.receiver.encode(""))
+		self.assertEqual('h\n', self.receiver.encode("h"))
+		self.assertEqual('a longer string\n', self.receiver.encode("a longer string"))
 		# It does not check if string-to-send contains the delimiter;
 		# it assumes it is safe.
-		self.aE('\n\n', self.receiver.encode("\n"))
+		self.assertEqual('\n\n', self.receiver.encode("\n"))
 
 
 	def test_bufferSizeLimit(self):
@@ -258,7 +258,7 @@ class DelimitedStringDecoderTests(CommonTests, unittest.TestCase):
 		a = self.receiver(maxLength=10)
 		got, code = a.getNewFrames(toSend)
 		got = fragmentsToStr(got)
-		self.aE((strings, decoders.OK), (got, code))
+		self.assertEqual((strings, decoders.OK), (got, code))
 
 
 	def test_someDocumentsParsedButRemainingBufferTooLong(self):
@@ -271,7 +271,7 @@ class DelimitedStringDecoderTests(CommonTests, unittest.TestCase):
 		strings = ['hello', 'there']
 		got, code = a.getNewFrames(toSend)
 		got = fragmentsToStr(got)
-		self.aE((strings, decoders.TOO_LONG), (got, code))
+		self.assertEqual((strings, decoders.TOO_LONG), (got, code))
 
 
 
@@ -327,17 +327,17 @@ class DelimitedJSONDecoderTests(CommonTests, unittest.TestCase):
 				for s in diceString(toSend, packetSize):
 					##print 'sending', repr(s)
 					out, code = a.getNewFrames(s)
-					self.aE(decoders.OK, code)
+					self.assertEqual(decoders.OK, code)
 					got.extend(out)
 
-				self.aE(self.strings, got)
+				self.assertEqual(self.strings, got)
 
 
 	def test_encode(self):
-		self.aE('"h"\n', self.receiver.encode("h"))
-		self.aE('"h"\n', self.receiver.encode(u"h"))
-		self.aE('[{}]\n', self.receiver.encode([{}]))
-		self.aE('"\\n"\n', self.receiver.encode("\n"))
+		self.assertEqual('"h"\n', self.receiver.encode("h"))
+		self.assertEqual('"h"\n', self.receiver.encode(u"h"))
+		self.assertEqual('[{}]\n', self.receiver.encode([{}]))
+		self.assertEqual('"\\n"\n', self.receiver.encode("\n"))
 
 
 	def test_bufferSizeLimit(self):
@@ -355,7 +355,7 @@ class DelimitedJSONDecoderTests(CommonTests, unittest.TestCase):
 			toSend += '"%s"\n' % s
 		
 		a = self.receiver(maxLength=10)
-		self.aE((strings, decoders.OK), a.getNewFrames(toSend))
+		self.assertEqual((strings, decoders.OK), a.getNewFrames(toSend))
 
 
 	def test_someDocumentsParsedButRemainingBufferTooLong(self):
@@ -366,7 +366,7 @@ class DelimitedJSONDecoderTests(CommonTests, unittest.TestCase):
 		toSend = '"hello"\n"there"\n"8chars"'
 		a = self.receiver(maxLength=7)
 		strings = ['hello', 'there']
-		self.aE((strings, decoders.TOO_LONG), a.getNewFrames(toSend))
+		self.assertEqual((strings, decoders.TOO_LONG), a.getNewFrames(toSend))
 
 
 	def test_lastJsonError(self):
@@ -378,8 +378,8 @@ class DelimitedJSONDecoderTests(CommonTests, unittest.TestCase):
 		self.assertFalse(hasattr(a, 'lastJsonError'))
 
 		out, code = a.getNewFrames("}\n")
-		self.aE([], out)
-		self.aE(decoders.INTRAFRAME_CORRUPTION, code)
+		self.assertEqual([], out)
+		self.assertEqual(decoders.INTRAFRAME_CORRUPTION, code)
 
 		self.assertTrue(isinstance(a.lastJsonError, simplejson.decoder.JSONDecodeError))
 
@@ -403,9 +403,9 @@ class Int32StringDecoderTests(CommonTests, unittest.TestCase):
 		for s in self.strings:
 			for c in struct.pack(r.structFormat, len(s)) + s:
 				out, code = fstValueToStrs(r.getNewFrames(c))
-				self.aE(decoders.OK, code)
+				self.assertEqual(decoders.OK, code)
 				got.extend(out)
-		self.aE(self.strings, got)
+		self.assertEqual(self.strings, got)
 
 
 	def test_zeroLengthString(self):
@@ -414,10 +414,10 @@ class Int32StringDecoderTests(CommonTests, unittest.TestCase):
 		fourth byte of the prefix arrives.
 		"""
 		r = self.receiver(maxLength=0)
-		self.aE(([], decoders.OK), r.getNewFrames('\x00'))
-		self.aE(([], decoders.OK), r.getNewFrames('\x00'))
-		self.aE(([], decoders.OK), r.getNewFrames('\x00'))
-		self.aE(([''], decoders.OK), fstValueToStrs(r.getNewFrames('\x00')))
+		self.assertEqual(([], decoders.OK), r.getNewFrames('\x00'))
+		self.assertEqual(([], decoders.OK), r.getNewFrames('\x00'))
+		self.assertEqual(([], decoders.OK), r.getNewFrames('\x00'))
+		self.assertEqual(([''], decoders.OK), fstValueToStrs(r.getNewFrames('\x00')))
 
 
 	def test_partial(self):
@@ -431,13 +431,13 @@ class Int32StringDecoderTests(CommonTests, unittest.TestCase):
 			for c in s:
 				##print repr(s), repr(c)
 				out, code = r.getNewFrames(c)
-				self.aE(decoders.OK, code)
-			self.aE([], got)
+				self.assertEqual(decoders.OK, code)
+			self.assertEqual([], got)
 
 
 	def test_encode(self):
 		value = decoders.Int32StringDecoder.encode("b" * 16)
-		self.aE(value, struct.pack(decoders.Int32StringDecoder.structFormat, 16) + "b" * 16)
+		self.assertEqual(value, struct.pack(decoders.Int32StringDecoder.structFormat, 16) + "b" * 16)
 
 
 	def test_encode32(self):
@@ -445,14 +445,14 @@ class Int32StringDecoderTests(CommonTests, unittest.TestCase):
 		Test specific behavior of the 32-bits length.
 		"""
 		value = decoders.Int32StringDecoder.encode("foo")
-		self.aE(value, "\x00\x00\x00\x03foo")
+		self.assertEqual(value, "\x00\x00\x00\x03foo")
 
 
 	def test_decode32(self):
 		r = self.receiver(maxLength=10)
 		got, code = fstValueToStrs(r.getNewFrames("\x00\x00\x00\x04ubar"))
-		self.aE(decoders.OK, code)
-		self.aE(["ubar"], got)
+		self.assertEqual(decoders.OK, code)
+		self.assertEqual(["ubar"], got)
 
 
 	def test_encodeTooLong(self):
@@ -472,14 +472,14 @@ class Int32StringDecoderTests(CommonTests, unittest.TestCase):
 
 		s = 'x' * (65536 + 1)
 
-		self.aR(decoders.StringTooLongError, lambda: Int16StringDecoder.encode(s))
+		self.assertRaises(decoders.StringTooLongError, lambda: Int16StringDecoder.encode(s))
 
 	
 	def test_lengthLimitExceeded(self):
 		r = self.receiver(maxLength=10)
 		out, code = r.getNewFrames(struct.pack(r.structFormat, 11))
-		self.aE([], out)
-		self.aE(decoders.TOO_LONG, code)
+		self.assertEqual([], out)
+		self.assertEqual(decoders.TOO_LONG, code)
 	
 	
 	def test_longStringNotDelivered(self):
@@ -490,13 +490,13 @@ class Int32StringDecoderTests(CommonTests, unittest.TestCase):
 		"""
 		r = self.receiver(maxLength=10)
 		out, code = r.getNewFrames(struct.pack(r.structFormat, 11) + 'x' * 11)
-		self.aE([], out)
-		self.aE(decoders.TOO_LONG, code)
+		self.assertEqual([], out)
+		self.assertEqual(decoders.TOO_LONG, code)
 
 
 	def test_lengthCheckedAtFourthByte(self):
 		r = self.receiver(maxLength=10)
-		self.aE(([], decoders.OK), r.getNewFrames('\xff')) # although this indicates a really long string, the length isn't looked at until 4 bytes arrive.
-		self.aE(([], decoders.OK), r.getNewFrames('\x00'))
-		self.aE(([], decoders.OK), r.getNewFrames('\x00'))
-		self.aE(([], decoders.TOO_LONG), r.getNewFrames('\x00'))
+		self.assertEqual(([], decoders.OK), r.getNewFrames('\xff')) # although this indicates a really long string, the length isn't looked at until 4 bytes arrive.
+		self.assertEqual(([], decoders.OK), r.getNewFrames('\x00'))
+		self.assertEqual(([], decoders.OK), r.getNewFrames('\x00'))
+		self.assertEqual(([], decoders.TOO_LONG), r.getNewFrames('\x00'))
