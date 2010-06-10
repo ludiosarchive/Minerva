@@ -1299,6 +1299,10 @@ class _BaseHelpers(object):
 
 
 
+def withoutUnimportantStreamCalls(log):
+	return [item for item in log if item not in (['getSACK'], ['notifyFinish'])]
+
+
 # TODO: generalize many of these tests and test them for the HTTP face as well.
 
 class _BaseSocketTransportTests(_BaseHelpers):
@@ -1549,7 +1553,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		stream = self.streamTracker.getStream('x'*26)
 
-		self.aE([['notifyFinish'], ['transportOnline', transport, False, None], ['getSACK']], stream.getNew())
+		self.aE([
+			['transportOnline', transport, False, None]
+		], withoutUnimportantStreamCalls(stream.getNew()))
 
 		transport.dataReceived('1:xxxxxxxx')
 
@@ -1558,7 +1564,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			TransportKillFrame(tk_frame_corruption),
 			YouCloseItFrame(),
 		], transport.getNew())
-		self.aE([['transportOffline', transport]], stream.getNew())
+		self.aE([
+			['transportOffline', transport]
+		], withoutUnimportantStreamCalls(stream.getNew()))
 
 		self._resetStreamTracker()
 
@@ -1740,12 +1748,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		# Make sure Stream received all of those strings
 		stream = self.streamTracker.getStream('x'*26)
 		self.aE([
-			['notifyFinish'],
-			['getSACK'],
 			['transportOnline', transport, False, None],
 			['stringsReceived', transport, [(0, sf("c2s_0")), (1, sf("c2s_1")), (2, sf("c2s_2"))]],
-			['getSACK'],
-		], stream.getNew())
+		], withoutUnimportantStreamCalls(stream.getNew()))
 
 
 	# TODO: test that transport is paused during authentication
@@ -1853,13 +1858,17 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		stream = self.streamTracker.getStream('x'*26)
 
 		self.aE([], transport.getNew())
-		self.aE([['notifyFinish'], ['transportOnline', transport, False, None], ['getSACK']], stream.getNew())
+		self.aE([
+			['transportOnline', transport, False, None]
+		], withoutUnimportantStreamCalls(stream.getNew()))
 
 		transport.connectionLost(failure.Failure(ValueError(
 			"Just a made-up error in test_connectionLostWithStream")))
 
 		self.aE([], transport.getNew())
-		self.aE([['transportOffline', transport]], stream.getNew())
+		self.aE([
+			['transportOffline', transport]
+		], withoutUnimportantStreamCalls(stream.getNew()))
 
 
 	def test_gimmeStringsFlagCausesSubscription(self):
@@ -1878,10 +1887,8 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			assert [] == transport.getNew(), self.decodingTcpTransport.log
 
 			self.aE([
-				['notifyFinish'],
 				['transportOnline', transport, True, succeedsTransport],
-				['getSACK'],
-			], stream.getNew())
+			], withoutUnimportantStreamCalls(stream.getNew()))
 			self._resetStreamTracker()
 
 
@@ -1896,26 +1903,22 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		stream = self.streamTracker.getStream('x'*26)
 
 		self.aE([
-			['notifyFinish'],
 			['transportOnline', transport, False, None],
-			['getSACK'],
-		], stream.getNew())
+		], withoutUnimportantStreamCalls(stream.getNew()))
 		self.aE([StreamCreatedFrame()], transport.getNew())
 
 		transport.sendFrames([StringFrame("box0")])
 
 		self.aE([
 			['stringsReceived', transport, [(0, sf("box0"))]],
-			['getSACK'],
-		], stream.getNew())
+		], withoutUnimportantStreamCalls(stream.getNew()))
 		self.aE([SackFrame(SACK(0, ()))], transport.getNew())
 
 		transport.sendFrames([SeqNumFrame(2), StringFrame("box2")])
 
 		self.aE([
 			['stringsReceived', transport, [(2, sf("box2"))]],
-			['getSACK'],
-		], stream.getNew())
+		], withoutUnimportantStreamCalls(stream.getNew()))
 		self.aE([SackFrame(SACK(0, (2,)))], transport.getNew())
 
 
@@ -1930,11 +1933,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport.sendFrames([SackFrame(SACK(0, ()))])
 		self.aE([], transport.getNew())
 		self.aE([
-			['notifyFinish'],
 			['transportOnline', transport, False, None],
-			['getSACK'],
 			['sackReceived', SACK(0, ())],
-		], stream.getNew())
+		], withoutUnimportantStreamCalls(stream.getNew()))
 
 
 	def test_sackFrameWithSACKValid(self):
@@ -1951,11 +1952,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport.sendFrames([SackFrame(SACK(0, (2,)))])
 		self.aE([], transport.getNew())
 		self.aE([
-			['notifyFinish'],
 			['transportOnline', transport, False, None],
-			['getSACK'],
 			['sackReceived', SACK(0, (2,))],
-		], stream.getNew())
+		], withoutUnimportantStreamCalls(stream.getNew()))
 
 
 	def test_sackedUnsentBoxes(self):
@@ -1973,12 +1972,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			YouCloseItFrame()
 		], transport.getNew())
 		self.aE([
-			['notifyFinish'],
 			['transportOnline', transport, False, None],
-			['getSACK'],
 			['sackReceived', SACK(1, ())],
 			['transportOffline', transport],
-		], stream.getNew())
+		], withoutUnimportantStreamCalls(stream.getNew()))
 
 
 	def test_resetValid(self):
@@ -1996,12 +1993,10 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				transport.sendFrames([ResetFrame(reason, True)])
 
 				self.aE([
-					['notifyFinish'],
 					['transportOnline', transport, False, None],
-					['getSACK'],
 					['resetFromPeer', reason, True],
 					['transportOffline', transport],
-				], stream.getNew())
+				], withoutUnimportantStreamCalls(stream.getNew()))
 
 				self._resetStreamTracker()
 
@@ -2019,7 +2014,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		stream = self.streamTracker.getStream('x'*26)
 
-		self.aE([['notifyFinish']], stream.getNew())
+		self.aE([], withoutUnimportantStreamCalls(stream.getNew()))
 
 
 	def test_causeTerminationDuringAuthentication(self):
@@ -2066,7 +2061,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 				stream = self.streamTracker.getStream('x'*26)
 
-				self.aE([['notifyFinish']], stream.getNew())
+				self.aE([], withoutUnimportantStreamCalls(stream.getNew()))
 
 				self._clock.advance(1.0)
 				self.aE(expectedFrames, transport.getNew())
@@ -2076,14 +2071,13 @@ class _BaseSocketTransportTests(_BaseHelpers):
 					# Then we deal with the buffered frames. One is a bad frame,
 					# so the transport promptly terminates and calls Stream.transportOffline
 					self.aE([
-						['getSACK'],
 						['transportOnline', transport, False, None],
 						['transportOffline', transport],
-					], stream.getNew())
+					], withoutUnimportantStreamCalls(stream.getNew()))
 				else:
 					# Because the transport was disconnect during authentication,
 					# we don't even tell Stream that it ever went online.
-					self.aE([], stream.getNew())
+					self.aE([], withoutUnimportantStreamCalls(stream.getNew()))
 
 
 
@@ -2925,17 +2919,14 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				transport = stream.allSeenTransports[-1]
 
 				expected = [
-					["notifyFinish"],
 					["transportOnline", transport, True, None],
-					["getSACK"],
 					["stringsReceived", transport, [(0, sf('box0')), (1, sf('box1')), (2, sf('box2'))]],
-					["getSACK"],
 				]
 
 				if not streaming:
 					expected += [["transportOffline", transport]]
 
-				self.aE(expected, stream.getNew())
+				self.aE(expected, withoutUnimportantStreamCalls(stream.getNew()))
 
 				self._resetStreamTracker()
 
@@ -2966,13 +2957,10 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		transport = stream.allSeenTransports[-1]
 
 		expected = [
-			["notifyFinish"],
 			["transportOnline", transport, True, None],
-			["getSACK"],
 			["stringsReceived", transport, [(0, sf('box0'))]],
-			["getSACK"],
 		]
-		self.aE(expected, stream.getNew())
+		self.aE(expected, withoutUnimportantStreamCalls(stream.getNew()))
 
 
 	def _sendAnotherString(self, stream, request, streaming, expectedWritten):
@@ -3182,17 +3170,15 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		transport = stream.allSeenTransports[-1]
 
 		self.aE([
-			["notifyFinish"],
 			["transportOnline", transport, True, None],
-			["getSACK"],
-		], stream.getNew())
+		], withoutUnimportantStreamCalls(stream.getNew()))
 
 		# On a real Request, this would be request.connectionLost(ConnectionLost())
 		request.processingFailed(ConnectionLost())
 
 		self.aE([
 			["transportOffline", transport],
-		], stream.getNew())
+		], withoutUnimportantStreamCalls(stream.getNew()))
 
 		# ServerTransport did not call .finish(), because Request was already
 		# disconnected.
