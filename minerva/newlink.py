@@ -1073,11 +1073,12 @@ class ServerTransport(object):
 		else:
 			stream = self.factory.streamTracker.getStream(self.streamId)
 
-		# Temporarily stop ACKing data on the underlying TCP connection,
-		# so that we don't get a flood of frames.
-		if self._mode == HTTP:
-			self.writable.channel.transport.pauseProducing()
-		else:
+		# During authentication, stop reading from the underlying TCP socket.
+		# It doesn't make sense the pause an HTTPChannel, because
+		# we already received the full request. It does make sense to
+		# pause a socket transport because peer could send an unlimited
+		# amount of data after the HelloFrame.
+		if self._mode != HTTP:
 			self.writable.pauseProducing()
 
 		# Check every transport, not just those with `requestNewStream`.
@@ -1115,9 +1116,7 @@ class ServerTransport(object):
 				self._closeWith(tk_stream_attach_failure)
 
 		def resumeWritable(_):
-			if self._mode == HTTP:
-				self.writable.channel.transport.resumeProducing()
-			else:
+			if self._mode != HTTP:
 				self.writable.resumeProducing()
 
 		d.addCallbacks(cbAuthOkay, cbAuthFailed)
