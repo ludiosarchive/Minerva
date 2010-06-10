@@ -16,6 +16,7 @@ goog.require('goog.Disposable');
 goog.require('goog.net.XhrIo');
 goog.require('goog.net.EventType');
 goog.require('cw.math');
+goog.require('cw.eventual');
 goog.require('cw.eq');
 goog.require('cw.repr');
 goog.require('cw.net.SACK');
@@ -35,12 +36,6 @@ goog.require('cw.net.TransportKillFrame');
 goog.require('cw.net.InvalidFrame');
 goog.require('cw.net.HttpFormat');
 goog.require('cw.net.decodeFrameFromServer');
-
-
-
-
-// Informal interfaces:
-// IWindowTime is an object with methods setTimeout, clearTimeout, setInterval, clearInterval
 
 
 
@@ -217,7 +212,7 @@ cw.net.StreamState_ = {
 
 
 /**
- * @param {!Object} clock Something that provides IWindowTime. TODO: use CallQueue instead?
+ * @param {!cw.eventual.CallQueue} callQueue
  * @param {!Object} protocol
  * @param {string} httpEndpoint
  * @param {function(): string} makeCredentialsCallable Function that returns a
@@ -226,14 +221,14 @@ cw.net.StreamState_ = {
  * @constructor
  * @extends {goog.Disposable}
  */
-cw.net.Stream = function(clock, protocol, httpEndpoint, makeCredentialsCallable) {
+cw.net.Stream = function(callQueue, protocol, httpEndpoint, makeCredentialsCallable) {
 	goog.Disposable.call(this);
 
 	/**
-	 * @type {!Object}
+	 * @type {!cw.eventual.CallQueue}
 	 * @private
 	 */
-	this.clock_ = clock;
+	this.callQueue_ = callQueue;
 
 	/**
 	 * @type {!Object}
@@ -406,7 +401,7 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
 	var transportType = cw.net.TransportType_.BROWSER_HTTP;
 	var endpoint = this.httpEndpoint_;
 	var transport = new cw.net.ClientTransport(
-		this.clock_, this, this.transportCount_, transportType, endpoint, becomePrimary);
+		this.callQueue_, this, this.transportCount_, transportType, endpoint, becomePrimary);
 	cw.net.Stream.logger.finest('Created new transport ' + cw.repr.repr(transport));
 	this.transports_.add(transport);
 	transport.writeSack_(this.getSACK_());
@@ -599,7 +594,7 @@ cw.net.TransportType_ = {
  * 	- ClientTransport may have subtly different ResetFrame behavior (more
  * 		StringFrames make it through? TODO: describe)
  *
- * @param {!Object} clock Something that provides IWindowTime. TODO: use CallQueue instead?
+ * @param {!cw.eventual.CallQueue} callQueue
  * @param {!cw.net.TransportType_} transportType
  * @param {string} endpoint
  * @param {boolean} becomePrimary Should this transport try to become primary
@@ -609,14 +604,14 @@ cw.net.TransportType_ = {
  * @extends {goog.Disposable}
  * @private
  */
-cw.net.ClientTransport = function(clock, stream, transportNumber, transportType, endpoint, becomePrimary) {
+cw.net.ClientTransport = function(callQueue, stream, transportNumber, transportType, endpoint, becomePrimary) {
 	goog.Disposable.call(this);
 
 	/**
-	 * @type {!Object}
+	 * @type {!cw.eventual.CallQueue}
 	 * @private
 	 */
-	this.clock_ = clock;
+	this.callQueue_ = callQueue;
 
 	/**
 	 * @type {!cw.net.Stream}
@@ -976,7 +971,7 @@ cw.net.ClientTransport.prototype.start_ = function() {
 		this.toSendFrames_ = [];
 		// TODO XXX IMPORTANT: remove this forced delay
 		var that = this;
-		this.clock_.setTimeout(function() { that.makeHttpRequest_(payload) }, 500);
+		this.callQueue_.clock.setTimeout(function() { that.makeHttpRequest_(payload) }, 500);
 	} else {
 		throw Error("start_: don't know what to do for this transportType");
 	}

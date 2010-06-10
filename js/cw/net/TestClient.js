@@ -116,13 +116,14 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 	 */
 	function test_writeStringsThenStart(self) {
 		var clock = new cw.clock.Clock();
+		var callQueue = new cw.eventual.CallQueue(clock);
 		var stream = new cw.net.TestClient.MockStream();
 		var queue = new cw.net.Queue();
 		queue.extend(['c2s_0', 'c2s_1']);
 		var payloads = [];
 
 		var ct = new cw.net.ClientTransport(
-			clock, stream, 0, BROWSER_HTTP, '/TestClient-not-a-real-endpoint/', true);
+			callQueue, stream, 0, BROWSER_HTTP, '/TestClient-not-a-real-endpoint/', true);
 		ct.makeHttpRequest_ = function(payload) { payloads.push(payload) };
 		ct.writeStrings_(queue, null);
 		ct.start_();

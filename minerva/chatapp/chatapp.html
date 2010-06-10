@@ -47,6 +47,7 @@ goog.provide('chatapp');
 goog.require('cw.autoTitle');
 goog.require('goog.debug.DivConsole');
 goog.require('goog.debug.Logger');
+goog.require('cw.eventual');
 goog.require('cw.string');
 goog.require('cw.net.Stream');
 goog.require('cw.net.IMinervaProtocol');
@@ -145,8 +146,9 @@ chatapp.lastProto = null;
 
 chatapp.startStream = function() {
 	chatapp.lastProto = new chatapp.ChatProtocol();
+	var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 	var stream = new cw.net.Stream(
-		window, chatapp.lastProto, '/httpface/', chatapp.makeCredentialsData);
+		callQueue, chatapp.lastProto, '/httpface/', chatapp.makeCredentialsData);
 	stream.start();
 };
 
