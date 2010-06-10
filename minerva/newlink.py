@@ -861,7 +861,7 @@ class ServerTransport(object):
 		'streamId', 'credentialsData', 'transportNumber', 'factory',
 		'transport', '_maxReceiveBytes', '_maxOpenTime',
 		'_lastSackSeenByClient', '_streamingResponse', '_needPaddingBytes',
-		'_wantsStrings', '_waitForAuthD', '_waitingFrames')
+		'_wantsStrings', '_waitingFrames')
 	# TODO: last 4 attributes above only for an HTTPSocketTransport, to save memory
 
 	maxLength = 1024*1024
@@ -890,7 +890,7 @@ class ServerTransport(object):
 		self._stream = \
 		self._producer = \
 		self.writable = \
-		self._waitForAuthD = None
+		self._waitingFrames = None
 
 
 	def __repr__(self):
@@ -1097,12 +1097,22 @@ class ServerTransport(object):
 			# Remember, a lot of stuff can happen underneath that
 			# transportOnline call because it may construct a MinervaProtocol,
 			# which may even call reset.
+			if not self._terminating:
+				waitedFrames = self._waitingFrames
+				self._waitingFrames = None
+				self._framesReceived(waitedFrames)
+				if self._mode == HTTP and not self._wantsStrings:
+					self.closeGently()
 
 		def cbAuthFailed(f):
 			f.trap(RejectTransport)
 			if self._terminating:
 				return
-			self._closeWith(tk_stream_attach_failure)
+			waitedFrames = self._waitingFrames
+			self._waitingFrames = None
+			self._framesReceived(waitedFrames)
+			if not self._terminating:
+				self._closeWith(tk_stream_attach_failure)
 
 		def resumeWritable(_):
 			if self._mode == HTTP:
@@ -1113,13 +1123,13 @@ class ServerTransport(object):
 		d.addCallbacks(cbAuthOkay, cbAuthFailed)
 		d.addErrback(log.err)
 		d.addBoth(resumeWritable)
-		return d
 
 
 	@mailboxify('_mailbox')
 	def _framesReceived(self, frames):
-		if self._waitForAuthD:
+		if self._waitingFrames is not None:
 			self._waitingFrames.extend(frames)
+			return
 
 		# Mutable outside list to work around Python 2.x read-only closures
 		bunchedStrings = [[]]
@@ -1160,23 +1170,8 @@ class ServerTransport(object):
 			if self.receivedCounter == 0:
 				if frameType == HelloFrame:
 					try:
-						self._waitForAuthD = self._handleHelloFrame(frame)
 						self._waitingFrames = frames[1:]
-
-						def resumeFrameProcessing(_):
-							waitedFrames = self._waitingFrames[:]
-							del self._waitingFrames[:]
-							if not self._terminating:
-								self._framesReceived(waitedFrames)
-								if self._mode == HTTP and not self._wantsStrings:
-									self.closeGently()
-
-						def removeWaitForAuthD(_):
-							self._waitForAuthD = None
-
-						self._waitForAuthD.addCallback(resumeFrameProcessing)
-						self._waitForAuthD.addErrback(log.err)
-						self._waitForAuthD.addBoth(removeWaitForAuthD)
+						self._handleHelloFrame(frame)
 					except NoSuchStream:
 						self._closeWith(tk_stream_attach_failure)
 						break

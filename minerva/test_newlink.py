@@ -1714,12 +1714,41 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		the transport is killed with C{tk_stream_attach_failure}.
 		"""
 		frame0 = _makeHelloFrame()
-		transport = self._makeTransport(rejectAll=True, firewallActionTime=1)
+		transport = self._makeTransport(rejectAll=True, firewallActionTime=1.0)
 		transport.sendFrames([frame0])
 		self.aE([], transport.getNew())
 		self._clock.advance(1.0)
 		self.aE([TransportKillFrame(tk_stream_attach_failure), YouCloseItFrame()], transport.getNew())
 		self._testExtraDataReceivedIgnored(transport)
+
+
+	def test_c2sStringFrameDuringAuthentication(self):
+		"""
+		If client sends a StringFrame during authentication, it is buffered until
+		the transport is authenticated.
+		"""
+		frame0 = _makeHelloFrame()
+		transport = self._makeTransport(firewallActionTime=1.0)
+		transport.sendFrames([frame0, StringFrame("c2s_0"), StringFrame("c2s_1")])
+		self.aE([], transport.getNew())
+		transport.sendFrames([StringFrame("c2s_2")])
+		self.aE([], transport.getNew())
+
+		self._clock.advance(1.0)
+		self.aE([StreamCreatedFrame(), SackFrame(SACK(2, ()))], transport.getNew())
+
+		# Make sure Stream received all of those strings
+		stream = self.streamTracker.getStream('x'*26)
+		self.aE([
+			['notifyFinish'],
+			['getSACK'],
+			['transportOnline', transport, False, None],
+			['stringsReceived', transport, [(0, sf("c2s_0")), (1, sf("c2s_1")), (2, sf("c2s_2"))]],
+			['getSACK'],
+		], stream.getNew())
+
+
+	# TODO: test that transport is paused during authentication
 
 
 	def test_newStreamMoreThanOnceOk(self):
@@ -1993,10 +2022,16 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.aE([['notifyFinish']], stream.getNew())
 
 
-	def test_nothingHappensIfAuthedAfterTransportTerminated(self):
+	def test_causeTerminationDuringAuthentication(self):
 		"""
-		If the transport is authenticated after it is already terminated,
-		nothing bad happens.
+		If the transport is authenticating, test what happens if the client either:
+			- sends a bad frame
+			- disconnects the transport
+
+		In the first case, client sends frames during authentication
+		that normally cause a TransportKillFrame, but because those
+		frames are buffered during authentication, client receives the
+		TransportKillFrame after authentication is complete.
 		"""
 		expected = {}
 		expected['bad_frame'] = [
@@ -2006,7 +2041,13 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		for rejectAll in (True, False):
 			for terminationMethod in ('bad_frame', 'client_closed'):
+				##print dict(rejectAll=rejectAll, terminationMethod=terminationMethod)
+
 				expectedFrames = expected[terminationMethod]
+				if rejectAll == False and terminationMethod == 'bad_frame':
+					expectedFrames = [
+						StreamCreatedFrame(),
+						StreamStatusFrame(SACK(-1, ()))] + expectedFrames
 
 				self._resetStreamTracker()
 
@@ -2021,16 +2062,28 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				else:
 					1/0
 
-				self.aE(expectedFrames, transport.getNew())
+				self.aE([], transport.getNew())
 
 				stream = self.streamTracker.getStream('x'*26)
 
 				self.aE([['notifyFinish']], stream.getNew())
 
 				self._clock.advance(1.0)
+				self.aE(expectedFrames, transport.getNew())
 
-				self.aE([], transport.getNew())
-				self.aE([], stream.getNew())
+				if rejectAll == False and terminationMethod == 'bad_frame':
+					# Because the transport authenticated, we tell Stream about it.
+					# Then we deal with the buffered frames. One is a bad frame,
+					# so the transport promptly terminates and calls Stream.transportOffline
+					self.aE([
+						['getSACK'],
+						['transportOnline', transport, False, None],
+						['transportOffline', transport],
+					], stream.getNew())
+				else:
+					# Because the transport was disconnect during authentication,
+					# we don't even tell Stream that it ever went online.
+					self.aE([], stream.getNew())
 
 
 
