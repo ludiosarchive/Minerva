@@ -37,7 +37,7 @@ class CsrfStopperTests(unittest.TestCase):
 	def test_makeTokenType(self):
 		c = CsrfStopper("secret string")
 		i = "id"
-		self.assertIdentical(str, type(c.makeToken(i)))
+		self.assertTrue(isinstance(c.makeToken(i), str))
 
 
 	def test_makeTokenDifferentForDifferentSecret(self):
@@ -188,7 +188,7 @@ class _CsrfTransportFirewallTests(object):
 		ms.virgin = False
 		act = lambda: firewall.checkTransport(transport, ms)
 		def cb(v):
-			self.assertIdentical(None, v)
+			self.assertIs(None, v)
 		return act().addCallback(cb)
 
 
@@ -200,7 +200,7 @@ class _CsrfTransportFirewallTests(object):
 		ms = MockStream()
 		act = lambda: firewall.checkTransport(transport, ms)
 		def cb(v):
-			self.assertIdentical(None, v)
+			self.assertIs(None, v)
 		return act().addCallback(cb)
 
 
