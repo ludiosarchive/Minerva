@@ -1023,6 +1023,10 @@ class ServerTransport(object):
 			return
 
 		if requestNewStream:
+			# If we send StreamCreatedFrame, it *must* be the first frame
+			# we send. If we send something else like a SackFrame first, and
+			# transport abruptly disconnects after that frame, client may get
+			# into an inconsistent state.
 			self._toSend += self._encodeFrame(StreamCreatedFrame())
 
 		# Write the initial SACK if we have not already written a SACK,

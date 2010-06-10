@@ -417,9 +417,10 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
 
 /**
  * Called by a transport which has received indication that the Stream has
- * been successfully created. The server sends StreamCreatedFrame over
- * *every* transport with `requestNewStream`, so this method might be
- * called more than once. This method is idempotent.
+ * been successfully created. The server sends StreamCreatedFrame as the
+ * first frame over *every* successfully-authenticated transport with
+ * `requestNewStream`, so this method might be called more than once.
+ * This method is idempotent.
  * @private
  */
 cw.net.Stream.prototype.streamSuccessfullyCreated_ = function() {
@@ -532,15 +533,6 @@ cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, sendSackFr
  * @private
  */
 cw.net.Stream.prototype.sackReceived_ = function(sack) {
-	// We absolutely need to do this, because server sometimes sends
-	// a SackFrame before it sends a StreamCreatedFrame. If we're
-	// removing items from our send queue, we definitely need to
-	// update our `streamExistsAtServer_` flag. In very rare cases,
-	// bad things could happen if we didn't.
-	this.streamExistsAtServer_ = true;
-	// Do not tryToSend_ because if primary transport breaks, we'll
-	// just connect a new primary, which will upload strings if necessary.
-
 	this.lastSackSeenByClient_ = sack;
 	return this.queue_.handleSACK(sack);
 };
