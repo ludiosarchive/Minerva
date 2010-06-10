@@ -139,7 +139,6 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 
 		goog.array.splice(decoded, 0, 1);
 		var expected = [
-			new SackFrame(new SACK(-1, [])),
 			new SeqNumFrame(0),
 			new StringFrame('c2s_0'),
 			new StringFrame('c2s_1')];
