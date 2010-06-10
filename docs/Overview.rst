@@ -10,7 +10,7 @@ Other available documentation
 
 This isn't the only documentation. There's also:
 
-*	`scope_overview.xlsx`_, which describes the flow of data through Minerva's components.
+*	`data_flow.pptx`_, which describes the flow of data through Minerva's components.
 
 *	`protocol.xlsx`_, which describes the various frames used in the Minerva protocol.
 
@@ -20,6 +20,8 @@ This isn't the only documentation. There's also:
 
 
 ..	_`protocol.xlsx`: protocol.xlsx
+
+..	_`data_flow.pptx`: data_flow.pptx
 
 
 Terminology
