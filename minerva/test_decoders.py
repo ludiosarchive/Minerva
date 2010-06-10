@@ -381,7 +381,7 @@ class DelimitedJSONDecoderTests(CommonTests, unittest.TestCase):
 		self.aE([], out)
 		self.aE(decoders.INTRAFRAME_CORRUPTION, code)
 
-		self.assert_(isinstance(a.lastJsonError, simplejson.decoder.JSONDecodeError));
+		self.assertTrue(isinstance(a.lastJsonError, simplejson.decoder.JSONDecodeError))
 
 
 

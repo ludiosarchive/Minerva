@@ -2258,7 +2258,7 @@ class BasicMinervaFactoryTests(unittest.TestCase):
 
 		f = WorkingBasicMinervaFactory()
 		proto = f.buildProtocol()
-		self.assert_(isinstance(proto, BasicMinervaProtocol))
+		self.assertTrue(isinstance(proto, BasicMinervaProtocol))
 
 
 	def test_unmodifiedFactoryIsNotCallable(self):
@@ -3143,7 +3143,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 		# Possibly prevents Avast from doing response buffering
 		self.assertEqual(1, len(headers['Server']))
-		self.assert_(headers['Server'][0].startswith('DWR-Reverse-Ajax'), headers['Server'])
+		self.assertTrue(headers['Server'][0].startswith('DWR-Reverse-Ajax'), headers['Server'])
 
 
 	def test_clientAbortsRequest(self):
