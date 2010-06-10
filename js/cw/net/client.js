@@ -16,6 +16,7 @@ goog.require('goog.Disposable');
 goog.require('goog.net.XhrIo');
 goog.require('goog.net.EventType');
 goog.require('cw.math');
+goog.require('cw.eq');
 goog.require('cw.repr');
 goog.require('cw.net.SACK');
 goog.require('cw.net.Queue');
@@ -269,6 +270,12 @@ cw.net.Stream = function(clock, protocol, httpEndpoint, makeCredentialsCallable)
 	this.lastSackSeenByClient_ = new cw.net.SACK(-1, []);
 
 	/**
+	 * @type {!cw.net.SACK}
+	 * @private
+	 */
+	this.lastSackSeenByServer_ = new cw.net.SACK(-1, []);
+
+	/**
 	 * The send queue.
 	 * @type {!cw.net.Queue}
 	 * @private
@@ -348,18 +355,31 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 	if(this.state_ == cw.net.StreamState_.UNSTARTED) {
 		return;
 	}
-	// TODO: WRONG! we may need to send a SACK!
-	if(this.queue_.getQueuedCount() == 0) {
-		return;
-	}
-	// After we're in STARTED, we always have a primary transport,
-	// even if its underlying object hasn't connected yet.
-	if(this.primaryTransport_.canSendMoreAfterStarted_) {
-		this.primaryTransport_.writeStrings_(this.queue_, null);
-	// For robustness reasons, wait until we know that Stream
-	// exists on server before creating secondary transports.
-	} else if(this.streamExistsAtServer_ && this.secondaryTransport_ == null) {
-		this.secondaryTransport_ = this.createNewTransport_(false);
+	var currentSack = this.incoming_.getSACK();
+	var haveQueueItems = (this.queue_.getQueuedCount() != 0);
+	var maybeNeedToSendSack = !cw.eq.equals(currentSack, this.lastSackSeenByServer_);
+
+	cw.net.Stream.logger.finest('In tryToSend_, ' + cw.repr.repr({
+		currentSack: currentSack,
+		lastSackSeenByServer_: this.lastSackSeenByServer_,
+		haveQueueItems: haveQueueItems,
+		maybeNeedToSendSack: maybeNeedToSendSack}));
+
+	if(haveQueueItems || maybeNeedToSendSack) {
+		// After we're in STARTED, we always have a primary transport,
+		// even if its underlying object hasn't connected yet.
+		if(this.primaryTransport_.canSendMoreAfterStarted_) {
+			if(maybeNeedToSendSack) {
+				this.primaryTransport_.writeSack_(currentSack);
+			}
+			if(haveQueueItems) {
+				this.primaryTransport_.writeStrings_(this.queue_, null);
+			}
+		// For robustness reasons, wait until we know that Stream
+		// exists on server before creating secondary transports.
+		} else if(this.streamExistsAtServer_ && this.secondaryTransport_ == null) {
+			this.secondaryTransport_ = this.createNewTransport_(false);
+		}
 	}
 };
 
@@ -387,7 +407,9 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
 	var endpoint = this.httpEndpoint_;
 	var transport = new cw.net.ClientTransport(
 		this.clock_, this, this.transportCount_, transportType, endpoint, becomePrimary);
+	cw.net.Stream.logger.finest('Created new transport ' + cw.repr.repr(transport));
 	this.transports_.add(transport);
+	transport.writeSack_(this.getSACK_());
 	transport.writeStrings_(this.queue_, null);
 	transport.start_();
 	return transport;
@@ -403,6 +425,14 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
 cw.net.Stream.prototype.streamSuccessfullyCreated_ = function() {
 	this.streamExistsAtServer_ = true;
 	this.tryToSend_();
+};
+
+/**
+ * @param {!cw.net.SACK} lastSackSeen The last SACK frame seen by the peer.
+ * @private
+ */
+cw.net.Stream.prototype.streamStatusReceived_ = function(lastSackSeen) {
+	this.lastSackSeenByServer_ = lastSackSeen;
 };
 
 /**
@@ -453,20 +483,36 @@ cw.net.Stream.prototype.resetFromPeer_ = function(reasonString, applicationLevel
  * 	these boxes.
  * @param {!Array.<number|string>} pairs (seqNum, string) pairs that
  * 	transport has received.
+ * @param {boolean} sendSackFrameImmediately
  * @private
  */
-cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs) {
+cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, sendSackFrameImmediately) {
 	//if(this.state_ == cw.net.StreamState_.DISCONNECTED) {
 	//	return;
 	//}
 
 	var _ = this.incoming_.give(
 		pairs, this.maxUndeliveredStrings, this.maxUndeliveredBytes);
+
+	// Because we received strings, we may need to send a SACK.
+	//
+	// Long-polling transports set sendSackFrameImmediately=false because
+	// Stream will create a new transport after that long-poll closes. We know
+	// it will close very soon because it just received strings. The new
+	// transport will have a SackFrame, so it is stupid to send it redundantly.
+	// For non-long-polling (HTTP streaming), the transport might not close
+	// for a while, and in that case we want to send a SackFrame over a new
+	// transport.
+	if(sendSackFrameImmediately) {
+		this.tryToSend_();
+	}
+
 	var items = _[0];
 	var hitLimit = _[1];
 	if(items) {
 		this.protocol_.stringsReceived(items);
 	}
+
 	// We deliver the deliverable strings even if the receive window is overflowing,
 	// just in case the peer sent something useful.
 	// Note: Underneath the stringsReceived call (above), someone may have
@@ -530,6 +576,10 @@ cw.net.Stream.prototype.disposeInternal = function() {
 
 // notifyFinish?
 // producers?
+
+cw.net.Stream.logger = goog.debug.Logger.getLogger('cw.net.Stream');
+cw.net.Stream.logger.setLevel(goog.debug.Logger.Level.ALL);
+
 
 
 
@@ -605,7 +655,7 @@ cw.net.ClientTransport = function(clock, stream, transportNumber, transportType,
 	 * @type {!Array.<string>}
 	 * @private
 	 */
-	this.toSendStrings_ = [];
+	this.toSendFrames_ = [];
 
 	/**
 	 * Should this transport try to become primary transport?
@@ -630,6 +680,13 @@ cw.net.ClientTransport = function(clock, stream, transportNumber, transportType,
 	 */
 	this.canSendMoreAfterStarted_ = (
 		transportType != cw.net.TransportType_.BROWSER_HTTP);
+
+	/**
+	 * Can server stream frames to this transport?
+	 * @type {boolean}
+	 * @private
+	 */
+	this.s2cStreaming = false;
 };
 goog.inherits(cw.net.ClientTransport, goog.Disposable);
 
@@ -645,6 +702,20 @@ cw.net.ClientTransport.prototype.underlying_ = null;
  * @private
  */
 cw.net.ClientTransport.prototype.started_ = false;
+
+/**
+ * Whether we're in the `framesReceived_` loop.
+ * @type {boolean}
+ * @private
+ */
+cw.net.ClientTransport.prototype.spinning_ = false;
+
+/**
+ * The last SACK written to the peer.
+ * @type {cw.net.SACK}
+ * @private
+ */
+cw.net.ClientTransport.prototype.lastSackWritten_ = null;
 
 /**
  * The number of frames we have received from the peer, minus 1.
@@ -668,15 +739,37 @@ cw.net.ClientTransport.prototype.ourSeqNum_ = -1;
 cw.net.ClientTransport.prototype.peerSeqNum_ = -1;
 
 /**
+ * @param {!Array.<string>} sb
+ * @private
+ */
+cw.net.ClientTransport.prototype.__reprToPieces__ = function(sb) {
+	sb.push(
+		'<ClientTransport #', String(this.transportNumber),
+		', becomePrimary=', String(this.becomePrimary_), '>');
+};
+
+/**
  * @param {!Array.<string>} bunchedStrings
  * @private
  */
 cw.net.ClientTransport.prototype.handleStrings_ = function(bunchedStrings) {
 	// bunchedStrings is already sorted 99.99%+ of the time
 	bunchedStrings.sort();
-	this.stream_.stringsReceived_(this, bunchedStrings);
+	var sendSackFrameImmediately = (this.s2cStreaming);
+	this.stream_.stringsReceived_(this, bunchedStrings, sendSackFrameImmediately);
 	// Remember that a lot can happen underneath that stringsReceived call,
 	// including a call to our own `reset_` or `close_` or `writeStrings_`
+};
+
+/**
+ * @private
+ */
+cw.net.ClientTransport.prototype.writeToUnderlying_ = function() {
+	goog.asserts.assert(
+		!this.canSendMoreAfterStarted_,
+		"How are we supposed to write " + cw.repr.repr(this.toSendFrames_) +
+		" if this transport cannot send after it has been started?")
+	1/0
 };
 
 /**
@@ -684,82 +777,93 @@ cw.net.ClientTransport.prototype.handleStrings_ = function(bunchedStrings) {
  * @private
  */
 cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
-	var logger = cw.net.ClientTransport.logger;
-	var closeSoon = false;
-	var bunchedStrings = [];
-	for(var i=0, len=frames.length; i < len; i++) {
-		var frameStr = frames[i];
-		this.receivedCounter_ += 1;
+	this.spinning_ = true;
+	try {
+		var logger = cw.net.ClientTransport.logger;
+		var closeSoon = false;
+		var bunchedStrings = [];
+		for(var i=0, len=frames.length; i < len; i++) {
+			var frameStr = frames[i];
+			this.receivedCounter_ += 1;
 
-		// For BROWSER_HTTP, first frame must be the anti-script-inclusion preamble.
-		// This provides decent protection against us parsing and reading frames
-		// from a page returned by an intermediary like a proxy or a WiFi access paywall.
-		if(this.receivedCounter_ == 0 &&
-		this.transportType_ == cw.net.TransportType_.BROWSER_HTTP &&
-		frameStr != ";)]}P") {
-			logger.warning("closing soon because got bad premable: " + cw.repr.repr(frameStr));
-			closeSoon = true;
-			break;
-		}
+			// For BROWSER_HTTP, first frame must be the anti-script-inclusion preamble.
+			// This provides decent protection against us parsing and reading frames
+			// from a page returned by an intermediary like a proxy or a WiFi access paywall.
+			if(this.receivedCounter_ == 0 &&
+			this.transportType_ == cw.net.TransportType_.BROWSER_HTTP &&
+			frameStr != ";)]}P") {
+				logger.warning("closing soon because got bad premable: " + cw.repr.repr(frameStr));
+				closeSoon = true;
+				break;
+			}
 
-		try {
-			/** @type {!cw.net.Frame} Decoded frame */
-			var frame = cw.net.decodeFrameFromServer(frameStr);
-			if(frame instanceof cw.net.StringFrame) {
-				this.peerSeqNum_ += 1;
-				// Because we may have received multiple Minerva strings, collect
-				// them into a Array and then deliver them all at once to Stream.
-				// This does *not* add any latency. It does reduce the number of funcalls.
-				bunchedStrings.push([this.peerSeqNum_, frame.string])
-			} else if(frame instanceof cw.net.SackFrame) {
-				if(this.stream_.sackReceived_(frame.sack)) {
-					logger.warning("closing soon because got bad SackFrame");
+			try {
+				/** @type {!cw.net.Frame} Decoded frame */
+				var frame = cw.net.decodeFrameFromServer(frameStr);
+				cw.net.ClientTransport.logger.fine(cw.repr.repr(this) + ' received ' + cw.repr.repr(frame));
+				if(frame instanceof cw.net.StringFrame) {
+					this.peerSeqNum_ += 1;
+					// Because we may have received multiple Minerva strings, collect
+					// them into a Array and then deliver them all at once to Stream.
+					// This does *not* add any latency. It does reduce the number of funcalls.
+					bunchedStrings.push([this.peerSeqNum_, frame.string])
+				} else if(frame instanceof cw.net.SackFrame) {
+					if(this.stream_.sackReceived_(frame.sack)) {
+						logger.warning("closing soon because got bad SackFrame");
+						closeSoon = true;
+						break;
+					}
+				} else if(frame instanceof cw.net.SeqNumFrame) {
+					this.peerSeqNum_ = frame.seqNum - 1;
+				} else if(frame instanceof cw.net.StreamStatusFrame) {
+					this.stream_.streamStatusReceived_(frame.lastSackSeen);
+				} else if(frame instanceof cw.net.YouCloseItFrame) {
+					logger.finest("closing soon because got YouCloseItFrame");
 					closeSoon = true;
 					break;
-				}
-			} else if(frame instanceof cw.net.SeqNumFrame) {
-				this.peerSeqNum_ = frame.seqNum - 1;
-			} else if(frame instanceof cw.net.YouCloseItFrame) {
-				logger.finest("closing soon because got YouCloseItFrame");
-				closeSoon = true;
-				break;
-			} else if(frame instanceof cw.net.TransportKillFrame) {
-				// TODO: adjust our behavior based on the type of TK we got
-				logger.finest("closing soon because got TransportKillFrame");
-				closeSoon = true;
-				break;
-			} else if(frame instanceof cw.net.PaddingFrame) {
-				// Ignore it
-			} else if(frame instanceof cw.net.StreamCreatedFrame) {
-				this.stream_.streamSuccessfullyCreated_();
-			} else {
-				if(bunchedStrings) {
-					this.handleStrings_(bunchedStrings);
-					bunchedStrings = [];
-				}
-				if(frame instanceof cw.net.ResetFrame) {
-					this.stream_.resetFromPeer_(frame.reasonString, frame.applicationLevel);
+				} else if(frame instanceof cw.net.TransportKillFrame) {
+					// TODO: adjust our behavior based on the type of TK we got
+					logger.finest("closing soon because got TransportKillFrame");
+					closeSoon = true;
 					break;
+				} else if(frame instanceof cw.net.PaddingFrame) {
+					// Ignore it
+				} else if(frame instanceof cw.net.StreamCreatedFrame) {
+					this.stream_.streamSuccessfullyCreated_();
 				} else {
-					throw Error("unexpected state in framesReceived_");
+					if(bunchedStrings) {
+						this.handleStrings_(bunchedStrings);
+						bunchedStrings = [];
+					}
+					if(frame instanceof cw.net.ResetFrame) {
+						this.stream_.resetFromPeer_(frame.reasonString, frame.applicationLevel);
+						break;
+					} else {
+						throw Error("unexpected state in framesReceived_");
+					}
 				}
+			} catch(e) {
+				if(!(e instanceof cw.net.InvalidFrame)) {
+					throw e;
+				}
+				logger.warning("closing soon because got InvalidFrame: " + cw.repr.repr(frameStr));
+				closeSoon = true;
+				break;
 			}
-		} catch(e) {
-			if(!(e instanceof cw.net.InvalidFrame)) {
-				throw e;
-			}
-			logger.warning("closing soon because got InvalidFrame: " + cw.repr.repr(frameStr));
-			closeSoon = true;
-			break;
 		}
-	}
 
-	if(bunchedStrings) {
-		this.handleStrings_(bunchedStrings);
-		bunchedStrings = [];
-	}
-	if(closeSoon) {
-		this.close_();
+		if(bunchedStrings) {
+			this.handleStrings_(bunchedStrings);
+			bunchedStrings = [];
+		}
+		if(this.toSendFrames_.length) {
+			this.writeToUnderlying_();
+		}
+		if(closeSoon) {
+			this.close_();
+		}
+	} finally {
+		this.spinning_ = false;
 	}
 };
 
@@ -820,7 +924,7 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 		hello.credentialsData = this.stream_.makeCredentialsCallable_();
 	}
 	hello.streamId = this.stream_.streamId;
-	hello.streamingResponse = false;
+	hello.streamingResponse = this.s2cStreaming;
 	if(hello.streamingResponse) {
 		hello.needPaddingBytes = 4096;
 	}
@@ -837,21 +941,13 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 };
 
 /**
- * @return {!cw.net.SackFrame}
- * @private
- */
-cw.net.ClientTransport.prototype.makeSackFrame_ = function() {
-	return new cw.net.SackFrame(this.stream_.getSACK_());
-};
-
-/**
  * Serialize {@code frame} and append a transport-encoded frame to the
  * 	internal send buffer.
  * @param {!cw.net.Frame} frame
  * @private
  */
 cw.net.ClientTransport.prototype.writeFrame_ = function(frame) {
-	this.toSendStrings_.push(frame.encode());
+	this.toSendFrames_.push(frame.encode());
 };
 
 /**
@@ -859,7 +955,6 @@ cw.net.ClientTransport.prototype.writeFrame_ = function(frame) {
  */
 cw.net.ClientTransport.prototype.writeInitialFrames_ = function() {
 	this.writeFrame_(this.makeHelloFrame_());
-	this.writeFrame_(this.makeSackFrame_());
 };
 
 /**
@@ -878,20 +973,43 @@ cw.net.ClientTransport.prototype.start_ = function() {
 	}
 	this.started_ = true;
 
-	if(!this.toSendStrings_.length) {
+	if(!this.toSendFrames_.length) {
 		this.writeInitialFrames_();
 	}
 
 	if(this.transportType_ == cw.net.TransportType_.BROWSER_HTTP) {
 		// push a "" because we want a trailing newline.
-		this.toSendStrings_.push("");
-		var payload = this.toSendStrings_.join('\n');
-		this.toSendStrings_ = [];
+		this.toSendFrames_.push("");
+		var payload = this.toSendFrames_.join('\n');
+		this.toSendFrames_ = [];
 		// TODO XXX IMPORTANT: remove this forced delay
 		var that = this;
 		this.clock_.setTimeout(function() { that.makeHttpRequest_(payload) }, 500);
 	} else {
 		throw Error("start_: don't know what to do for this transportType");
+	}
+};
+
+/**
+ * @param {!cw.net.SACK} sack
+ * @private
+ */
+cw.net.ClientTransport.prototype.writeSack_ = function(sack) {
+	// Stream doesn't keep track of which SACKs have been written to
+	// which transports. If this is the SACK we wrote last time, ignore
+	// Stream's request.
+	if(sack == this.lastSackWritten_) {
+		return;
+	}
+
+	if(!this.started_ && !this.toSendFrames_.length) {
+		this.writeInitialFrames_();
+	}
+
+	this.writeFrame_(new cw.net.SackFrame(sack));
+	this.lastSackWritten_ = sack;
+	if(!this.spinning_) {
+		this.writeToUnderlying_();
 	}
 };
 
@@ -909,7 +1027,7 @@ cw.net.ClientTransport.prototype.writeStrings_ = function(queue, start) {
 	goog.asserts.assert(
 		start !== undefined, "writeStrings_: Did you forget `start` argument?");
 
-	if(!this.started_ && !this.toSendStrings_.length) {
+	if(!this.started_ && !this.toSendFrames_.length) {
 		this.writeInitialFrames_();
 	}
 
@@ -925,6 +1043,9 @@ cw.net.ClientTransport.prototype.writeStrings_ = function(queue, start) {
 		}
 		this.writeFrame_(new cw.net.StringFrame(string));
 		this.ourSeqNum_ = seqNum;
+	}
+	if(!this.spinning_) {
+		this.writeToUnderlying_();
 	}
 };
 
@@ -961,7 +1082,7 @@ cw.net.ClientTransport.prototype.causedRwinOverflow_ = function() {
  * @private
  */
 cw.net.ClientTransport.prototype.writeReset_ = function(reasonString, applicationLevel) {
-	if(!this.started_ && !this.toSendStrings_.length) {
+	if(!this.started_ && !this.toSendFrames_.length) {
 		this.writeInitialFrames_();
 	}
 	var resetFrame = new cw.net.ResetFrame(reasonString, applicationLevel);

@@ -65,6 +65,13 @@ logger.setLevel(goog.debug.Logger.Level.ALL);
 
 logger.info('Logger works.');
 
+
+window.onerror = function(msg, url, lineNumber) {
+	logger.severe('window.onerror: message: ' + cw.repr.repr(msg) +
+		'\nURL: ' + url + '\nLine Number: ' + lineNumber)
+};
+
+
 function byId(o) {
 	return document.getElementById(o);
 }

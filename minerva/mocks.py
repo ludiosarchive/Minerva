@@ -7,7 +7,7 @@ from twisted.test.proto_helpers import StringTransport
 #from twisted.internet.test.test_base import FakeReactor as _TwistedFakeReactor
 
 from mypy.strops import StringFragment
-from minerva.window import Queue, Incoming
+from minerva.window import SACK, Queue, Incoming
 from minerva.newlink import (
 	NoSuchStream, IMinervaProtocol, IMinervaFactory, StreamAlreadyExists)
 from minerva.decoders import OK
@@ -120,6 +120,7 @@ class DummyChannel(object):
 			self.noDelayEnabled = False
 			self.written = ''
 			self.producers = []
+			self.paused = 0
 
 		def getPeer(self):
 			return address.IPv4Address("TCP", '192.168.1.1', 12344)
@@ -134,6 +135,12 @@ class DummyChannel(object):
 
 		def getHost(self):
 			return address.IPv4Address("TCP", '10.0.0.1', self.port)
+
+		def pauseProducing(self):
+			self.paused += 1
+
+		def resumeProducing(self):
+			self.paused -= 1
 
 		def registerProducer(self, producer, streaming):
 			self.producers.append((producer, streaming))
@@ -231,6 +238,7 @@ class MockStream(_MockMixin):
 		self.queue = Queue()
 		self._transports = set()
 		self.allSeenTransports = []
+		self.lastSackSeenByServer = SACK(-1, ())
 
 
 	def sendStrings(self, strings):
@@ -257,6 +265,7 @@ class MockStream(_MockMixin):
 		Returns C{True} if SACK was bad, C{False} otherwise.
 		"""
 		self.log.append(['sackReceived', sack])
+		self.lastSackSeenByServer = sack
 		return self.queue.handleSACK(sack)
 
 

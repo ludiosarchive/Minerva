@@ -21,7 +21,7 @@ from mypy.mailbox import Mailbox, mailboxify
 from minerva import decoders
 from minerva.website import RejectTransport
 from minerva.interfaces import ISimpleConsumer
-from minerva.window import Queue, Incoming
+from minerva.window import SACK, Queue, Incoming
 from minerva.frames import (
 	HelloFrame, StringFrame, SeqNumFrame, SackFrame, StreamStatusFrame,
 	StreamCreatedFrame, YouCloseItFrame, ResetFrame, PaddingFrame,
@@ -193,7 +193,8 @@ class Stream(object):
 	__slots__ = (
 		'_clock', 'streamId', '_streamProtocolFactory', '_protocol', 'virgin', '_primaryTransport',
 		'_notifications', '_transports', 'disconnected', 'queue', '_incoming', '_pretendAcked',
-		'_producer', '_streamingProducer', '_primaryHasProducer', '_primaryPaused')
+		'_producer', '_streamingProducer', '_primaryHasProducer', '_primaryPaused',
+		'lastSackSeenByServer')
 
 	def __init__(self, clock, streamId, streamProtocolFactory):
 		self._clock = clock
@@ -217,6 +218,7 @@ class Stream(object):
 
 		self.queue = Queue()
 		self._incoming = Incoming()
+		self.lastSackSeenByServer = SACK(-1, ())
 
 
 	def __repr__(self):
@@ -341,6 +343,8 @@ class Stream(object):
 		Called by a transport to tell me that it has received *already sorted*
 		(seqNum, string) L{pairs}.
 		"""
+		assert transport in self._transports
+
 		if self.disconnected:
 			return
 
@@ -376,6 +380,8 @@ class Stream(object):
 		# No need to pretend any more, because we just got a likely-up-to-date sack from the client.
 		wasPretending = self._pretendAcked
 		self._pretendAcked = None
+
+		self.lastSackSeenByServer = sack
 
 		if self.queue.handleSACK(sack):
 			return True # badSACK
@@ -772,6 +778,8 @@ class IMinervaTransport(ISimpleConsumer):
 		Close this transport. Usually happens if the transport is no longer
 		useful (due to HTTP limitations), or because a new active S2C
 		transport has connected.
+
+		Only transports with a _stream can be closed gently.
 		"""
 
 
@@ -852,7 +860,8 @@ class ServerTransport(object):
 		'_terminating', '_paused', '_stream', '_producer', '_parser',
 		'streamId', 'credentialsData', 'transportNumber', 'factory',
 		'transport', '_maxReceiveBytes', '_maxOpenTime',
-		'_lastSackSeenByClient', '_streamingResponse', '_needPaddingBytes')
+		'_lastSackSeenByClient', '_streamingResponse', '_needPaddingBytes',
+		'_wantsStrings', '_waitForAuthD', '_waitingFrames')
 	# TODO: last 4 attributes above only for an HTTPSocketTransport, to save memory
 
 	maxLength = 1024*1024
@@ -880,7 +889,8 @@ class ServerTransport(object):
 
 		self._stream = \
 		self._producer = \
-		self.writable = None
+		self.writable = \
+		self._waitForAuthD = None
 
 
 	def __repr__(self):
@@ -897,9 +907,13 @@ class ServerTransport(object):
 			self._toSend = ''
 			self.writable.write(toSend)
 
-		closeNow = self._terminating or (not self._streamingResponse and toSend)
+		if not self._streamingResponse and toSend:
+			# This re-enters spin
+			self.closeGently()
+			# We already re-entered _stoppedSpinning, so return.
+			return
 
-		if closeNow:
+		if self._terminating:
 			# Tell Stream this transport is offline. Whether we still have a TCP
 			# connection open to the peer is irrelevant.
 			if self._stream:
@@ -925,6 +939,9 @@ class ServerTransport(object):
 		if self._terminating:
 			return
 
+		if self._stream is not None:
+			self._toSend += self._encodeFrame(StreamStatusFrame(
+				self._stream.lastSackSeenByServer))
 		self._toSend += self._encodeFrame(TransportKillFrame(reason))
 		if self._mode != HTTP:
 			self._toSend += self._encodeFrame(YouCloseItFrame())
@@ -939,12 +956,17 @@ class ServerTransport(object):
 		if self._terminating:
 			return
 
+		if self._stream is None:
+			raise RuntimeError("can't closeGently a transport with no _stream")
+
+		self._toSend += self._encodeFrame(StreamStatusFrame(
+			self._stream.lastSackSeenByServer))
 		if self._mode != HTTP:
 			self._toSend += self._encodeFrame(YouCloseItFrame())
 		self._terminating = True
 
 
-	# No need for mailboxify because it just calls _closeWith
+	@mailboxify('_mailbox')
 	def causedRwinOverflow(self):
 		"""
 		@see L{IMinervaTransport.causedRwinOverflow}
@@ -960,6 +982,7 @@ class ServerTransport(object):
 		if self._terminating:
 			return
 
+		# Because it's a reset, there's no need to send a StreamStatusFrame
 		self._toSend += self._encodeFrame(ResetFrame(reasonString, applicationLevel))
 		if self._mode != HTTP:
 			self._toSend += self._encodeFrame(YouCloseItFrame())
@@ -1004,6 +1027,7 @@ class ServerTransport(object):
 
 		# Write the initial SACK if we have not already written a SACK,
 		# but only if the client has an out-of-date impression of the SACK.
+		# We can't always send the SACK because of long-polling.
 		if self._lastSackSeenByClient is not None:
 			currentSack = self._stream.getSACK()
 			if currentSack != self._lastSackSeenByClient:
@@ -1023,6 +1047,7 @@ class ServerTransport(object):
 		self.transportNumber = hello.transportNumber
 		self._streamingResponse = hello.streamingResponse
 		self._lastSackSeenByClient = hello.lastSackSeenByClient
+		self._wantsStrings = hello.wantsStrings()
 
 		if self._mode == HTTP:
 			self._needPaddingBytes = hello.needPaddingBytes
@@ -1044,12 +1069,18 @@ class ServerTransport(object):
 		else:
 			stream = self.factory.streamTracker.getStream(self.streamId)
 
+		# Temporarily stop ACKing data on the underlying TCP connection,
+		# so that we don't get a flood of frames.
+		if self._mode == HTTP:
+			self.writable.channel.transport.pauseProducing()
+		else:
+			self.writable.pauseProducing()
+
 		# Check every transport, not just those with `requestNewStream`.
 		d = self.factory.firewall.checkTransport(self, stream)
 
 		# Keep only the variables we need for the cbAuthOkay closure
-		wantsStrings = hello.wantsStrings()
-		succeedsTransport = hello.succeedsTransport if wantsStrings else None
+		succeedsTransport = hello.succeedsTransport if self._wantsStrings else None
 
 		def cbAuthOkay(_):
 			if self._terminating:
@@ -1058,7 +1089,7 @@ class ServerTransport(object):
 			# and that we have called transportOnline (or are calling it right now).
 			self._stream = stream
 			self._writeInitialFrames(requestNewStream)
-			self._stream.transportOnline(self, wantsStrings, succeedsTransport)
+			self._stream.transportOnline(self, self._wantsStrings, succeedsTransport)
 			# Remember, a lot of stuff can happen underneath that
 			# transportOnline call because it may construct a MinervaProtocol,
 			# which may even call reset.
@@ -1069,11 +1100,23 @@ class ServerTransport(object):
 				return
 			self._closeWith(tk_stream_attach_failure)
 
+		def resumeWritable(_):
+			if self._mode == HTTP:
+				self.writable.channel.transport.resumeProducing()
+			else:
+				self.writable.resumeProducing()
+
 		d.addCallbacks(cbAuthOkay, cbAuthFailed)
 		d.addErrback(log.err)
+		d.addBoth(resumeWritable)
+		return d
 
 
+	@mailboxify('_mailbox')
 	def _framesReceived(self, frames):
+		if self._waitForAuthD:
+			self._waitingFrames.extend(frames)
+
 		# Mutable outside list to work around Python 2.x read-only closures
 		bunchedStrings = [[]]
 		def handleStrings():
@@ -1113,10 +1156,29 @@ class ServerTransport(object):
 			if self.receivedCounter == 0:
 				if frameType == HelloFrame:
 					try:
-						self._handleHelloFrame(frame)
+						self._waitForAuthD = self._handleHelloFrame(frame)
+						self._waitingFrames = frames[1:]
+
+						def resumeFrameProcessing(_):
+							waitedFrames = self._waitingFrames[:]
+							del self._waitingFrames[:]
+							if not self._terminating:
+								self._framesReceived(waitedFrames)
+								if self._mode == HTTP and not self._wantsStrings:
+									self.closeGently()
+
+						def removeWaitForAuthD(_):
+							self._waitForAuthD = None
+
+						self._waitForAuthD.addCallback(resumeFrameProcessing)
+						self._waitForAuthD.addErrback(log.err)
+						self._waitForAuthD.addBoth(removeWaitForAuthD)
 					except NoSuchStream:
 						self._closeWith(tk_stream_attach_failure)
 						break
+					# break because self._framesReceived(waitedFrames)
+					# processes the remaining frames.
+					break
 				else:
 					self._closeWith(tk_invalid_frame_type_or_arguments)
 					break

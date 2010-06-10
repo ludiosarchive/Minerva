@@ -688,6 +688,8 @@ def decodeFrameFromServer(frameString):
 		return SackFrame.decode(frameString)
 	elif lastByte == "N":
 		return SeqNumFrame.decode(frameString)
+	elif lastByte == "T":
+		return StreamStatusFrame.decode(frameString)
 	elif lastByte == "Y":
 		return YouCloseItFrame.decode(frameString)
 	elif lastByte == "P":

@@ -38,9 +38,9 @@ from minerva.newlink import (
 )
 
 from minerva.frames import (
-	HelloFrame, StringFrame, SeqNumFrame, SackFrame, StreamCreatedFrame,
-	YouCloseItFrame, ResetFrame, PaddingFrame, TransportKillFrame,
-	decodeFrameFromServer)
+	HelloFrame, StringFrame, SeqNumFrame, SackFrame, StreamStatusFrame,
+	StreamCreatedFrame, YouCloseItFrame, ResetFrame, PaddingFrame,
+	TransportKillFrame, decodeFrameFromServer)
 
 tk_stream_attach_failure = TransportKillFrame.stream_attach_failure
 tk_acked_unsent_strings =  TransportKillFrame.acked_unsent_strings
@@ -1553,7 +1553,11 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		transport.dataReceived('1:xxxxxxxx')
 
-		self.aE([TransportKillFrame(tk_frame_corruption), YouCloseItFrame()], transport.getNew())
+		self.aE([
+			StreamStatusFrame(SACK(-1, ())),
+			TransportKillFrame(tk_frame_corruption),
+			YouCloseItFrame(),
+		], transport.getNew())
 		self.aE([['transportOffline', transport]], stream.getNew())
 
 		self._resetStreamTracker()
@@ -1565,7 +1569,11 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport.sendFrames([frame0])
 		self.aE([StreamCreatedFrame()], transport.getNew())
 		transport.sendFrames([_BadFrame('?')])
-		self.aE([TransportKillFrame(tk_invalid_frame_type_or_arguments), YouCloseItFrame()], transport.getNew())
+		self.aE([
+			StreamStatusFrame(SACK(-1, ())),
+			TransportKillFrame(tk_invalid_frame_type_or_arguments),
+			YouCloseItFrame(),
+		], transport.getNew())
 		self._testExtraDataReceivedIgnored(transport)
 
 
@@ -1586,6 +1594,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self.aE([StreamCreatedFrame()], transport.getNew())
 			transport.sendFrames([frame])
 			self.aE([
+				StreamStatusFrame(SACK(-1, ())),
 				TransportKillFrame(tk_invalid_frame_type_or_arguments),
 				YouCloseItFrame()
 			], transport.getNew())
@@ -1617,6 +1626,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.aE([StreamCreatedFrame()], transport.getNew())
 		transport.sendFrames([frame0])
 		self.aE([
+			StreamStatusFrame(SACK(-1, ())),
 			TransportKillFrame(tk_invalid_frame_type_or_arguments),
 			YouCloseItFrame()
 		], transport.getNew())
@@ -1633,6 +1643,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport.sendFrames([frame0, frame0])
 		self.aE([
 			StreamCreatedFrame(),
+			StreamStatusFrame(SACK(-1, ())),
 			TransportKillFrame(tk_invalid_frame_type_or_arguments),
 			YouCloseItFrame()
 		], transport.getNew())
@@ -1759,10 +1770,25 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 	def test_closeGently(self):
+		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
+		transport.sendFrames([frame0])
 		transport.closeGently()
-		self.aE([YouCloseItFrame()], transport.getNew())
+		self.aE([
+			StreamCreatedFrame(),
+			StreamStatusFrame(SACK(-1, ())),
+			YouCloseItFrame()
+		], transport.getNew())
 		self._testExtraDataReceivedIgnored(transport)
+
+
+	def test_closeGentlyRequiresAStream(self):
+		"""
+		If you try to closeGently a transport with no Stream, it raises
+		RuntimeError.
+		"""
+		transport = self._makeTransport()
+		self.assertRaises(RuntimeError, lambda: transport.closeGently())
 
 
 	def test_causedRwinOverflow(self):
@@ -1913,6 +1939,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		transport.sendFrames([SackFrame(SACK(1, ()))])
 		self.aE([
+			StreamStatusFrame(SACK(1, ())),
 			TransportKillFrame(tk_acked_unsent_strings),
 			YouCloseItFrame()
 		], transport.getNew())
@@ -2263,7 +2290,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		self.aE([SeqNumFrame(0), StringFrame("s2cbox0"), StringFrame("s2cbox1")], transport1.getNew())
 
-		self.aE([YouCloseItFrame()], transport0.getNew())
+		self.aE([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport0.getNew())
 
 
 		# Finally ACK those strings; connect a new transport; make sure
@@ -2282,7 +2309,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		self.aE([], transport2.getNew())
 
-		self.aE([YouCloseItFrame()], transport1.getNew())
+		self.aE([StreamStatusFrame(SACK(1, ())), YouCloseItFrame()], transport1.getNew())
 
 
 		# Send a reset over transport2; make sure transport2 is
@@ -2291,7 +2318,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport2.sendFrames([ResetFrame("testing", True)])
 
-		self.aE([YouCloseItFrame()], transport2.getNew())
+		self.aE([StreamStatusFrame(SACK(1, ())), YouCloseItFrame()], transport2.getNew())
 
 		self.aE([["streamReset", WhoReset.client_app, "testing"]], proto.getNew())
 
@@ -2338,7 +2365,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		self.aE([], transport1.getNew())
 
-		self.aE([YouCloseItFrame()], transport0.getNew())
+		self.aE([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport0.getNew())
 
 
 		# Send another string S2C and make sure it is written to transport1
@@ -2483,7 +2510,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			ResetFrame("x", False),
 			_BadFrame('?')])
 
-		self.aE([YouCloseItFrame()], transport0.getNew())
+		self.aE([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport0.getNew())
 
 		proto = list(self.protocolFactory.instances)[0]
 		self.aE([
@@ -2510,8 +2537,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		transport0.sendFrames(frames)
 
 		self.aE([
-			SackFrame(SACK(1, ())),
 			StreamCreatedFrame(),
+			SackFrame(SACK(1, ())),
+			StreamStatusFrame(SACK(-1, ())),
 			YouCloseItFrame()
 		], transport0.getNew())
 
@@ -2545,8 +2573,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		transport0.sendFrames([ResetFrame("reason", True)])
 		transport1.sendFrames([ResetFrame("reason", False)])
 
-		self.aE([YouCloseItFrame()], transport0.getNew())
-		self.aE([YouCloseItFrame()], transport1.getNew())
+		self.aE([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport0.getNew())
+		self.aE([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport1.getNew())
 
 		proto = list(self.protocolFactory.instances)[0]
 		self.aE([
@@ -2629,7 +2657,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			]
 
 			if clientResetsImmediately:
-				expected.append(YouCloseItFrame())
+				expected.extend([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()])
 
 			self.aE(expected, transport0.getNew())
 
@@ -2668,8 +2696,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			transport0.sendFrames(frames)
 
 			self.aE([
-				SackFrame(SACK(1, ())),
 				StreamCreatedFrame(),
+				SackFrame(SACK(1, ())),
 				SeqNumFrame(0),
 				StringFrame("s2cbox0"),
 				StringFrame("s2cbox1"),
@@ -2714,8 +2742,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			transport0.sendFrames(frames)
 
 			expected = [
-				SackFrame(SACK(1, ())),
 				StreamCreatedFrame(),
+				SackFrame(SACK(1, ())),
 				SeqNumFrame(0),
 				StringFrame("s2cbox0"),
 				StringFrame("s2cbox1"),
@@ -2723,7 +2751,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			]
 
 			if clientResetsImmediately:
-				expected.append(YouCloseItFrame())
+				expected.extend([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()])
 
 			self.aE(expected, transport0.getNew())
 
@@ -2769,8 +2797,10 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			transport0.sendFrames(frames)
 
 			expected = [
-				SackFrame(SACK(2, ())),
 				StreamCreatedFrame(),
+				SackFrame(SACK(2, ())),
+				# Because it's a reset, server doesn't send StreamStatusFrame
+				#StreamStatusFrame(SACK(-1, ())),
 				ResetFrame('reset forced by mock protocol', True),
 				YouCloseItFrame(),
 			]
@@ -2829,11 +2859,13 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				self.assertEqual(server.NOT_DONE_YET, out)
 
 				encode = DelimitedStringDecoder.encode
-				self.assertEqual([
+				expectedWritten = [
 					encode(HTTP_RESPONSE_PREAMBLE), (
-						encode(SackFrame(SACK(2, ())).encode()) +
-						encode(StreamCreatedFrame().encode()))
-				], request.written)
+						encode(StreamCreatedFrame().encode()) +
+						encode(SackFrame(SACK(2, ())).encode()))]
+				if not streaming:
+					expectedWritten += [encode(StreamStatusFrame(SACK(-1, ())).encode())]
+				self.assertEqual(expectedWritten, request.written)
 				self.assertEqual(0 if streaming else 1, request.finished)
 
 				stream = self.streamTracker.getStream('x'*26)
@@ -2842,6 +2874,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				expected = [
 					["notifyFinish"],
 					["transportOnline", transport, True, None],
+					["getSACK"],
 					["stringsReceived", transport, [(0, sf('box0')), (1, sf('box1')), (2, sf('box2'))]],
 					["getSACK"],
 				]
@@ -2882,6 +2915,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		expected = [
 			["notifyFinish"],
 			["transportOnline", transport, True, None],
+			["getSACK"],
 			["stringsReceived", transport, [(0, sf('box0'))]],
 			["getSACK"],
 		]
@@ -2940,11 +2974,13 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			encode = DelimitedStringDecoder.encode
 			expectedWritten = [
 				encode(HTTP_RESPONSE_PREAMBLE), (
-					encode(SackFrame(SACK(0, ())).encode()) +
 					encode(StreamCreatedFrame().encode()) +
 					encode(SeqNumFrame(0).encode()) +
 					encode(StringFrame('box0').encode()) +
-					encode(StringFrame('box1').encode()))]
+					encode(StringFrame('box1').encode())) +
+					encode(SackFrame(SACK(0, ())).encode())]
+			if not streaming:
+				expectedWritten += [encode(StreamStatusFrame(SACK(-1, ())).encode())]
 
 			self.assertEqual(expectedWritten, request.written)
 			self.assertEqual(0 if streaming else 1, request.finished)
@@ -2972,10 +3008,13 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		self.assertEqual(server.NOT_DONE_YET, out)
 
 		encode = DelimitedStringDecoder.encode
-		self.assertEqual([
+		expectedWritten = [
 			encode(HTTP_RESPONSE_PREAMBLE),
-			encode(StreamCreatedFrame().encode())
-		], request.written)
+			encode(StreamCreatedFrame().encode()),
+		]
+		if not streaming:
+			expectedWritten += [encode(StreamStatusFrame(SACK(-1, ())).encode())]
+		self.assertEqual(expectedWritten, request.written)
 
 		# The first request is now finished, because it was used to
 		# create a Stream, and server sent StreamCreatedFrame.
@@ -3033,6 +3072,8 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 					encode(SeqNumFrame(0).encode()) +
 					encode(StringFrame('box0').encode()) +
 					encode(StringFrame('box1').encode()))]
+			if not streaming:
+				expectedWritten += [encode(StreamStatusFrame(SACK(-1, ())).encode())]
 
 			self.assertEqual(expectedWritten, request.written)
 			self.assertEqual(0 if streaming else 1, request.finished)
@@ -3104,7 +3145,40 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		# disconnected.
 		self.assertEqual(0, request.finished)
 
-	# TODO: test that transports that don't want any boxes are closed very quickly
+
+	def test_nonPrimaryTransportClosed(self):
+		"""
+		Any non-primary transport (does not subscribe to strings) is closed
+		quickly, even if no frames need to be written to it.
+		"""
+		# streaming=True has no effect.
+		for streaming in (False, True):
+			##print "streaming: %r" % streaming
+
+			self._resetStreamTracker(realObjects=True)
+
+			resource = self._makeResource()
+			frames = []
+			self._attachFirstHttpTransportWithFrames(resource, frames, streaming=False)
+
+			request = DummyRequest(postpath=[])
+			request.method = 'POST'
+
+			frame0 = _makeHelloFrameHttp(dict(
+				requestNewStream=DeleteProperty,
+				succeedsTransport=DeleteProperty,
+				streamingResponse=streaming))
+			frames = [frame0]
+
+			request.content = StringIO(
+				'\n'.join(f.encode() for f in frames) + '\n')
+
+			encode = DelimitedStringDecoder.encode
+
+			resource.render(request)
+			self.assertEqual([';)]}P\n', encode(StreamStatusFrame(SACK(-1, ())).encode())], request.written)
+			self.assertEqual(1, request.finished)
+
 
 	# TODO: implement and test minOpenTime
 
