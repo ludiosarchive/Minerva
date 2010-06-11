@@ -1753,7 +1753,19 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		], withoutUnimportantStreamCalls(stream.getNew()))
 
 
-	# TODO: test that transport is paused during authentication
+	def test_transportPausedDuringAuthentication(self):
+		"""
+		During authentication, Minerva stops reading from the underlying
+		TCP socket for the transport. Note: this is not applicable to HTTP
+		transports.
+		"""
+		frame0 = _makeHelloFrame()
+		transport = self._makeTransport(firewallActionTime=1.0)
+		self.assertEqual('producing', transport.writable.producerState)
+		transport.sendFrames([frame0])
+		self.assertEqual('paused', transport.writable.producerState)
+		self._clock.advance(1.0)
+		self.assertEqual('producing', transport.writable.producerState)
 
 
 	def test_newStreamMoreThanOnceOk(self):
