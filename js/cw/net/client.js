@@ -24,6 +24,7 @@ goog.require('cw.net.Queue');
 goog.require('cw.net.Incoming');
 goog.require('cw.net.FlashSocket');
 
+goog.require('cw.net.Frame');
 goog.require('cw.net.HelloFrame');
 goog.require('cw.net.StringFrame');
 goog.require('cw.net.SeqNumFrame');
@@ -638,7 +639,7 @@ cw.net.ClientTransport = function(callQueue, stream, transportNumber, transportT
 	/**
 	 * Very temporary send buffer, always [] before returning control
 	 * to browser event loop.
-	 * @type {!Array.<string>}
+	 * @type {!Array.<!cw.net.Frame>}
 	 * @private
 	 */
 	this.toSendFrames_ = [];
@@ -928,13 +929,12 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 };
 
 /**
- * Serialize {@code frame} and append a transport-encoded frame to the
- * 	internal send buffer.
+ * Append frame to the internal send buffer.
  * @param {!cw.net.Frame} frame
  * @private
  */
 cw.net.ClientTransport.prototype.writeFrame_ = function(frame) {
-	this.toSendFrames_.push(frame.encode());
+	this.toSendFrames_.push(frame);
 };
 
 /**
@@ -942,6 +942,22 @@ cw.net.ClientTransport.prototype.writeFrame_ = function(frame) {
  */
 cw.net.ClientTransport.prototype.writeInitialFrames_ = function() {
 	this.writeFrame_(this.makeHelloFrame_());
+};
+
+/**
+ * Flush the internal send buffer and return an HTTP POST payload.
+ * @return {string} The HTTP POST payload.
+ * @private
+ */
+cw.net.ClientTransport.prototype.flushBufferAsHttpPayload_ = function() {
+	var sb = [];
+	for(var i=0, len=this.toSendFrames_.length; i < len; i++) {
+		var frame = this.toSendFrames_[i];
+		frame.encodeToPieces(sb);
+		sb.push('\n');
+	}
+	this.toSendFrames_ = [];
+	return sb.join("");
 };
 
 /**
@@ -965,10 +981,7 @@ cw.net.ClientTransport.prototype.start_ = function() {
 	}
 
 	if(this.transportType_ == cw.net.TransportType_.BROWSER_HTTP) {
-		// push a "" because we want a trailing newline.
-		this.toSendFrames_.push("");
-		var payload = this.toSendFrames_.join('\n');
-		this.toSendFrames_ = [];
+		var payload = this.flushBufferAsHttpPayload_();
 		// TODO XXX IMPORTANT: remove this forced delay
 		var that = this;
 		this.callQueue_.clock.setTimeout(function() { that.makeHttpRequest_(payload) }, 500);

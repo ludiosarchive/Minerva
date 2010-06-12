@@ -3,6 +3,7 @@
  * 	that Minerva client needs.
  */
 
+goog.provide('cw.net.Frame');
 goog.provide('cw.net.HelloFrame');
 goog.provide('cw.net.StringFrame');
 goog.provide('cw.net.SeqNumFrame');
