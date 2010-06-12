@@ -252,9 +252,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 			'maxReceiveBytes': genericBad,
 			'maxOpenTime': genericBad,
 			'credentialsData': concat([rep('x', 256), '\t', '\ucccc'], listWithout(genericBad, [""])),
-			// We can pass either a string or a !cw.net.SACK
-			'lastSackSeenByClient': [
-				DeleteProperty, '', '|', SK(-2, []), SK(-1, [-2])]
+			// We can pass either a string or a cw.net.SACK
+			'sack': ['', '|', SK(-2, []), SK(-1, [-2])],
+			'lastSackSeenByClient': [DeleteProperty, '', '|', SK(-2, []), SK(-1, [-2])]
 		});
 
 		cw.UnitTest.logger.info('test_decodeFailedInvalidValues: badMutations: ' +
@@ -288,7 +288,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 		}
 
 		// sanity check; make sure we actually tested things
-		goog.asserts.assert(ran == 122, "Ran " + ran + " times; change this assert as needed");
+		goog.asserts.assert(ran == 126, "Ran " + ran + " times; change this assert as needed");
 	},
 
 	function test_encode(self) {
@@ -306,7 +306,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 				// for equality in JS, need boolean instead of number
 				'requestNewStream': true,
 				'streamingResponse': true,
-				'needPaddingBytes': 0}));
+				'needPaddingBytes': 0,
+				'sack': SK(-1, [])}));
 		var encodedDecodedHello = HelloFrame.decode(hello.encode());
 		self.assertEqual(hello, encodedDecodedHello);
 	},

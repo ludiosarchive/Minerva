@@ -404,7 +404,6 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
 		this.callQueue_, this, this.transportCount_, transportType, endpoint, becomePrimary);
 	cw.net.Stream.logger.finest('Created new transport ' + cw.repr.repr(transport));
 	this.transports_.add(transport);
-	transport.writeSack_(this.getSACK_());
 	transport.writeStrings_(this.queue_, null);
 	transport.start_();
 	return transport;
@@ -923,6 +922,7 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 	if(this.becomePrimary_) {
 		hello.succeedsTransport = null;
 	}
+	hello.sack = this.stream_.getSACK_();
 	hello.lastSackSeenByClient = this.stream_.lastSackSeenByClient_;
 	return hello;
 };

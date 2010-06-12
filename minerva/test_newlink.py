@@ -1952,7 +1952,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 	def test_sackFrameWithSACKValid(self):
 		"""
-		Actually test the SACK numbers
+		Test a valid SackFrame with a non-empty sackList.
 		"""
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
@@ -1969,7 +1969,12 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		], withoutUnimportantStreamCalls(stream.getNew()))
 
 
-	def test_sackedUnsentBoxes(self):
+	def test_sackedUnsentStrings(self):
+		"""
+		If client sends a SackFrame that ACKs strings that were never
+		sent, Stream.transportOffline is called, and client receives
+		a `TransportKillFrame(tk_acked_unsent_strings)`.
+		"""
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
@@ -1988,6 +1993,74 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			['sackReceived', SACK(1, ())],
 			['transportOffline', transport],
 		], withoutUnimportantStreamCalls(stream.getNew()))
+
+
+	def test_sackValidInHelloFrame(self):
+		"""
+		Test that Stream gets the right calls if a sack is given in the
+		HelloFrame.
+		"""
+		stream = self.streamTracker.buildStream('x'*26)
+		stream.queue.append("box0")
+
+		frame0 = _makeHelloFrame(dict(sack=SACK(0, ())))
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
+		self.assertEqual([StreamCreatedFrame()], transport.getNew())
+
+		self.assertEqual([], transport.getNew())
+		self.assertEqual([
+			# Note sackReceived before transportOnline
+			['sackReceived', SACK(0, ())],
+			['transportOnline', transport, False, None],
+		], withoutUnimportantStreamCalls(stream.getNew()))
+
+
+	def test_sackedUnsentStringsInHelloFrame(self):
+		"""
+		If client sends a HelloFrame with a `sack` argument that SACKs
+		strings that were never sent, Stream.transportOnline is never
+		called, and client receives a `TransportKillFrame(tk_acked_unsent_strings)`.
+		"""
+		stream = self.streamTracker.buildStream('x'*26)
+		stream.queue.append("box0")
+
+		frame0 = _makeHelloFrame(dict(sack=SACK(1, ())))
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
+
+		self.assertEqual([
+			StreamCreatedFrame(),
+			# Note the curious lack of StreamStatusFrame, due to implementation detail
+			TransportKillFrame(tk_acked_unsent_strings),
+			YouCloseItFrame()
+		], transport.getNew())
+		self.assertEqual([
+			['sackReceived', SACK(1, ())],
+		], withoutUnimportantStreamCalls(stream.getNew()))
+
+
+	def test_sackInHelloFrameDelayedUntilAuthenticated(self):
+		"""
+		If client sends a `sack` argument in the HelloFrame, `sackReceived` isn't
+		called on Stream until the transport is authenticated.
+		"""
+		frame0 = _makeHelloFrame(dict(sack=SACK(-1, ())))
+		transport = self._makeTransport(firewallActionTime=1.0)
+		transport.sendFrames([frame0])
+
+		stream = self.streamTracker.getStream('x'*26)
+		# Stream.sackReceived has not been called yet
+		self.assertEqual([], withoutUnimportantStreamCalls(stream.getNew()))
+
+		self._clock.advance(1.0)
+
+		self.assertEqual([
+			['sackReceived', SACK(-1, ())],
+			['transportOnline', transport, False, None],
+		], withoutUnimportantStreamCalls(stream.getNew()))
+
+		self.assertEqual([StreamCreatedFrame()], transport.getNew())
 
 
 	def test_resetValid(self):

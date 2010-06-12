@@ -76,6 +76,7 @@ cw.net.HelloProperty_ = {
 	maxOpenTime: 'maxt',
 	useMyTcpAcks: 'tcpack',
 	succeedsTransport: 'eeds',
+	sack: 'sack',
 	lastSackSeenByClient: 'lastack'
 };
 
@@ -130,13 +131,28 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 
 	var obj = new cw.net.HelloFrame();
 
-	// credentialsData is always optional
+	// credentialsData is always optional.
 	var credentialsData = helloData.get(HP.credentialsData, "");
 	if(!(goog.isString(credentialsData)) ||
 	!(cw.net.isValidShortRestrictedString_(credentialsData))) {
 		throw new cw.net.InvalidHello("bad credentialsData");
 	}
 	obj.credentialsData = /** @type {string} */ (credentialsData);
+
+	// sack is always optional.
+	var sack = helloData.get(HP.sack, MISSING_);
+	if(sack != MISSING_) {
+		if(!goog.isString(sack)) {
+			throw new cw.net.InvalidHello("sack not a string");
+		}
+		sack = cw.net.sackStringToSack_(sack);
+		if(sack == null) {
+			throw new cw.net.InvalidHello("bad sack");
+		}
+		obj.sack = sack;
+	} else {
+		obj.sack = null;
+	}
 
 	var lastSackSeen = helloData.get(HP.lastSackSeenByClient, MISSING_);
 	if(lastSackSeen == MISSING_ || !goog.isString(lastSackSeen)) {
@@ -280,6 +296,8 @@ cw.net.HelloFrame = function() {
 	this.useMyTcpAcks;
 	/** @type {undefined|?number} */
 	this.succeedsTransport;
+	/** @type {string|cw.net.SACK} */
+	this.sack;
 	/** @type {string|!cw.net.SACK} */
 	this.lastSackSeenByClient;
 };
@@ -345,7 +363,7 @@ cw.net.HelloFrame.decode = function(frameString) {
 /**
  * @private
  * @param {!cw.net.HelloFrame} helloFrame
- * @return {!Array.<*>}
+ * @return {!Array.<(number|string|boolean|null|undefined|cw.net.SACK)>}
  */
 cw.net.HelloFrame.makePropertyArray_ = function(helloFrame) {
 	return [
@@ -361,6 +379,7 @@ cw.net.HelloFrame.makePropertyArray_ = function(helloFrame) {
 		helloFrame.maxOpenTime,
 		helloFrame.useMyTcpAcks,
 		helloFrame.succeedsTransport,
+		helloFrame.sack,
 		helloFrame.lastSackSeenByClient
 	];
 };
@@ -387,6 +406,14 @@ cw.net.HelloFrame.prototype.encodeToPieces = function(sb) {
 	compact[HP.useMyTcpAcks] = this.useMyTcpAcks;
 	compact[HP.succeedsTransport] = this.succeedsTransport;
 
+	if(this.sack instanceof cw.net.SACK) {
+		compact[HP.sack] =
+			cw.string.withoutLast(
+				new cw.net.SackFrame(this.sack).encode(), 1);
+	} else {
+		compact[HP.sack] = this.sack;
+	}
+
 	if(this.lastSackSeenByClient instanceof cw.net.SACK) {
 		compact[HP.lastSackSeenByClient] =
 			cw.string.withoutLast(
@@ -394,7 +421,6 @@ cw.net.HelloFrame.prototype.encodeToPieces = function(sb) {
 	} else {
 		compact[HP.lastSackSeenByClient] = this.lastSackSeenByClient;
 	}
-
 
 	// Remove the "undefined" values; TODO: don't do this so inefficiently
 	for(var k in compact) {

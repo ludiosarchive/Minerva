@@ -78,6 +78,7 @@ class HelloFrameTests(unittest.TestCase):
 				credentialsData="",
 				needPaddingBytes=0,
 				httpFormat=None,
+				sack=None,
 				lastSackSeenByClient=SACK(-1, ()))),
 			HelloFrame.decode(sf(s)))
 
@@ -166,7 +167,8 @@ class HelloFrameTests(unittest.TestCase):
 			maxOpenTime=genericBad,
 			credentialsData=["x" * 256, '\t', u'\ucccc'] + listWithout(genericBad, [""]),
 			# We can pass either a string or a SACK
-			lastSackSeenByClient=[DeleteProperty, '', '|', SACK(-2, ()), SACK(-1, (-2,))]
+			sack=['', '|', SACK(-2, ()), SACK(-1, (-2,))],
+			lastSackSeenByClient=[DeleteProperty, '', '|', SACK(-2, ()), SACK(-1, (-2,))],
 		)
 		##print badMutations
 
@@ -191,7 +193,7 @@ class HelloFrameTests(unittest.TestCase):
 				ran += 1
 
 		# sanity check; make sure we actually tested things
-		assert ran == 122, "Ran %d times; change this assert as needed" % (ran,)
+		assert ran == 126, "Ran %d times; change this assert as needed" % (ran,)
 
 
 	def test_encode(self):
@@ -208,7 +210,8 @@ class HelloFrameTests(unittest.TestCase):
 			# same here for consistency.
 			requestNewStream=True,
 			streamingResponse=True,
-			needPaddingBytes=0))
+			needPaddingBytes=0,
+			sack=SACK(-1, ())))
 		encodedDecodedHello = HelloFrame.decode(sf(hello.encode()))
 		self.assertEqual(hello, encodedDecodedHello)
 

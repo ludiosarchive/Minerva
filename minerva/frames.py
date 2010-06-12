@@ -33,6 +33,7 @@ class HelloFrameArguments(object):
 	maxOpenTime = 'maxt'
 	useMyTcpAcks = 'tcpack'
 	succeedsTransport = 'eeds'
+	sack = 'sack'
 	lastSackSeenByClient = 'lastack'
 
 
@@ -51,6 +52,7 @@ Hello_maxReceiveBytes = _hfa.maxReceiveBytes
 Hello_maxOpenTime = _hfa.maxOpenTime
 Hello_useMyTcpAcks = _hfa.useMyTcpAcks
 Hello_succeedsTransport = _hfa.succeedsTransport
+Hello_sack = _hfa.sack
 Hello_lastSackSeenByClient = _hfa.lastSackSeenByClient
 del _hfa
 
@@ -83,12 +85,24 @@ def helloDataToHelloFrame(helloData):
 
 	obj = attrdict()
 
-	# credentialsData is always optional
+	# credentialsData is always optional.
 	obj.credentialsData = helloData[Hello_credentialsData] if \
 		Hello_credentialsData in helloData else ""
 	if not isinstance(obj.credentialsData, str) or \
 	not isValidShortRestrictedString(obj.credentialsData):
 		raise InvalidHello("bad credentialsData")
+
+	# sack is always optional.
+	if Hello_sack in helloData:
+		try:
+			sack = helloData[Hello_sack]
+			if not isinstance(sack, str):
+				raise TypeError
+			obj.sack = sackStringToSack(sack)
+		except (KeyError, TypeError, InvalidSackString):
+			raise InvalidHello("bad sack")
+	else:
+		obj.sack = None
 
 	try:
 		lastSackSeen = helloData[Hello_lastSackSeenByClient]

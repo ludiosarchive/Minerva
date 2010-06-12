@@ -1018,7 +1018,7 @@ class ServerTransport(object):
 
 
 	@mailboxify('_mailbox')
-	def _writeInitialFrames(self, requestNewStream):
+	def _writeInitialFrames(self, stream, requestNewStream):
 		if self._terminating:
 			return
 
@@ -1033,7 +1033,7 @@ class ServerTransport(object):
 		# but only if the client has an out-of-date impression of the SACK.
 		# We can't always send the SACK because of long-polling.
 		if self._lastSackSeenByClient is not None:
-			currentSack = self._stream.getSACK()
+			currentSack = stream.getSACK()
 			if currentSack != self._lastSackSeenByClient:
 				##print "\n", self, currentSack, self._lastSackSeenByClient
 				self._toSend += self._encodeFrame(SackFrame(currentSack))
@@ -1072,6 +1072,8 @@ class ServerTransport(object):
 				stream = self.factory.streamTracker.getStream(self.streamId)
 		else:
 			stream = self.factory.streamTracker.getStream(self.streamId)
+		# Danger! Do not call anything on `stream` until we authenticate
+		# the transport.
 
 		# During authentication, stop reading from the underlying TCP socket.
 		# It doesn't make sense the pause an HTTPChannel, because
@@ -1086,14 +1088,21 @@ class ServerTransport(object):
 
 		# Keep only the variables we need for the cbAuthOkay closure
 		succeedsTransport = hello.succeedsTransport if self._wantsStrings else None
+		sack = hello.sack
 
 		def cbAuthOkay(_):
 			if self._terminating:
 				return
+			self._writeInitialFrames(stream, requestNewStream)
+			if sack is not None:
+				if stream.sackReceived(sack):
+					# badSACK
+					self._closeWith(tk_acked_unsent_strings)
+					return
+
 			# Note: self._stream being non-None implies that were are authed,
 			# and that we have called transportOnline (or are calling it right now).
 			self._stream = stream
-			self._writeInitialFrames(requestNewStream)
 			self._stream.transportOnline(self, self._wantsStrings, succeedsTransport)
 			# Remember, a lot of stuff can happen underneath that
 			# transportOnline call because it may construct a MinervaProtocol,
