@@ -442,7 +442,7 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
  * @private
  */
 cw.net.Stream.prototype.streamSuccessfullyCreated_ = function(avoidCreatingTransports) {
-	cw.net.Stream.logger.finest('Stream ' + this.streamId + ' is now confirmed to exist at server.');
+	cw.net.Stream.logger.finest('Stream is now confirmed to exist at server.');
 	this.streamExistsAtServer_ = true;
 	// See comment for cw.net.Stream.prototype.stringsReceived_
 	if(this.secondaryIsWaitingForStreamToExist_ && !avoidCreatingTransports) {
