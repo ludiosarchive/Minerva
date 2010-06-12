@@ -494,10 +494,10 @@ cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, sendSackFr
 	// Long-polling transports set sendSackFrameImmediately=false because
 	// Stream will create a new transport after that long-poll closes. We know
 	// it will close very soon because it just received strings. The new
-	// transport will have a SackFrame, so it is stupid to send it redundantly.
-	// For non-long-polling (HTTP streaming), the transport might not close
-	// for a while, and in that case we want to send a SackFrame over a new
-	// transport.
+	// transport will have a SACK, so it is stupid to create a new secondary
+	// transport right now to send a SACK redundantly.
+	// For HTTP streaming, the transport might not close for a while, and
+	// tryToSend_ will create a secondary transport to send a SACK.
 	if(sendSackFrameImmediately) {
 		this.tryToSend_();
 	}
