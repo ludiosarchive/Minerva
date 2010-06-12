@@ -77,7 +77,7 @@ cw.net.HelloProperty_ = {
 	useMyTcpAcks: 'tcpack',
 	succeedsTransport: 'eeds',
 	sack: 'sack',
-	lastSackSeenByClient: 'lastack'
+	lastSackSeenByClient: 'seenack'
 };
 
 

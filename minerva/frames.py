@@ -34,7 +34,7 @@ class HelloFrameArguments(object):
 	useMyTcpAcks = 'tcpack'
 	succeedsTransport = 'eeds'
 	sack = 'sack'
-	lastSackSeenByClient = 'lastack'
+	lastSackSeenByClient = 'seenack'
 
 
 
