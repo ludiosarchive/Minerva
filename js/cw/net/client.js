@@ -355,16 +355,18 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 	var haveQueueItems = (this.queue_.getQueuedCount() != 0);
 	var maybeNeedToSendSack = !cw.eq.equals(currentSack, this.lastSackSeenByServer_);
 
-	cw.net.Stream.logger.finest('In tryToSend_, ' + cw.repr.repr({
-		currentSack: currentSack,
-		lastSackSeenByServer_: this.lastSackSeenByServer_,
-		haveQueueItems: haveQueueItems,
-		maybeNeedToSendSack: maybeNeedToSendSack}));
+//	cw.net.Stream.logger.finest('In tryToSend_, ' + cw.repr.repr({
+//		currentSack: currentSack,
+//		lastSackSeenByServer_: this.lastSackSeenByServer_,
+//		haveQueueItems: haveQueueItems,
+//		maybeNeedToSendSack: maybeNeedToSendSack}));
 
 	if(haveQueueItems || maybeNeedToSendSack) {
 		// After we're in STARTED, we always have a primary transport,
 		// even if its underlying object hasn't connected yet.
 		if(this.primaryTransport_.canSendMoreAfterStarted_) {
+			cw.net.Stream.logger.finest(
+				"tryToSend_: writing SACK/strings to primary");
 			if(maybeNeedToSendSack) {
 				this.primaryTransport_.writeSack_(currentSack);
 			}
@@ -374,7 +376,12 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 		// For robustness reasons, wait until we know that Stream
 		// exists on server before creating secondary transports.
 		} else if(this.streamExistsAtServer_ && this.secondaryTransport_ == null) {
+			cw.net.Stream.logger.finest(
+				"tryToSend_: creating secondary to send SACK/strings");
 			this.secondaryTransport_ = this.createNewTransport_(false);
+		} else {
+			cw.net.Stream.logger.finest(
+				"tryToSend_: need to send SACK/strings, but can't right now");
 		}
 	}
 };
@@ -403,7 +410,7 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
 	var endpoint = this.httpEndpoint_;
 	var transport = new cw.net.ClientTransport(
 		this.callQueue_, this, this.transportCount_, transportType, endpoint, becomePrimary);
-	cw.net.Stream.logger.finest('Created new transport ' + cw.repr.repr(transport));
+	cw.net.Stream.logger.finest('Created: ' + transport.getDescription_());
 	this.transports_.add(transport);
 	transport.writeStrings_(this.queue_, null);
 	transport.start_();
@@ -441,6 +448,7 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 	if(!removed) {
 		throw Error("transport was not removed?");
 	}
+	cw.net.Stream.logger.fine('Offline: ' + transport.getDescription_());
 	if(transport == this.primaryTransport_) {
 		this.primaryTransport_ = this.createNewTransport_(true);
 	} else if(transport == this.secondaryTransport_) {
@@ -760,6 +768,16 @@ cw.net.ClientTransport.prototype.writeToUnderlying_ = function() {
 };
 
 /**
+ * Only used for log messages.
+ * @return {string}
+ * @private
+ */
+cw.net.ClientTransport.prototype.getDescription_ = function() {
+	var prettyString = (this.becomePrimary_ ? "Prim. T#" : "Sec. T#") + this.transportNumber;
+	return prettyString;
+};
+
+/**
  * @param {!Array.<string>} frames
  * @private
  */
@@ -787,7 +805,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 			try {
 				/** @type {!cw.net.Frame} Decoded frame */
 				var frame = cw.net.decodeFrameFromServer(frameStr);
-				cw.net.ClientTransport.logger.fine(cw.repr.repr(this) + ' received ' + cw.repr.repr(frame));
+				cw.net.ClientTransport.logger.fine(this.getDescription_() + ' RECV ' + cw.repr.repr(frame));
 				if(frame instanceof cw.net.StringFrame) {
 					this.peerSeqNum_ += 1;
 					// Because we may have received multiple Minerva strings, collect
@@ -981,6 +999,10 @@ cw.net.ClientTransport.prototype.start_ = function() {
 	}
 
 	if(this.transportType_ == cw.net.TransportType_.BROWSER_HTTP) {
+		for(var i=0; i < this.toSendFrames_.length; i++) {
+			var frame = this.toSendFrames_[i];
+			cw.net.ClientTransport.logger.fine(this.getDescription_() + ' SEND ' + cw.repr.repr(frame));
+		}
 		var payload = this.flushBufferAsHttpPayload_();
 		// TODO XXX IMPORTANT: remove this forced delay
 		var that = this;
