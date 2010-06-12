@@ -11,5 +11,5 @@ setup(
 	version=minerva.__version__,
 	description="Minerva",
 	packages=['minerva', 'minerva.sample', 'minerva.flashtest', 'twisted.plugins'],
-	package_data={'minerva': ['flashtest/*.swf', 'flashtest/*.html'],},
+	package_data={'minerva': ['*.html', '*/*.swf', '*/*.html'],},
 )

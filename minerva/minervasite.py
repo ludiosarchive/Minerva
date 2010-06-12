@@ -166,29 +166,6 @@ class UnicodeRainbow(BetterResource):
 
 
 
-class Index(BetterResource):
-	isLeaf = True
-
-	def render_GET(self, request):
-		return '''\
-<!doctype html>
-<ul>
-<li><a href="/@tests/">/@tests/</a>
-<li><a href="/docs/">/docs/</a>
-<li><a href="/@testres_Coreweb/">/@testres_Coreweb/</a>
-<li><a href="/@testres_Minerva/">/@testres_Minerva/</a>
-	<ul>
-	<li><a href="/@testres_Minerva/DisplayConnections/">DisplayConnections/</a>
-	<li><a href="/@testres_Minerva/SimpleResponse/">SimpleResponse/</a>
-	<li><a href="/@testres_Minerva/UnicodeRainbow/">UnicodeRainbow/</a>
-	<li><a href="/@testres_Minerva/NoOriginHeader/">NoOriginHeader/</a>
-	</ul>
-<li><a href="/form_sandbox/">/form_sandbox/</a>
-<li><a href="/flashtest/">/flashtest/</a>
-</ul>
-'''
-
-
 class FormSandbox(BetterResource):
 	isLeaf = True
 
@@ -321,6 +298,7 @@ class Root(BetterResource):
 
 	def __init__(self, reactor, httpFace, csrfStopper, cookieInstaller):
 		import cwtools
+		import minerva
 
 		BetterResource.__init__(self)
 
@@ -328,7 +306,8 @@ class Root(BetterResource):
 
 		JSPATH = FilePath(os.environ['JSPATH'])
 
-		self.putChild('', Index())
+		minervaPath = FilePath(minerva.__path__[0])
+		self.putChild('', BetterFile(minervaPath.child('index.html').path))
 		self.putChild('JSPATH', BetterFile(JSPATH.path))
 		self.putChild('@tests', testing.TestPage(['cw.net'], JSPATH))
 
