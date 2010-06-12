@@ -309,6 +309,14 @@ cw.net.Stream.prototype.maxUndeliveredBytes = 1 * 1024 * 1024;
 cw.net.Stream.prototype.streamExistsAtServer_ = false;
 
 /**
+ * Is a secondary transport suppressed because Stream might not exist on
+ * server yet?
+ * @type {boolean}
+ * @private
+ */
+cw.net.Stream.prototype.secondaryIsWaitingForStreamToExist_ = false;
+
+/**
  * State the stream is in.
  * @type {!cw.net.StreamState_}
  * @private
@@ -375,10 +383,17 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 			}
 		// For robustness reasons, wait until we know that Stream
 		// exists on server before creating secondary transports.
-		} else if(this.streamExistsAtServer_ && this.secondaryTransport_ == null) {
-			cw.net.Stream.logger.finest(
-				"tryToSend_: creating secondary to send SACK/strings");
-			this.secondaryTransport_ = this.createNewTransport_(false);
+		} else if(this.secondaryTransport_ == null) {
+			if(!this.streamExistsAtServer_) {
+				cw.net.Stream.logger.finest(
+					"tryToSend_: not creating a secondary because Stream " +
+					"might not exist on server");
+				this.secondaryIsWaitingForStreamToExist_ = true;
+			} else {
+				cw.net.Stream.logger.finest(
+					"tryToSend_: creating secondary to send SACK/strings");
+				this.secondaryTransport_ = this.createNewTransport_(false);
+			}
 		} else {
 			cw.net.Stream.logger.finest(
 				"tryToSend_: need to send SACK/strings, but can't right now");
@@ -423,11 +438,19 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
  * first frame over *every* successfully-authenticated transport with
  * `requestNewStream`, so this method might be called more than once.
  * This method is idempotent.
+ * @param {boolean} avoidCreatingTransports
  * @private
  */
-cw.net.Stream.prototype.streamSuccessfullyCreated_ = function() {
+cw.net.Stream.prototype.streamSuccessfullyCreated_ = function(avoidCreatingTransports) {
+	cw.net.Stream.logger.finest('Stream ' + this.streamId + ' is now confirmed to exist at server.');
 	this.streamExistsAtServer_ = true;
-	this.tryToSend_();
+	// See comment for cw.net.Stream.prototype.stringsReceived_
+	if(this.secondaryIsWaitingForStreamToExist_ && !avoidCreatingTransports) {
+		// This method is idempotent, so we should set this to false
+		// to avoid calling tryToSend_ more than necessary.
+		this.secondaryIsWaitingForStreamToExist_ = false;
+		this.tryToSend_();
+	}
 };
 
 /**
@@ -487,10 +510,10 @@ cw.net.Stream.prototype.resetFromPeer_ = function(reasonString, applicationLevel
  * 	these boxes.
  * @param {!Array.<number|string>} pairs (seqNum, string) pairs that
  * 	transport has received.
- * @param {boolean} sendSackFrameImmediately
+ * @param {boolean} avoidCreatingTransports
  * @private
  */
-cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, sendSackFrameImmediately) {
+cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, avoidCreatingTransports) {
 	//if(this.state_ == cw.net.StreamState_.DISCONNECTED) {
 	//	return;
 	//}
@@ -498,23 +521,26 @@ cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, sendSackFr
 	var _ = this.incoming_.give(
 		pairs, this.maxUndeliveredStrings, this.maxUndeliveredBytes);
 
-	// Because we received strings, we may need to send a SACK.
-	//
-	// Long-polling transports set sendSackFrameImmediately=false because
-	// Stream will create a new transport after that long-poll closes. We know
-	// it will close very soon because it just received strings. The new
-	// transport will have a SACK, so it is stupid to create a new secondary
-	// transport right now to send a SACK redundantly.
-	// For HTTP streaming, the transport might not close for a while, and
-	// tryToSend_ will create a secondary transport to send a SACK.
-	if(sendSackFrameImmediately) {
-		this.tryToSend_();
-	}
-
 	var items = _[0];
 	var hitLimit = _[1];
 	if(items) {
 		this.protocol_.stringsReceived(items);
+	}
+
+	// Because we received strings, we may need to send a SACK.
+	// Do this after giving protocol_ the strings, because protocol may
+	// queue more strings for sending. Note that in that case, tryToSend_
+	// has already been called.
+	//
+	// Long-polling transports set avoidCreatingTransports=true because
+	// Stream will create a new transport after that long-poll closes. We know
+	// it will close very soon because it just received strings. The new
+	// transport will have a SACK, so it is stupid to create a new secondary
+	// transport right now to send a SACK redundantly.
+	// For HTTP streaming, the transport might not close for a while, so
+	// we do call tryToSend_.
+	if(!avoidCreatingTransports) { // maybe we want && !hitLimit?
+		this.tryToSend_();
 	}
 
 	// We deliver the deliverable strings even if the receive window is overflowing,
@@ -750,8 +776,8 @@ cw.net.ClientTransport.prototype.__reprToPieces__ = function(sb) {
 cw.net.ClientTransport.prototype.handleStrings_ = function(bunchedStrings) {
 	// bunchedStrings is already sorted 99.99%+ of the time
 	bunchedStrings.sort();
-	var sendSackFrameImmediately = (this.s2cStreaming);
-	this.stream_.stringsReceived_(this, bunchedStrings, sendSackFrameImmediately);
+	var avoidCreatingTransports = !this.s2cStreaming;
+	this.stream_.stringsReceived_(this, bunchedStrings, avoidCreatingTransports);
 	// Remember that a lot can happen underneath that stringsReceived call,
 	// including a call to our own `reset_` or `close_` or `writeStrings_`
 };
@@ -834,7 +860,8 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 				} else if(frame instanceof cw.net.PaddingFrame) {
 					// Ignore it
 				} else if(frame instanceof cw.net.StreamCreatedFrame) {
-					this.stream_.streamSuccessfullyCreated_();
+					var avoidCreatingTransports = !this.s2cStreaming;
+					this.stream_.streamSuccessfullyCreated_(avoidCreatingTransports);
 				} else {
 					if(bunchedStrings) {
 						this.handleStrings_(bunchedStrings);
