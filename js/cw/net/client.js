@@ -260,18 +260,6 @@ cw.net.Stream = function(callQueue, protocol, httpEndpoint, makeCredentialsCalla
 	this.streamId = cw.net.makeStreamId_();
 
 	/**
-	 * @type {!cw.net.SACK}
-	 * @private
-	 */
-	this.lastSackSeenByClient_ = new cw.net.SACK(-1, []);
-
-	/**
-	 * @type {!cw.net.SACK}
-	 * @private
-	 */
-	this.lastSackSeenByServer_ = new cw.net.SACK(-1, []);
-
-	/**
 	 * The send queue.
 	 * @type {!cw.net.Queue}
 	 * @private
@@ -286,6 +274,18 @@ cw.net.Stream = function(callQueue, protocol, httpEndpoint, makeCredentialsCalla
 	this.incoming_ = new cw.net.Incoming();
 };
 goog.inherits(cw.net.Stream, goog.Disposable);
+
+/**
+ * @type {!cw.net.SACK}
+ * @private
+ */
+cw.net.Stream.prototype.lastSackSeenByClient_ = new cw.net.SACK(-1, []);
+
+/**
+ * @type {!cw.net.SACK}
+ * @private
+ */
+cw.net.Stream.prototype.lastSackSeenByServer_ = new cw.net.SACK(-1, []);
 
 /**
  * Maximum number of undelivered strings allowed in {@code this.incoming_},
