@@ -1,5 +1,17 @@
 /**
- * @fileoverview Minerva client and related functionality
+ * @fileoverview Minerva client and related functionality.
+ *
+ * If you make modifications, keep in mind that the unit tests are not
+ * complete enough to prevent regressions. You may want to use
+ * the /chatapp/ page to check the behavior, as well as a tools like
+ * HttpFox, Firebug, and Wireshark.
+ *
+ * There is a lot of behavior we're optimizing for in this file:
+ * 	- sending as little redundant data as possible
+ * 	- receiving as little redundant data as possible
+ * 	- anti-DoS (not making crazy amount of requests if peer is
+ * 		unreachable or misbehaving)
+ * 	- low latency (no excessive setTimeout(..., 0) )
  */
 
 goog.provide('cw.net.WhoReset');
