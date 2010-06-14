@@ -327,7 +327,7 @@ class Root(BetterResource):
 
 		# The docs are outside of the minerva package
 		docsDir = FilePath(__file__).parent().parent().child('docs')
-		if(docsDir.exists()):
+		if docsDir.exists():
 			self.putChild('docs', BetterFile(docsDir.path))
 
 
