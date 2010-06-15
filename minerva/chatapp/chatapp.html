@@ -92,8 +92,8 @@ chatapp.ChatProtocol.prototype.streamStarted = function(stream) {
 	this.stream_.sendStrings(['begin_chat']);
 };
 
-chatapp.ChatProtocol.prototype.streamReset = function(whoReset, reasonString) {
-	logger.info('streamReset: ' + whoReset + ', ' + reasonString);
+chatapp.ChatProtocol.prototype.streamReset = function(reasonString, applicationLevel) {
+	logger.info('streamReset: ' + reasonString + ', ' + applicationLevel);
 };
 
 chatapp.ChatProtocol.prototype.handleString_ = function(s) {

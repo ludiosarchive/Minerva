@@ -25,7 +25,7 @@ from minerva.window import SACK, Queue, Incoming
 from minerva.frames import (
 	HelloFrame, StringFrame, SeqNumFrame, SackFrame, StreamStatusFrame,
 	StreamCreatedFrame, YouCloseItFrame, ResetFrame, PaddingFrame,
-	TransportKillFrame, WhoReset, InvalidFrame, decodeFrameFromClient)
+	TransportKillFrame, InvalidFrame, decodeFrameFromClient)
 
 # Make globals that pypycpyo.optimizer can optimize away
 tk_stream_attach_failure = TransportKillFrame.stream_attach_failure
@@ -72,7 +72,7 @@ class IMinervaProtocol(Interface):
 		"""
 
 
-	def streamReset(whoReset, reasonString):
+	def streamReset(reasonString, applicationLevel):
 		"""
 		Called when this stream has reset, either internally by Minerva
 		server's Stream, or a call to Stream.reset, or by a reset frame
@@ -80,13 +80,12 @@ class IMinervaProtocol(Interface):
 
 		You must *not* raise any exception. Wrap your code in try/except if necessary.
 
-		@param whoReset: who reset the Stream. One of
-		C{WhoReset.{server_minerva,server_app,client_minerva,client_app}}.
-		@type whoReset: int
-
-		@param reasonString: textual reason why stream has reset.
+		@param reasonString: Textual reason why Stream has reset.
 			String contains only bytes in inclusive range 0x20 - 0x7E.
 		@type reasonString: str
+
+		@type applicationLevel: Was the reason caused by an application (not
+			Minerva internals?)
 		"""
 
 
@@ -123,7 +122,7 @@ class BasicMinervaProtocol(object):
 		self.stream = stream
 
 
-	def streamReset(self, whoReset, reasonString):
+	def streamReset(self, reasonString, applicationLevel):
 		del self.stream
 
 
@@ -292,7 +291,7 @@ class Stream(object):
 		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
 		try:
-			self._protocol.streamReset(WhoReset.server_app, reasonString)
+			self._protocol.streamReset(reasonString, True)
 		finally:
 			del self._protocol
 
@@ -315,9 +314,7 @@ class Stream(object):
 		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
 		try:
-			self._protocol.streamReset(
-				WhoReset.client_app if applicationLevel else WhoReset.client_minerva,
-				reasonString)
+			self._protocol.streamReset(reasonString, applicationLevel)
 		finally:
 			del self._protocol
 
@@ -329,11 +326,11 @@ class Stream(object):
 		# .copy() because _transports shrinks as transports call Stream.transportOffline
 		# TODO: add explicit test that makes this .copy() necessary
 		for t in self._transports.copy():
-			t.writeReset(reasonString, applicationLevel=False)
+			t.writeReset(reasonString, False)
 		self._fireNotifications()
 		# Call application code last, to mitigate disaster if it raises an exception.
 		try:
-			self._protocol.streamReset(WhoReset.server_minerva, reasonString)
+			self._protocol.streamReset(reasonString, False)
 		finally:
 			del self._protocol
 

@@ -262,9 +262,9 @@ class DemoProtocol(BasicMinervaProtocol):
 		self.stream.sendStrings(send)
 
 
-	def streamReset(self, whoReset, reasonString):
+	def streamReset(self, reasonString, applicationLevel):
 		self._reset = True
-		log.msg("Stream reset: %r, %r" % (whoReset, reasonString))
+		log.msg("Stream reset: %r, %r" % (reasonString, applicationLevel))
 		if self.chatting:
 			self.factory.chatters.remove(self)
 

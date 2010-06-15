@@ -31,7 +31,7 @@ from minerva.decoders import (
 	BencodeStringDecoder, Int32StringDecoder, DelimitedStringDecoder)
 
 from minerva.newlink import (
-	Stream, StreamTracker, NoSuchStream, WhoReset,
+	Stream, StreamTracker, NoSuchStream,
 	StreamAlreadyExists, ISimpleConsumer, IMinervaProtocol,
 	IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
 	IMinervaTransport, ServerTransport, SocketFace, HttpFace,
@@ -563,8 +563,7 @@ class StreamTests(unittest.TestCase):
 			self.assertEqual(True, s.disconnected)
 
 			i = list(factory.instances)[0]
-			who = WhoReset.client_app if applicationLevel else WhoReset.client_minerva
-			self.assertEqual([["streamStarted", s], ["streamReset", who, 'the reason']], i.getNew())
+			self.assertEqual([["streamStarted", s], ["streamReset", 'the reason', applicationLevel]], i.getNew())
 
 			self.assertEqual([["closeGently"]], t1.getNew())
 			self.assertEqual([["closeGently"]], t2.getNew())
@@ -2480,7 +2479,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		self.assertEqual([StreamStatusFrame(SACK(1, ())), YouCloseItFrame()], transport2.getNew())
 
-		self.assertEqual([["streamReset", WhoReset.client_app, "testing"]], proto.getNew())
+		self.assertEqual([["streamReset", "testing", True]], proto.getNew())
 
 		self.assertEqual([], transport0.getNew())
 		self.assertEqual([], transport1.getNew())
@@ -2675,7 +2674,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		proto = list(self.protocolFactory.instances)[0]
 		self.assertEqual([
 			["streamStarted", stream],
-			["streamReset", WhoReset.client_app, "reason"]
+			["streamReset", "reason", True]
 		], proto.getNew())
 
 
@@ -2706,7 +2705,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		proto = list(self.protocolFactory.instances)[0]
 		self.assertEqual([
 			["stringsReceived", [sf("box0"), sf("box1")]],
-			["streamReset", WhoReset.client_app, ''],
+			["streamReset", '', True],
 		], proto.getNew()[1:])
 
 
@@ -2739,7 +2738,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		proto = list(self.protocolFactory.instances)[0]
 		self.assertEqual([
 			["streamStarted", stream],
-			["streamReset", WhoReset.client_app, "reason"],
+			["streamReset", "reason", True],
 		], proto.getNew())
 
 
@@ -2780,7 +2779,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			proto = list(self.protocolFactory.instances)[0]
 			self.assertEqual([
-				["streamReset", WhoReset.server_app, 'reset forced by mock protocol'],
+				["streamReset", 'reset forced by mock protocol', True],
 			], proto.getNew()[1:])
 
 
@@ -2823,7 +2822,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			proto = list(self.protocolFactory.instances)[0]
 			if clientResetsImmediately:
-				self.assertEqual([["streamReset", WhoReset.client_app, '']], proto.getNew()[1:])
+				self.assertEqual([["streamReset", '', True]], proto.getNew()[1:])
 			else:
 				self.assertEqual([], proto.getNew()[1:])
 
@@ -2869,7 +2868,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			proto = list(self.protocolFactory.instances)[0]
 			self.assertEqual([
 				["stringsReceived", [sf("box0"), sf("box1")]],
-				["streamReset", WhoReset.server_app, 'reset forced by mock protocol']
+				["streamReset", 'reset forced by mock protocol', True]
 			], proto.getNew()[1:])
 
 
@@ -2919,7 +2918,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			if clientResetsImmediately:
 				self.assertEqual([
 					["stringsReceived", [sf("box0"), sf("box1")]],
-					["streamReset", WhoReset.client_app, ''],
+					["streamReset", '', True],
 				], proto.getNew()[1:])
 			else:
 				self.assertEqual([
@@ -2970,7 +2969,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			proto = list(self.protocolFactory.instances)[0]
 			self.assertEqual([
 				["stringsReceived", [sf("box0"), sf("box1"), sf("box2")]],
-				["streamReset", WhoReset.server_app, 'reset forced by mock protocol'],
+				["streamReset", 'reset forced by mock protocol', True],
 			], proto.getNew()[1:])
 
 

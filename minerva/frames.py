@@ -508,14 +508,6 @@ class PaddingFrame(tuple):
 
 
 
-class WhoReset(object):
-	server_minerva = 1
-	server_app = 2
-	client_minerva = 3
-	client_app = 4
-
-
-
 def isValidShortRestrictedString(string):
 	"""
 	Return C{True} if C{str} C{string} has 0-255 bytes,

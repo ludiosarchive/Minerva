@@ -347,8 +347,8 @@ class MockMinervaProtocol(_MockMixin):
 			self._callStuff()
 
 
-	def streamReset(self, whoReset, reasonString):
-		self.log.append(['streamReset', whoReset, reasonString])
+	def streamReset(self, reasonString, applicationLevel):
+		self.log.append(['streamReset', reasonString, applicationLevel])
 
 
 	def stringsReceived(self, strings):
