@@ -123,7 +123,7 @@ cw.net.TestClient.RecordingProtocol.prototype.streamReset = function(reasonStrin
 };
 
 cw.net.TestClient.RecordingProtocol.prototype.handleString_ = function(s) {
-	throw new Error("override handleString_ on your RecordingProtocol");
+	throw Error("override handleString_ on your RecordingProtocol");
 };
 
 cw.net.TestClient.RecordingProtocol.prototype.stringsReceived = function(strings) {

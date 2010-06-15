@@ -26,7 +26,7 @@ cw.net.retValToBoolean_ = function(retval) {
 	} else if(retval == 'false') {
 		return false;
 	}
-	throw new Error("Unexpected retval from Flash: " + retval);
+	throw Error("Unexpected retval from Flash: " + retval);
 };
 
 /**
