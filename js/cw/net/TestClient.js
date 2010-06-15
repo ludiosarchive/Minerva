@@ -121,6 +121,7 @@ cw.net.TestClient.RecordingProtocol.prototype.streamStarted = function(stream) {
 
 cw.net.TestClient.RecordingProtocol.prototype.streamReset = function(reasonString, applicationLevel) {
 	this.log.push(['streamReset', reasonString, applicationLevel]);
+	this.testingDoneD.callback(null);
 };
 
 cw.net.TestClient.RecordingProtocol.prototype.handleString_ = function(s) {
@@ -334,6 +335,30 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 		stream.start();
 
 		proto.testingDoneD.addCallback(function() { self._runAssertions(stream, proto); });
+		return proto.testingDoneD;
+	},
+
+	/**
+	 * Send a string that makes the server application reset the Stream;
+	 * verify that our Stream is reset. Note that we might not get a
+	 * ResetFrame because our primary transport might not be connected.
+	 * (Though perhaps not in practice in this specific test case).
+	 */
+	function test_streamReset(self) {
+		var proto = self.makeProtocol_();
+		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
+		var stream = new cw.net.Stream(
+			callQueue, proto, '/httpface/', goog.bind(self.makeCredentialsData_, self));
+		stream.sendStrings(['reset_me:test_streamReset']);
+		stream.start();
+
+		function streamResetAssertions() {
+			self.assertEqual(2, proto.log.length);
+			self.assertEqual("streamStarted", proto.log[0][0]);
+			self.assertEqual("streamReset", proto.log[1][0]);
+		}
+
+		proto.testingDoneD.addCallback(streamResetAssertions);
 		return proto.testingDoneD;
 	}
 );
