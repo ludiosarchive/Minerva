@@ -224,6 +224,14 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 		return uaId + '|' + self.csrfToken_;
 	},
 
+	function _runAssertions(self, stream, proto) {
+		self.assertEqual([
+			["streamStarted", stream],
+			["stringsReceived", ["hello world"]],
+			["stringsReceived", ["hello world"]]
+		], proto.log);
+	},
+
 	function test_stream(self) {
 		var proto = new cw.net.TestClient.DemoProtocol();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
@@ -232,15 +240,23 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 		stream.start();
 		stream.sendStrings(['echo_twice:hello world']);
 
-		function runAssertions() {
-			self.assertEqual([
-				["streamStarted", stream],
-				["stringsReceived", ["hello world"]],
-				["stringsReceived", ["hello world"]]
-			], proto.log);
-		}
-		proto.testingDoneD.addCallback(runAssertions);
+		proto.testingDoneD.addCallback(function() { self._runAssertions(stream, proto); });
+		return proto.testingDoneD;
+	},
 
+	/**
+	 * Like test_stream, but we sendStrings(...) before we start(), which
+	 * makes it send the `echo_twice:...` string in the first transport.
+	 */
+	function test_streamWithStringInFirstTransport(self) {
+		var proto = new cw.net.TestClient.DemoProtocol();
+		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
+		var stream = new cw.net.Stream(
+			callQueue, proto, '/httpface/', goog.bind(self.makeCredentialsData_, self));
+		stream.sendStrings(['echo_twice:hello world']);
+		stream.start();
+
+		proto.testingDoneD.addCallback(function() { self._runAssertions(stream, proto); });
 		return proto.testingDoneD;
 	}
 );
