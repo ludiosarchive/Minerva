@@ -445,7 +445,7 @@ cw.net.Stream.prototype.tryToSend_ = function() {
  */
 cw.net.Stream.prototype.sendStrings = function(strings) {
 	if(this.state_ > cw.net.StreamState_.STARTED) {
-		throw Error("can't send strings in state " + this.state_);
+		throw Error("sendStrings: Can't send strings in state " + this.state_);
 	}
 	if(!strings.length) {
 		return;
@@ -518,7 +518,7 @@ cw.net.Stream.prototype.streamStatusReceived_ = function(lastSackSeen) {
 cw.net.Stream.prototype.transportOffline_ = function(transport) {
 	var removed = this.transports_.remove(transport);
 	if(!removed) {
-		throw Error("Transport was not removed?");
+		throw Error("transportOffline_: Transport was not removed?");
 	}
 	cw.net.Stream.logger.fine('Offline: ' + transport.getDescription_());
 
@@ -556,7 +556,7 @@ cw.net.Stream.prototype.reset = function(reasonString) {
 	goog.asserts.assertString(reasonString);
 
 	if(this.state_ > cw.net.StreamState_.STARTED) {
-		throw Error("can't send reset in state " + this.state_);
+		throw Error("reset: Can't send reset in state " + this.state_);
 	}
 	this.state_ = cw.net.StreamState_.RESETTING;
 	if(this.primaryTransport_ && this.primaryTransport_.canFlushMoreThanOnce_) {
@@ -929,7 +929,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 			if(this.receivedCounter_ == 0 &&
 			this.transportType_ == cw.net.TransportType_.BROWSER_HTTP &&
 			frameStr != ";)]}P") {
-				logger.warning("closing soon because got bad premable: " + cw.repr.repr(frameStr));
+				logger.warning("Closing soon because got bad premable: " + cw.repr.repr(frameStr));
 				closeSoon = true;
 				break;
 			}
@@ -946,7 +946,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 					bunchedStrings.push([this.peerSeqNum_, frame.string])
 				} else if(frame instanceof cw.net.SackFrame) {
 					if(this.stream_.sackReceived_(frame.sack)) {
-						logger.warning("closing soon because got bad SackFrame");
+						logger.warning("Closing soon because got bad SackFrame");
 						closeSoon = true;
 						break;
 					}
@@ -955,12 +955,12 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 				} else if(frame instanceof cw.net.StreamStatusFrame) {
 					this.stream_.streamStatusReceived_(frame.lastSackSeen);
 				} else if(frame instanceof cw.net.YouCloseItFrame) {
-					logger.finest("closing soon because got YouCloseItFrame");
+					logger.finest("Closing soon because got YouCloseItFrame");
 					closeSoon = true;
 					break;
 				} else if(frame instanceof cw.net.TransportKillFrame) {
 					// TODO: adjust our behavior based on the type of TK we got
-					logger.finest("closing soon because got TransportKillFrame");
+					logger.finest("Closing soon because got TransportKillFrame");
 					closeSoon = true;
 					break;
 				} else if(frame instanceof cw.net.PaddingFrame) {
@@ -977,14 +977,14 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 						this.stream_.resetFromPeer_(frame.reasonString, frame.applicationLevel);
 						break;
 					} else {
-						throw Error("unexpected state in framesReceived_");
+						throw Error("Unexpected state in framesReceived_.");
 					}
 				}
 			} catch(e) {
 				if(!(e instanceof cw.net.InvalidFrame)) {
 					throw e;
 				}
-				logger.warning("closing soon because got InvalidFrame: " + cw.repr.repr(frameStr));
+				logger.warning("Closing soon because got InvalidFrame: " + cw.repr.repr(frameStr));
 				closeSoon = true;
 				break;
 			}
@@ -1125,7 +1125,7 @@ cw.net.ClientTransport.prototype.flushBufferAsHttpPayload_ = function() {
  */
 cw.net.ClientTransport.prototype.flush_ = function() {
 	if(this.started_ && !this.canFlushMoreThanOnce_) {
-		throw Error("flush_: can't flush more than once to this transport");
+		throw Error("flush_: Can't flush more than once to this transport.");
 	}
 
 	if(!this.started_ && !this.toSendFrames_.length) {
@@ -1142,7 +1142,7 @@ cw.net.ClientTransport.prototype.flush_ = function() {
 		var payload = this.flushBufferAsHttpPayload_();
 		this.makeHttpRequest_(payload);
 	} else {
-		throw Error("flush_: don't know what to do for this transportType");
+		throw Error("flush_: Don't know what to do for this transportType.");
 	}
 };
 
@@ -1209,7 +1209,7 @@ cw.net.ClientTransport.prototype.close_ = function() {
 			this.underlying_.dispose();
 		}
 	} else {
-		throw Error("close_: don't know what to do for this transportType");
+		throw Error("close_: Don't know what to do for this transportType.");
 	}
 	this.stream_.transportOffline_(this);
 };
@@ -1222,7 +1222,7 @@ cw.net.ClientTransport.prototype.close_ = function() {
  * @private
  */
 cw.net.ClientTransport.prototype.causedRwinOverflow_ = function() {
-	cw.net.ClientTransport.logger.severe("peer caused rwin overflow");
+	cw.net.ClientTransport.logger.severe("Peer caused rwin overflow.");
 	this.close_();
 };
 
