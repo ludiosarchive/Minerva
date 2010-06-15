@@ -364,33 +364,27 @@ class Stream(object):
 		"""
 		Private. Do not call this.
 
-		C{sack} is a L{window.SACK}
-		Minerva transports call this when they get a SackFrame from client.
+		Minerva transports call this when they get a HelloFrame.sack
+		or SackFrame from client. C{sack} is a L{window.SACK}.
+
 		Returns C{True} if SACK was bad, C{False} otherwise.
 		"""
-		# TODO: As an addition to the succeedsTransport parameter, we could
-		# implement a feature to more-quickly remove strings from the server's
-		# send window (Queue):
-		# implement a flag on SackFrame that lets client indicate "outdated SACK",
-		# which causes server to remove old frames from its send window, but
-		# doesn't imply that the client didn't receive strings further-ahead
-		# of the SACK numbers.
-
-		# No need to pretend any more, because we just got a likely-up-to-date sack from the client.
+		# No need to pretend any more, because we just got a
+		# likely-up-to-date SACK from the client.
 		wasPretending = self._pretendAcked
 		self._pretendAcked = None
 
 		self.lastSackSeenByServer = sack
 
 		if self.queue.handleSACK(sack):
-			return True # badSACK
+			return True
 
-		if wasPretending:
+		if wasPretending is not None:
 			# Try to send, because the SACK may have indicated that the client
 			# lost strings that were delivered to the older active S2C transport.
 			self._tryToSend()
 
-		return False # not badSACK
+		return False
 
 
 	def transportOnline(self, transport, wantsStrings, succeedsTransport):
@@ -1094,8 +1088,13 @@ class ServerTransport(object):
 				return
 			self._writeInitialFrames(stream, requestNewStream)
 			if sack is not None:
+				# Call sackReceived before transportOnline:
+				# * If hello.sack is a bad SACK, we never tell Stream about the transport.
+				# * If this transport is succeeding another transport, the hello.sack
+				#    removes strings from server's Queue but keeps this new
+				#    transport in _pretendAcked mode.
 				if stream.sackReceived(sack):
-					# badSACK
+					# It was a bad SACK, so close.
 					self._closeWith(tk_acked_unsent_strings)
 					return
 
@@ -1194,7 +1193,7 @@ class ServerTransport(object):
 
 			elif frameType == SackFrame:
 				if self._stream.sackReceived(frame.sack):
-					# badSACK
+					# It was a bad SACK, so close.
 					self._closeWith(tk_acked_unsent_strings)
 					break
 
