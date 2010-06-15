@@ -10,6 +10,7 @@ Notes on understanding this test file:
 	that it was a victim of a search/replace spree.
 """
 
+from collections import defaultdict
 from cStringIO import StringIO
 from zope.interface import verify
 from twisted.trial import unittest
@@ -2113,26 +2114,31 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		frames are buffered during authentication, client receives the
 		TransportKillFrame after authentication is complete.
 		"""
-		expected = {}
-		expected['bad_frame'] = [
+		expected = defaultdict(dict)
+		# expected[terminationMethod][rejectAll] = [frame0, frame1, ...]
+
+		expected['bad_frame'][True] = [
+			TransportKillFrame(tk_stream_attach_failure),
+			YouCloseItFrame()]
+
+		expected['bad_frame'][False] = [
+			StreamCreatedFrame(),
+			StreamStatusFrame(SACK(-1, ())),
 			TransportKillFrame(tk_invalid_frame_type_or_arguments),
 			YouCloseItFrame()]
-		expected['client_closed'] = []
+
+		expected['client_closed'][True] = []
+
+		expected['client_closed'][False] = []
 
 		for rejectAll in (True, False):
 			for terminationMethod in ('bad_frame', 'client_closed'):
-				##print dict(rejectAll=rejectAll, terminationMethod=terminationMethod)
-
-				expectedFrames = expected[terminationMethod]
-				if rejectAll == False and terminationMethod == 'bad_frame':
-					expectedFrames = [
-						StreamCreatedFrame(),
-						StreamStatusFrame(SACK(-1, ()))] + expectedFrames
-
 				self._resetStreamTracker()
 
-				frame0 = _makeHelloFrame()
+				##print dict(rejectAll=rejectAll, terminationMethod=terminationMethod)
+
 				transport = self._makeTransport(rejectAll=rejectAll, firewallActionTime=1.0)
+				frame0 = _makeHelloFrame()
 				transport.sendFrames([frame0])
 				self.assertEqual([], transport.getNew())
 				if terminationMethod == 'bad_frame':
@@ -2149,6 +2155,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 				self.assertEqual([], withoutUnimportantStreamCalls(stream.getNew()))
 
 				self._clock.advance(1.0)
+				expectedFrames = expected[terminationMethod][rejectAll]
 				self.assertEqual(expectedFrames, transport.getNew())
 
 				if rejectAll == False and terminationMethod == 'bad_frame':
@@ -2163,6 +2170,27 @@ class _BaseSocketTransportTests(_BaseHelpers):
 					# Because the transport was disconnect during authentication,
 					# we don't even tell Stream that it ever went online.
 					self.assertEqual([], withoutUnimportantStreamCalls(stream.getNew()))
+
+
+	def test_sentFramesIgnoredIfTransportAuthFails(self):
+		"""
+		If client sends valid frames while transport is authenticating,
+		those frames are completely ignored if transport auth fails.
+
+		This is a test for a real regression.
+		"""
+		frame0 = _makeHelloFrame()
+		transport = self._makeTransport(rejectAll=True, firewallActionTime=1.0)
+		transport.sendFrames([frame0])
+		self.assertEqual([], transport.getNew())
+
+		transport.sendFrames([SackFrame(SACK(2, ())), StringFrame("hello")])
+		self.assertEqual([], transport.getNew())
+		self._clock.advance(1.0)
+		self.assertEqual([
+			TransportKillFrame(tk_stream_attach_failure),
+			YouCloseItFrame()
+		], transport.getNew())
 
 
 

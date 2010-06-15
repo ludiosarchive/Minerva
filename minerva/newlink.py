@@ -1118,12 +1118,8 @@ class ServerTransport(object):
 
 		def cbAuthFailed(f):
 			f.trap(RejectTransport)
-			if self._terminating:
-				return
-			waitedFrames = self._waitingFrames
-			self._waitingFrames = None
-			self._framesReceived(waitedFrames)
 			if not self._terminating:
+				self._waitingFrames = None
 				self._closeWith(tk_stream_attach_failure)
 
 		def resumeWritable(_):
