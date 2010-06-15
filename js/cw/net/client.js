@@ -347,8 +347,8 @@ cw.net.Stream.prototype.primaryTransport_ = null;
 cw.net.Stream.prototype.secondaryTransport_ = null;
 
 /**
- * The transport used for resetting the Stream, if reset cannot be done
- * over primary.
+ * The transport dedicated to resetting the Stream. Note that sometimes
+ * the ResetFrame is sent over primaryTransport_ instead.
  * @type {Object}
  * @private
  */
