@@ -4,6 +4,7 @@
  */
 
 goog.provide('cw.net.Frame');
+goog.provide('cw.net.TransportKillReason');
 goog.provide('cw.net.HelloFrame');
 goog.provide('cw.net.StringFrame');
 goog.provide('cw.net.SeqNumFrame');
