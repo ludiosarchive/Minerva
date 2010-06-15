@@ -235,9 +235,21 @@ class DemoProtocol(BasicMinervaProtocol):
 				send.append(s.replace('echo:', '', 1))
 
 			elif s.startswith('echo_twice:'):
-				payload = s.replace('echo_twice:', '', 1)
+				payload = s.split(':', 1)[1]
 				send.append(payload)
 				self._clock.callLater(0, lambda: self.stream.sendStrings([payload]))
+
+			elif s.startswith('reset_me:'):
+				reasonString = s.split(':', 1)[1]
+				self.stream.reset(reasonString)
+
+			elif s.startswith('string_then_reset_me:'):
+				reasonString = s.split(':', 1)[1]
+				# Send a string which will effectively close a long-polling
+				# primary transport. In this case, the client will usually
+				# not see a ResetFrame.
+				self.stream.sendStrings(["about to reset with reasonString " + reasonString])
+				self.stream.reset(reasonString)
 
 			elif s == 'send_demo':
 				self.stream.sendStrings(['starting_send_demo'])
@@ -248,7 +260,7 @@ class DemoProtocol(BasicMinervaProtocol):
 				self.factory.chatters.add(self)
 
 			elif s.startswith('broadcast:'):
-				text = s.replace('broadcast:', '', 1)
+				text = s.split(':', 1)[1]
 				for c in self.factory.chatters:
 					# We assume text contains only characters in the " " - "~" range.
 					c.stream.sendStrings(["TEXT|" + str(self._id) + '|' + text])
