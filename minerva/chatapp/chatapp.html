@@ -62,14 +62,14 @@ var logDiv = document.getElementById('log');
 var divConsole = new goog.debug.DivConsole(logDiv);
 divConsole.setCapturing(true);
 
-var logger = goog.debug.Logger.getLogger('logger');
-logger.setLevel(goog.debug.Logger.Level.ALL);
+chatapp.logger = goog.debug.Logger.getLogger('chatapp.logger');
+chatapp.logger.setLevel(goog.debug.Logger.Level.ALL);
 
-logger.info('Logger works.');
+chatapp.logger.info('Logger works.');
 
 
 window.onerror = function(msg, url, lineNumber) {
-	logger.severe('window.onerror: message: ' + cw.repr.repr(msg) +
+	chatapp.logger.severe('window.onerror: message: ' + cw.repr.repr(msg) +
 		'\nURL: ' + url + '\nLine Number: ' + lineNumber)
 };
 
@@ -88,17 +88,17 @@ chatapp.ChatProtocol = function() {
 
 chatapp.ChatProtocol.prototype.streamStarted = function(stream) {
 	this.stream_ = stream;
-	logger.info('streamStarted');
+	chatapp.logger.info('streamStarted');
 	this.stream_.sendStrings(['begin_chat']);
 };
 
 chatapp.ChatProtocol.prototype.streamReset = function(reasonString, applicationLevel) {
-	logger.info('streamReset: ' + reasonString + ', ' + applicationLevel);
+	chatapp.logger.info('streamReset: ' + reasonString + ', ' + applicationLevel);
 };
 
 chatapp.ChatProtocol.prototype.handleString_ = function(s) {
 	function fail() {
-		logger.severe('Could not handle string: ' + cw.repr.repr(s));
+		chatapp.logger.severe('Could not handle string: ' + cw.repr.repr(s));
 	}
 
 	var splitted = cw.string.split(s, '|', 2);
@@ -113,7 +113,7 @@ chatapp.ChatProtocol.prototype.handleString_ = function(s) {
 	}
 
 	// TODO: add timestamp
-	logger.info(cw.string.format('<{0}> {1}', uaId, text));
+	chatapp.logger.info(cw.string.format('<{0}> {1}', uaId, text));
 };
 
 chatapp.ChatProtocol.prototype.stringsReceived = function(strings) {
@@ -128,7 +128,7 @@ chatapp.ChatProtocol.prototype.reset = function() {
 };
 
 chatapp.ChatProtocol.prototype.sendText = function(text) {
-	logger.info('sendText: ' + text);
+	chatapp.logger.info('sendText: ' + text);
 	this.stream_.sendStrings(["broadcast:" + text]);
 };
 
