@@ -78,6 +78,7 @@ cw.net.TestClient.MockStream.prototype.getSACK_ = function() {
 cw.net.TestClient.MockClientTransport =
 function(callQueue, stream, transportNumber, transportType, endpoint, becomePrimary) {
 	this.canSendMoreAfterStarted_ = false;
+	this.penalty_ = 0;
 
 	this.log = [];
 	this.started = false;

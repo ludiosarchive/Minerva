@@ -36,6 +36,7 @@ goog.require('cw.net.Incoming');
 goog.require('cw.net.FlashSocket');
 
 goog.require('cw.net.Frame');
+goog.require('cw.net.TransportKillReason');
 goog.require('cw.net.HelloFrame');
 goog.require('cw.net.StringFrame');
 goog.require('cw.net.SeqNumFrame');
@@ -112,10 +113,6 @@ cw.net.IEndpointLocator.prototype.locate = function(type) {
  * @type {number}
  */
 cw.net.protocolVersion_ = 2;
-
-
-// Note: a tk_stream_attach_failure, or tk_acked_unsent_boxes, or tk_invalid_frame_type_or_arguments from server
-// should be treated as an internal reset (client_minerva).
 
 
 
@@ -355,6 +352,15 @@ cw.net.Stream.prototype.secondaryTransport_ = null;
 cw.net.Stream.prototype.resettingTransport_ = null;
 
 /**
+ * The current penalty for the Stream. Increased when transports die with
+ * errors that suggest the Stream is permanently broken or unreachable.
+ * Reset back to 0 when a transport with no penalty goes offline.
+ * @type {number}
+ * @private
+ */
+cw.net.Stream.prototype.streamPenalty_ = 0;
+
+/**
  * @param {!Array.<string>} sb
  */
 cw.net.Stream.prototype.__reprToPieces__ = function(sb) {
@@ -522,10 +528,22 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 	}
 	cw.net.Stream.logger.fine('Offline: ' + transport.getDescription_());
 
+	if(!transport.penalty_) {
+		this.streamPenalty_ = 0;
+	} else {
+		this.streamPenalty_ += transport.penalty_;
+	}
+
+	if(this.streamPenalty_ >= 1) {
+		cw.net.Stream.logger.info(
+			"transportOffline_: Doing an internal reset because streamPenalty_ reached limit.");
+		this.internalReset_("stream penalty reached limit");
+	}
+
 	if(this.state_ > cw.net.StreamState_.STARTED) {
 		if(this.state_ == cw.net.StreamState_.RESETTING &&
 		transport.wroteResetFrame_) {
-			cw.net.Stream.logger.fine("Was RESETTING, now DISCONNECTED.");
+			cw.net.Stream.logger.info("Was RESETTING, now DISCONNECTED.");
 			this.state_ = cw.net.StreamState_.DISCONNECTED;
 		}
 		cw.net.Stream.logger.fine(
@@ -560,7 +578,7 @@ cw.net.Stream.prototype.reset = function(reasonString) {
 	}
 	this.state_ = cw.net.StreamState_.RESETTING;
 	if(this.primaryTransport_ && this.primaryTransport_.canFlushMoreThanOnce_) {
-		cw.net.Stream.logger.fine("reset: Sending ResetFrame over existing primary.");
+		cw.net.Stream.logger.info("reset: Sending ResetFrame over existing primary.");
 		this.primaryTransport_.writeReset_(reasonString, true/* applicationLevel */);
 		this.primaryTransport_.flush_();
 		this.primaryTransport_.close();
@@ -579,7 +597,7 @@ cw.net.Stream.prototype.reset = function(reasonString) {
 			this.secondaryTransport_.dispose();
 		}
 
-		cw.net.Stream.logger.fine("reset: Creating resettingTransport_ for sending ResetFrame.");
+		cw.net.Stream.logger.info("reset: Creating resettingTransport_ for sending ResetFrame.");
 		this.resettingTransport_ = this.createNewTransport_(false);
 		this.resettingTransport_.writeReset_(reasonString, true/* applicationLevel */);
 		this.resettingTransport_.flush_();
@@ -592,6 +610,20 @@ cw.net.Stream.prototype.reset = function(reasonString) {
 };
 
 /**
+ * @param {string} reasonString
+ * @param {boolean} applicationLevel
+ * @private
+ */
+cw.net.Stream.prototype.doReset_ = function(reasonString, applicationLevel) {
+	this.state_ = cw.net.StreamState_.DISCONNECTED;
+	var transports = this.transports_.getValues();
+	for(var i=0; i < transports.length; i++) {
+		transports[i].dispose();
+	}
+	this.protocol_.streamReset(reasonString, applicationLevel);
+};
+
+/**
  * ClientTransport calls this when it gets a reset frame from server.
  * ClientTransport still needs to call transportOffline after this.
  * @param {string} reasonString
@@ -599,9 +631,16 @@ cw.net.Stream.prototype.reset = function(reasonString) {
  * @private
  */
 cw.net.Stream.prototype.resetFromPeer_ = function(reasonString, applicationLevel) {
-	this.state_ = cw.net.StreamState_.DISCONNECTED;
-	this.protocol_.streamReset(reasonString, applicationLevel);
-	// TODO: dispose all transports?
+	this.doReset_(reasonString, applicationLevel);
+};
+
+/**
+ * Called by Stream if has decided to give up on the Stream.
+ * @param {string} reasonString
+ * @private
+ */
+cw.net.Stream.prototype.internalReset_ = function(reasonString) {
+	this.doReset_(reasonString, false/* applicationLevel */);
 };
 
 /**
@@ -790,7 +829,7 @@ cw.net.ClientTransport = function(callQueue, stream, transportNumber, transportT
 	 * 		is not receiving strings.
 	 * 	for non-HTTP transports: we'll make a connection. Stream will
 	 * 		be able to continue to send strings over it. Stream can
-	 * 		call ClientTransport.close_ to close it at any time.
+	 * 		call ClientTransport.dispose to close it at any time.
 	 * @type {boolean}
 	 * @private
 	 */
@@ -868,6 +907,14 @@ cw.net.ClientTransport.prototype.peerSeqNum_ = -1;
  */
 cw.net.ClientTransport.prototype.wroteResetFrame_ = false;
 
+/**
+ * The additional likelihood that Stream is dead on server or permanently
+ * unreachable. This is a guess based on the data we received.
+ * @type {number}
+ * @private
+ */
+cw.net.ClientTransport.prototype.penalty_ = 0;
+
 
 /**
  * @param {!Array.<string>} sb
@@ -896,7 +943,7 @@ cw.net.ClientTransport.prototype.handleStrings_ = function(bunchedStrings) {
 	var avoidCreatingTransports = !this.s2cStreaming;
 	this.stream_.stringsReceived_(this, bunchedStrings, avoidCreatingTransports);
 	// Remember that a lot can happen underneath that stringsReceived call,
-	// including a call to our own `reset_` or `close_` or `writeStrings_`
+	// including a call to our own `reset_` or `dispose` or `writeStrings_`
 };
 
 /**
@@ -929,7 +976,8 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 			if(this.receivedCounter_ == 0 &&
 			this.transportType_ == cw.net.TransportType_.BROWSER_HTTP &&
 			frameStr != ";)]}P") {
-				logger.warning("Closing soon because got bad premable: " + cw.repr.repr(frameStr));
+				logger.warning("Closing soon because got bad preamble: " + cw.repr.repr(frameStr));
+				// No penalty because we want to treat this just like "cannot connect to peer".
 				closeSoon = true;
 				break;
 			}
@@ -959,8 +1007,13 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 					closeSoon = true;
 					break;
 				} else if(frame instanceof cw.net.TransportKillFrame) {
-					// TODO: adjust our behavior based on the type of TK we got
-					logger.finest("Closing soon because got TransportKillFrame");
+					if(frame.reason == cw.net.TransportKillReason.stream_attach_failure) {
+						this.penalty_ += 1;
+					} else if(frame.reason == cw.net.TransportKillReason.acked_unsent_strings) {
+						this.penalty_ += 0.5;
+					}
+					// For frame_corruption || invalid_frame_type_or_arguments || rwin_overflow, no penalty.
+					logger.finest("Closing soon because got " + cw.repr.repr(frame));
 					closeSoon = true;
 					break;
 				} else if(frame instanceof cw.net.PaddingFrame) {
@@ -985,6 +1038,8 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 					throw e;
 				}
 				logger.warning("Closing soon because got InvalidFrame: " + cw.repr.repr(frameStr));
+				// No penalty because this cause is almost certainly
+				// due to corruption by intermediary.
 				closeSoon = true;
 				break;
 			}
@@ -994,11 +1049,12 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 			this.handleStrings_(bunchedStrings);
 			bunchedStrings = [];
 		}
+		this.spinning_ = false;
 		if(this.toSendFrames_.length) {
 			this.flush_();
 		}
 		if(closeSoon) {
-			this.close_();
+			this.dispose();
 		}
 	} finally {
 		this.spinning_ = false;
@@ -1025,7 +1081,7 @@ cw.net.ClientTransport.prototype.httpResponseReceived_ = function() {
 		cw.net.ClientTransport.logger.warning("got incomplete http response");
 	}
 	this.framesReceived_(frames);
-	this.stream_.transportOffline_(this);
+	this.dispose();
 };
 
 /**
@@ -1128,6 +1184,12 @@ cw.net.ClientTransport.prototype.flush_ = function() {
 		throw Error("flush_: Can't flush more than once to this transport.");
 	}
 
+	if(this.spinning_) {
+		cw.net.ClientTransport.logger.finest(
+			"flush_: Returning because spinning right now.");
+		return;
+	}
+
 	if(!this.started_ && !this.toSendFrames_.length) {
 		this.writeInitialFrames_();
 	}
@@ -1200,16 +1262,18 @@ cw.net.ClientTransport.prototype.writeStrings_ = function(queue, start) {
 };
 
 /**
- * Close this transport for any reason.
+ * Call `dispose` to close this transport. If it is called again, this is a no-op.
  * @private
  */
-cw.net.ClientTransport.prototype.close_ = function() {
+cw.net.ClientTransport.prototype.disposeInternal = function() {
+	cw.net.ClientTransport.superClass_.disposeInternal.call(this);
+
 	if(this.transportType_ == cw.net.TransportType_.BROWSER_HTTP) {
 		if(this.underlying_) {
 			this.underlying_.dispose();
 		}
 	} else {
-		throw Error("close_: Don't know what to do for this transportType.");
+		throw Error("disposeInternal: Don't know what to do for this transportType.");
 	}
 	this.stream_.transportOffline_(this);
 };
@@ -1223,7 +1287,7 @@ cw.net.ClientTransport.prototype.close_ = function() {
  */
 cw.net.ClientTransport.prototype.causedRwinOverflow_ = function() {
 	cw.net.ClientTransport.logger.severe("Peer caused rwin overflow.");
-	this.close_();
+	this.dispose();
 };
 
 /**
@@ -1242,12 +1306,6 @@ cw.net.ClientTransport.prototype.writeReset_ = function(reasonString, applicatio
 	this.writeFrame_(resetFrame);
 	this.wroteResetFrame_ = true;
 };
-
-cw.net.ClientTransport.prototype.disposeInternal = function() {
-	cw.net.ClientTransport.superClass_.disposeInternal.call(this);
-	this.close_();
-};
-
 
 
 cw.net.ClientTransport.logger = goog.debug.Logger.getLogger('cw.net.ClientTransport');
