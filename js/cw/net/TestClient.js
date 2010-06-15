@@ -6,10 +6,15 @@ goog.provide('cw.net.TestClient');
 
 goog.require('cw.UnitTest');
 goog.require('goog.array');
+goog.require('goog.asserts');
+goog.require('goog.dom');
 goog.require('goog.string');
+goog.require('goog.async.Deferred');
 goog.require('cw.repr');
-
 goog.require('cw.clock');
+goog.require('cw.eventual');
+goog.require('cw.whoami');
+
 goog.require('cw.net.Queue');
 goog.require('cw.net.TransportType_');
 goog.require('cw.net.SACK');
@@ -147,6 +152,97 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 	}
 
 	// TODO: test if ClientTransport(becomePrimary=false), HelloFrame does not have an 'eeds' argument
+);
+
+
+
+/**
+ * @implements {cw.net.IMinervaProtocol}
+ * @constructor
+ */
+cw.net.TestClient.DemoProtocol = function() {
+	this.testingDoneD = new goog.async.Deferred();
+	this.log = [];
+	this.stringCount = -1;
+};
+
+cw.net.TestClient.DemoProtocol.prototype.streamStarted = function(stream) {
+	this.stream_ = stream;
+	this.log.push(['streamStarted', stream]);
+};
+
+cw.net.TestClient.DemoProtocol.prototype.streamReset = function(whoReset, reasonString) {
+	this.log.push([whoReset, reasonString]);
+};
+
+cw.net.TestClient.DemoProtocol.prototype.handleString_ = function(s) {
+	this.stringCount += 1;
+	if(s == "hello world" && this.stringCount > 0) {
+		this.stream_.reset();
+		this.testingDoneD.callback(null);
+	}
+};
+
+cw.net.TestClient.DemoProtocol.prototype.stringsReceived = function(strings) {
+	this.log.push(['stringsReceived', strings]);
+	for(var i=0; i < strings.length; i++) {
+		var s = strings[i];
+		this.handleString_(s);
+	}
+};
+
+
+/**
+ * Test Stream and ClientTransport with real requests.
+ */
+cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
+
+	function setUp(self) {
+		var d = new goog.async.Deferred();
+		goog.global['window'].__GetTokenPage_gotToken = function(token) {
+			self.csrfToken_ = token;
+			// To reduce our exposure to bugs, callback the Deferred with
+			// a stack from this window, not from the iframe.
+			window.setTimeout(function() { d.callback(null); }, 0);
+		};
+
+		// the iframe calls __GetTokenPage_gotToken
+		var _iframe = goog.dom.createDom('iframe',
+			{"src": "/@testres_Minerva/GetTokenPage/", "width": "1", "height": "1"});
+		goog.dom.appendChild(document.body, _iframe);
+
+		return d;
+	},
+
+	function makeCredentialsData_(self) {
+		// Because we loaded the iframe, we assume we have a uaId cookie set.
+
+		// Already base64-url-safe encoded
+		var uaId = cw.whoami.getUaId();
+		goog.asserts.assert(uaId !== undefined, "uaId is undefined");
+		goog.asserts.assert(self.csrfToken_ !== undefined, "self.csrfToken_ is undefined");
+		return uaId + '|' + self.csrfToken_;
+	},
+
+	function test_stream(self) {
+		var proto = new cw.net.TestClient.DemoProtocol();
+		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
+		var stream = new cw.net.Stream(
+			callQueue, proto, '/httpface/', goog.bind(self.makeCredentialsData_, self));
+		stream.start();
+		stream.sendStrings(['echo_twice:hello world']);
+
+		function runAssertions() {
+			self.assertEqual([
+				["streamStarted", stream],
+				["stringsReceived", ["hello world"]],
+				["stringsReceived", ["hello world"]]
+			], proto.log);
+		}
+		proto.testingDoneD.addCallback(runAssertions);
+
+		return proto.testingDoneD;
+	}
 );
 
 

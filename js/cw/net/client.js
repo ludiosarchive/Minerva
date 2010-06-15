@@ -358,6 +358,26 @@ cw.net.Stream.prototype.primaryTransport_ = null;
 cw.net.Stream.prototype.secondaryTransport_ = null;
 
 /**
+ * @param {!Array.<string>} sb
+ */
+cw.net.Stream.prototype.__reprToPieces__ = function(sb) {
+	sb.push('<Stream id=');
+	cw.repr.reprToPieces(this.streamId, sb);
+	sb.push(', state=', String(this.state_));
+	sb.push(', primary=');
+	cw.repr.reprToPieces(this.primaryTransport_, sb);
+	sb.push(', secondary=');
+	cw.repr.reprToPieces(this.secondaryTransport_, sb);
+};
+
+/**
+ * @param {*} other
+ */
+cw.net.Stream.prototype.equals = function(other) {
+	return this === other;
+};
+
+/**
  * @private
  */
 cw.net.Stream.prototype.tryToSend_ = function() {
@@ -782,6 +802,13 @@ cw.net.ClientTransport.prototype.__reprToPieces__ = function(sb) {
 };
 
 /**
+ * @param {*} other
+ */
+cw.net.ClientTransport.prototype.equals = function(other) {
+	return this === other;
+};
+
+/**
  * @param {!Array.<string>} bunchedStrings
  * @private
  */
@@ -875,7 +902,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 					var avoidCreatingTransports = !this.s2cStreaming;
 					this.stream_.streamSuccessfullyCreated_(avoidCreatingTransports);
 				} else {
-					if(bunchedStrings) {
+					if(bunchedStrings.length) {
 						this.handleStrings_(bunchedStrings);
 						bunchedStrings = [];
 					}
@@ -896,7 +923,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 			}
 		}
 
-		if(bunchedStrings) {
+		if(bunchedStrings.length) {
 			this.handleStrings_(bunchedStrings);
 			bunchedStrings = [];
 		}
