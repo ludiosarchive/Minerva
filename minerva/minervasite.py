@@ -270,8 +270,8 @@ class DemoProtocol(BasicMinervaProtocol):
 
 			# else ignore other boxes
 
-		# ugh
-		self.stream.sendStrings(send)
+		if send:
+			self.stream.sendStrings(send)
 
 
 	def streamReset(self, reasonString, applicationLevel):
