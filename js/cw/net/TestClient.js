@@ -121,7 +121,6 @@ cw.net.TestClient.RecordingProtocol.prototype.streamStarted = function(stream) {
 
 cw.net.TestClient.RecordingProtocol.prototype.streamReset = function(reasonString, applicationLevel) {
 	this.log.push(['streamReset', reasonString, applicationLevel]);
-	this.testingDoneD.callback(null);
 };
 
 cw.net.TestClient.RecordingProtocol.prototype.handleString_ = function(s) {
@@ -346,6 +345,13 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 	 */
 	function test_streamReset(self) {
 		var proto = self.makeProtocol_();
+
+		var origStreamReset = cw.net.TestClient.RecordingProtocol.prototype.streamReset;
+		proto.streamReset = function(reasonString, applicationLevel) {
+			origStreamReset.call(this, reasonString, applicationLevel);
+			this.testingDoneD.callback(null);
+		};
+
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.Stream(
 			callQueue, proto, '/httpface/', goog.bind(self.makeCredentialsData_, self));
