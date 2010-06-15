@@ -947,13 +947,12 @@ cw.net.ClientTransport.prototype.handleStrings_ = function(bunchedStrings) {
 };
 
 /**
- * Only used for log messages.
+ * Return a short description of the transport. Used only for log messages.
  * @return {string}
  * @private
  */
 cw.net.ClientTransport.prototype.getDescription_ = function() {
-	var prettyString = (this.becomePrimary_ ? "Prim. T#" : "Sec. T#") + this.transportNumber;
-	return prettyString;
+	return (this.becomePrimary_ ? "Prim. T#" : "Sec. T#") + this.transportNumber;
 };
 
 /**
@@ -976,7 +975,8 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 			if(this.receivedCounter_ == 0 &&
 			this.transportType_ == cw.net.TransportType_.BROWSER_HTTP &&
 			frameStr != ";)]}P") {
-				logger.warning("Closing soon because got bad preamble: " + cw.repr.repr(frameStr));
+				logger.warning("Closing soon because got bad preamble: " +
+					cw.repr.repr(frameStr));
 				// No penalty because we want to treat this just like "cannot connect to peer".
 				closeSoon = true;
 				break;
@@ -985,7 +985,8 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 			try {
 				/** @type {!cw.net.Frame} Decoded frame */
 				var frame = cw.net.decodeFrameFromServer(frameStr);
-				cw.net.ClientTransport.logger.fine(this.getDescription_() + ' RECV ' + cw.repr.repr(frame));
+				cw.net.ClientTransport.logger.fine(
+					this.getDescription_() + ' RECV ' + cw.repr.repr(frame));
 				if(frame instanceof cw.net.StringFrame) {
 					this.peerSeqNum_ += 1;
 					// Because we may have received multiple Minerva strings, collect
@@ -1012,7 +1013,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 					} else if(frame.reason == cw.net.TransportKillReason.acked_unsent_strings) {
 						this.penalty_ += 0.5;
 					}
-					// For frame_corruption || invalid_frame_type_or_arguments || rwin_overflow, no penalty.
+					// For all other TransportKillFrame reasons, no penalty.
 					logger.finest("Closing soon because got " + cw.repr.repr(frame));
 					closeSoon = true;
 					break;
@@ -1199,7 +1200,8 @@ cw.net.ClientTransport.prototype.flush_ = function() {
 	if(this.transportType_ == cw.net.TransportType_.BROWSER_HTTP) {
 		for(var i=0; i < this.toSendFrames_.length; i++) {
 			var frame = this.toSendFrames_[i];
-			cw.net.ClientTransport.logger.fine(this.getDescription_() + ' SEND ' + cw.repr.repr(frame));
+			cw.net.ClientTransport.logger.fine(
+				this.getDescription_() + ' SEND ' + cw.repr.repr(frame));
 		}
 		var payload = this.flushBufferAsHttpPayload_();
 		this.makeHttpRequest_(payload);
