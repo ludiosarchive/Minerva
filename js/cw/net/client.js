@@ -439,11 +439,22 @@ cw.net.Stream.prototype.tryToSend_ = function() {
  * @param {!Array.<string>} strings Strings to send.
  */
 cw.net.Stream.prototype.sendStrings = function(strings) {
-	if(!strings) {
+	if(!strings.length) {
 		return;
 	}
 	this.queue_.extend(strings);
 	this.tryToSend_();
+};
+
+/**
+ * @private
+ * @return {!cw.net.ClientTransport} The newly-instantiated transport.
+ * This method exists so that it can be overriden in tests.
+ */
+cw.net.Stream.prototype.instantiateTransport_ =
+function(callQueue, stream, transportNumber, transportType, endpoint, becomePrimary) {
+	return new cw.net.ClientTransport(
+		callQueue, stream, transportNumber, transportType, endpoint, becomePrimary);
 };
 
 /**
@@ -455,7 +466,7 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
 	this.transportCount_ += 1;
 	var transportType = cw.net.TransportType_.BROWSER_HTTP;
 	var endpoint = this.httpEndpoint_;
-	var transport = new cw.net.ClientTransport(
+	var transport = this.instantiateTransport_(
 		this.callQueue_, this, this.transportCount_, transportType, endpoint, becomePrimary);
 	cw.net.Stream.logger.finest('Created: ' + transport.getDescription_());
 	this.transports_.add(transport);

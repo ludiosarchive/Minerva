@@ -10,6 +10,7 @@ goog.require('goog.asserts');
 goog.require('goog.dom');
 goog.require('goog.string');
 goog.require('goog.async.Deferred');
+goog.require('goog.testing.recordFunction');
 goog.require('cw.repr');
 goog.require('cw.clock');
 goog.require('cw.eventual');
@@ -71,6 +72,71 @@ cw.net.TestClient.MockStream.prototype.getSACK_ = function() {
 
 
 
+/**
+ * @constructor
+ */
+cw.net.TestClient.MockClientTransport =
+function(callQueue, stream, transportNumber, transportType, endpoint, becomePrimary) {
+	this.canSendMoreAfterStarted_ = false;
+
+	this.log = [];
+	this.started = false;
+};
+
+cw.net.TestClient.MockClientTransport.prototype.writeStrings_ = function(strings) {
+	this.log.push(['writeStrings_', strings]);
+};
+
+cw.net.TestClient.MockClientTransport.prototype.writeSack_ = function(sack) {
+	this.log.push(['writeSack_', sack]);
+};
+
+cw.net.TestClient.MockClientTransport.prototype.start_ = function() {
+	this.log.push(['start_']);
+	this.started = true;
+};
+
+cw.net.TestClient.MockClientTransport.prototype.getDescription_ = function() {
+	return "<MockClientTransport>";
+};
+
+
+
+
+/**
+ * @implements {cw.net.IMinervaProtocol}
+ * @constructor
+ */
+cw.net.TestClient.RecordingProtocol = function() {
+	this.testingDoneD = new goog.async.Deferred();
+	this.log = [];
+	this.stringCount = -1;
+};
+
+cw.net.TestClient.RecordingProtocol.prototype.streamStarted = function(stream) {
+	this.stream_ = stream;
+	this.log.push(['streamStarted', stream]);
+};
+
+cw.net.TestClient.RecordingProtocol.prototype.streamReset = function(whoReset, reasonString) {
+	this.log.push([whoReset, reasonString]);
+};
+
+cw.net.TestClient.RecordingProtocol.prototype.handleString_ = function(s) {
+	throw new Error("override handleString_ on your RecordingProtocol");
+};
+
+cw.net.TestClient.RecordingProtocol.prototype.stringsReceived = function(strings) {
+	this.log.push(['stringsReceived', strings]);
+	for(var i=0; i < strings.length; i++) {
+		var s = strings[i];
+		this.handleString_(s);
+	}
+};
+
+
+
+
 cw.net.TestClient.decodeFramesFromHttpClient_ = function(payload) {
 	var frames = payload.split('\n');
 	var last = frames.pop();
@@ -86,8 +152,40 @@ cw.net.TestClient.decodeFramesFromHttpClient_ = function(payload) {
 
 
 
+/**
+ * Use this function to do {@code stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_; }
+ * @private
+ * @return {!cw.net.TestClient.MockClientTransport} The newly-instantiated transport.
+ */
+cw.net.TestClient.instantiateMockTransport_ =
+function(callQueue, stream, transportNumber, transportType, endpoint, becomePrimary) {
+	return new cw.net.TestClient.MockClientTransport(
+		callQueue, stream, transportNumber, transportType, endpoint, becomePrimary);
+};
+
+
+
 cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 	// TODO: test for what happens if you `reset` a Stream before you `start it`.
+
+	/**
+	 * If sendStrings is called with an empty Array, it does not
+	 * try to send.
+	 */
+	function test_sendStringsNoStrings(self) {
+		var proto = new cw.net.TestClient.RecordingProtocol();
+		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
+		var stream = new cw.net.Stream(
+			callQueue, proto, '/StreamTests-not-a-real-endpoint/', function() { return "not-real-credentials"; });
+		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
+		stream.tryToSend_ = goog.testing.recordFunction(goog.bind(stream.tryToSend_, stream));
+		stream.start();
+		self.assertEqual(0, stream.tryToSend_.getCallCount());
+		stream.sendStrings(['hello']); // Non-empty Array causes a tryToSend_ call
+		self.assertEqual(1, stream.tryToSend_.getCallCount());
+		stream.sendStrings([]); // empty Array does not cause tryToSend_ call
+		self.assertEqual(1, stream.tryToSend_.getCallCount());
+	},
 
 	/**
 	 * Calling stream.dispose() makes it call dispose() on all of its transports.
@@ -157,42 +255,6 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 
 
 /**
- * @implements {cw.net.IMinervaProtocol}
- * @constructor
- */
-cw.net.TestClient.DemoProtocol = function() {
-	this.testingDoneD = new goog.async.Deferred();
-	this.log = [];
-	this.stringCount = -1;
-};
-
-cw.net.TestClient.DemoProtocol.prototype.streamStarted = function(stream) {
-	this.stream_ = stream;
-	this.log.push(['streamStarted', stream]);
-};
-
-cw.net.TestClient.DemoProtocol.prototype.streamReset = function(whoReset, reasonString) {
-	this.log.push([whoReset, reasonString]);
-};
-
-cw.net.TestClient.DemoProtocol.prototype.handleString_ = function(s) {
-	this.stringCount += 1;
-	if(s == "hello world" && this.stringCount > 0) {
-		this.stream_.reset();
-		this.testingDoneD.callback(null);
-	}
-};
-
-cw.net.TestClient.DemoProtocol.prototype.stringsReceived = function(strings) {
-	this.log.push(['stringsReceived', strings]);
-	for(var i=0; i < strings.length; i++) {
-		var s = strings[i];
-		this.handleString_(s);
-	}
-};
-
-
-/**
  * Test Stream and ClientTransport with real requests.
  */
 cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
@@ -232,8 +294,21 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 		], proto.log);
 	},
 
+	function makeProtocol_(self) {
+		var	 proto = new cw.net.TestClient.RecordingProtocol();
+
+		proto.handleString_ = function(s) {
+			this.stringCount += 1;
+			if(s == "hello world" && this.stringCount > 0) {
+				this.stream_.reset();
+				this.testingDoneD.callback(null);
+			}
+		}
+		return proto;
+	},
+
 	function test_stream(self) {
-		var proto = new cw.net.TestClient.DemoProtocol();
+		var proto = self.makeProtocol_();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.Stream(
 			callQueue, proto, '/httpface/', goog.bind(self.makeCredentialsData_, self));
@@ -249,7 +324,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 	 * makes it send the `echo_twice:...` string in the first transport.
 	 */
 	function test_streamWithStringInFirstTransport(self) {
-		var proto = new cw.net.TestClient.DemoProtocol();
+		var proto = self.makeProtocol_();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.Stream(
 			callQueue, proto, '/httpface/', goog.bind(self.makeCredentialsData_, self));
