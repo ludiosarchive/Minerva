@@ -556,7 +556,7 @@ cw.net.Stream.prototype.reset = function(reasonString) {
 	goog.asserts.assertString(reasonString);
 
 	if(this.state_ > cw.net.StreamState_.STARTED) {
-		throw new Error("can't send strings in state " + this.state_);
+		throw new Error("can't send reset in state " + this.state_);
 	}
 	this.state_ = cw.net.StreamState_.RESETTING;
 	if(this.primaryTransport_ && this.primaryTransport_.canFlushMoreThanOnce_) {
