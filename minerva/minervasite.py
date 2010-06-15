@@ -200,6 +200,7 @@ class DemoProtocol(BasicMinervaProtocol):
 		self._reset = False
 		self._chatting = False
 		self._id = DemoProtocol.counter
+		self.chatting = False
 		DemoProtocol.counter += 1
 
 
