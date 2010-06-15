@@ -251,6 +251,10 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 	}
 
 	// TODO: test if ClientTransport(becomePrimary=false), HelloFrame does not have an 'eeds' argument
+
+	// TODO: test if we receive a frame, give it to Stream, which gives it to the protocol,
+	// which synchronously calls a function that results in the ClientTransport closing,
+	// the ClientTransport stops processing frames.
 );
 
 
