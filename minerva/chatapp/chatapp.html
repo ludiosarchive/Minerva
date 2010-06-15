@@ -23,7 +23,8 @@
 <tr>
 	<td>Reconnect:</td>
 	<td>
-		<input type="submit" value="Disconnect and connect new stream" onclick="chatapp.reconnectStream();return false">
+		<input type="submit" value="Reset" onclick="chatapp.resetStream();return false">
+		<input type="submit" value="Reset and connect new stream" onclick="chatapp.reconnectStream();return false">
 	</td>
 </tr>
 <tr>
@@ -123,7 +124,7 @@ chatapp.ChatProtocol.prototype.stringsReceived = function(strings) {
 };
 
 chatapp.ChatProtocol.prototype.reset = function() {
-	this.stream_.reset();
+	this.stream_.reset("because user clicked button");
 };
 
 chatapp.ChatProtocol.prototype.sendText = function(text) {
@@ -150,6 +151,11 @@ chatapp.startStream = function() {
 	var stream = new cw.net.Stream(
 		callQueue, chatapp.lastProto, '/httpface/', chatapp.makeCredentialsData);
 	stream.start();
+};
+
+
+chatapp.resetStream = function() {
+	chatapp.lastProto.reset();
 };
 
 
