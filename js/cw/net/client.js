@@ -880,11 +880,11 @@ cw.net.ClientTransport.prototype.spinning_ = false;
 cw.net.ClientTransport.prototype.lastSackWritten_ = null;
 
 /**
- * The number of frames we have received from the peer, minus 1.
+ * The number of frames from the peer that we have successfully decoded.
  * @type {number}
  * @private
  */
-cw.net.ClientTransport.prototype.receivedCounter_ = -1;
+cw.net.ClientTransport.prototype.framesDecoded_ = 0;
 
 /**
  * The seqNum of the next string we might send to the peer, minus 1.
@@ -967,12 +967,11 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 		var bunchedStrings = [];
 		for(var i=0, len=frames.length; i < len; i++) {
 			var frameStr = frames[i];
-			this.receivedCounter_ += 1;
 
 			// For BROWSER_HTTP, first frame must be the anti-script-inclusion preamble.
 			// This provides decent protection against us parsing and reading frames
 			// from a page returned by an intermediary like a proxy or a WiFi access paywall.
-			if(this.receivedCounter_ == 0 &&
+			if(this.framesDecoded_ == 0 &&
 			this.transportType_ == cw.net.TransportType_.BROWSER_HTTP &&
 			frameStr != ";)]}P") {
 				logger.warning("Closing soon because got bad preamble: " +
@@ -985,6 +984,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 			try {
 				/** @type {!cw.net.Frame} Decoded frame */
 				var frame = cw.net.decodeFrameFromServer(frameStr);
+				this.framesDecoded_ += 1;
 				cw.net.ClientTransport.logger.fine(
 					this.getDescription_() + ' RECV ' + cw.repr.repr(frame));
 				if(frame instanceof cw.net.StringFrame) {
