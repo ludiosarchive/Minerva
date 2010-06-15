@@ -91,8 +91,8 @@ cw.net.TestClient.MockClientTransport.prototype.writeSack_ = function(sack) {
 	this.log.push(['writeSack_', sack]);
 };
 
-cw.net.TestClient.MockClientTransport.prototype.start_ = function() {
-	this.log.push(['start_']);
+cw.net.TestClient.MockClientTransport.prototype.flush_ = function() {
+	this.log.push(['flush_']);
 	this.started = true;
 };
 
@@ -118,8 +118,8 @@ cw.net.TestClient.RecordingProtocol.prototype.streamStarted = function(stream) {
 	this.log.push(['streamStarted', stream]);
 };
 
-cw.net.TestClient.RecordingProtocol.prototype.streamReset = function(whoReset, reasonString) {
-	this.log.push([whoReset, reasonString]);
+cw.net.TestClient.RecordingProtocol.prototype.streamReset = function(reasonString, applicationLevel) {
+	this.log.push(['streamReset', reasonString, applicationLevel]);
 };
 
 cw.net.TestClient.RecordingProtocol.prototype.handleString_ = function(s) {
@@ -214,7 +214,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 
 cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods(
 	/**
-	 * If we call writeStrings_ then start_ on a ClientTransport, it makes
+	 * If we call writeStrings_ then flush_ on a ClientTransport, it makes
 	 * an HTTP request with a HelloFrame, SackFrame, SeqNumFrame, then StringFrames.
 	 */
 	function test_writeStringsThenStart(self) {
@@ -229,7 +229,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 			callQueue, stream, 0, BROWSER_HTTP, '/TestClient-not-a-real-endpoint/', true);
 		ct.makeHttpRequest_ = function(payload) { payloads.push(payload) };
 		ct.writeStrings_(queue, null);
-		ct.start_();
+		ct.flush_();
 		clock.advance(1000); // TODO: remove this if not necessary
 
 		self.assertEqual(1, payloads.length);
@@ -290,7 +290,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 		self.assertEqual([
 			["streamStarted", stream],
 			["stringsReceived", ["hello world"]],
-			["stringsReceived", ["hello world"]]
+			["stringsReceived", ["hello world"]],
+			["streamReset", "done testing things", true]
 		], proto.log);
 	},
 
@@ -300,7 +301,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 		proto.handleString_ = function(s) {
 			this.stringCount += 1;
 			if(s == "hello world" && this.stringCount > 0) {
-				this.stream_.reset();
+				this.stream_.reset("done testing things");
 				this.testingDoneD.callback(null);
 			}
 		}

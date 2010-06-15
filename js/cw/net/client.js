@@ -14,7 +14,6 @@
  * 	- low latency (no excessive setTimeout(..., 0) )
  */
 
-goog.provide('cw.net.WhoReset');
 goog.provide('cw.net.IMinervaProtocol');
 goog.provide('cw.net.Stream');
 goog.provide('cw.net.ClientTransport');
@@ -115,17 +114,6 @@ cw.net.IEndpointLocator.prototype.locate = function(type) {
 cw.net.protocolVersion_ = 2;
 
 
-/**
- * @enum {number}
- */
-cw.net.WhoReset = {
-	server_minerva: 1,
-	server_app: 2,
-	client_minerva: 3,
-	client_app: 4
-};
-
-
 // Note: a tk_stream_attach_failure, or tk_acked_unsent_boxes, or tk_invalid_frame_type_or_arguments from server
 // should be treated as an internal reset (client_minerva).
 
@@ -175,11 +163,11 @@ cw.net.IMinervaProtocol.prototype.streamStarted = function(stream) {
  *
  * You must *not* raise any Error. Wrap your code in try/catch if necessary.
  *
- * @param {!cw.net.WhoReset} whoReset Who reset the stream?
- * @param {string} reasonString textual reason why stream has reset.
+ * @param {string} reasonString Textual reason why stream has reset.
  * 	String contains only characters in inclusive range 0x20 - 0x7E.
+ * @param {boolean} applicationLevel
  */
-cw.net.IMinervaProtocol.prototype.streamReset = function(whoReset, reasonString) {
+cw.net.IMinervaProtocol.prototype.streamReset = function(reasonString, applicationLevel) {
 
 };
 
@@ -220,7 +208,8 @@ cw.net.makeStreamId_ = function() {
 cw.net.StreamState_ = {
 	UNSTARTED: 1,
 	STARTED: 2,
-	DISCONNECTED: 3
+	RESETTING: 3,
+	DISCONNECTED: 4
 };
 
 
@@ -358,6 +347,14 @@ cw.net.Stream.prototype.primaryTransport_ = null;
 cw.net.Stream.prototype.secondaryTransport_ = null;
 
 /**
+ * The transport used for resetting the Stream, if reset cannot be done
+ * over primary.
+ * @type {Object}
+ * @private
+ */
+cw.net.Stream.prototype.resettingTransport_ = null;
+
+/**
  * @param {!Array.<string>} sb
  */
 cw.net.Stream.prototype.__reprToPieces__ = function(sb) {
@@ -368,6 +365,8 @@ cw.net.Stream.prototype.__reprToPieces__ = function(sb) {
 	cw.repr.reprToPieces(this.primaryTransport_, sb);
 	sb.push(', secondary=');
 	cw.repr.reprToPieces(this.secondaryTransport_, sb);
+	sb.push(', resetting=');
+	cw.repr.reprToPieces(this.resettingTransport_, sb);
 };
 
 /**
@@ -389,6 +388,9 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 			"removed item #0 from our queue?");
 	}
 	if(this.state_ == cw.net.StreamState_.UNSTARTED) {
+		cw.net.Stream.logger.finest(
+			"tryToSend_: haven't started yet; not sending anything. " +
+			"You should call Stream.start().");
 		return;
 	}
 	var currentSack = this.incoming_.getSACK();
@@ -404,7 +406,7 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 	if(haveQueueItems || maybeNeedToSendSack) {
 		// After we're in STARTED, we always have a primary transport,
 		// even if its underlying object hasn't connected yet.
-		if(this.primaryTransport_.canSendMoreAfterStarted_) {
+		if(this.primaryTransport_.canFlushMoreThanOnce_) {
 			cw.net.Stream.logger.finest(
 				"tryToSend_: writing SACK/strings to primary");
 			if(maybeNeedToSendSack) {
@@ -413,6 +415,7 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 			if(haveQueueItems) {
 				this.primaryTransport_.writeStrings_(this.queue_, null);
 			}
+			this.primaryTransport_.flush_();
 		// For robustness reasons, wait until we know that Stream
 		// exists on server before creating secondary transports.
 		} else if(this.secondaryTransport_ == null) {
@@ -425,6 +428,8 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 				cw.net.Stream.logger.finest(
 					"tryToSend_: creating secondary to send SACK/strings");
 				this.secondaryTransport_ = this.createNewTransport_(false);
+				this.secondaryTransport_.writeStrings_(this.queue_, null);
+				this.secondaryTransport_.flush_();
 			}
 		} else {
 			cw.net.Stream.logger.finest(
@@ -439,6 +444,9 @@ cw.net.Stream.prototype.tryToSend_ = function() {
  * @param {!Array.<string>} strings Strings to send.
  */
 cw.net.Stream.prototype.sendStrings = function(strings) {
+	if(this.state_ > cw.net.StreamState_.STARTED) {
+		throw new Error("can't send strings in state " + this.state_);
+	}
 	if(!strings.length) {
 		return;
 	}
@@ -470,8 +478,6 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
 		this.callQueue_, this, this.transportCount_, transportType, endpoint, becomePrimary);
 	cw.net.Stream.logger.finest('Created: ' + transport.getDescription_());
 	this.transports_.add(transport);
-	transport.writeStrings_(this.queue_, null);
-	transport.start_();
 	return transport;
 };
 
@@ -512,11 +518,25 @@ cw.net.Stream.prototype.streamStatusReceived_ = function(lastSackSeen) {
 cw.net.Stream.prototype.transportOffline_ = function(transport) {
 	var removed = this.transports_.remove(transport);
 	if(!removed) {
-		throw Error("transport was not removed?");
+		throw Error("Transport was not removed?");
 	}
 	cw.net.Stream.logger.fine('Offline: ' + transport.getDescription_());
+
+	if(this.state_ > cw.net.StreamState_.STARTED) {
+		if(this.state_ == cw.net.StreamState_.RESETTING &&
+		transport.wroteResetFrame_) {
+			cw.net.Stream.logger.fine("Was RESETTING, now DISCONNECTED.");
+			this.state_ = cw.net.StreamState_.DISCONNECTED;
+		}
+		cw.net.Stream.logger.fine(
+			"Not creating a transport because Stream is in state " + this.state_);
+		return;
+	}
+
 	if(transport == this.primaryTransport_) {
 		this.primaryTransport_ = this.createNewTransport_(true);
+		this.primaryTransport_.writeStrings_(this.queue_, null);
+		this.primaryTransport_.flush_();
 	} else if(transport == this.secondaryTransport_) {
 		this.secondaryTransport_ = null;
 		// More data might have been queued while the secondary transport
@@ -533,7 +553,42 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
  * @param {string} reasonString Reason why resetting the stream
  */
 cw.net.Stream.prototype.reset = function(reasonString) {
-	1/0
+	goog.asserts.assertString(reasonString);
+
+	if(this.state_ > cw.net.StreamState_.STARTED) {
+		throw new Error("can't send strings in state " + this.state_);
+	}
+	this.state_ = cw.net.StreamState_.RESETTING;
+	if(this.primaryTransport_ && this.primaryTransport_.canFlushMoreThanOnce_) {
+		cw.net.Stream.logger.fine("reset: Sending ResetFrame over existing primary.");
+		this.primaryTransport_.writeReset_(reasonString, true/* applicationLevel */);
+		this.primaryTransport_.flush_();
+		this.primaryTransport_.close();
+	} else {
+		// Primary is either offline or can't send after started, so
+		// we need to create a secondary transport to send a reset frame.
+
+		// Dispose primary and secondary transports to free up connection
+		// slots, which is hopefully not necessary.
+		if(this.primaryTransport_) {
+			cw.net.Stream.logger.fine("reset: Disposing primary before sending ResetFrame.");
+			this.primaryTransport_.dispose();
+		}
+		if(this.secondaryTransport_) {
+			cw.net.Stream.logger.fine("reset: Disposing secondary before sending ResetFrame.");
+			this.secondaryTransport_.dispose();
+		}
+
+		cw.net.Stream.logger.fine("reset: Creating resettingTransport_ for sending ResetFrame.");
+		this.resettingTransport_ = this.createNewTransport_(false);
+		this.resettingTransport_.writeReset_(reasonString, true/* applicationLevel */);
+		this.resettingTransport_.flush_();
+		// If server gets the ResetFrame, it will close the transport (or send YouCloseIt).
+		// Eventually transportOffline_ is called (we hope), which no
+		// longer makes a new transport because this.state_ > STARTED
+	}
+
+	this.protocol_.streamReset(reasonString, true/* applicationLevel */);
 };
 
 /**
@@ -544,7 +599,9 @@ cw.net.Stream.prototype.reset = function(reasonString) {
  * @private
  */
 cw.net.Stream.prototype.resetFromPeer_ = function(reasonString, applicationLevel) {
-	1/0
+	this.state_ = cw.net.StreamState_.DISCONNECTED;
+	this.protocol_.streamReset(reasonString, applicationLevel);
+	// TODO: dispose all transports?
 };
 
 /**
@@ -557,9 +614,9 @@ cw.net.Stream.prototype.resetFromPeer_ = function(reasonString, applicationLevel
  * @private
  */
 cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, avoidCreatingTransports) {
-	//if(this.state_ == cw.net.StreamState_.DISCONNECTED) {
-	//	return;
-	//}
+	goog.asserts.assert(
+		this.state_ == cw.net.StreamState_.STARTED,
+		"stringsReceived_: state is " + this.state_);
 
 	var _ = this.incoming_.give(
 		pairs, this.maxUndeliveredStrings, this.maxUndeliveredBytes);
@@ -624,13 +681,15 @@ cw.net.Stream.prototype.getSACK_ = function() {
 cw.net.Stream.prototype.start = function() {
 	goog.asserts.assert(
 		this.state_ == cw.net.StreamState_.UNSTARTED,
-		'start_: bad Stream state_: ' + this.state_);
+		'start: bad Stream state_: ' + this.state_);
 
 	// Call streamStarted before we even connect one transport successfully.
 	this.protocol_.streamStarted(this);
 
 	this.state_ = cw.net.StreamState_.STARTED;
 	this.primaryTransport_ = this.createNewTransport_(true);
+	this.primaryTransport_.writeStrings_(this.queue_, null);
+	this.primaryTransport_.flush_();
 };
 
 cw.net.Stream.prototype.disposeInternal = function() {
@@ -742,7 +801,7 @@ cw.net.ClientTransport = function(callQueue, stream, transportNumber, transportT
 	 * @type {boolean}
 	 * @private
 	 */
-	this.canSendMoreAfterStarted_ = (
+	this.canFlushMoreThanOnce_ = (
 		transportType != cw.net.TransportType_.BROWSER_HTTP);
 
 	/**
@@ -803,6 +862,14 @@ cw.net.ClientTransport.prototype.ourSeqNum_ = -1;
 cw.net.ClientTransport.prototype.peerSeqNum_ = -1;
 
 /**
+ * Has `writeReset_` been called on this transport?
+ * @type {boolean}
+ * @private
+ */
+cw.net.ClientTransport.prototype.wroteResetFrame_ = false;
+
+
+/**
  * @param {!Array.<string>} sb
  * @private
  */
@@ -830,17 +897,6 @@ cw.net.ClientTransport.prototype.handleStrings_ = function(bunchedStrings) {
 	this.stream_.stringsReceived_(this, bunchedStrings, avoidCreatingTransports);
 	// Remember that a lot can happen underneath that stringsReceived call,
 	// including a call to our own `reset_` or `close_` or `writeStrings_`
-};
-
-/**
- * @private
- */
-cw.net.ClientTransport.prototype.writeToUnderlying_ = function() {
-	goog.asserts.assert(
-		!this.canSendMoreAfterStarted_,
-		"How are we supposed to write " + cw.repr.repr(this.toSendFrames_) +
-		" if this transport cannot send after it has been started?")
-	1/0
 };
 
 /**
@@ -939,7 +995,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 			bunchedStrings = [];
 		}
 		if(this.toSendFrames_.length) {
-			this.writeToUnderlying_();
+			this.flush_();
 		}
 		if(closeSoon) {
 			this.close_();
@@ -1030,6 +1086,7 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
  */
 cw.net.ClientTransport.prototype.writeFrame_ = function(frame) {
 	this.toSendFrames_.push(frame);
+	//logger.severe('toSendFrames_: ' + cw.repr.repr(this.toSendFrames_));
 };
 
 /**
@@ -1056,7 +1113,8 @@ cw.net.ClientTransport.prototype.flushBufferAsHttpPayload_ = function() {
 };
 
 /**
- * Start the transport. Make the initial connection/HTTP request.
+ * Flush internally queued frames to the underlying connection/HTTP request.
+ * If necessary, make the initial connection/HTTP request.
  *
  * This can be called after calling {@link #writeStrings_} and/or
  * {@link #writeReset_} on a non-started transport. For transports
@@ -1065,15 +1123,16 @@ cw.net.ClientTransport.prototype.flushBufferAsHttpPayload_ = function() {
  *
  * @private
  */
-cw.net.ClientTransport.prototype.start_ = function() {
-	if(this.started_) {
-		throw Error("already started");
+cw.net.ClientTransport.prototype.flush_ = function() {
+	if(this.started_ && !this.canFlushMoreThanOnce_) {
+		throw Error("flush_: can't flush more than once to this transport");
 	}
-	this.started_ = true;
 
-	if(!this.toSendFrames_.length) {
+	if(!this.started_ && !this.toSendFrames_.length) {
 		this.writeInitialFrames_();
 	}
+
+	this.started_ = true;
 
 	if(this.transportType_ == cw.net.TransportType_.BROWSER_HTTP) {
 		for(var i=0; i < this.toSendFrames_.length; i++) {
@@ -1081,11 +1140,9 @@ cw.net.ClientTransport.prototype.start_ = function() {
 			cw.net.ClientTransport.logger.fine(this.getDescription_() + ' SEND ' + cw.repr.repr(frame));
 		}
 		var payload = this.flushBufferAsHttpPayload_();
-		// TODO XXX IMPORTANT: remove this forced delay
-		var that = this;
-		this.callQueue_.clock.setTimeout(function() { that.makeHttpRequest_(payload) }, 500);
+		this.makeHttpRequest_(payload);
 	} else {
-		throw Error("start_: don't know what to do for this transportType");
+		throw Error("flush_: don't know what to do for this transportType");
 	}
 };
 
@@ -1107,9 +1164,6 @@ cw.net.ClientTransport.prototype.writeSack_ = function(sack) {
 
 	this.writeFrame_(new cw.net.SackFrame(sack));
 	this.lastSackWritten_ = sack;
-	if(!this.spinning_) {
-		this.writeToUnderlying_();
-	}
 };
 
 /**
@@ -1143,9 +1197,6 @@ cw.net.ClientTransport.prototype.writeStrings_ = function(queue, start) {
 		this.writeFrame_(new cw.net.StringFrame(string));
 		this.ourSeqNum_ = seqNum;
 	}
-	if(!this.spinning_) {
-		this.writeToUnderlying_();
-	}
 };
 
 /**
@@ -1154,7 +1205,9 @@ cw.net.ClientTransport.prototype.writeStrings_ = function(queue, start) {
  */
 cw.net.ClientTransport.prototype.close_ = function() {
 	if(this.transportType_ == cw.net.TransportType_.BROWSER_HTTP) {
-		this.underlying_.dispose();
+		if(this.underlying_) {
+			this.underlying_.dispose();
+		}
 	} else {
 		throw Error("close_: don't know what to do for this transportType");
 	}
@@ -1174,7 +1227,8 @@ cw.net.ClientTransport.prototype.causedRwinOverflow_ = function() {
 };
 
 /**
- * Send a reset frame over this transport, then close.
+ * Send a reset frame over this transport. Depending on what you want,
+ * 	you must `close` or `start` the transport after you call this.
  * @param {string} reasonString Textual reason why Stream is resetting.
  * @param {boolean} applicationLevel Whether this reset was made by the
  * 	application.
@@ -1186,7 +1240,7 @@ cw.net.ClientTransport.prototype.writeReset_ = function(reasonString, applicatio
 	}
 	var resetFrame = new cw.net.ResetFrame(reasonString, applicationLevel);
 	this.writeFrame_(resetFrame);
-	this.close_();
+	this.wroteResetFrame_ = true;
 };
 
 cw.net.ClientTransport.prototype.disposeInternal = function() {
