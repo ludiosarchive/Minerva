@@ -789,7 +789,7 @@ cw.net.ClientTransport = function(callQueue, stream, transportNumber, transportT
 	this.callQueue_ = callQueue;
 
 	/**
-	 * @type {!cw.net.Stream}
+	 * @type {cw.net.Stream}
 	 * @private
 	 */
 	this.stream_ = stream;
@@ -966,6 +966,16 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 		var closeSoon = false;
 		var bunchedStrings = [];
 		for(var i=0, len=frames.length; i < len; i++) {
+			// Inside the loop, we call stream_ for many reasons, which
+			// can synchronously dispose us for one of several reasons.
+			// Note that we might have been disposed before entering
+			// framesReceived_; for example, if we were disposed while
+			// making an HTTP request.
+			if(this.isDisposed()) {
+				logger.info(this.getDescription_() +
+					" returning from loop because we're disposed.");
+				return;
+			}
 			var frameStr = frames[i];
 
 			// For BROWSER_HTTP, first frame must be the anti-script-inclusion preamble.
@@ -1268,7 +1278,12 @@ cw.net.ClientTransport.prototype.writeStrings_ = function(queue, start) {
  * @private
  */
 cw.net.ClientTransport.prototype.disposeInternal = function() {
+	cw.net.ClientTransport.logger.info(
+		this.getDescription_() + " in disposeInternal.");
+
 	cw.net.ClientTransport.superClass_.disposeInternal.call(this);
+
+	this.toSendFrames_ = [];
 
 	if(this.transportType_ == cw.net.TransportType_.BROWSER_HTTP) {
 		if(this.underlying_) {
@@ -1277,7 +1292,12 @@ cw.net.ClientTransport.prototype.disposeInternal = function() {
 	} else {
 		throw Error("disposeInternal: Don't know what to do for this transportType.");
 	}
-	this.stream_.transportOffline_(this);
+	var stream = this.stream_;
+	// Break circular references faster.
+	// Make sure errors are thrown if we try to make further calls on this.stream_.
+	this.stream_ = null;
+
+	stream.transportOffline_(this);
 };
 
 /**
