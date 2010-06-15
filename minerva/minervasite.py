@@ -233,6 +233,11 @@ class DemoProtocol(BasicMinervaProtocol):
 			if s.startswith('echo:'):
 				send.append(s.replace('echo:', '', 1))
 
+			elif s.startswith('echo_twice:'):
+				payload = s.replace('echo_twice:', '', 1)
+				send.append(payload)
+				self._clock.callLater(0, lambda: self.stream.sendStrings([payload]))
+
 			elif s == 'send_demo':
 				self.stream.sendStrings(['starting_send_demo'])
 				self._sendDemo(1)
@@ -279,8 +284,42 @@ class DemoFactory(BasicMinervaFactory):
 
 
 
+class GetTokenPage(BetterResource):
+	"""
+	Used by TestClient.js, because TestRunnerPage itself does not set
+	uaId cookie, and it does not have a CSRF_TOKEN.
+	"""
+	isLeaf = True
+
+	def __init__(self, csrfStopper, cookieInstaller):
+		BetterResource.__init__(self)
+		self._csrfStopper = csrfStopper
+		self._cookieInstaller = cookieInstaller
+
+
+	def render_GET(self, request):
+		cookie = self._cookieInstaller.getSet(request)
+		token = self._csrfStopper.makeToken(cookie)
+
+		return """\
+<!doctype html>
+<html>
+<head>
+	<title>GetTokenPage</title>
+</head>
+<body>
+<script>
+	window.CSRF_TOKEN = %s;
+	window.parent.__GetTokenPage_gotToken(window.CSRF_TOKEN);
+</script>
+</body>
+</html>
+""" % (simplejson.dumps(token),)
+
+
+
 class ResourcesForTest(BetterResource):
-	def __init__(self, reactor):
+	def __init__(self, reactor, csrfStopper, cookieInstaller):
 		BetterResource.__init__(self)
 		self._reactor = reactor
 
@@ -289,8 +328,7 @@ class ResourcesForTest(BetterResource):
 		self.putChild('SimpleResponse', SimpleResponse())
 		self.putChild('UnicodeRainbow', UnicodeRainbow())
 		self.putChild('NoOriginHeader', NoOriginHeader())
-
-		# add test resources as needed
+		self.putChild('GetTokenPage', GetTokenPage(csrfStopper, cookieInstaller))
 
 
 
@@ -315,13 +353,13 @@ class Root(BetterResource):
 		testres_Coreweb = FilePath(cwtools.__path__[0]).child('testres').path
 		self.putChild('@testres_Coreweb', BetterFile(testres_Coreweb))
 
-		testres_Minerva = ResourcesForTest(reactor)
+		testres_Minerva = ResourcesForTest(reactor, csrfStopper, cookieInstaller)
 		self.putChild('@testres_Minerva', testres_Minerva)
 
-		self.putChild('form_sandbox', FormSandbox(self._reactor))
-
+		# Also used by tests
 		self.putChild('httpface', httpFace)
 
+		# Demos that use httpFace and/or socketFace
 		self.putChild('flashtest', FlashTestPage(csrfStopper, cookieInstaller))
 		self.putChild('chatapp', ChatAppPage(csrfStopper, cookieInstaller))
 
@@ -329,6 +367,8 @@ class Root(BetterResource):
 		docsDir = FilePath(__file__).parent().parent().child('docs')
 		if docsDir.exists():
 			self.putChild('docs', BetterFile(docsDir.path))
+
+		self.putChild('form_sandbox', FormSandbox(self._reactor))
 
 
 
