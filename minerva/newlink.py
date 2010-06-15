@@ -255,6 +255,8 @@ class Stream(object):
 		@param strings: a sequence of C{str} objects
 		@type strings: a sequence
 		"""
+		assert not isinstance(strings, basestring), "Need strings, not a string"
+
 		if self.disconnected:
 			raise RuntimeError("Cannot sendStrings on disconnected Stream %r" % (self,))
 
