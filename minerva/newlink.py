@@ -321,6 +321,10 @@ class Stream(object):
 
 	# This assumes _protocol has been instantiated.
 	def _internalReset(self, reasonString):
+		"""
+		Called by Stream if it has given up on the Stream. This sends
+		ResetFrame to any open transports.
+		"""
 		assert not self.disconnected, self
 		self.disconnected = True
 		# .copy() because _transports shrinks as transports call Stream.transportOffline

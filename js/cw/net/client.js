@@ -638,7 +638,8 @@ cw.net.Stream.prototype.resetFromPeer_ = function(reasonString, applicationLevel
 };
 
 /**
- * Called by Stream if has decided to give up on the Stream.
+ * Called by Stream if it has given up on the Stream. This does *not* try to
+ * send a ResetFrame to the server.
  * @param {string} reasonString
  * @private
  */
