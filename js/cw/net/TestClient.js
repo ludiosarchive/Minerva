@@ -61,6 +61,7 @@ cw.net.TestClient.MockStream = function() {
 	this.makeCredentialsCallable_ = function() { return "MockStream-credentials"; };
 	this.lastSackSeenByClient_ = new SACK(-1, []);
 	this.streamId = goog.string.repeat('x', 26);
+	this.log = [];
 };
 
 /**
@@ -68,6 +69,13 @@ cw.net.TestClient.MockStream = function() {
  */
 cw.net.TestClient.MockStream.prototype.getSACK_ = function() {
 	return new SACK(-1, []);
+};
+
+/**
+ * @return {!Object}
+ */
+cw.net.TestClient.MockStream.prototype.transportOffline_ = function(transport) {
+	this.log.push(['transportOffline_', transport]);
 };
 
 
@@ -226,12 +234,21 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 		queue.extend(['c2s_0', 'c2s_1']);
 		var payloads = [];
 
+		var initialDelay = 2;
 		var ct = new cw.net.ClientTransport(
-			callQueue, stream, 0, BROWSER_HTTP, '/TestClient-not-a-real-endpoint/', true);
-		ct.makeHttpRequest_ = function(payload) { payloads.push(payload) };
+			callQueue, stream, 0, BROWSER_HTTP, '/TestClient-not-a-real-endpoint/', true, initialDelay);
+		ct.makeHttpRequest_ = function(payload) {
+			payloads.push(payload)
+		};
 		ct.writeStrings_(queue, null);
 		ct.flush_();
-		clock.advance(1000); // TODO: remove this if not necessary
+
+		// It doesn't make the request until initialDelay millliseconds pass
+		self.assertEqual(0, payloads.length);
+		clock.advance(1);
+		self.assertEqual(0, payloads.length);
+		clock.advance(1);
+		// After that, it should have made the request...
 
 		self.assertEqual(1, payloads.length);
 		var decoded = cw.net.TestClient.decodeFramesFromHttpClient_(payloads[0]);
@@ -248,6 +265,47 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 			new StringFrame('c2s_0'),
 			new StringFrame('c2s_1')];
 		self.assertEqual(expected, decoded);
+	},
+
+	/**
+	 * Calling flush_ twice on an HTTP transport raises an Error.
+	 */
+	function test_flushHttpTransportTwiceRaisesError(self) {
+		var clock = new cw.clock.Clock();
+		var callQueue = new cw.eventual.CallQueue(clock);
+		var stream = new cw.net.TestClient.MockStream();
+
+		var ct = new cw.net.ClientTransport(
+			callQueue, stream, 0, BROWSER_HTTP, '/TestClient-not-a-real-endpoint/', true, 2/* initialDelay */);
+		ct.flush_();
+		self.assertThrows(Error, function() { ct.flush_(); },
+			"flush_: Can't flush more than once to this transport.");
+	},
+
+	/**
+	 * If we call ClientTransport.dispose, it cancels the setTimeout which
+	 * would have started the underlying TCP connection or HTTP request.
+	 */
+	function test_disposeCancelsDelayedUnderlying(self) {
+		var clock = new cw.clock.Clock();
+		var callQueue = new cw.eventual.CallQueue(clock);
+		var stream = new cw.net.TestClient.MockStream();
+		var payloads = [];
+
+		var initialDelay = 2;
+		var ct = new cw.net.ClientTransport(
+			callQueue, stream, 0, BROWSER_HTTP, '/TestClient-not-a-real-endpoint/', true, initialDelay);
+		ct.makeHttpRequest_ = function(payload) {
+			payloads.push(payload)
+		};
+		ct.flush_();
+		self.assertEqual(0, payloads.length); // sanity check
+
+		// flush_ calls a setTimeout to start underlying in `initialDelay` ms.
+		// Dispose, advance, and make sure that request was never made.
+		ct.dispose();
+		clock.advance(initialDelay);
+		self.assertEqual(0, payloads.length);
 	}
 
 	// TODO: test if ClientTransport(becomePrimary=false), HelloFrame does not have an 'eeds' argument

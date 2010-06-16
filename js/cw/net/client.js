@@ -974,6 +974,14 @@ cw.net.ClientTransport.prototype.underlyingEndTime_ = null;
 cw.net.ClientTransport.prototype.started_ = false;
 
 /**
+ * The setTimeout ticket for the call to make the underlying TCP connection
+ * or HTTP request.
+ * @type {?number}
+ * @private
+ */
+cw.net.ClientTransport.prototype.underlyingStartTicket_ = null;
+
+/**
  * Whether we're in the `framesReceived_` loop.
  * @type {boolean}
  * @private
@@ -1251,12 +1259,10 @@ cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
 	// Use "application/octet-stream" instead of
 	// "application/x-www-form-urlencoded;charset=utf-8" because we don't
 	// want Minerva server or intermediaries to try to urldecode the POST body.
-	this.callQueue_.clock.setTimeout(goog.bind(function() {
-		this.underlyingStartTime_ = goog.Timer.getTime(this.callQueue_.clock);
-		this.underlying_.send(
-			this.endpoint_, 'POST', payload,
-			{'Content-Type': 'application/octet-stream'});
-	}, this), this.initialDelay_);
+	this.underlyingStartTime_ = goog.Timer.getTime(this.callQueue_.clock);
+	this.underlying_.send(
+		this.endpoint_, 'POST', payload,
+		{'Content-Type': 'application/octet-stream'});
 };
 
 /**
@@ -1360,7 +1366,11 @@ cw.net.ClientTransport.prototype.flush_ = function() {
 				this.getDescription_() + ' SEND ' + cw.repr.repr(frame));
 		}
 		var payload = this.flushBufferAsHttpPayload_();
-		this.makeHttpRequest_(payload);
+		var that = this;
+		this.underlyingStartTicket_ = this.callQueue_.clock.setTimeout(function() {
+			that.underlyingStartTicket_ = null;
+			that.makeHttpRequest_(payload);
+		}, this.initialDelay_);
 	} else {
 		throw Error("flush_: Don't know what to do for this transportType.");
 	}
@@ -1428,6 +1438,10 @@ cw.net.ClientTransport.prototype.disposeInternal = function() {
 		this.getDescription_() + " in disposeInternal.");
 
 	cw.net.ClientTransport.superClass_.disposeInternal.call(this);
+
+	if(this.underlyingStartTicket_ != null) {
+		this.callQueue_.clock.clearTimeout(this.underlyingStartTicket_);
+	}
 
 	this.toSendFrames_ = [];
 
