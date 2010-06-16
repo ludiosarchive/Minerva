@@ -20,6 +20,7 @@ goog.require('cw.net.Queue');
 goog.require('cw.net.TransportType_');
 goog.require('cw.net.SACK');
 goog.require('cw.net.Stream');
+goog.require('cw.net.EventType');
 goog.require('cw.net.ClientTransport');
 
 goog.require('cw.net.HelloFrame');
@@ -109,7 +110,6 @@ cw.net.TestClient.MockClientTransport.prototype.getDescription_ = function() {
  * @constructor
  */
 cw.net.TestClient.RecordingProtocol = function() {
-	this.testingDoneD = new goog.async.Deferred();
 	this.log = [];
 	this.stringCount = -1;
 };
@@ -307,7 +307,6 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 			this.stringCount += 1;
 			if(s == "hello world" && this.stringCount > 0) {
 				this.stream_.reset("done testing things");
-				this.testingDoneD.callback(null);
 			}
 		}
 		return proto;
@@ -321,8 +320,11 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 		stream.start();
 		stream.sendStrings(['echo_twice:hello world']);
 
-		proto.testingDoneD.addCallback(function() { self._runAssertions(stream, proto); });
-		return proto.testingDoneD;
+		var d = new goog.async.Deferred();
+		stream.addEventListener(
+			cw.net.EventType.DISCONNECTED, goog.bind(d.callback, d), false);
+		d.addCallback(function() { self._runAssertions(stream, proto); });
+		return d;
 	},
 
 	/**
@@ -337,8 +339,11 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 		stream.sendStrings(['echo_twice:hello world']);
 		stream.start();
 
-		proto.testingDoneD.addCallback(function() { self._runAssertions(stream, proto); });
-		return proto.testingDoneD;
+		var d = new goog.async.Deferred();
+		stream.addEventListener(
+			cw.net.EventType.DISCONNECTED, goog.bind(d.callback, d), false);
+		d.addCallback(function() { self._runAssertions(stream, proto); });
+		return d;
 	},
 
 	/**
@@ -353,7 +358,6 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 		var origStreamReset = cw.net.TestClient.RecordingProtocol.prototype.streamReset;
 		proto.streamReset = function(reasonString, applicationLevel) {
 			origStreamReset.call(this, reasonString, applicationLevel);
-			this.testingDoneD.callback(null);
 		};
 
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
@@ -368,8 +372,11 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 			self.assertEqual("streamReset", proto.log[1][0]);
 		}
 
-		proto.testingDoneD.addCallback(streamResetAssertions);
-		return proto.testingDoneD;
+		var d = new goog.async.Deferred();
+		stream.addEventListener(
+			cw.net.EventType.DISCONNECTED, goog.bind(d.callback, d), false);
+		d.addCallback(streamResetAssertions);
+		return d;
 	}
 );
 

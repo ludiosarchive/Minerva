@@ -16,10 +16,13 @@
 
 goog.provide('cw.net.IMinervaProtocol');
 goog.provide('cw.net.Stream');
+goog.provide('cw.net.EventType');
 goog.provide('cw.net.ClientTransport');
 goog.provide('cw.net.TransportType_');
 
 goog.require('goog.asserts');
+goog.require('goog.events');
+goog.require('goog.events.EventTarget');
 goog.require('goog.string');
 goog.require('goog.structs.Set');
 goog.require('goog.debug.Logger');
@@ -198,6 +201,15 @@ cw.net.makeStreamId_ = function() {
 
 
 /**
+ * Stream's event types
+ * @enum {string}
+ */
+cw.net.EventType = {
+	DISCONNECTED: 'disconnected'
+};
+
+
+/**
  * States that a Stream can be in.
  * @enum {number}
  * @private
@@ -218,10 +230,10 @@ cw.net.StreamState_ = {
  * 	credentialsData string.
  *
  * @constructor
- * @extends {goog.Disposable}
+ * @extends {goog.events.EventTarget}
  */
 cw.net.Stream = function(callQueue, protocol, httpEndpoint, makeCredentialsCallable) {
-	goog.Disposable.call(this);
+	goog.events.EventTarget.call(this);
 
 	/**
 	 * @type {!cw.eventual.CallQueue}
@@ -271,7 +283,7 @@ cw.net.Stream = function(callQueue, protocol, httpEndpoint, makeCredentialsCalla
 	 */
 	this.incoming_ = new cw.net.Incoming();
 };
-goog.inherits(cw.net.Stream, goog.Disposable);
+goog.inherits(cw.net.Stream, goog.events.EventTarget);
 
 /**
  * @type {!cw.net.SACK}
@@ -333,7 +345,7 @@ cw.net.Stream.prototype.transportCount_ = -1;
 
 /**
  * The primary transport, for receiving S2C strings.
- * @type {Object}
+ * @type {cw.net.ClientTransport}
  * @private
  */
 cw.net.Stream.prototype.primaryTransport_ = null;
@@ -341,7 +353,7 @@ cw.net.Stream.prototype.primaryTransport_ = null;
 /**
  * The secondary transport, for sending S2C strings (especially if primary
  * 	cannot after it has been created).
- * @type {Object}
+ * @type {cw.net.ClientTransport}
  * @private
  */
 cw.net.Stream.prototype.secondaryTransport_ = null;
@@ -349,7 +361,7 @@ cw.net.Stream.prototype.secondaryTransport_ = null;
 /**
  * The transport dedicated to resetting the Stream. Note that sometimes
  * the ResetFrame is sent over primaryTransport_ instead.
- * @type {Object}
+ * @type {cw.net.ClientTransport}
  * @private
  */
 cw.net.Stream.prototype.resettingTransport_ = null;
@@ -362,6 +374,22 @@ cw.net.Stream.prototype.resettingTransport_ = null;
  * @private
  */
 cw.net.Stream.prototype.streamPenalty_ = 0;
+
+/**
+ * How many times in a row the primary transport has been started
+ * with a non-zero initialDelay.
+ * @type {number}
+ * @private
+ */
+cw.net.Stream.prototype.primaryDelayCount_ = 0;
+
+/**
+ * How many times in a row the secondary transport has been started
+ * with a non-zero initialDelay.
+ * @type {number}
+ * @private
+ */
+cw.net.Stream.prototype.secondaryDelayCount_ = 0;
 
 /**
  * @param {!Array.<string>} sb
@@ -521,6 +549,40 @@ cw.net.Stream.prototype.streamStatusReceived_ = function(lastSackSeen) {
 };
 
 /**
+ * @param {!cw.net.ClientTransport} transport
+ * @return {number} Delay in milliseconds
+ */
+cw.net.Stream.prototype.getDelayForTransport_ = function(transport) {
+	var needDelay = transport.shouldDelayNextTransport_();
+	var count;
+	if(transport == this.primaryTransport_) {
+		if(needDelay) {
+			count = ++this.primaryDelayCount_;
+		} else {
+			count = this.primaryDelayCount_ = 0;
+		}
+	} else { // secondaryTransport_
+		if(needDelay) {
+			count = ++this.secondaryDelayCount_;
+		} else {
+			count = this.secondaryDelayCount_ = 0;
+		}
+	}
+	// If non-zero count, delay is 2000 * count, but no more than 6000,
+	// plus a random variance of +- 2000
+	return (!count) ? 0 : (2000 * Math.min(count, 3) + (Math.floor(Math.random() * 4000)) - 2000);
+};
+
+/**
+ * @private
+ */
+cw.net.Stream.prototype.goDisconnect_ = function() {
+	this.dispatchEvent({
+		type: cw.net.EventType.DISCONNECTED
+	});
+};
+
+/**
  * ClientTransport calls this to tell Stream that it has disconnected.
  * @param {!cw.net.ClientTransport} transport
  * @private
@@ -549,19 +611,19 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 		transport.wroteResetFrame_) {
 			cw.net.Stream.logger.info("Was RESETTING, now DISCONNECTED.");
 			this.state_ = cw.net.StreamState_.DISCONNECTED;
+			this.goDisconnect_();
 		}
 		cw.net.Stream.logger.fine(
 			"Not creating a transport because Stream is in state " + this.state_);
 		return;
 	}
 
+	var initialDelay = this.getDelayForTransport_(transport);
 	if(transport == this.primaryTransport_) {
-		var initialDelay = transport.shouldDelayNextTransport_() ? 3000 : 0;
 		this.primaryTransport_ = this.createNewTransport_(true, initialDelay);
 		this.primaryTransport_.writeStrings_(this.queue_, null);
 		this.primaryTransport_.flush_();
 	} else if(transport == this.secondaryTransport_) {
-		var initialDelay = transport.shouldDelayNextTransport_() ? 3000 : 0;
 		this.secondaryTransport_ = null;
 		// More data might have been queued while the secondary transport
 		// was getting a response. It's also possible that the server didn't
@@ -604,7 +666,7 @@ cw.net.Stream.prototype.reset = function(reasonString) {
 		}
 
 		cw.net.Stream.logger.info("reset: Creating resettingTransport_ for sending ResetFrame.");
-		this.resettingTransport_ = this.createNewTransport_(false, 0 /* initialDelay */);
+		this.resettingTransport_ = this.createNewTransport_(false, 0/* initialDelay */);
 		this.resettingTransport_.writeReset_(reasonString, true/* applicationLevel */);
 		this.resettingTransport_.flush_();
 		// If server gets the ResetFrame, it will close the transport (or send YouCloseIt).
@@ -627,6 +689,9 @@ cw.net.Stream.prototype.doReset_ = function(reasonString, applicationLevel) {
 		transports[i].dispose();
 	}
 	this.protocol_.streamReset(reasonString, applicationLevel);
+	// Fire event after streamReset, to be consistent with the call
+	// ordering that happens if the client application resets instead.
+	this.goDisconnect_();
 };
 
 /**
