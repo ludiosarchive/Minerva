@@ -91,6 +91,7 @@ function(callQueue, stream, transportNumber, transportType, endpoint, becomePrim
 
 	this.log = [];
 	this.started = false;
+	this.disposed = false;
 };
 
 cw.net.TestClient.MockClientTransport.prototype.writeStrings_ = function(strings) {
@@ -101,9 +102,18 @@ cw.net.TestClient.MockClientTransport.prototype.writeSack_ = function(sack) {
 	this.log.push(['writeSack_', sack]);
 };
 
+cw.net.TestClient.MockClientTransport.prototype.writeReset_ = function(reasonString, applicationLevel) {
+	this.log.push(['writeReset_', reasonString, applicationLevel]);
+};
+
 cw.net.TestClient.MockClientTransport.prototype.flush_ = function() {
 	this.log.push(['flush_']);
 	this.started = true;
+};
+
+cw.net.TestClient.MockClientTransport.prototype.dispose = function() {
+	this.log.push(['dispose']);
+	this.disposed = true;
 };
 
 cw.net.TestClient.MockClientTransport.prototype.getDescription_ = function() {
@@ -197,27 +207,57 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 	},
 
 	/**
-	 * Calling stream.dispose() makes it call dispose() on all of its transports.
+	 * If Stream is already reset, calling Stream.sendStrings raises an Error.
 	 */
-	function test_disposeDisposesAllTransports(self) {
-		1/0
-	},
-	
-	function test_sendStringsOverSecondaryTransport(self) {
-
-	},
-
-	function test_sendStringsOverPrimaryTransport(self) {
-
-	},
-
-	function test_resetOverSecondaryTransport(self) {
-
+	function test_cannotSendStringsAfterAlreadyReset(self) {
+		var proto = new cw.net.TestClient.RecordingProtocol();
+		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
+		var stream = new cw.net.Stream(
+			callQueue, proto, '/StreamTests-not-a-real-endpoint/', function() { return "not-real-credentials"; });
+		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
+		stream.start();
+		stream.reset("a reasonString");
+		self.assertThrows(Error, function() { stream.sendStrings(["a string"]); },
+			"sendStrings: Can't send strings in state 3");
 	},
 
-	function test_resetOverPrimaryTransport(self) {
-
+	/**
+	 * If Stream is already reset, calling Stream.reset raises an Error.
+	 */
+	function test_cannotResetAfterAlreadyReset(self) {
+		var proto = new cw.net.TestClient.RecordingProtocol();
+		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
+		var stream = new cw.net.Stream(
+			callQueue, proto, '/StreamTests-not-a-real-endpoint/', function() { return "not-real-credentials"; });
+		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
+		stream.start();
+		stream.reset("a reasonString");
+		self.assertThrows(Error, function() { stream.reset("a reasonString"); },
+			"reset: Can't send reset in state 3");
 	}
+
+//	/**
+//	 * Calling stream.dispose() makes it call dispose() on all of its transports.
+//	 */
+//	function test_disposeDisposesAllTransports(self) {
+//
+//	},
+//
+//	function test_sendStringsOverSecondaryTransport(self) {
+//
+//	},
+//
+//	function test_sendStringsOverPrimaryTransport(self) {
+//
+//	},
+//
+//	function test_resetOverSecondaryTransport(self) {
+//
+//	},
+//
+//	function test_resetOverPrimaryTransport(self) {
+//
+//	}
 );
 
 
