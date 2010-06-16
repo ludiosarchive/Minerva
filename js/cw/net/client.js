@@ -27,6 +27,7 @@ goog.require('goog.string');
 goog.require('goog.structs.Set');
 goog.require('goog.debug.Logger');
 goog.require('goog.Disposable');
+goog.require('goog.Timer');
 goog.require('goog.net.XhrIo');
 goog.require('goog.net.EventType');
 goog.require('cw.math');
@@ -549,28 +550,39 @@ cw.net.Stream.prototype.streamStatusReceived_ = function(lastSackSeen) {
 };
 
 /**
- * @param {!cw.net.ClientTransport} transport
+ * Return a good initialDelay for a new transport, based on old transport
+ * {@code transport}.
+ * @param {!cw.net.ClientTransport} transport The previous transport
  * @return {number} Delay in milliseconds
  */
-cw.net.Stream.prototype.getDelayForTransport_ = function(transport) {
-	var needDelay = transport.shouldDelayNextTransport_();
+cw.net.Stream.prototype.getDelayForNextTransport_ = function(transport) {
+	var considerDelay = transport.considerDelayingNextTransport_();
 	var count;
 	if(transport == this.primaryTransport_) {
-		if(needDelay) {
+		if(considerDelay) {
 			count = ++this.primaryDelayCount_;
 		} else {
 			count = this.primaryDelayCount_ = 0;
 		}
 	} else { // secondaryTransport_
-		if(needDelay) {
+		if(considerDelay) {
 			count = ++this.secondaryDelayCount_;
 		} else {
 			count = this.secondaryDelayCount_ = 0;
 		}
 	}
-	// If non-zero count, delay is 2000 * count, but no more than 6000,
-	// plus a random variance of +- 2000
-	return (!count) ? 0 : (2000 * Math.min(count, 3) + (Math.floor(Math.random() * 4000)) - 2000);
+	if(!count) {
+		return 0;
+	} else {
+		var base = 2000 * Math.min(count, 3);
+		var variance = Math.floor(Math.random() * 4000) - 2000;
+		var oldDuration = transport.getUnderlyingDuration_();
+		var delay = Math.max(0, base + variance - oldDuration);
+		cw.net.Stream.logger.finest(
+			"getDelayForNextTransport_: " +
+			cw.repr.repr({base: base, variance: variance, oldDuration: oldDuration, delay: delay}));
+		return delay;
+	}
 };
 
 /**
@@ -618,7 +630,7 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 		return;
 	}
 
-	var initialDelay = this.getDelayForTransport_(transport);
+	var initialDelay = this.getDelayForNextTransport_(transport);
 	if(transport == this.primaryTransport_) {
 		this.primaryTransport_ = this.createNewTransport_(true, initialDelay);
 		this.primaryTransport_.writeStrings_(this.queue_, null);
@@ -939,6 +951,20 @@ goog.inherits(cw.net.ClientTransport, goog.Disposable);
 cw.net.ClientTransport.prototype.underlying_ = null;
 
 /**
+ * When the underlying TCP connection or HTTP request started.
+ * @type {?number}
+ * @private
+ */
+cw.net.ClientTransport.prototype.underlyingStartTime_ = null;
+
+/**
+ * When the underlying TCP connection or HTTP request ended.
+ * @type {?number}
+ * @private
+ */
+cw.net.ClientTransport.prototype.underlyingEndTime_ = null;
+
+/**
  * Whether the underlying TCP connection or HTTP request has been made.
  * @type {boolean}
  * @private
@@ -995,6 +1021,14 @@ cw.net.ClientTransport.prototype.wroteResetFrame_ = false;
  */
 cw.net.ClientTransport.prototype.penalty_ = 0;
 
+/**
+ * Did the transport receive data that suggests we should possibly delay
+ * the next transport?
+ * @type {boolean}
+ * @private
+ */
+cw.net.ClientTransport.prototype.hadProblems_ = false;
+
 
 /**
  * @param {!Array.<string>} sb
@@ -1036,13 +1070,25 @@ cw.net.ClientTransport.prototype.getDescription_ = function() {
 };
 
 /**
- * Should Stream delay the creation of the next transport?
+ * Should Stream consider an initialDelay for the next transport?
  * @return {boolean}
  * @private
  */
-cw.net.ClientTransport.prototype.shouldDelayNextTransport_ = function() {
-	// Delay if we have non-0 penalty, or if 0 frames decoded.
-	return !!(this.penalty_ || !this.framesDecoded_);
+cw.net.ClientTransport.prototype.considerDelayingNextTransport_ = function() {
+	return !!(this.hadProblems_ || !this.framesDecoded_);
+};
+
+/**
+ * Return how many milliseconds the underlying TCP connection or HTTP request
+ * was open. This does not include initialDelay. The returned number may be too
+ * low or too high if the clock jumped.
+ * @return {number} Duration in milliseconds.
+ * @private
+ */
+cw.net.ClientTransport.prototype.getUnderlyingDuration_ = function() {
+	goog.asserts.assertNumber(this.underlyingEndTime_);
+	goog.asserts.assertNumber(this.underlyingStartTime_);
+	return Math.max(0, this.underlyingEndTime_ - this.underlyingStartTime_);
 };
 
 /**
@@ -1097,6 +1143,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 				} else if(frame instanceof cw.net.SackFrame) {
 					if(this.stream_.sackReceived_(frame.sack)) {
 						logger.warning("Closing soon because got bad SackFrame");
+						this.hadProblems_ = true;
 						closeSoon = true;
 						break;
 					}
@@ -1109,14 +1156,13 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 					closeSoon = true;
 					break;
 				} else if(frame instanceof cw.net.TransportKillFrame) {
+					this.hadProblems_ = true;
 					if(frame.reason == cw.net.TransportKillReason.stream_attach_failure) {
 						this.penalty_ += 1;
 					} else if(frame.reason == cw.net.TransportKillReason.acked_unsent_strings) {
 						this.penalty_ += 0.5;
-					} else {
-						// frame_corruption, invalid_frame_type_or_arguments, rwin_overflow
-						this.penalty_ += 0.02;
 					}
+					// no penalty for frame_corruption, invalid_frame_type_or_arguments, rwin_overflow
 					logger.finest("Closing soon because got " + cw.repr.repr(frame));
 					closeSoon = true;
 					break;
@@ -1144,6 +1190,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 				logger.warning("Closing soon because got InvalidFrame: " + cw.repr.repr(frameStr));
 				// No penalty because this cause is almost certainly
 				// due to corruption by intermediary.
+				this.hadProblems_ = true;
 				closeSoon = true;
 				break;
 			}
@@ -1169,6 +1216,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
  * @private
  */
 cw.net.ClientTransport.prototype.httpResponseReceived_ = function() {
+	this.underlyingEndTime_ = goog.Timer.getTime(this.callQueue_.clock);
 	var responseText = this.underlying_.getResponseText();
 	// Proxies might convert \n to \r\n, so convert terminators if necessary.
 	if(responseText.indexOf('\r\n') != -1) {
@@ -1201,12 +1249,12 @@ cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
 	// Use "application/octet-stream" instead of
 	// "application/x-www-form-urlencoded;charset=utf-8" because we don't
 	// want Minerva server or intermediaries to try to urldecode the POST body.
-	var that = this;
-	this.callQueue_.clock.setTimeout(function() {
-		that.underlying_.send(
-			that.endpoint_, 'POST', payload,
+	this.callQueue_.clock.setTimeout(goog.bind(function() {
+		this.underlyingStartTime_ = goog.Timer.getTime(this.callQueue_.clock);
+		this.underlying_.send(
+			this.endpoint_, 'POST', payload,
 			{'Content-Type': 'application/octet-stream'});
-	}, this.initialDelay_);
+	}, this), this.initialDelay_);
 };
 
 /**
