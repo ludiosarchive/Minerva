@@ -649,7 +649,9 @@ cw.net.Stream.prototype.reset = function(reasonString) {
 		cw.net.Stream.logger.info("reset: Sending ResetFrame over existing primary.");
 		this.primaryTransport_.writeReset_(reasonString, true/* applicationLevel */);
 		this.primaryTransport_.flush_();
-		this.primaryTransport_.close();
+		// If server gets the ResetFrame, it will close the transport (or send YouCloseIt).
+		// Eventually transportOffline_ is called (we hope), which no
+		// longer makes a new transport because this.state_ > STARTED
 	} else {
 		// Primary is either offline or can't send after started, so
 		// we need to create a secondary transport to send a reset frame.
@@ -669,9 +671,7 @@ cw.net.Stream.prototype.reset = function(reasonString) {
 		this.resettingTransport_ = this.createNewTransport_(false, 0/* initialDelay */);
 		this.resettingTransport_.writeReset_(reasonString, true/* applicationLevel */);
 		this.resettingTransport_.flush_();
-		// If server gets the ResetFrame, it will close the transport (or send YouCloseIt).
-		// Eventually transportOffline_ is called (we hope), which no
-		// longer makes a new transport because this.state_ > STARTED
+		// Comment above about primaryTransport_.flush_() applies here too.
 	}
 
 	this.protocol_.streamReset(reasonString, true/* applicationLevel */);
