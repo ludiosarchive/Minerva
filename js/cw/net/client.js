@@ -300,11 +300,14 @@ cw.net.Stream.prototype.maxUndeliveredStrings = 50;
 cw.net.Stream.prototype.maxUndeliveredBytes = 1 * 1024 * 1024;
 
 /**
- * Does the server know about the Stream yet? If not, the transports we make
- * must have HelloFrame with `requestNewStream` and `credentialsData`.
+ * Has the server ever known about the Stream? Set to `true` after
+ * we get a StreamCreatedFrame. Never set back to `false`.
+ *
+ * If `false`, the transports that Stream makes must have HelloFrame with
+ * `requestNewStream` and `credentialsData`.
  * @type {boolean}
  */
-cw.net.Stream.prototype.streamExistsAtServer_ = false;
+cw.net.Stream.prototype.streamExistedAtServer_ = false;
 
 /**
  * Is a secondary transport suppressed because Stream might not exist on
@@ -386,7 +389,7 @@ cw.net.Stream.prototype.equals = function(other) {
  * @private
  */
 cw.net.Stream.prototype.tryToSend_ = function() {
-	if(!this.streamExistsAtServer_) {
+	if(!this.streamExistedAtServer_) {
 		goog.asserts.assert(
 			this.queue_.getQueuedCount() == 0 ||
 			this.queue_.getQueuedKeys()[0] === 0,
@@ -425,7 +428,7 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 		// For robustness reasons, wait until we know that Stream
 		// exists on server before creating secondary transports.
 		} else if(this.secondaryTransport_ == null) {
-			if(!this.streamExistsAtServer_) {
+			if(!this.streamExistedAtServer_) {
 				cw.net.Stream.logger.finest(
 					"tryToSend_: not creating a secondary because Stream " +
 					"might not exist on server");
@@ -498,7 +501,7 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
  */
 cw.net.Stream.prototype.streamSuccessfullyCreated_ = function(avoidCreatingTransports) {
 	cw.net.Stream.logger.finest('Stream is now confirmed to exist at server.');
-	this.streamExistsAtServer_ = true;
+	this.streamExistedAtServer_ = true;
 	// See comment for cw.net.Stream.prototype.stringsReceived_
 	if(this.secondaryIsWaitingForStreamToExist_ && !avoidCreatingTransports) {
 		// This method is idempotent, so we should set this to false
@@ -1123,7 +1126,7 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 	hello.transportNumber = this.transportNumber;
 	hello.protocolVersion = cw.net.protocolVersion_;
 	hello.httpFormat = cw.net.HttpFormat.FORMAT_XHR;
-	if(!this.stream_.streamExistsAtServer_) {
+	if(!this.stream_.streamExistedAtServer_) {
 		hello.requestNewStream = true;
 		// TODO: maybe sometimes client needs to send credentialsData
 		// even when it's not a new Stream?
