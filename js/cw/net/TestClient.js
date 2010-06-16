@@ -159,9 +159,9 @@ cw.net.TestClient.decodeFramesFromHttpClient_ = function(payload) {
  * @return {!cw.net.TestClient.MockClientTransport} The newly-instantiated transport.
  */
 cw.net.TestClient.instantiateMockTransport_ =
-function(callQueue, stream, transportNumber, transportType, endpoint, becomePrimary) {
+function(callQueue, stream, transportNumber, transportType, endpoint, becomePrimary, initialDelay) {
 	return new cw.net.TestClient.MockClientTransport(
-		callQueue, stream, transportNumber, transportType, endpoint, becomePrimary);
+		callQueue, stream, transportNumber, transportType, endpoint, becomePrimary, initialDelay);
 };
 
 

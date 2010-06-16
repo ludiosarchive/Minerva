@@ -386,9 +386,10 @@ cw.net.Stream.prototype.equals = function(other) {
 };
 
 /**
+ * @param {number} initialDelay
  * @private
  */
-cw.net.Stream.prototype.tryToSend_ = function() {
+cw.net.Stream.prototype.tryToSend_ = function(initialDelay) {
 	if(!this.streamExistedAtServer_) {
 		goog.asserts.assert(
 			this.queue_.getQueuedCount() == 0 ||
@@ -436,7 +437,7 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 			} else {
 				cw.net.Stream.logger.finest(
 					"tryToSend_: creating secondary to send SACK/strings");
-				this.secondaryTransport_ = this.createNewTransport_(false);
+				this.secondaryTransport_ = this.createNewTransport_(false, initialDelay);
 				this.secondaryTransport_.writeStrings_(this.queue_, null);
 				this.secondaryTransport_.flush_();
 			}
@@ -460,7 +461,7 @@ cw.net.Stream.prototype.sendStrings = function(strings) {
 		return;
 	}
 	this.queue_.extend(strings);
-	this.tryToSend_();
+	this.tryToSend_(0/* initialDelay */);
 };
 
 /**
@@ -469,9 +470,9 @@ cw.net.Stream.prototype.sendStrings = function(strings) {
  * This method exists so that it can be overriden in tests.
  */
 cw.net.Stream.prototype.instantiateTransport_ =
-function(callQueue, stream, transportNumber, transportType, endpoint, becomePrimary) {
+function(callQueue, stream, transportNumber, transportType, endpoint, becomePrimary, initialDelay) {
 	return new cw.net.ClientTransport(
-		callQueue, stream, transportNumber, transportType, endpoint, becomePrimary);
+		callQueue, stream, transportNumber, transportType, endpoint, becomePrimary, initialDelay);
 };
 
 /**
@@ -479,13 +480,13 @@ function(callQueue, stream, transportNumber, transportType, endpoint, becomePrim
  * 	primary transport.
  * @return {!cw.net.ClientTransport} The newly-created transport.
  */
-cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
+cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary, initialDelay) {
 	this.transportCount_ += 1;
 	var transportType = cw.net.TransportType_.BROWSER_HTTP;
 	var endpoint = this.httpEndpoint_;
 	var transport = this.instantiateTransport_(
-		this.callQueue_, this, this.transportCount_, transportType, endpoint, becomePrimary);
-	cw.net.Stream.logger.finest('Created: ' + transport.getDescription_());
+		this.callQueue_, this, this.transportCount_, transportType, endpoint, becomePrimary, initialDelay);
+	cw.net.Stream.logger.finest('Created: ' + transport.getDescription_() + ', delay=' + initialDelay);
 	this.transports_.add(transport);
 	return transport;
 };
@@ -507,7 +508,7 @@ cw.net.Stream.prototype.streamSuccessfullyCreated_ = function(avoidCreatingTrans
 		// This method is idempotent, so we should set this to false
 		// to avoid calling tryToSend_ more than necessary.
 		this.secondaryIsWaitingForStreamToExist_ = false;
-		this.tryToSend_();
+		this.tryToSend_(0/* initialDelay */);
 	}
 };
 
@@ -555,15 +556,17 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 	}
 
 	if(transport == this.primaryTransport_) {
-		this.primaryTransport_ = this.createNewTransport_(true);
+		var initialDelay = transport.shouldDelayNextTransport_() ? 3000 : 0;
+		this.primaryTransport_ = this.createNewTransport_(true, initialDelay);
 		this.primaryTransport_.writeStrings_(this.queue_, null);
 		this.primaryTransport_.flush_();
 	} else if(transport == this.secondaryTransport_) {
+		var initialDelay = transport.shouldDelayNextTransport_() ? 3000 : 0;
 		this.secondaryTransport_ = null;
 		// More data might have been queued while the secondary transport
 		// was getting a response. It's also possible that the server didn't
 		// ACK what we just sent, so we have to send it again.
-		this.tryToSend_();
+		this.tryToSend_(initialDelay);
 	}
 };
 
@@ -601,7 +604,7 @@ cw.net.Stream.prototype.reset = function(reasonString) {
 		}
 
 		cw.net.Stream.logger.info("reset: Creating resettingTransport_ for sending ResetFrame.");
-		this.resettingTransport_ = this.createNewTransport_(false);
+		this.resettingTransport_ = this.createNewTransport_(false, 0 /* initialDelay */);
 		this.resettingTransport_.writeReset_(reasonString, true/* applicationLevel */);
 		this.resettingTransport_.flush_();
 		// If server gets the ResetFrame, it will close the transport (or send YouCloseIt).
@@ -683,7 +686,7 @@ cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, avoidCreat
 	// For HTTP streaming, the transport might not close for a while, so
 	// we do call tryToSend_.
 	if(!avoidCreatingTransports) { // maybe we want && !hitLimit?
-		this.tryToSend_();
+		this.tryToSend_(0/* initialDelay */);
 	}
 
 	// We deliver the deliverable strings even if the receive window is overflowing,
@@ -730,7 +733,7 @@ cw.net.Stream.prototype.start = function() {
 	this.protocol_.streamStarted(this);
 
 	this.state_ = cw.net.StreamState_.STARTED;
-	this.primaryTransport_ = this.createNewTransport_(true);
+	this.primaryTransport_ = this.createNewTransport_(true, 0/* initialDelay */);
 	this.primaryTransport_.writeStrings_(this.queue_, null);
 	this.primaryTransport_.flush_();
 };
@@ -783,7 +786,7 @@ cw.net.TransportType_ = {
  * @extends {goog.Disposable}
  * @private
  */
-cw.net.ClientTransport = function(callQueue, stream, transportNumber, transportType, endpoint, becomePrimary) {
+cw.net.ClientTransport = function(callQueue, stream, transportNumber, transportType, endpoint, becomePrimary, initialDelay) {
 	goog.Disposable.call(this);
 
 	/**
@@ -838,6 +841,14 @@ cw.net.ClientTransport = function(callQueue, stream, transportNumber, transportT
 	 * @private
 	 */
 	this.becomePrimary_ = becomePrimary;
+
+	/**
+	 * How many milliseconds to wait before making the connection or HTTP
+	 * request.
+	 * @type {number}
+	 * @private
+	 */
+	this.initialDelay_ = initialDelay;
 
 	/**
 	 * Can this transport send more strings after it has been started?
@@ -960,6 +971,16 @@ cw.net.ClientTransport.prototype.getDescription_ = function() {
 };
 
 /**
+ * Should Stream delay the creation of the next transport?
+ * @return {boolean}
+ * @private
+ */
+cw.net.ClientTransport.prototype.shouldDelayNextTransport_ = function() {
+	// Delay if we have non-0 penalty, or if 0 frames decoded.
+	return !!(this.penalty_ || !this.framesDecoded_);
+};
+
+/**
  * @param {!Array.<string>} frames
  * @private
  */
@@ -1027,8 +1048,10 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 						this.penalty_ += 1;
 					} else if(frame.reason == cw.net.TransportKillReason.acked_unsent_strings) {
 						this.penalty_ += 0.5;
+					} else {
+						// frame_corruption, invalid_frame_type_or_arguments, rwin_overflow
+						this.penalty_ += 0.02;
 					}
-					// For all other TransportKillFrame reasons, no penalty.
 					logger.finest("Closing soon because got " + cw.repr.repr(frame));
 					closeSoon = true;
 					break;
@@ -1113,9 +1136,12 @@ cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
 	// Use "application/octet-stream" instead of
 	// "application/x-www-form-urlencoded;charset=utf-8" because we don't
 	// want Minerva server or intermediaries to try to urldecode the POST body.
-	this.underlying_.send(
-		this.endpoint_, 'POST', payload,
-		{'Content-Type': 'application/octet-stream'});
+	var that = this;
+	this.callQueue_.clock.setTimeout(function() {
+		that.underlying_.send(
+			that.endpoint_, 'POST', payload,
+			{'Content-Type': 'application/octet-stream'});
+	}, this.initialDelay_);
 };
 
 /**
