@@ -575,6 +575,8 @@ cw.net.Stream.prototype.getDelayForNextTransport_ = function(transport) {
 		return 0;
 	} else {
 		var base = 2000 * Math.min(count, 3);
+		// Add random variance, so that if the server dies we don't get
+		// hit by every client at the same time.
 		var variance = Math.floor(Math.random() * 4000) - 2000;
 		var oldDuration = transport.getUnderlyingDuration_();
 		var delay = Math.max(0, base + variance - oldDuration);
