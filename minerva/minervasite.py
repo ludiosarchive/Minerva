@@ -5,6 +5,7 @@ import simplejson
 from twisted.python import log
 from twisted.python.filepath import FilePath
 from twisted.web import resource, static, http, server
+from twisted.internet.task import LoopingCall
 
 from zope.interface import implements
 
@@ -414,5 +415,10 @@ def makeMinervaAndHttp(reactor, csrfSecret):
 	except TypeError:
 		# Twisted
 		httpSite = ConnectionTrackingSite(root)
+	else:
+		# Twisted z9trunk
+		idleKiller = LoopingCall(httpSite.disconnectIdle)
+		idleKiller.clock = clock
+		idleKiller.start(60)
 
 	return (socketFace, httpSite)
