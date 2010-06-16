@@ -990,6 +990,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 				closeSoon = true;
 				break;
 			}
+			// If it was the preamble, we're going to decode it again below.
 
 			try {
 				/** @type {!cw.net.Frame} Decoded frame */
