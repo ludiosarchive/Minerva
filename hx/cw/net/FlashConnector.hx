@@ -131,12 +131,19 @@ class FlashConnection {
 					break;
 				}
 				available -= expecting;
-				// Expecting ASCII only, but using readUTFBytes anyway.
+				// We expect ASCII only, but use readUTFBytes anyway,
+				// because that is probably the best-tested function.
 				try {
 					outBuffer += comma;
-					outBuffer += '"';
-					outBuffer += socket.readUTFBytes(expecting);
-					outBuffer += '"';
+					// Wrap string in single quotes and backslash single
+					// quotes, because the payload is less likely to contain them.
+					// We expect that payload is JSON most of the time,
+					// which is more likely to have double quotes.
+					outBuffer += "'";
+					// haXe has no .replace. We might want to call AS3/Flash 9's
+					// native String.replace(/regex/g, ...) in the future.
+					outBuffer += socket.readUTFBytes(expecting).split("\\").join("\\\\").split("'").join("\\'");
+					outBuffer += "'";
 					comma = ",";
 				} catch (e:Dynamic) { // Unknown if IOError is ever actually thrown here
 					hadError = true;
@@ -149,8 +156,9 @@ class FlashConnection {
 		outBuffer += "]";
 
 		if(outBuffer != "[]") {
-			// We expect an ASCII-safe string of JSON, so doing this is okay.
-			ExternalInterface.call("__FS_instances['"+id+"'].onframes("+outBuffer+","+(hadError ? "true" : "false")+",'"+flashKey+"')");
+			ExternalInterface.call(
+				"__FS_instances['" + id + "'].onframes(" +
+				outBuffer + "," + (hadError ? "true" : "false") + ",'" + flashKey + "')");
 		}
 	}
 
