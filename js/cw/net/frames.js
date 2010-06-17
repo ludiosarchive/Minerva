@@ -307,10 +307,10 @@ cw.net.HelloFrame = function() {
 /**
  * Test two frames for equality.
  * @param {*} other
- * @param {!Array.<string>} messages
+ * @param {Array.<string>=} eqLog
  * @return {boolean}
  */
-cw.net.HelloFrame.prototype.equals = function(other, messages) {
+cw.net.HelloFrame.prototype.equals = function(other, eqLog) {
 	if(!(other instanceof cw.net.HelloFrame)) {
 		return false;
 	}
@@ -318,7 +318,7 @@ cw.net.HelloFrame.prototype.equals = function(other, messages) {
 	var myProperties = cw.net.HelloFrame.makePropertyArray_(this);
 	var otherProperties = cw.net.HelloFrame.makePropertyArray_(other);
 
-	return cw.eq.equals(myProperties, otherProperties, messages);
+	return cw.eq.equals(myProperties, otherProperties, eqLog);
 };
 
 /**
@@ -457,10 +457,10 @@ cw.net.StringFrame = function(string) {
 /**
  * Test two frames for equality.
  * @param {*} other
- * @param {!Array.<string>} messages
+ * @param {Array.<string>=} eqLog
  * @return {boolean}
  */
-cw.net.StringFrame.prototype.equals = function(other, messages) {
+cw.net.StringFrame.prototype.equals = function(other, eqLog) {
 	return (
 		other instanceof cw.net.StringFrame &&
 		this.string == other.string);
@@ -507,10 +507,10 @@ cw.net.SeqNumFrame = function(seqNum) {
 /**
  * Test two frames for equality.
  * @param {*} other
- * @param {!Array.<string>} messages
+ * @param {Array.<string>=} eqLog
  * @return {boolean}
  */
-cw.net.SeqNumFrame.prototype.equals = function(other, messages) {
+cw.net.SeqNumFrame.prototype.equals = function(other, eqLog) {
 	return (
 		other instanceof cw.net.SeqNumFrame &&
 		this.seqNum == other.seqNum);
@@ -607,13 +607,13 @@ cw.net.SackFrame = function(sack) {
 /**
  * Test two frames for equality.
  * @param {*} other
- * @param {!Array.<string>} messages
+ * @param {Array.<string>=} eqLog
  * @return {boolean}
  */
-cw.net.SackFrame.prototype.equals = function(other, messages) {
+cw.net.SackFrame.prototype.equals = function(other, eqLog) {
 	return (
 		other instanceof cw.net.SackFrame &&
-		this.sack.equals(other.sack, messages));
+		this.sack.equals(other.sack, eqLog));
 };
 
 /**
@@ -663,13 +663,13 @@ cw.net.StreamStatusFrame = function(lastSackSeen) {
 /**
  * Test two frames for equality.
  * @param {*} other
- * @param {!Array.<string>} messages
+ * @param {Array.<string>=} eqLog
  * @return {boolean}
  */
-cw.net.StreamStatusFrame.prototype.equals = function(other, messages) {
+cw.net.StreamStatusFrame.prototype.equals = function(other, eqLog) {
 	return (
 		other instanceof cw.net.StreamStatusFrame &&
-		this.lastSackSeen.equals(other.lastSackSeen, messages));
+		this.lastSackSeen.equals(other.lastSackSeen, eqLog));
 };
 
 /**
@@ -724,10 +724,10 @@ cw.net.StreamCreatedFrame.prototype.__reprToPieces__ = function(sb) {
 /**
  * Test two frames for equality.
  * @param {*} other
- * @param {!Array.<string>} messages
+ * @param {Array.<string>=} eqLog
  * @return {boolean}
  */
-cw.net.StreamCreatedFrame.prototype.equals = function(other, messages) {
+cw.net.StreamCreatedFrame.prototype.equals = function(other, eqLog) {
 	return (other instanceof cw.net.StreamCreatedFrame);
 };
 
@@ -771,10 +771,10 @@ cw.net.YouCloseItFrame.prototype.__reprToPieces__ = function(sb) {
 /**
  * Test two frames for equality.
  * @param {*} other
- * @param {!Array.<string>} messages
+ * @param {Array.<string>=} eqLog
  * @return {boolean}
  */
-cw.net.YouCloseItFrame.prototype.equals = function(other, messages) {
+cw.net.YouCloseItFrame.prototype.equals = function(other, eqLog) {
 	return (other instanceof cw.net.YouCloseItFrame);
 };
 
@@ -813,10 +813,10 @@ cw.net.PaddingFrame = function(numBytes) {
 /**
  * Test two frames for equality.
  * @param {*} other
- * @param {!Array.<string>} messages
+ * @param {Array.<string>=} eqLog
  * @return {boolean}
  */
-cw.net.PaddingFrame.prototype.equals = function(other, messages) {
+cw.net.PaddingFrame.prototype.equals = function(other, eqLog) {
 	return (
 		other instanceof cw.net.PaddingFrame &&
 		this.numBytes == other.numBytes);
@@ -879,10 +879,10 @@ cw.net.ResetFrame = function(reasonString, applicationLevel) {
 /**
  * Test two frames for equality.
  * @param {*} other
- * @param {!Array.<string>} messages
+ * @param {Array.<string>=} eqLog
  * @return {boolean}
  */
-cw.net.ResetFrame.prototype.equals = function(other, messages) {
+cw.net.ResetFrame.prototype.equals = function(other, eqLog) {
 	return (
 		other instanceof cw.net.ResetFrame &&
 		this.reasonString == other.reasonString &&
@@ -971,10 +971,10 @@ cw.net.TransportKillFrame = function(reason) {
 /**
  * Test two frames for equality.
  * @param {*} other
- * @param {!Array.<string>} messages
+ * @param {Array.<string>=} eqLog
  * @return {boolean}
  */
-cw.net.TransportKillFrame.prototype.equals = function(other, messages) {
+cw.net.TransportKillFrame.prototype.equals = function(other, eqLog) {
 	return (
 		other instanceof cw.net.TransportKillFrame &&
 		this.reason == other.reason);

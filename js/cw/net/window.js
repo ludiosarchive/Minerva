@@ -29,10 +29,10 @@ cw.net.SACK = function(ackNumber, sackList) {
 /**
  * Test two SACKs for equality.
  * @param {*} other
- * @param {!Array.<string>} messages
+ * @param {Array.<string>=} eqLog
  * @return {boolean}
  */
-cw.net.SACK.prototype.equals = function(other, messages) {
+cw.net.SACK.prototype.equals = function(other, eqLog) {
 	return (
 		other instanceof cw.net.SACK &&
 		this.ackNumber == other.ackNumber &&
