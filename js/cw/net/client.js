@@ -433,7 +433,7 @@ cw.net.Stream.prototype.tryToSend_ = function(initialDelay) {
 	}
 	var currentSack = this.incoming_.getSACK();
 	var haveQueueItems = (this.queue_.getQueuedCount() != 0);
-	var maybeNeedToSendSack = !currentSack.equals(this.lastSackSeenByServer_, []);
+	var maybeNeedToSendSack = !currentSack.equals(this.lastSackSeenByServer_);
 
 //	cw.net.Stream.logger.finest('In tryToSend_, ' + cw.repr.repr({
 //		currentSack: currentSack,
