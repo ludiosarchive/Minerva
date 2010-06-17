@@ -407,13 +407,14 @@ def makeMinervaAndHttp(reactor, csrfSecret):
 	root = Root(reactor, httpFace, csrfStopper, cookieInstaller)
 
 	try:
-		# Twisted z9trunk
+		# Twisted z9trunk can take a clock argument
 		httpSite = ConnectionTrackingSite(root, clock=clock)
 	except TypeError:
-		# Twisted
+		# Twisted trunk cannot take a clock argument
 		httpSite = ConnectionTrackingSite(root)
 	else:
-		# Twisted z9trunk
+		# Twisted z9trunk does not disconnect idle HTTP connections,
+		# but provides a function to disconnect all idle-for-too-long connections.
 		idleKiller = LoopingCall(httpSite.disconnectIdle)
 		idleKiller.clock = clock
 		idleKiller.start(60)
