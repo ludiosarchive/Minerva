@@ -104,7 +104,8 @@ class SimpleResponse(BetterResource):
 
 	def render_POST(self, request):
 		request.setHeader('Access-Control-Allow-Origin', '*')
-		return simplejson.dumps({"you_posted_utf8": request.content.read().decode('utf-8')})
+		return simplejson.dumps(
+			{"you_posted_utf8": request.content.read().decode('utf-8')})
 
 
 
@@ -391,8 +392,8 @@ def makeMinervaAndHttp(reactor, csrfSecret):
 
 	cookieInstaller = CookieInstaller(randgen.secureRandom)
 
-	# In the real world, you might want this to be more restrictive. Minerva has its own
-	# CSRF protection, so it's not critical.
+	# In the real world, you might want this to be more restrictive.
+	# Minerva has its own CSRF protection, so it's not critical.
 	policyString = '''\
 <cross-domain-policy><allow-access-from domain="*" to-ports="*"/></cross-domain-policy>'''.strip()
 
