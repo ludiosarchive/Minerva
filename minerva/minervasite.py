@@ -417,6 +417,6 @@ def makeMinervaAndHttp(reactor, csrfSecret):
 		# but provides a function to disconnect all idle-for-too-long connections.
 		idleKiller = LoopingCall(httpSite.disconnectIdle)
 		idleKiller.clock = clock
-		idleKiller.start(60)
+		idleKiller.start(60, now=True) # `now` to exercise the code early.
 
 	return (socketFace, httpSite)
