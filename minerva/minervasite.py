@@ -397,16 +397,12 @@ def makeMinervaAndHttp(reactor, csrfSecret):
 <cross-domain-policy><allow-access-from domain="*" to-ports="*"/></cross-domain-policy>'''.strip()
 
 	csrfStopper = CsrfStopper(csrfSecret)
-	##uaToStreams = UAToStreamsCorrelator()
-	##firewall = makeLayeredFirewall(csrfStopper, uaToStreams)
 	firewall = CsrfTransportFirewall(NoopTransportFirewall(), csrfStopper)
 	tracker = StreamTracker(reactor, clock, DemoFactory(clock))
-	##tracker.observeStreams(firewall)
 
 	httpFace = HttpFace(clock, tracker, firewall)
 	socketFace = SocketFace(clock, tracker, firewall, policyString=policyString)
 
-	# the HTTP stuff
 	root = Root(reactor, httpFace, csrfStopper, cookieInstaller)
 
 	try:
