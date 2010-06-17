@@ -193,6 +193,10 @@ GET.
 
 
 
+def getRestrictedStringAlphabet():
+	return "".join(chr(n) for n in range(0x20, 0x7E + 1))
+
+
 class DemoProtocol(BasicMinervaProtocol):
 
 	counter = 0
@@ -254,7 +258,7 @@ class DemoProtocol(BasicMinervaProtocol):
 				self.stream.reset(reasonString)
 
 			elif s == 'send_demo':
-				self.stream.sendStrings(['starting_send_demo'])
+				self.stream.sendStrings(['starting_send_demo', 'alphabet: ' + getRestrictedStringAlphabet()])
 				self._sendDemo(1)
 
 			elif s == 'begin_chat':
