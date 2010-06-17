@@ -32,7 +32,6 @@ goog.require('goog.net.XhrIo');
 goog.require('goog.net.EventType');
 goog.require('cw.math');
 goog.require('cw.eventual');
-goog.require('cw.eq');
 goog.require('cw.repr');
 goog.require('cw.net.SACK');
 goog.require('cw.net.Queue');
@@ -434,7 +433,7 @@ cw.net.Stream.prototype.tryToSend_ = function(initialDelay) {
 	}
 	var currentSack = this.incoming_.getSACK();
 	var haveQueueItems = (this.queue_.getQueuedCount() != 0);
-	var maybeNeedToSendSack = !cw.eq.equals(currentSack, this.lastSackSeenByServer_);
+	var maybeNeedToSendSack = !currentSack.equals(this.lastSackSeenByServer_);
 
 //	cw.net.Stream.logger.finest('In tryToSend_, ' + cw.repr.repr({
 //		currentSack: currentSack,
