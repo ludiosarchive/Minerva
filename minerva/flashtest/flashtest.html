@@ -109,6 +109,16 @@ var mode = getTestMode(url);
 logger.info('Mode is: ' + mode)
 
 var flashKey = goog.string.getRandomString();
+// flashKey must not contain single quote or backslash.
+//
+// flashKey is used to determine whether to drop the Flash->JS calls
+// we get. Very rarely, Firefox 3.5 - 3.6ish (maybe older and newer as well)
+// sometimes make Flash->JS calls to the page after it has reloaded,
+// which the page is not expecting at all. For some weak proof, see
+// the screenshots in Minerva/docs/firefox_externalinterface_bug/
+//
+// Yes, this might even be a security issue, if there's private information
+// in those Flash->JS calls.
 
 function loadSWF() {
 	var flashvars = {'onloadcallback': '_appswfLoaded', 'flashkey': flashKey};

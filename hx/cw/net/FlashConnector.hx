@@ -160,6 +160,7 @@ class FlashConnection {
 				"__FS_instances['" + id + "'].onframes(" +
 				outBuffer + "," + (hadError ? "true" : "false") + ",'" + flashKey + "')");
 		}
+		// flashKey is expected to not have single quote or backslash
 	}
 
 	public function writeFrames(msgs:Array<String>) {
@@ -282,6 +283,7 @@ class FlashConnector {
 	public static function main() {
 		registerCallbacks();
 
+		// flashKey must not have single quote or backslash
 		flashKey = flash.Lib.current.loaderInfo.parameters.flashkey;
 
 		if (flash.Lib.current.loaderInfo.parameters.onloadcallback != null) {
