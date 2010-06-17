@@ -613,7 +613,7 @@ cw.net.SackFrame = function(sack) {
 cw.net.SackFrame.prototype.equals = function(other, messages) {
 	return (
 		other instanceof cw.net.SackFrame &&
-		cw.eq.equals(this.sack, other.sack, messages));
+		this.sack.equals(other.sack, messages));
 };
 
 /**
@@ -669,7 +669,7 @@ cw.net.StreamStatusFrame = function(lastSackSeen) {
 cw.net.StreamStatusFrame.prototype.equals = function(other, messages) {
 	return (
 		other instanceof cw.net.StreamStatusFrame &&
-		cw.eq.equals(this.lastSackSeen, other.lastSackSeen, messages));
+		this.lastSackSeen.equals(other.lastSackSeen, messages));
 };
 
 /**

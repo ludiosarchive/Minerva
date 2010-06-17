@@ -7,7 +7,6 @@ goog.provide('cw.net.Incoming');
 goog.provide('cw.net.Queue');
 goog.provide('cw.net.SACK')
 
-goog.require('cw.eq');
 goog.require('cw.repr');
 goog.require('cw.objsize');
 goog.require('goog.asserts');
@@ -37,7 +36,10 @@ cw.net.SACK.prototype.equals = function(other, messages) {
 	return (
 		other instanceof cw.net.SACK &&
 		this.ackNumber == other.ackNumber &&
-		cw.eq.equals(this.sackList, other.sackList, messages));
+		this.sackList.join(",") == other.sackList);
+	// We don't use cw.eq.equals for sackList because it's slower and adds
+	// to compiled code size.  See Coreweb's TestAssumptions to see that
+	// the above comparison works.
 };
 
 /**
