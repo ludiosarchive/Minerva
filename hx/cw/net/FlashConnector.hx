@@ -271,11 +271,20 @@ class FlashConnector {
 		Security.loadPolicyFile(path);
 	}
 
+	/**
+	 * Set callbackFunc. You must do this before calling other EI-exposed
+	 * functions. Returns `true` if setting callbackFunc succeeded.
+	 */
+	public static inline function setCallbackFunc(f:String):Bool {
+		callbackFunc = f;
+		return true;
+	}
+
 	public static inline function registerCallbacks() {
 		// TODO: maybe obfuscate these names
 
 		//ExternalInterface.addCallback("__FC_loadPolicyFile", loadPolicyFile);
-
+		ExternalInterface.addCallback("__FC_setCallbackFunc", setCallbackFunc);
 		ExternalInterface.addCallback("__FC_connect", connect);
 		ExternalInterface.addCallback("__FC_close", close);
 		ExternalInterface.addCallback("__FC_writeFrames", writeFrames);
@@ -283,8 +292,6 @@ class FlashConnector {
 
 	public static function main() {
 		registerCallbacks();
-
-		callbackFunc = flash.Lib.current.loaderInfo.parameters.callbackFunc;
 
 		if (flash.Lib.current.loaderInfo.parameters.onloadcallback != null) {
 			ExternalInterface.call(flash.Lib.current.loaderInfo.parameters.onloadcallback);

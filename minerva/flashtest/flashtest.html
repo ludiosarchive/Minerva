@@ -56,6 +56,7 @@ goog.require('goog.net.EventType');
 goog.require('goog.events');
 goog.require('goog.Uri');
 goog.require('swfobject');
+goog.require('cw.eventual');
 goog.require('cw.whoami');
 goog.require('cw.string');
 goog.require('cw.repr');
@@ -110,7 +111,7 @@ logger.info('Mode is: ' + mode)
 
 
 function loadSWF() {
-	var flashvars = {'onloadcallback': '_appswfLoaded', 'callbackFunc': '__FlashSocket_eiCallback'};
+	var flashvars = {'onloadcallback': '_appswfLoaded'};
 	var params = {};
 	swfobject.embedSWF("app.swf", "appswf", "30", "30", [9, 0, 0], "expressInstall.swf", flashvars, params); // no attributes
 }
@@ -177,7 +178,9 @@ function makeC2SFramesForTesting() {
 
 function connectWithFlash(bridge) {
 	logger.warning('Connecting.');
-	var fs = new cw.net.FlashSocket(bridge);
+	var callQueue = new cw.eventual.CallQueue(goog.global['window']);
+	var fst = new cw.net.FlashSocketTracker(callQueue, bridge);
+	var fs = fst.createNew();
 	var websiteHostPort = (''+document.location.host).split(':');
 	var host = websiteHostPort[0];
 	var port = 843;
@@ -288,7 +291,7 @@ function makeHttpRequest() {
 function reconnect() {
 	logger.warning('Closing.');
 	if(mode == 'flash') {
-		lastFlashSocket.close_();
+		lastFlashSocket.dispose();
 		connectWithFlash(document.getElementById('appswf'));
 	} else if(mode == 'http') {
 		terminateLastXhr();

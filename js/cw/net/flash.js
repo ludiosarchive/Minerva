@@ -6,6 +6,7 @@ goog.provide('cw.net.FlashSocket');
 
 goog.require('goog.asserts');
 goog.require('goog.string');
+goog.require('goog.object');
 goog.require('goog.Disposable');
 goog.require('cw.eventual');
 goog.require('cw.externalinterface');
@@ -50,13 +51,12 @@ cw.net.retValToBoolean_ = function(retval) {
  *
  * If your on* methods throw an Error, the error will be re-thrown to the window.
  *
- * @param {!Element} bridge The already-loaded Flash element that provides
- * 		FlashConnector capabilities in psuedo-namespace '__FC_'
+ * @param {!cw.net.FlashSocketTracker} tracker
  *
  * @constructor
  * @extends {goog.Disposable}
  */
-cw.net.FlashSocket = function(bridge) {
+cw.net.FlashSocket = function(tracker) {
 	goog.Disposable.call(this);
 
 	/**
@@ -79,12 +79,18 @@ cw.net.FlashSocket = function(bridge) {
 	goog.asserts.assert(/^([0-9a-zA-Z]*)$/.test(this.id_), "id has bad chars");
 
 	/**
-	 * @type {!Element} bridge The already-loaded Flash element
+	 * @type {!cw.net.FlashSocketTracker}
 	 * @private
 	 */
-	this.bridge_ = bridge;
+	this.tracker_ = tracker;
 
-	cw.net.FlashSocket.instances_[this.id_] = this;
+	/**
+	 * @type {Element} bridge The already-loaded Flash element
+	 * @private
+	 */
+	this.bridge_ = tracker.bridge_;
+
+	tracker.instances_[this.id_] = this;
 };
 goog.inherits(cw.net.FlashSocket, goog.Disposable);
 
@@ -93,12 +99,14 @@ goog.inherits(cw.net.FlashSocket, goog.Disposable);
  * @param {number} port Port to connect to
  * TODO: @param {number} timeout Flash-level timeout: "Indicates the number
  * 	of milliseconds to wait for a connection."
- * @return {boolean} Whether the connect initiated without error.
  */
 cw.net.FlashSocket.prototype.connect = function(host, port) { // , timeout
 	// TODO: instead of passing <int32>\n, maybe pass some sort of mode?
-	return cw.net.retValToBoolean_(this.bridge_.CallFunction(
+	var ret = cw.net.retValToBoolean_(this.bridge_.CallFunction(
 		cw.externalinterface.request('__FC_connect', this.id_, host, port, '<int32/>\n')));
+	if(!ret) {
+		throw Error('__FC_connect failed?');
+	}
 };
 
 /**
@@ -106,32 +114,33 @@ cw.net.FlashSocket.prototype.connect = function(host, port) { // , timeout
  * Each string must contain only characters in inclusive range {@code U+0000}
  * to {@code U+007F}.
  * @param {!Array.<string>} strings
- * @return {boolean} Whether all frames were written without error.
  */
 cw.net.FlashSocket.prototype.writeFrames = function(strings) {
-	return cw.net.retValToBoolean_(this.bridge_.CallFunction(
-		cw.externalinterface.request('__FC_writeFrames', this.id_, strings)));
-};
-
-/**
- * Close the underlying Flash Socket.
- * @return {boolean} Whether the close succeeded.
- */
-cw.net.FlashSocket.prototype.close = function() {
 	var ret = cw.net.retValToBoolean_(this.bridge_.CallFunction(
-		cw.externalinterface.request('__FC_close', this.id_)));
-	this.dispose();
-	return ret;
+		cw.externalinterface.request('__FC_writeFrames', this.id_, strings)));
+	if(!ret) {
+		throw Error('__FC_writeFrames failed?');
+	}
 };
 
 /**
- * @inheritDoc
- * @protected
+ * Call `dispose` to close the underlying Flash socket.
  */
 cw.net.FlashSocket.prototype.disposeInternal = function() {
 	cw.net.FlashSocket.superClass_.disposeInternal.call(this);
-	delete cw.net.FlashSocket.instances_[this.id_];
+
+	var bridge = this.bridge_;
 	delete this.bridge_;
+
+	// Our work is made easier by this:
+	// "The close event is dispatched only when the server closes the
+	// connection; it is not dispatched when you call the close() method."
+	// https://www.adobe.com/livedocs/flex/2/langref/flash/net/Socket.html#close%28%29
+
+	// ignore retval
+	bridge.CallFunction(cw.externalinterface.request('__FC_close', this.id_));
+
+	delete this.tracker_[this.id_];
 };
 
 ///**
@@ -148,16 +157,73 @@ cw.net.FlashSocket.prototype.disposeInternal = function() {
 
 
 /**
+ * An object to keep track of all of the `FlashSocket`s we have created.
+ *
+ * @param {!cw.eventual.CallQueue} callQueue
+ * @param {!Element} bridge The already-loaded Flash element that provides
+ * 	FlashConnector capabilities in psuedo-namespace '__FC_'
+ * @constructor
+ * @extends {goog.Disposable}
+ */
+cw.net.FlashSocketTracker = function(callQueue, bridge) {
+	goog.Disposable.call(this);
+
+	/**
+	 * @type {!cw.eventual.CallQueue} callQueue
+	 * @private
+	 */
+	this.callQueue_ = callQueue;
+
+	/**
+	 * The already-loaded Flash element.
+	 * @type {Element} bridge
+	 * @private
+	 */
+	this.bridge_ = bridge;
+
+	/**
+	 * A map of FlashSocket id -> FlashSocket. Using a plain object is safe
+	 * only because the `id`s we use are random enough.
+	 * @type {Object.<string, !cw.net.FlashSocket>}
+	 * @private
+	 */
+	this.instances_ = {};
+
+	/**
+	 * @type {string}
+	 * @private
+	 */
+	this.callbackFunc_ = '__FST_' + goog.string.getRandomString();
+
+	goog.global[this.callbackFunc_] = goog.bind(this.eiCallback_, this);
+
+	var ret = bridge.CallFunction(cw.externalinterface.request('__FC_setCallbackFunc', this.callbackFunc_));
+	if(!ret) {
+		throw Error("__FC_setCallbackFunc failed?");
+	}
+};
+goog.inherits(cw.net.FlashSocketTracker, goog.Disposable);
+
+/**
+ * Return a new unconnected FlashSocket.
+ * @return {!cw.net.FlashSocket} An unconnected FlashSocket.
+ */
+cw.net.FlashSocketTracker.prototype.createNew = function() {
+	var flashSocket = new cw.net.FlashSocket(this);
+	return flashSocket;
+};
+
+/**
  * @param {string} id The id of the FlashSocket.
  * @param {string} event The event name.
  * @param {!Array.<string>|string=} arg1
  * @param {boolean=} arg2
  */
-cw.net.FlashSocket.dispatchEvent_ = function(id, event, arg1, arg2) {
-	var instance = cw.net.FlashSocket.instances_[id];
+cw.net.FlashSocketTracker.prototype.dispatchEvent_ = function(id, event, arg1, arg2) {
+	var instance = this.instances_[id];
 	if(!instance) {
 		// Maybe we should use a logger instead?
-		throw new Error("No such FlashSocket instance, possibly from a phantom: " + id);
+		throw Error("No such FlashSocket instance, possibly from a phantom: " + id);
 	}
 	if(event == "frames") {
 		instance.onframes.call(instance, arg1, arg2);
@@ -170,10 +236,9 @@ cw.net.FlashSocket.dispatchEvent_ = function(id, event, arg1, arg2) {
 	} else if(event == "securityerror") {
 		instance.onsecurityerror.call(instance, arg1);
 	} else {
-		throw new Error("bad event: " + event);
+		throw Error("bad event: " + event);
 	}
-}
-
+};
 
 /**
  * The only function called by the Flash applet.
@@ -183,7 +248,7 @@ cw.net.FlashSocket.dispatchEvent_ = function(id, event, arg1, arg2) {
  * @param {!Array.<string>|string=} arg1
  * @param {boolean=} arg2
  */
-cw.net.FlashSocket.eiCallback_ = function(id, event, arg1, arg2) {
+cw.net.FlashSocketTracker.prototype.eiCallback_ = function(id, event, arg1, arg2) {
 	// Don't bother throwing Errors in this function, they will get
 	// black-holed! (and the Flash side might see a return value `null`)
 
@@ -197,21 +262,25 @@ cw.net.FlashSocket.eiCallback_ = function(id, event, arg1, arg2) {
 	 * 		risk of crashing the browser by using cw.eventually.
 	 */
 	try {
-		cw.eventual.theCallQueue.eventually(
-			cw.net.FlashSocket.dispatchEvent_, this, [id, event, arg1, arg2]);
+		this.callQueue_.eventually(
+			this.dispatchEvent_, this, [id, event, arg1, arg2]);
 	} catch(e) {
+		// If we couldn't even call `eventually`...
 		goog.global['window'].setTimeout(function(){ throw e; }, 0);
 	}
 };
 
-
 /**
- * @type {!Object.<string, !cw.net.FlashSocket>}
- * @private
+ * Call `dispose` to dispose all `FlashSocket`s and dispose
+ * FlashSocketTracker.
  */
-cw.net.FlashSocket.instances_ = {};
-
-// Closure Compiler will rename pretty much everything, but it can't
-// rename the ExternalInterface calls inside FlashConnector.hx. So,
-// we expose a global property to the instances map.
-goog.global['__FlashSocket_eiCallback'] = cw.net.FlashSocket.eiCallback_;
+cw.net.FlashSocketTracker.prototype.disposeInternal = function() {
+	var flashSockets = goog.object.getValues(this.instances_);
+	while(flashSockets.length) {
+		flashSockets.pop().dispose();
+	}
+	this.instances_ = null;
+	this.bridge_ = null;
+	// Can't delete things in global scope in IE, so null it
+	goog.global[this.callbackFunc_] = null;
+};
