@@ -126,7 +126,7 @@ function loadSWF() {
 function _appswfLoaded() {
 	// setTimeout to get out from under the Flash->JS stack frame.
 	goog.global['window'].setTimeout(function() {
-		connectWithFlash(document.getElementById(flashObject.getId()));
+		connectWithFlash(goog.dom.getElement(flashObject.getId()));
 	}, 0);
 }
 
