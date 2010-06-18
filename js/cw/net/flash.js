@@ -1,7 +1,15 @@
 /**
  * @fileoverview Flash socket for Minerva client.
+ *
+ * This doesn't use goog.events for a few reasons:
+ * 	-	This is a low-level interface not intended to be used by anything
+ * 		but JS Minerva.
+ * 	-	We want to avoid the additional overhead of event dispatch.
+ * 	-	We don't want to explain that event handlers must not mutate
+ * 		the Array passed to `onframes`.
  */
 
+goog.provide('cw.net.IFlashSocketProtocol');
 goog.provide('cw.net.FlashSocket');
 goog.provide('cw.net.FlashSocketTracker');
 
@@ -12,6 +20,66 @@ goog.require('goog.Disposable');
 goog.require('cw.eventual');
 goog.require('cw.externalinterface');
 goog.require('cw.repr');
+
+
+/**
+ * An interface for sending and receiving encoded Minerva frames over a
+ * Flash Socket.
+ *
+ * If your on* methods throw an Error, the error will be re-thrown to the
+ * window.
+ *
+ * @interface
+ */
+cw.net.IFlashSocketProtocol = function() {
+
+};
+
+/**
+ * Called when the connection is established.
+ */
+cw.net.IFlashSocketProtocol.prototype.onconnect = function() {
+
+};
+
+/**
+ * Called when the connection has been closed by the peer. Not called if
+ * you call FlashSocket.close() yourself.
+ */
+cw.net.IFlashSocketProtocol.prototype.onclose = function() {
+
+};
+
+/**
+ * Called when (encoded) frames are received.
+ * @param {!Array.<string>} frames
+ */
+cw.net.IFlashSocketProtocol.prototype.onframes = function(frames) {
+
+};
+
+/**
+ * Called "when an input/output error occurs that causes the connection to fail."
+ * @param {string} text
+ */
+cw.net.IFlashSocketProtocol.prototype.onioerror = function(text) {
+
+};
+
+/**
+ * Called when a call to FlashSocket.connect "attempts to connect either to
+ * a server that doesn't serve a socket policy file, or to a server whose
+ * policy file doesn't grant the calling host access to the specified port."
+ * Also called in Flash Player 10+ if the connection could not be established
+ * in 20 seconds. See http://kb2.adobe.com/cps/405/kb405545.html
+ * @param {string} text
+ */
+cw.net.IFlashSocketProtocol.prototype.onsecurityerror = function(text) {
+
+};
+
+
+
 
 /**
  * Instead of eval()ing any random return value from
@@ -36,38 +104,29 @@ cw.net.retValToBoolean_ = function(retval) {
 };
 
 /**
- * A Flash socket object with an API similar to browser-provided objects like
- * WebSocket.
+ * A Flash Socket object useful for sending and receiving encoded
+ * Minerva frames.
  *
- * Instantiate this object and set properties `onconnect`, `onclose`, `onioerror`,
- * `onsecurityerror`, and `onframes`. Then call `connect`.
- *
- * Note that in Flash Player 10, onsecurityerror may be fired if a connection
- * cannot be established after 20 seconds. See
- * http://kb2.adobe.com/cps/405/kb405545.html
- *
- * Your onclose/onioerror/onsecurityerror properties should call this.dispose(),
- * unless you are testing re-use of a Flash Socket object for multiple
- * consecutive connections. You don't want to do this in production code,
- * because it's more likely to have bugs.
- *
- * If your on* methods throw an Error, the error will be re-thrown to the window.
+ * This does not support reusing an underlying Flash Socket object for
+ * multiple connections.
  *
  * @param {!cw.net.FlashSocketTracker} tracker
+ * @param {!Object} proto An object that implements
+ *	{@link cw.net.IFlashSocketProtocol}.
  *
  * @constructor
  * @extends {goog.Disposable}
  */
-cw.net.FlashSocket = function(tracker) {
+cw.net.FlashSocket = function(tracker, proto) {
 	goog.Disposable.call(this);
 
 	/**
-	 * This FlashSocket's unique id. Must be 0-9a-zA-Z only.
+	 * This FlashSocket's unique id. Must be _0-9a-zA-Z only.
 	 * @type {string}
 	 * @private
 	 */
 	this.id_ = '_' + goog.string.getRandomString();
-	goog.asserts.assert(/^([0-9a-zA-Z]*)$/.test(this.id_), "id has bad chars");
+	goog.asserts.assert(/^([_0-9a-zA-Z]*)$/.test(this.id_), "id has bad chars");
 
 	/**
 	 * @type {!cw.net.FlashSocketTracker}
@@ -76,10 +135,23 @@ cw.net.FlashSocket = function(tracker) {
 	this.tracker_ = tracker;
 
 	/**
+	 * @type {!Object} An object that implements
+	 *	{@link cw.net.IFlashSocketProtocol}.
+	 * @private
+	 */
+	this.proto_ = proto;
+
+	/**
 	 * @type {Element} bridge The already-loaded Flash element
 	 * @private
 	 */
 	this.bridge_ = tracker.bridge_;
+
+	/**
+	 * Do we need to call `close` on the underlying socket when we dispose?
+	 * @type {boolean}
+	 */
+	this.needToCallClose_ = true;
 };
 goog.inherits(cw.net.FlashSocket, goog.Disposable);
 
@@ -90,6 +162,32 @@ cw.net.FlashSocket.prototype.__reprToPieces__ = function(sb) {
 	sb.push("<FlashSocket id='");
 	sb.push(this.id_);
 	sb.push("'>");
+};
+
+/**
+ * @param {string} event The event name.
+ * @param {!Array.<string>|string=} arg1
+ */
+cw.net.FlashSocket.prototype.dispatchEventToProto_ = function(event, arg1) {
+	if(event == "frames") {
+		this.proto_.onframes(arg1);
+	} else if(event == "connect") {
+		this.proto_.onconnect();
+	} else if(event == "close") {
+		this.needToCallClose_ = false;
+		this.proto_.onclose();
+		this.dispose();
+	} else if(event == "ioerror") {
+		this.needToCallClose_ = false;
+		this.proto_.onioerror(arg1);
+		this.dispose();
+	} else if(event == "securityerror") {
+		this.needToCallClose_ = false;
+		this.proto_.onsecurityerror(arg1);
+		this.dispose();
+	} else {
+		throw Error("bad event: " + event);
+	}
 };
 
 /**
@@ -130,28 +228,20 @@ cw.net.FlashSocket.prototype.disposeInternal = function() {
 	var bridge = this.bridge_;
 	delete this.bridge_;
 
-	// Our work is made easier by this:
-	// "The close event is dispatched only when the server closes the
-	// connection; it is not dispatched when you call the close() method."
-	// https://www.adobe.com/livedocs/flex/2/langref/flash/net/Socket.html#close%28%29
+	if(this.needToCallClose_) {
+		// Our work is made easier by this:
+		// "The close event is dispatched only when the server closes the
+		// connection; it is not dispatched when you call the close() method."
+		// https://www.adobe.com/livedocs/flex/2/langref/flash/net/Socket.html#close%28%29
 
-	// ignore retval
-	bridge.CallFunction(cw.externalinterface.request('__FC_close', this.id_));
+		// ignore retval
+		bridge.CallFunction(cw.externalinterface.request('__FC_close', this.id_));
+	}
 
 	this.tracker_.socketOffline_(this);
 };
 
-///**
-// * @param {!Array.<string>}
-// */
-//cw.net.FlashSocket.prototype.onframes = goog.abstractMethod;
-//
-///**
-// * @param {!Array.<string>}
-// */
-//cw.net.FlashSocket.prototype.onconnect = goog.abstractMethod;
 
-// TODO: maybe we should dispatch events like everything else in Closure?
 
 
 /**
@@ -223,10 +313,12 @@ cw.net.FlashSocketTracker.prototype.__reprToPieces__ = function(sb) {
 
 /**
  * Return a new unconnected FlashSocket.
+ * @param {!Object} proto An object that implements
+ * 	{@link cw.net.IFlashSocketProtocol}.
  * @return {!cw.net.FlashSocket} An unconnected FlashSocket.
  */
-cw.net.FlashSocketTracker.prototype.createNew = function() {
-	var flashSocket = new cw.net.FlashSocket(this);
+cw.net.FlashSocketTracker.prototype.createNew = function(proto) {
+	var flashSocket = new cw.net.FlashSocket(this, proto);
 	this.instances_[flashSocket.id_] = flashSocket;
 	return flashSocket;
 };
@@ -246,23 +338,19 @@ cw.net.FlashSocketTracker.prototype.socketOffline_ = function(flashSocket) {
  * @param {!Array.<string>|string=} arg1
  * @param {boolean=} arg2
  */
-cw.net.FlashSocketTracker.prototype.dispatchEvent_ = function(id, event, arg1, arg2) {
+cw.net.FlashSocketTracker.prototype.dispatchEventToSocket_ = function(id, event, arg1, arg2) {
 	var instance = this.instances_[id];
 	if(!instance) {
 		throw Error("No such FlashSocket instance: " + id);
 	}
-	if(event == "frames") {
-		instance.onframes.call(instance, arg1, arg2);
-	} else if(event == "connect") {
-		instance.onconnect.call(instance);
-	} else if(event == "close") {
-		instance.onconnect.call(instance);
-	} else if(event == "ioerror") {
-		instance.onioerror.call(instance, arg1);
-	} else if(event == "securityerror") {
-		instance.onsecurityerror.call(instance, arg1);
+	if(event == "frames" && arg2) { // arg2 is hadError
+		instance.dispatchEventToProto_(
+			"ioerror", "FlashConnector hadError while handling data.");
+		// That was a fake ioerror, so we actually have to disconnect
+		// the underlying Socket ourselves.
+		instance.dispose();
 	} else {
-		throw Error("bad event: " + event);
+		instance.dispatchEventToProto_(event, arg1);
 	}
 };
 
@@ -289,7 +377,7 @@ cw.net.FlashSocketTracker.prototype.eiCallback_ = function(id, event, arg1, arg2
 	 */
 	try {
 		this.callQueue_.eventually(
-			this.dispatchEvent_, this, [id, event, arg1, arg2]);
+			this.dispatchEventToSocket_, this, [id, event, arg1, arg2]);
 	} catch(e) {
 		// If we couldn't even call `eventually`...
 		goog.global['window'].setTimeout(function() { throw e; }, 0);

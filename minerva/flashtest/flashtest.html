@@ -60,6 +60,7 @@ goog.require('cw.eventual');
 goog.require('cw.whoami');
 goog.require('cw.string');
 goog.require('cw.repr');
+goog.require('cw.net.IFlashSocketProtocol');
 goog.require('cw.net.FlashSocketTracker');
 goog.require('cw.net.HelloFrame'); // we actually want HelloProperty_
 </script>
@@ -118,7 +119,10 @@ function loadSWF() {
 
 
 function _appswfLoaded() {
-	connectWithFlash(document.getElementById('appswf'));
+	// setTimeout to get out from under the Flash->JS stack frame.
+	goog.global['window'].setTimeout(function() {
+		connectWithFlash(document.getElementById('appswf'));
+	}, 0);
 }
 
 
@@ -176,54 +180,66 @@ function makeC2SFramesForTesting() {
 }
 
 
+/**
+ * @constructor
+ * @implements {cw.net.IFlashSocketProtocol}
+ */
+var FlashTestSocketProtocol = function() {
+	/**
+	 * @type {!cw.net.FlashSocket}
+	 */
+	this.socket_;
+};
+
+FlashTestSocketProtocol.prototype.onconnect = function() {
+	try {
+		logger.info('onconnect');
+		var frames = makeC2SFramesForTesting();
+		for(i=0; i < frames.length; i++) {
+			logger.info('Sending: ' + frames[i]);
+		}
+		var out = this.socket_.writeFrames(frames);
+		logger.info('writeFrames rvalue: ' + out);
+	} catch(e) {
+		logger.severe('error in onconnect', e);
+	}
+};
+
+FlashTestSocketProtocol.prototype.onclose = function() {
+	logger.info('onclose');
+};
+
+FlashTestSocketProtocol.prototype.onioerror = function(errorText) {
+	logger.severe('onioerror: ' + cw.repr.repr(errorText));
+};
+
+FlashTestSocketProtocol.prototype.onsecurityerror = function(errorText) {
+	logger.severe('onsecurityerror: ' + cw.repr.repr(errorText));
+};
+
+FlashTestSocketProtocol.prototype.onframes = function(frames) {
+	logger.info('onframes with ' + frames.length + ' frame(s).');
+	for(var i=0; i < frames.length; i++) {
+		var frame = frames[i];
+		logger.info('Received: ' + cw.repr.repr(frame));
+	}
+};
+
+
+
+
 function connectWithFlash(bridge) {
-	logger.warning('Connecting.');
 	var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 	var fst = new cw.net.FlashSocketTracker(callQueue, bridge);
-	var fs = fst.createNew();
+	var proto = new FlashTestSocketProtocol();
+	var fs = fst.createNew(proto);
+	proto.socket_ = fs;
 	var websiteHostPort = (''+document.location.host).split(':');
 	var host = websiteHostPort[0];
 	var port = 843;
 
-	fs.onconnect = function() {
-		try {
-			logger.info('onconnect');
-			var frames = makeC2SFramesForTesting();
-			for(i=0; i < frames.length; i++) {
-				logger.info('Sending: ' + frames[i]);
-			}
-			var out = fs.writeFrames(frames);
-			logger.info('writeFrames rvalue: ' + out);
-		} catch(e) {
-			logger.severe('error in onconnect', e);
-		}
-	}
-
-	fs.onclose = function() {
-		logger.info('onclose');
-		this.dispose();
-	}
-
-	fs.onioerror = function(errorText) {
-		logger.severe('onioerror: ' + errorText);
-		this.dispose();
-	}
-
-	fs.onsecurityerror = function(errorText) {
-		logger.severe('onsecurityerror: ' + errorText);
-		this.dispose();
-	}
-
-	fs.onframes = function(frames, hadError) {
-		logger.info('onframes with '+frames.length+' frame(s). hadError? ' + hadError);
-		for(var i=0; i < frames.length; i++) {
-			var frame = frames[i]; 
-			logger.info('Received: '+serializer.serialize(frame));
-		}
-	}
-
 	fs.connect(host, port);
-
+	logger.warning('Connecting to ' + host + ':' + String(port));
 	lastFlashSocket = fs;
 }
 
