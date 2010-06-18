@@ -295,7 +295,7 @@ cw.net.FlashSocketTracker.prototype.eiCallback_ = function(id, event, arg1, arg2
 			this.dispatchEvent_, this, [id, event, arg1, arg2]);
 	} catch(e) {
 		// If we couldn't even call `eventually`...
-		goog.global['window'].setTimeout(function(){ throw e; }, 0);
+		goog.global['window'].setTimeout(function() { throw e; }, 0);
 	}
 };
 
