@@ -397,6 +397,6 @@ cw.net.FlashSocketTracker.prototype.disposeInternal = function() {
 	}
 	this.instances_ = null;
 	this.bridge_ = null;
-	// Can't delete things in global scope in IE, so null it
-	goog.global[this.callbackFunc_] = null;
+	// Not `delete' because IE can't
+	goog.global[this.callbackFunc_] = undefined;
 };
