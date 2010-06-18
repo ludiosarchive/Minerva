@@ -249,8 +249,7 @@ cw.net.FlashSocketTracker.prototype.socketOffline_ = function(flashSocket) {
 cw.net.FlashSocketTracker.prototype.dispatchEvent_ = function(id, event, arg1, arg2) {
 	var instance = this.instances_[id];
 	if(!instance) {
-		// Maybe we should use a logger instead?
-		throw Error("No such FlashSocket instance, possibly from a phantom: " + id);
+		throw Error("No such FlashSocket instance: " + id);
 	}
 	if(event == "frames") {
 		instance.onframes.call(instance, arg1, arg2);
