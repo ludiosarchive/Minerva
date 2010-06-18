@@ -164,13 +164,13 @@ function makeC2SFramesForTesting() {
 	var helloData = makeHelloData(uaId, transportNumber);
 	var helloFrame = serializer.serialize(helloData) + 'H';
 	// If the server receives this more than once, it is
-	// subsequently ignored because the box # is always 0,
-	// and box 0 was already received.
+	// subsequently ignored because the seqNum is always 0,
+	// and string #0 was already received.
 	var seqNumFrame = '0' + 'N'; // not really necessary to send
 	var frames = [helloFrame, seqNumFrame];
-	var boxFrame = 'send_demo' + ' ';
+	var stringFrame = 'send_demo' + ' ';
 	if(transportNumber == 0) {
-		frames.push(boxFrame);
+		frames.push(stringFrame);
 	}
 	return frames;
 }
