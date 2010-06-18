@@ -63,21 +63,10 @@ cw.net.FlashSocket = function(tracker) {
 
 	/**
 	 * This FlashSocket's unique id. Must be 0-9a-zA-Z only.
-	 *
-	 * We use ~128 random bits instead of a simple instance counter, because
-	 * we need to determine whether to drop the Flash->JS calls
-	 * we get. Very rarely, Firefox 3.5 - 3.6ish (maybe older and newer as well)
-	 * sometimes make Flash->JS calls to the page after it has reloaded,
-	 * which the page is not expecting at all. For some proof, see the
-	 * screenshots in Minerva/docs/firefox_externalinterface_bug/
-	 *
-	 * Yes, the above bug is probably a security issue, because there may
-	 * be private information in those Flash->JS calls.
-	 *
 	 * @type {string}
 	 * @private
 	 */
-	this.id_ = goog.string.getRandomString() + goog.string.getRandomString();
+	this.id_ = '_' + goog.string.getRandomString();
 	goog.asserts.assert(/^([0-9a-zA-Z]*)$/.test(this.id_), "id has bad chars");
 
 	/**
@@ -199,6 +188,15 @@ cw.net.FlashSocketTracker = function(callQueue, bridge) {
 	this.instances_ = {};
 
 	/**
+	 * We use a random instead of a guessable callback name because
+	 * very rarely, in Firefox 3.5 - 3.6 (maybe older and newer as well)
+	 * some "in transit" Flash->JS calls reach a newly-reloaded page,
+	 * which the page is not expecting at all. For some proof, see the
+	 * screenshots in Minerva/docs/firefox_externalinterface_bug/
+	 *
+	 * Yes, the above bug is probably a security issue, because there may
+	 * be private information in those Flash->JS calls.
+	 *
 	 * @type {string}
 	 * @private
 	 */
