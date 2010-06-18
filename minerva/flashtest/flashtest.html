@@ -150,6 +150,7 @@ function makeHelloData(uaId, transportNumber) {
 	helloData[HP.maxOpenTime] = 3600;
 	helloData[HP.succeedsTransport] = null;
 	helloData[HP.httpFormat] = 2; /* XHR */
+	helloData[HP.sack] = '|' + String(ackNum);
 	helloData[HP.lastSackSeenByClient] = lastSackSeenByClient;
 	return helloData;
 }
@@ -166,8 +167,7 @@ function makeC2SFramesForTesting() {
 	// subsequently ignored because the box # is always 0,
 	// and box 0 was already received.
 	var seqNumFrame = '0' + 'N'; // not really necessary to send
-	var sackFrame = '|' + String(ackNum) + 'A';
-	var frames = [helloFrame, sackFrame, seqNumFrame];
+	var frames = [helloFrame, seqNumFrame];
 	var boxFrame = 'send_demo' + ' ';
 	if(transportNumber == 0) {
 		frames.push(boxFrame);
