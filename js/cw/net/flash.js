@@ -3,6 +3,7 @@
  */
 
 goog.provide('cw.net.FlashSocket');
+goog.provide('cw.net.FlashSocketTracker');
 
 goog.require('goog.asserts');
 goog.require('goog.string');
@@ -10,6 +11,7 @@ goog.require('goog.object');
 goog.require('goog.Disposable');
 goog.require('cw.eventual');
 goog.require('cw.externalinterface');
+goog.require('cw.repr');
 
 /**
  * Instead of eval()ing any random return value from
@@ -89,10 +91,17 @@ cw.net.FlashSocket = function(tracker) {
 	 * @private
 	 */
 	this.bridge_ = tracker.bridge_;
-
-	tracker.instances_[this.id_] = this;
 };
 goog.inherits(cw.net.FlashSocket, goog.Disposable);
+
+/**
+ * @param {!Array.<string>} sb
+ */
+cw.net.FlashSocket.prototype.__reprToPieces__ = function(sb) {
+	sb.push("<FlashSocket id='");
+	sb.push(this.id_);
+	sb.push("'>");
+};
 
 /**
  * @param {string} host Hostname to connect to
@@ -140,7 +149,7 @@ cw.net.FlashSocket.prototype.disposeInternal = function() {
 	// ignore retval
 	bridge.CallFunction(cw.externalinterface.request('__FC_close', this.id_));
 
-	delete this.tracker_[this.id_];
+	this.tracker_.socketOffline_(this);
 };
 
 ///**
@@ -197,7 +206,8 @@ cw.net.FlashSocketTracker = function(callQueue, bridge) {
 
 	goog.global[this.callbackFunc_] = goog.bind(this.eiCallback_, this);
 
-	var ret = bridge.CallFunction(cw.externalinterface.request('__FC_setCallbackFunc', this.callbackFunc_));
+	var ret = cw.net.retValToBoolean_(bridge.CallFunction(
+		cw.externalinterface.request('__FC_setCallbackFunc', this.callbackFunc_)));
 	if(!ret) {
 		throw Error("__FC_setCallbackFunc failed?");
 	}
@@ -205,12 +215,31 @@ cw.net.FlashSocketTracker = function(callQueue, bridge) {
 goog.inherits(cw.net.FlashSocketTracker, goog.Disposable);
 
 /**
+ * @param {!Array.<string>} sb
+ */
+cw.net.FlashSocketTracker.prototype.__reprToPieces__ = function(sb) {
+	sb.push("<FlashSocketTracker instances=");
+	cw.repr.reprToPieces(this.instances_, sb);
+	sb.push(">");
+};
+
+/**
  * Return a new unconnected FlashSocket.
  * @return {!cw.net.FlashSocket} An unconnected FlashSocket.
  */
 cw.net.FlashSocketTracker.prototype.createNew = function() {
 	var flashSocket = new cw.net.FlashSocket(this);
+	this.instances_[flashSocket.id_] = flashSocket;
 	return flashSocket;
+};
+
+/**
+ * Called by `FlashSocket`s.
+ * @param {!cw.net.FlashSocket} flashSocket
+ * @private
+ */
+cw.net.FlashSocketTracker.prototype.socketOffline_ = function(flashSocket) {
+	delete this.instances_[flashSocket.id_];
 };
 
 /**
