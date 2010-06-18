@@ -19,6 +19,8 @@ goog.require('cw.whoami');
 goog.require('cw.net.Queue');
 goog.require('cw.net.TransportType_');
 goog.require('cw.net.SACK');
+goog.require('cw.net.EndpointType');
+goog.require('cw.net.Endpoint');
 goog.require('cw.net.Stream');
 goog.require('cw.net.EventType');
 goog.require('cw.net.ClientTransport');
@@ -51,6 +53,15 @@ var TransportKillFrame = cw.net.TransportKillFrame;
 var BROWSER_HTTP = cw.net.TransportType_.BROWSER_HTTP;
 
 var SACK = cw.net.SACK;
+
+var notARealEndpoint = new cw.net.Endpoint(
+	cw.net.EndpointType.HTTP, "/TestClient-not-a-real-endpoint/", null, null);
+
+/**
+ * Endpoint to a real Minerva server.
+ */
+httpFaceEndpoint = new cw.net.Endpoint(
+	cw.net.EndpointType.HTTP, "/httpface/", null, null);
 
 
 /**
@@ -195,7 +206,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.Stream(
-			callQueue, proto, '/StreamTests-not-a-real-endpoint/', function() { return "not-real-credentials"; });
+			callQueue, proto, notARealEndpoint, function() { return "not-real-credentials"; });
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
 		stream.tryToSend_ = goog.testing.recordFunction(goog.bind(stream.tryToSend_, stream));
 		stream.start();
@@ -213,7 +224,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.Stream(
-			callQueue, proto, '/StreamTests-not-a-real-endpoint/', function() { return "not-real-credentials"; });
+			callQueue, proto, notARealEndpoint, function() { return "not-real-credentials"; });
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
 		stream.start();
 		stream.reset("a reasonString");
@@ -228,7 +239,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.Stream(
-			callQueue, proto, '/StreamTests-not-a-real-endpoint/', function() { return "not-real-credentials"; });
+			callQueue, proto, notARealEndpoint, function() { return "not-real-credentials"; });
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
 		stream.start();
 		stream.reset("a reasonString");
@@ -276,7 +287,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 
 		var initialDelay = 2;
 		var ct = new cw.net.ClientTransport(
-			callQueue, stream, 0, BROWSER_HTTP, '/TestClient-not-a-real-endpoint/', true, initialDelay);
+			callQueue, stream, 0, BROWSER_HTTP, notARealEndpoint, true, initialDelay);
 		ct.makeHttpRequest_ = function(payload) {
 			payloads.push(payload)
 		};
@@ -316,7 +327,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 		var stream = new cw.net.TestClient.MockStream();
 
 		var ct = new cw.net.ClientTransport(
-			callQueue, stream, 0, BROWSER_HTTP, '/TestClient-not-a-real-endpoint/', true, 2/* initialDelay */);
+			callQueue, stream, 0, BROWSER_HTTP, notARealEndpoint, true, 2/* initialDelay */);
 		ct.flush_();
 		self.assertThrows(Error, function() { ct.flush_(); },
 			"flush_: Can't flush more than once to this transport.");
@@ -334,7 +345,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 
 		var initialDelay = 2;
 		var ct = new cw.net.ClientTransport(
-			callQueue, stream, 0, BROWSER_HTTP, '/TestClient-not-a-real-endpoint/', true, initialDelay);
+			callQueue, stream, 0, BROWSER_HTTP, notARealEndpoint, true, initialDelay);
 		ct.makeHttpRequest_ = function(payload) {
 			payloads.push(payload)
 		};
@@ -414,7 +425,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 		var proto = self.makeProtocol_();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.Stream(
-			callQueue, proto, '/httpface/', goog.bind(self.makeCredentialsData_, self));
+			callQueue, proto, httpFaceEndpoint, goog.bind(self.makeCredentialsData_, self));
 		stream.start();
 		stream.sendStrings(['echo_twice:hello world']);
 
@@ -433,7 +444,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 		var proto = self.makeProtocol_();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.Stream(
-			callQueue, proto, '/httpface/', goog.bind(self.makeCredentialsData_, self));
+			callQueue, proto, httpFaceEndpoint, goog.bind(self.makeCredentialsData_, self));
 		stream.sendStrings(['echo_twice:hello world']);
 		stream.start();
 
@@ -460,7 +471,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.Stream(
-			callQueue, proto, '/httpface/', goog.bind(self.makeCredentialsData_, self));
+			callQueue, proto, httpFaceEndpoint, goog.bind(self.makeCredentialsData_, self));
 		stream.sendStrings(['reset_me:test_streamReset']);
 		stream.start();
 

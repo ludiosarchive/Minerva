@@ -14,6 +14,8 @@
  * 	- low latency (no excessive setTimeout(..., 0) )
  */
 
+goog.provide('cw.net.EndpointType');
+goog.provide('cw.net.Endpoint');
 goog.provide('cw.net.IMinervaProtocol');
 goog.provide('cw.net.Stream');
 goog.provide('cw.net.EventType');
@@ -60,48 +62,73 @@ goog.require('cw.net.decodeFrameFromServer');
  * @enum {number}
  */
 cw.net.EndpointType = {
-	HTTP: 1,
-	HTTPS: 2,
-	WS: 3, // WebSocket
-	WSS: 4, // WebSocket Secure
-	TCP: 5 // Flash Socket, also hypothetically Silverlight, Java, and other things that allow TCP connections.
+	HTTP: 1, // (http:// or https://)
+	WS: 2, // WebSocket (ws:// or wss://)
+
+	// A TCP connection, using Flash Socket; also hypothetically
+	// Silverlight, Java, etc.
+	TCP: 3
 };
 
 
 /**
- * Implement this interface for your "endpoint locator" object.
+ * Object to represent a Minerva endpoint. Contains the EndpointType and
+ * either a URL or a (host, port) pair. If `url` is null, host and port
+ * should be not-null.
  *
- * @interface
+ * @param {!cw.net.EndpointType} type
+ * @param {?string} url
+ * @param {?string} host
+ * @param {?number} port
+ * @constructor
  */
-cw.net.IEndpointLocator = function() {
-
+cw.net.Endpoint = function(type, url, host, port) {
+	/** @type {!cw.net.EndpointType} */
+	this.type = type;
+	/** @type {?string} */
+	this.url = url;
+	/** @type {?string} */
+	this.host = host;
+	/** @type {?number} */
+	this.port = port;
 };
 
-// XXX TODO: this API feels wrong. What if there are multiple available endpoints
-// for an EndpointType? Remember: endpoints may change during runtime,
-// and at initial page load, we may want to connect to everything to see what
-// we can connect to.
 
-/**
- * @param {!cw.net.EndpointType} type The type of endpoint
- *
- * @return {?Array.<!(string|Object)>} The endpoint (with
- * 	credentials) that Minerva client should connect to.
- *
- *	Return an array of [the endpoint URL, credentialsData], or, if no
- * 	endpoint is suitable, return `null`.
- *
- * 	the endpoint URL: If `type` is `cw.net.EndpointType.{HTTP,HTTPS,WS,WSS}`, the
- * 	full URL with an appropriate scheme (`http://` or `https://` or `ws://` or `ws://`).
- * 	If `type` is `cw.net.EndpointType.TCP`, a URL that looks like "tcp://hostname:port"
- * 	(both `hostname` and the `port` number are required.)
- *
- * 	credentialsData: `Object`, which may be looked at by Minerva server's
- * 	firewall. Cannot be an `Array`, or anything but `Object`.
- */
-cw.net.IEndpointLocator.prototype.locate = function(type) {
 
-};
+///**
+// * Implement this interface for your "endpoint locator" object.
+// *
+// * @interface
+// */
+//cw.net.IEndpointLocator = function() {
+//
+//};
+//
+//// XXX TODO: this API feels wrong. What if there are multiple available endpoints
+//// for an EndpointType? Remember: endpoints may change during runtime,
+//// and at initial page load, we may want to connect to everything to see what
+//// we can connect to.
+//
+///**
+// * @param {!cw.net.EndpointType} type The type of endpoint
+// *
+// * @return {?Array.<!(string|Object)>} The endpoint (with
+// * 	credentials) that Minerva client should connect to.
+// *
+// *	Return an array of [the endpoint URL, credentialsData], or, if no
+// * 	endpoint is suitable, return `null`.
+// *
+// * 	the endpoint URL: If `type` is `cw.net.EndpointType.{HTTP,HTTPS,WS,WSS}`, the
+// * 	full URL with an appropriate scheme (`http://` or `https://` or `ws://` or `ws://`).
+// * 	If `type` is `cw.net.EndpointType.TCP`, a URL that looks like "tcp://hostname:port"
+// * 	(both `hostname` and the `port` number are required.)
+// *
+// * 	credentialsData: `Object`, which may be looked at by Minerva server's
+// * 	firewall. Cannot be an `Array`, or anything but `Object`.
+// */
+//cw.net.IEndpointLocator.prototype.locate = function(type) {
+//
+//};
 
 
 // TODO: need some kind of interface to allow applications to control
@@ -225,14 +252,14 @@ cw.net.StreamState_ = {
 /**
  * @param {!cw.eventual.CallQueue} callQueue
  * @param {!Object} protocol
- * @param {string} httpEndpoint
+ * @param {!cw.net.Endpoint} endpoint
  * @param {function(): string} makeCredentialsCallable Function that returns a
  * 	credentialsData string.
  *
  * @constructor
  * @extends {goog.events.EventTarget}
  */
-cw.net.Stream = function(callQueue, protocol, httpEndpoint, makeCredentialsCallable) {
+cw.net.Stream = function(callQueue, protocol, endpoint, makeCredentialsCallable) {
 	goog.events.EventTarget.call(this);
 
 	/**
@@ -248,10 +275,12 @@ cw.net.Stream = function(callQueue, protocol, httpEndpoint, makeCredentialsCalla
 	this.protocol_ = protocol;
 
 	/**
-	 * @type {string}
+	 * TODO: add a method to change the endpoint while the Stream is running.
+	 * This method may need to dispose existing transports.
+	 * @type {!cw.net.Endpoint}
 	 * @private
 	 */
-	this.httpEndpoint_ = httpEndpoint;
+	this.endpoint_ = endpoint;
 
 	/**
 	 * @type {function(): string}
@@ -513,10 +542,9 @@ endpoint, becomePrimary, initialDelay) {
 cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary, initialDelay) {
 	this.transportCount_ += 1;
 	var transportType = cw.net.TransportType_.BROWSER_HTTP;
-	var endpoint = this.httpEndpoint_;
 	var transport = this.instantiateTransport_(
 		this.callQueue_, this, this.transportCount_, transportType,
-			endpoint, becomePrimary, initialDelay);
+			this.endpoint_, becomePrimary, initialDelay);
 	cw.net.Stream.logger.finest(
 		"Created: " + transport.getDescription_() + ", delay=" + initialDelay);
 	this.transports_.add(transport);
@@ -839,7 +867,7 @@ cw.net.Stream.logger.setLevel(goog.debug.Logger.Level.ALL);
  * @private
  */
 cw.net.TransportType_ = {
-	BROWSER_HTTP: 1,
+	BROWSER_HTTP: 1, // maybe this should be called BROWSER_XHR?
 	FLASH_SOCKET: 2,
 	WEBSOCKET: 3
 };
@@ -860,7 +888,7 @@ cw.net.TransportType_ = {
  *
  * @param {!cw.eventual.CallQueue} callQueue
  * @param {!cw.net.TransportType_} transportType
- * @param {string} endpoint
+ * @param {!cw.net.Endpoint} endpoint
  * @param {boolean} becomePrimary Should this transport try to become primary
  * 	transport?
  *
@@ -895,7 +923,7 @@ cw.net.ClientTransport = function(callQueue, stream, transportNumber, transportT
 	this.transportType_ = transportType;
 
 	/**
-	 * @type {string}
+	 * @type {!cw.net.Endpoint}
 	 * @private
 	 */
 	this.endpoint_ = endpoint;
@@ -1264,7 +1292,7 @@ cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
 	// want Minerva server or intermediaries to try to urldecode the POST body.
 	this.underlyingStartTime_ = goog.Timer.getTime(this.callQueue_.clock);
 	this.underlying_.send(
-		this.endpoint_, 'POST', payload,
+		this.endpoint_.url, 'POST', payload,
 		{'Content-Type': 'application/octet-stream'});
 };
 

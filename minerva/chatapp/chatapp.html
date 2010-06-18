@@ -148,8 +148,9 @@ chatapp.lastProto = null;
 chatapp.startStream = function() {
 	chatapp.lastProto = new chatapp.ChatProtocol();
 	var callQueue = new cw.eventual.CallQueue(goog.global['window']);
+	var endpoint = new cw.net.Endpoint(cw.net.EndpointType.HTTP, '/httpface/', null, null);
 	var stream = new cw.net.Stream(
-		callQueue, chatapp.lastProto, '/httpface/', chatapp.makeCredentialsData);
+		callQueue, chatapp.lastProto, endpoint, chatapp.makeCredentialsData);
 	stream.start();
 };
 
