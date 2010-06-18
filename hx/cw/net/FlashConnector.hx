@@ -43,7 +43,7 @@ import flash.system.Security;
 
 
 class FlashConnection {
-	public var flashKey:String;
+	public var callbackFunc:String;
 	public var socket:Socket;
 	public var expecting:Int;
 	public var prelude:String;
@@ -51,12 +51,12 @@ class FlashConnection {
 	public var id:String;
 	//public var flashConnector:FlashConnector;
 
-	public function new(myId, prelude, flashKey) {
+	public function new(myId, prelude, callbackFunc) {
 		this.expecting = -1;
 		this.preludeSent = false;
 		this.id = myId;
 		this.prelude = prelude;
-		this.flashKey = flashKey;
+		this.callbackFunc = callbackFunc;
 		//flashConnector = fc;
 
 		// "It is strongly advised to use the constructor form without parameters,
@@ -90,22 +90,24 @@ class FlashConnection {
 	}
 
 	public inline function handle_connect(event) {
-		ExternalInterface.call("__FS_instances['"+id+"'].onconnect()");
+		ExternalInterface.call(callbackFunc, id, "connect");
 	}
 
 	public inline function handle_close(event) {
 		FlashConnector.done(id);
-		ExternalInterface.call("__FS_instances['"+id+"'].onclose()");
+		ExternalInterface.call(callbackFunc, id, "close");
 	}
 
 	public inline function handle_io_error(event) {
+		// TODO: need to call .done?
 		// We assume that our Flash cw.json encoder is not necessary for event.text
-		ExternalInterface.call("(function(id, err){__FS_instances[id].onioerror(err)})", id, event.text);
+		ExternalInterface.call(callbackFunc, id, "ioerror", event.text);
 	}
 
 	public inline function handle_security_error(event) {
+		// TODO: need to call .done?
 		// We assume that our Flash cw.json encoder is not necessary for event.text
-		ExternalInterface.call("(function(id, err){__FS_instances[id].onsecurityerror(err)})", id, event.text);
+		ExternalInterface.call(callbackFunc, id, "securityerror", event.text);
 	}
 
 	public inline function handle_data(event) {
@@ -157,10 +159,9 @@ class FlashConnection {
 
 		if(outBuffer != "[]") {
 			ExternalInterface.call(
-				"__FS_instances['" + id + "'].onframes(" +
-				outBuffer + "," + (hadError ? "true" : "false") + ",'" + flashKey + "')");
+				callbackFunc + "('" + id + "', 'frames', " +
+				outBuffer + "," + (hadError ? "true" : "false") + ")");
 		}
-		// flashKey is expected to not have single quote or backslash
 	}
 
 	public function writeFrames(msgs:Array<String>) {
@@ -223,14 +224,14 @@ class FlashConnection {
  */
 class FlashConnector {
 	public static var connections:Hash<FlashConnection> = new Hash();
-	public static var flashKey:String;
+	public static var callbackFunc:String;
 
 	public static inline function connect(instance_id:String, host:String, port:Int, prelude:String) {
 		// This implementation allows FlashConnection's Socket object to be reused,
 		// but reusing is not recommended.
 		var conn:FlashConnection = connections.get(instance_id);
 		if (conn == null) {
-			conn = new FlashConnection(instance_id, prelude, flashKey);
+			conn = new FlashConnection(instance_id, prelude, callbackFunc);
 			connections.set(instance_id, conn);
 		}
 
@@ -283,8 +284,7 @@ class FlashConnector {
 	public static function main() {
 		registerCallbacks();
 
-		// flashKey must not have single quote or backslash
-		flashKey = flash.Lib.current.loaderInfo.parameters.flashkey;
+		callbackFunc = flash.Lib.current.loaderInfo.parameters.callbackFunc;
 
 		if (flash.Lib.current.loaderInfo.parameters.onloadcallback != null) {
 			ExternalInterface.call(flash.Lib.current.loaderInfo.parameters.onloadcallback);

@@ -56,11 +56,11 @@ goog.require('goog.net.EventType');
 goog.require('goog.events');
 goog.require('goog.Uri');
 goog.require('swfobject');
-goog.require('cw.net.FlashSocket');
-goog.require('cw.net.HelloFrame'); // we actually want HelloProperty_
 goog.require('cw.whoami');
 goog.require('cw.string');
 goog.require('cw.repr');
+goog.require('cw.net.FlashSocket');
+goog.require('cw.net.HelloFrame'); // we actually want HelloProperty_
 </script>
 
 <script>
@@ -108,20 +108,9 @@ var mode = getTestMode(url);
 
 logger.info('Mode is: ' + mode)
 
-var flashKey = goog.string.getRandomString();
-// flashKey must not contain single quote or backslash.
-//
-// flashKey is used to determine whether to drop the Flash->JS calls
-// we get. Very rarely, Firefox 3.5 - 3.6ish (maybe older and newer as well)
-// sometimes make Flash->JS calls to the page after it has reloaded,
-// which the page is not expecting at all. For some weak proof, see
-// the screenshots in Minerva/docs/firefox_externalinterface_bug/
-//
-// Yes, this might even be a security issue, if there's private information
-// in those Flash->JS calls.
 
 function loadSWF() {
-	var flashvars = {'onloadcallback': '_appswfLoaded', 'flashkey': flashKey};
+	var flashvars = {'onloadcallback': '_appswfLoaded', 'callbackFunc': '__FlashSocket_eiCallback'};
 	var params = {};
 	swfobject.embedSWF("app.swf", "appswf", "30", "30", [9, 0, 0], "expressInstall.swf", flashvars, params); // no attributes
 }
@@ -222,8 +211,8 @@ function connectWithFlash(bridge) {
 		this.dispose();
 	}
 
-	fs.onframes = function(frames, hadError, flashKey) {
-		logger.info('onframes from '+flashKey+' with '+frames.length+' frame(s). hadError? ' + hadError);
+	fs.onframes = function(frames, hadError) {
+		logger.info('onframes with '+frames.length+' frame(s). hadError? ' + hadError);
 		for(var i=0; i < frames.length; i++) {
 			var frame = frames[i]; 
 			logger.info('Received: '+serializer.serialize(frame));
