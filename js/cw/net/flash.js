@@ -232,7 +232,7 @@ cw.net.FlashSocketTracker.prototype.createNew = function() {
 };
 
 /**
- * Called by `FlashSocket`s.
+ * Called by `FlashSocket`s after they dispose themselves.
  * @param {!cw.net.FlashSocket} flashSocket
  * @private
  */
@@ -304,6 +304,8 @@ cw.net.FlashSocketTracker.prototype.disposeInternal = function() {
 	var flashSockets = goog.object.getValues(this.instances_);
 	while(flashSockets.length) {
 		flashSockets.pop().dispose();
+		// Each .dispose() calls this.socketOffline_, but this isn't
+		// a big deal.
 	}
 	this.instances_ = null;
 	this.bridge_ = null;
