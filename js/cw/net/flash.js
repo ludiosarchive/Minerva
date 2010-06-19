@@ -52,7 +52,8 @@ cw.net.IFlashSocketProtocol.prototype.onclose = function() {
 
 /**
  * Called when (encoded) frames are received.
- * @param {!Array.<string>} frames
+ * @param {!Array.<string>} frames Array of serialized Minerva frames. You
+ * 	may mutate the Array.
  */
 cw.net.IFlashSocketProtocol.prototype.onframes = function(frames) {
 
