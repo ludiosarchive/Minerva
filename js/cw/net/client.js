@@ -38,7 +38,7 @@ goog.require('cw.repr');
 goog.require('cw.net.SACK');
 goog.require('cw.net.Queue');
 goog.require('cw.net.Incoming');
-goog.require('cw.net.FlashSocket');
+goog.require('cw.net.FlashSocketTracker');
 
 goog.require('cw.net.Frame');
 goog.require('cw.net.TransportKillReason');
@@ -63,7 +63,7 @@ goog.require('cw.net.decodeFrameFromServer');
  */
 cw.net.EndpointType = {
 	HTTP: 1, // (http:// or https://)
-	WS: 2, // WebSocket (ws:// or wss://)
+	WEBSOCKET: 2, // WebSocket (ws:// or wss://)
 
 	// A TCP connection, using Flash Socket; also hypothetically
 	// Silverlight, Java, etc.
@@ -522,6 +522,25 @@ cw.net.Stream.prototype.sendStrings = function(strings) {
 };
 
 /**
+ * Get the appropriate TransportType_ for our current endpoint.
+ * @private
+ * @return {!cw.net.TransportType_}
+ */
+cw.net.Stream.prototype.getTransportType_ = function() {
+	if(this.endpoint_.type == cw.net.EndpointType.HTTP) {
+		var transportType = cw.net.TransportType_.XHR_LONGPOLL;
+		// TODO: sometimes XHR_STREAM
+	} else if(this.endpoint_.type == cw.net.EndpointType.WEBSOCKET) {
+		var transportType = cw.net.TransportType_.WEBSOCKET;
+	} else if(this.endpoint_.type == cw.net.EndpointType.TCP) {
+		var transportType = cw.net.TransportType_.FLASH_SOCKET;
+	} else {
+		throw new Error("Don't support EndpointType " + this.endpoint_.type);
+	}
+	return transportType;
+};
+
+/**
  * @private
  * @return {!cw.net.ClientTransport} The newly-instantiated transport.
  * This method exists so that it can be overriden in tests.
@@ -540,8 +559,8 @@ endpoint, becomePrimary, initialDelay) {
  * @return {!cw.net.ClientTransport} The newly-created transport.
  */
 cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary, initialDelay) {
+	var transportType = this.getTransportType_();
 	this.transportCount_ += 1;
-	var transportType = cw.net.TransportType_.BROWSER_HTTP;
 	var transport = this.instantiateTransport_(
 		this.callQueue_, this, this.transportCount_, transportType,
 			this.endpoint_, becomePrimary, initialDelay);
@@ -867,9 +886,10 @@ cw.net.Stream.logger.setLevel(goog.debug.Logger.Level.ALL);
  * @private
  */
 cw.net.TransportType_ = {
-	BROWSER_HTTP: 1, // maybe this should be called BROWSER_XHR?
-	FLASH_SOCKET: 2,
-	WEBSOCKET: 3
+	XHR_LONGPOLL: 1,
+	XHR_STREAM: 2,
+	FLASH_SOCKET: 3,
+	WEBSOCKET: 4
 };
 
 
@@ -966,14 +986,16 @@ cw.net.ClientTransport = function(callQueue, stream, transportNumber, transportT
 	 * @private
 	 */
 	this.canFlushMoreThanOnce_ = (
-		transportType != cw.net.TransportType_.BROWSER_HTTP);
+		transportType == cw.net.TransportType_.FLASH_SOCKET ||
+		transportType == cw.net.TransportType_.WEBSOCKET);
 
 	/**
 	 * Can server stream frames to this transport?
 	 * @type {boolean}
 	 * @private
 	 */
-	this.s2cStreaming = false;
+	this.s2cStreaming =
+		(this.transportType_ != cw.net.TransportType_.XHR_LONGPOLL);
 };
 goog.inherits(cw.net.ClientTransport, goog.Disposable);
 
@@ -1155,12 +1177,12 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 			}
 			var frameStr = frames[i];
 
-			// For BROWSER_HTTP, first frame must be the anti-script-inclusion preamble.
+			// For HTTP transports, first frame must be the anti-script-inclusion preamble.
 			// This provides decent protection against us parsing and reading frames
 			// from a page returned by an intermediary like a proxy or a WiFi access paywall.
-			if(this.framesDecoded_ == 0 &&
-			this.transportType_ == cw.net.TransportType_.BROWSER_HTTP &&
-			frameStr != ";)]}P") {
+			if(this.framesDecoded_ == 0 && frameStr != ";)]}P" &&
+			(this.transportType_ == cw.net.TransportType_.XHR_LONGPOLL ||
+			this.transportType_ == cw.net.TransportType_.XHR_STREAM)) {
 				logger.warning("Closing soon because got bad preamble: " +
 					cw.repr.repr(frameStr));
 				// No penalty because we want to treat this just like "cannot connect to peer".
@@ -1390,7 +1412,7 @@ cw.net.ClientTransport.prototype.flush_ = function() {
 
 	this.started_ = true;
 
-	if(this.transportType_ == cw.net.TransportType_.BROWSER_HTTP) {
+	if(this.transportType_ == cw.net.TransportType_.XHR_LONGPOLL) {
 		for(var i=0; i < this.toSendFrames_.length; i++) {
 			var frame = this.toSendFrames_[i];
 			cw.net.ClientTransport.logger.fine(
@@ -1476,12 +1498,9 @@ cw.net.ClientTransport.prototype.disposeInternal = function() {
 
 	this.toSendFrames_ = [];
 
-	if(this.transportType_ == cw.net.TransportType_.BROWSER_HTTP) {
-		if(this.underlying_) {
-			this.underlying_.dispose();
-		}
-	} else {
-		throw Error("disposeInternal: Don't know what to do for this transportType.");
+	// for all transportType_'s
+	if(this.underlying_) {
+		this.underlying_.dispose();
 	}
 	var stream = this.stream_;
 	// Break circular references faster.

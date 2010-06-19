@@ -50,7 +50,7 @@ var PaddingFrame = cw.net.PaddingFrame;
 var ResetFrame = cw.net.ResetFrame;
 var TransportKillFrame = cw.net.TransportKillFrame;
 
-var BROWSER_HTTP = cw.net.TransportType_.BROWSER_HTTP;
+var XHR_LONGPOLL = cw.net.TransportType_.XHR_LONGPOLL;
 
 var SACK = cw.net.SACK;
 
@@ -287,7 +287,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 
 		var initialDelay = 2;
 		var ct = new cw.net.ClientTransport(
-			callQueue, stream, 0, BROWSER_HTTP, notARealEndpoint, true, initialDelay);
+			callQueue, stream, 0, XHR_LONGPOLL, notARealEndpoint, true, initialDelay);
 		ct.makeHttpRequest_ = function(payload) {
 			payloads.push(payload)
 		};
@@ -327,7 +327,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 		var stream = new cw.net.TestClient.MockStream();
 
 		var ct = new cw.net.ClientTransport(
-			callQueue, stream, 0, BROWSER_HTTP, notARealEndpoint, true, 2/* initialDelay */);
+			callQueue, stream, 0, XHR_LONGPOLL, notARealEndpoint, true, 2/* initialDelay */);
 		ct.flush_();
 		self.assertThrows(Error, function() { ct.flush_(); },
 			"flush_: Can't flush more than once to this transport.");
@@ -345,7 +345,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 
 		var initialDelay = 2;
 		var ct = new cw.net.ClientTransport(
-			callQueue, stream, 0, BROWSER_HTTP, notARealEndpoint, true, initialDelay);
+			callQueue, stream, 0, XHR_LONGPOLL, notARealEndpoint, true, initialDelay);
 		ct.makeHttpRequest_ = function(payload) {
 			payloads.push(payload)
 		};
