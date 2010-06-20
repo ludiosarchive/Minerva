@@ -371,7 +371,8 @@ cw.net.Stream.prototype.secondaryIsWaitingForStreamToExist_ = false;
 cw.net.Stream.prototype.state_ = cw.net.StreamState_.UNSTARTED;
 
 /**
- * Counter to uniquely identify the transports in this Stream
+ * Counter used to uniquely assign a transportNumber for the
+ * ClientTransports in this Stream.
  * @type {number}
  * @private
  */
@@ -579,9 +580,8 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
  * @return {!cw.net.WastingTimeTransport} The newly-created transport.
  */
 cw.net.Stream.prototype.createWastingTransport_ = function(delay) {
-	this.transportCount_ += 1;
 	var transport = new cw.net.WastingTimeTransport(
-		this.callQueue_, this, this.transportCount_, delay);
+		this.callQueue_, this, delay);
 	cw.net.Stream.logger.finest(
 		"Created: " + transport.getDescription_() + ", delay=" + delay);
 	this.transports_.add(transport);
@@ -1597,14 +1597,13 @@ cw.net.ClientTransport.logger.setLevel(goog.debug.Logger.Level.ALL);
  *
  * @param {!cw.eventual.CallQueue} callQueue
  * @param {!cw.net.Stream} stream
- * @param {number} transportNumber
  * @param {number} delay
  *
  * @constructor
  * @extends {goog.Disposable}
  * @private
  */
-cw.net.WastingTimeTransport = function(callQueue, stream, transportNumber, delay) {
+cw.net.WastingTimeTransport = function(callQueue, stream, delay) {
 	goog.Disposable.call(this);
 
 	/**
@@ -1618,11 +1617,6 @@ cw.net.WastingTimeTransport = function(callQueue, stream, transportNumber, delay
 	 * @private
 	 */
 	this.stream_ = stream;
-
-	/**
-	 * @type {number}
-	 */
-	this.transportNumber = transportNumber;
 
 	/**
 	 * @type {number}
@@ -1677,8 +1671,7 @@ cw.net.WastingTimeTransport.prototype.flush_ = function() {
  */
 cw.net.WastingTimeTransport.prototype.__reprToPieces__ = function(sb) {
 	sb.push(
-		'<WastingTimeTransport #', String(this.transportNumber),
-		', delay=', String(this.delay_), '>');
+		'<WastingTimeTransport delay=', String(this.delay_), '>');
 };
 
 /**
@@ -1694,7 +1687,7 @@ cw.net.WastingTimeTransport.prototype.equals = function(other) {
  * @private
  */
 cw.net.WastingTimeTransport.prototype.getDescription_ = function() {
-	return "Wast. T#" + this.transportNumber;
+	return "Wast. T";
 };
 
 /**
