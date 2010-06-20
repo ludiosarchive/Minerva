@@ -644,6 +644,9 @@ cw.net.Stream.prototype.getDelayForNextTransport_ = function(transport) {
 		}
 	}
 	if(isWaster || !count) {
+		cw.net.Stream.logger.finest(
+			"getDelayForNextTransport_: " + cw.repr.repr({
+				'count': count, 'delay': 0}));
 		return 0;
 	} else {
 		var base = 2000 * Math.min(count, 3);
@@ -1587,8 +1590,10 @@ cw.net.ClientTransport.logger.setLevel(goog.debug.Logger.Level.ALL);
 
 /**
  * A transport that does not actually try to connect anywhere, but rather
- * waits for N milliseconds and goes offline. {@link cw.net.Stream} uses
- * this to throttle connection attempts.
+ * waits for `delay` milliseconds and goes offline. {@link cw.net.Stream}
+ * uses this when it wants to delay a connection attempt. During a period of
+ * network problems, you will see this interspersed between real
+ * {@link ClientTransport}s.
  *
  * @param {!cw.eventual.CallQueue} callQueue
  * @param {!cw.net.Stream} stream
@@ -1699,15 +1704,6 @@ cw.net.WastingTimeTransport.prototype.getDescription_ = function() {
  */
 cw.net.WastingTimeTransport.prototype.considerDelayingNextTransport_ = function() {
 	return false;
-};
-
-/**
- * Because WastingTimeTransport has no underlying_, always return 0.
- * @return {number}
- * @private
- */
-cw.net.WastingTimeTransport.prototype.getUnderlyingDuration_ = function() {
-	return 0;
 };
 
 /**
