@@ -20,6 +20,7 @@ goog.provide('cw.net.IMinervaProtocol');
 goog.provide('cw.net.Stream');
 goog.provide('cw.net.EventType');
 goog.provide('cw.net.ClientTransport');
+goog.provide('cw.net.WastingTimeTransport');
 goog.provide('cw.net.TransportType_');
 
 goog.require('goog.asserts');
@@ -80,9 +81,11 @@ cw.net.EndpointType = {
  * @param {?string} url
  * @param {?string} host
  * @param {?number} port
+ * @param {?Element} applet The already-loaded Flash applet that will help
+ * 	Minerva make the connection.  Required for EndpointType.TCP.
  * @constructor
  */
-cw.net.Endpoint = function(type, url, host, port) {
+cw.net.Endpoint = function(type, url, host, port, applet) {
 	/** @type {!cw.net.EndpointType} */
 	this.type = type;
 	/** @type {?string} */
@@ -91,6 +94,8 @@ cw.net.Endpoint = function(type, url, host, port) {
 	this.host = host;
 	/** @type {?number} */
 	this.port = port;
+	/** @type {?Element} */
+	this.applet = applet;
 };
 
 
@@ -374,7 +379,7 @@ cw.net.Stream.prototype.transportCount_ = -1;
 
 /**
  * The primary transport, for receiving S2C strings.
- * @type {cw.net.ClientTransport}
+ * @type {cw.net.ClientTransport|cw.net.WastingTimeTransport}
  * @private
  */
 cw.net.Stream.prototype.primaryTransport_ = null;
@@ -382,7 +387,7 @@ cw.net.Stream.prototype.primaryTransport_ = null;
 /**
  * The secondary transport, for sending S2C strings (especially if primary
  * 	cannot after it has been created).
- * @type {cw.net.ClientTransport}
+ * @type {cw.net.ClientTransport|cw.net.WastingTimeTransport}
  * @private
  */
 cw.net.Stream.prototype.secondaryTransport_ = null;
@@ -405,16 +410,16 @@ cw.net.Stream.prototype.resettingTransport_ = null;
 cw.net.Stream.prototype.streamPenalty_ = 0;
 
 /**
- * How many times in a row the primary transport has been started
- * with a non-zero initialDelay.
+ * How many times in a row the primary transport has been followed
+ * by a WastingTimeTransport.
  * @type {number}
  * @private
  */
 cw.net.Stream.prototype.primaryDelayCount_ = 0;
 
 /**
- * How many times in a row the secondary transport has been started
- * with a non-zero initialDelay.
+ * How many times in a row the secondary transport has been followed
+ * by a WastingTimeTransport.
  * @type {number}
  * @private
  */
@@ -443,10 +448,9 @@ cw.net.Stream.prototype.equals = function(other) {
 };
 
 /**
- * @param {number} initialDelay
  * @private
  */
-cw.net.Stream.prototype.tryToSend_ = function(initialDelay) {
+cw.net.Stream.prototype.tryToSend_ = function() {
 	if(!this.streamExistedAtServer_) {
 		goog.asserts.assert(
 			this.queue_.getQueuedCount() == 0 ||
@@ -494,7 +498,7 @@ cw.net.Stream.prototype.tryToSend_ = function(initialDelay) {
 			} else {
 				cw.net.Stream.logger.finest(
 					"tryToSend_: creating secondary to send SACK/strings");
-				this.secondaryTransport_ = this.createNewTransport_(false, initialDelay);
+				this.secondaryTransport_ = this.createNewTransport_(false);
 				this.secondaryTransport_.writeStrings_(this.queue_, null);
 				this.secondaryTransport_.flush_();
 			}
@@ -518,7 +522,7 @@ cw.net.Stream.prototype.sendStrings = function(strings) {
 		return;
 	}
 	this.queue_.extend(strings);
-	this.tryToSend_(0/* initialDelay */);
+	this.tryToSend_();
 };
 
 /**
@@ -547,10 +551,10 @@ cw.net.Stream.prototype.getTransportType_ = function() {
  */
 cw.net.Stream.prototype.instantiateTransport_ =
 function(callQueue, stream, transportNumber, transportType,
-endpoint, becomePrimary, initialDelay) {
+endpoint, becomePrimary) {
 	return new cw.net.ClientTransport(
 		callQueue, stream, transportNumber, transportType,
-		endpoint, becomePrimary, initialDelay);
+		endpoint, becomePrimary);
 };
 
 /**
@@ -558,14 +562,28 @@ endpoint, becomePrimary, initialDelay) {
  * 	primary transport.
  * @return {!cw.net.ClientTransport} The newly-created transport.
  */
-cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary, initialDelay) {
+cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
 	var transportType = this.getTransportType_();
 	this.transportCount_ += 1;
 	var transport = this.instantiateTransport_(
 		this.callQueue_, this, this.transportCount_, transportType,
-			this.endpoint_, becomePrimary, initialDelay);
+			this.endpoint_, becomePrimary);
 	cw.net.Stream.logger.finest(
-		"Created: " + transport.getDescription_() + ", delay=" + initialDelay);
+		"Created: " + transport.getDescription_());
+	this.transports_.add(transport);
+	return transport;
+};
+
+/**
+ * Create a dummy transport that waits for N milliseconds and goes offline.
+ * @return {!cw.net.WastingTimeTransport} The newly-created transport.
+ */
+cw.net.Stream.prototype.createWastingTransport_ = function(delay) {
+	this.transportCount_ += 1;
+	var transport = new cw.net.WastingTimeTransport(
+		this.callQueue_, this, this.transportCount_, delay);
+	cw.net.Stream.logger.finest(
+		"Created: " + transport.getDescription_() + ", delay=" + delay);
 	this.transports_.add(transport);
 	return transport;
 };
@@ -587,7 +605,7 @@ cw.net.Stream.prototype.streamSuccessfullyCreated_ = function(avoidCreatingTrans
 		// This method is idempotent, so we should set this to false
 		// to avoid calling tryToSend_ more than necessary.
 		this.secondaryIsWaitingForStreamToExist_ = false;
-		this.tryToSend_(0/* initialDelay */);
+		this.tryToSend_();
 	}
 };
 
@@ -600,28 +618,32 @@ cw.net.Stream.prototype.streamStatusReceived_ = function(lastSackSeen) {
 };
 
 /**
- * Return a good initialDelay for a new transport, based on old transport
- * {@code transport}.
- * @param {!cw.net.ClientTransport} transport The previous transport
+ * Return how many milliseconds we should waste before creating a transport
+ * that actually tries to connect to the server. If 0, connect a new real
+ * transport right away (even under the current stack frame).
+ *
+ * @param {!(cw.net.ClientTransport|cw.net.WastingTimeTransport)} transport The
+ * 	previous transport.
  * @return {number} Delay in milliseconds
  */
 cw.net.Stream.prototype.getDelayForNextTransport_ = function(transport) {
 	var considerDelay = transport.considerDelayingNextTransport_();
+	var isWaster = transport instanceof cw.net.WastingTimeTransport;
 	var count;
 	if(transport == this.primaryTransport_) {
 		if(considerDelay) {
 			count = ++this.primaryDelayCount_;
-		} else {
+		} else if(!isWaster) {
 			count = this.primaryDelayCount_ = 0;
 		}
 	} else { // secondaryTransport_
 		if(considerDelay) {
 			count = ++this.secondaryDelayCount_;
-		} else {
+		} else if(!isWaster) {
 			count = this.secondaryDelayCount_ = 0;
 		}
 	}
-	if(!count) {
+	if(isWaster || !count) {
 		return 0;
 	} else {
 		var base = 2000 * Math.min(count, 3);
@@ -631,8 +653,9 @@ cw.net.Stream.prototype.getDelayForNextTransport_ = function(transport) {
 		var oldDuration = transport.getUnderlyingDuration_();
 		var delay = Math.max(0, base + variance - oldDuration);
 		cw.net.Stream.logger.finest(
-			"getDelayForNextTransport_: " +
-			cw.repr.repr({base: base, variance: variance, oldDuration: oldDuration, delay: delay}));
+			"getDelayForNextTransport_: " + cw.repr.repr({
+				'count': count, 'base': base, 'variance': variance,
+				'oldDuration': oldDuration, 'delay': delay}));
 		return delay;
 	}
 };
@@ -648,7 +671,7 @@ cw.net.Stream.prototype.goDisconnect_ = function() {
 
 /**
  * ClientTransport calls this to tell Stream that it has disconnected.
- * @param {!cw.net.ClientTransport} transport
+ * @param {!cw.net.ClientTransport|cw.net.WastingTimeTransport} transport
  * @private
  */
 cw.net.Stream.prototype.transportOffline_ = function(transport) {
@@ -679,20 +702,28 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 		}
 		cw.net.Stream.logger.fine(
 			"Not creating a transport because Stream is in state " + this.state_);
-		return;
-	}
-
-	var initialDelay = this.getDelayForNextTransport_(transport);
-	if(transport == this.primaryTransport_) {
-		this.primaryTransport_ = this.createNewTransport_(true, initialDelay);
-		this.primaryTransport_.writeStrings_(this.queue_, null);
-		this.primaryTransport_.flush_();
-	} else if(transport == this.secondaryTransport_) {
-		this.secondaryTransport_ = null;
-		// More data might have been queued while the secondary transport
-		// was getting a response. It's also possible that the server didn't
-		// ACK what we just sent, so we have to send it again.
-		this.tryToSend_(initialDelay);
+	} else {
+		var delay = this.getDelayForNextTransport_(transport);
+		if(transport == this.primaryTransport_) {
+			if(!delay) {
+				this.primaryTransport_ = this.createNewTransport_(true);
+				this.primaryTransport_.writeStrings_(this.queue_, null);
+			} else {
+				this.primaryTransport_ = this.createWastingTransport_(delay);
+			}
+			this.primaryTransport_.flush_();
+		} else if(transport == this.secondaryTransport_) {
+			if(!delay) {
+				this.secondaryTransport_ = null;
+				// More data might have been queued while the secondary transport
+				// was getting a response. It's also possible that the server didn't
+				// ACK what we just sent, so we have to send it again.
+				this.tryToSend_();
+			} else {
+				this.secondaryTransport_ = this.createWastingTransport_(delay);
+				this.secondaryTransport_.flush_();
+			}
+		}
 	}
 };
 
@@ -732,7 +763,7 @@ cw.net.Stream.prototype.reset = function(reasonString) {
 		}
 
 		cw.net.Stream.logger.info("reset: Creating resettingTransport_ for sending ResetFrame.");
-		this.resettingTransport_ = this.createNewTransport_(false, 0/* initialDelay */);
+		this.resettingTransport_ = this.createNewTransport_(false);
 		this.resettingTransport_.writeReset_(reasonString, true/* applicationLevel */);
 		this.resettingTransport_.flush_();
 		// Comment above about primaryTransport_.flush_() applies here too.
@@ -815,7 +846,7 @@ cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, avoidCreat
 	// For HTTP streaming, the transport might not close for a while, so
 	// we do call tryToSend_.
 	if(!avoidCreatingTransports) { // maybe we want && !hitLimit?
-		this.tryToSend_(0/* initialDelay */);
+		this.tryToSend_();
 	}
 
 	// We deliver the deliverable strings even if the receive window is overflowing,
@@ -862,7 +893,7 @@ cw.net.Stream.prototype.start = function() {
 	this.protocol_.streamStarted(this);
 
 	this.state_ = cw.net.StreamState_.STARTED;
-	this.primaryTransport_ = this.createNewTransport_(true, 0/* initialDelay */);
+	this.primaryTransport_ = this.createNewTransport_(true);
 	this.primaryTransport_.writeStrings_(this.queue_, null);
 	this.primaryTransport_.flush_();
 };
@@ -907,6 +938,8 @@ cw.net.TransportType_ = {
  * 		StringFrames make it through? TODO: describe)
  *
  * @param {!cw.eventual.CallQueue} callQueue
+ * @param {!cw.net.Stream} stream
+ * @param {number} transportNumber
  * @param {!cw.net.TransportType_} transportType
  * @param {!cw.net.Endpoint} endpoint
  * @param {boolean} becomePrimary Should this transport try to become primary
@@ -916,7 +949,7 @@ cw.net.TransportType_ = {
  * @extends {goog.Disposable}
  * @private
  */
-cw.net.ClientTransport = function(callQueue, stream, transportNumber, transportType, endpoint, becomePrimary, initialDelay) {
+cw.net.ClientTransport = function(callQueue, stream, transportNumber, transportType, endpoint, becomePrimary) {
 	goog.Disposable.call(this);
 
 	/**
@@ -973,14 +1006,6 @@ cw.net.ClientTransport = function(callQueue, stream, transportNumber, transportT
 	this.becomePrimary_ = becomePrimary;
 
 	/**
-	 * How many milliseconds to wait before making the connection or HTTP
-	 * request.
-	 * @type {number}
-	 * @private
-	 */
-	this.initialDelay_ = initialDelay;
-
-	/**
 	 * Can this transport send more strings after it has been started?
 	 * @type {boolean}
 	 * @private
@@ -1025,14 +1050,6 @@ cw.net.ClientTransport.prototype.underlyingEndTime_ = null;
  * @private
  */
 cw.net.ClientTransport.prototype.started_ = false;
-
-/**
- * The setTimeout ticket for the call to make the underlying TCP connection
- * or HTTP request.
- * @type {?number}
- * @private
- */
-cw.net.ClientTransport.prototype.underlyingStartTicket_ = null;
 
 /**
  * Whether we're in the `framesReceived_` loop.
@@ -1133,7 +1150,7 @@ cw.net.ClientTransport.prototype.getDescription_ = function() {
 };
 
 /**
- * Should Stream consider an initialDelay for the next transport?
+ * Should Stream consider a WastingTimeTransport for the next transport?
  * @return {boolean}
  * @private
  */
@@ -1143,8 +1160,7 @@ cw.net.ClientTransport.prototype.considerDelayingNextTransport_ = function() {
 
 /**
  * Return how many milliseconds the underlying TCP connection or HTTP request
- * was open. This does not include initialDelay. The returned number may be too
- * low or too high if the clock jumped.
+ * was open.  The returned number may be too low or too high if the clock jumped.
  * @return {number} Duration in milliseconds.
  * @private
  */
@@ -1385,6 +1401,29 @@ cw.net.ClientTransport.prototype.flushBufferAsHttpPayload_ = function() {
 };
 
 /**
+ * Flush the internal send buffer and return an Array of encoded frames.
+ * @return {!Array.<string>} The encoded frames.
+ * @private
+ */
+cw.net.ClientTransport.prototype.flushBufferAsEncodedFrames_ = function() {
+	var frames = [];
+	for(var i=0, len=this.toSendFrames_.length; i < len; i++) {
+		var frame = this.toSendFrames_[i];
+		frames.push(frame.encode());
+	}
+	this.toSendFrames_ = [];
+	return frames;
+};
+
+/**
+ * @param {!Array.<string>} frames Encoded frames to send right away.
+ * @private
+ */
+cw.net.ClientTransport.prototype.makeFlashConnection_ = function(frames) {
+	throw Error("TODO");
+};
+
+/**
  * Flush internally queued frames to the underlying connection/HTTP request.
  * If necessary, make the initial connection/HTTP request.
  *
@@ -1406,26 +1445,31 @@ cw.net.ClientTransport.prototype.flush_ = function() {
 		return;
 	}
 
-	if(!this.started_ && !this.toSendFrames_.length) {
+	var wasStarted = this.started_;
+	this.started_ = true;
+
+	if(!wasStarted && !this.toSendFrames_.length) {
 		this.writeInitialFrames_();
 	}
 
-	this.started_ = true;
+	// Just debug logging
+	for(var i=0; i < this.toSendFrames_.length; i++) {
+		var frame = this.toSendFrames_[i];
+		cw.net.ClientTransport.logger.fine(
+			this.getDescription_() + ' SEND ' + cw.repr.repr(frame));
+	}
 
 	if(this.transportType_ == cw.net.TransportType_.XHR_LONGPOLL) {
-		for(var i=0; i < this.toSendFrames_.length; i++) {
-			var frame = this.toSendFrames_[i];
-			cw.net.ClientTransport.logger.fine(
-				this.getDescription_() + ' SEND ' + cw.repr.repr(frame));
-		}
 		var payload = this.flushBufferAsHttpPayload_();
-		var that = this;
-		this.underlyingStartTicket_ = this.callQueue_.clock.setTimeout(function() {
-			that.underlyingStartTicket_ = null;
-			that.makeHttpRequest_(payload);
-		}, this.initialDelay_);
+		this.makeHttpRequest_(payload);
+	} else if(this.transportType_ == cw.net.TransportType_.FLASH_SOCKET) {
+		var frames = this.flushBufferAsEncodedFrames_();
+		if(this.underlying_) {
+			this.underlying_.writeFrames(frames);
+		}
+		this.makeFlashConnection_(frames);
 	} else {
-		throw Error("flush_: Don't know what to do for this transportType.");
+		throw Error("flush_: Don't know what to do for this transportType: " + this.transportType_);
 	}
 };
 
@@ -1492,10 +1536,6 @@ cw.net.ClientTransport.prototype.disposeInternal = function() {
 
 	cw.net.ClientTransport.superClass_.disposeInternal.call(this);
 
-	if(this.underlyingStartTicket_ != null) {
-		this.callQueue_.clock.clearTimeout(this.underlyingStartTicket_);
-	}
-
 	this.toSendFrames_ = [];
 
 	// for all transportType_'s
@@ -1542,3 +1582,262 @@ cw.net.ClientTransport.prototype.writeReset_ = function(reasonString, applicatio
 
 cw.net.ClientTransport.logger = goog.debug.Logger.getLogger('cw.net.ClientTransport');
 cw.net.ClientTransport.logger.setLevel(goog.debug.Logger.Level.ALL);
+
+
+
+/**
+ * A transport that does not actually try to connect anywhere, but rather
+ * waits for N milliseconds and goes offline. {@link cw.net.Stream} uses
+ * this to throttle connection attempts.
+ *
+ * @param {!cw.eventual.CallQueue} callQueue
+ * @param {!cw.net.Stream} stream
+ * @param {number} transportNumber
+ * @param {number} delay
+ *
+ * @constructor
+ * @extends {goog.Disposable}
+ * @private
+ */
+cw.net.WastingTimeTransport = function(callQueue, stream, transportNumber, delay) {
+	goog.Disposable.call(this);
+
+	/**
+	 * @type {!cw.eventual.CallQueue}
+	 * @private
+	 */
+	this.callQueue_ = callQueue;
+
+	/**
+	 * @type {cw.net.Stream}
+	 * @private
+	 */
+	this.stream_ = stream;
+
+	/**
+	 * @type {number}
+	 */
+	this.transportNumber = transportNumber;
+
+	/**
+	 * @type {number}
+	 * @private
+	 */
+	this.delay_ = delay;
+
+	/**
+	 * @type {boolean}
+	 * @private
+	 */
+	this.started_ = false;
+
+	/**
+	 * @type {boolean}
+	 * @private
+	 */
+	this.canFlushMoreThanOnce_ = false;
+
+	/**
+	 * @type {?number}
+	 * @private
+	 */
+	this.goOfflineTicket_ = null;
+};
+goog.inherits(cw.net.WastingTimeTransport, goog.Disposable);
+
+/**
+ * Start wasting time.
+ * @private
+ */
+cw.net.WastingTimeTransport.prototype.flush_ = function() {
+	if(this.started_ && !this.canFlushMoreThanOnce_) {
+		throw Error("flush_: Can't flush more than once to WastingTimeTransport.");
+	}
+
+	this.started_ = true;
+
+	goog.asserts.assert(this.goOfflineTicket_ == null,
+		"WastingTimeTransport already has goOfflineTicket_?");
+
+	var that = this;
+	this.goOfflineTicket_ = this.callQueue_.clock.setTimeout(function() {
+		that.goOfflineTicket_ = null;
+		that.dispose();
+	}, this.delay_);
+};
+
+/**
+ * @param {!Array.<string>} sb
+ * @private
+ */
+cw.net.WastingTimeTransport.prototype.__reprToPieces__ = function(sb) {
+	sb.push(
+		'<WastingTimeTransport #', String(this.transportNumber),
+		', delay=', String(this.delay_), '>');
+};
+
+/**
+ * @param {*} other
+ */
+cw.net.WastingTimeTransport.prototype.equals = function(other) {
+	return this === other;
+};
+
+/**
+ * Return a short description of the transport. Used only for log messages.
+ * @return {string}
+ * @private
+ */
+cw.net.WastingTimeTransport.prototype.getDescription_ = function() {
+	return "Wast. T#" + this.transportNumber;
+};
+
+/**
+ * Should Stream consider a WastingTimeTransport for the next transport?
+ * @return {boolean}
+ * @private
+ */
+cw.net.WastingTimeTransport.prototype.considerDelayingNextTransport_ = function() {
+	return false;
+};
+
+/**
+ * Because WastingTimeTransport has no underlying_, always return 0.
+ * @return {number}
+ * @private
+ */
+cw.net.WastingTimeTransport.prototype.getUnderlyingDuration_ = function() {
+	return 0;
+};
+
+/**
+ * Call `dispose` to close this transport. If it is called again, this is a no-op.
+ * @private
+ */
+cw.net.WastingTimeTransport.prototype.disposeInternal = function() {
+	cw.net.WastingTimeTransport.logger.info(
+		this.getDescription_() + " in disposeInternal.");
+
+	cw.net.WastingTimeTransport.superClass_.disposeInternal.call(this);
+
+	if(this.goOfflineTicket_ != null) {
+		this.callQueue_.clock.clearTimeout(this.goOfflineTicket_);
+	}
+
+	var stream = this.stream_;
+	// Break circular references faster.
+	// Make sure errors are thrown if we try to make further calls on this.stream_.
+	this.stream_ = null;
+
+	stream.transportOffline_(this);
+};
+
+
+cw.net.WastingTimeTransport.logger = goog.debug.Logger.getLogger('cw.net.WastingTimeTransport');
+cw.net.WastingTimeTransport.logger.setLevel(goog.debug.Logger.Level.ALL);
+
+
+
+
+/**
+ * A convenient wrapper over cw.net.FlashSocket. ClientTransport can assume
+ * it is connected and write frames to it, even when it is not connected yet.
+ * This simplifies the ClientTransport logic. It also makes it possible to easily
+ * support a possible improvement where client sends data before the connection
+ * is established.
+ *
+ * @param {!cw.net.ClientTransport} clientTransport
+ * @constructor
+ * @extends {goog.Disposable}
+ * @private
+ * @implements {cw.net.IFlashSocketProtocol}
+ */
+cw.net.FlashSocketConduit = function(clientTransport) {
+	goog.Disposable.call(this);
+	/**
+	 * @type {!cw.net.ClientTransport}
+	 */
+	this.clientTransport_ = clientTransport;
+
+	/**
+	 * Encoded frames that we need to send after we connect.
+	 * @type {Array.<string>}
+	 */
+	this.bufferedFrames_ = [];
+
+	/**
+	 * @type {!cw.net.FlashSocket}
+	 */
+	this.socket_;
+};
+goog.inherits(cw.net.FlashSocketConduit, goog.Disposable);
+
+/**
+ * @return {boolean}
+ */
+cw.net.FlashSocketConduit.prototype.isConnected = function() {
+	return !this.bufferedFrames_;
+};
+
+/**
+ * @param {!Array.<string>} frames
+ */
+cw.net.FlashSocketConduit.prototype.writeFrames = function(frames) {
+	if(!this.isConnected()) {
+		this.bufferedFrames_.push.apply(this.bufferedFrames_, frames);
+	} else {
+		this.socket_.writeFrames(frames);
+	}
+};
+
+/**
+ * @param {string} host Hostname to connect to
+ * @param {number} port Port to connect to
+ */
+cw.net.FlashSocketConduit.prototype.connect = function(host, port) {
+	this.socket_.connect(host, port);
+};
+
+cw.net.FlashSocketConduit.prototype.onconnect = function() {
+	cw.net.FlashSocketConduit.logger.info('onconnect');
+	var frames = this.bufferedFrames_;
+	this.bufferedFrames_ = null;
+	if(frames.length) {
+		this.socket_.writeFrames(frames);
+	}
+};
+
+cw.net.FlashSocketConduit.prototype.onclose = function() {
+	cw.net.FlashSocketConduit.logger.info('onclose');
+};
+
+/**
+ * @param {string} errorText
+ */
+cw.net.FlashSocketConduit.prototype.onioerror = function(errorText) {
+	cw.net.FlashSocketConduit.logger.warning('onioerror: ' + cw.repr.repr(errorText));
+};
+
+/**
+ * @param {string} errorText
+ */
+cw.net.FlashSocketConduit.prototype.onsecurityerror = function(errorText) {
+	cw.net.FlashSocketConduit.logger.warning('onsecurityerror: ' + cw.repr.repr(errorText));
+};
+
+/**
+ * @param {!Array.<string>} frames
+ */
+cw.net.FlashSocketConduit.prototype.onframes = function(frames) {
+	this.clientTransport_.framesReceived_(frames);
+};
+
+cw.net.FlashSocketConduit.prototype.disposeInternal = function() {
+	cw.net.FlashSocketConduit.logger.info("in disposeInternal.");
+	cw.net.FlashSocketConduit.superClass_.disposeInternal.call(this);
+	this.socket_.disposeInternal();
+};
+
+
+cw.net.FlashSocketConduit.logger = goog.debug.Logger.getLogger('cw.net.FlashSocketConduit');
+cw.net.FlashSocketConduit.logger.setLevel(goog.debug.Logger.Level.ALL);

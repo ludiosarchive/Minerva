@@ -24,6 +24,7 @@ goog.require('cw.net.Endpoint');
 goog.require('cw.net.Stream');
 goog.require('cw.net.EventType');
 goog.require('cw.net.ClientTransport');
+goog.require('cw.net.WastingTimeTransport');
 
 goog.require('cw.net.HelloFrame');
 goog.require('cw.net.StringFrame');
@@ -55,13 +56,13 @@ var XHR_LONGPOLL = cw.net.TransportType_.XHR_LONGPOLL;
 var SACK = cw.net.SACK;
 
 var notARealEndpoint = new cw.net.Endpoint(
-	cw.net.EndpointType.HTTP, "/TestClient-not-a-real-endpoint/", null, null);
+	cw.net.EndpointType.HTTP, "/TestClient-not-a-real-endpoint/", null, null, null);
 
 /**
  * Endpoint to a real Minerva server.
  */
 httpFaceEndpoint = new cw.net.Endpoint(
-	cw.net.EndpointType.HTTP, "/httpface/", null, null);
+	cw.net.EndpointType.HTTP, "/httpface/", null, null, null);
 
 
 /**
@@ -188,9 +189,9 @@ cw.net.TestClient.decodeFramesFromHttpClient_ = function(payload) {
  * @return {!cw.net.TestClient.MockClientTransport} The newly-instantiated transport.
  */
 cw.net.TestClient.instantiateMockTransport_ =
-function(callQueue, stream, transportNumber, transportType, endpoint, becomePrimary, initialDelay) {
+function(callQueue, stream, transportNumber, transportType, endpoint, becomePrimary) {
 	return new cw.net.TestClient.MockClientTransport(
-		callQueue, stream, transportNumber, transportType, endpoint, becomePrimary, initialDelay);
+		callQueue, stream, transportNumber, transportType, endpoint, becomePrimary);
 };
 
 
@@ -285,21 +286,13 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 		queue.extend(['c2s_0', 'c2s_1']);
 		var payloads = [];
 
-		var initialDelay = 2;
 		var ct = new cw.net.ClientTransport(
-			callQueue, stream, 0, XHR_LONGPOLL, notARealEndpoint, true, initialDelay);
+			callQueue, stream, 0, XHR_LONGPOLL, notARealEndpoint, true);
 		ct.makeHttpRequest_ = function(payload) {
 			payloads.push(payload)
 		};
 		ct.writeStrings_(queue, null);
 		ct.flush_();
-
-		// It doesn't make the request until initialDelay millliseconds pass
-		self.assertEqual(0, payloads.length);
-		clock.advance(1);
-		self.assertEqual(0, payloads.length);
-		clock.advance(1);
-		// After that, it should have made the request...
 
 		self.assertEqual(1, payloads.length);
 		var decoded = cw.net.TestClient.decodeFramesFromHttpClient_(payloads[0]);
@@ -327,36 +320,10 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 		var stream = new cw.net.TestClient.MockStream();
 
 		var ct = new cw.net.ClientTransport(
-			callQueue, stream, 0, XHR_LONGPOLL, notARealEndpoint, true, 2/* initialDelay */);
+			callQueue, stream, 0, XHR_LONGPOLL, notARealEndpoint, true);
 		ct.flush_();
 		self.assertThrows(Error, function() { ct.flush_(); },
 			"flush_: Can't flush more than once to this transport.");
-	},
-
-	/**
-	 * If we call ClientTransport.dispose, it cancels the setTimeout which
-	 * would have started the underlying TCP connection or HTTP request.
-	 */
-	function test_disposeCancelsDelayedUnderlying(self) {
-		var clock = new cw.clock.Clock();
-		var callQueue = new cw.eventual.CallQueue(clock);
-		var stream = new cw.net.TestClient.MockStream();
-		var payloads = [];
-
-		var initialDelay = 2;
-		var ct = new cw.net.ClientTransport(
-			callQueue, stream, 0, XHR_LONGPOLL, notARealEndpoint, true, initialDelay);
-		ct.makeHttpRequest_ = function(payload) {
-			payloads.push(payload)
-		};
-		ct.flush_();
-		self.assertEqual(0, payloads.length); // sanity check
-
-		// flush_ calls a setTimeout to start underlying in `initialDelay` ms.
-		// Dispose, advance, and make sure that request was never made.
-		ct.dispose();
-		clock.advance(initialDelay);
-		self.assertEqual(0, payloads.length);
 	}
 
 	// TODO: test if ClientTransport(becomePrimary=false), HelloFrame does not have an 'eeds' argument
@@ -364,6 +331,35 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 	// TODO: test if we receive a frame, give it to Stream, which gives it to the protocol,
 	// which synchronously calls a function that results in the ClientTransport closing,
 	// the ClientTransport stops processing frames.
+);
+
+
+
+cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'WastingTimeTransportTests').methods(
+	/**
+	 * If we call WastingTimeTransportTests.dispose, it cancels the
+	 * setTimeout which would have called `this.dispose()`.
+	 */
+	function test_disposeCancelsDelayedUnderlying(self) {
+		var clock = new cw.clock.Clock();
+		var callQueue = new cw.eventual.CallQueue(clock);
+		var stream = new cw.net.TestClient.MockStream();
+
+		var delay = 1000;
+		var ct = new cw.net.WastingTimeTransport(
+			callQueue, stream, 0/* transportNumber */, delay);
+		ct.dispose = goog.testing.recordFunction(goog.bind(ct.dispose, ct));
+		ct.flush_();
+
+		// flush_ calls a setTimeout to `this.dispose` in 1000 ms.
+		// Dispose, advance, and make sure it was not disposed twice
+		// (although that would do no real harm, we do not want to
+		// have stray setTimeouts)
+		ct.dispose();
+		self.assertEqual(1, ct.dispose.getCallCount());
+		clock.advance(delay);
+		self.assertEqual(1, ct.dispose.getCallCount());
+	}
 );
 
 

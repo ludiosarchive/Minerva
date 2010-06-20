@@ -366,6 +366,7 @@ class Root(BetterResource):
 		minervaPath = FilePath(minerva.__path__[0])
 		self.putChild('', BetterFile(minervaPath.child('index.html').path))
 		self.putChild('JSPATH', BetterFile(JSPATH.path))
+		self.putChild('compiled_client', BetterFile(minervaPath.child('compiled_client').path))
 		self.putChild('@tests', testing.TestPage(['cw.net'], JSPATH))
 
 		# testres_Coreweb always needed for running tests.

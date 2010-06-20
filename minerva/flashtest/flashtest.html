@@ -115,7 +115,7 @@ logger.info('Mode is: ' + mode)
 var flashObject = null;
 
 function loadSWF() {
-	flashObject = new goog.ui.media.FlashObject('app.swf');
+	flashObject = new goog.ui.media.FlashObject('/compiled_client/FlashConnector.swf');
 	flashObject.setBackgroundColor("#ffffff");
 	flashObject.setSize(30, 30);
 	flashObject.setFlashVar('onloadcallback', '_appswfLoaded');
@@ -203,10 +203,9 @@ FlashTestSocketProtocol.prototype.onconnect = function() {
 		for(i=0; i < frames.length; i++) {
 			logger.info('Sending: ' + frames[i]);
 		}
-		var out = this.socket_.writeFrames(frames);
-		logger.info('writeFrames rvalue: ' + out);
+		this.socket_.writeFrames(frames);
 	} catch(e) {
-		logger.severe('error in onconnect', e);
+		logger.severe('error in onconnect: ' + e);
 	}
 };
 
