@@ -81,11 +81,11 @@ cw.net.EndpointType = {
  * @param {?string} url
  * @param {?string} host
  * @param {?number} port
- * @param {?Element} applet The already-loaded Flash applet that will help
- * 	Minerva make the connection.  Required for EndpointType.TCP.
+ * @param {?cw.net.FlashSocketTracker} tracker The `FlashSocketTracker` that
+ * 	will help us make a connection.  Required for {@code EndpointType.TCP}.
  * @constructor
  */
-cw.net.Endpoint = function(type, url, host, port, applet) {
+cw.net.Endpoint = function(type, url, host, port, tracker) {
 	/** @type {!cw.net.EndpointType} */
 	this.type = type;
 	/** @type {?string} */
@@ -94,8 +94,8 @@ cw.net.Endpoint = function(type, url, host, port, applet) {
 	this.host = host;
 	/** @type {?number} */
 	this.port = port;
-	/** @type {?Element} */
-	this.applet = applet;
+	/** @type {?cw.net.FlashSocketTracker} */
+	this.tracker = tracker;
 };
 
 
@@ -1405,11 +1405,30 @@ cw.net.ClientTransport.prototype.flushBufferAsEncodedFrames_ = function() {
 };
 
 /**
+ * Called by our this.underlying_, a `FlashSocketConduit`.
+ * @private
+ */
+cw.net.ClientTransport.prototype.flashSocketTerminated_ = function() {
+	// We treat close/ioerror/securityerror all the same.
+	this.underlyingEndTime_ = goog.Timer.getTime(this.callQueue_.clock);
+	this.dispose();
+};
+
+/**
  * @param {!Array.<string>} frames Encoded frames to send right away.
  * @private
  */
 cw.net.ClientTransport.prototype.makeFlashConnection_ = function(frames) {
-	throw Error("TODO");
+	var endpoint = this.endpoint_;
+	if(!endpoint.host || !endpoint.port) { // Note: port 0
+		throw Error("missing host or port");
+	}
+	var proto = new cw.net.FlashSocketConduit(this);
+	this.underlying_ = endpoint.tracker.createNew(proto);
+	proto.socket_ = this.underlying_;
+	this.underlyingStartTime_ = goog.Timer.getTime(this.callQueue_.clock);
+	proto.connect(endpoint.host, endpoint.port);
+	proto.writeFrames(frames);
 };
 
 /**
@@ -1455,8 +1474,9 @@ cw.net.ClientTransport.prototype.flush_ = function() {
 		var frames = this.flushBufferAsEncodedFrames_();
 		if(this.underlying_) {
 			this.underlying_.writeFrames(frames);
+		} else {
+			this.makeFlashConnection_(frames);
 		}
-		this.makeFlashConnection_(frames);
 	} else {
 		throw Error("flush_: Don't know what to do for this transportType: " + this.transportType_);
 	}
@@ -1708,10 +1728,12 @@ cw.net.WastingTimeTransport.logger.setLevel(goog.debug.Logger.Level.ALL);
 
 
 /**
- * A convenient wrapper over cw.net.FlashSocket. ClientTransport can assume
- * it is connected and write frames to it, even when it is not connected yet.
- * This simplifies the ClientTransport logic. It also makes it possible to easily
- * support a possible improvement where client sends data before the connection
+ * A convenient wrapper over cw.net.FlashSocket.  Note that writing data to a
+ * not-yet-open Flash Socket is (probably) an error.  This class buffers
+ * initial data, so that ClientTransport can assume it is connected and write
+ * frames to it, even when it is not connected yet.  This simplifies the
+ * ClientTransport logic.  It also makes it possible to easily support a
+ * possible improvement where client sends data before the connection
  * is established.
  *
  * @param {!cw.net.ClientTransport} clientTransport
@@ -1735,6 +1757,8 @@ cw.net.FlashSocketConduit = function(clientTransport) {
 
 	/**
 	 * @type {!cw.net.FlashSocket}
+	 * This property should be set by the code that calls
+	 * {@code aFlashSocketTracker.createNew}.
 	 */
 	this.socket_;
 };
@@ -1777,6 +1801,7 @@ cw.net.FlashSocketConduit.prototype.onconnect = function() {
 
 cw.net.FlashSocketConduit.prototype.onclose = function() {
 	cw.net.FlashSocketConduit.logger.info('onclose');
+	this.clientTransport_.flashSocketTerminated_();
 };
 
 /**
@@ -1784,6 +1809,7 @@ cw.net.FlashSocketConduit.prototype.onclose = function() {
  */
 cw.net.FlashSocketConduit.prototype.onioerror = function(errorText) {
 	cw.net.FlashSocketConduit.logger.warning('onioerror: ' + cw.repr.repr(errorText));
+	this.clientTransport_.flashSocketTerminated_();
 };
 
 /**
@@ -1791,6 +1817,7 @@ cw.net.FlashSocketConduit.prototype.onioerror = function(errorText) {
  */
 cw.net.FlashSocketConduit.prototype.onsecurityerror = function(errorText) {
 	cw.net.FlashSocketConduit.logger.warning('onsecurityerror: ' + cw.repr.repr(errorText));
+	this.clientTransport_.flashSocketTerminated_();
 };
 
 /**

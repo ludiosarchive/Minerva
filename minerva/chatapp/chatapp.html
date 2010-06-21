@@ -58,6 +58,7 @@ goog.require('cw.eventual');
 goog.require('cw.string');
 goog.require('cw.net.Stream');
 goog.require('cw.net.IMinervaProtocol');
+goog.require('cw.net.FlashSocketTracker');
 goog.require('cw.whoami');
 goog.require('cw.repr');
 goog.require('cw.string');
@@ -203,8 +204,9 @@ chatapp.getEndpoint = function() {
 		var host = url.getDomain();
 		var port = 843;
 		var d = chatapp.loadFlashConnector_();
-		d.addCallback(function(flashElement) {
-			var endpoint = new cw.net.Endpoint(cw.net.EndpointType.TCP, null, host, port, flashElement);
+		d.addCallback(function(bridge) {
+			var tracker = new cw.net.FlashSocketTracker(chatapp.callQueue, bridge);
+			var endpoint = new cw.net.Endpoint(cw.net.EndpointType.TCP, null, host, port, tracker);
 			return endpoint;
 		});
 		return d;
@@ -212,13 +214,15 @@ chatapp.getEndpoint = function() {
 };
 
 
+chatapp.callQueue = new cw.eventual.CallQueue(goog.global['window']);
+
+
 chatapp.startStream = function() {
 	chatapp.lastProto = new chatapp.ChatProtocol();
-	var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 	var endpointD = chatapp.getEndpoint();
 	endpointD.addCallback(function(endpoint) {
 		var stream = new cw.net.Stream(
-			callQueue, chatapp.lastProto, endpoint, chatapp.makeCredentialsData);
+			chatapp.callQueue, chatapp.lastProto, endpoint, chatapp.makeCredentialsData);
 		stream.start();
 	});
 };

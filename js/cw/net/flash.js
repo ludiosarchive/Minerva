@@ -401,3 +401,14 @@ cw.net.FlashSocketTracker.prototype.disposeInternal = function() {
 	// Not `delete' because IE can't
 	goog.global[this.callbackFunc_] = undefined;
 };
+
+
+// This is how Minerva actually reaches a real Flash Socket:
+// Stream
+//	ClientTransport
+//		[[an Endpoint]].[[a FlashSocketTracker]].createNew([[a FlashSocketConduit]])
+//			FlashSocket
+//				* ExternalInterface *
+//					FlashConnector.hx
+//						FlashConnection
+//							Socket
