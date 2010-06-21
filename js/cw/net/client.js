@@ -442,13 +442,6 @@ cw.net.Stream.prototype.__reprToPieces__ = function(sb) {
 };
 
 /**
- * @param {*} other
- */
-cw.net.Stream.prototype.equals = function(other) {
-	return this === other;
-};
-
-/**
  * @private
  */
 cw.net.Stream.prototype.tryToSend_ = function() {
@@ -1124,13 +1117,6 @@ cw.net.ClientTransport.prototype.__reprToPieces__ = function(sb) {
 };
 
 /**
- * @param {*} other
- */
-cw.net.ClientTransport.prototype.equals = function(other) {
-	return this === other;
-};
-
-/**
  * @param {!Array.<string>} bunchedStrings
  * @private
  */
@@ -1672,13 +1658,6 @@ cw.net.WastingTimeTransport.prototype.flush_ = function() {
 cw.net.WastingTimeTransport.prototype.__reprToPieces__ = function(sb) {
 	sb.push(
 		'<WastingTimeTransport delay=', String(this.delay_), '>');
-};
-
-/**
- * @param {*} other
- */
-cw.net.WastingTimeTransport.prototype.equals = function(other) {
-	return this === other;
 };
 
 /**
