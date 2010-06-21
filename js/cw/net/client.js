@@ -1038,7 +1038,7 @@ cw.net.ClientTransport.prototype.underlyingStartTime_ = null;
  * @type {?number}
  * @private
  */
-cw.net.ClientTransport.prototype.underlyingEndTime_ = null;
+cw.net.ClientTransport.prototype.underlyingStopTime_ = null;
 
 /**
  * Whether the underlying TCP connection or HTTP request has been made.
@@ -1154,9 +1154,9 @@ cw.net.ClientTransport.prototype.considerDelayingNextTransport_ = function() {
  * @private
  */
 cw.net.ClientTransport.prototype.getUnderlyingDuration_ = function() {
-	goog.asserts.assertNumber(this.underlyingEndTime_);
+	goog.asserts.assertNumber(this.underlyingStopTime_);
 	goog.asserts.assertNumber(this.underlyingStartTime_);
-	return Math.max(0, this.underlyingEndTime_ - this.underlyingStartTime_);
+	return Math.max(0, this.underlyingStopTime_ - this.underlyingStartTime_);
 };
 
 /**
@@ -1284,7 +1284,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
  * @private
  */
 cw.net.ClientTransport.prototype.httpResponseReceived_ = function() {
-	this.underlyingEndTime_ = goog.Timer.getTime(this.callQueue_.clock);
+	this.underlyingStopTime_ = goog.Timer.getTime(this.callQueue_.clock);
 	var responseText = this.underlying_.getResponseText();
 	// Proxies might convert \n to \r\n, so convert terminators if necessary.
 	if(responseText.indexOf('\r\n') != -1) {
@@ -1410,7 +1410,7 @@ cw.net.ClientTransport.prototype.flushBufferAsEncodedFrames_ = function() {
  */
 cw.net.ClientTransport.prototype.flashSocketTerminated_ = function() {
 	// We treat close/ioerror/securityerror all the same.
-	this.underlyingEndTime_ = goog.Timer.getTime(this.callQueue_.clock);
+	this.underlyingStopTime_ = goog.Timer.getTime(this.callQueue_.clock);
 	this.dispose();
 };
 
