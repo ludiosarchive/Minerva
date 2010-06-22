@@ -366,7 +366,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingConsumptionTests').met
 	 */
 	function test_itemSizeChangedWhileInIncoming(self) {
 		throw new cw.UnitTest.SkipTest(
-			"not yet a problem because Incoming cannot accept mutables items");
+			"not yet a problem because Incoming cannot accept mutable items");
 
 		var i = new Incoming();
 		var mutable = [];
