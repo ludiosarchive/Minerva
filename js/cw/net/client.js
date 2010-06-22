@@ -1006,9 +1006,7 @@ cw.net.ClientTransport = function(callQueue, stream, transportNumber, transportT
 	 * @type {boolean}
 	 * @private
 	 */
-	this.canFlushMoreThanOnce_ = (
-		transportType == cw.net.TransportType_.FLASH_SOCKET ||
-		transportType == cw.net.TransportType_.WEBSOCKET);
+	this.canFlushMoreThanOnce_ = !this.isHttpTransport_();
 
 	/**
 	 * Can server stream frames to this transport?
@@ -1147,6 +1145,16 @@ cw.net.ClientTransport.prototype.getUnderlyingDuration_ = function() {
 };
 
 /**
+ * @return {boolean} Whether this ClientTransport is an HTTP transport.
+ * @private
+ */
+cw.net.ClientTransport.prototype.isHttpTransport_ = function() {
+	return (
+		this.transportType_ == cw.net.TransportType_.XHR_LONGPOLL ||
+		this.transportType_ == cw.net.TransportType_.XHR_STREAM);
+};
+
+/**
  * @param {!Array.<!Array.<number|string>>} bunchedStrings Unsorted Array of
  * 	(seqNum, string) pairs collected in {@link #framesReceived_}.
  * @private
@@ -1187,9 +1195,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 			// For HTTP transports, first frame must be the anti-script-inclusion preamble.
 			// This provides decent protection against us parsing and reading frames
 			// from a page returned by an intermediary like a proxy or a WiFi access paywall.
-			if(this.framesDecoded_ == 0 && frameStr != ";)]}P" &&
-			(this.transportType_ == cw.net.TransportType_.XHR_LONGPOLL ||
-			this.transportType_ == cw.net.TransportType_.XHR_STREAM)) {
+			if(this.framesDecoded_ == 0 && frameStr != ";)]}P" && this.isHttpTransport_()) {
 				logger.warning("Closing soon because got bad preamble: " +
 					cw.repr.repr(frameStr));
 				// No penalty because we want to treat this just like "cannot connect to peer".
