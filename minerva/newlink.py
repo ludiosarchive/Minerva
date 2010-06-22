@@ -832,8 +832,10 @@ def sanitizeHelloFrame(helloFrame, isHttp):
 
 
 
-# Acceptable protocol modes for ServerTransport to be in. Int32* are for Flash Socket.
-UNKNOWN, POLICYFILE, INT32, INT32CRYPTO, WEBSOCKET, BENCODE, HTTP = range(7)
+# Acceptable protocol modes for ServerTransport to be in.
+# POLICYFILE and INT32 are for Flash Socket.
+# BENCODE is not used by real clients, only test_newlink.py
+UNKNOWN, POLICYFILE, INT32, BENCODE, HTTP = range(5)
 
 HTTP_RESPONSE_PREAMBLE = ";)]}P" # "P" to indicate a PaddingFrame.
 
@@ -848,7 +850,7 @@ class ServerTransport(object):
 	(for HTTP endpoints), or for every TCP connection we receive (for
 	Flash Socket/WebSocket endpoints).
 	"""
-	# Implements several interfaces. Also almost an IProtocol, but this has
+	# Implements several interfaces.  Also almost an IProtocol, but this has
 	# no connectionMade (only makeConnection).
 	implements(IMinervaTransport, IPushProducer, IPullProducer)
 
