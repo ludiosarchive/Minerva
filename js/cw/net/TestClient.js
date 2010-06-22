@@ -9,16 +9,21 @@ goog.require('goog.array');
 goog.require('goog.asserts');
 goog.require('goog.dom');
 goog.require('goog.string');
+goog.require('goog.Uri');
 goog.require('goog.async.Deferred');
+goog.require('goog.async.DeferredList');
 goog.require('goog.testing.recordFunction');
 goog.require('cw.repr');
 goog.require('cw.clock');
 goog.require('cw.eventual');
+goog.require('cw.loadflash');
+goog.require('goog.ui.media.FlashObject');
 goog.require('cw.whoami');
 
 goog.require('cw.net.Queue');
 goog.require('cw.net.TransportType_');
 goog.require('cw.net.SACK');
+goog.require('cw.net.FlashSocketTracker');
 goog.require('cw.net.EndpointType');
 goog.require('cw.net.Endpoint');
 goog.require('cw.net.Stream');
@@ -57,12 +62,6 @@ var SACK = cw.net.SACK;
 
 var notARealEndpoint = new cw.net.Endpoint(
 	cw.net.EndpointType.HTTP, "/TestClient-not-a-real-endpoint/", null, null, null);
-
-/**
- * Endpoint to a real Minerva server.
- */
-httpFaceEndpoint = new cw.net.Endpoint(
-	cw.net.EndpointType.HTTP, "/httpface/", null, null, null);
 
 
 /**
@@ -142,6 +141,7 @@ cw.net.TestClient.MockClientTransport.prototype.getDescription_ = function() {
 cw.net.TestClient.RecordingProtocol = function() {
 	this.log = [];
 	this.stringCount = -1;
+	this.gotStrings = [];
 };
 
 cw.net.TestClient.RecordingProtocol.prototype.streamStarted = function(stream) {
@@ -159,6 +159,7 @@ cw.net.TestClient.RecordingProtocol.prototype.handleString_ = function(s) {
 
 cw.net.TestClient.RecordingProtocol.prototype.stringsReceived = function(strings) {
 	this.log.push(['stringsReceived', strings]);
+	this.gotStrings.push.apply(this.gotStrings, strings);
 	for(var i=0; i < strings.length; i++) {
 		var s = strings[i];
 		this.handleString_(s);
@@ -365,25 +366,31 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'DoNothingTransportTests').meth
 
 
 /**
- * Test Stream and ClientTransport with real requests.
+ * Base class to test Stream and ClientTransport with real
+ * TCP connections/HTTP requests.
  */
-cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
+cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 
 	function setUp(self) {
-		var d = new goog.async.Deferred();
+		var iframeD = new goog.async.Deferred();
 		goog.global['window'].__GetTokenPage_gotToken = function(token) {
 			self.csrfToken_ = token;
 			// To reduce our exposure to bugs, callback the Deferred with
 			// a stack from this window, not from the iframe.
-			window.setTimeout(function() { d.callback(null); }, 0);
+			window.setTimeout(function() { iframeD.callback(null); }, 0);
 		};
 
 		// the iframe calls __GetTokenPage_gotToken
 		var _iframe = goog.dom.createDom('iframe',
-			{"src": "/@testres_Minerva/GetTokenPage/", "width": "1", "height": "1"});
+			{"src": "/@testres_Minerva/GetTokenPage/", "width": "16", "height": "16"});
 		goog.dom.appendChild(document.body, _iframe);
 
-		return d;
+		var endpointD = self.getEndpoint_();
+		endpointD.addCallback(function(endpoint) {
+			self.endpoint_ = endpoint;
+		});
+
+		return new goog.async.DeferredList([iframeD, endpointD]);
 	},
 
 	function makeCredentialsData_(self) {
@@ -396,18 +403,30 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 		return uaId + '|' + self.csrfToken_;
 	},
 
-	function _runAssertions(self, stream, proto) {
+	function runAssertions_(self, stream, proto) {
+		// For every transport that is not XHR_LONGPOLL, the
+		// `stringsReceived` calls might be coalesced.  So we don't
+		// know if we'll get one or two `stringsReceived` calls.
+
+		var logWithoutStringsReceived =
+			goog.array.filter(proto.log, function(elem, idx, arr) {
+				return elem[0] != "stringsReceived";
+			});
+
 		self.assertEqual([
 			["streamStarted", stream],
-			["stringsReceived", ["hello world"]],
-			["stringsReceived", ["hello world"]],
 			["streamReset", "done testing things", true]
-		], proto.log);
+		], logWithoutStringsReceived);
+
+		self.assertEqual(["hello world", "hello world"], proto.gotStrings);
 	},
 
 	function makeProtocol_(self) {
 		var	 proto = new cw.net.TestClient.RecordingProtocol();
 
+		/**
+		 * @this {cw.net.TestClient.RecordingProtocol}
+		 */
 		proto.handleString_ = function(s) {
 			this.stringCount += 1;
 			if(s == "hello world" && this.stringCount > 0) {
@@ -421,14 +440,14 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 		var proto = self.makeProtocol_();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.Stream(
-			callQueue, proto, httpFaceEndpoint, goog.bind(self.makeCredentialsData_, self));
+			callQueue, proto, self.endpoint_, goog.bind(self.makeCredentialsData_, self));
 		stream.start();
 		stream.sendStrings(['echo_twice:hello world']);
 
 		var d = new goog.async.Deferred();
 		stream.addEventListener(
 			cw.net.EventType.DISCONNECTED, goog.bind(d.callback, d), false);
-		d.addCallback(function() { self._runAssertions(stream, proto); });
+		d.addCallback(function() { self.runAssertions_(stream, proto); });
 		return d;
 	},
 
@@ -440,14 +459,14 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 		var proto = self.makeProtocol_();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.Stream(
-			callQueue, proto, httpFaceEndpoint, goog.bind(self.makeCredentialsData_, self));
+			callQueue, proto, self.endpoint_, goog.bind(self.makeCredentialsData_, self));
 		stream.sendStrings(['echo_twice:hello world']);
 		stream.start();
 
 		var d = new goog.async.Deferred();
 		stream.addEventListener(
 			cw.net.EventType.DISCONNECTED, goog.bind(d.callback, d), false);
-		d.addCallback(function() { self._runAssertions(stream, proto); });
+		d.addCallback(function() { self.runAssertions_(stream, proto); });
 		return d;
 	},
 
@@ -467,7 +486,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.Stream(
-			callQueue, proto, httpFaceEndpoint, goog.bind(self.makeCredentialsData_, self));
+			callQueue, proto, self.endpoint_, goog.bind(self.makeCredentialsData_, self));
 		stream.sendStrings(['reset_me:test_streamReset']);
 		stream.start();
 
@@ -484,6 +503,82 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'RealNetworkTests').methods(
 		return d;
 	}
 );
+
+
+/**
+ * Test Stream and ClientTransport with real HTTP requests.
+ */
+cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealHttpTests').methods(
+
+	function getEndpoint_(self) {
+		httpFaceEndpoint = new cw.net.Endpoint(
+			cw.net.EndpointType.HTTP, "/httpface/", null, null, null);
+		return goog.async.Deferred.succeed(httpFaceEndpoint);
+	}
+);
+
+
+/**
+ * Test Stream and ClientTransport with real Flash socket connections.
+ */
+cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealFlashSocketTests').methods(
+
+	function loadFlashApplet_(self) {
+		// Copied from cw.Test.TestExternalInterface.  TODO: generalize
+		// it somehow.
+
+		// The .swf applet persists between tests.
+		var existingApplet = cw.net.TestClient.__existingFlashApplet;
+		if(existingApplet) {
+			return goog.async.Deferred.succeed(existingApplet);
+		} else if(existingApplet === null) {
+			throw new cw.UnitTest.SkipTest("Previous attempt to load applet failed.");
+		} else { // === 'undefined'
+			var flashObject = new goog.ui.media.FlashObject(
+				'/compiled_client/FlashConnector.swf');
+			flashObject.setBackgroundColor("#777777");
+			// Make it wide so that you can read the text on the Chrome plugin
+			// shim that says "Plugin Missing".
+			flashObject.setSize(300, 30);
+
+			var d = cw.loadflash.loadFlashObjectWithTimeout(
+				goog.global['window'], flashObject, '9', document.body, 8000/* timeout */);
+			d.addCallbacks(
+				function(applet) {
+					cw.net.TestClient.__existingFlashApplet = applet;
+					return applet;
+				},
+				function(err) {
+					cw.net.TestClient.__existingFlashApplet = null;
+					if(err instanceof cw.loadflash.FlashLoadFailed) {
+						throw new cw.UnitTest.SkipTest(err.message);
+					} else {
+						// Timed out, or other Error
+						throw err;
+					}
+				});
+			return d;
+		}
+	},
+
+	function getEndpoint_(self) {
+		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
+		var url = new goog.Uri(document.location);
+		var host = url.getDomain();
+		var port = 843;
+
+		var d = self.loadFlashApplet_();
+		d.addCallback(function(bridge) {
+			var tracker = new cw.net.FlashSocketTracker(callQueue, bridge);
+			var endpoint = new cw.net.Endpoint(cw.net.EndpointType.TCP, null, host, port, tracker);
+			return endpoint;
+		});
+
+		return d;
+	}
+);
+
+
 
 
 })(); // end anti-clobbering for JScript

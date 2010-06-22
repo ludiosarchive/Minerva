@@ -16,6 +16,7 @@ goog.provide('cw.net.FlashSocketTracker');
 goog.require('goog.asserts');
 goog.require('goog.string');
 goog.require('goog.object');
+goog.require('goog.debug.Logger');
 goog.require('goog.Disposable');
 goog.require('cw.eventual');
 goog.require('cw.externalinterface');
@@ -80,29 +81,6 @@ cw.net.IFlashSocketProtocol.prototype.onsecurityerror = function(text) {
 };
 
 
-
-
-/**
- * Instead of eval()ing any random return value from
- * [flash object].CallFunction, we decode only "true" and "false".
- *
- * This has the added advantage that if we get an unexpected value, we have
- * it in serialized form, so it is easier to display and debug.
- *
- * Throws Error if we got an unexpected value.
- *
- * @param {string} retval Serialized return value from {@code CallFunction}.
- * @return {boolean}
- * @private
- */
-cw.net.retValToBoolean_ = function(retval) {
-	if(retval == 'true') {
-		return true;
-	} else if(retval == 'false') {
-		return false;
-	}
-	throw Error("Unexpected retval from Flash: " + retval);
-};
 
 /**
  * A Flash Socket object useful for sending and receiving encoded
@@ -199,10 +177,10 @@ cw.net.FlashSocket.prototype.dispatchEventToProto_ = function(event, arg1) {
  */
 cw.net.FlashSocket.prototype.connect = function(host, port) { // , timeout
 	// TODO: instead of passing <int32>\n, maybe pass some sort of mode?
-	var ret = cw.net.retValToBoolean_(this.bridge_.CallFunction(
-		cw.externalinterface.request('__FC_connect', this.id_, host, port, '<int32/>\n')));
-	if(!ret) {
-		throw Error('__FC_connect failed?');
+	var ret = this.bridge_.CallFunction(
+		cw.externalinterface.request('__FC_connect', this.id_, host, port, '<int32/>\n'));
+	if(ret != '"OK"') {
+		throw Error('__FC_connect failed? ret: ' + ret);
 	}
 };
 
@@ -213,10 +191,16 @@ cw.net.FlashSocket.prototype.connect = function(host, port) { // , timeout
  * @param {!Array.<string>} strings
  */
 cw.net.FlashSocket.prototype.writeFrames = function(strings) {
-	var ret = cw.net.retValToBoolean_(this.bridge_.CallFunction(
-		cw.externalinterface.request('__FC_writeFrames', this.id_, strings)));
-	if(!ret) {
-		throw Error('__FC_writeFrames failed?');
+	var ret = this.bridge_.CallFunction(
+		cw.externalinterface.request('__FC_writeFrames', this.id_, strings));
+	if(ret == '"OK"') {
+
+	} else if(ret == '"no such instance"') {
+		cw.net.FlashSocket.logger.warning(
+			"Flash no longer knows of " + this.id_ + "; disposing.");
+		this.dispose();
+	} else {
+		throw Error('__FC_writeFrames failed? ret: ' + ret);
 	}
 };
 
@@ -224,23 +208,25 @@ cw.net.FlashSocket.prototype.writeFrames = function(strings) {
  * Call `dispose` to close the underlying Flash socket.
  */
 cw.net.FlashSocket.prototype.disposeInternal = function() {
+	cw.net.FlashSocket.logger.info(
+		'in disposeInternal, needToCallClose_=' + this.needToCallClose_);
+
 	cw.net.FlashSocket.superClass_.disposeInternal.call(this);
 
 	var bridge = this.bridge_;
 	delete this.bridge_;
 
 	if(this.needToCallClose_) {
-		// Our work is made easier by this:
-		// "The close event is dispatched only when the server closes the
-		// connection; it is not dispatched when you call the close() method."
-		// https://www.adobe.com/livedocs/flex/2/langref/flash/net/Socket.html#close%28%29
-
-		// ignore retval
-		bridge.CallFunction(cw.externalinterface.request('__FC_close', this.id_));
+		var ret = bridge.CallFunction(cw.externalinterface.request('__FC_close', this.id_));
+		cw.net.FlashSocket.logger.info("disposeInternal: __FC_close ret: " + ret);
 	}
 
 	this.tracker_.socketOffline_(this);
 };
+
+
+cw.net.FlashSocket.logger = goog.debug.Logger.getLogger('cw.net.FlashSocket');
+cw.net.FlashSocket.logger.setLevel(goog.debug.Logger.Level.ALL);
 
 
 
@@ -295,10 +281,10 @@ cw.net.FlashSocketTracker = function(callQueue, bridge) {
 
 	goog.global[this.callbackFunc_] = goog.bind(this.eiCallback_, this);
 
-	var ret = cw.net.retValToBoolean_(bridge.CallFunction(
-		cw.externalinterface.request('__FC_setCallbackFunc', this.callbackFunc_)));
-	if(!ret) {
-		throw Error("__FC_setCallbackFunc failed?");
+	var ret = bridge.CallFunction(
+		cw.externalinterface.request('__FC_setCallbackFunc', this.callbackFunc_));
+	if(ret != '"OK"') {
+		throw Error("__FC_setCallbackFunc failed? ret: " + ret);
 	}
 };
 goog.inherits(cw.net.FlashSocketTracker, goog.Disposable);
@@ -342,7 +328,16 @@ cw.net.FlashSocketTracker.prototype.socketOffline_ = function(flashSocket) {
 cw.net.FlashSocketTracker.prototype.dispatchEventToSocket_ = function(id, event, arg1, arg2) {
 	var instance = this.instances_[id];
 	if(!instance) {
-		throw Error("No such FlashSocket instance: " + id);
+		// This may happen in this scenario:
+		// First, FlashConnector has some error, calls .close() on itself, sends
+		// an ExternalInterface call, which doesn't make it in time.
+		// Next, cw.net.FlashSocket makes some other call, sees "no such instance"
+		// and disposes itself.  Next, the original ExternalInterface call from
+		// Flash finally arrives, and it hits this branch.
+		cw.net.FlashSocketTracker.logger.warning(
+			"Cannot dispatch because we have no instance: " +
+			cw.repr.repr([id, event, arg1, arg2]));
+		return;
 	}
 	if(event == "frames" && arg2) { // arg2 is hadError
 		instance.dispatchEventToProto_(
@@ -401,6 +396,11 @@ cw.net.FlashSocketTracker.prototype.disposeInternal = function() {
 	// Not `delete' because IE can't
 	goog.global[this.callbackFunc_] = undefined;
 };
+
+
+cw.net.FlashSocketTracker.logger = goog.debug.Logger.getLogger('cw.net.FlashSocketTracker');
+cw.net.FlashSocketTracker.logger.setLevel(goog.debug.Logger.Level.ALL);
+
 
 
 // This is how Minerva actually reaches a real Flash Socket:

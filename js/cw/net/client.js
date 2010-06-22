@@ -1020,7 +1020,7 @@ goog.inherits(cw.net.ClientTransport, goog.Disposable);
 
 /**
  * The underlying object used to send and receive frames.
- * @type {goog.net.XhrIo|cw.net.FlashSocket}
+ * @type {goog.net.XhrIo|cw.net.FlashSocketConduit}
  */
 cw.net.ClientTransport.prototype.underlying_ = null;
 
@@ -1447,12 +1447,12 @@ cw.net.ClientTransport.prototype.makeFlashConnection_ = function(frames) {
 	if(!endpoint.host || !endpoint.port) { // Note: port 0
 		throw Error("missing host or port");
 	}
-	var proto = new cw.net.FlashSocketConduit(this);
-	this.underlying_ = endpoint.tracker.createNew(proto);
-	proto.socket_ = this.underlying_;
+	this.underlying_ = new cw.net.FlashSocketConduit(this);
+	var socket = endpoint.tracker.createNew(this.underlying_);
+	this.underlying_.socket_ = socket;
 	this.underlyingStartTime_ = goog.Timer.getTime(this.callQueue_.clock);
-	proto.connect(endpoint.host, endpoint.port);
-	proto.writeFrames(frames);
+	this.underlying_.connect(endpoint.host, endpoint.port);
+	this.underlying_.writeFrames(frames);
 };
 
 /**
@@ -1792,16 +1792,21 @@ goog.inherits(cw.net.FlashSocketConduit, goog.Disposable);
  * @return {boolean}
  */
 cw.net.FlashSocketConduit.prototype.isConnected = function() {
+	// Remember: [] is truthy, null is not.
 	return !this.bufferedFrames_;
 };
 
 /**
- * @param {!Array.<string>} frames
+ * @param {!Array.<string>} frames Encoded frames
  */
 cw.net.FlashSocketConduit.prototype.writeFrames = function(frames) {
 	if(!this.isConnected()) {
+		cw.net.FlashSocketConduit.logger.finest(
+			"writeFrames: Not connected, can't write " + frames.length + " frame(s) yet.");
 		this.bufferedFrames_.push.apply(this.bufferedFrames_, frames);
 	} else {
+		cw.net.FlashSocketConduit.logger.finest(
+			"writeFrames: Writing " + frames.length + " frame(s).");
 		this.socket_.writeFrames(frames);
 	}
 };
@@ -1819,6 +1824,8 @@ cw.net.FlashSocketConduit.prototype.onconnect = function() {
 	var frames = this.bufferedFrames_;
 	this.bufferedFrames_ = null;
 	if(frames.length) {
+		cw.net.FlashSocketConduit.logger.finest(
+			"onconnect: Writing " + frames.length + " buffered frame(s).");
 		this.socket_.writeFrames(frames);
 	}
 };

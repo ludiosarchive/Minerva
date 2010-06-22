@@ -116,8 +116,8 @@ var flashObject = null;
 
 function loadSWF() {
 	flashObject = new goog.ui.media.FlashObject('/compiled_client/FlashConnector.swf');
-	flashObject.setBackgroundColor("#ffffff");
-	flashObject.setSize(30, 30);
+	flashObject.setBackgroundColor("#777777");
+	flashObject.setSize(300, 30);
 	flashObject.setFlashVar('onloadcallback', '_appswfLoaded');
 	flashObject.render(goog.dom.getElement("appswf"));
 }
