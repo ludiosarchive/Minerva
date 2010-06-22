@@ -685,8 +685,8 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 	}
 
 	if(this.streamPenalty_ >= 1) {
-		cw.net.Stream.logger.info(
-			"transportOffline_: Doing an internal reset because streamPenalty_ reached limit.");
+		cw.net.Stream.logger.info("transportOffline_: Doing an internal " +
+			"reset because streamPenalty_ reached limit.");
 		this.internalReset_("stream penalty reached limit");
 	}
 
