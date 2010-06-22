@@ -932,7 +932,7 @@ cw.net.TransportType_ = {
  * 	- ClientTransport deals with unicode strings (though restricted in range),
  * 		ServerTransport deals with bytes.
  * 	- ClientTransport may have subtly different ResetFrame behavior (more
- * 		StringFrames make it through? TODO: describe)
+ * 		StringFrames make it through? Really? TODO: describe)
  *
  * @param {!cw.eventual.CallQueue} callQueue
  * @param {!cw.net.Stream} stream

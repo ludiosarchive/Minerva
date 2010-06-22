@@ -837,21 +837,20 @@ UNKNOWN, POLICYFILE, INT32, INT32CRYPTO, WEBSOCKET, BENCODE, HTTP = range(7)
 
 HTTP_RESPONSE_PREAMBLE = ";)]}P" # "P" to indicate a PaddingFrame.
 
-# TODO: We'll need to make sure it's impossible for an attacker to downgrade "int32+crypto"
-# down to "int32"
 
 
 class ServerTransport(object):
 	"""
-	This is private. Use SocketFace, which will build this Protocol.
+	Private.  Use SocketFace or HttpFace, which will build this object
+	(it is a a Protocol, among other things).
 
-	This is a hybrid:
-		Flash Socket
-		Flash Socket policy server
-		HTTP (twisted.web.server.Request)
-	TODO: WebSocket, Flash Socket (encrypted)
+	One ServerTransport is instantiated for every HTTP request we receive
+	(for HTTP endpoints), or for every TCP connection we receive (for
+	Flash Socket/WebSocket endpoints).
 	"""
-	implements(IMinervaTransport, IPushProducer, IPullProducer) # Almost an IProtocol, but has no connectionMade
+	# Implements several interfaces. Also almost an IProtocol, but this has
+	# no connectionMade (only makeConnection).
+	implements(IMinervaTransport, IPushProducer, IPullProducer)
 
 	__slots__ = (
 		'_mailbox', 'ourSeqNum', '_lastStartParam', '_mode', '_peerSeqNum',
@@ -861,7 +860,7 @@ class ServerTransport(object):
 		'transport', '_maxReceiveBytes', '_maxOpenTime',
 		'_lastSackSeenByClient', '_streamingResponse', '_needPaddingBytes',
 		'_wantsStrings', '_waitingFrames')
-	# TODO: last 4 attributes above only for an HTTPSocketTransport, to save memory
+	# TODO: ~4 attributes above only for an HTTPSocketTransport, to save memory
 
 	maxLength = 1024*1024
 	noisy = True
