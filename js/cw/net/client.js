@@ -1528,12 +1528,12 @@ cw.net.ClientTransport.prototype.writeSack_ = function(sack) {
 };
 
 /**
- * Write boxes in queue {@code queue} to the peer.
- * TODO: copy docstring from Py Minerva
+ * Write strings in queue {@code queue} to the peer.  This does not write
+ * strings that were already written to the peer over this transport.
  *
  * @param {!cw.net.Queue} queue Queue containing strings to send.
- * @param {?number} start Which item in queue to start at, or null (to not
- * 	skip any).
+ * @param {?number} start Minimum string seqNum to consider sending, or null
+ * 	to not skip any.
  * @private
  */
 cw.net.ClientTransport.prototype.writeStrings_ = function(queue, start) {

@@ -766,7 +766,8 @@ class IMinervaTransport(ISimpleConsumer):
 		now lower (or None) compared to the previous `start`.
 
 		@param queue: an L{abstract.Queue}
-		@param start: where to start in the queue, or C{None}
+		@param start: Minimum string seqNum to consider sending, or C{None}
+			to not skip any.
 		@type start: L{int} or L{long} or L{NoneType}
 		"""
 
