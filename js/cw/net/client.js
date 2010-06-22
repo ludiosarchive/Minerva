@@ -24,6 +24,7 @@ goog.provide('cw.net.WastingTimeTransport');
 goog.provide('cw.net.TransportType_');
 
 goog.require('goog.asserts');
+goog.require('goog.array');
 goog.require('goog.events');
 goog.require('goog.events.EventTarget');
 goog.require('goog.string');
@@ -1155,10 +1156,16 @@ cw.net.ClientTransport.prototype.isHttpTransport_ = function() {
 };
 
 /**
- * @param {!Array.<!Array.<number|string>>} bunchedStrings Unsorted Array of
+ * @type {Array.<!Array.<number|string>>} Unsorted Array of
  * 	(seqNum, string) pairs collected in {@link #framesReceived_}.
  * @private
  * // TODO: types for tuples
+ */
+cw.net.BunchedStrings_ = goog.typedef;
+
+/**
+ * @param {!cw.net.BunchedStrings_} bunchedStrings
+ * @private
  */
 cw.net.ClientTransport.prototype.handleStrings_ = function(bunchedStrings) {
 	// bunchedStrings is already sorted 99.99%+ of the time
@@ -1170,13 +1177,98 @@ cw.net.ClientTransport.prototype.handleStrings_ = function(bunchedStrings) {
 };
 
 /**
+ * @param {string} frameStr
+ * @param {!cw.net.BunchedStrings_} bunchedStrings
+ * @return {boolean} Whether ClientTransport must close (dispose) the
+ * 	transport.
+ * @private
+ */
+cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedStrings) {
+	// For HTTP transports, first frame must be the anti-script-inclusion preamble.
+	// This provides decent protection against us parsing and reading frames
+	// from a page returned by an intermediary like a proxy or a WiFi access paywall.
+	var logger = cw.net.ClientTransport.logger;
+	if(this.framesDecoded_ == 0 && frameStr != ";)]}P" && this.isHttpTransport_()) {
+		logger.warning("Closing soon because got bad preamble: " +
+			cw.repr.repr(frameStr));
+		// No penalty because we want to treat this just like "cannot connect to peer".
+		return true;
+	}
+	// If it was the preamble, we're going to decode it again below.
+
+	try {
+		/** @type {!cw.net.Frame} Decoded frame */
+		var frame = cw.net.decodeFrameFromServer(frameStr);
+		this.framesDecoded_ += 1;
+		logger.fine(this.getDescription_() + ' RECV ' + cw.repr.repr(frame));
+		if(frame instanceof cw.net.StringFrame) {
+			this.peerSeqNum_ += 1;
+			// Because we may have received multiple Minerva strings, collect
+			// them into a Array and then deliver them all at once to Stream.
+			// This does *not* add any latency. It does reduce the number of funcalls.
+			bunchedStrings.push([this.peerSeqNum_, frame.string]);
+		} else if(frame instanceof cw.net.SackFrame) {
+			if(this.stream_.sackReceived_(frame.sack)) {
+				logger.warning("Closing soon because got bad SackFrame");
+				this.hadProblems_ = true;
+				return true;
+			}
+		} else if(frame instanceof cw.net.SeqNumFrame) {
+			this.peerSeqNum_ = frame.seqNum - 1;
+		} else if(frame instanceof cw.net.StreamStatusFrame) {
+			this.stream_.streamStatusReceived_(frame.lastSackSeen);
+		} else if(frame instanceof cw.net.YouCloseItFrame) {
+			logger.finest("Closing soon because got YouCloseItFrame");
+			return true;
+		} else if(frame instanceof cw.net.TransportKillFrame) {
+			this.hadProblems_ = true;
+			if(frame.reason == cw.net.TransportKillReason.stream_attach_failure) {
+				this.penalty_ += 1;
+			} else if(frame.reason == cw.net.TransportKillReason.acked_unsent_strings) {
+				this.penalty_ += 0.5;
+			}
+			// no penalty for frame_corruption, invalid_frame_type_or_arguments, rwin_overflow
+			logger.finest("Closing soon because got " + cw.repr.repr(frame));
+			return true;
+		} else if(frame instanceof cw.net.PaddingFrame) {
+			// Ignore it
+		} else if(frame instanceof cw.net.StreamCreatedFrame) {
+			var avoidCreatingTransports = !this.s2cStreaming;
+			this.stream_.streamSuccessfullyCreated_(avoidCreatingTransports);
+		} else {
+			if(bunchedStrings.length) {
+				this.handleStrings_(bunchedStrings);
+				goog.array.clear(bunchedStrings);
+			}
+			if(frame instanceof cw.net.ResetFrame) {
+				this.stream_.resetFromPeer_(frame.reasonString, frame.applicationLevel);
+				// closeSoon = true is unnecessary here because resetFromPeer_
+				// will dispose all transports, but we'll dispose ourselves anyway.
+				return true;
+			} else {
+				throw Error("Unexpected state in framesReceived_.");
+			}
+		}
+	} catch(e) {
+		if(!(e instanceof cw.net.InvalidFrame)) {
+			throw e;
+		}
+		logger.warning("Closing soon because got InvalidFrame: " + cw.repr.repr(frameStr));
+		// No penalty because this cause is almost certainly
+		// due to corruption by intermediary.
+		this.hadProblems_ = true;
+		return true;
+	}
+	return false; // don't closeSoon
+};
+
+/**
  * @param {!Array.<string>} frames Encoded frames received from peer.
  * @private
  */
 cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 	this.spinning_ = true;
 	try {
-		var logger = cw.net.ClientTransport.logger;
 		var closeSoon = false;
 		var bunchedStrings = [];
 		for(var i=0, len=frames.length; i < len; i++) {
@@ -1186,88 +1278,13 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 			// framesReceived_; for example, if we were disposed while
 			// making an HTTP request.
 			if(this.isDisposed()) {
-				logger.info(this.getDescription_() +
+				cw.net.ClientTransport.logger.info(this.getDescription_() +
 					" returning from loop because we're disposed.");
 				return;
 			}
 			var frameStr = frames[i];
-
-			// For HTTP transports, first frame must be the anti-script-inclusion preamble.
-			// This provides decent protection against us parsing and reading frames
-			// from a page returned by an intermediary like a proxy or a WiFi access paywall.
-			if(this.framesDecoded_ == 0 && frameStr != ";)]}P" && this.isHttpTransport_()) {
-				logger.warning("Closing soon because got bad preamble: " +
-					cw.repr.repr(frameStr));
-				// No penalty because we want to treat this just like "cannot connect to peer".
-				closeSoon = true;
-				break;
-			}
-			// If it was the preamble, we're going to decode it again below.
-
-			try {
-				/** @type {!cw.net.Frame} Decoded frame */
-				var frame = cw.net.decodeFrameFromServer(frameStr);
-				this.framesDecoded_ += 1;
-				cw.net.ClientTransport.logger.fine(
-					this.getDescription_() + ' RECV ' + cw.repr.repr(frame));
-				if(frame instanceof cw.net.StringFrame) {
-					this.peerSeqNum_ += 1;
-					// Because we may have received multiple Minerva strings, collect
-					// them into a Array and then deliver them all at once to Stream.
-					// This does *not* add any latency. It does reduce the number of funcalls.
-					bunchedStrings.push([this.peerSeqNum_, frame.string])
-				} else if(frame instanceof cw.net.SackFrame) {
-					if(this.stream_.sackReceived_(frame.sack)) {
-						logger.warning("Closing soon because got bad SackFrame");
-						this.hadProblems_ = true;
-						closeSoon = true;
-						break;
-					}
-				} else if(frame instanceof cw.net.SeqNumFrame) {
-					this.peerSeqNum_ = frame.seqNum - 1;
-				} else if(frame instanceof cw.net.StreamStatusFrame) {
-					this.stream_.streamStatusReceived_(frame.lastSackSeen);
-				} else if(frame instanceof cw.net.YouCloseItFrame) {
-					logger.finest("Closing soon because got YouCloseItFrame");
-					closeSoon = true;
-					break;
-				} else if(frame instanceof cw.net.TransportKillFrame) {
-					this.hadProblems_ = true;
-					if(frame.reason == cw.net.TransportKillReason.stream_attach_failure) {
-						this.penalty_ += 1;
-					} else if(frame.reason == cw.net.TransportKillReason.acked_unsent_strings) {
-						this.penalty_ += 0.5;
-					}
-					// no penalty for frame_corruption, invalid_frame_type_or_arguments, rwin_overflow
-					logger.finest("Closing soon because got " + cw.repr.repr(frame));
-					closeSoon = true;
-					break;
-				} else if(frame instanceof cw.net.PaddingFrame) {
-					// Ignore it
-				} else if(frame instanceof cw.net.StreamCreatedFrame) {
-					var avoidCreatingTransports = !this.s2cStreaming;
-					this.stream_.streamSuccessfullyCreated_(avoidCreatingTransports);
-				} else {
-					if(bunchedStrings.length) {
-						this.handleStrings_(bunchedStrings);
-						bunchedStrings = [];
-					}
-					if(frame instanceof cw.net.ResetFrame) {
-						this.stream_.resetFromPeer_(frame.reasonString, frame.applicationLevel);
-						break;
-					} else {
-						throw Error("Unexpected state in framesReceived_.");
-					}
-				}
-			} catch(e) {
-				if(!(e instanceof cw.net.InvalidFrame)) {
-					throw e;
-				}
-				logger.warning("Closing soon because got InvalidFrame: " + cw.repr.repr(frameStr));
-				// No penalty because this cause is almost certainly
-				// due to corruption by intermediary.
-				this.hadProblems_ = true;
-				closeSoon = true;
+			closeSoon = this.handleFrame_(frameStr, bunchedStrings);
+			if(closeSoon) {
 				break;
 			}
 		}
