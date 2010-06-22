@@ -1117,19 +1117,6 @@ cw.net.ClientTransport.prototype.__reprToPieces__ = function(sb) {
 };
 
 /**
- * @param {!Array.<string>} bunchedStrings
- * @private
- */
-cw.net.ClientTransport.prototype.handleStrings_ = function(bunchedStrings) {
-	// bunchedStrings is already sorted 99.99%+ of the time
-	bunchedStrings.sort();
-	var avoidCreatingTransports = !this.s2cStreaming;
-	this.stream_.stringsReceived_(this, bunchedStrings, avoidCreatingTransports);
-	// Remember that a lot can happen underneath that stringsReceived call,
-	// including a call to our own `reset_` or `dispose` or `writeStrings_`
-};
-
-/**
  * Return a short description of the transport. Used only for log messages.
  * @return {string}
  * @private
@@ -1160,7 +1147,22 @@ cw.net.ClientTransport.prototype.getUnderlyingDuration_ = function() {
 };
 
 /**
- * @param {!Array.<string>} frames
+ * @param {!Array.<!Array.<number|string>>} bunchedStrings Unsorted Array of
+ * 	(seqNum, string) pairs collected in {@link #framesReceived_}.
+ * @private
+ * // TODO: types for tuples
+ */
+cw.net.ClientTransport.prototype.handleStrings_ = function(bunchedStrings) {
+	// bunchedStrings is already sorted 99.99%+ of the time
+	bunchedStrings.sort();
+	var avoidCreatingTransports = !this.s2cStreaming;
+	this.stream_.stringsReceived_(this, bunchedStrings, avoidCreatingTransports);
+	// Remember that a lot can happen underneath that stringsReceived call,
+	// including a call to our own `writeStrings_` or `writeReset_` or `dispose`.
+};
+
+/**
+ * @param {!Array.<string>} frames Encoded frames received from peer.
  * @private
  */
 cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
