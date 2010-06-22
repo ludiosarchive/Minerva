@@ -1,7 +1,10 @@
 """
-You really want to read docs/Overview.rst to understand the code in this file.
+The core of Minerva server.
 
-See minerva/sample/demo.py for an idea of how to use the classes below.
+Please read the files in Minerva/docs/ to begin understanding how this works.
+
+See minerva.minervasite for an idea of how to use the classes below,
+especially `makeMinervaAndHttp` and `DemoProtocol`.
 """
 
 import traceback
@@ -66,7 +69,8 @@ class IMinervaProtocol(Interface):
 
 		You'll want to keep the stream around with C{self.stream = stream}.
 
-		You must *not* raise any exception. Wrap your code in try/except if necessary.
+		You must *not* raise any exception. Wrap your code in try/except
+		if necessary.
 
 		@param stream: the L{Stream} that was started.
 		@type stream: L{Stream}
@@ -79,7 +83,8 @@ class IMinervaProtocol(Interface):
 		server's Stream, or a call to Stream.reset, or by a reset frame
 		from the peer.
 
-		You must *not* raise any exception. Wrap your code in try/except if necessary.
+		You must *not* raise any exception. Wrap your code in try/except
+		if necessary.
 
 		@param reasonString: Textual reason why Stream has reset.
 			String contains only bytes in inclusive range 0x20 - 0x7E.
@@ -173,18 +178,24 @@ class BasicMinervaFactory(object):
 
 
 
-# There is no factory for customizing the construction of L{Stream}s, just like
-# there is no factory for customizing the construction of L{twisted.internet.tcp.Server}s in Twisted.
+# There is no factory for customizing the construction of L{Stream}s,
+# just like there is no factory for customizing the construction of
+# L{twisted.internet.tcp.Server}s in Twisted.
 class Stream(object):
 	"""
-	I'm sort-of analogous to L{twisted.internet.tcp.Connection}
+	Stream is sort-of analogous to L{twisted.internet.tcp.Connection}.
+	Stream can span many TCP connections/HTTP requests.  Because Stream
+	in Minerva server has no built-in timeouts, the application code is in
+	full control of how long a Stream lasts without contact from the peer.
 
-	The producer/consumer here is designed to deal with TCP bandwidth pressure
-	(and "lack of any S2C transport" pressure). It does not help with any kind of
-	application-level pressure. Applications that want high-volume
-	streaming should implement an application-level producer/consumer system.
+	The producer/consumer here is designed to deal with TCP bandwidth
+	pressure (and "lack of any S2C transport" pressure).  It does not help
+	with any kind of application-level pressure.  Applications that want
+	high-volume streaming should implement an application-level
+	producer/consumer system.
 	"""
-	# Don't implement IPushProducer or IPullProducer because we don't expect stopProducing
+	# Don't implement IPushProducer or IPullProducer because we don't
+	# expect stopProducing.
 	implements(ISimpleConsumer)
 
 	maxUndeliveredStrings = 50 # strings
@@ -210,7 +221,8 @@ class Stream(object):
 		self._streamingProducer = \
 		self._primaryHasProducer = \
 		self._primaryPaused = False
-		# _primaryPaused: Does the primary transport think it is paused? Or if no primary transport, False.
+		# _primaryPaused: Does the primary transport think it is paused?
+		# Or if no primary transport, False.
 
 		self.virgin = True # no transports have ever attached to it
 		self._notifications = []
@@ -222,8 +234,9 @@ class Stream(object):
 
 
 	def __repr__(self):
-		return ('<%s streamId=%r, queue.getQueuedCount()=%d, disconnected=%r>'
-			% (self.__class__.__name__, self.streamId, self.queue.getQueuedCount(), self.disconnected))
+		return ('<%s streamId=%r, queue.getQueuedCount()=%d, disconnected=%r>' % (
+			self.__class__.__name__,
+			self.streamId, self.queue.getQueuedCount(), self.disconnected))
 
 
 	def _tryToSend(self):
@@ -448,9 +461,11 @@ class Stream(object):
 			self._unregisterProducerOnPrimary()
 			self._primaryTransport = None
 
-			# This line is not actually necessary, because even if _primaryPaused is left at True,
-			# producers attached to Stream would be paused anyway when there is no primary
-			# transport. We leave it in anyway for ease of debugging, and in case the code changes.
+			# This line is not actually necessary, because even if
+			# _primaryPaused is left at True, producers attached to
+			# Stream would be paused anyway when there is no primary
+			# transport.  We leave it in anyway for ease of debugging,
+			# and in case the code changes.
 			self._primaryPaused = False
 
 			if self._producer and self._streamingProducer:
@@ -467,7 +482,8 @@ class Stream(object):
 			self._primaryHasProducer = False
 
 
-	# Called when we have a new primary transport, or when a MinervaProtocol registers a producer with us (Stream)
+	# Called when we have a new primary transport, or when a
+	# MinervaProtocol registers a producer with us (Stream).
 	def _registerProducerOnPrimary(self):
 		if not self._primaryHasProducer:
 			self._primaryTransport.registerProducer(self, self._streamingProducer)
@@ -475,14 +491,18 @@ class Stream(object):
 
 
 	def _newPrimary(self, transport):
-		if self._primaryTransport: # If we already have a primary transport that hasn't detached
+		# If we already have a primary transport that hasn't detached:
+		if self._primaryTransport:
 			self._unregisterProducerOnPrimary()
 			# If old primary transport paused us, our producer was paused, and this pause state
 			# is no longer relevant, so go back to resume.
 			if self._primaryPaused and self._producer and self._streamingProducer:
 				self._producer.resumeProducing()
-			self._primaryPaused = False # TODO low-priority: can we make a test that fails if this is indented right once?
-			self._primaryTransport.closeGently() # TODO: test that transport calls transportOffline right after this happens
+			# TODO low-priority: can we make a test that fails if
+			# this is indented right once?
+			self._primaryPaused = False
+			# TODO: test that transport calls transportOffline right after this happens.
+			self._primaryTransport.closeGently()
 		else:
 			# There was no active S2C transport, so if we had a push
 			# producer, it was paused, and we need to unpause it.
@@ -512,7 +532,8 @@ class Stream(object):
 		Called by L{StreamTracker} to tell me that the server is shutting down.
 
 		@return: a L{Deferred} that fires when it's okay to shut down,
-			or a L{int}/L{float} that says in how many seconds it is okay to shut down.
+			or a L{int}/L{float} that says in how many seconds it is
+			okay to shut down.
 
 		TODO: decide if serverShuttingDown should be both an application level
 			and Minerva-level event? Should applications have to use their own
@@ -533,14 +554,16 @@ class Stream(object):
 		return self._notifications[-1]
 
 
-	# This is a copy/paste from twisted.internet.interfaces.IConsumer with changes
+	# This is a copy/paste from twisted.internet.interfaces.IConsumer with changes.
 
-	# called by MinervaProtocol instances or anyone else interested in the Stream
+	# Called by MinervaProtocol instances or anyone else interested in the
+	# Stream.
 
-	# The only reason we have this is because not all MinervaProtocols will be L{IProducer}s
-	# (some will be very simple). Why not just implement pause/resume/stopProducing
-	# in BasicMinervaProtocol with ': pass' methods? Because the protocol wouldn't change
-	# its behavior; this is bad, it is unholy to send data when you are paused.
+	# The only reason we have this is because not all MinervaProtocols will
+	# be L{IProducer}s (some will be very simple).  Why not just implement
+	# pause/resume/stopProducing in BasicMinervaProtocol with ': pass'
+	# methods?  Because the protocol wouldn't change its behavior.  That
+	# doesn't break anything, but it seems wrong.
 	def registerProducer(self, producer, streaming):
 		"""
 		Register to receive data from a producer that creates S2C strings.
@@ -672,19 +695,22 @@ class StreamTracker(object):
 				"cannot make stream with id %r because it already exists" % (streamId,))
 
 		s = self.stream(self._clock, streamId, self._streamProtocolFactory)
-		# Do this first, in case an observer stupidly wants to use L{StreamTracker.getStream}.
+		# Do this first, in case an observer wants to use
+		# L{StreamTracker.getStream}.
 		self._streams[safeKey] = s
 
 		try:
-			for o in self._observers.copy(): # copy() in case `unobserveStreams' changes it
+			# copy() in case `unobserveStreams' changes it.
+			for o in self._observers.copy():
 				o.streamUp(s)
 		except:
 			# If an exception happened, at least we can clean up our part of the mess.
 			del self._streams[safeKey]
 			raise
-		# If an exception happened in an observer, it bubbles up.
-		# If an exception happened, we don't call streamDown(s) because we don't know which
-		# observers really think the stream is "up" (the exception might have occurred "early")
+		# If an exception happened in an observer, it is re-raised.
+		# If an exception happened, we don't call streamDown(s) because
+		# we don't know which observers really think the stream is "up"
+		# (the exception might have occurred "early")
 
 		d = s.notifyFinish()
 		d.addBoth(self._forgetStream, streamId)
@@ -704,8 +730,9 @@ class StreamTracker(object):
 
 
 	def _disconnectAll(self):
-		# TODO: block new connections - stop listening on the faces? reject their requests quickly?
-		log.msg('in StreamTracker._disconnectAll; maybe you want to implement something')
+		# TODO: block new connections - stop listening on the faces?
+		# Reject their requests quickly?
+		log.msg('in StreamTracker._disconnectAll; TODO: implement something')
 
 #		while True:
 #			try:
@@ -748,9 +775,10 @@ class StreamTracker(object):
 
 
 
-# A MinervaTransport must have registerProducer and unregisterProducer because
-# Stream calls those methods, but it doesn't actually need to be an IPushProducer/IPullProducer.
-# It could, in theory, buffer all the information it gets without caring about TCP pressure at all.
+# A MinervaTransport must have registerProducer and unregisterProducer
+# because Stream calls those methods, but it doesn't actually need to be
+# an IPushProducer/IPullProducer.  It could, in theory, buffer all the
+# information it gets without caring about TCP pressure at all.
 class IMinervaTransport(ISimpleConsumer):
 
 	ourSeqNum = Attribute(
@@ -1270,17 +1298,26 @@ class ServerTransport(object):
 				self._parser = decoders.Int32StringDecoder(maxLength=self.maxLength)
 
 			# TODO: <int32-zlib/> with <x/> alias
-			# TODO: if we support compression, make sure people can't zlib-bomb us with exploding strings:
-			#	use the zlib Decompression Object and decompress(string[, max_length]), then check unconsumed_tail.
-			#	Note: there's probably one excess memory-copy with the unconsumed_tail stuff, but that's okay.
+			# TODO: if we support compression, make sure people can't
+			# zlib-bomb us with exploding strings:
+			#	use the zlib Decompression Object and
+			#	decompress(string[, max_length]), then check unconsumed_tail.
+			# Note: there's probably one excess memory-copy with the
+			#	unconsumed_tail stuff, but that's okay.
 
-			elif len(self._initialBuffer) >= 512: # TODO: increase or lower this, depending on how much we really need.
+			# TODO: raise or lower `512`, depending on how much we really need.
+			elif len(self._initialBuffer) >= 512:
 				# Terminating, but we can't even send any type of frame.
 				self._terminating = True
-				# RST them instead of FIN, because they don't look like a well-behaving client anyway.
+				# RST them instead of FIN, because they don't look
+				# like a well-behaving client anyway.
 				if hasattr(self.writable, 'abortConnection'):
-					self.writable.abortConnection() # We know that writable is a `transport` here, not a Request.
+					# We know that writable is an ITCPTransport here,
+					# not a Request.
+					self.writable.abortConnection()
 				else:
+					# abortConnection not yet in Twisted trunk; see
+					# http://twistedmatrix.com/trac/ticket/78
 					self.writable.loseConnection()
 				return
 
