@@ -178,11 +178,10 @@ cw.net.IMinervaProtocol = function() {
 };
 
 /**
- * Called when this stream has just started.
+ * Called when this stream has just started.  You may want to keep the
+ * stream around with {@code this.stream = stream}.
  *
- * You'll want to keep the stream around with {@code this.stream = stream}.
- *
- * You must *not* raise any exception. Wrap your code in try/catch if necessary.
+ * You must *not* throw any error. Wrap your code in try/catch if necessary.
  *
  * @param {!cw.net.Stream} stream the Stream that was just started.
  */
@@ -194,7 +193,7 @@ cw.net.IMinervaProtocol.prototype.streamStarted = function(stream) {
  * Called when this stream has reset, either internally by Minerva client's
  * Stream, or a call to Stream.reset, or by a reset frame from the peer.
  *
- * You must *not* raise any Error. Wrap your code in try/catch if necessary.
+ * You must *not* throw any error. Wrap your code in try/catch if necessary.
  *
  * @param {string} reasonString Textual reason why stream has reset.
  * 	String contains only characters in inclusive range 0x20 - 0x7E.
@@ -207,7 +206,7 @@ cw.net.IMinervaProtocol.prototype.streamReset = function(reasonString, applicati
 /**
  * Called whenever one or more strings are received.
  *
- * You must *not* throw any Error. Wrap your code in try/catch
+ * You must *not* throw any error. Wrap your code in try/catch
  * if necessary. You may mutate the Array and keep references
  * to the Array and strings.
  *

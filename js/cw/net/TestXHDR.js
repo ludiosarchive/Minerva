@@ -187,7 +187,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseUsableXHDRLogicTests').meth
 	 * {@code self.xhdr.abort} is called multiple times.
 	 *
 	 * We use a dummy because calling .abort_() multiple times on a browser's
-	 * XHR object doesn't raise an exception or do anything important. We still
+	 * XHR object doesn't throw an exception or do anything important. We still
 	 * want to prevent it from happening.
 	 */
 	function test_abortCalledOnlyOnce(self) {

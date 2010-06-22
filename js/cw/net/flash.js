@@ -369,7 +369,7 @@ cw.net.FlashSocketTracker.prototype.eiCallback_ = function(id, event, arg1, arg2
 
 	/**
 	 * Use callQueue.eventually ("a better setTimeout(..., 0)") for two reasons:
-	 * 1)	Errors raised under the Flash->JS call's stack frame are
+	 * 1)	Errors thrown under the Flash->JS call's stack frame are
 	 * 		black-holed.  This is bad; we always want to see errors.
 	 * 		cw.eventually will re-throw any errors into the window.
 	 * 2)	We don't trust the Flash->JS entry point, which is poorly-tested

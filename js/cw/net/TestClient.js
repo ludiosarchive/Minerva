@@ -219,7 +219,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 	},
 
 	/**
-	 * If Stream is already reset, calling Stream.sendStrings raises an Error.
+	 * If Stream is already reset, calling Stream.sendStrings throws an Error.
 	 */
 	function test_cannotSendStringsAfterAlreadyReset(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
@@ -234,7 +234,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 	},
 
 	/**
-	 * If Stream is already reset, calling Stream.reset raises an Error.
+	 * If Stream is already reset, calling Stream.reset throws an Error.
 	 */
 	function test_cannotResetAfterAlreadyReset(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
@@ -312,9 +312,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 	},
 
 	/**
-	 * Calling flush_ twice on an HTTP transport raises an Error.
+	 * Calling flush_ twice on an HTTP transport throws an Error.
 	 */
-	function test_flushHttpTransportTwiceRaisesError(self) {
+	function test_flushHttpTransportTwiceThrowsError(self) {
 		var clock = new cw.clock.Clock();
 		var callQueue = new cw.eventual.CallQueue(clock);
 		var stream = new cw.net.TestClient.MockStream();
