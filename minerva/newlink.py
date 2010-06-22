@@ -11,12 +11,13 @@ from twisted.python import log
 from twisted.internet import protocol, defer
 from twisted.internet.interfaces import (
 	IPushProducer, IPullProducer, IProtocol, IProtocolFactory)
-from twisted.web import resource
 from twisted.web.server import NOT_DONE_YET
 
 from mypy.randgen import secureRandom
 from mypy.strops import StringFragment
 from mypy.mailbox import Mailbox, mailboxify
+
+from webmagic.untwist import BetterResource
 
 from minerva import decoders
 from minerva.website import RejectTransport
@@ -1498,13 +1499,13 @@ class SocketFace(protocol.ServerFactory):
 
 
 
-class HttpFace(resource.Resource):
+class HttpFace(BetterResource):
 	__slots__ = ('_clock', 'streamTracker', 'firewall')
 	isLeaf = True
 	protocol = ServerTransport
 
 	def __init__(self, clock, streamTracker, firewall):
-		resource.Resource.__init__(self)
+		BetterResource.__init__(self)
 		self._clock = clock
 		self.streamTracker = streamTracker
 		self.firewall = firewall
