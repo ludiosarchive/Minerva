@@ -20,7 +20,7 @@ goog.provide('cw.net.IMinervaProtocol');
 goog.provide('cw.net.Stream');
 goog.provide('cw.net.EventType');
 goog.provide('cw.net.ClientTransport');
-goog.provide('cw.net.WastingTimeTransport');
+goog.provide('cw.net.DoNothingTransport');
 goog.provide('cw.net.TransportType_');
 
 goog.require('goog.asserts');
@@ -381,7 +381,7 @@ cw.net.Stream.prototype.transportCount_ = -1;
 
 /**
  * The primary transport, for receiving S2C strings.
- * @type {cw.net.ClientTransport|cw.net.WastingTimeTransport}
+ * @type {cw.net.ClientTransport|cw.net.DoNothingTransport}
  * @private
  */
 cw.net.Stream.prototype.primaryTransport_ = null;
@@ -389,7 +389,7 @@ cw.net.Stream.prototype.primaryTransport_ = null;
 /**
  * The secondary transport, for sending S2C strings (especially if primary
  * 	cannot after it has been created).
- * @type {cw.net.ClientTransport|cw.net.WastingTimeTransport}
+ * @type {cw.net.ClientTransport|cw.net.DoNothingTransport}
  * @private
  */
 cw.net.Stream.prototype.secondaryTransport_ = null;
@@ -413,7 +413,7 @@ cw.net.Stream.prototype.streamPenalty_ = 0;
 
 /**
  * How many times in a row the primary transport has been followed
- * by a WastingTimeTransport.
+ * by a DoNothingTransport.
  * @type {number}
  * @private
  */
@@ -421,7 +421,7 @@ cw.net.Stream.prototype.primaryDelayCount_ = 0;
 
 /**
  * How many times in a row the secondary transport has been followed
- * by a WastingTimeTransport.
+ * by a DoNothingTransport.
  * @type {number}
  * @private
  */
@@ -571,10 +571,10 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
 
 /**
  * Create a dummy transport that waits for N milliseconds and goes offline.
- * @return {!cw.net.WastingTimeTransport} The newly-created transport.
+ * @return {!cw.net.DoNothingTransport} The newly-created transport.
  */
 cw.net.Stream.prototype.createWastingTransport_ = function(delay) {
-	var transport = new cw.net.WastingTimeTransport(
+	var transport = new cw.net.DoNothingTransport(
 		this.callQueue_, this, delay);
 	cw.net.Stream.logger.finest(
 		"Created: " + transport.getDescription_() + ", delay=" + delay);
@@ -616,13 +616,13 @@ cw.net.Stream.prototype.streamStatusReceived_ = function(lastSackSeen) {
  * that actually tries to connect to the server. If 0, connect a new real
  * transport right away (even under the current stack frame).
  *
- * @param {!(cw.net.ClientTransport|cw.net.WastingTimeTransport)} transport The
+ * @param {!(cw.net.ClientTransport|cw.net.DoNothingTransport)} transport The
  * 	previous transport.
  * @return {number} Delay in milliseconds
  */
 cw.net.Stream.prototype.getDelayForNextTransport_ = function(transport) {
 	var considerDelay = transport.considerDelayingNextTransport_();
-	var isWaster = transport instanceof cw.net.WastingTimeTransport;
+	var isWaster = transport instanceof cw.net.DoNothingTransport;
 	var count;
 	if(transport == this.primaryTransport_) {
 		if(considerDelay) {
@@ -668,7 +668,7 @@ cw.net.Stream.prototype.goDisconnect_ = function() {
 
 /**
  * ClientTransport calls this to tell Stream that it has disconnected.
- * @param {!cw.net.ClientTransport|cw.net.WastingTimeTransport} transport
+ * @param {!cw.net.ClientTransport|cw.net.DoNothingTransport} transport
  * @private
  */
 cw.net.Stream.prototype.transportOffline_ = function(transport) {
@@ -1125,7 +1125,7 @@ cw.net.ClientTransport.prototype.getDescription_ = function() {
 };
 
 /**
- * Should Stream consider a WastingTimeTransport for the next transport?
+ * Should Stream consider a DoNothingTransport for the next transport?
  * @return {boolean}
  * @private
  */
@@ -1634,7 +1634,7 @@ cw.net.ClientTransport.logger.setLevel(goog.debug.Logger.Level.ALL);
  * @extends {goog.Disposable}
  * @private
  */
-cw.net.WastingTimeTransport = function(callQueue, stream, delay) {
+cw.net.DoNothingTransport = function(callQueue, stream, delay) {
 	goog.Disposable.call(this);
 
 	/**
@@ -1673,21 +1673,21 @@ cw.net.WastingTimeTransport = function(callQueue, stream, delay) {
 	 */
 	this.goOfflineTicket_ = null;
 };
-goog.inherits(cw.net.WastingTimeTransport, goog.Disposable);
+goog.inherits(cw.net.DoNothingTransport, goog.Disposable);
 
 /**
  * Start wasting time.
  * @private
  */
-cw.net.WastingTimeTransport.prototype.flush_ = function() {
+cw.net.DoNothingTransport.prototype.flush_ = function() {
 	if(this.started_ && !this.canFlushMoreThanOnce_) {
-		throw Error("flush_: Can't flush more than once to WastingTimeTransport.");
+		throw Error("flush_: Can't flush more than once to DoNothingTransport.");
 	}
 
 	this.started_ = true;
 
 	goog.asserts.assert(this.goOfflineTicket_ == null,
-		"WastingTimeTransport already has goOfflineTicket_?");
+		"DoNothingTransport already has goOfflineTicket_?");
 
 	var that = this;
 	this.goOfflineTicket_ = this.callQueue_.clock.setTimeout(function() {
@@ -1700,9 +1700,9 @@ cw.net.WastingTimeTransport.prototype.flush_ = function() {
  * @param {!Array.<string>} sb
  * @private
  */
-cw.net.WastingTimeTransport.prototype.__reprToPieces__ = function(sb) {
+cw.net.DoNothingTransport.prototype.__reprToPieces__ = function(sb) {
 	sb.push(
-		'<WastingTimeTransport delay=', String(this.delay_), '>');
+		'<DoNothingTransport delay=', String(this.delay_), '>');
 };
 
 /**
@@ -1710,16 +1710,16 @@ cw.net.WastingTimeTransport.prototype.__reprToPieces__ = function(sb) {
  * @return {string}
  * @private
  */
-cw.net.WastingTimeTransport.prototype.getDescription_ = function() {
+cw.net.DoNothingTransport.prototype.getDescription_ = function() {
 	return "Wast. T";
 };
 
 /**
- * Should Stream consider a WastingTimeTransport for the next transport?
+ * Should Stream consider a DoNothingTransport for the next transport?
  * @return {boolean}
  * @private
  */
-cw.net.WastingTimeTransport.prototype.considerDelayingNextTransport_ = function() {
+cw.net.DoNothingTransport.prototype.considerDelayingNextTransport_ = function() {
 	return false;
 };
 
@@ -1727,11 +1727,11 @@ cw.net.WastingTimeTransport.prototype.considerDelayingNextTransport_ = function(
  * Call `dispose` to close this transport. If it is called again, this is a no-op.
  * @private
  */
-cw.net.WastingTimeTransport.prototype.disposeInternal = function() {
-	cw.net.WastingTimeTransport.logger.info(
+cw.net.DoNothingTransport.prototype.disposeInternal = function() {
+	cw.net.DoNothingTransport.logger.info(
 		this.getDescription_() + " in disposeInternal.");
 
-	cw.net.WastingTimeTransport.superClass_.disposeInternal.call(this);
+	cw.net.DoNothingTransport.superClass_.disposeInternal.call(this);
 
 	if(this.goOfflineTicket_ != null) {
 		this.callQueue_.clock.clearTimeout(this.goOfflineTicket_);
@@ -1746,8 +1746,8 @@ cw.net.WastingTimeTransport.prototype.disposeInternal = function() {
 };
 
 
-cw.net.WastingTimeTransport.logger = goog.debug.Logger.getLogger('cw.net.WastingTimeTransport');
-cw.net.WastingTimeTransport.logger.setLevel(goog.debug.Logger.Level.ALL);
+cw.net.DoNothingTransport.logger = goog.debug.Logger.getLogger('cw.net.DoNothingTransport');
+cw.net.DoNothingTransport.logger.setLevel(goog.debug.Logger.Level.ALL);
 
 
 

@@ -24,7 +24,7 @@ goog.require('cw.net.Endpoint');
 goog.require('cw.net.Stream');
 goog.require('cw.net.EventType');
 goog.require('cw.net.ClientTransport');
-goog.require('cw.net.WastingTimeTransport');
+goog.require('cw.net.DoNothingTransport');
 
 goog.require('cw.net.HelloFrame');
 goog.require('cw.net.StringFrame');
@@ -335,9 +335,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 
 
 
-cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'WastingTimeTransportTests').methods(
+cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'DoNothingTransportTests').methods(
 	/**
-	 * If we call WastingTimeTransportTests.dispose, it cancels the
+	 * If we call DoNothingTransportTests.dispose, it cancels the
 	 * setTimeout which would have called `this.dispose()`.
 	 */
 	function test_disposeCancelsDelayedUnderlying(self) {
@@ -346,7 +346,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'WastingTimeTransportTests').me
 		var stream = new cw.net.TestClient.MockStream();
 
 		var delay = 1000;
-		var ct = new cw.net.WastingTimeTransport(
+		var ct = new cw.net.DoNothingTransport(
 			callQueue, stream, 0/* transportNumber */, delay);
 		ct.dispose = goog.testing.recordFunction(goog.bind(ct.dispose, ct));
 		ct.flush_();
