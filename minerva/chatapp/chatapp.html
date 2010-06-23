@@ -51,8 +51,9 @@ goog.require('cw.autoTitle');
 goog.require('goog.debug.DivConsole');
 goog.require('goog.debug.Logger');
 goog.require('goog.dom');
-goog.require('goog.ui.media.FlashObject');
 goog.require('goog.async.Deferred');
+goog.require('goog.ui.media.FlashObject');
+goog.require('cw.loadflash');
 goog.require('goog.Uri');
 goog.require('cw.eventual');
 goog.require('cw.string');
@@ -154,38 +155,17 @@ chatapp.lastProto = null;
 
 
 /**
- * @type {!Array.<!goog.async.Deferred>}
- */
-chatapp.loadedDeferreds_ = [];
-
-
-/**
- * @private
- */
-chatapp.flashConnectorLoaded_ = function() {
-	// setTimeout to escape the Flash->JS stack frame
-	goog.global['window'].setTimeout(function() {
-		chatapp.loadedDeferreds_.shift().callback(null);
-	}, 0);
-};
-
-
-/**
  * @private
  * @return {!goog.async.Deferred} Deferred that fires with an object or embed
  *	 element.
  */
 chatapp.loadFlashConnector_ = function() {
 	flashObject = new goog.ui.media.FlashObject('/compiled_client/FlashConnector.swf');
-	flashObject.setBackgroundColor("#ffffff");
-	flashObject.setSize(30, 30);
-	flashObject.setFlashVar('onloadcallback', 'chatapp.flashConnectorLoaded_');
-	var d = new goog.async.Deferred();
-	d.addCallback(function(ignored) {
-		return goog.dom.getElement(flashObject.getId());
-	});
-	chatapp.loadedDeferreds_.push(d);
-	flashObject.render(goog.dom.getElement("FlashConnectorSwf"));
+	flashObject.setBackgroundColor("#777777");
+	flashObject.setSize(300, 30);
+	var renderInto = goog.dom.getElement("FlashConnectorSwf");
+	var d = cw.loadflash.loadFlashObjectWithTimeout(
+		chatapp.callQueue.clock, flashObject, '9', renderInto, 8000);
 	return d;
 };
 
