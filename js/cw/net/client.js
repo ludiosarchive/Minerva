@@ -658,7 +658,7 @@ cw.net.Stream.prototype.getDelayForNextTransport_ = function(transport) {
 /**
  * @private
  */
-cw.net.Stream.prototype.goDisconnect_ = function() {
+cw.net.Stream.prototype.fireDisconnectedEvent_ = function() {
 	this.dispatchEvent({
 		type: cw.net.EventType.DISCONNECTED
 	});
@@ -693,7 +693,7 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 		transport.wroteResetFrame_) {
 			cw.net.Stream.logger.info("Was RESETTING, now DISCONNECTED.");
 			this.state_ = cw.net.StreamState_.DISCONNECTED;
-			this.goDisconnect_();
+			this.fireDisconnectedEvent_();
 		}
 		cw.net.Stream.logger.fine(
 			"Not creating a transport because Stream is in state " + this.state_);
@@ -781,7 +781,7 @@ cw.net.Stream.prototype.doReset_ = function(reasonString, applicationLevel) {
 	this.protocol_.streamReset(reasonString, applicationLevel);
 	// Fire event after streamReset, to be consistent with the call
 	// ordering that happens if the client application resets instead.
-	this.goDisconnect_();
+	this.fireDisconnectedEvent_();
 };
 
 /**
