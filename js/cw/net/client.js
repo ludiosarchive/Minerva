@@ -809,8 +809,8 @@ cw.net.Stream.prototype.internalReset_ = function(reasonString) {
  * ClientTransport calls this to tell Stream about received strings.
  * @param {!cw.net.ClientTransport} transport The transport that received
  * 	these boxes.
- * @param {!Array.<number|string>} pairs (seqNum, string) pairs that
- * 	transport has received.
+ * @param {!cw.net.SeqNumStringPairs_} pairs Sorted Array of
+ * 	(seqNum, string) pairs that transport has received.
  * @param {boolean} avoidCreatingTransports
  * @private
  */
@@ -1154,15 +1154,16 @@ cw.net.ClientTransport.prototype.isHttpTransport_ = function() {
 };
 
 /**
- * @type {Array.<!Array.<number|string>>} Unsorted Array of
- * 	(seqNum, string) pairs collected in {@link #framesReceived_}.
+ * @type {Array.<!Array.<number|string>>} An Array of
+ * 	(seqNum, string) pairs.
  * @private
  * // TODO: types for tuples
  */
-cw.net.BunchedStrings_ = goog.typedef;
+cw.net.SeqNumStringPairs_ = goog.typedef;
 
 /**
- * @param {!cw.net.BunchedStrings_} bunchedStrings
+ * @param {!cw.net.SeqNumStringPairs_} bunchedStrings Unsorted Array of
+ * 	(seqNum, string) pairs collected in {@link #framesReceived_}.
  * @private
  */
 cw.net.ClientTransport.prototype.handleStrings_ = function(bunchedStrings) {
@@ -1176,7 +1177,8 @@ cw.net.ClientTransport.prototype.handleStrings_ = function(bunchedStrings) {
 
 /**
  * @param {string} frameStr
- * @param {!cw.net.BunchedStrings_} bunchedStrings
+ * @param {!cw.net.SeqNumStringPairs_} bunchedStrings Unsorted Array of
+ * 	(seqNum, string) pairs that this method can push into, or clear.
  * @return {boolean} Whether ClientTransport must close (dispose) the
  * 	transport.
  * @private
