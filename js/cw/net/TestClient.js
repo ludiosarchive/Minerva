@@ -390,7 +390,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 			self.endpoint_ = endpoint;
 		});
 
-		return new goog.async.DeferredList([iframeD, endpointD]);
+		return new goog.async.DeferredList(
+			[iframeD, endpointD], false, true/* opt_fireOnOneErrback */);
 	},
 
 	function makeCredentialsData_(self) {
