@@ -12,6 +12,7 @@ looper python -N \
 -W 'ignore:the sets module is deprecated' \
 `which twistd` -r epoll -n minervarun \
 --secretfile dev_keys/csrf_secret \
+--domain 'linuxwan.com' \
 -h tcp:8111:interface=$INTERFACE \
 -h ssl:444:privateKey=dev_keys/x.linuxwan.com-key.pem:interface=$INTERFACE \
 -m tcp:8112:interface=$INTERFACE \

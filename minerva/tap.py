@@ -30,6 +30,13 @@ class Options(sharedopts.BaseOptions):
 			"strports description for the Minerva server. "
 			"Example: 'ssl:444:privateKey=privateAndPublic.pem:interface=0'. "
 			"Repeat this option for multiple servers."],
+
+		# Automatically setting document.document based on a GET
+		# parameter or by looking at parent's URL is insecure (because
+		# some browsers will allow setting document.domain to 'com',
+		# for example.)  We require that the document.domain be
+		# manually specified.
+		["domain", "d", None, "The domain to set document.domain values to."]
 	]
 
 	longdesc = """\
@@ -69,8 +76,9 @@ def makeService(config):
 	multi = service.MultiService()
 
 	csrfSecret = config['secret']
+	domain = config['domain']
 
-	socketFace, httpSite = minervasite.makeMinervaAndHttp(reactor, csrfSecret)
+	socketFace, httpSite = minervasite.makeMinervaAndHttp(reactor, csrfSecret, domain)
 	httpSite.displayTracebacks = not config["notracebacks"]
 
 	for httpStrport in config['http']:

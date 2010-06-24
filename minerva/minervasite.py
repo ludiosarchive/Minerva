@@ -11,6 +11,7 @@ from zope.interface import implements
 
 from cwtools import testing, jsimp
 from mypy import randgen
+from mypy.objops import strToNonNegLimit
 
 from minerva.newlink import (
 	BasicMinervaProtocol, BasicMinervaFactory, StreamTracker, HttpFace, SocketFace)
@@ -351,9 +352,46 @@ class ResourcesForTest(BetterResource):
 
 
 
+class XDRFrame(BetterResource):
+	"""
+	A page suitable for loading into an iframe.  It sets a document.domain
+	so that it can communicate with the parent page (which must also set
+	document.domain).  It is capable of making XHR requests.
+	"""
+	isLeaf = True
+
+	def __init__(self, domain):
+		self.domain = domain
+
+
+	def render_GET(self, request):
+		frameIdStr = request.args['id'][0]
+		# 2**53 is the largest integral number that can be represented
+		# in JavaScript.
+		frameId = strToNonNegLimit(frameIdStr, 2**53)
+		return """\
+<!doctype html>
+<html>
+<head>
+	<title>XDRFrame</title>
+</head>
+<body>
+<script src="/JSPATH/closure/goog/base.js"></script>
+<script src="/JSPATH/nongoog_deps.js"></script>
+<!-- TODO! add script that can do XHR -->
+<script>
+	document.domain = %s;
+	window.onload = parent.__XDRFrame_loaded(%s);
+</script>
+</body>
+</html>
+""" % (simplejson.dumps(self.domain), frameId)
+
+
+
 class Root(BetterResource):
 
-	def __init__(self, reactor, httpFace, csrfStopper, cookieInstaller):
+	def __init__(self, reactor, httpFace, csrfStopper, cookieInstaller, domain):
 		import cwtools
 		import minerva
 
@@ -382,6 +420,7 @@ class Root(BetterResource):
 		# Demos that use httpFace and/or socketFace
 		self.putChild('flashtest', FlashTestPage(csrfStopper, cookieInstaller))
 		self.putChild('chatapp', ChatAppPage(csrfStopper, cookieInstaller))
+		self.putChild('xdrframe', XDRFrame(domain))
 
 		# The docs are outside of the minerva package
 		docsDir = FilePath(__file__).parent().parent().child('docs')
@@ -392,7 +431,7 @@ class Root(BetterResource):
 
 
 
-def makeMinervaAndHttp(reactor, csrfSecret):
+def makeMinervaAndHttp(reactor, csrfSecret, domain):
 	clock = reactor
 
 	cookieInstaller = CookieInstaller(randgen.secureRandom)
@@ -409,7 +448,7 @@ def makeMinervaAndHttp(reactor, csrfSecret):
 	httpFace = HttpFace(clock, tracker, firewall)
 	socketFace = SocketFace(clock, tracker, firewall, policyString=policyString)
 
-	root = Root(reactor, httpFace, csrfStopper, cookieInstaller)
+	root = Root(reactor, httpFace, csrfStopper, cookieInstaller, domain)
 
 	try:
 		# Twisted z9trunk can take a clock argument
