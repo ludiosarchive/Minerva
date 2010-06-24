@@ -14,7 +14,8 @@
  * 	- low latency (no excessive setTimeout(..., 0) )
  */
 
-goog.provide('cw.net.EndpointType');
+goog.provide('cw.net.SocketEndpoint');
+goog.provide('cw.net.HttpEndpoint');
 goog.provide('cw.net.Endpoint');
 goog.provide('cw.net.IMinervaProtocol');
 goog.provide('cw.net.Stream');
@@ -58,49 +59,46 @@ goog.require('cw.net.HttpFormat');
 goog.require('cw.net.decodeFrameFromServer');
 
 
-
 /**
- * Endpoint types
- * @enum {number}
- */
-cw.net.EndpointType = {
-	HTTP: 1, // (http:// or https://)
-	WEBSOCKET: 2, // WebSocket (ws:// or wss://)
-
-	// A TCP connection, using Flash Socket; also hypothetically
-	// Silverlight, Java, etc.
-	TCP: 3
-};
-
-
-/**
- * Object to represent a Minerva endpoint. Contains the EndpointType and
- * either a URL or a (host, port) pair. If the `url` arguments is null,
- * host and port should be not-null.
+ * Object to represent a Socket endpoint.
  *
- * @param {!cw.net.EndpointType} type
- * @param {?string} primaryUrl URL for primary HTTP transports.
- * @param {?string} secondaryUrl URL for secondary HTTP transports.
- * @param {?string} host Hostname for socket-like transports.
- * @param {?number} port Port for socket-like transports.
- * @param {?cw.net.FlashSocketTracker} tracker The `FlashSocketTracker` that
- * 	will help us make a connection.  Required for {@code EndpointType.TCP}.
+ * @param {string} host Hostname for socket-like transports.
+ * @param {number} port Port for socket-like transports.
+ * @param {!cw.net.FlashSocketTracker} tracker The `FlashSocketTracker` that
+ * 	will help us make a connection.
  * @constructor
  */
-cw.net.Endpoint = function(type, primaryUrl, secondaryUrl, host, port, tracker) {
-	/** @type {!cw.net.EndpointType} */
-	this.type = type;
-	/** @type {?string} */
-	this.primaryUrl = primaryUrl;
-	/** @type {?string} */
-	this.secondaryUrl = secondaryUrl;
-	/** @type {?string} */
+cw.net.SocketEndpoint = function(host, port, tracker) {
+	/** @type {string} */
 	this.host = host;
-	/** @type {?number} */
+	/** @type {number} */
 	this.port = port;
-	/** @type {?cw.net.FlashSocketTracker} */
+	/** @type {!cw.net.FlashSocketTracker} */
 	this.tracker = tracker;
 };
+
+// TODO: WebSocketEndpoint
+
+
+/**
+ * Object to represent an HTTP endpoint.
+ *
+ * @param {string} primaryUrl URL for primary HTTP transports.
+ * @param {string} secondaryUrl URL for secondary HTTP transports.
+ * @constructor
+ */
+cw.net.HttpEndpoint = function(primaryUrl, secondaryUrl) {
+	/** @type {string} */
+	this.primaryUrl = primaryUrl;
+	/** @type {string} */
+	this.secondaryUrl = secondaryUrl;
+};
+
+
+/**
+ * @type {cw.net.SocketEndpoint|cw.net.HttpEndpoint}
+ */
+cw.net.Endpoint = goog.typedef;
 
 
 
@@ -528,15 +526,13 @@ cw.net.Stream.prototype.sendStrings = function(strings) {
  * @return {!cw.net.TransportType_}
  */
 cw.net.Stream.prototype.getTransportType_ = function() {
-	if(this.endpoint_.type == cw.net.EndpointType.HTTP) {
+	if(this.endpoint_ instanceof cw.net.HttpEndpoint) {
 		var transportType = cw.net.TransportType_.XHR_LONGPOLL;
 		// TODO: sometimes XHR_STREAM
-	} else if(this.endpoint_.type == cw.net.EndpointType.WEBSOCKET) {
-		var transportType = cw.net.TransportType_.WEBSOCKET;
-	} else if(this.endpoint_.type == cw.net.EndpointType.TCP) {
+	} else if(this.endpoint_ instanceof cw.net.SocketEndpoint) {
 		var transportType = cw.net.TransportType_.FLASH_SOCKET;
 	} else {
-		throw new Error("Don't support EndpointType " + this.endpoint_.type);
+		throw new Error("Don't support endpoint " + cw.repr.repr(this.endpoint_));
 	}
 	return transportType;
 };

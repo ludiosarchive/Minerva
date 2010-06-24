@@ -58,6 +58,8 @@ goog.require('goog.Uri');
 goog.require('cw.eventual');
 goog.require('cw.string');
 goog.require('cw.net.Stream');
+goog.require('cw.net.SocketEndpoint');
+goog.require('cw.net.HttpEndpoint');
 goog.require('cw.net.IMinervaProtocol');
 goog.require('cw.net.FlashSocketTracker');
 goog.require('cw.whoami');
@@ -178,7 +180,7 @@ chatapp.getEndpoint = function() {
 	var queryData = url.getQueryData();
 	var mode = queryData.get('mode');
 	if(mode == 'http') {
-		var endpoint = new cw.net.Endpoint(cw.net.EndpointType.HTTP, '/httpface/', '/httpface/', null, null, null);
+		var endpoint = new cw.net.HttpEndpoint('/httpface/', '/httpface/');
 		return goog.async.Deferred.succeed(endpoint);
 	} else {
 		var host = url.getDomain();
@@ -186,7 +188,7 @@ chatapp.getEndpoint = function() {
 		var d = chatapp.loadFlashConnector_();
 		d.addCallback(function(bridge) {
 			var tracker = new cw.net.FlashSocketTracker(chatapp.callQueue, bridge);
-			var endpoint = new cw.net.Endpoint(cw.net.EndpointType.TCP, null, null, host, port, tracker);
+			var endpoint = new cw.net.SocketEndpoint(host, port, tracker);
 			return endpoint;
 		});
 		return d;

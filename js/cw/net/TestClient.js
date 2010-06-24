@@ -24,8 +24,8 @@ goog.require('cw.net.Queue');
 goog.require('cw.net.TransportType_');
 goog.require('cw.net.SACK');
 goog.require('cw.net.FlashSocketTracker');
-goog.require('cw.net.EndpointType');
-goog.require('cw.net.Endpoint');
+goog.require('cw.net.SocketEndpoint');
+goog.require('cw.net.HttpEndpoint');
 goog.require('cw.net.Stream');
 goog.require('cw.net.EventType');
 goog.require('cw.net.ClientTransport');
@@ -60,8 +60,8 @@ var XHR_LONGPOLL = cw.net.TransportType_.XHR_LONGPOLL;
 
 var SACK = cw.net.SACK;
 
-var notARealEndpoint = new cw.net.Endpoint(cw.net.EndpointType.HTTP,
-	"/TestClient-not-a-real-endpoint/", "/TestClient-not-a-real-endpoint/", null, null, null);
+var fakeHttpEndpoint = new cw.net.HttpEndpoint(
+	"/TestClient-not-a-real-endpoint/", "/TestClient-not-a-real-endpoint/");
 
 
 /**
@@ -208,7 +208,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.Stream(
-			callQueue, proto, notARealEndpoint, function() { return "not-real-credentials"; });
+			callQueue, proto, fakeHttpEndpoint, function() { return "not-real-credentials"; });
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
 		stream.tryToSend_ = goog.testing.recordFunction(goog.bind(stream.tryToSend_, stream));
 		stream.start();
@@ -226,7 +226,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.Stream(
-			callQueue, proto, notARealEndpoint, function() { return "not-real-credentials"; });
+			callQueue, proto, fakeHttpEndpoint, function() { return "not-real-credentials"; });
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
 		stream.start();
 		stream.reset("a reasonString");
@@ -241,7 +241,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.Stream(
-			callQueue, proto, notARealEndpoint, function() { return "not-real-credentials"; });
+			callQueue, proto, fakeHttpEndpoint, function() { return "not-real-credentials"; });
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
 		stream.start();
 		stream.reset("a reasonString");
@@ -288,7 +288,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 		var payloads = [];
 
 		var ct = new cw.net.ClientTransport(
-			callQueue, stream, 0, XHR_LONGPOLL, notARealEndpoint, true);
+			callQueue, stream, 0, XHR_LONGPOLL, fakeHttpEndpoint, true);
 		ct.makeHttpRequest_ = function(payload) {
 			payloads.push(payload)
 		};
@@ -321,7 +321,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 		var stream = new cw.net.TestClient.MockStream();
 
 		var ct = new cw.net.ClientTransport(
-			callQueue, stream, 0, XHR_LONGPOLL, notARealEndpoint, true);
+			callQueue, stream, 0, XHR_LONGPOLL, fakeHttpEndpoint, true);
 		ct.flush_();
 		self.assertThrows(Error, function() { ct.flush_(); },
 			"flush_: Can't flush more than once to this transport.");
@@ -512,8 +512,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealHttpTests').methods(
 
 	function getEndpoint_(self) {
-		httpFaceEndpoint = new cw.net.Endpoint(
-			cw.net.EndpointType.HTTP, "/httpface/", "/httpface/", null, null, null);
+		httpFaceEndpoint = new cw.net.HttpEndpoint("/httpface/", "/httpface/");
 		return goog.async.Deferred.succeed(httpFaceEndpoint);
 	}
 );
@@ -571,7 +570,7 @@ cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealFlashSocket
 		var d = self.loadFlashApplet_();
 		d.addCallback(function(bridge) {
 			var tracker = new cw.net.FlashSocketTracker(callQueue, bridge);
-			var endpoint = new cw.net.Endpoint(cw.net.EndpointType.TCP, null, null, host, port, tracker);
+			var endpoint = new cw.net.SocketEndpoint(host, port, tracker);
 			return endpoint;
 		});
 
