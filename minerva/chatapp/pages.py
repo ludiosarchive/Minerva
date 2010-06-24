@@ -13,10 +13,11 @@ from webmagic.untwist import BetterResource
 class Index(BetterResource):
 	isLeaf = True
 
-	def __init__(self, csrfStopper, cookieInstaller):
+	def __init__(self, csrfStopper, cookieInstaller, domain):
 		BetterResource.__init__(self)
 		self._csrfStopper = csrfStopper
 		self._cookieInstaller = cookieInstaller
+		self._domain = domain
 
 		self._jinja2Env = jinja2.Environment()
 		self._basePath = FilePath(__file__).parent() # this is minerva/chatapp/
@@ -33,6 +34,7 @@ class Index(BetterResource):
 		dictionary = dict(
 			getTestPageCSS=getTestPageCSS,
 			token=token,
+			domain=self._domain,
 			dumps=simplejson.dumps)
 		rendered = self._jinja2Env.from_string(template).render(dictionary)
 		return rendered.encode('utf-8')
@@ -41,7 +43,7 @@ class Index(BetterResource):
 
 class ChatAppPage(BetterResource):
 
-	def __init__(self, csrfStopper, cookieInstaller):
+	def __init__(self, csrfStopper, cookieInstaller, domain):
 		BetterResource.__init__(self)
 
-		self.putChild('', Index(csrfStopper, cookieInstaller))
+		self.putChild('', Index(csrfStopper, cookieInstaller, domain))

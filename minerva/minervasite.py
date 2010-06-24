@@ -369,6 +369,10 @@ class XDRFrame(BetterResource):
 		# 2**53 is the largest integral number that can be represented
 		# in JavaScript.
 		frameId = strToNonNegLimit(frameIdStr, 2**53)
+
+		# Note: for the __XDRFrame_loaded call to work, document.domain
+		# on parent page must be set *before* the browser starts executing
+		# code in the iframe.
 		return """\
 <!doctype html>
 <html>
@@ -381,7 +385,15 @@ class XDRFrame(BetterResource):
 <!-- TODO! add script that can do XHR -->
 <script>
 	document.domain = %s;
-	window.onload = parent.__XDRFrame_loaded(%s);
+	function notifyParent() {
+		try {
+			parent.__XDRFrame_loaded(%s);
+		} catch(err) {
+			throw Error("could not call __XDRFrame_loaded on parent, " +
+				"perhaps document.domain not set? err: " + err.message);
+		}
+	}
+	window.onload = notifyParent;
 </script>
 </body>
 </html>
@@ -419,7 +431,7 @@ class Root(BetterResource):
 
 		# Demos that use httpFace and/or socketFace
 		self.putChild('flashtest', FlashTestPage(csrfStopper, cookieInstaller))
-		self.putChild('chatapp', ChatAppPage(csrfStopper, cookieInstaller))
+		self.putChild('chatapp', ChatAppPage(csrfStopper, cookieInstaller, domain))
 		self.putChild('xdrframe', XDRFrame(domain))
 
 		# The docs are outside of the minerva package

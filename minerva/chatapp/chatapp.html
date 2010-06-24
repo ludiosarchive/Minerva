@@ -12,6 +12,7 @@
 	</style>
 	<script>
 		window.CSRF_TOKEN = {{ dumps(token) }};
+		document.domain = {{ dumps(domain) }};
 	</script>
 </head>
 <body>
