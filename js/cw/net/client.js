@@ -75,22 +75,25 @@ cw.net.EndpointType = {
 
 /**
  * Object to represent a Minerva endpoint. Contains the EndpointType and
- * either a URL or a (host, port) pair. If `url` is null, host and port
- * should be not-null.
+ * either a URL or a (host, port) pair. If the `url` arguments is null,
+ * host and port should be not-null.
  *
  * @param {!cw.net.EndpointType} type
- * @param {?string} url
- * @param {?string} host
- * @param {?number} port
+ * @param {?string} primaryUrl URL for primary HTTP transports.
+ * @param {?string} secondaryUrl URL for secondary HTTP transports.
+ * @param {?string} host Hostname for socket-like transports.
+ * @param {?number} port Port for socket-like transports.
  * @param {?cw.net.FlashSocketTracker} tracker The `FlashSocketTracker` that
  * 	will help us make a connection.  Required for {@code EndpointType.TCP}.
  * @constructor
  */
-cw.net.Endpoint = function(type, url, host, port, tracker) {
+cw.net.Endpoint = function(type, primaryUrl, secondaryUrl, host, port, tracker) {
 	/** @type {!cw.net.EndpointType} */
 	this.type = type;
 	/** @type {?string} */
-	this.url = url;
+	this.primaryUrl = primaryUrl;
+	/** @type {?string} */
+	this.secondaryUrl = secondaryUrl;
 	/** @type {?string} */
 	this.host = host;
 	/** @type {?number} */
@@ -1338,13 +1341,14 @@ cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
 		goog.bind(this.httpResponseReceived_, this));
 	goog.asserts.assert(this.underlying_ === null, 'already have an underlying_');
 	this.underlying_ = xhr;
+	var url = this.becomePrimary_ ?
+		this.endpoint_.primaryUrl : this.endpoint_.secondaryUrl;
+	this.underlyingStartTime_ = goog.Timer.getTime(this.callQueue_.clock);
+	this.underlying_.send(url, 'POST', payload, {
+		'Content-Type': 'application/octet-stream'});
 	// Use "application/octet-stream" instead of
 	// "application/x-www-form-urlencoded;charset=utf-8" because we don't
 	// want Minerva server or intermediaries to try to urldecode the POST body.
-	this.underlyingStartTime_ = goog.Timer.getTime(this.callQueue_.clock);
-	this.underlying_.send(
-		this.endpoint_.url, 'POST', payload,
-		{'Content-Type': 'application/octet-stream'});
 };
 
 /**

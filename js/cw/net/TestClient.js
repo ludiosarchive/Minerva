@@ -60,8 +60,8 @@ var XHR_LONGPOLL = cw.net.TransportType_.XHR_LONGPOLL;
 
 var SACK = cw.net.SACK;
 
-var notARealEndpoint = new cw.net.Endpoint(
-	cw.net.EndpointType.HTTP, "/TestClient-not-a-real-endpoint/", null, null, null);
+var notARealEndpoint = new cw.net.Endpoint(cw.net.EndpointType.HTTP,
+	"/TestClient-not-a-real-endpoint/", "/TestClient-not-a-real-endpoint/", null, null, null);
 
 
 /**
@@ -513,7 +513,7 @@ cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealHttpTests')
 
 	function getEndpoint_(self) {
 		httpFaceEndpoint = new cw.net.Endpoint(
-			cw.net.EndpointType.HTTP, "/httpface/", null, null, null);
+			cw.net.EndpointType.HTTP, "/httpface/", "/httpface/", null, null, null);
 		return goog.async.Deferred.succeed(httpFaceEndpoint);
 	}
 );
@@ -571,7 +571,7 @@ cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealFlashSocket
 		var d = self.loadFlashApplet_();
 		d.addCallback(function(bridge) {
 			var tracker = new cw.net.FlashSocketTracker(callQueue, bridge);
-			var endpoint = new cw.net.Endpoint(cw.net.EndpointType.TCP, null, host, port, tracker);
+			var endpoint = new cw.net.Endpoint(cw.net.EndpointType.TCP, null, null, host, port, tracker);
 			return endpoint;
 		});
 
