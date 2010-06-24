@@ -274,7 +274,7 @@ cw.net.Incoming.prototype.size_ = 0;
 /**
  * Simultaneously give new items, and get deliverable items.
  *
- * @param {!Array.<!Array.<(number|string)>>} numAndItemSeq An Array of
+ * @param {!Array.<!Array.<number|string>>} numAndItemSeq An Array of
  * 	*already sorted* (seqNum, string) pairs. // TODO: types for tuples
  * @param {number} itemLimit
  * @param {number} sizeLimit
