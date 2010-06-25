@@ -1446,9 +1446,6 @@ cw.net.ClientTransport.prototype.flashSocketTerminated_ = function() {
  */
 cw.net.ClientTransport.prototype.makeFlashConnection_ = function(frames) {
 	var endpoint = this.endpoint_;
-	if(!endpoint.host || !endpoint.port) { // Note: port 0
-		throw Error("missing host or port");
-	}
 	this.underlying_ = new cw.net.FlashSocketConduit(this);
 	var socket = endpoint.tracker.createNew(this.underlying_);
 	this.underlying_.socket_ = socket;
