@@ -36,7 +36,8 @@ class Options(sharedopts.BaseOptions):
 		# some browsers will allow setting document.domain to 'com',
 		# for example.)  We require that the document.domain be
 		# manually specified.
-		["domain", "d", None, "The domain to set document.domain values to."]
+		["domain", "d", None, "The domain to set document.domain values to. " +
+			"Do not include the port number."]
 	]
 
 	longdesc = """\

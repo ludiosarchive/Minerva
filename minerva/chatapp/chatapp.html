@@ -10,10 +10,6 @@
 			padding: 0.5em 0 0.5em 0;
 		}
 	</style>
-	<script>
-		window.CSRF_TOKEN = {{ dumps(token) }};
-		document.domain = {{ dumps(domain) }};
-	</script>
 </head>
 <body>
 
@@ -38,6 +34,39 @@
 </td>
 </tr>
 </table>
+
+<!--
+Think about this: if in the future we have cross-tab sharing
+working with named-window grabbing and SharedWorker, do we
+really want to dump two iframes and two DNS requests on the user
+for each page they load?  That seems kind of bad.  We should try
+to connect to other tabs first, then create an iframe.
+
+To combine the best of both worlds: leave a cookie that indicates
+whether there is probably an already-connected Stream in a tab.
+If no such cookie, write out the iframes immediately.
+-->
+<script>
+	// Use just one preamble <script> to reduce page load time.
+
+	window.CSRF_TOKEN = {{ dumps(token) }};
+	document.domain = {{ dumps(domain) }};
+	var __XDRFrame_loaded = function(id) {
+		__XDRFrame_loaded.done.push(id);
+	};
+	__XDRFrame_loaded.done = [];
+	// We expect location.port to be an empty string if no :port is in
+	// the URL.  If there is an explicit port, we need to load the iframe
+	// with that port, even if it's the default port (80 or 443), because
+	// a mismatch of "explicit port" and "implicit port" may prevent
+	// cross-subdomain interaction from working in some browsers.
+	__XDRFrame_loaded.portString = location.port ? ':' + location.port : "";
+	document.write(
+		'<iframe width=16 height=16 src="//{{ sub1 }}.{{ domain }}' +
+			__XDRFrame_loaded.portString + '/xdrframe/?id=1"></iframe>' +
+		'<iframe width=16 height=16 src="//{{ sub2 }}.{{ domain }}' +
+			__XDRFrame_loaded.portString + '/xdrframe/?id=2"></iframe>');
+</script>
 
 <div id="FlashConnectorSwf"></div>
 

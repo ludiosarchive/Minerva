@@ -1,5 +1,6 @@
 import jinja2
 import simplejson
+import random
 
 from twisted.python.filepath import FilePath
 from twisted.web import resource, static
@@ -7,6 +8,13 @@ from twisted.web import resource, static
 from cwtools.htmltools import getTestPageCSS
 
 from webmagic.untwist import BetterResource
+
+
+
+def getRandomSubdomain():
+	# Always have 20 digits.  Use only random digits (not letters) to
+	# prevent forming words that may be blocked by proxies.
+	return 'ml' + str(random.randint(10**19, 10**20 - 1))
 
 
 
@@ -29,12 +37,17 @@ class Index(BetterResource):
 		cookie = self._cookieInstaller.getSet(request)
 		token = self._csrfStopper.makeToken(cookie)
 
+		sub1 = getRandomSubdomain()
+		sub2 = getRandomSubdomain()
+
 		# This jinja2 stuff is for the html page, not the JavaScript
 		template = self._basePath.child(self._fileName).getContent().decode('utf-8')
 		dictionary = dict(
 			getTestPageCSS=getTestPageCSS,
 			token=token,
 			domain=self._domain,
+			sub1=sub1,
+			sub2=sub2,
 			dumps=simplejson.dumps)
 		rendered = self._jinja2Env.from_string(template).render(dictionary)
 		return rendered.encode('utf-8')
