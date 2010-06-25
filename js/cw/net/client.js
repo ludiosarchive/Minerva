@@ -1344,7 +1344,7 @@ cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
 	this.underlyingStartTime_ = goog.Timer.getTime(this.callQueue_.clock);
 	this.underlying_.send(url, 'POST', payload, {
 		'Content-Type': 'application/octet-stream'});
-	// Use "application/octet-stream" instead of
+	// We use "application/octet-stream" instead of
 	// "application/x-www-form-urlencoded;charset=utf-8" because we don't
 	// want Minerva server or intermediaries to try to urldecode the POST body.
 };
