@@ -388,7 +388,9 @@ class XDRFrame(BetterResource):
 <body>
 <script src="/JSPATH/closure/goog/base.js"></script>
 <script src="/JSPATH/nongoog_deps.js"></script>
-<!-- TODO! add script that can do XHR -->
+<script>
+goog.require('cw.net.XHRSlave');
+</script>
 <script>
 	document.domain = %s;
 	function notifyParent() {
