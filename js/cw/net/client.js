@@ -36,6 +36,7 @@ goog.require('goog.Timer');
 goog.require('goog.net.XhrIo');
 goog.require('goog.net.EventType');
 goog.require('goog.uri.utils');
+goog.require('goog.object');
 goog.require('cw.math');
 goog.require('cw.eventual');
 goog.require('cw.repr');
@@ -1378,23 +1379,32 @@ cw.net.ClientTransport.prototype.httpResponseReceived_ = function() {
 };
 
 /**
+ * @private
+ */
+cw.net.ClientTransport.prototype.httpResponseEnded_ = function() {
+	// TODO: is this really a good place to take the end time?  Keep
+	// in mind streaming XHR requests.
+	this.underlyingStopTime_ = goog.Timer.getTime(this.callQueue_.clock);
+	this.dispose();
+};
+
+/**
  * @param {string} payload
  * @private
  */
 cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
-	var xhr = new goog.net.XhrIo();
-	goog.events.listen(xhr, goog.net.EventType.COMPLETE,
-		goog.bind(this.httpResponseReceived_, this));
-	goog.asserts.assert(this.underlying_ === null, 'already have an underlying_');
-	this.underlying_ = xhr;
 	var url = this.becomePrimary_ ?
 		this.endpoint_.primaryUrl : this.endpoint_.secondaryUrl;
+	var contentWindow = this.becomePrimary_ ?
+		this.endpoint_.primaryWindow : this.endpoint_.secondaryWindow;
+
+	goog.asserts.assert(this.underlying_ === null, 'already have an underlying_');
+	var onFramesCallback = goog.bind(this.framesReceived_, this);
+	var onCompleteCallback = goog.bind(this.httpResponseEnded_, this);
+	this.underlying_ = cw.net.theXHRMasterTracker_.createNew(contentWindow);
 	this.underlyingStartTime_ = goog.Timer.getTime(this.callQueue_.clock);
-	this.underlying_.send(url, 'POST', payload, {
-		'Content-Type': 'application/octet-stream'});
-	// We use "application/octet-stream" instead of
-	// "application/x-www-form-urlencoded;charset=utf-8" because we don't
-	// want Minerva server or intermediaries to try to urldecode the POST body.
+
+	this.underlying_.makeRequest(url, 'POST', payload);
 };
 
 /**
@@ -1914,3 +1924,154 @@ cw.net.FlashSocketConduit.prototype.disposeInternal = function() {
 
 cw.net.FlashSocketConduit.logger = goog.debug.Logger.getLogger('cw.net.FlashSocketConduit');
 cw.net.FlashSocketConduit.logger.setLevel(goog.debug.Logger.Level.ALL);
+
+
+
+/**
+ *
+ *
+ * @param {!Window} contentWindow
+ * @param {string} reqId
+ * @constructor
+ * @extends {goog.Disposable}
+ * @private
+ */
+cw.net.XHRMaster = function(reqId, contentWindow, onFramesCallback, onCompleteCallback) {
+	goog.Disposable.call(this);
+
+	/**
+	 * @type {string}
+	 */
+	this.reqId_ = reqId;
+
+	/**
+	 * @type {!Window}
+	 */
+	this.contentWindow_ = contentWindow;
+
+	/**
+	 * @type {!Function}
+	 */
+	this.onFramesCallback_ = onFramesCallback;
+
+	/**
+	 * @type {!Function}
+	 */
+	this.onCompleteCallback_ = onCompleteCallback;
+};
+goog.inherits(cw.net.XHRMaster, goog.Disposable);
+
+
+/**
+ * @param {string} url
+ * @param {string} method "POST" or "GET".
+ * @param {string} payload The POST payload, or ""
+ */
+cw.net.XHRMaster.prototype.makeRequest = function(url, method, payload) {
+	this.contentWindow_['__XHRSlave_makeRequest'](this.reqId_, url, method, payload);
+};
+
+/**
+ * @type {!Array.<string>} frames
+ * @private
+ */
+cw.net.XHRMaster.prototype.onframes_ = function(frames) {
+	this.onFramesCallback_(frames);
+};
+
+cw.net.XHRMaster.prototype.oncomplete_ = function() {
+	this.onCompleteCallback_();
+};
+
+cw.net.XHRMaster.prototype.disposeInternal = function() {
+	// Note: it might already know it is offline, if oncomplete_ was called.
+	cw.net.theXHRMasterTracker_.masterOffline_(this);
+	this.contentWindow_['__XHRSlave_dispose'](this.reqId_);
+	delete this.contentWindow_;
+};
+
+
+
+/**
+ * @constructor
+ * @extends {goog.Disposable}
+ * @private
+ */
+cw.net.XHRMasterTracker = function() {
+	goog.Disposable.call(this);
+
+	/**
+	 * @type {!Object.<string, !cw.net.XHRMaster>}
+	 * @private
+	 */
+	this.masters_ = {};
+};
+
+/**
+ * @param {!Window} contentWindow
+ * @private
+ */
+cw.net.XHRMasterTracker.prototype.createNew =
+function(contentWindow, onFramesCallback, onCompleteCallback) {
+	var reqId = '_' + goog.string.getRandomString();
+	var master = new cw.net.XHRMaster(
+		reqId, contentWindow, onFramesCallback, onCompleteCallback);
+	this.masters_[reqId] = master;
+	return master;
+};
+
+/**
+ * @param {string} reqId
+ * @param {!Array.<string>} frames
+ * @private
+ */
+cw.net.XHRMasterTracker.prototype.onframes_ = function(reqId, frames) {
+	var master = this.masters_[reqId];
+	if(!master) {
+		throw Error("onframes_: no master for " + cw.repr.repr(reqId));
+	}
+	master.onframes_(frames);
+};
+
+/**
+ * @param {string} reqId
+ * @private
+ */
+cw.net.XHRMasterTracker.prototype.oncomplete_ = function(reqId) {
+	var master = this.masters_[reqId];
+	if(!master) {
+		throw Error("oncomplete_: no master for " + cw.repr.repr(reqId));
+	}
+	this.masterOffline_(master);
+	master.oncomplete_();
+};
+
+/**
+ * @param {!cw.net.XHRMaster} master
+ * @private
+ */
+cw.net.XHRMasterTracker.prototype.masterOffline_ = function(master) {
+	delete this.masters_[master.reqId_];
+};
+
+cw.net.XHRMasterTracker.prototype.disposeInternal = function() {
+	var masters = goog.object.getValues(this.masters_);
+	while(masters.length) {
+		masters.pop().dispose();
+	}
+	this.masters_ = {};
+};
+
+
+/**
+ * @type {!cw.net.XHRMasterTracker}
+ * @private
+ */
+cw.net.theXHRMasterTracker_ = new cw.net.XHRMaster();
+
+
+goog.global['__XHRMaster_onframes'] =
+	goog.bind(cw.net.theXHRMasterTracker_.onframes_, cw.net.theXHRMasterTracker_);
+
+goog.global['__XHRMaster_oncomplete'] =
+	goog.bind(cw.net.theXHRMasterTracker_.oncomplete_, cw.net.theXHRMasterTracker_);
