@@ -209,6 +209,33 @@ chatapp.loadFlashConnector_ = function() {
 
 
 /**
+ * @return {!goog.async.Deferred} a Deferred that fires when both iframes
+ * 	are loaded.
+ */
+chatapp.waitForIframes = function() {
+	chatapp.logger.info('Waiting for iframes...');
+	var d = new goog.async.Deferred();
+	var count = __XDRFrame_loaded.done.length;
+	var need;
+	var gotAnotherIframe = function(ignoredId) {
+		count += 1;
+		need = 2 - count;
+		if(!need) {
+			chatapp.logger.info('Got iframes after waiting.');
+			d.callback(null);
+		}
+	}
+	__XDRFrame_loaded.done = {'push': gotAnotherIframe};
+	need = 2 - count;
+	if(!need) {
+		chatapp.logger.info('Already had all iframes.');
+		d.callback(null);
+	}
+	return d;
+};
+
+
+/**
  * @return {!goog.async.Deferred} Deferred that fires with a {!cw.net.Endpoint}
  */
 chatapp.getEndpoint = function() {
@@ -216,26 +243,24 @@ chatapp.getEndpoint = function() {
 	var queryData = url.getQueryData();
 	var mode = queryData.get('mode');
 	if(mode == 'http') {
-		// Assume both iframes are loaded
-		if(__XDRFrame_loaded.done.length != 2) {
-			throw Error("One of the 2 iframes hasn't loaded yet. " +
-				"Improve this code to wait for them.");
-		}
+		var d = chatapp.waitForIframes();
+		d.addCallback(function() {
+			var primaryWindow = goog.dom.getFrameContentWindow(
+				goog.dom.getElement('chatapp-iframe-1'));
+			var secondaryWindow = goog.dom.getFrameContentWindow(
+				goog.dom.getElement('chatapp-iframe-2'));
 
-		var primaryWindow = goog.dom.getFrameContentWindow(
-			goog.dom.getElement('chatapp-iframe-1'));
-		var secondaryWindow = goog.dom.getFrameContentWindow(
-			goog.dom.getElement('chatapp-iframe-2'));
+			var primaryUrl = new goog.Uri(__XDRFrame_loaded.url1);
+			primaryUrl.setPath('/httpface/');
 
-		var primaryUrl = new goog.Uri(__XDRFrame_loaded.url1);
-		primaryUrl.setPath('/httpface/');
+			var secondaryUrl = new goog.Uri(__XDRFrame_loaded.url2);
+			secondaryUrl.setPath('/httpface/');
 
-		var secondaryUrl = new goog.Uri(__XDRFrame_loaded.url2);
-		secondaryUrl.setPath('/httpface/');
-
-		var endpoint = new cw.net.HttpEndpoint(
-			primaryUrl.toString(), primaryWindow, secondaryUrl.toString(), secondaryWindow);
-		return goog.async.Deferred.succeed(endpoint);
+			var endpoint = new cw.net.HttpEndpoint(
+				primaryUrl.toString(), primaryWindow, secondaryUrl.toString(), secondaryWindow);
+			return endpoint;
+		});
+		return d;
 	} else {
 		var host = url.getDomain();
 		var port = 843;
