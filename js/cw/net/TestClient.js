@@ -61,7 +61,8 @@ var XHR_LONGPOLL = cw.net.TransportType_.XHR_LONGPOLL;
 var SACK = cw.net.SACK;
 
 var fakeHttpEndpoint = new cw.net.HttpEndpoint(
-	"/TestClient-not-a-real-endpoint/", "/TestClient-not-a-real-endpoint/");
+	"http://127.0.0.1/TestClient-not-a-real-endpoint/", null,
+	"http://127.0.0.1/TestClient-not-a-real-endpoint/", null);
 
 
 /**
@@ -512,7 +513,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealHttpTests').methods(
 
 	function getEndpoint_(self) {
-		httpFaceEndpoint = new cw.net.HttpEndpoint("/httpface/", "/httpface/");
+		var pageUrl = new goog.Uri(window.location.href);
+		var endpointUrl = pageUrl.resolve(new goog.Uri('/httpface/')).toString();
+		httpFaceEndpoint = new cw.net.HttpEndpoint(endpointUrl, null, endpointUrl, null);
 		return goog.async.Deferred.succeed(httpFaceEndpoint);
 	}
 );

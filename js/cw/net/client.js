@@ -83,16 +83,41 @@ cw.net.SocketEndpoint = function(host, port, tracker) {
 /**
  * Object to represent an HTTP endpoint.
  *
- * @param {string} primaryUrl URL for primary HTTP transports.
- * @param {string} secondaryUrl URL for secondary HTTP transports.
+ * @param {string} primaryUrl Absolute URL for primary HTTP transports.
+ * @param {Window} primaryWindow The contentWindow of an iframe that may
+ * 	help us make XHR requests to {@code primaryUrl}.  If none, use `null`.
+ * @param {string} secondaryUrl Absolute URL for secondary HTTP transports.
+ * @param {Window} secondaryWindow The contentWindow of an iframe that may
+ * 	help us make XHR requests to {@code secondaryUrl}. If none, use `null`.
  * @constructor
  */
-cw.net.HttpEndpoint = function(primaryUrl, secondaryUrl) {
+cw.net.HttpEndpoint = function(primaryUrl, primaryWindow, secondaryUrl, secondaryWindow) {
 	/** @type {string} */
 	this.primaryUrl = primaryUrl;
+	/** @type {Window} */
+	this.primaryWindow = primaryWindow;
 	/** @type {string} */
 	this.secondaryUrl = secondaryUrl;
+	/** @type {Window} */
+	this.secondaryWindow = secondaryWindow;
+
+	// Doing XHR with relative URLs is broken in some older browsers
+	// (if I recall correctly, in Safari when XHR is done from iframes).
+	// So, disallow relative URLs.
+	this.ensureAbsoluteURLs_();
 };
+
+
+cw.net.HttpEndpoint.prototype.ensureAbsoluteURLs_ = function() {
+	if((this.primaryUrl.indexOf("http://") == 0 || this.primaryUrl.indexOf("https://") == 0) &&
+	(this.secondaryUrl.indexOf("http://") == 0 || this.secondaryUrl.indexOf("https://") == 0)) {
+		// OK
+	} else {
+		throw Error("primaryUrl and secondUrl must be absolute URLs "+
+			"with http or https scheme");
+	}
+};
+
 
 
 /**
