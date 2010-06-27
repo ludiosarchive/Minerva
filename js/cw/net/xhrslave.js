@@ -18,10 +18,11 @@ goog.require('goog.net.EventType');
  * @param {!cw.net.XHRSlaveTracker} tracker
  * @param {string} reqId
  * @constructor
+ * @extends {goog.Disposable}
  */
 cw.net.XHRSlave = function(tracker, reqId) {
 	/**
-	 * @type {!cw.net.XHRSlave}
+	 * @type {!cw.net.XHRSlaveTracker}
 	 * @private
 	 */
 	this.tracker_ = tracker;
@@ -49,9 +50,9 @@ cw.net.XHRSlave.prototype.httpResponseReceived_ = function() {
 	}
 	var frames = responseText.split('\n');
 	var last = frames.pop();
-	// TODO: warn parent about incomplete frame
-	this.tracker_.onframes_(frames);
-	this.tracker_.oncomplete_();
+	// TODO: warn parent about incomplete frame `last`, if non-empty
+	goog.global.parent['__XHRMaster_onframes'](this.reqId_, frames);
+	goog.global.parent['__XHRMaster_oncomplete'](this.reqId_);
 	this.dispose();
 };
 
@@ -67,7 +68,7 @@ cw.net.XHRSlave.prototype.httpResponseReceived_ = function() {
  */
 cw.net.XHRSlave.prototype.makeRequest = function(url, method, payload) {
 	this.underlying_ = new goog.net.XhrIo();
-	goog.events.listen(xhr, goog.net.EventType.COMPLETE,
+	goog.events.listen(this.underlying_, goog.net.EventType.COMPLETE,
 		goog.bind(this.httpResponseReceived_, this));
 
 	this.underlying_.send(url, method, payload, {
@@ -111,12 +112,15 @@ goog.inherits(cw.net.XHRSlaveTracker, goog.Disposable);
  * @param {string} payload The POST payload, or ""
  * @private
  */
-cw.net.XHRSlaveTracker.prototype.makeRequest = function(reqId, url, method, payload) {
-	var slave = new cw.net.XHRSlave(tracker, reqId);
+cw.net.XHRSlaveTracker.prototype.makeRequest_ = function(reqId, url, method, payload) {
+	var slave = new cw.net.XHRSlave(this, reqId);
 	this.slaves_[reqId] = slave;
 	slave.makeRequest(url, method, payload);
 };
 
+/**
+ * @private
+ */
 cw.net.XHRSlaveTracker.prototype.disposeRequest_ = function(reqId) {
 	var slave = this.slaves_[reqId];
 	if(!slave) {
@@ -146,7 +150,7 @@ cw.net.XHRSlaveTracker.prototype.disposeInternal = function() {
 cw.net.theXHRSlaveTracker_ = new cw.net.XHRSlaveTracker();
 
 goog.global['__XHRSlave_makeRequest'] =
-	goog.bind(cw.net.theXHRSlaveTracker_.makeRequest, cw.net.theXHRSlaveTracker_);
+	goog.bind(cw.net.theXHRSlaveTracker_.makeRequest_, cw.net.theXHRSlaveTracker_);
 
 goog.global['__XHRSlave_dispose'] =
-	goog.bind(cw.net.theXHRSlaveTracker_.disposeRequest, cw.net.theXHRSlaveTracker_);
+	goog.bind(cw.net.theXHRSlaveTracker_.disposeRequest_, cw.net.theXHRSlaveTracker_);

@@ -94,6 +94,8 @@ cw.net.SocketEndpoint = function(host, port, tracker) {
  * @constructor
  */
 cw.net.HttpEndpoint = function(primaryUrl, primaryWindow, secondaryUrl, secondaryWindow) {
+	goog.asserts.assertString(primaryUrl);
+	goog.asserts.assertString(secondaryUrl);
 	/** @type {string} */
 	this.primaryUrl = primaryUrl;
 	/** @type {!Window} */
@@ -1357,30 +1359,6 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 /**
  * @private
  */
-cw.net.ClientTransport.prototype.httpResponseReceived_ = function() {
-	this.underlyingStopTime_ = goog.Timer.getTime(this.callQueue_.clock);
-	var responseText = this.underlying_.getResponseText();
-	// Proxies might convert \n to \r\n, so convert terminators if necessary.
-	if(responseText.indexOf('\r\n') != -1) {
-		responseText = responseText.replace(/\r\n/g, '\n');
-	}
-	var frames = responseText.split('\n');
-	var last = frames.pop();
-	if(last != "") {
-		// This isn't really a big deal, because Streams survive broken
-		// transports.
-		// Note: response might be incomplete even if this case
-		// is not run, because the response might have beeen abruptly
-		// terminated after a newline.
-		cw.net.ClientTransport.logger.warning("got incomplete http response");
-	}
-	this.framesReceived_(frames);
-	this.dispose();
-};
-
-/**
- * @private
- */
 cw.net.ClientTransport.prototype.httpResponseEnded_ = function() {
 	// TODO: is this really a good place to take the end time?  Keep
 	// in mind streaming XHR requests.
@@ -1398,12 +1376,13 @@ cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
 	var contentWindow = this.becomePrimary_ ?
 		this.endpoint_.primaryWindow : this.endpoint_.secondaryWindow;
 
-	goog.asserts.assert(this.underlying_ === null, 'already have an underlying_');
 	var onFramesCallback = goog.bind(this.framesReceived_, this);
 	var onCompleteCallback = goog.bind(this.httpResponseEnded_, this);
-	this.underlying_ = cw.net.theXHRMasterTracker_.createNew(contentWindow);
-	this.underlyingStartTime_ = goog.Timer.getTime(this.callQueue_.clock);
+	goog.asserts.assert(this.underlying_ === null, 'already have an underlying_');
+	this.underlying_ = cw.net.theXHRMasterTracker_.createNew(
+		contentWindow, onFramesCallback, onCompleteCallback);
 
+	this.underlyingStartTime_ = goog.Timer.getTime(this.callQueue_.clock);
 	this.underlying_.makeRequest(url, 'POST', payload);
 };
 
@@ -1972,13 +1951,16 @@ cw.net.XHRMaster.prototype.makeRequest = function(url, method, payload) {
 };
 
 /**
- * @type {!Array.<string>} frames
+ * @param {!Array.<string>} frames
  * @private
  */
 cw.net.XHRMaster.prototype.onframes_ = function(frames) {
 	this.onFramesCallback_(frames);
 };
 
+/**
+ * @private
+ */
 cw.net.XHRMaster.prototype.oncomplete_ = function() {
 	this.onCompleteCallback_();
 };
@@ -2067,7 +2049,7 @@ cw.net.XHRMasterTracker.prototype.disposeInternal = function() {
  * @type {!cw.net.XHRMasterTracker}
  * @private
  */
-cw.net.theXHRMasterTracker_ = new cw.net.XHRMaster();
+cw.net.theXHRMasterTracker_ = new cw.net.XHRMasterTracker();
 
 
 goog.global['__XHRMaster_onframes'] =
