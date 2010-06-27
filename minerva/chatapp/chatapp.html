@@ -214,7 +214,7 @@ chatapp.getEndpoint = function() {
 	if(mode == 'http') {
 		var pageUrl = new goog.Uri(window.location.href);
 		var endpointUrl = pageUrl.resolve(new goog.Uri('/httpface/')).toString();
-		var endpoint = new cw.net.HttpEndpoint(endpointUrl, null, endpointUrl, null);
+		var endpoint = new cw.net.HttpEndpoint(endpointUrl, goog.global, endpointUrl, goog.global);
 		return goog.async.Deferred.succeed(endpoint);
 	} else {
 		var host = url.getDomain();

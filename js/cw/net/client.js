@@ -35,6 +35,7 @@ goog.require('goog.Disposable');
 goog.require('goog.Timer');
 goog.require('goog.net.XhrIo');
 goog.require('goog.net.EventType');
+goog.require('goog.uri.utils');
 goog.require('cw.math');
 goog.require('cw.eventual');
 goog.require('cw.repr');
@@ -84,30 +85,34 @@ cw.net.SocketEndpoint = function(host, port, tracker) {
  * Object to represent an HTTP endpoint.
  *
  * @param {string} primaryUrl Absolute URL for primary HTTP transports.
- * @param {Window} primaryWindow The contentWindow of an iframe that may
- * 	help us make XHR requests to {@code primaryUrl}.  If none, use `null`.
+ * @param {!Window} primaryWindow The contentWindow of an iframe that may
+ * 	help us make XHR requests to {@code primaryUrl}, or this page's window.
  * @param {string} secondaryUrl Absolute URL for secondary HTTP transports.
- * @param {Window} secondaryWindow The contentWindow of an iframe that may
- * 	help us make XHR requests to {@code secondaryUrl}. If none, use `null`.
+ * @param {!Window} secondaryWindow The contentWindow of an iframe that may
+ * 	help us make XHR requests to {@code secondaryUrl}, or this page's window.
  * @constructor
  */
 cw.net.HttpEndpoint = function(primaryUrl, primaryWindow, secondaryUrl, secondaryWindow) {
 	/** @type {string} */
 	this.primaryUrl = primaryUrl;
-	/** @type {Window} */
+	/** @type {!Window} */
 	this.primaryWindow = primaryWindow;
 	/** @type {string} */
 	this.secondaryUrl = secondaryUrl;
-	/** @type {Window} */
+	/** @type {!Window} */
 	this.secondaryWindow = secondaryWindow;
 
 	// Doing XHR with relative URLs is broken in some older browsers
 	// (if I recall correctly, in Safari when XHR is done from iframes).
 	// So, disallow relative URLs.
 	this.ensureAbsoluteURLs_();
+
+	this.ensureSameOrigin_();
 };
 
-
+/**
+ * @private
+ */
 cw.net.HttpEndpoint.prototype.ensureAbsoluteURLs_ = function() {
 	if((this.primaryUrl.indexOf("http://") == 0 || this.primaryUrl.indexOf("https://") == 0) &&
 	(this.secondaryUrl.indexOf("http://") == 0 || this.secondaryUrl.indexOf("https://") == 0)) {
@@ -117,6 +122,24 @@ cw.net.HttpEndpoint.prototype.ensureAbsoluteURLs_ = function() {
 			"with http or https scheme");
 	}
 };
+
+/**
+ * Ensure that primaryWindow has the same origin as primaryUrl.
+ * Ensure that secondaryWindow has the same origin as secondaryUrl.
+ * @private
+ */
+cw.net.HttpEndpoint.prototype.ensureSameOrigin_ = function() {
+	// Note: URLs for iframes can change, but we hold a reference to
+	// its window, not the iframe itself.  But, bad things might happen if
+	// we later make requests on a "dead" window.
+	if(!goog.uri.utils.haveSameDomain(this.primaryUrl, this.primaryWindow.location.href)) {
+		throw Error("primaryWindow not same origin as primaryUrl");
+	}
+	if(!goog.uri.utils.haveSameDomain(this.secondaryUrl, this.secondaryWindow.location.href)) {
+		throw Error("secondaryWindow not same origin as secondaryUrl");
+	}
+};
+
 
 
 
