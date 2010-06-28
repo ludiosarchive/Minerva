@@ -1986,6 +1986,8 @@ cw.net.XHRMaster.prototype.disposeInternal = function() {
 
 
 /**
+ * An object that tracks all {@link cw.net.XHRMaster}s, because the peer
+ * frame must be able to reference them by a string.
  * @constructor
  * @extends {goog.Disposable}
  * @private

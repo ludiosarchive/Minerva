@@ -90,6 +90,8 @@ cw.net.XHRSlave.prototype.disposeInternal = function(reqId) {
 
 
 /**
+ * An object that tracks all {@link cw.net.XHRSlave}s, because the peer
+ * frame must be able to reference them by a string.
  * @constructor
  * @extends {goog.Disposable}
  * @private
