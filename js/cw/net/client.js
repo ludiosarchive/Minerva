@@ -36,6 +36,8 @@ goog.require('goog.Timer');
 goog.require('goog.net.XhrIo');
 goog.require('goog.net.EventType');
 goog.require('goog.uri.utils');
+goog.require('goog.object');
+goog.require('goog.userAgent');
 goog.require('cw.math');
 goog.require('cw.eventual');
 goog.require('cw.repr');
@@ -93,6 +95,8 @@ cw.net.SocketEndpoint = function(host, port, tracker) {
  * @constructor
  */
 cw.net.HttpEndpoint = function(primaryUrl, primaryWindow, secondaryUrl, secondaryWindow) {
+	goog.asserts.assertString(primaryUrl);
+	goog.asserts.assertString(secondaryUrl);
 	/** @type {string} */
 	this.primaryUrl = primaryUrl;
 	/** @type {!Window} */
@@ -1356,24 +1360,10 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 /**
  * @private
  */
-cw.net.ClientTransport.prototype.httpResponseReceived_ = function() {
+cw.net.ClientTransport.prototype.httpResponseEnded_ = function() {
+	// TODO: is this really a good place to take the end time?  Keep
+	// in mind streaming XHR requests.
 	this.underlyingStopTime_ = goog.Timer.getTime(this.callQueue_.clock);
-	var responseText = this.underlying_.getResponseText();
-	// Proxies might convert \n to \r\n, so convert terminators if necessary.
-	if(responseText.indexOf('\r\n') != -1) {
-		responseText = responseText.replace(/\r\n/g, '\n');
-	}
-	var frames = responseText.split('\n');
-	var last = frames.pop();
-	if(last != "") {
-		// This isn't really a big deal, because Streams survive broken
-		// transports.
-		// Note: response might be incomplete even if this case
-		// is not run, because the response might have beeen abruptly
-		// terminated after a newline.
-		cw.net.ClientTransport.logger.warning("got incomplete http response");
-	}
-	this.framesReceived_(frames);
 	this.dispose();
 };
 
@@ -1382,19 +1372,19 @@ cw.net.ClientTransport.prototype.httpResponseReceived_ = function() {
  * @private
  */
 cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
-	var xhr = new goog.net.XhrIo();
-	goog.events.listen(xhr, goog.net.EventType.COMPLETE,
-		goog.bind(this.httpResponseReceived_, this));
-	goog.asserts.assert(this.underlying_ === null, 'already have an underlying_');
-	this.underlying_ = xhr;
 	var url = this.becomePrimary_ ?
 		this.endpoint_.primaryUrl : this.endpoint_.secondaryUrl;
+	var contentWindow = this.becomePrimary_ ?
+		this.endpoint_.primaryWindow : this.endpoint_.secondaryWindow;
+
+	var onFramesCallback = goog.bind(this.framesReceived_, this);
+	var onCompleteCallback = goog.bind(this.httpResponseEnded_, this);
+	goog.asserts.assert(this.underlying_ === null, 'already have an underlying_');
+	this.underlying_ = cw.net.theXHRMasterTracker_.createNew(
+		contentWindow, onFramesCallback, onCompleteCallback);
+
 	this.underlyingStartTime_ = goog.Timer.getTime(this.callQueue_.clock);
-	this.underlying_.send(url, 'POST', payload, {
-		'Content-Type': 'application/octet-stream'});
-	// We use "application/octet-stream" instead of
-	// "application/x-www-form-urlencoded;charset=utf-8" because we don't
-	// want Minerva server or intermediaries to try to urldecode the POST body.
+	this.underlying_.makeRequest(url, 'POST', payload);
 };
 
 /**
@@ -1914,3 +1904,177 @@ cw.net.FlashSocketConduit.prototype.disposeInternal = function() {
 
 cw.net.FlashSocketConduit.logger = goog.debug.Logger.getLogger('cw.net.FlashSocketConduit');
 cw.net.FlashSocketConduit.logger.setLevel(goog.debug.Logger.Level.ALL);
+
+
+
+/**
+ * An XHR that is really being done by an XHRSlave.  Used for making XHR
+ * requests across subdomains.
+ *
+ * Note: this is slightly overkill because it was intended to work over a
+ * Worker boundary as well, not just an iframe boundary.  TODO: if this
+ * is ever used for XHR-in-Worker, get rid of the synchronous errors and
+ * possibly use log messages instead.  (Because an XHRSlave could disappear
+ * before the other side knows about it; the same for XHRMaster.)
+ *
+ * After writing this, I found out that I don't actually need Worker; I only
+ * need SharedWorker.  And that SharedWorker will run the entire Stream,
+ * not just an XHR request.
+ *
+ * @param {!Window} contentWindow
+ * @param {string} reqId
+ * @constructor
+ * @extends {goog.Disposable}
+ * @private
+ */
+cw.net.XHRMaster = function(reqId, contentWindow, onFramesCallback, onCompleteCallback) {
+	goog.Disposable.call(this);
+
+	/**
+	 * @type {string}
+	 */
+	this.reqId_ = reqId;
+
+	/**
+	 * @type {!Window}
+	 */
+	this.contentWindow_ = contentWindow;
+
+	/**
+	 * @type {!Function}
+	 */
+	this.onFramesCallback_ = onFramesCallback;
+
+	/**
+	 * @type {!Function}
+	 */
+	this.onCompleteCallback_ = onCompleteCallback;
+};
+goog.inherits(cw.net.XHRMaster, goog.Disposable);
+
+
+/**
+ * @param {string} url
+ * @param {string} method "POST" or "GET".
+ * @param {string} payload The POST payload, or ""
+ */
+cw.net.XHRMaster.prototype.makeRequest = function(url, method, payload) {
+	this.contentWindow_['__XHRSlave_makeRequest'](this.reqId_, url, method, payload);
+};
+
+/**
+ * @param {!Array.<string>} frames
+ * @private
+ */
+cw.net.XHRMaster.prototype.onframes_ = function(frames) {
+	this.onFramesCallback_(frames);
+};
+
+/**
+ * @private
+ */
+cw.net.XHRMaster.prototype.oncomplete_ = function() {
+	this.onCompleteCallback_();
+};
+
+cw.net.XHRMaster.prototype.disposeInternal = function() {
+	// Note: it might already know it is offline, if oncomplete_ was called.
+	cw.net.theXHRMasterTracker_.masterOffline_(this);
+	this.contentWindow_['__XHRSlave_dispose'](this.reqId_);
+	delete this.contentWindow_;
+};
+
+
+
+/**
+ * An object that tracks all {@link cw.net.XHRMaster}s, because the peer
+ * frame must be able to reference them by a string.
+ * @constructor
+ * @extends {goog.Disposable}
+ * @private
+ */
+cw.net.XHRMasterTracker = function() {
+	goog.Disposable.call(this);
+
+	/**
+	 * @type {!Object.<string, !cw.net.XHRMaster>}
+	 * @private
+	 */
+	this.masters_ = {};
+};
+
+/**
+ * @param {!Window} contentWindow
+ * @private
+ */
+cw.net.XHRMasterTracker.prototype.createNew =
+function(contentWindow, onFramesCallback, onCompleteCallback) {
+	var reqId = '_' + goog.string.getRandomString();
+	var master = new cw.net.XHRMaster(
+		reqId, contentWindow, onFramesCallback, onCompleteCallback);
+	this.masters_[reqId] = master;
+	return master;
+};
+
+/**
+ * @param {string} reqId
+ * @param {!Array.<string>} frames
+ * @private
+ */
+cw.net.XHRMasterTracker.prototype.onframes_ = function(reqId, frames) {
+	if(goog.userAgent.IE) {
+		// Make a copy of the Array, because if the iframe it came from
+		// is destroyed, the Array prototype will soon corrupt.
+		// See Closure Library's goog.array.concat JSDoc.
+		// See https://connect.microsoft.com/IE/feedback/details/559477/
+		frames = goog.array.concat(frames);
+	}
+	var master = this.masters_[reqId];
+	if(!master) {
+		throw Error("onframes_: no master for " + cw.repr.repr(reqId));
+	}
+	master.onframes_(frames);
+};
+
+/**
+ * @param {string} reqId
+ * @private
+ */
+cw.net.XHRMasterTracker.prototype.oncomplete_ = function(reqId) {
+	var master = this.masters_[reqId];
+	if(!master) {
+		throw Error("oncomplete_: no master for " + cw.repr.repr(reqId));
+	}
+	this.masterOffline_(master);
+	master.oncomplete_();
+};
+
+/**
+ * @param {!cw.net.XHRMaster} master
+ * @private
+ */
+cw.net.XHRMasterTracker.prototype.masterOffline_ = function(master) {
+	delete this.masters_[master.reqId_];
+};
+
+cw.net.XHRMasterTracker.prototype.disposeInternal = function() {
+	var masters = goog.object.getValues(this.masters_);
+	while(masters.length) {
+		masters.pop().dispose();
+	}
+	this.masters_ = {};
+};
+
+
+/**
+ * @type {!cw.net.XHRMasterTracker}
+ * @private
+ */
+cw.net.theXHRMasterTracker_ = new cw.net.XHRMasterTracker();
+
+
+goog.global['__XHRMaster_onframes'] =
+	goog.bind(cw.net.theXHRMasterTracker_.onframes_, cw.net.theXHRMasterTracker_);
+
+goog.global['__XHRMaster_oncomplete'] =
+	goog.bind(cw.net.theXHRMasterTracker_.oncomplete_, cw.net.theXHRMasterTracker_);

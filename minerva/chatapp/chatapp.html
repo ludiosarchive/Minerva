@@ -61,11 +61,15 @@ If no such cookie, write out the iframes immediately.
 	// a mismatch of "explicit port" and "implicit port" may prevent
 	// cross-subdomain interaction from working in some browsers.
 	__XDRFrame_loaded.portString = location.port ? ':' + location.port : "";
+	__XDRFrame_loaded.url1 = location.protocol + '//{{ sub1 }}.{{ domain }}' +
+		__XDRFrame_loaded.portString + '/';
+	__XDRFrame_loaded.url2 = location.protocol + '//{{ sub2 }}.{{ domain }}' +
+		__XDRFrame_loaded.portString + '/';
 	document.write(
-		'<iframe width=16 height=16 src="//{{ sub1 }}.{{ domain }}' +
-			__XDRFrame_loaded.portString + '/xdrframe/?id=1"></iframe>' +
-		'<iframe width=16 height=16 src="//{{ sub2 }}.{{ domain }}' +
-			__XDRFrame_loaded.portString + '/xdrframe/?id=2"></iframe>');
+		'<iframe width=16 height=16 src="' + __XDRFrame_loaded.url1 +
+			'xdrframe/?id=1" id="chatapp-iframe-1"></iframe>' +
+		'<iframe width=16 height=16 src="' + __XDRFrame_loaded.url2 +
+			'xdrframe/?id=2" id="chatapp-iframe-2"></iframe>');
 </script>
 
 <div id="FlashConnectorSwf"></div>
@@ -205,6 +209,33 @@ chatapp.loadFlashConnector_ = function() {
 
 
 /**
+ * @return {!goog.async.Deferred} a Deferred that fires when both iframes
+ * 	are loaded.
+ */
+chatapp.waitForIframes = function() {
+	chatapp.logger.info('Waiting for iframes...');
+	var d = new goog.async.Deferred();
+	var count = __XDRFrame_loaded.done.length;
+	var need;
+	var gotAnotherIframe = function(ignoredId) {
+		count += 1;
+		need = 2 - count;
+		if(!need) {
+			chatapp.logger.info('Got iframes after waiting.');
+			d.callback(null);
+		}
+	}
+	__XDRFrame_loaded.done = {'push': gotAnotherIframe};
+	need = 2 - count;
+	if(!need) {
+		chatapp.logger.info('Already had all iframes.');
+		d.callback(null);
+	}
+	return d;
+};
+
+
+/**
  * @return {!goog.async.Deferred} Deferred that fires with a {!cw.net.Endpoint}
  */
 chatapp.getEndpoint = function() {
@@ -212,10 +243,24 @@ chatapp.getEndpoint = function() {
 	var queryData = url.getQueryData();
 	var mode = queryData.get('mode');
 	if(mode == 'http') {
-		var pageUrl = new goog.Uri(window.location.href);
-		var endpointUrl = pageUrl.resolve(new goog.Uri('/httpface/')).toString();
-		var endpoint = new cw.net.HttpEndpoint(endpointUrl, goog.global, endpointUrl, goog.global);
-		return goog.async.Deferred.succeed(endpoint);
+		var d = chatapp.waitForIframes();
+		d.addCallback(function() {
+			var primaryWindow = goog.dom.getFrameContentWindow(
+				goog.dom.getElement('chatapp-iframe-1'));
+			var secondaryWindow = goog.dom.getFrameContentWindow(
+				goog.dom.getElement('chatapp-iframe-2'));
+
+			var primaryUrl = new goog.Uri(__XDRFrame_loaded.url1);
+			primaryUrl.setPath('/httpface/');
+
+			var secondaryUrl = new goog.Uri(__XDRFrame_loaded.url2);
+			secondaryUrl.setPath('/httpface/');
+
+			var endpoint = new cw.net.HttpEndpoint(
+				primaryUrl.toString(), primaryWindow, secondaryUrl.toString(), secondaryWindow);
+			return endpoint;
+		});
+		return d;
 	} else {
 		var host = url.getDomain();
 		var port = 843;
