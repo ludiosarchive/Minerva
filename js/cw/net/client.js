@@ -1907,7 +1907,18 @@ cw.net.FlashSocketConduit.logger.setLevel(goog.debug.Logger.Level.ALL);
 
 
 /**
+ * An XHR that is really being done by an XHRSlave.  Used for making XHR
+ * requests across subdomains.
  *
+ * Note: this is slightly overkill because it was intended to work over a
+ * Worker boundary as well, not just an iframe boundary.  TODO: if this
+ * is ever used for XHR-in-Worker, get rid of the synchronous errors and
+ * possibly use log messages instead.  (Because an XHRSlave could disappear
+ * before the other side knows about it; the same for XHRMaster.)
+ *
+ * After writing this, I found out that I don't actually need Worker; I only
+ * need SharedWorker.  And that SharedWorker will run the entire Stream,
+ * not just an XHR request.
  *
  * @param {!Window} contentWindow
  * @param {string} reqId
