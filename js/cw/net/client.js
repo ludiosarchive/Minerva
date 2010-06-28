@@ -37,6 +37,7 @@ goog.require('goog.net.XhrIo');
 goog.require('goog.net.EventType');
 goog.require('goog.uri.utils');
 goog.require('goog.object');
+goog.require('goog.userAgent');
 goog.require('cw.math');
 goog.require('cw.eventual');
 goog.require('cw.repr');
@@ -2021,6 +2022,13 @@ function(contentWindow, onFramesCallback, onCompleteCallback) {
  * @private
  */
 cw.net.XHRMasterTracker.prototype.onframes_ = function(reqId, frames) {
+	if(goog.userAgent.IE) {
+		// Make a copy of the Array, because if the iframe it came from
+		// is destroyed, the Array prototype will soon corrupt.
+		// See Closure Library's goog.array.concat JSDoc.
+		// See https://connect.microsoft.com/IE/feedback/details/559477/
+		frames = goog.array.concat(frames);
+	}
 	var master = this.masters_[reqId];
 	if(!master) {
 		throw Error("onframes_: no master for " + cw.repr.repr(reqId));
