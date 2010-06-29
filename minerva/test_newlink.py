@@ -3,8 +3,8 @@ Notes on understanding this test file:
 
 -	Minerva's newlink was originally designed to transfer "boxes"
 	of varying type (including objects and lists and strings), but it
-	was then changed to only transfer str objects. In this file you'll
-	still see "box", but it really means "string".
+	was then changed to only transfer restricted strings. In this file
+	you'll still see "box", but it really means "string".
 
 -	If something in this file makes no sense, consider the possibility
 	that it was a victim of a search/replace spree.
