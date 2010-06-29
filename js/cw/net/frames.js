@@ -245,13 +245,17 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	}
 	obj.maxReceiveBytes = maxReceiveBytes;
 
-	// maxOpenTime is optional and has no limit by default
-	var maxOpenTime = cw.net.ensureNonNegIntegralInt_(
-		helloData.get(HP.maxOpenTime, cw.math.LARGEST_INTEGER));
-	if(maxOpenTime == null) {
-		throw new cw.net.InvalidHello("bad maxOpenTime");
+	// maxOpenTime is optional and has no limit by default.
+	// Time is in milliseconds.
+	var maxOpenTime = helloData.get(HP.maxOpenTime, MISSING_);
+	if(maxOpenTime != MISSING_) {
+		obj.maxOpenTime = cw.net.ensureNonNegIntegralInt_(maxOpenTime);
+		if(obj.maxOpenTime == null) {
+			throw new cw.net.InvalidHello("bad maxOpenTime");
+		}
+	} else {
+		obj.maxOpenTime = null;
 	}
-	obj.maxOpenTime = maxOpenTime;
 
 	return obj;
 };

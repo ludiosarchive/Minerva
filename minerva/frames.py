@@ -173,7 +173,7 @@ def helloDataToHelloFrame(helloData):
 	else:
 		obj.needPaddingBytes = 0
 
-	# Both are optional and have no limit by default
+	# maxReceiveBytes is optional and have no limit by default
 	try:
 		obj.maxReceiveBytes = ensureNonNegIntLimit(
 			helloData[Hello_maxReceiveBytes], 2**53) # e: ValueError, TypeError
@@ -182,11 +182,13 @@ def helloDataToHelloFrame(helloData):
 	except (TypeError, ValueError):
 		raise InvalidHello("bad maxReceiveBytes")
 
+	# maxOpenTime is optional and has no limit by default.
+	# Time is in milliseconds.
 	try:
 		obj.maxOpenTime = ensureNonNegIntLimit(
 			helloData[Hello_maxOpenTime], 2**53) # e: ValueError, TypeError
 	except KeyError:
-		obj.maxOpenTime = 2**53
+		obj.maxOpenTime = None
 	except (TypeError, ValueError):
 		raise InvalidHello("bad maxOpenTime")
 
