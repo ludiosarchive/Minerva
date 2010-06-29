@@ -31,7 +31,8 @@ goog.require('cw.net.EventType');
 goog.require('cw.net.ClientTransport');
 goog.require('cw.net.DoNothingTransport');
 
-// Load xhrslave into the test page window
+// Load xhrslave into the test page window, because some tests use
+// goog.global for the two contentWindow arguments in HttpEndpoint.
 goog.require('cw.net.XHRSlave');
 
 goog.require('cw.net.HelloFrame');
