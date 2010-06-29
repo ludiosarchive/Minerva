@@ -28,19 +28,18 @@ goog.require('goog.asserts');
 goog.require('goog.array');
 goog.require('goog.events');
 goog.require('goog.events.EventTarget');
-goog.require('goog.string');
 goog.require('goog.structs.Set');
 goog.require('goog.debug.Logger');
 goog.require('goog.Disposable');
 goog.require('goog.Timer');
 goog.require('goog.net.XhrIo');
-goog.require('goog.net.EventType');
 goog.require('goog.uri.utils');
 goog.require('goog.object');
 goog.require('goog.userAgent');
 goog.require('cw.math');
 goog.require('cw.eventual');
 goog.require('cw.repr');
+goog.require('cw.string');
 goog.require('cw.net.SACK');
 goog.require('cw.net.Queue');
 goog.require('cw.net.Incoming');
@@ -281,7 +280,7 @@ cw.net.IMinervaProtocol.prototype.stringsReceived = function(strings) {
  * @private
  */
 cw.net.makeStreamId_ = function() {
-	return goog.string.getRandomString() + goog.string.getRandomString();
+	return cw.string.getCleanRandomString() + cw.string.getCleanRandomString();
 };
 
 
@@ -2009,7 +2008,7 @@ cw.net.XHRMasterTracker = function() {
  */
 cw.net.XHRMasterTracker.prototype.createNew =
 function(contentWindow, onFramesCallback, onCompleteCallback) {
-	var reqId = '_' + goog.string.getRandomString();
+	var reqId = '_' + cw.string.getCleanRandomString();
 	var master = new cw.net.XHRMaster(
 		reqId, contentWindow, onFramesCallback, onCompleteCallback);
 	this.masters_[reqId] = master;

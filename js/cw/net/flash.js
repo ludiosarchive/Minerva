@@ -14,13 +14,13 @@ goog.provide('cw.net.FlashSocket');
 goog.provide('cw.net.FlashSocketTracker');
 
 goog.require('goog.asserts');
-goog.require('goog.string');
 goog.require('goog.object');
 goog.require('goog.debug.Logger');
 goog.require('goog.Disposable');
 goog.require('cw.eventual');
 goog.require('cw.externalinterface');
 goog.require('cw.repr');
+goog.require('cw.string');
 
 
 /**
@@ -104,7 +104,7 @@ cw.net.FlashSocket = function(tracker, proto) {
 	 * @type {string}
 	 * @private
 	 */
-	this.id_ = '_' + goog.string.getRandomString();
+	this.id_ = '_' + cw.string.getCleanRandomString();
 	goog.asserts.assert(/^([_0-9a-zA-Z]*)$/.test(this.id_), "id has bad chars");
 
 	/**
@@ -277,7 +277,7 @@ cw.net.FlashSocketTracker = function(callQueue, bridge) {
 	 * @type {string}
 	 * @private
 	 */
-	this.callbackFunc_ = '__FST_' + goog.string.getRandomString();
+	this.callbackFunc_ = '__FST_' + cw.string.getCleanRandomString();
 
 	goog.global[this.callbackFunc_] = goog.bind(this.eiCallback_, this);
 

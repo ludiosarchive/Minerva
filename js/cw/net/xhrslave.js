@@ -10,7 +10,10 @@
 
 goog.provide('cw.net.XHRSlave');
 
+goog.require('cw.repr');
 goog.require('goog.Disposable');
+goog.require('goog.events');
+goog.require('goog.object');
 goog.require('goog.net.XhrIo');
 goog.require('goog.net.EventType');
 
