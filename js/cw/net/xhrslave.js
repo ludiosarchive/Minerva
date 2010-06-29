@@ -10,7 +10,6 @@
 
 goog.provide('cw.net.XHRSlave');
 
-goog.require('cw.repr');
 goog.require('goog.Disposable');
 goog.require('goog.events');
 goog.require('goog.object');
@@ -136,7 +135,10 @@ cw.net.XHRSlaveTracker.prototype.makeRequest_ = function(reqId, url, method, pay
 cw.net.XHRSlaveTracker.prototype.disposeRequest_ = function(reqId) {
 	var slave = this.slaves_[reqId];
 	if(!slave) {
-		throw Error("disposeRequest_: no slave for " + cw.repr.repr(reqId));
+		// Slave not found; nothing to dispose.  Don't raise an error
+		// because XHRSlaveTracker was designed to work over an
+		// async postMessage bridge.
+		return;
 	}
 	slave.dispose();
 };
