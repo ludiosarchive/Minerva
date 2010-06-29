@@ -47,6 +47,9 @@ cw.net.XHRSlave.prototype.underlying_ = null;
 
 cw.net.XHRSlave.prototype.httpResponseReceived_ = function() {
 	var responseText = this.underlying_.getResponseText();
+	//parent['__childIframeLogger'].fine(
+	//	'XHRSlave.httpResponseReceived_ with ' + responseText.length + ' chars.');
+
 	// Proxies might convert \n to \r\n, so convert terminators if necessary.
 	if(responseText.indexOf('\r\n') != -1) {
 		responseText = responseText.replace(/\r\n/g, '\n');
@@ -55,8 +58,11 @@ cw.net.XHRSlave.prototype.httpResponseReceived_ = function() {
 	var last = frames.pop();
 	// TODO: warn parent about incomplete frame `last`, if non-empty
 	goog.global.parent['__XHRMaster_onframes'](this.reqId_, frames);
-	goog.global.parent['__XHRMaster_oncomplete'](this.reqId_);
-	this.dispose();
+	// The above onframes call may have synchronously disposed us.
+	if(!this.isDisposed()) {
+		goog.global.parent['__XHRMaster_oncomplete'](this.reqId_);
+		this.dispose();
+	}
 };
 
 /**
@@ -81,7 +87,8 @@ cw.net.XHRSlave.prototype.makeRequest = function(url, method, payload) {
 	// want Minerva server or intermediaries to try to urldecode the POST body.
 };
 
-cw.net.XHRSlave.prototype.disposeInternal = function(reqId) {
+cw.net.XHRSlave.prototype.disposeInternal = function() {
+	//parent['__childIframeLogger'].fine('XHRSlave.disposeInternal.');
 	if(this.underlying_) {
 		this.underlying_.dispose();
 	}

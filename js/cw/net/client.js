@@ -2078,3 +2078,9 @@ goog.global['__XHRMaster_onframes'] =
 
 goog.global['__XHRMaster_oncomplete'] =
 	goog.bind(cw.net.theXHRMasterTracker_.oncomplete_, cw.net.theXHRMasterTracker_);
+
+
+
+//cw.net.childIframeLogger = goog.debug.Logger.getLogger('cw.net.childIframeLogger');
+//cw.net.childIframeLogger.setLevel(goog.debug.Logger.Level.ALL);
+//goog.global['__childIframeLogger'] = cw.net.childIframeLogger;
