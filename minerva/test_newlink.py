@@ -1133,6 +1133,21 @@ class StreamTrackerTests(unittest.TestCase):
 
 
 
+def decodeFramesFromServer(encodedFrames):
+	return [decodeFrameFromServer(f) for f in encodedFrames]
+
+
+def decodeHttpResponseFromServer(body):
+	encodedFrames = body.split('\n')
+	empty = encodedFrames.pop()
+	assert empty == ""
+	return decodeFramesFromServer(encodedFrames)
+
+
+def decodeResponseInMockRequest(request):
+	return decodeHttpResponseFromServer(''.join(request.written))
+
+
 class SocketTransportModeSelectionTests(unittest.TestCase):
 	"""
 	Test the very initial stage of the communication, where the
@@ -1197,7 +1212,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 				self.transport.dataReceived(s)
 			frames, code = strictGetNewFrames(self.parser, self.tcpTransport.value())
 			# f instead of str(f) because BencodeStringDecoder delivers C{str}s
-			decodedFrames = [decodeFrameFromServer(f) for f in frames]
+			decodedFrames = decodeFramesFromServer(frames)
 			self.assertEqual([TransportKillFrame(tk_stream_attach_failure), YouCloseItFrame()], decodedFrames)
 
 
@@ -1221,7 +1236,7 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 			for s in diceString(toSend, packetSize):
 				self.transport.dataReceived(s)
 			frames, code = strictGetNewFrames(self.parser, self.tcpTransport.value())
-			decodedFrames = [decodeFrameFromServer(str(f)) for f in frames]
+			decodedFrames = decodeFramesFromServer(frames)
 			self.assertEqual([TransportKillFrame(tk_stream_attach_failure), YouCloseItFrame()], decodedFrames)
 
 
@@ -3014,13 +3029,13 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				self.assertEqual(server.NOT_DONE_YET, out)
 
 				encode = DelimitedStringDecoder.encode
-				expectedWritten = [
-					encode(HTTP_RESPONSE_PREAMBLE), (
-						encode(StreamCreatedFrame().encode()) +
-						encode(SackFrame(SACK(2, ())).encode()))]
+				expectedFrames = [
+					PaddingFrame(4),
+					StreamCreatedFrame(),
+					SackFrame(SACK(2, ()))]
 				if not streaming:
-					expectedWritten += [encode(StreamStatusFrame(SACK(-1, ())).encode())]
-				self.assertEqual(expectedWritten, request.written)
+					expectedFrames += [StreamStatusFrame(SACK(-1, ()))]
+				self.assertEqual(expectedFrames, decodeResponseInMockRequest(request))
 				self.assertEqual(0 if streaming else 1, request.finished)
 
 				stream = self.streamTracker.getStream('x'*26)
@@ -3071,18 +3086,16 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		self.assertEqual(expected, withoutUnimportantStreamCalls(stream.getNew()))
 
 
-	def _sendAnotherString(self, stream, request, streaming, expectedWritten):
-		encode = DelimitedStringDecoder.encode
-
+	def _sendAnotherString(self, stream, request, streaming, expectedFrames):
 		stream.sendStrings(['extraBox'])
 		if not streaming:
 			# For non-streaming requests, if another S2C box is sent right
 			# now, it is not written to the request.
-			self.assertEqual(expectedWritten, request.written)
+			self.assertEqual(expectedFrames, decodeResponseInMockRequest(request))
 			self.assertEqual(1, request.finished)
 		else:
-			self.assertEqual(expectedWritten + [
-				encode(StringFrame('extraBox').encode())], request.written)
+			self.assertEqual(expectedFrames + [
+				StringFrame('extraBox')], decodeResponseInMockRequest(request))
 			self.assertEqual(0, request.finished)
 
 
@@ -3120,21 +3133,21 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			out = resource.render(request)
 			self.assertEqual(server.NOT_DONE_YET, out)
 
-			encode = DelimitedStringDecoder.encode
-			expectedWritten = [
-				encode(HTTP_RESPONSE_PREAMBLE), (
-					encode(StreamCreatedFrame().encode()) +
-					encode(SeqNumFrame(0).encode()) +
-					encode(StringFrame('box0').encode()) +
-					encode(StringFrame('box1').encode())) +
-					encode(SackFrame(SACK(0, ())).encode())]
+			expectedFrames = [
+				PaddingFrame(4),
+				StreamCreatedFrame(),
+				SeqNumFrame(0),
+				StringFrame('box0'),
+				StringFrame('box1'),
+				SackFrame(SACK(0, ())),
+			]
 			if not streaming:
-				expectedWritten += [encode(StreamStatusFrame(SACK(-1, ())).encode())]
+				expectedFrames += [StreamStatusFrame(SACK(-1, ()))]
 
-			self.assertEqual(expectedWritten, request.written)
+			self.assertEqual(expectedFrames, decodeResponseInMockRequest(request))
 			self.assertEqual(0 if streaming else 1, request.finished)
 
-			self._sendAnotherString(stream, request, streaming, expectedWritten)
+			self._sendAnotherString(stream, request, streaming, expectedFrames)
 
 
 	def _attachFirstHttpTransportWithFrames(self, resource, frames, streaming, expectedFirewallActionTime=None):
@@ -3158,19 +3171,18 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			self._clock.advance(expectedFirewallActionTime)
 		self.assertEqual(server.NOT_DONE_YET, out)
 
-		encode = DelimitedStringDecoder.encode
-		expectedWritten = [
-			encode(HTTP_RESPONSE_PREAMBLE),
-			encode(StreamCreatedFrame().encode()),
+		expectedFrames = [
+			PaddingFrame(4),
+			StreamCreatedFrame(),
 		]
 		if not streaming:
-			expectedWritten += [encode(StreamStatusFrame(SACK(-1, ())).encode())]
+			expectedFrames += [StreamStatusFrame(SACK(-1, ()))]
 
 		# The first request is now finished, because it was used to
 		# create a Stream, and server sent StreamCreatedFrame.
 		self.assertEqual(0 if streaming else 1, request.finished)
 
-		self.assertEqual(expectedWritten, request.written)
+		self.assertEqual(expectedFrames, decodeResponseInMockRequest(request))
 
 
 	def test_S2CStringsSoonAvailable(self):
@@ -3212,25 +3224,25 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				'\n'.join(f.encode() for f in frames) + '\n')
 			resource.render(request)
 
-			encode = DelimitedStringDecoder.encode
 			self.assertEqual([
-				encode(HTTP_RESPONSE_PREAMBLE)
-			], request.written)
+				PaddingFrame(4)
+			], decodeResponseInMockRequest(request))
 
 			stream.sendStrings(['box0', 'box1'])
 
-			expectedWritten = [
-				encode(HTTP_RESPONSE_PREAMBLE), (
-					encode(SeqNumFrame(0).encode()) +
-					encode(StringFrame('box0').encode()) +
-					encode(StringFrame('box1').encode()))]
+			expectedFrames = [
+				PaddingFrame(4),
+				SeqNumFrame(0),
+				StringFrame('box0'),
+				StringFrame('box1'),
+			]
 			if not streaming:
-				expectedWritten += [encode(StreamStatusFrame(SACK(-1, ())).encode())]
+				expectedFrames += [StreamStatusFrame(SACK(-1, ()))]
 
-			self.assertEqual(expectedWritten, request.written)
+			self.assertEqual(expectedFrames, decodeResponseInMockRequest(request))
 			self.assertEqual(0 if streaming else 1, request.finished)
 
-			self._sendAnotherString(stream, request, streaming, expectedWritten)
+			self._sendAnotherString(stream, request, streaming, expectedFrames)
 
 
 	def test_responseHasGoodHttpHeaders(self):
@@ -3322,10 +3334,11 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			request.content = StringIO(
 				'\n'.join(f.encode() for f in frames) + '\n')
 
-			encode = DelimitedStringDecoder.encode
-
 			resource.render(request)
-			self.assertEqual([';)]}P\n', encode(StreamStatusFrame(SACK(-1, ())).encode())], request.written)
+			self.assertEqual([
+				PaddingFrame(4),
+				StreamStatusFrame(SACK(-1, ()))
+			], decodeResponseInMockRequest(request))
 			self.assertEqual(1, request.finished)
 
 
@@ -3355,24 +3368,21 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		request.content = StringIO(
 			'\n'.join(f.encode() for f in frames) + '\n')
 
-		encode = DelimitedStringDecoder.encode
-
 		out = resource.render(request)
 		self.assertEqual(server.NOT_DONE_YET, out)
-		self.assertEqual([encode(HTTP_RESPONSE_PREAMBLE)], request.written)
+		self.assertEqual([PaddingFrame(4)], decodeResponseInMockRequest(request))
 		self._clock.advance(0.5)
 		# At this point, the ServerTransport is (hopefully) authenticated.
-		self.assertEqual([encode(HTTP_RESPONSE_PREAMBLE)], request.written)
+		self.assertEqual([PaddingFrame(4)], decodeResponseInMockRequest(request))
 		self._clock.advance(1.5)
 
 		# After 2 seconds, the ServerTransport is closed; there was no
 		# reason to close it other than the 2 second maxOpenTime.
 
-		expectedWritten = [
-			encode(HTTP_RESPONSE_PREAMBLE),
-			encode(StreamStatusFrame(SACK(-1, ())).encode()),
-		]
-		self.assertEqual(expectedWritten, request.written)
+		self.assertEqual([
+			PaddingFrame(4),
+			StreamStatusFrame(SACK(-1, ())),
+		], decodeResponseInMockRequest(request))
 		self.assertEqual(1, request.finished)
 
 
