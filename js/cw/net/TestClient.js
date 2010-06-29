@@ -31,6 +31,9 @@ goog.require('cw.net.EventType');
 goog.require('cw.net.ClientTransport');
 goog.require('cw.net.DoNothingTransport');
 
+// Load xhrslave into the test page window
+goog.require('cw.net.XHRSlave');
+
 goog.require('cw.net.HelloFrame');
 goog.require('cw.net.StringFrame');
 goog.require('cw.net.SeqNumFrame');
@@ -60,7 +63,12 @@ var XHR_LONGPOLL = cw.net.TransportType_.XHR_LONGPOLL;
 
 var SACK = cw.net.SACK;
 
-var fakeWindow = {'location': {'href': 'http://127.0.0.1/'}}
+var fakeWindow = {
+	'location': {'href': 'http://127.0.0.1/'},
+	'__XHRSlave_makeRequest': function() {
+		cw.UnitTest.logger.info(
+			"TestClient.js: fakeWindow.__XHRSlave_makeRequest called");
+	}};
 var fakeHttpEndpoint = new cw.net.HttpEndpoint(
 	"http://127.0.0.1/TestClient-not-a-real-endpoint/", fakeWindow,
 	"http://127.0.0.1/TestClient-not-a-real-endpoint/", fakeWindow);
