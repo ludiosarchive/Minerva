@@ -19,6 +19,7 @@ from twisted.web.server import NOT_DONE_YET
 from mypy.randgen import secureRandom
 from mypy.strops import StringFragment
 from mypy.mailbox import Mailbox, mailboxify
+from mypy.constant import Constant
 
 from webmagic.untwist import BetterResource
 
@@ -868,6 +869,8 @@ UNKNOWN, POLICYFILE, INT32, BENCODE, HTTP = range(5)
 HTTP_RESPONSE_PREAMBLE = ";)]}P" # "P" to indicate a PaddingFrame.
 
 
+DontWriteSack = Constant("DontWriteSack")
+
 
 class ServerTransport(object):
 	"""
@@ -889,13 +892,15 @@ class ServerTransport(object):
 		'streamId', 'credentialsData', 'transportNumber', 'factory',
 		'transport', '_maxReceiveBytes', '_maxOpenTime',
 		'_lastSackSeenByClient', '_streamingResponse', '_needPaddingBytes',
-		'_wantsStrings', '_waitingFrames')
+		'_wantsStrings', '_waitingFrames', '_clock', '_maxOpenDc')
 	# TODO: ~4 attributes above only for an HTTPSocketTransport, to save memory
 
 	maxLength = 1024*1024
 	noisy = True
 
-	def __init__(self):
+	def __init__(self, clock):
+		self._clock = clock
+
 		self._mailbox = Mailbox(self._stoppedSpinning)
 
 		self.ourSeqNum = \
@@ -915,6 +920,7 @@ class ServerTransport(object):
 		# to send a proper Hello frame in their HTTP request, and we don't
 		# want the request to get "stuck".
 
+		self._maxOpenDc = \
 		self._stream = \
 		self._producer = \
 		self.writable = \
@@ -927,6 +933,15 @@ class ServerTransport(object):
 			self._terminating, self._stream, self._paused, self.ourSeqNum)
 
 
+	def isAttached(self):
+		"""
+		Is this ServerTransport currently attached to a Stream?
+		This is always C{False} if not authenticated, and C{False} after
+		we call L{Stream.transportOffline}.
+		"""
+		return self._stream is not None
+
+
 	def _stoppedSpinning(self):
 		# This method always run after mailboxified methods(s) are called.
 
@@ -935,13 +950,18 @@ class ServerTransport(object):
 			self._toSend = ''
 			self.writable.write(toSend)
 
-		if not self._streamingResponse and toSend:
+		if toSend and not self._streamingResponse:
 			# This re-enters spin
 			self.closeGently()
 			# We already re-entered _stoppedSpinning, so return.
 			return
 
 		if self._terminating:
+			if self._maxOpenDc is not None:
+				if self._maxOpenDc.active():
+					self._maxOpenDc.cancel()
+				self._maxOpenDc = None
+
 			# Tell Stream this transport is offline. Whether we still have a TCP
 			# connection open to the peer is irrelevant.
 			if self._stream:
@@ -967,7 +987,7 @@ class ServerTransport(object):
 		if self._terminating:
 			return
 
-		if self._stream is not None:
+		if self.isAttached():
 			self._toSend += self._encodeFrame(StreamStatusFrame(
 				self._stream.lastSackSeenByServer))
 		self._toSend += self._encodeFrame(TransportKillFrame(reason))
@@ -984,11 +1004,9 @@ class ServerTransport(object):
 		if self._terminating:
 			return
 
-		if self._stream is None:
-			raise RuntimeError("can't closeGently a transport with no _stream")
-
-		self._toSend += self._encodeFrame(StreamStatusFrame(
-			self._stream.lastSackSeenByServer))
+		if self.isAttached():
+			self._toSend += self._encodeFrame(StreamStatusFrame(
+				self._stream.lastSackSeenByServer))
 		if self._mode != HTTP:
 			self._toSend += self._encodeFrame(YouCloseItFrame())
 		self._terminating = True
@@ -1046,6 +1064,17 @@ class ServerTransport(object):
 
 
 	@mailboxify('_mailbox')
+	def _exceededMaxOpenTime(self):
+		# Note: We might still be authenticating.
+		if self.isAttached():
+			self.closeGently()
+		else:
+			# TODO: cancel the Deferred returned by firewall.checkTransport(...)
+			pass
+
+
+	# Must *not* be mailboxified; otherwise long-polling transports
+	# are closed too early.
 	def _writeInitialFrames(self, stream, requestNewStream):
 		if self._terminating:
 			return
@@ -1060,10 +1089,9 @@ class ServerTransport(object):
 		# Write the initial SACK if we have not already written a SACK,
 		# but only if the client has an out-of-date impression of the SACK.
 		# We can't always send the SACK because of long-polling.
-		if self._lastSackSeenByClient is not None:
+		if self._lastSackSeenByClient is not DontWriteSack:
 			currentSack = stream.getSACK()
 			if currentSack != self._lastSackSeenByClient:
-				##print "\n", self, currentSack, self._lastSackSeenByClient
 				self._toSend += self._encodeFrame(SackFrame(currentSack))
 
 
@@ -1085,6 +1113,11 @@ class ServerTransport(object):
 			self._needPaddingBytes = hello.needPaddingBytes
 			self._maxReceiveBytes = hello.maxReceiveBytes
 			self._maxOpenTime = hello.maxOpenTime
+			if self._maxOpenTime is not None:
+				# The "max open time" limit covers the time before and
+				# after authentication.
+				self._maxOpenDc = self._clock.callLater(
+					self._maxOpenTime / 1000.0, self._exceededMaxOpenTime)
 
 		# We get/build a Stream instance before the firewall checkTransport
 		# because the firewall needs to know if we're working with a virgin
@@ -1182,7 +1215,7 @@ class ServerTransport(object):
 			bunchedStrings[0] = []
 			self._toSend += self._encodeFrame(SackFrame(self._stream.getSACK()))
 			# We no longer need to write the "initial SACK" to client
-			self._lastSackSeenByClient = None
+			self._lastSackSeenByClient = DontWriteSack
 
 		# Note: keep in mind that _closeWith is mailboxified, so any actual
 		# closing happens after we call `handleStrings` near the end.
@@ -1532,7 +1565,7 @@ class SocketFace(protocol.ServerFactory):
 
 
 	def buildProtocol(self, addr):
-		p = self.protocol()
+		p = self.protocol(self._clock)
 		p.factory = self
 		return p
 
@@ -1556,7 +1589,7 @@ class HttpFace(BetterResource):
 
 
 	def render_POST(self, request):
-		t = self.protocol()
+		t = self.protocol(self._clock)
 		t.factory = self
 		d = request.notifyFinish()
 		d.addErrback(t.requestAborted)

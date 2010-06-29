@@ -156,7 +156,7 @@ function makeHelloData(uaId, transportNumber) {
 	}
 	helloData[HP.streamingResponse] = Number(mode == 'flash');
 	helloData[HP.maxReceiveBytes] = 9999999;
-	helloData[HP.maxOpenTime] = 3600;
+	helloData[HP.maxOpenTime] = 3600 * 1000;
 	helloData[HP.succeedsTransport] = null;
 	helloData[HP.httpFormat] = 2; /* XHR */
 	helloData[HP.sack] = '|' + String(ackNum);

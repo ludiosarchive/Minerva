@@ -1253,18 +1253,18 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 class TransportIsHttpTests(unittest.TestCase):
 
 	def test_isHttpUnknown(self):
-		transport = ServerTransport()
+		transport = ServerTransport(task.Clock())
 		self.assertRaises(RuntimeError, lambda: transport.isHttp())
 
 
 	def test_isHttpNegative(self):
-		transport = ServerTransport()
+		transport = ServerTransport(task.Clock())
 		transport.makeConnection(DummyTCPTransport())
 		self.assertEqual(False, transport.isHttp())
 
 
 	def test_isHttpPositive(self):
-		transport = ServerTransport()
+		transport = ServerTransport(task.Clock())
 		request = http.Request(DummyChannel(), False)
 		request.content = StringIO("yow \n")
 		transport.requestStarted(request)
@@ -1826,15 +1826,6 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			YouCloseItFrame()
 		], transport.getNew())
 		self._testExtraDataReceivedIgnored(transport)
-
-
-	def test_closeGentlyRequiresAStream(self):
-		"""
-		If you try to closeGently a transport with no Stream, it raises
-		RuntimeError.
-		"""
-		transport = self._makeTransport()
-		self.assertRaises(RuntimeError, lambda: transport.closeGently())
 
 
 	def test_causedRwinOverflow(self):
@@ -2975,6 +2966,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 
 class HttpTests(_BaseHelpers, unittest.TestCase):
+	"""
+	TODO: don't compare the encoded frames in asserts; compare
+	decoded frames instead, which will make things simpler to decipher
+	when asserts fail.
+	"""
 	# Inherit setUp, _resetStreamTracker
 
 	def _makeResource(self, rejectAll=False, firewallActionTime=None):
@@ -3141,7 +3137,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			self._sendAnotherString(stream, request, streaming, expectedWritten)
 
 
-	def _attachFirstHttpTransportWithFrames(self, resource, frames, streaming):
+	def _attachFirstHttpTransportWithFrames(self, resource, frames, streaming, expectedFirewallActionTime=None):
 		"""
 		Send a request to C{resource} that does nothing but create a new
 		Stream (and assert a few things we expect to see after doing this).
@@ -3158,6 +3154,8 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			'\n'.join(f.encode() for f in frames) + '\n')
 
 		out = resource.render(request)
+		if expectedFirewallActionTime is not None:
+			self._clock.advance(expectedFirewallActionTime)
 		self.assertEqual(server.NOT_DONE_YET, out)
 
 		encode = DelimitedStringDecoder.encode
@@ -3167,11 +3165,12 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		]
 		if not streaming:
 			expectedWritten += [encode(StreamStatusFrame(SACK(-1, ())).encode())]
-		self.assertEqual(expectedWritten, request.written)
 
 		# The first request is now finished, because it was used to
 		# create a Stream, and server sent StreamCreatedFrame.
 		self.assertEqual(0 if streaming else 1, request.finished)
+
+		self.assertEqual(expectedWritten, request.written)
 
 
 	def test_S2CStringsSoonAvailable(self):
@@ -3194,7 +3193,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			# See Minerva git history before 2010-06-08 02:40 UTC to see
 			# what mess it was before.
 			self._attachFirstHttpTransportWithFrames(
-				resource, [], streaming=streaming)
+				resource, frames=[], streaming=streaming)
 
 			stream = self.streamTracker.getStream('x'*26)
 
@@ -3309,8 +3308,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			self._resetStreamTracker(realObjects=True)
 
 			resource = self._makeResource()
-			frames = []
-			self._attachFirstHttpTransportWithFrames(resource, frames, streaming=False)
+			self._attachFirstHttpTransportWithFrames(resource, frames=[], streaming=False)
 
 			request = DummyRequest(postpath=[])
 			request.method = 'POST'
@@ -3331,9 +3329,54 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			self.assertEqual(1, request.finished)
 
 
-	# TODO: implement and test minOpenTime
+	def test_maxOpenTime(self):
+		"""
+		If HelloFrame has a maxOpenTime, the HTTP request is closed N
+		miiliseconds after the HelloFrame is processed.
 
-	# TODO: test maxOpenTime
+		Both the authentication time and the post-authentication time
+		eat up the maxOpenTime.
+		"""
+		self._resetStreamTracker(realObjects=True)
+		resource = self._makeResource(firewallActionTime=0.5)
+		self._attachFirstHttpTransportWithFrames(
+			resource, frames=[], streaming=False, expectedFirewallActionTime=0.5)
+
+		request = DummyRequest(postpath=[])
+		request.method = 'POST'
+
+		frame0 = _makeHelloFrameHttp(dict(
+			succeedsTransport=None,
+			requestNewStream=False,
+			transportNumber=1,
+			maxOpenTime=2000))
+		frames = [frame0]
+
+		request.content = StringIO(
+			'\n'.join(f.encode() for f in frames) + '\n')
+
+		encode = DelimitedStringDecoder.encode
+
+		out = resource.render(request)
+		self.assertEqual(server.NOT_DONE_YET, out)
+		self.assertEqual([encode(HTTP_RESPONSE_PREAMBLE)], request.written)
+		self._clock.advance(0.5)
+		# At this point, the ServerTransport is (hopefully) authenticated.
+		self.assertEqual([encode(HTTP_RESPONSE_PREAMBLE)], request.written)
+		self._clock.advance(1.5)
+
+		# After 2 seconds, the ServerTransport is closed; there was no
+		# reason to close it other than the 2 second maxOpenTime.
+
+		expectedWritten = [
+			encode(HTTP_RESPONSE_PREAMBLE),
+			encode(StreamStatusFrame(SACK(-1, ())).encode()),
+		]
+		self.assertEqual(expectedWritten, request.written)
+		self.assertEqual(1, request.finished)
+
+
+	# TODO: implement and test minOpenTime
 
 	# TODO: test numPaddingBytes
 

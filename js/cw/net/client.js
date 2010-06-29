@@ -1408,7 +1408,7 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 	// TODO: investigate if any browsers are thrashing CPU by copying
 	// the whole thing during XHR streaming.
 	hello.maxReceiveBytes = 300000;
-	hello.maxOpenTime = 55;
+	hello.maxOpenTime = 55000;
 	hello.useMyTcpAcks = false;
 	if(this.becomePrimary_) {
 		hello.succeedsTransport = null;
