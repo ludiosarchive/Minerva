@@ -1910,10 +1910,10 @@ cw.net.FlashSocketConduit.logger.setLevel(goog.debug.Logger.Level.ALL);
  * requests across subdomains.
  *
  * Note: this is slightly overkill because it was intended to work over a
- * Worker boundary as well, not just an iframe boundary.  TODO: if this
- * is ever used for XHR-in-Worker, get rid of the synchronous errors and
- * possibly use log messages instead.  (Because an XHRSlave could disappear
- * before the other side knows about it; the same for XHRMaster.)
+ * Worker boundary as well, not just an iframe boundary.  If this
+ * is ever used for XHR-in-Worker, change the `logger.severe` calls in
+ * XHRMasterTracker to `logger.info`, because an XHRSlave could disappear
+ * before the other side knows about it; the same for XHRMaster.
  *
  * After writing this, I found out that I don't actually need Worker; I only
  * need SharedWorker.  And that SharedWorker will run the entire Stream,
@@ -2031,7 +2031,9 @@ cw.net.XHRMasterTracker.prototype.onframes_ = function(reqId, frames) {
 	frames = goog.array.concat(frames);
 	var master = this.masters_[reqId];
 	if(!master) {
-		throw Error("onframes_: no master for " + cw.repr.repr(reqId));
+		cw.net.XHRMasterTracker.logger.severe(
+			"onframes_: no master for " + cw.repr.repr(reqId));
+		return;
 	}
 	master.onframes_(frames);
 };
@@ -2043,7 +2045,9 @@ cw.net.XHRMasterTracker.prototype.onframes_ = function(reqId, frames) {
 cw.net.XHRMasterTracker.prototype.oncomplete_ = function(reqId) {
 	var master = this.masters_[reqId];
 	if(!master) {
-		throw Error("oncomplete_: no master for " + cw.repr.repr(reqId));
+		cw.net.XHRMasterTracker.logger.severe(
+			"oncomplete_: no master for " + cw.repr.repr(reqId));
+		return;
 	}
 	this.masterOffline_(master);
 	master.oncomplete_();
@@ -2064,6 +2068,10 @@ cw.net.XHRMasterTracker.prototype.disposeInternal = function() {
 	}
 	this.masters_ = {};
 };
+
+cw.net.XHRMasterTracker.logger = goog.debug.Logger.getLogger('cw.net.XHRMasterTracker');
+cw.net.XHRMasterTracker.logger.setLevel(goog.debug.Logger.Level.ALL);
+
 
 
 /**
