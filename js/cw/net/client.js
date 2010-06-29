@@ -582,7 +582,7 @@ cw.net.Stream.prototype.getTransportType_ = function() {
 	} else if(this.endpoint_ instanceof cw.net.SocketEndpoint) {
 		var transportType = cw.net.TransportType_.FLASH_SOCKET;
 	} else {
-		throw new Error("Don't support endpoint " + cw.repr.repr(this.endpoint_));
+		throw Error("Don't support endpoint " + cw.repr.repr(this.endpoint_));
 	}
 	return transportType;
 };

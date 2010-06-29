@@ -317,7 +317,7 @@ function reconnect() {
 		terminateLastXhr();
 		makeHttpRequest();
 	} else {
-		throw new Error("bad mode " + mode);
+		throw Error("bad mode " + mode);
 	}
 }
 
@@ -333,7 +333,7 @@ function sendAck(n) {
 		ackNum = n;
 		reconnect();
 	} else {
-		throw new Error("bad mode " + mode);
+		throw Error("bad mode " + mode);
 	}
 }
 
@@ -343,7 +343,7 @@ if(mode == 'flash') {
 } else if(mode == 'http') {
 	makeHttpRequest();
 } else {
-	throw new Error("bad mode " + mode);
+	throw Error("bad mode " + mode);
 }
 
 </script>
