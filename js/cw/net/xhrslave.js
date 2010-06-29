@@ -43,7 +43,9 @@ goog.inherits(cw.net.XHRSlave, goog.Disposable);
  */
 cw.net.XHRSlave.prototype.underlying_ = null;
 
-
+/**
+ * @private
+ */
 cw.net.XHRSlave.prototype.httpResponseReceived_ = function() {
 	var responseText = this.underlying_.getResponseText();
 	//parent['__childIframeLogger'].fine(
@@ -130,6 +132,7 @@ cw.net.XHRSlaveTracker.prototype.makeRequest_ = function(reqId, url, method, pay
 };
 
 /**
+ * @param {string} reqId
  * @private
  */
 cw.net.XHRSlaveTracker.prototype.disposeRequest_ = function(reqId) {
@@ -144,6 +147,7 @@ cw.net.XHRSlaveTracker.prototype.disposeRequest_ = function(reqId) {
 };
 
 /**
+ * @param {!cw.net.XHRSlave} slave
  * @private
  */
 cw.net.XHRSlaveTracker.prototype.slaveOffline_ = function(slave) {
