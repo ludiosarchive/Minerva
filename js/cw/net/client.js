@@ -35,7 +35,6 @@ goog.require('goog.Timer');
 goog.require('goog.net.XhrIo');
 goog.require('goog.uri.utils');
 goog.require('goog.object');
-goog.require('goog.userAgent');
 goog.require('cw.math');
 goog.require('cw.eventual');
 goog.require('cw.repr');
@@ -2021,13 +2020,15 @@ function(contentWindow, onFramesCallback, onCompleteCallback) {
  * @private
  */
 cw.net.XHRMasterTracker.prototype.onframes_ = function(reqId, frames) {
-	if(goog.userAgent.IE) {
-		// Make a copy of the Array, because if the iframe it came from
-		// is destroyed, the Array prototype will soon corrupt.
-		// See Closure Library's goog.array.concat JSDoc.
-		// See https://connect.microsoft.com/IE/feedback/details/559477/
-		frames = goog.array.concat(frames);
-	}
+	// Make a copy of the Array for two reasons:
+	// 1)	We don't want to keep an additional reference to the iframe's
+	// 		global object. (ClientTransport might keep the Array around,
+	// 		though hopefully it doesn't.)
+	// 2)	In IE, if the iframe the Array came from is destroyed, the
+	//		Array prototype will soon corrupt.
+	//		See Closure Library's goog.array.concat JSDoc.
+	//		See https://connect.microsoft.com/IE/feedback/details/559477/
+	frames = goog.array.concat(frames);
 	var master = this.masters_[reqId];
 	if(!master) {
 		throw Error("onframes_: no master for " + cw.repr.repr(reqId));
