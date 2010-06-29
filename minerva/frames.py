@@ -662,7 +662,7 @@ def decodeFrameFromClient(frameString):
 	try:
 		lastByte = frameString[-1]
 	except IndexError:
-		return InvalidFrame("0-length frame")
+		raise InvalidFrame("0-length frame")
 
 	# Keep this ordered by most-probable first
 	if lastByte == " ":
@@ -687,7 +687,7 @@ def decodeFrameFromServer(frameString):
 	try:
 		lastByte = frameString[-1]
 	except IndexError:
-		return InvalidFrame("0-length frame")
+		raise InvalidFrame("0-length frame")
 
 	# Keep this ordered by most-probable first
 	if lastByte == " ":
