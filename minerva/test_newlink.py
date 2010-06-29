@@ -3183,6 +3183,10 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		self.assertEqual(0 if streaming else 1, request.finished)
 
 		self.assertEqual(expectedFrames, decodeResponseInMockRequest(request))
+		# Check that the PaddingFrame we received is the
+		# HTTP_RESPONSE_PREAMBLE. (This really applies to all HTTP
+		# responses we see from Minerva)
+		self.assertEqual(HTTP_RESPONSE_PREAMBLE, ''.join(request.written).split('\n')[0])
 
 
 	def test_S2CStringsSoonAvailable(self):
