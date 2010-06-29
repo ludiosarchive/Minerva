@@ -18,7 +18,6 @@ from twisted.web.server import NOT_DONE_YET
 
 from mypy.randgen import secureRandom
 from mypy.strops import StringFragment
-from mypy.mailbox import Mailbox, mailboxify
 from mypy.constant import Constant
 
 from webmagic.untwist import BetterResource
@@ -872,6 +871,7 @@ HTTP_RESPONSE_PREAMBLE = ";)]}P" # "P" to indicate a PaddingFrame.
 DontWriteSack = Constant("DontWriteSack")
 
 
+
 class ServerTransport(object):
 	"""
 	Private.  Use SocketFace or HttpFace, which will build this object
@@ -886,22 +886,20 @@ class ServerTransport(object):
 	implements(IMinervaTransport, IPushProducer, IPullProducer)
 
 	__slots__ = (
-		'_mailbox', 'ourSeqNum', '_lastStartParam', '_mode', '_peerSeqNum',
+		'ourSeqNum', '_lastStartParam', '_mode', '_peerSeqNum',
 		'_initialBuffer', '_toSend', 'writable', 'connected', 'receivedCounter',
 		'_terminating', '_paused', '_stream', '_producer', '_parser',
-		'streamId', 'credentialsData', 'transportNumber', 'factory',
-		'transport', '_maxReceiveBytes', '_maxOpenTime',
+		'streamId', 'credentialsData', 'transportNumber', 'factory', '_sackDirty',
+		'transport', '_maxReceiveBytes', '_maxOpenTime', '_callingStream',
 		'_lastSackSeenByClient', '_streamingResponse', '_needPaddingBytes',
 		'_wantsStrings', '_waitingFrames', '_clock', '_maxOpenDc')
-	# TODO: ~4 attributes above only for an HTTPSocketTransport, to save memory
+	# TODO: ~5 attributes above only for an HTTPSocketTransport, to save memory
 
 	maxLength = 1024*1024
 	noisy = True
 
 	def __init__(self, clock):
 		self._clock = clock
-
-		self._mailbox = Mailbox(self._stoppedSpinning)
 
 		self.ourSeqNum = \
 		self._peerSeqNum = \
@@ -915,6 +913,8 @@ class ServerTransport(object):
 		self.connected = \
 		self._terminating = \
 		self._streamingResponse = \
+		self._callingStream = \
+		self._sackDirty = \
 		self._paused = False
 		# _streamingResponse is False by default because client may fail
 		# to send a proper Hello frame in their HTTP request, and we don't
@@ -942,21 +942,22 @@ class ServerTransport(object):
 		return self._stream is not None
 
 
-	def _stoppedSpinning(self):
-		# This method always run after mailboxified methods(s) are called.
+	def _maybeWriteToPeer(self):
+		if self._callingStream:
+			return
 
 		toSend = self._toSend
 		if toSend:
 			self._toSend = ''
 			self.writable.write(toSend)
 
-		if toSend and not self._streamingResponse:
-			# This re-enters spin
+		terminating = self._terminating
+		if toSend and not self._streamingResponse and not terminating:
 			self.closeGently()
-			# We already re-entered _stoppedSpinning, so return.
-			return
+			# closeGently writes frames, sets self._terminating = True,
+			# and re-enters _maybeWriteToPeer.
 
-		if self._terminating:
+		if terminating:
 			if self._maxOpenDc is not None:
 				if self._maxOpenDc.active():
 					self._maxOpenDc.cancel()
@@ -969,8 +970,7 @@ class ServerTransport(object):
 				self._stream = None
 
 			if self._mode == HTTP:
-				# .finish() is only for Requests
-				if not self.writable._disconnected:
+				if not self.writable._disconnected and not self.writable.finished:
 					self.writable.finish()
 
 			# TODO: for non-HTTP, set timer and close the connection ourselves
@@ -982,10 +982,11 @@ class ServerTransport(object):
 		return self._parser.encode(frame.encode())
 
 
-	@mailboxify('_mailbox')
 	def _closeWith(self, reason):
-		if self._terminating:
-			return
+		assert not self._terminating, self
+
+		if self._sackDirty:
+			self._appendSack()
 
 		if self.isAttached():
 			self._toSend += self._encodeFrame(StreamStatusFrame(
@@ -994,15 +995,14 @@ class ServerTransport(object):
 		if self._mode != HTTP:
 			self._toSend += self._encodeFrame(YouCloseItFrame())
 		self._terminating = True
+		self._maybeWriteToPeer()
 
 
-	@mailboxify('_mailbox')
 	def closeGently(self):
 		"""
 		@see L{IMinervaTransport.closeGently}
 		"""
-		if self._terminating:
-			return
+		assert not self._terminating, self
 
 		if self.isAttached():
 			self._toSend += self._encodeFrame(StreamStatusFrame(
@@ -1010,38 +1010,44 @@ class ServerTransport(object):
 		if self._mode != HTTP:
 			self._toSend += self._encodeFrame(YouCloseItFrame())
 		self._terminating = True
+		self._maybeWriteToPeer()
 
 
-	@mailboxify('_mailbox')
 	def causedRwinOverflow(self):
 		"""
 		@see L{IMinervaTransport.causedRwinOverflow}
 		"""
 		self._closeWith(tk_rwin_overflow)
+		self._maybeWriteToPeer()
 
 
-	@mailboxify('_mailbox')
 	def writeReset(self, reasonString, applicationLevel):
 		"""
 		@see L{IMinervaTransport.writeReset}
 		"""
-		if self._terminating:
-			return
+		assert not self._terminating, self
+
+		if self._sackDirty:
+			self._appendSack()
 
 		# Because it's a reset, there's no need to send a StreamStatusFrame
 		self._toSend += self._encodeFrame(ResetFrame(reasonString, applicationLevel))
 		if self._mode != HTTP:
 			self._toSend += self._encodeFrame(YouCloseItFrame())
 		self._terminating = True
+		self._maybeWriteToPeer()
 
 
-	@mailboxify('_mailbox')
 	def writeStrings(self, queue, start):
 		"""
 		@see L{IMinervaTransport.writeStrings}
 		"""
-		if self._terminating:
-			return
+		# If the transport is terminating, it should have already called
+		# Stream.transportOffline(self)
+		assert not self._terminating, self
+
+		if self._sackDirty:
+			self._appendSack()
 
 		# Something went wrong if we're writing strings before
 		# we received the hello frame.
@@ -1061,9 +1067,9 @@ class ServerTransport(object):
 				self._toSend += self._encodeFrame(SeqNumFrame(seqNum))
 			self._toSend += self._encodeFrame(StringFrame(string))
 			self.ourSeqNum = seqNum
+		self._maybeWriteToPeer()
 
 
-	@mailboxify('_mailbox')
 	def _exceededMaxOpenTime(self):
 		# Note: We might still be authenticating.
 		if self.isAttached():
@@ -1073,11 +1079,8 @@ class ServerTransport(object):
 			pass
 
 
-	# Must *not* be mailboxified; otherwise long-polling transports
-	# are closed too early.
 	def _writeInitialFrames(self, stream, requestNewStream):
-		if self._terminating:
-			return
+		assert not self._terminating, self
 
 		if requestNewStream:
 			# If we send StreamCreatedFrame, it *must* be the first frame
@@ -1169,22 +1172,28 @@ class ServerTransport(object):
 			# Note: self._stream being non-None implies that were are authed,
 			# and that we have called transportOnline (or are calling it right now).
 			self._stream = stream
+			self._callingStream = True
 			self._stream.transportOnline(self, self._wantsStrings, succeedsTransport)
-			# Remember, a lot of stuff can happen underneath that
-			# transportOnline call because it may construct a MinervaProtocol,
-			# which may even call reset.
+			self._callingStream = False
+			# Remember that a lot can happen underneath that
+			# transportOnline call, because it may construct a
+			# MinervaProtocol, which may even call reset.
 			if not self._terminating:
 				waitedFrames = self._waitingFrames
 				self._waitingFrames = None
 				self._framesReceived(waitedFrames)
-				if self._mode == HTTP and not self._wantsStrings:
+				# Remember that a lot can happen underneath that
+				# _framesReceived call, including a reset.
+				if not self._terminating and self._mode == HTTP and not self._wantsStrings:
 					self.closeGently()
+			self._maybeWriteToPeer()
 
 		def cbAuthFailed(f):
 			f.trap(RejectTransport)
-			if not self._terminating:
-				self._waitingFrames = None
-				self._closeWith(tk_stream_attach_failure)
+			if self._terminating:
+				return
+			self._waitingFrames = None
+			self._closeWith(tk_stream_attach_failure)
 
 		def resumeWritable(_):
 			if self._mode != HTTP:
@@ -1195,7 +1204,16 @@ class ServerTransport(object):
 		d.addBoth(resumeWritable)
 
 
-	@mailboxify('_mailbox')
+	def _appendSack(self):
+		"""
+		Append a SackFrame to the internal send buffer.
+		"""
+		self._toSend += self._encodeFrame(SackFrame(self._stream.getSACK()))
+		self._sackDirty = False
+		# We no longer need to write the "initial SACK" to client
+		self._lastSackSeenByClient = DontWriteSack
+
+
 	def _framesReceived(self, frames):
 		if self._waitingFrames is not None:
 			self._waitingFrames.extend(frames)
@@ -1207,20 +1225,30 @@ class ServerTransport(object):
 			# bunchedStrings is already sorted 99.99%+ of the time, so this
 			# sort is particularly fast with Timsort.
 			bunchedStrings[0].sort()
-			self._stream.stringsReceived(self, bunchedStrings[0])
+
+			# The _sackDirty behavior in this class reduces the number
+			# of SackFrames that are written out, while making sure that
+			# SackFrames are not "held up" by StringFrames written out by
+			# the Stream.  If Stream writes strings during the Stream.stringsReceived
+			# call below, a SackFrame is sent before the StringFrames.
+			assert not self._sackDirty, self
+			self._sackDirty = True
+			self._callingStream = True
+			try:
+				self._stream.stringsReceived(self, bunchedStrings[0])
+			finally:
+				self._callingStream = False
 			# Remember that a lot can happen underneath that stringsReceived call,
-			# including a call to our own `reset` or `closeGently` or `writeStrings`
-			# (though those are all mailboxify'ed).
+			# including a call to our own `reset` or `closeGently` or `writeStrings`.
 
 			bunchedStrings[0] = []
-			self._toSend += self._encodeFrame(SackFrame(self._stream.getSACK()))
-			# We no longer need to write the "initial SACK" to client
-			self._lastSackSeenByClient = DontWriteSack
 
-		# Note: keep in mind that _closeWith is mailboxified, so any actual
-		# closing happens after we call `handleStrings` near the end.
+			if not self._terminating and self._sackDirty:
+				self._appendSack()
 
 		for frameString in frames:
+			if self._terminating:
+				return
 			self.receivedCounter += 1
 
 			if isinstance(frameString, str):
@@ -1260,7 +1288,10 @@ class ServerTransport(object):
 				bunchedStrings[0].append((self._peerSeqNum, frame.string))
 
 			elif frameType == SackFrame:
-				if self._stream.sackReceived(frame.sack):
+				self._callingStream = True
+				badSack = self._stream.sackReceived(frame.sack)
+				self._callingStream = False
+				if badSack:
 					# It was a bad SACK, so close.
 					self._closeWith(tk_acked_unsent_strings)
 					break
@@ -1277,7 +1308,9 @@ class ServerTransport(object):
 					handleStrings()
 
 				if frameType == ResetFrame:
+					self._callingStream = True
 					self._stream.resetFromPeer(frame.reasonString, frame.applicationLevel)
+					self._callingStream = False
 					break # No need to process any frames after the reset frame
 
 				else:
@@ -1289,12 +1322,13 @@ class ServerTransport(object):
 
 		if bunchedStrings[0]:
 			handleStrings()
+		self._maybeWriteToPeer()
 
 
-	@mailboxify('_mailbox')
 	def dataReceived(self, data):
 		##print repr(data)
 		if self._terminating:
+			# Ignore data received if we are terminating.
 			return
 
 		# Before we can even speak "Minerva" and send frames, we need to
@@ -1367,10 +1401,10 @@ class ServerTransport(object):
 			self._closeWith(tk_frame_corruption)
 		else:
 			raise RuntimeError("Got unknown code from parser %r: %r" % (self._parser, code))
+		self._maybeWriteToPeer()
 
 
 	# called by Stream instances
-	@mailboxify('_mailbox')
 	def registerProducer(self, producer, streaming):
 		if self._producer:
 			raise RuntimeError("Cannot register producer %s, "
@@ -1389,6 +1423,7 @@ class ServerTransport(object):
 			producer.pauseProducing()
 
 		self.writable.registerProducer(self, streaming)
+		self._maybeWriteToPeer()
 
 
 	# called by Stream instances
@@ -1422,12 +1457,12 @@ class ServerTransport(object):
 		pass
 
 
-	@mailboxify('_mailbox')
 	def connectionLost(self, reason):
 		if self.noisy:
 			log.msg('Connection lost for %r reason %r' % (self, reason))
 		# It might already be terminating, but often not.
 		self._terminating = True
+		self._maybeWriteToPeer()
 
 
 	def _handleRequestBody(self):
@@ -1490,12 +1525,12 @@ class ServerTransport(object):
 
 
 	# Called by twisted.web if client closes connection before the request is finished
-	@mailboxify('_mailbox')
 	def requestAborted(self, reason):
 		if self.noisy:
 			log.msg('Peer aborted request %r on %r' % (self.writable, self))
 		# It might already be terminating, but often not.
 		self._terminating = True
+		self._maybeWriteToPeer()
 
 
 	# Called by Twisted when a TCP connection is made

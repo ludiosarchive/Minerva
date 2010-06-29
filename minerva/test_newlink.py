@@ -3390,6 +3390,68 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		self.assertEqual(1, request.finished)
 
 
+	def test_secondaryTransportTerminatedUnderFramesReceivedCall(self): # keywords: reentrant
+		"""
+		This is similar to L{IntegrationTests.test_serverResetsUnderneathStringsReceivedCall},
+		but tests a real (but short-lived) regression in newlink's `cbAuthOkay`,
+		where `_terminating` was not checked before calling `closeGently`.
+		"""
+		class MyFactory(MockMinervaProtocolFactory):
+			def buildProtocol(self):
+				obj = self.protocol(callFrom=('stringsReceived',), callWhat=('reset',))
+				obj.factory = self
+				return obj
+
+		for clientResetsImmediately in (True, False):
+			##print "clientResetsImmediately=", clientResetsImmediately
+			self._resetStreamTracker(protocolFactoryClass=MyFactory, realObjects=True)
+			# Needs to be done after _resetStreamTracker
+			resource = self._makeResource()
+
+			self._attachFirstHttpTransportWithFrames(
+				resource, frames=[], streaming=False)
+
+			frame0 = _makeHelloFrameHttp(dict(
+				# The bug only happened when the transport did not
+				# want strings.
+				succeedsTransport=DeleteProperty,
+				requestNewStream=False))
+
+			frames = [
+				frame0,
+				StringFrame("box0"),
+				StringFrame("box1"),
+				StringFrame("box2"),
+			]
+			if clientResetsImmediately:
+				# Surprise! Client wants to reset very immediately too. But this is completely ignored.
+				frames.append(ResetFrame("client's reason", True))
+
+			request = DummyRequest(postpath=[])
+			request.method = 'POST'
+			request.content = StringIO(
+				'\n'.join(f.encode() for f in frames) + '\n')
+
+			resource.render(request)
+
+			expected = [
+				PaddingFrame(4),
+				SackFrame(SACK(2, ())),
+				# Because it's a reset, server doesn't send StreamStatusFrame
+				#StreamStatusFrame(SACK(-1, ())),
+				ResetFrame('reset forced by mock protocol', True),
+			]
+
+			self.assertEqual(1, request.finished)
+			self.assertEqual(expected, decodeResponseInMockRequest(request))
+
+			proto = list(self.protocolFactory.instances)[0]
+			self.assertEqual([
+				["stringsReceived", [sf("box0"), sf("box1"), sf("box2")]],
+				["streamReset", 'reset forced by mock protocol', True],
+			], proto.getNew()[1:])
+
+
 	# TODO: implement and test minOpenTime
 
 	# TODO: test numPaddingBytes
