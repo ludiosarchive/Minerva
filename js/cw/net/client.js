@@ -35,6 +35,8 @@ goog.require('goog.Timer');
 goog.require('goog.net.XhrIo');
 goog.require('goog.uri.utils');
 goog.require('goog.object');
+goog.require('goog.userAgent');
+goog.require('goog.userAgent.product');
 goog.require('cw.math');
 goog.require('cw.eventual');
 goog.require('cw.repr');
@@ -652,13 +654,16 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
 
 /**
  * Create a dummy transport that waits for N milliseconds and goes offline.
+ * @param {number} delay
+ * @param {number} times
  * @return {!cw.net.DoNothingTransport} The newly-created transport.
  */
-cw.net.Stream.prototype.createWastingTransport_ = function(delay) {
+cw.net.Stream.prototype.createWastingTransport_ = function(delay, times) {
 	var transport = new cw.net.DoNothingTransport(
-		this.callQueue_, this, delay);
+		this.callQueue_, this, delay, times);
 	cw.net.Stream.logger.finest(
-		"Created: " + transport.getDescription_() + ", delay=" + delay);
+		"Created: " + transport.getDescription_() +
+		", delay=" + delay + ", times=" + times);
 	this.transports_.add(transport);
 	return transport;
 };
@@ -693,29 +698,67 @@ cw.net.Stream.prototype.streamStatusReceived_ = function(lastSackSeen) {
 };
 
 /**
- * Return how many milliseconds we should waste before creating a transport
- * that actually tries to connect to the server. If 0, connect a new real
- * transport right away (even under the current stack frame).
+ * Return a delay after which we can assume that the spinner has stopped
+ * spinning.  This applies only to WebKit browsers.
+ *
+ * @return {!Array.<number>} (Delay in milliseconds, times to repeat delay).
+ * @private
+ * // TODO: types for tuples
+ */
+cw.net.Stream.prototype.getDelayToStopSpinner_ = function() {
+	goog.asserts.assert(goog.userAgent.WEBKIT, "not WebKit?");
+
+	// In Chrome, a 0ms one time is enough, but in Safari, it is not.
+	// See http://ludios.net/browser_bugs/spinner_behavior/xhr_onload_and_0ms.html
+	//
+	// The numbers below were carefully determined by testing some
+	// worst-case scenarios with modal dialogs completely freezing
+	// Safari for a while.
+	//
+	// To get the lowest acceptable numbers here, load /chatapp/ (which
+	// has an image that takes 4 seconds to load).  Then, somehow freeze
+	// Safari, then unfreeze it.  An easy but untested way would be to use
+	// the OS's process management utils (for example, `kill` with the right
+	// signal).
+	//
+	// On OS X, I managed to make this happen by forcing an SSL
+	// certificate warning, then clicking to making OS X's modal
+	// password prompt dialog appear.  See:
+	// Minerva/docs/safari_password_prompt_loading_spinner_stays.png
+	//
+	// On Windows XP, I managed to make this happen by pressing Ctrl-P
+	// to print, which in my specific virtual machine caused Safari to lock
+	// up for 20 seconds while it tried to connect to my printer.
+	if(goog.userAgent.product.CHROME) {
+		return [0, 1];
+	} else {
+		// Assume every WebKit browser but Chrome misbehaves like Safari.
+		// Note: this could probably go lower, but I don't want to risk it.
+		return [9, 20];
+	}
+};
+
+/**
+ * Return a suitable delay for the next transport, based on transport's
+ * properties (and whether it is primary/secondary).  If times=0, it is safe
+ * to create a new real transport right away, even under caller's stack frame.
  *
  * @param {!(cw.net.ClientTransport|cw.net.DoNothingTransport)} transport The
  * 	previous transport.
- * @return {number} Delay in milliseconds
+ * @return {!Array.<number>} (Delay in milliseconds, times to repeat delay).
+ * // TODO: types for tuples
  */
 cw.net.Stream.prototype.getDelayForNextTransport_ = function(transport) {
+	var delay;
+	var times;
 	var isWaster = transport instanceof cw.net.DoNothingTransport;
 	if(!isWaster && transport.abortedForSpinner_) {
-		// 100ms is probably enough, 0ms is definitely not (for Safari).
-		// See http://ludios.net/browser_bugs/spinner_behavior/xhr_onload_and_0ms.html
-		//
-		// Note: a DoNothingTransport for 100ms still doesn't always stop
-		// the spinner.  I think this happens when Safari doesn't get a chance
-		// to go through its event loop without an XHR open.  On OS X, I managed
-		// to make this happen by making OS X's modal password prompt dialog
-		// appear.  See Minerva/docs/safari_password_prompt_loading_spinner_stays.png
-		// After I pressed cancel, the DoNothingTransport was created and
-		// disposed, but the loading spinner was still spinning.
-		// (Tested Safari 5.0 on OS X 10.6.4).
-		return 100;
+		var _ = this.getDelayToStopSpinner_();
+		delay = _[0];
+		times = _[1];
+		cw.net.Stream.logger.finest("getDelayForNextTransport_: " +
+			cw.repr.repr({'delay': delay, 'times': times}));
+		return [delay, times];
 	}
 
 	var considerDelay = transport.considerDelayingNextTransport_();
@@ -734,23 +777,23 @@ cw.net.Stream.prototype.getDelayForNextTransport_ = function(transport) {
 		}
 	}
 	if(isWaster || !count) {
-		cw.net.Stream.logger.finest(
-			"getDelayForNextTransport_: " + cw.repr.repr({
-				'count': count, 'delay': 0}));
-		return 0;
+		delay = 0;
+		times = 0;
+		cw.net.Stream.logger.finest("getDelayForNextTransport_: " +
+			cw.repr.repr({'count': count, 'delay': delay, 'times': times}));
 	} else {
 		var base = 2000 * Math.min(count, 3);
 		// Add random variance, so that if the server dies we don't get
 		// hit by every client at the same time.
 		var variance = Math.floor(Math.random() * 4000) - 2000;
 		var oldDuration = transport.getUnderlyingDuration_();
-		var delay = Math.max(0, base + variance - oldDuration);
-		cw.net.Stream.logger.finest(
-			"getDelayForNextTransport_: " + cw.repr.repr({
-				'count': count, 'base': base, 'variance': variance,
-				'oldDuration': oldDuration, 'delay': delay}));
-		return delay;
+		delay = Math.max(0, base + variance - oldDuration);
+		times = delay ? 1 : 0;
+		cw.net.Stream.logger.finest("getDelayForNextTransport_: " +
+			cw.repr.repr({'count': count, 'base': base, 'variance': variance,
+				'oldDuration': oldDuration, 'delay': delay, 'times': times}));
 	}
+	return [delay, times];
 };
 
 /**
@@ -796,24 +839,26 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 		cw.net.Stream.logger.fine(
 			"Not creating a transport because Stream is in state " + this.state_);
 	} else {
-		var delay = this.getDelayForNextTransport_(transport);
+		var _ = this.getDelayForNextTransport_(transport);
+		var delay = _[0];
+		var times = _[1];
 		if(transport == this.primaryTransport_) {
-			if(!delay) {
+			if(!times) {
 				this.primaryTransport_ = this.createNewTransport_(true);
 				this.primaryTransport_.writeStrings_(this.queue_, null);
 			} else {
-				this.primaryTransport_ = this.createWastingTransport_(delay);
+				this.primaryTransport_ = this.createWastingTransport_(delay, times);
 			}
 			this.primaryTransport_.flush_();
 		} else if(transport == this.secondaryTransport_) {
-			if(!delay) {
+			if(!times) {
 				this.secondaryTransport_ = null;
 				// More data might have been queued while the secondary transport
 				// was getting a response. It's also possible that the server didn't
 				// ACK what we just sent, so we have to send it again.
 				this.tryToSend_();
 			} else {
-				this.secondaryTransport_ = this.createWastingTransport_(delay);
+				this.secondaryTransport_ = this.createWastingTransport_(delay, times);
 				this.secondaryTransport_.flush_();
 			}
 		}
@@ -1723,20 +1768,22 @@ cw.net.ClientTransport.logger.setLevel(goog.debug.Logger.Level.ALL);
 
 /**
  * A transport that does not actually try to connect anywhere, but rather
- * waits for `delay` milliseconds and goes offline. {@link cw.net.Stream}
- * uses this when it wants to delay a connection attempt. During a period of
- * network problems, you will see this interspersed between real
- * {@link ClientTransport}s.
+ * waits for `delay` milliseconds `times` times and goes offline.
+ * {@link cw.net.Stream} uses this when it wants to delay a connection
+ * attempt.  During a period of network problems, you will see this
+ * interspersed between real {@link ClientTransport}s.  This is also
+ * used when Stream kills the loading spinner in WebKit browsers.
  *
  * @param {!cw.eventual.CallQueue} callQueue
  * @param {!cw.net.Stream} stream
  * @param {number} delay
+ * @param {number} times
  *
  * @constructor
  * @extends {goog.Disposable}
  * @private
  */
-cw.net.DoNothingTransport = function(callQueue, stream, delay) {
+cw.net.DoNothingTransport = function(callQueue, stream, delay, times) {
 	goog.Disposable.call(this);
 
 	/**
@@ -1756,6 +1803,12 @@ cw.net.DoNothingTransport = function(callQueue, stream, delay) {
 	 * @private
 	 */
 	this.delay_ = delay;
+
+	/**
+	 * @type {number}
+	 * @private
+	 */
+	this.countdown_ = times;
 
 	/**
 	 * @type {boolean}
@@ -1778,6 +1831,31 @@ cw.net.DoNothingTransport = function(callQueue, stream, delay) {
 goog.inherits(cw.net.DoNothingTransport, goog.Disposable);
 
 /**
+ * @private
+ */
+cw.net.DoNothingTransport.prototype.timeoutFired_ = function() {
+	this.goOfflineTicket_ = null;
+	this.countdown_--;
+	if(this.countdown_) {
+		this.setUpTimeout_();
+	} else {
+		this.dispose();
+	}
+};
+
+/**
+ * @private
+ */
+cw.net.DoNothingTransport.prototype.setUpTimeout_ = function() {
+	var that = this;
+	goog.asserts.assert(this.goOfflineTicket_ == null,
+		"DoNothingTransport already has goOfflineTicket_?");
+	this.goOfflineTicket_ = this.callQueue_.clock.setTimeout(function() {
+		that.timeoutFired_();
+	}, this.delay_);
+};
+
+/**
  * Start wasting time.
  * @private
  */
@@ -1785,17 +1863,8 @@ cw.net.DoNothingTransport.prototype.flush_ = function() {
 	if(this.started_ && !this.canFlushMoreThanOnce_) {
 		throw Error("flush_: Can't flush more than once to DoNothingTransport.");
 	}
-
 	this.started_ = true;
-
-	goog.asserts.assert(this.goOfflineTicket_ == null,
-		"DoNothingTransport already has goOfflineTicket_?");
-
-	var that = this;
-	this.goOfflineTicket_ = this.callQueue_.clock.setTimeout(function() {
-		that.goOfflineTicket_ = null;
-		that.dispose();
-	}, this.delay_);
+	this.setUpTimeout_();
 };
 
 /**
