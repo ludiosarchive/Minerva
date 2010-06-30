@@ -296,7 +296,7 @@ cw.net.HelloFrame = function() {
 	this.needPaddingBytes;
 	/** @type {number} */
 	this.maxReceiveBytes;
-	/** @type {number} */
+	/** @type {?number} */
 	this.maxOpenTime;
 	/** @type {boolean} */
 	this.useMyTcpAcks;
