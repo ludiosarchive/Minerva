@@ -22,6 +22,8 @@ from minerva.website import (
 from minerva.flashtest.pages import FlashTestPage
 from minerva.chatapp.pages import ChatAppPage
 
+from lytics.endpoint import WaitResource
+
 from webmagic.untwist import (
 	CookieInstaller, BetterResource, BetterFile, HelpfulNoResource)
 
@@ -441,6 +443,9 @@ class Root(BetterResource):
 		self.putChild('flashtest', FlashTestPage(csrfStopper, cookieInstaller))
 		self.putChild('chatapp', ChatAppPage(csrfStopper, cookieInstaller, domain))
 		self.putChild('xdrframe', XDRFrame(domain))
+
+		# Used by chatapp
+		self.putChild('wait_resource', WaitResource(clock=reactor))
 
 		# The docs are outside of the minerva package
 		docsDir = FilePath(__file__).parent().parent().child('docs')

@@ -14,6 +14,8 @@
 <body>
 
 <div id="doc">
+This page supports options ?mode=http, ?mode=flash, ?useSub=0, ?useSub=1
+(which can be combined).
 </div>
 
 <table id="controls">
@@ -47,6 +49,11 @@ whether there is probably an already-connected Stream in a tab.
 If no such cookie, write out the iframes immediately.
 -->
 <script>
+	// Insert an image that takes a while to load, to make sure our
+	// WebKit spinner-killer works.
+	document.write('<img src="/wait_resource/?wait=4&zx=' +
+		Math.random() + '" width=1 height=1>');
+
 	// Use just one preamble <script> to reduce page load time.
 
 	window.CSRF_TOKEN = {{ dumps(token) }};
@@ -91,6 +98,7 @@ goog.require('cw.loadflash');
 goog.require('goog.Uri');
 goog.require('cw.eventual');
 goog.require('cw.string');
+goog.require('cw.net.XHRSlave');
 goog.require('cw.net.Stream');
 goog.require('cw.net.SocketEndpoint');
 goog.require('cw.net.HttpEndpoint');
@@ -242,25 +250,41 @@ chatapp.getEndpoint = function() {
 	var url = new goog.Uri(document.location);
 	var queryData = url.getQueryData();
 	var mode = queryData.get('mode');
+	// Use subdomains for HTTP communication?
+	var useSub = Boolean(Number(queryData.get('useSub', '1')));
 	if(mode == 'http') {
-		var d = chatapp.waitForIframes();
-		d.addCallback(function() {
-			var primaryWindow = goog.dom.getFrameContentWindow(
-				goog.dom.getElement('chatapp-iframe-1'));
-			var secondaryWindow = goog.dom.getFrameContentWindow(
-				goog.dom.getElement('chatapp-iframe-2'));
+		if(useSub) {
+			var d = chatapp.waitForIframes();
+			d.addCallback(function() {
+				var primaryWindow = goog.dom.getFrameContentWindow(
+					goog.dom.getElement('chatapp-iframe-1'));
+				var secondaryWindow = goog.dom.getFrameContentWindow(
+					goog.dom.getElement('chatapp-iframe-2'));
 
-			var primaryUrl = new goog.Uri(__XDRFrame_loaded.url1);
-			primaryUrl.setPath('/httpface/');
+				var primaryUrl = new goog.Uri(__XDRFrame_loaded.url1);
+				primaryUrl.setPath('/httpface/');
 
-			var secondaryUrl = new goog.Uri(__XDRFrame_loaded.url2);
-			secondaryUrl.setPath('/httpface/');
+				var secondaryUrl = new goog.Uri(__XDRFrame_loaded.url2);
+				secondaryUrl.setPath('/httpface/');
+
+				var endpoint = new cw.net.HttpEndpoint(
+					primaryUrl.toString(), primaryWindow, secondaryUrl.toString(), secondaryWindow);
+				return endpoint;
+			});
+			return d;
+		} else {
+			var endpointUrl = url.clone();
+			endpointUrl.setPath('/httpface/');
+			endpointUrl.setQuery('');
+			var primaryUrl = endpointUrl;
+			var secondaryUrl = endpointUrl;
+			var primaryWindow = goog.global;
+			var secondaryWindow = goog.global;
 
 			var endpoint = new cw.net.HttpEndpoint(
 				primaryUrl.toString(), primaryWindow, secondaryUrl.toString(), secondaryWindow);
-			return endpoint;
-		});
-		return d;
+			return goog.async.Deferred.succeed(endpoint);
+		}
 	} else {
 		var host = url.getDomain();
 		var port = 843;
