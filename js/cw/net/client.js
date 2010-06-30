@@ -377,11 +377,12 @@ cw.net.Stream = function(callQueue, protocol, endpoint, makeCredentialsCallable)
 	this.windowLoadEvent_ = null;
 
 	// For WebKit browsers, we need an ugly hack to prevent the loading
-	// spinning from spinning indefinitely if there is an open XHR request.
-	// If window.onload fires, abort HTTP requests, wait ~100 milliseconds,
-	// then tryToSend_.
+	// spinner/throbber from spinning indefinitely if there is an open XHR
+	// request.  If window.onload fires, abort HTTP requests, wait ~100ms,
+	// then tryToSend_.  Note that it may never fire if window is already
+	// loaded, or if it never finishes loading.
 	if(goog.userAgent.WEBKIT) {
-		this.windowLoadEvent_ = goog.events.listen(
+		this.windowLoadEvent_ = goog.events.listenOnce(
 			goog.global, goog.events.EventType.LOAD,
 			this.restartHttpRequests_, false, this);
 	}
