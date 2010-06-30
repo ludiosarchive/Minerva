@@ -367,6 +367,22 @@ cw.net.Stream = function(callQueue, protocol, endpoint, makeCredentialsCallable)
 	 * @private
 	 */
 	this.incoming_ = new cw.net.Incoming();
+
+	/**
+	 * The numeric key for our window.onload listener (if we listen).
+	 * @type {?number}
+	 */
+	this.windowLoadEvent_ = null;
+
+	// For WebKit browsers, we need an ugly hack to prevent the loading
+	// spinning from spinning indefinitely if there is an open XHR request.
+	// If window.onload fires, abort HTTP requests, wait ~100 milliseconds,
+	// then tryToSend_.
+	if(goog.userAgent.WEBKIT) {
+		this.windowLoadEvent_ = goog.events.listen(
+			goog.global, goog.events.EventType.LOAD,
+			this.restartHttpRequests_, false, this);
+	}
 };
 goog.inherits(cw.net.Stream, goog.events.EventTarget);
 
@@ -555,6 +571,23 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 };
 
 /**
+ * WebKit spinner-killer hack.
+ * See the JSDoc in the constructor near {@code this.windowLoadEvent_}.
+ * @private
+ */
+cw.net.Stream.prototype.restartHttpRequests_ = function() {
+	if(this.primaryTransport_ && this.primaryTransport_.isHttpTransport_()) {
+		cw.net.Stream.logger.info("restartHttpRequests_: aborting primary");
+		this.primaryTransport_.abortToStopSpinner_();
+	}
+	if(this.secondaryTransport_ && this.secondaryTransport_.isHttpTransport_()) {
+		cw.net.Stream.logger.info("restartHttpRequests_: aborting secondary");
+		this.secondaryTransport_.abortToStopSpinner_();
+	}
+	// Don't abort resettingTransport_.
+};
+
+/**
  * Send strings `strings` to the peer. You may call this even before the
  * 	Stream is started with {@link #start}.
  * @param {!Array.<string>} strings Strings to send.
@@ -669,8 +702,23 @@ cw.net.Stream.prototype.streamStatusReceived_ = function(lastSackSeen) {
  * @return {number} Delay in milliseconds
  */
 cw.net.Stream.prototype.getDelayForNextTransport_ = function(transport) {
-	var considerDelay = transport.considerDelayingNextTransport_();
 	var isWaster = transport instanceof cw.net.DoNothingTransport;
+	if(!isWaster && transport.abortedForSpinner_) {
+		// 100ms is probably enough, 0ms is definitely not (for Safari).
+		// See http://ludios.net/browser_bugs/spinner_behavior/xhr_onload_and_0ms.html
+		//
+		// Note: a DoNothingTransport for 100ms still doesn't always stop
+		// the spinner.  I think this happens when Safari doesn't get a chance
+		// to go through its event loop without an XHR open.  On OS X, I managed
+		// to make this happen by making OS X's modal password prompt dialog
+		// appear.  See Minerva/docs/safari_password_prompt_loading_spinner_stays.png
+		// After I pressed cancel, the DoNothingTransport was created and
+		// disposed, but the loading spinner was still spinning.
+		// (Tested Safari 5.0 on OS X 10.6.4).
+		return 100;
+	}
+
+	var considerDelay = transport.considerDelayingNextTransport_();
 	var count;
 	if(transport == this.primaryTransport_) {
 		if(considerDelay) {
@@ -945,7 +993,9 @@ cw.net.Stream.prototype.start = function() {
 
 cw.net.Stream.prototype.disposeInternal = function() {
 	cw.net.Stream.superClass_.disposeInternal.call(this);
-	//
+	if(goog.userAgent.WEBKIT && this.windowLoadEvent_) {
+		goog.events.unlistenByKey(this.windowLoadEvent_);
+	}
 };
 
 // notifyFinish?
@@ -1135,6 +1185,14 @@ cw.net.ClientTransport.prototype.peerSeqNum_ = -1;
  * @private
  */
 cw.net.ClientTransport.prototype.wroteResetFrame_ = false;
+
+/**
+ * Was this transport aborted because Stream is trying to stop
+ * the browser spinner from spinning?
+ * @type {boolean}
+ * @private
+ */
+cw.net.ClientTransport.prototype.abortedForSpinner_ = false;
 
 /**
  * The additional likelihood that Stream is dead on server or permanently
@@ -1619,6 +1677,16 @@ cw.net.ClientTransport.prototype.disposeInternal = function() {
 };
 
 /**
+ * Abort because we're trying to stop the browser spinner from spinning.
+ * @private
+ */
+cw.net.ClientTransport.prototype.abortToStopSpinner_ = function() {
+	goog.asserts.assert(this.isHttpTransport_(), "only useful for http");
+	this.abortedForSpinner_ = true;
+	this.dispose();
+};
+
+/**
  * Close this transport because it has caused our receive window to
  * overflow. We don't want to keep the transport open because otherwise
  * the server will assume that the strings it sent over the transport
@@ -1737,6 +1805,15 @@ cw.net.DoNothingTransport.prototype.flush_ = function() {
 cw.net.DoNothingTransport.prototype.__reprToPieces__ = function(sb) {
 	sb.push(
 		'<DoNothingTransport delay=', String(this.delay_), '>');
+};
+
+/**
+ * Note: Stream.restartHttpRequests_ needs this.
+ * @return {boolean}
+ * @private
+ */
+cw.net.DoNothingTransport.prototype.isHttpTransport_ = function() {
+	return false;
 };
 
 /**
