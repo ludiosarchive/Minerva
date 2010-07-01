@@ -66,6 +66,13 @@ cw.net.ResponseTextDecoder = function(xObject, maxLength) {
 };
 
 /**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.ResponseTextDecoder.prototype.logger_ =
+	goog.debug.Logger.getLogger('cw.net.ResponseTextDecoder');
+
+/**
  * The next location decoder will read
  * @type {number}
  * @private
@@ -149,7 +156,7 @@ cw.net.ResponseTextDecoder.prototype.getNewStrings = function(responseTextLength
 	var reportedLength = responseTextLength;
 	responseTextLength = text.length;
 	if(reportedLength > responseTextLength) {
-		cw.net.ResponseTextDecoder.logger.fine(
+		this.logger_.fine(
 			'Someone lied and reported a too-large responseTextLength: ' +
 			reportedLength + '; should have been ' + responseTextLength + ' or lower.');
 	}
@@ -202,7 +209,3 @@ cw.net.ResponseTextDecoder.prototype.getNewStrings = function(responseTextLength
 	////console.log('ignoreUntil_ now', this.ignoreUntil_);
 	return strings;
 };
-
-
-cw.net.ResponseTextDecoder.logger = goog.debug.Logger.getLogger('cw.net.ResponseTextDecoder');
-cw.net.ResponseTextDecoder.logger.setLevel(goog.debug.Logger.Level.ALL);

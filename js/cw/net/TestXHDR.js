@@ -12,6 +12,7 @@ goog.require('cw.net.simpleRequest');
 goog.require('cw.uri');
 goog.require('cw.Class');
 goog.require('goog.debug');
+goog.require('goog.debug.Logger');
 goog.require('goog.userAgent');
 goog.require('goog.json.Serializer');
 goog.require('goog.string');
@@ -20,8 +21,11 @@ goog.require('goog.string');
 // anti-clobbering for JScript
 (function(){
 
+/**
+ * @type {!goog.debug.Logger}
+ * @private
+ */
 cw.net.TestXHDR.logger = goog.debug.Logger.getLogger('cw.net.TestXHDR');
-cw.net.TestXHDR.logger.setLevel(goog.debug.Logger.Level.ALL);
 
 
 cw.net.TestXHDR.hasXDomainRequest = function hasXDomainRequest() {

@@ -523,7 +523,7 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 			"removed item #0 from our queue?");
 	}
 	if(this.state_ == cw.net.StreamState_.UNSTARTED) {
-		cw.net.Stream.logger.finest(
+		this.logger_.finest(
 			"tryToSend_: haven't started yet; not sending anything. " +
 			"You should call Stream.start().");
 		return;
@@ -532,7 +532,7 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 	var haveQueueItems = (this.queue_.getQueuedCount() != 0);
 	var maybeNeedToSendSack = !currentSack.equals(this.lastSackSeenByServer_);
 
-//	cw.net.Stream.logger.finest('In tryToSend_, ' + cw.repr.repr({
+//	this.logger_.finest('In tryToSend_, ' + cw.repr.repr({
 //		currentSack: currentSack,
 //		lastSackSeenByServer_: this.lastSackSeenByServer_,
 //		haveQueueItems: haveQueueItems,
@@ -542,7 +542,7 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 		// After we're in STARTED, we always have a primary transport,
 		// even if its underlying object hasn't connected yet.
 		if(this.primaryTransport_.canFlushMoreThanOnce_) {
-			cw.net.Stream.logger.finest(
+			this.logger_.finest(
 				"tryToSend_: writing SACK/strings to primary");
 			if(maybeNeedToSendSack) {
 				this.primaryTransport_.writeSack_(currentSack);
@@ -555,19 +555,19 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 		// exists on server before creating secondary transports.
 		} else if(this.secondaryTransport_ == null) {
 			if(!this.streamExistedAtServer_) {
-				cw.net.Stream.logger.finest(
+				this.logger_.finest(
 					"tryToSend_: not creating a secondary because Stream " +
 					"might not exist on server");
 				this.secondaryIsWaitingForStreamToExist_ = true;
 			} else {
-				cw.net.Stream.logger.finest(
+				this.logger_.finest(
 					"tryToSend_: creating secondary to send SACK/strings");
 				this.secondaryTransport_ = this.createNewTransport_(false);
 				this.secondaryTransport_.writeStrings_(this.queue_, null);
 				this.secondaryTransport_.flush_();
 			}
 		} else {
-			cw.net.Stream.logger.finest(
+			this.logger_.finest(
 				"tryToSend_: need to send SACK/strings, but can't right now");
 		}
 	}
@@ -580,11 +580,11 @@ cw.net.Stream.prototype.tryToSend_ = function() {
  */
 cw.net.Stream.prototype.restartHttpRequests_ = function() {
 	if(this.primaryTransport_ && this.primaryTransport_.isHttpTransport_()) {
-		cw.net.Stream.logger.info("restartHttpRequests_: aborting primary");
+		this.logger_.info("restartHttpRequests_: aborting primary");
 		this.primaryTransport_.abortToStopSpinner_();
 	}
 	if(this.secondaryTransport_ && this.secondaryTransport_.isHttpTransport_()) {
-		cw.net.Stream.logger.info("restartHttpRequests_: aborting secondary");
+		this.logger_.info("restartHttpRequests_: aborting secondary");
 		this.secondaryTransport_.abortToStopSpinner_();
 	}
 	// Don't abort resettingTransport_.
@@ -647,7 +647,7 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
 	var transport = this.instantiateTransport_(
 		this.callQueue_, this, this.transportCount_, transportType,
 			this.endpoint_, becomePrimary);
-	cw.net.Stream.logger.finest(
+	this.logger_.finest(
 		"Created: " + transport.getDescription_());
 	this.transports_.add(transport);
 	return transport;
@@ -662,7 +662,7 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
 cw.net.Stream.prototype.createWastingTransport_ = function(delay, times) {
 	var transport = new cw.net.DoNothingTransport(
 		this.callQueue_, this, delay, times);
-	cw.net.Stream.logger.finest(
+	this.logger_.finest(
 		"Created: " + transport.getDescription_() +
 		", delay=" + delay + ", times=" + times);
 	this.transports_.add(transport);
@@ -679,7 +679,7 @@ cw.net.Stream.prototype.createWastingTransport_ = function(delay, times) {
  * @private
  */
 cw.net.Stream.prototype.streamSuccessfullyCreated_ = function(avoidCreatingTransports) {
-	cw.net.Stream.logger.finest('Stream is now confirmed to exist at server.');
+	this.logger_.finest('Stream is now confirmed to exist at server.');
 	this.streamExistedAtServer_ = true;
 	// See comment for cw.net.Stream.prototype.stringsReceived_
 	if(this.secondaryIsWaitingForStreamToExist_ && !avoidCreatingTransports) {
@@ -757,7 +757,7 @@ cw.net.Stream.prototype.getDelayForNextTransport_ = function(transport) {
 		var _ = this.getDelayToStopSpinner_();
 		delay = _[0];
 		times = _[1];
-		cw.net.Stream.logger.finest("getDelayForNextTransport_: " +
+		this.logger_.finest("getDelayForNextTransport_: " +
 			cw.repr.repr({'delay': delay, 'times': times}));
 		return [delay, times];
 	}
@@ -780,7 +780,7 @@ cw.net.Stream.prototype.getDelayForNextTransport_ = function(transport) {
 	if(isWaster || !count) {
 		delay = 0;
 		times = 0;
-		cw.net.Stream.logger.finest("getDelayForNextTransport_: " +
+		this.logger_.finest("getDelayForNextTransport_: " +
 			cw.repr.repr({'count': count, 'delay': delay, 'times': times}));
 	} else {
 		var base = 2000 * Math.min(count, 3);
@@ -790,7 +790,7 @@ cw.net.Stream.prototype.getDelayForNextTransport_ = function(transport) {
 		var oldDuration = transport.getUnderlyingDuration_();
 		delay = Math.max(0, base + variance - oldDuration);
 		times = delay ? 1 : 0;
-		cw.net.Stream.logger.finest("getDelayForNextTransport_: " +
+		this.logger_.finest("getDelayForNextTransport_: " +
 			cw.repr.repr({'count': count, 'base': base, 'variance': variance,
 				'oldDuration': oldDuration, 'delay': delay, 'times': times}));
 	}
@@ -816,7 +816,7 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 	if(!removed) {
 		throw Error("transportOffline_: Transport was not removed?");
 	}
-	cw.net.Stream.logger.fine('Offline: ' + transport.getDescription_());
+	this.logger_.fine('Offline: ' + transport.getDescription_());
 
 	if(!transport.penalty_) {
 		this.streamPenalty_ = 0;
@@ -825,7 +825,7 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 	}
 
 	if(this.streamPenalty_ >= 1) {
-		cw.net.Stream.logger.info("transportOffline_: Doing an internal " +
+		this.logger_.info("transportOffline_: Doing an internal " +
 			"reset because streamPenalty_ reached limit.");
 		this.internalReset_("stream penalty reached limit");
 	}
@@ -833,11 +833,11 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 	if(this.state_ > cw.net.StreamState_.STARTED) {
 		if(this.state_ == cw.net.StreamState_.RESETTING &&
 		transport.wroteResetFrame_) {
-			cw.net.Stream.logger.info("Was RESETTING, now DISCONNECTED.");
+			this.logger_.info("Was RESETTING, now DISCONNECTED.");
 			this.state_ = cw.net.StreamState_.DISCONNECTED;
 			this.fireDisconnectedEvent_();
 		}
-		cw.net.Stream.logger.fine(
+		this.logger_.fine(
 			"Not creating a transport because Stream is in state " + this.state_);
 	} else {
 		var _ = this.getDelayForNextTransport_(transport);
@@ -880,7 +880,7 @@ cw.net.Stream.prototype.reset = function(reasonString) {
 	}
 	this.state_ = cw.net.StreamState_.RESETTING;
 	if(this.primaryTransport_ && this.primaryTransport_.canFlushMoreThanOnce_) {
-		cw.net.Stream.logger.info("reset: Sending ResetFrame over existing primary.");
+		this.logger_.info("reset: Sending ResetFrame over existing primary.");
 		this.primaryTransport_.writeReset_(reasonString, true/* applicationLevel */);
 		this.primaryTransport_.flush_();
 		// If server gets the ResetFrame, it will close the transport (or send YouCloseIt).
@@ -893,15 +893,15 @@ cw.net.Stream.prototype.reset = function(reasonString) {
 		// Dispose primary and secondary transports to free up connection
 		// slots, which is hopefully not necessary.
 		if(this.primaryTransport_) {
-			cw.net.Stream.logger.fine("reset: Disposing primary before sending ResetFrame.");
+			this.logger_.fine("reset: Disposing primary before sending ResetFrame.");
 			this.primaryTransport_.dispose();
 		}
 		if(this.secondaryTransport_) {
-			cw.net.Stream.logger.fine("reset: Disposing secondary before sending ResetFrame.");
+			this.logger_.fine("reset: Disposing secondary before sending ResetFrame.");
 			this.secondaryTransport_.dispose();
 		}
 
-		cw.net.Stream.logger.info("reset: Creating resettingTransport_ for sending ResetFrame.");
+		this.logger_.info("reset: Creating resettingTransport_ for sending ResetFrame.");
 		this.resettingTransport_ = this.createNewTransport_(false);
 		this.resettingTransport_.writeReset_(reasonString, true/* applicationLevel */);
 		this.resettingTransport_.flush_();
@@ -1037,6 +1037,12 @@ cw.net.Stream.prototype.start = function() {
 	this.primaryTransport_.flush_();
 };
 
+/**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.Stream.prototype.logger_ = goog.debug.Logger.getLogger('cw.net.Stream');
+
 cw.net.Stream.prototype.disposeInternal = function() {
 	cw.net.Stream.superClass_.disposeInternal.call(this);
 	if(goog.userAgent.WEBKIT && this.windowLoadEvent_) {
@@ -1046,9 +1052,6 @@ cw.net.Stream.prototype.disposeInternal = function() {
 
 // notifyFinish?
 // producers?
-
-cw.net.Stream.logger = goog.debug.Logger.getLogger('cw.net.Stream');
-cw.net.Stream.logger.setLevel(goog.debug.Logger.Level.ALL);
 
 
 
@@ -1341,7 +1344,7 @@ cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedString
 	// For HTTP transports, first frame must be the anti-script-inclusion preamble.
 	// This provides decent protection against us parsing and reading frames
 	// from a page returned by an intermediary like a proxy or a WiFi access paywall.
-	var logger = cw.net.ClientTransport.logger;
+	var logger = this.logger_;
 	if(this.framesDecoded_ == 0 && frameStr != ";)]}P" && this.isHttpTransport_()) {
 		logger.warning("Closing soon because got bad preamble: " +
 			cw.repr.repr(frameStr));
@@ -1432,7 +1435,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 			// framesReceived_; for example, if we were disposed while
 			// making an HTTP request.
 			if(this.isDisposed()) {
-				cw.net.ClientTransport.logger.info(this.getDescription_() +
+				this.logger_.info(this.getDescription_() +
 					" returning from loop because we're disposed.");
 				return;
 			}
@@ -1611,7 +1614,7 @@ cw.net.ClientTransport.prototype.flush_ = function() {
 	}
 
 	if(this.spinning_) {
-		cw.net.ClientTransport.logger.finest(
+		this.logger_.finest(
 			"flush_: Returning because spinning right now.");
 		return;
 	}
@@ -1626,7 +1629,7 @@ cw.net.ClientTransport.prototype.flush_ = function() {
 	// Just debug logging
 	for(var i=0; i < this.toSendFrames_.length; i++) {
 		var frame = this.toSendFrames_[i];
-		cw.net.ClientTransport.logger.fine(
+		this.logger_.fine(
 			this.getDescription_() + ' SEND ' + cw.repr.repr(frame));
 	}
 
@@ -1703,7 +1706,7 @@ cw.net.ClientTransport.prototype.writeStrings_ = function(queue, start) {
  * @private
  */
 cw.net.ClientTransport.prototype.disposeInternal = function() {
-	cw.net.ClientTransport.logger.info(
+	this.logger_.info(
 		this.getDescription_() + " in disposeInternal.");
 
 	cw.net.ClientTransport.superClass_.disposeInternal.call(this);
@@ -1740,7 +1743,7 @@ cw.net.ClientTransport.prototype.abortToStopSpinner_ = function() {
  * @private
  */
 cw.net.ClientTransport.prototype.causedRwinOverflow_ = function() {
-	cw.net.ClientTransport.logger.severe("Peer caused rwin overflow.");
+	this.logger_.severe("Peer caused rwin overflow.");
 	this.dispose();
 };
 
@@ -1761,9 +1764,11 @@ cw.net.ClientTransport.prototype.writeReset_ = function(reasonString, applicatio
 	this.wroteResetFrame_ = true;
 };
 
-
-cw.net.ClientTransport.logger = goog.debug.Logger.getLogger('cw.net.ClientTransport');
-cw.net.ClientTransport.logger.setLevel(goog.debug.Logger.Level.ALL);
+/**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.ClientTransport.prototype.logger_ = goog.debug.Logger.getLogger('cw.net.ClientTransport');
 
 
 
@@ -1909,7 +1914,7 @@ cw.net.DoNothingTransport.prototype.considerDelayingNextTransport_ = function() 
  * @private
  */
 cw.net.DoNothingTransport.prototype.disposeInternal = function() {
-	cw.net.DoNothingTransport.logger.info(
+	this.logger_.info(
 		this.getDescription_() + " in disposeInternal.");
 
 	cw.net.DoNothingTransport.superClass_.disposeInternal.call(this);
@@ -1926,9 +1931,11 @@ cw.net.DoNothingTransport.prototype.disposeInternal = function() {
 	stream.transportOffline_(this);
 };
 
-
-cw.net.DoNothingTransport.logger = goog.debug.Logger.getLogger('cw.net.DoNothingTransport');
-cw.net.DoNothingTransport.logger.setLevel(goog.debug.Logger.Level.ALL);
+/**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.DoNothingTransport.prototype.logger_ = goog.debug.Logger.getLogger('cw.net.DoNothingTransport');
 
 
 
@@ -1983,11 +1990,11 @@ cw.net.FlashSocketConduit.prototype.isConnected = function() {
  */
 cw.net.FlashSocketConduit.prototype.writeFrames = function(frames) {
 	if(!this.isConnected()) {
-		cw.net.FlashSocketConduit.logger.finest(
+		this.logger_.finest(
 			"writeFrames: Not connected, can't write " + frames.length + " frame(s) yet.");
 		this.bufferedFrames_.push.apply(this.bufferedFrames_, frames);
 	} else {
-		cw.net.FlashSocketConduit.logger.finest(
+		this.logger_.finest(
 			"writeFrames: Writing " + frames.length + " frame(s).");
 		this.socket_.writeFrames(frames);
 	}
@@ -2002,18 +2009,18 @@ cw.net.FlashSocketConduit.prototype.connect = function(host, port) {
 };
 
 cw.net.FlashSocketConduit.prototype.onconnect = function() {
-	cw.net.FlashSocketConduit.logger.info('onconnect');
+	this.logger_.info('onconnect');
 	var frames = this.bufferedFrames_;
 	this.bufferedFrames_ = null;
 	if(frames.length) {
-		cw.net.FlashSocketConduit.logger.finest(
+		this.logger_.finest(
 			"onconnect: Writing " + frames.length + " buffered frame(s).");
 		this.socket_.writeFrames(frames);
 	}
 };
 
 cw.net.FlashSocketConduit.prototype.onclose = function() {
-	cw.net.FlashSocketConduit.logger.info('onclose');
+	this.logger_.info('onclose');
 	this.clientTransport_.flashSocketTerminated_();
 };
 
@@ -2021,7 +2028,7 @@ cw.net.FlashSocketConduit.prototype.onclose = function() {
  * @param {string} errorText
  */
 cw.net.FlashSocketConduit.prototype.onioerror = function(errorText) {
-	cw.net.FlashSocketConduit.logger.warning('onioerror: ' + cw.repr.repr(errorText));
+	this.logger_.warning('onioerror: ' + cw.repr.repr(errorText));
 	this.clientTransport_.flashSocketTerminated_();
 };
 
@@ -2029,7 +2036,7 @@ cw.net.FlashSocketConduit.prototype.onioerror = function(errorText) {
  * @param {string} errorText
  */
 cw.net.FlashSocketConduit.prototype.onsecurityerror = function(errorText) {
-	cw.net.FlashSocketConduit.logger.warning('onsecurityerror: ' + cw.repr.repr(errorText));
+	this.logger_.warning('onsecurityerror: ' + cw.repr.repr(errorText));
 	this.clientTransport_.flashSocketTerminated_();
 };
 
@@ -2041,14 +2048,16 @@ cw.net.FlashSocketConduit.prototype.onframes = function(frames) {
 };
 
 cw.net.FlashSocketConduit.prototype.disposeInternal = function() {
-	cw.net.FlashSocketConduit.logger.info("in disposeInternal.");
+	this.logger_.info("in disposeInternal.");
 	cw.net.FlashSocketConduit.superClass_.disposeInternal.call(this);
 	this.socket_.disposeInternal();
 };
 
-
-cw.net.FlashSocketConduit.logger = goog.debug.Logger.getLogger('cw.net.FlashSocketConduit');
-cw.net.FlashSocketConduit.logger.setLevel(goog.debug.Logger.Level.ALL);
+/**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.FlashSocketConduit.prototype.logger_ = goog.debug.Logger.getLogger('cw.net.FlashSocketConduit');
 
 
 
@@ -2178,7 +2187,7 @@ cw.net.XHRMasterTracker.prototype.onframes_ = function(reqId, frames) {
 	frames = goog.array.concat(frames);
 	var master = this.masters_[reqId];
 	if(!master) {
-		cw.net.XHRMasterTracker.logger.severe(
+		this.logger_.severe(
 			"onframes_: no master for " + cw.repr.repr(reqId));
 		return;
 	}
@@ -2192,7 +2201,7 @@ cw.net.XHRMasterTracker.prototype.onframes_ = function(reqId, frames) {
 cw.net.XHRMasterTracker.prototype.oncomplete_ = function(reqId) {
 	var master = this.masters_[reqId];
 	if(!master) {
-		cw.net.XHRMasterTracker.logger.severe(
+		this.logger_.severe(
 			"oncomplete_: no master for " + cw.repr.repr(reqId));
 		return;
 	}
@@ -2216,8 +2225,11 @@ cw.net.XHRMasterTracker.prototype.disposeInternal = function() {
 	this.masters_ = {};
 };
 
-cw.net.XHRMasterTracker.logger = goog.debug.Logger.getLogger('cw.net.XHRMasterTracker');
-cw.net.XHRMasterTracker.logger.setLevel(goog.debug.Logger.Level.ALL);
+/**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.XHRMasterTracker.prototype.logger_ = goog.debug.Logger.getLogger('cw.net.XHRMasterTracker');
 
 
 

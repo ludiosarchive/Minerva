@@ -15,7 +15,8 @@
 
 <div id="doc">
 This page supports options ?mode=http, ?mode=flash, ?useSub=0, ?useSub=1
-(which can be combined).
+(which can be combined).  Note: when using subdomains, you'll see fewer log
+messages because log messages in the iframes are not sent to this parent window.
 </div>
 
 <table id="controls">
@@ -91,6 +92,7 @@ goog.provide('chatapp');
 goog.require('cw.autoTitle');
 goog.require('goog.debug.DivConsole');
 goog.require('goog.debug.Logger');
+goog.require('goog.debug.LogManager');
 goog.require('goog.dom');
 goog.require('goog.async.Deferred');
 goog.require('goog.ui.media.FlashObject');
@@ -110,13 +112,13 @@ goog.require('cw.string');
 </script>
 
 <script>
+goog.debug.LogManager.getRoot().setLevel(goog.debug.Logger.Level.ALL);
+
 var logDiv = document.getElementById('log');
 var divConsole = new goog.debug.DivConsole(logDiv);
 divConsole.setCapturing(true);
 
 chatapp.logger = goog.debug.Logger.getLogger('chatapp.logger');
-chatapp.logger.setLevel(goog.debug.Logger.Level.ALL);
-
 chatapp.logger.info('Logger works.');
 
 

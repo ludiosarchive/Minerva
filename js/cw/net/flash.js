@@ -196,7 +196,7 @@ cw.net.FlashSocket.prototype.writeFrames = function(strings) {
 	if(ret == '"OK"') {
 
 	} else if(ret == '"no such instance"') {
-		cw.net.FlashSocket.logger.warning(
+		this.logger_.warning(
 			"Flash no longer knows of " + this.id_ + "; disposing.");
 		this.dispose();
 	} else {
@@ -208,7 +208,7 @@ cw.net.FlashSocket.prototype.writeFrames = function(strings) {
  * Call `dispose` to close the underlying Flash socket.
  */
 cw.net.FlashSocket.prototype.disposeInternal = function() {
-	cw.net.FlashSocket.logger.info(
+	this.logger_.info(
 		'in disposeInternal, needToCallClose_=' + this.needToCallClose_);
 
 	cw.net.FlashSocket.superClass_.disposeInternal.call(this);
@@ -218,15 +218,17 @@ cw.net.FlashSocket.prototype.disposeInternal = function() {
 
 	if(this.needToCallClose_) {
 		var ret = bridge.CallFunction(cw.externalinterface.request('__FC_close', this.id_));
-		cw.net.FlashSocket.logger.info("disposeInternal: __FC_close ret: " + ret);
+		this.logger_.info("disposeInternal: __FC_close ret: " + ret);
 	}
 
 	this.tracker_.socketOffline_(this);
 };
 
-
-cw.net.FlashSocket.logger = goog.debug.Logger.getLogger('cw.net.FlashSocket');
-cw.net.FlashSocket.logger.setLevel(goog.debug.Logger.Level.ALL);
+/**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.FlashSocket.prototype.logger_ = goog.debug.Logger.getLogger('cw.net.FlashSocket');
 
 
 
@@ -334,7 +336,7 @@ cw.net.FlashSocketTracker.prototype.dispatchEventToSocket_ = function(id, event,
 		// Next, cw.net.FlashSocket makes some other call, sees "no such instance"
 		// and disposes itself.  Next, the original ExternalInterface call from
 		// Flash finally arrives, and it hits this branch.
-		cw.net.FlashSocketTracker.logger.warning(
+		this.logger_.warning(
 			"Cannot dispatch because we have no instance: " +
 			cw.repr.repr([id, event, arg1, arg2]));
 		return;
@@ -397,9 +399,11 @@ cw.net.FlashSocketTracker.prototype.disposeInternal = function() {
 	goog.global[this.callbackFunc_] = undefined;
 };
 
-
-cw.net.FlashSocketTracker.logger = goog.debug.Logger.getLogger('cw.net.FlashSocketTracker');
-cw.net.FlashSocketTracker.logger.setLevel(goog.debug.Logger.Level.ALL);
+/**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.FlashSocketTracker.prototype.logger_ = goog.debug.Logger.getLogger('cw.net.FlashSocketTracker');
 
 
 

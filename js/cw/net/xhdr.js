@@ -261,7 +261,7 @@ cw.net.UsableXDR.prototype.finishAndReset_ = function(errorOrNull) {
  * @private
  */
 cw.net.UsableXDR.prototype.handler_XDR_onerror_ = function() {
-	cw.net.UsableXDR.logger.fine('handler_XDR_onerror_');
+	this.logger_.fine('handler_XDR_onerror_');
 	this.finishAndReset_(new cw.net.NetworkProblem());
 };
 
@@ -269,7 +269,7 @@ cw.net.UsableXDR.prototype.handler_XDR_onerror_ = function() {
  * @private
  */
 cw.net.UsableXDR.prototype.handler_XDR_ontimeout_ = function() {
-	cw.net.UsableXDR.logger.fine('handler_XDR_ontimeout_');
+	this.logger_.fine('handler_XDR_ontimeout_');
 	// Even though our XDR timeout is very high and should never be
 	// reached, we'll treat it the same as an official timeout.
 	this.finishAndReset_(new cw.net.Timeout());
@@ -281,11 +281,11 @@ cw.net.UsableXDR.prototype.handler_XDR_ontimeout_ = function() {
 cw.net.UsableXDR.prototype.handler_XDR_onprogress_ = function() {
 	// window.event appears to be `null` all the time in IE8 XDR, so
 	// there is no useful information for us.
-	cw.net.UsableXDR.logger.finest('handler_XDR_onprogress_ ' + window.event);
+	this.logger_.finest('handler_XDR_onprogress_ ' + window.event);
 	try {
 		this.progressCallback_(this.object_, null, null);
 	} catch(e) {
-		cw.net.UsableXDR.logger.severe('[handler_XDR_onprogress_] Error in progressCallback_', e);
+		this.logger_.severe('[handler_XDR_onprogress_] Error in progressCallback_', e);
 	}
 };
 
@@ -293,11 +293,11 @@ cw.net.UsableXDR.prototype.handler_XDR_onprogress_ = function() {
  * @private
  */
 cw.net.UsableXDR.prototype.handler_XDR_onload_ = function() {
-	cw.net.UsableXDR.logger.fine('handler_XDR_onload_');
+	this.logger_.fine('handler_XDR_onload_');
 	try {
 		this.progressCallback_(this.object_, null, null);
 	} catch(e) {
-		cw.net.UsableXDR.logger.severe('[handler_XDR_onload_] Error in progressCallback_', e);
+		this.logger_.severe('[handler_XDR_onload_] Error in progressCallback_', e);
 	}
 	this.finishAndReset_(null);
 };
@@ -362,9 +362,12 @@ cw.net.UsableXDR.prototype.abort_ = function() {
 	}
 };
 
-
-cw.net.UsableXDR.logger = goog.debug.Logger.getLogger('cw.net.UsableXDR');
-cw.net.UsableXDR.logger.setLevel(goog.debug.Logger.Level.ALL);
+/**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.UsableXDR.prototype.logger_ =
+	goog.debug.Logger.getLogger('cw.net.UsableXDR');
 
 
 
@@ -430,7 +433,7 @@ cw.net.UsableXHR.prototype.request_ = function(verb, url, post, progressCallback
 	try {
 		x.onprogress = goog.bind(this.handler_onprogress_, this);
 	} catch(err) {
-		cw.net.UsableXHR.logger.info(self + ": failed to attach onprogress event: " + err.message);
+		this.logger_.info(self + ": failed to attach onprogress event: " + err.message);
 	}
 	// TODO: maybe attach onerror too, to detect some network errors.
 
@@ -507,7 +510,7 @@ cw.net.UsableXHR.prototype.handler_poll_ = function() {
 		try {
 			this.progressCallback_(this.object_, null, null);
 		} catch(e) {
-			cw.net.UsableXHR.logger.severe('[handler_poll_] Error in progressCallback_', e);
+			this.logger_.severe('[handler_poll_] Error in progressCallback_', e);
 		}
 	}
 };
@@ -516,7 +519,7 @@ cw.net.UsableXHR.prototype.handler_poll_ = function() {
  * @private
  */
 cw.net.UsableXHR.prototype.handler_onprogress_ = function(ev) {
-	//cw.net.UsableXHR.logger.finest('handler_onprogress_: ' + goog.json.serialize(ev));
+	//this.logger_.finest('handler_onprogress_: ' + goog.json.serialize(ev));
 
 	// In Safari 4.0.3 and Firefox 3.5.2/3.0.7, e.totalSize === 4294967295
 	// when length is unknown.
@@ -540,7 +543,7 @@ cw.net.UsableXHR.prototype.handler_onprogress_ = function(ev) {
 		try {
 			this.progressCallback_(this.object_, null, this.totalSize_);
 		} catch(e) {
-			cw.net.UsableXHR.logger.severe('[handler_onprogress_] Error in progressCallback_', e);
+			this.logger_.severe('[handler_onprogress_] Error in progressCallback_', e);
 		}
 	}
 };
@@ -554,12 +557,12 @@ cw.net.UsableXHR.prototype.handler_onreadystatechange_ = function() {
 	// TODO: look around in other browsers? maybe (but unlikely) they'll have
 	// 	a "bytes received" property.
 	var readyState = this.object_.readyState;
-	cw.net.UsableXHR.logger.finest(this + ': readyState: ' + readyState);
+	this.logger_.finest(this + ': readyState: ' + readyState);
 	if(readyState == 3 || readyState == 4) {
 		try {
 			this.progressCallback_(this.object_, this.position_, this.totalSize_);
 		} catch(e) {
-			cw.net.UsableXHR.logger.severe('[handler_onreadystatechange_] Error in progressCallback_', e);
+			this.logger_.severe('[handler_onreadystatechange_] Error in progressCallback_', e);
 		}
 	}
 
@@ -578,9 +581,12 @@ cw.net.UsableXHR.prototype.handler_onreadystatechange_ = function() {
 	}
 };
 
-
-cw.net.UsableXHR.logger = goog.debug.Logger.getLogger('cw.net.UsableXHR');
-cw.net.UsableXHR.logger.setLevel(goog.debug.Logger.Level.ALL);
+/**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.UsableXHR.prototype.logger_ =
+	goog.debug.Logger.getLogger('cw.net.UsableXHR');
 
 
 
