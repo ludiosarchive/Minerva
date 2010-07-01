@@ -1344,9 +1344,8 @@ cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedString
 	// For HTTP transports, first frame must be the anti-script-inclusion preamble.
 	// This provides decent protection against us parsing and reading frames
 	// from a page returned by an intermediary like a proxy or a WiFi access paywall.
-	var logger = this.logger_;
 	if(this.framesDecoded_ == 0 && frameStr != ";)]}P" && this.isHttpTransport_()) {
-		logger.warning("Closing soon because got bad preamble: " +
+		this.logger_.warning("Closing soon because got bad preamble: " +
 			cw.repr.repr(frameStr));
 		// No penalty because we want to treat this just like "cannot connect to peer".
 		return true;
@@ -1357,7 +1356,7 @@ cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedString
 		/** @type {!cw.net.Frame} Decoded frame */
 		var frame = cw.net.decodeFrameFromServer(frameStr);
 		this.framesDecoded_ += 1;
-		logger.fine(this.getDescription_() + ' RECV ' + cw.repr.repr(frame));
+		this.logger_.fine(this.getDescription_() + ' RECV ' + cw.repr.repr(frame));
 		if(frame instanceof cw.net.StringFrame) {
 			this.peerSeqNum_ += 1;
 			// Because we may have received multiple Minerva strings, collect
@@ -1366,7 +1365,7 @@ cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedString
 			bunchedStrings.push([this.peerSeqNum_, frame.string]);
 		} else if(frame instanceof cw.net.SackFrame) {
 			if(this.stream_.sackReceived_(frame.sack)) {
-				logger.warning("Closing soon because got bad SackFrame");
+				this.logger_.warning("Closing soon because got bad SackFrame");
 				this.hadProblems_ = true;
 				return true;
 			}
@@ -1375,7 +1374,7 @@ cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedString
 		} else if(frame instanceof cw.net.StreamStatusFrame) {
 			this.stream_.streamStatusReceived_(frame.lastSackSeen);
 		} else if(frame instanceof cw.net.YouCloseItFrame) {
-			logger.finest("Closing soon because got YouCloseItFrame");
+			this.logger_.finest("Closing soon because got YouCloseItFrame");
 			return true;
 		} else if(frame instanceof cw.net.TransportKillFrame) {
 			this.hadProblems_ = true;
@@ -1384,8 +1383,9 @@ cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedString
 			} else if(frame.reason == cw.net.TransportKillReason.acked_unsent_strings) {
 				this.penalty_ += 0.5;
 			}
-			// no penalty for frame_corruption, invalid_frame_type_or_arguments, rwin_overflow
-			logger.finest("Closing soon because got " + cw.repr.repr(frame));
+			// No penalty for frame_corruption, rwin_overflow, or
+			// invalid_frame_type_or_arguments
+			this.logger_.finest("Closing soon because got " + cw.repr.repr(frame));
 			return true;
 		} else if(frame instanceof cw.net.PaddingFrame) {
 			// Ignore it
@@ -1410,7 +1410,8 @@ cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedString
 		if(!(e instanceof cw.net.InvalidFrame)) {
 			throw e;
 		}
-		logger.warning("Closing soon because got InvalidFrame: " + cw.repr.repr(frameStr));
+		this.logger_.warning("Closing soon because got InvalidFrame: " +
+			cw.repr.repr(frameStr));
 		// No penalty because this cause is almost certainly
 		// due to corruption by intermediary.
 		this.hadProblems_ = true;
