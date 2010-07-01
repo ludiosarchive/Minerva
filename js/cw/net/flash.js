@@ -135,6 +135,13 @@ cw.net.FlashSocket = function(tracker, proto) {
 goog.inherits(cw.net.FlashSocket, goog.Disposable);
 
 /**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.FlashSocket.prototype.logger_ =
+	goog.debug.Logger.getLogger('cw.net.FlashSocket');
+
+/**
  * @param {!Array.<string>} sb
  */
 cw.net.FlashSocket.prototype.__reprToPieces__ = function(sb) {
@@ -224,13 +231,6 @@ cw.net.FlashSocket.prototype.disposeInternal = function() {
 	this.tracker_.socketOffline_(this);
 };
 
-/**
- * @type {!goog.debug.Logger}
- * @protected
- */
-cw.net.FlashSocket.prototype.logger_ = goog.debug.Logger.getLogger('cw.net.FlashSocket');
-
-
 
 
 /**
@@ -290,6 +290,13 @@ cw.net.FlashSocketTracker = function(callQueue, bridge) {
 	}
 };
 goog.inherits(cw.net.FlashSocketTracker, goog.Disposable);
+
+/**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.FlashSocketTracker.prototype.logger_ =
+	goog.debug.Logger.getLogger('cw.net.FlashSocketTracker');
 
 /**
  * @param {!Array.<string>} sb
@@ -398,12 +405,6 @@ cw.net.FlashSocketTracker.prototype.disposeInternal = function() {
 	// Not `delete' because IE can't
 	goog.global[this.callbackFunc_] = undefined;
 };
-
-/**
- * @type {!goog.debug.Logger}
- * @protected
- */
-cw.net.FlashSocketTracker.prototype.logger_ = goog.debug.Logger.getLogger('cw.net.FlashSocketTracker');
 
 
 

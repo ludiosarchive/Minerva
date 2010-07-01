@@ -390,6 +390,13 @@ cw.net.Stream = function(callQueue, protocol, endpoint, makeCredentialsCallable)
 goog.inherits(cw.net.Stream, goog.events.EventTarget);
 
 /**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.Stream.prototype.logger_ =
+	goog.debug.Logger.getLogger('cw.net.Stream');
+
+/**
  * @type {!cw.net.SACK}
  * @private
  */
@@ -1037,12 +1044,6 @@ cw.net.Stream.prototype.start = function() {
 	this.primaryTransport_.flush_();
 };
 
-/**
- * @type {!goog.debug.Logger}
- * @protected
- */
-cw.net.Stream.prototype.logger_ = goog.debug.Logger.getLogger('cw.net.Stream');
-
 cw.net.Stream.prototype.disposeInternal = function() {
 	cw.net.Stream.superClass_.disposeInternal.call(this);
 	if(goog.userAgent.WEBKIT && this.windowLoadEvent_) {
@@ -1165,6 +1166,13 @@ cw.net.ClientTransport = function(callQueue, stream, transportNumber, transportT
 		(this.transportType_ != cw.net.TransportType_.XHR_LONGPOLL);
 };
 goog.inherits(cw.net.ClientTransport, goog.Disposable);
+
+/**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.ClientTransport.prototype.logger_ =
+	goog.debug.Logger.getLogger('cw.net.ClientTransport');
 
 /**
  * The underlying object used to send and receive frames.
@@ -1765,12 +1773,6 @@ cw.net.ClientTransport.prototype.writeReset_ = function(reasonString, applicatio
 	this.wroteResetFrame_ = true;
 };
 
-/**
- * @type {!goog.debug.Logger}
- * @protected
- */
-cw.net.ClientTransport.prototype.logger_ = goog.debug.Logger.getLogger('cw.net.ClientTransport');
-
 
 
 /**
@@ -1836,6 +1838,13 @@ cw.net.DoNothingTransport = function(callQueue, stream, delay, times) {
 	this.goOfflineTicket_ = null;
 };
 goog.inherits(cw.net.DoNothingTransport, goog.Disposable);
+
+/**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.DoNothingTransport.prototype.logger_ =
+	goog.debug.Logger.getLogger('cw.net.DoNothingTransport');
 
 /**
  * @private
@@ -1932,13 +1941,6 @@ cw.net.DoNothingTransport.prototype.disposeInternal = function() {
 	stream.transportOffline_(this);
 };
 
-/**
- * @type {!goog.debug.Logger}
- * @protected
- */
-cw.net.DoNothingTransport.prototype.logger_ = goog.debug.Logger.getLogger('cw.net.DoNothingTransport');
-
-
 
 
 /**
@@ -1977,6 +1979,13 @@ cw.net.FlashSocketConduit = function(clientTransport) {
 	this.socket_;
 };
 goog.inherits(cw.net.FlashSocketConduit, goog.Disposable);
+
+/**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.FlashSocketConduit.prototype.logger_ =
+	goog.debug.Logger.getLogger('cw.net.FlashSocketConduit');
 
 /**
  * @return {boolean}
@@ -2053,12 +2062,6 @@ cw.net.FlashSocketConduit.prototype.disposeInternal = function() {
 	cw.net.FlashSocketConduit.superClass_.disposeInternal.call(this);
 	this.socket_.disposeInternal();
 };
-
-/**
- * @type {!goog.debug.Logger}
- * @protected
- */
-cw.net.FlashSocketConduit.prototype.logger_ = goog.debug.Logger.getLogger('cw.net.FlashSocketConduit');
 
 
 
@@ -2159,6 +2162,13 @@ cw.net.XHRMasterTracker = function() {
 };
 
 /**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.XHRMasterTracker.prototype.logger_ =
+	goog.debug.Logger.getLogger('cw.net.XHRMasterTracker');
+
+/**
  * @param {!Window} contentWindow
  * @private
  */
@@ -2225,12 +2235,6 @@ cw.net.XHRMasterTracker.prototype.disposeInternal = function() {
 	}
 	this.masters_ = {};
 };
-
-/**
- * @type {!goog.debug.Logger}
- * @protected
- */
-cw.net.XHRMasterTracker.prototype.logger_ = goog.debug.Logger.getLogger('cw.net.XHRMasterTracker');
 
 
 

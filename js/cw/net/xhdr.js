@@ -232,6 +232,17 @@ cw.net.UsableXDR = function(clock, objectFactory) {
 	this.requestActive_ = false;
 };
 
+/**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.UsableXDR.prototype.logger_ =
+	goog.debug.Logger.getLogger('cw.net.UsableXDR');
+
+/**
+ * @return {boolean}
+ * @private
+ */
 cw.net.UsableXDR.prototype.canCrossDomains_ = function() {
 	return true;
 };
@@ -362,13 +373,6 @@ cw.net.UsableXDR.prototype.abort_ = function() {
 	}
 };
 
-/**
- * @type {!goog.debug.Logger}
- * @protected
- */
-cw.net.UsableXDR.prototype.logger_ =
-	goog.debug.Logger.getLogger('cw.net.UsableXDR');
-
 
 
 /**
@@ -390,7 +394,16 @@ cw.net.UsableXHR = function(clock, objectFactory) {
 };
 
 /**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.UsableXHR.prototype.logger_ =
+	goog.debug.Logger.getLogger('cw.net.UsableXHR');
+
+/**
  * {@see cw.net.IUsableSomething.canCrossDomains_}
+ * @return {boolean}
+ * @private
  */
 cw.net.UsableXHR.prototype.canCrossDomains_ = function() {
 	return (typeof this.objectFactory_().withCredentials === "boolean");
@@ -580,13 +593,6 @@ cw.net.UsableXHR.prototype.handler_onreadystatechange_ = function() {
 		this.finishAndReset_(null);
 	}
 };
-
-/**
- * @type {!goog.debug.Logger}
- * @protected
- */
-cw.net.UsableXHR.prototype.logger_ =
-	goog.debug.Logger.getLogger('cw.net.UsableXHR');
 
 
 
