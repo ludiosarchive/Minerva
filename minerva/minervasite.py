@@ -25,55 +25,8 @@ from minerva.chatapp.pages import ChatAppPage
 from lytics.endpoint import WaitResource
 
 from webmagic.untwist import (
-	CookieInstaller, BetterResource, BetterFile, HelpfulNoResource)
-
-
-class ConnectionTrackingHTTPChannel(http.HTTPChannel):
-	"""
-	An L{HTTPChannel} that tells the factory about all connection
-	activity.
-	"""
-	__slots__ = ()
-
-	def __init__(self, *args, **kwargs):
-		http.HTTPChannel.__init__(self, *args, **kwargs)
-
-
-	def connectionMade(self, *args, **kwargs):
-		http.HTTPChannel.connectionMade(self, *args, **kwargs)
-		log.msg('Connection made: %r' % (self,))
-		self.factory.connections.add(self)
-
-
-	def connectionLost(self, *args, **kwargs):
-		http.HTTPChannel.connectionLost(self, *args, **kwargs)
-		log.msg('Connection lost: %r' % (self,))
-		self.factory.connections.remove(self)
-
-
-
-class ConnectionTrackingSite(server.Site):
-	protocol = ConnectionTrackingHTTPChannel
-
-	def __init__(self, *args, **kwargs):
-		server.Site.__init__(self, *args, **kwargs)
-		self.connections = set()
-
-
-
-class DisplayConnections(BetterResource):
-	"""
-	Display a list of all connections connected to this server.
-	"""
-	isLeaf = True
-	def render_GET(self, request):
-		conns = repr(request.channel.factory.connections)
-		out = """\
-<pre>
-%s
-</pre>
-""" % (cgi.escape(conns))
-		return out
+	CookieInstaller, BetterResource, BetterFile, HelpfulNoResource,
+	ConnectionTrackingSite, DisplayConnections)
 
 
 
