@@ -23,9 +23,11 @@ goog.provide('cw.net.EventType');
 goog.provide('cw.net.ClientTransport');
 goog.provide('cw.net.DoNothingTransport');
 goog.provide('cw.net.TransportType_');
+goog.provide('cw.net.waitForXDRFrames');
 
 goog.require('goog.asserts');
 goog.require('goog.array');
+goog.require('goog.async.Deferred');
 goog.require('goog.events');
 goog.require('goog.events.EventTarget');
 goog.require('goog.structs.Set');
@@ -2250,6 +2252,45 @@ goog.global['__XHRMaster_onframes'] =
 
 goog.global['__XHRMaster_oncomplete'] =
 	goog.bind(cw.net.theXHRMasterTracker_.oncomplete_, cw.net.theXHRMasterTracker_);
+
+
+
+/**
+ * @param {string} globalName The name of the global function that the
+ * 	XDRFrames call.
+ * @param {number} expected How many XDRFrames we're waiting for.
+ *
+ * @return {!goog.async.Deferred} a Deferred that fires when all XDRFrames
+ * 	are loaded.
+ */
+cw.net.waitForXDRFrames = function(globalName, expected) {
+	cw.net.logger_.info('Waiting for XDRFrames...');
+	var d = new goog.async.Deferred();
+	var count = goog.global[globalName]['done'].length;
+	var need;
+	var gotAnotherIframe = function(ignoredId) {
+		count += 1;
+		need = expected - count;
+		if(!need) {
+			cw.net.logger_.info('Got XDRFrames after waiting.');
+			d.callback(null);
+		}
+	}
+	goog.global[globalName]['done'] = {'push': gotAnotherIframe};
+	need = expected - count;
+	if(!need) {
+		cw.net.logger_.info('Already had all XDRFrames.');
+		d.callback(null);
+	}
+	return d;
+};
+
+
+/**
+ * @type {!goog.debug.Logger}
+ * @private
+ */
+cw.net.logger_ = goog.debug.Logger.getLogger('cw.net');
 
 
 

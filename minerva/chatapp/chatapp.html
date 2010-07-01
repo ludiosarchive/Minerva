@@ -106,6 +106,7 @@ goog.require('cw.net.SocketEndpoint');
 goog.require('cw.net.HttpEndpoint');
 goog.require('cw.net.IMinervaProtocol');
 goog.require('cw.net.FlashSocketTracker');
+goog.require('cw.net.waitForXDRFrames');
 goog.require('cw.whoami');
 goog.require('cw.repr');
 goog.require('cw.string');
@@ -219,33 +220,6 @@ chatapp.loadFlashConnector_ = function() {
 
 
 /**
- * @return {!goog.async.Deferred} a Deferred that fires when both iframes
- * 	are loaded.
- */
-chatapp.waitForIframes = function() {
-	chatapp.logger.info('Waiting for iframes...');
-	var d = new goog.async.Deferred();
-	var count = __XDRFrame_loaded.done.length;
-	var need;
-	var gotAnotherIframe = function(ignoredId) {
-		count += 1;
-		need = 2 - count;
-		if(!need) {
-			chatapp.logger.info('Got iframes after waiting.');
-			d.callback(null);
-		}
-	}
-	__XDRFrame_loaded.done = {'push': gotAnotherIframe};
-	need = 2 - count;
-	if(!need) {
-		chatapp.logger.info('Already had all iframes.');
-		d.callback(null);
-	}
-	return d;
-};
-
-
-/**
  * @return {!goog.async.Deferred} Deferred that fires with a {!cw.net.Endpoint}
  */
 chatapp.getEndpoint = function() {
@@ -256,7 +230,7 @@ chatapp.getEndpoint = function() {
 	var useSub = Boolean(Number(queryData.get('useSub', '1')));
 	if(mode == 'http') {
 		if(useSub) {
-			var d = chatapp.waitForIframes();
+			var d = cw.net.waitForXDRFrames('__XDRFrame_loaded', 2);
 			d.addCallback(function() {
 				var primaryWindow = goog.dom.getFrameContentWindow(
 					goog.dom.getElement('chatapp-iframe-1'));
