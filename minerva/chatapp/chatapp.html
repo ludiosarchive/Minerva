@@ -75,9 +75,9 @@ If no such cookie, write out the iframes immediately.
 		__XDRFrame_loaded.portString + '/';
 	document.write(
 		'<iframe width=16 height=16 src="' + __XDRFrame_loaded.url1 +
-			'xdrframe/?id=1" id="chatapp-iframe-1"></iframe>' +
+			'xdrframe/?id=1" id="xdrframe-1"></iframe>' +
 		'<iframe width=16 height=16 src="' + __XDRFrame_loaded.url2 +
-			'xdrframe/?id=2" id="chatapp-iframe-2"></iframe>');
+			'xdrframe/?id=2" id="xdrframe-2"></iframe>');
 </script>
 
 <div id="FlashConnectorSwf"></div>
@@ -93,21 +93,13 @@ goog.require('cw.autoTitle');
 goog.require('goog.debug.DivConsole');
 goog.require('goog.debug.Logger');
 goog.require('goog.debug.LogManager');
-goog.require('goog.dom');
-goog.require('goog.async.Deferred');
-goog.require('goog.ui.media.FlashObject');
-goog.require('cw.loadflash');
 goog.require('goog.Uri');
 goog.require('cw.eventual');
 goog.require('cw.string');
-goog.require('cw.net.XHRSlave');
 goog.require('cw.net.Stream');
-goog.require('cw.net.SocketEndpoint');
-goog.require('cw.net.HttpEndpoint');
 goog.require('cw.net.IMinervaProtocol');
-goog.require('cw.net.FlashSocketTracker');
-goog.require('cw.net.waitForXDRFrames');
-goog.require('cw.whoami');
+goog.require('cw.net.demo.getEndpoint');
+goog.require('cw.net.demo.makeCredentialsData');
 goog.require('cw.repr');
 goog.require('cw.string');
 </script>
@@ -190,89 +182,10 @@ chatapp.ChatProtocol.prototype.sendText = function(text) {
 };
 
 
-chatapp.makeCredentialsData = function() {
-	// Already base64-url-safe encoded
-	var uaId = cw.whoami.getUaId();
-	return uaId + '|' + window.CSRF_TOKEN;
-};
-
-
 /**
  * @type {?chatapp.ChatProtocol}
  */
 chatapp.lastProto = null;
-
-
-/**
- * @private
- * @return {!goog.async.Deferred} Deferred that fires with an object or embed
- *	 element.
- */
-chatapp.loadFlashConnector_ = function() {
-	flashObject = new goog.ui.media.FlashObject('/compiled_client/FlashConnector.swf');
-	flashObject.setBackgroundColor("#777777");
-	flashObject.setSize(300, 30);
-	var renderInto = goog.dom.getElement("FlashConnectorSwf");
-	var d = cw.loadflash.loadFlashObjectWithTimeout(
-		chatapp.callQueue.clock, flashObject, '9', renderInto, 8000);
-	return d;
-};
-
-
-/**
- * @return {!goog.async.Deferred} Deferred that fires with a {!cw.net.Endpoint}
- */
-chatapp.getEndpoint = function() {
-	var url = new goog.Uri(document.location);
-	var queryData = url.getQueryData();
-	var mode = queryData.get('mode');
-	// Use subdomains for HTTP communication?
-	var useSub = Boolean(Number(queryData.get('useSub', '1')));
-	if(mode == 'http') {
-		if(useSub) {
-			var d = cw.net.waitForXDRFrames('__XDRFrame_loaded', 2);
-			d.addCallback(function() {
-				var primaryWindow = goog.dom.getFrameContentWindow(
-					goog.dom.getElement('chatapp-iframe-1'));
-				var secondaryWindow = goog.dom.getFrameContentWindow(
-					goog.dom.getElement('chatapp-iframe-2'));
-
-				var primaryUrl = new goog.Uri(__XDRFrame_loaded.url1);
-				primaryUrl.setPath('/httpface/');
-
-				var secondaryUrl = new goog.Uri(__XDRFrame_loaded.url2);
-				secondaryUrl.setPath('/httpface/');
-
-				var endpoint = new cw.net.HttpEndpoint(
-					primaryUrl.toString(), primaryWindow, secondaryUrl.toString(), secondaryWindow);
-				return endpoint;
-			});
-			return d;
-		} else {
-			var endpointUrl = url.clone();
-			endpointUrl.setPath('/httpface/');
-			endpointUrl.setQuery('');
-			var primaryUrl = endpointUrl;
-			var secondaryUrl = endpointUrl;
-			var primaryWindow = goog.global;
-			var secondaryWindow = goog.global;
-
-			var endpoint = new cw.net.HttpEndpoint(
-				primaryUrl.toString(), primaryWindow, secondaryUrl.toString(), secondaryWindow);
-			return goog.async.Deferred.succeed(endpoint);
-		}
-	} else {
-		var host = url.getDomain();
-		var port = 843;
-		var d = chatapp.loadFlashConnector_();
-		d.addCallback(function(bridge) {
-			var tracker = new cw.net.FlashSocketTracker(chatapp.callQueue, bridge);
-			var endpoint = new cw.net.SocketEndpoint(host, port, tracker);
-			return endpoint;
-		});
-		return d;
-	}
-};
 
 
 chatapp.callQueue = new cw.eventual.CallQueue(goog.global['window']);
@@ -280,10 +193,10 @@ chatapp.callQueue = new cw.eventual.CallQueue(goog.global['window']);
 
 chatapp.startStream = function() {
 	chatapp.lastProto = new chatapp.ChatProtocol();
-	var endpointD = chatapp.getEndpoint();
+	var endpointD = cw.net.demo.getEndpoint(chatapp.callQueue);
 	endpointD.addCallback(function(endpoint) {
 		var stream = new cw.net.Stream(
-			chatapp.callQueue, chatapp.lastProto, endpoint, chatapp.makeCredentialsData);
+			chatapp.callQueue, chatapp.lastProto, endpoint, cw.net.demo.makeCredentialsData);
 		stream.start();
 	});
 };
