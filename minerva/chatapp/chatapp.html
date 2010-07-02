@@ -199,35 +199,43 @@ chatapp.callQueue = new cw.eventual.CallQueue(goog.global['window']);
 
 chatapp.idleFired = function() {
 	chatapp.resetStream("idle timeout fired");
+	chatapp.lastProto = null;
 };
 
 
 chatapp.idleTimeout = null;
 
 
-chatapp.notIdle = function(ev) {
+chatapp.activityDetected = function(ev) {
 	if(chatapp.idleTimeout != null) {
 		chatapp.callQueue.clock.clearTimeout(chatapp.idleTimeout);
 	}
-	chatapp.idleTimeout = chatapp.callQueue.clock.setTimeout(chatapp.idleFired, 600 * 1000);
+
+	if(!chatapp.lastProto) {
+		// No Stream is active, so we don't need a timeout.
+		return;
+	}
+
+	chatapp.idleTimeout = chatapp.callQueue.clock.setTimeout(
+		chatapp.idleFired, 600 * 1000);
 };
 
-
-chatapp.notIdle();
 
 /**
  * @type {!Array.<!goog.events.EventType>}
  */
-chatapp.notIdleEvents = [
+chatapp.activityEvents = [
 	goog.events.EventType.CLICK,
 	goog.events.EventType.FOCUS,
 	goog.events.EventType.KEYDOWN,
 	goog.events.EventType.KEYPRESS];
-chatapp.clickListen = goog.events.listen(goog.global, chatapp.notIdleEvents, chatapp.notIdle, true);
+chatapp.clickListen = goog.events.listen(
+	goog.global, chatapp.activityEvents, chatapp.activityDetected, true);
 
 
 chatapp.startStream = function() {
 	chatapp.lastProto = new chatapp.ChatProtocol();
+	chatapp.activityDetected();
 	var endpointD = cw.net.demo.getEndpoint(chatapp.callQueue);
 	endpointD.addCallback(function(endpoint) {
 		var stream = new cw.net.Stream(
@@ -246,7 +254,9 @@ chatapp.resetStream = function(reason) {
 
 
 chatapp.reconnectStream = function() {
-	chatapp.lastProto.reset('because user clicked reconnect button');
+	if(chatapp.lastProto) {
+		chatapp.lastProto.reset('because user clicked reconnect button');
+	}
 	chatapp.startStream();
 };
 
