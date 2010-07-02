@@ -23,7 +23,7 @@ messages because log messages in the iframes are not sent to this parent window.
 <tr>
 	<td>Reconnect:</td>
 	<td>
-		<input type="submit" value="Reset" onclick="chatapp.resetStream();return false">
+		<input type="submit" value="Reset" onclick="chatapp.resetStream('because user clicked button');return false">
 		<input type="submit" value="Reset and connect new stream" onclick="chatapp.reconnectStream();return false">
 	</td>
 </tr>
@@ -93,6 +93,8 @@ goog.require('cw.autoTitle');
 goog.require('goog.debug.DivConsole');
 goog.require('goog.debug.Logger');
 goog.require('goog.debug.LogManager');
+goog.require('goog.events');
+goog.require('goog.events.EventType');
 goog.require('goog.Uri');
 goog.require('cw.eventual');
 goog.require('cw.string');
@@ -172,8 +174,12 @@ chatapp.ChatProtocol.prototype.stringsReceived = function(strings) {
 	}
 };
 
-chatapp.ChatProtocol.prototype.reset = function() {
-	this.stream_.reset("because user clicked button");
+/**
+ * @param {string} reason
+ */
+chatapp.ChatProtocol.prototype.reset = function(reason) {
+	chatapp.logger.info('resetting with reason: ' + reason);
+	this.stream_.reset(reason);
 };
 
 chatapp.ChatProtocol.prototype.sendText = function(text) {
@@ -191,6 +197,35 @@ chatapp.lastProto = null;
 chatapp.callQueue = new cw.eventual.CallQueue(goog.global['window']);
 
 
+chatapp.idleFired = function() {
+	chatapp.resetStream("idle timeout fired");
+};
+
+
+chatapp.idleTimeout = null;
+
+
+chatapp.notIdle = function(ev) {
+	if(chatapp.idleTimeout != null) {
+		chatapp.callQueue.clock.clearTimeout(chatapp.idleTimeout);
+	}
+	chatapp.idleTimeout = chatapp.callQueue.clock.setTimeout(chatapp.idleFired, 600 * 1000);
+};
+
+
+chatapp.notIdle();
+
+/**
+ * @type {!Array.<!goog.events.EventType>}
+ */
+chatapp.notIdleEvents = [
+	goog.events.EventType.CLICK,
+	goog.events.EventType.FOCUS,
+	goog.events.EventType.KEYDOWN,
+	goog.events.EventType.KEYPRESS];
+chatapp.clickListen = goog.events.listen(goog.global, chatapp.notIdleEvents, chatapp.notIdle, true);
+
+
 chatapp.startStream = function() {
 	chatapp.lastProto = new chatapp.ChatProtocol();
 	var endpointD = cw.net.demo.getEndpoint(chatapp.callQueue);
@@ -202,13 +237,16 @@ chatapp.startStream = function() {
 };
 
 
-chatapp.resetStream = function() {
-	chatapp.lastProto.reset();
+/**
+ * @param {string} reason
+ */
+chatapp.resetStream = function(reason) {
+	chatapp.lastProto.reset(reason);
 };
 
 
 chatapp.reconnectStream = function() {
-	chatapp.lastProto.reset();
+	chatapp.lastProto.reset('because user clicked reconnect button');
 	chatapp.startStream();
 };
 
