@@ -1968,7 +1968,8 @@ cw.net.FlashSocketConduit = function(clientTransport) {
 	this.clientTransport_ = clientTransport;
 
 	/**
-	 * Encoded frames that we need to send after we connect.
+	 * Encoded frames that we need to send after we connect,
+	 * or {@code null} if we already sent them.
 	 * @type {Array.<string>}
 	 */
 	this.bufferedFrames_ = [];
@@ -2062,6 +2063,7 @@ cw.net.FlashSocketConduit.prototype.onframes = function(frames) {
 cw.net.FlashSocketConduit.prototype.disposeInternal = function() {
 	this.logger_.info("in disposeInternal.");
 	cw.net.FlashSocketConduit.superClass_.disposeInternal.call(this);
+	delete this.clientTransport_; // possible circular reference
 	this.socket_.disposeInternal();
 };
 
@@ -2235,7 +2237,7 @@ cw.net.XHRMasterTracker.prototype.disposeInternal = function() {
 	while(masters.length) {
 		masters.pop().dispose();
 	}
-	this.masters_ = {};
+	delete this.masters_;
 };
 
 

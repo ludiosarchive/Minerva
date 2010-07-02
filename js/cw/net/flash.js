@@ -220,6 +220,7 @@ cw.net.FlashSocket.prototype.disposeInternal = function() {
 
 	cw.net.FlashSocket.superClass_.disposeInternal.call(this);
 
+	delete this.proto_; // possible circular reference.
 	var bridge = this.bridge_;
 	delete this.bridge_;
 
@@ -253,7 +254,7 @@ cw.net.FlashSocketTracker = function(callQueue, bridge) {
 
 	/**
 	 * The already-loaded Flash element.
-	 * @type {Element} bridge
+	 * @type {!Element} bridge
 	 * @private
 	 */
 	this.bridge_ = bridge;
@@ -261,7 +262,7 @@ cw.net.FlashSocketTracker = function(callQueue, bridge) {
 	/**
 	 * A map of FlashSocket id -> FlashSocket. Using a plain object is safe
 	 * only because the `id`s we use are random enough.
-	 * @type {Object.<string, !cw.net.FlashSocket>}
+	 * @type {!Object.<string, !cw.net.FlashSocket>}
 	 * @private
 	 */
 	this.instances_ = {};
@@ -400,8 +401,8 @@ cw.net.FlashSocketTracker.prototype.disposeInternal = function() {
 		// Each .dispose() calls this.socketOffline_, but this isn't
 		// a big deal.
 	}
-	this.instances_ = null;
-	this.bridge_ = null;
+	delete this.instances_;
+	delete this.bridge_;
 	// Not `delete' because IE can't
 	goog.global[this.callbackFunc_] = undefined;
 };

@@ -159,7 +159,7 @@ cw.net.XHRSlaveTracker.prototype.disposeInternal = function() {
 	while(slaves.length) {
 		slaves.pop().dispose();
 	}
-	this.slaves_ = {};
+	delete this.slaves_;
 };
 
 
