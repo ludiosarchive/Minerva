@@ -211,13 +211,11 @@ chatapp.activityDetected = function(ev) {
 		chatapp.callQueue.clock.clearTimeout(chatapp.idleTimeout);
 	}
 
-	if(!chatapp.lastProto) {
-		// No Stream is active, so we don't need a timeout.
-		return;
+	// Only need a timeout if we have an active Stream
+	if(chatapp.lastProto) {
+		chatapp.idleTimeout = chatapp.callQueue.clock.setTimeout(
+			chatapp.idleFired, 600 * 1000);
 	}
-
-	chatapp.idleTimeout = chatapp.callQueue.clock.setTimeout(
-		chatapp.idleFired, 600 * 1000);
 };
 
 
