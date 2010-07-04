@@ -3,4 +3,5 @@
 *.pyc
 *.pyo
 *.swf
+/twistd.pid
 /twisted/plugins/dropin.cache
