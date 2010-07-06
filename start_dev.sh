@@ -2,7 +2,7 @@
 export JSPATH="$HOME/JSPATH"
 export PYTHONPATH=$HOME/Projects/Coreweb:$HOME/Projects/Minerva:$HOME/Projects/Webmagic
 export PYRELOADING=1
-export INTERFACE=0
+export INTERFACE="192.168.0.119"
 
 echo "Using `which twistd`"
 
@@ -17,4 +17,4 @@ looper python -N \
 -h ssl:444:privateKey=dev_keys/x.linuxwan.com-key.pem:interface=$INTERFACE \
 -m tcp:8112:interface=$INTERFACE \
 -m tcp:843:interface=$INTERFACE \
--m ssl:8113:privateKey=dev_keys/x.linuxwan.com-key.pem:interface=$INTERFACE
+-m ssl:8113:privateKey=dev_keys/x.linuxwan.com-key.pem:interface=$INTERFACE \
