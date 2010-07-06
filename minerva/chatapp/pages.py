@@ -8,14 +8,7 @@ from twisted.web import resource, static
 from cwtools.htmltools import getTestPageCSS
 
 from webmagic.untwist import BetterResource
-
-
-
-def getRandomSubdomain():
-	# Always have 20 digits.  Use only random digits (not letters) to
-	# prevent forming words that may be blocked by proxies.
-	return 'ml' + str(random.randint(10**19, 10**20 - 1))
-
+from minerva.newlink import getRandomSubdomain
 
 
 class Index(BetterResource):
@@ -37,8 +30,8 @@ class Index(BetterResource):
 		cookie = self._cookieInstaller.getSet(request)
 		token = self._csrfStopper.makeToken(cookie)
 
-		sub1 = getRandomSubdomain()
-		sub2 = getRandomSubdomain()
+		sub1 = getRandomSubdomain('ml', 20)
+		sub2 = getRandomSubdomain('ml', 20)
 
 		# This jinja2 stuff is for the html page, not the JavaScript
 		template = self._basePath.child(self._fileName).getContent().decode('utf-8')

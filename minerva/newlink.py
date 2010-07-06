@@ -9,6 +9,7 @@ especially `makeMinervaAndHttp` and `DemoProtocol`.
 
 import traceback
 from zope.interface import Interface, Attribute, implements
+from random import randint
 
 from twisted.python import log
 from twisted.internet import protocol, defer
@@ -1631,6 +1632,17 @@ class HttpFace(BetterResource):
 		t.requestStarted(request)
 		return NOT_DONE_YET
 
+
+
+def getRandomSubdomain(prefix, digits):
+	"""
+	Get a random subdomain name that starts with C{prefix}.
+	and has C{digits} extra digits.   C{prefix} must start with a
+	lowercase letter a-z.
+	"""
+	# Always have C{digits} digits.  Use only random digits (not letters) to
+	# prevent forming words that may be blocked by proxies.
+	return prefix + str(randint(10**(digits - 1), 10**digits - 1))
 
 
 from pypycpyo import optimizer
