@@ -554,7 +554,7 @@ cw.net.Stream.prototype.hasAlreadyWrittenSack_ = function(sack) {
 /**
  * @private
  */
-cw.net.Stream.prototype.tryToSend_ = function() {
+cw.net.Stream.prototype.ensureQueueIntegrity_ = function() {
 	if(!this.streamExistedAtServer_) {
 		goog.asserts.assert(
 			this.queue_.getQueuedCount() == 0 ||
@@ -562,6 +562,13 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 			"Stream does not exist at server, but we have already " +
 			"removed item #0 from our queue?");
 	}
+};
+
+/**
+ * @private
+ */
+cw.net.Stream.prototype.tryToSend_ = function() {
+	this.ensureQueueIntegrity_();
 	if(this.state_ == cw.net.StreamState_.UNSTARTED) {
 		return;
 	}
@@ -575,8 +582,7 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 		haveQueueItems && highestSeqNumSent < this.queue_.getLastItemNumber();
 
 //	this.logger_.finest('In tryToSend_, ' + cw.repr.repr({
-//		queue: this.queue_,
-//		currentSack: currentSack,
+//		queue: this.queue_, currentSack: currentSack,
 //		lastSackSeenByServer_: this.lastSackSeenByServer_,
 //		haveQueueItems: haveQueueItems,
 //		maybeNeedToSendSack: maybeNeedToSendSack,
