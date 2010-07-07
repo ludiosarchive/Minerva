@@ -1575,6 +1575,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport.dataReceived('1:xxxxxxxx')
 
 		self.assertEqual([
+			SackFrame(SACK(-1, ())),
 			StreamStatusFrame(SACK(-1, ())),
 			TransportKillFrame(tk_frame_corruption),
 			YouCloseItFrame(),
@@ -1593,6 +1594,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.assertEqual([StreamCreatedFrame()], transport.getNew())
 		transport.sendFrames([_BadFrame('?')])
 		self.assertEqual([
+			SackFrame(SACK(-1, ())),
 			StreamStatusFrame(SACK(-1, ())),
 			TransportKillFrame(tk_invalid_frame_type_or_arguments),
 			YouCloseItFrame(),
@@ -1617,6 +1619,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			self.assertEqual([StreamCreatedFrame()], transport.getNew())
 			transport.sendFrames([frame])
 			self.assertEqual([
+				SackFrame(SACK(-1, ())),
 				StreamStatusFrame(SACK(-1, ())),
 				TransportKillFrame(tk_invalid_frame_type_or_arguments),
 				YouCloseItFrame()
@@ -1649,6 +1652,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self.assertEqual([StreamCreatedFrame()], transport.getNew())
 		transport.sendFrames([frame0])
 		self.assertEqual([
+			SackFrame(SACK(-1, ())),
 			StreamStatusFrame(SACK(-1, ())),
 			TransportKillFrame(tk_invalid_frame_type_or_arguments),
 			YouCloseItFrame()
@@ -1666,6 +1670,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport.sendFrames([frame0, frame0])
 		self.assertEqual([
 			StreamCreatedFrame(),
+			SackFrame(SACK(-1, ())),
 			StreamStatusFrame(SACK(-1, ())),
 			TransportKillFrame(tk_invalid_frame_type_or_arguments),
 			YouCloseItFrame()
@@ -1837,6 +1842,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		transport.closeGently()
 		self.assertEqual([
 			StreamCreatedFrame(),
+			SackFrame(SACK(-1, ())),
 			StreamStatusFrame(SACK(-1, ())),
 			YouCloseItFrame()
 		], transport.getNew())
@@ -1990,6 +1996,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		transport.sendFrames([SackFrame(SACK(1, ()))])
 		self.assertEqual([
+			SackFrame(SACK(-1, ())),
 			StreamStatusFrame(SACK(1, ())),
 			TransportKillFrame(tk_acked_unsent_strings),
 			YouCloseItFrame()
@@ -2128,6 +2135,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 		expected['bad_frame'][False] = [
 			StreamCreatedFrame(),
+			SackFrame(SACK(-1, ())),
 			StreamStatusFrame(SACK(-1, ())),
 			TransportKillFrame(tk_invalid_frame_type_or_arguments),
 			YouCloseItFrame()]
@@ -2455,7 +2463,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		self.assertEqual([SeqNumFrame(0), StringFrame("s2cbox0"), StringFrame("s2cbox1")], transport1.getNew())
 
-		self.assertEqual([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport0.getNew())
+		self.assertEqual([
+			SackFrame(SACK(3, ())),
+			StreamStatusFrame(SACK(-1, ())),
+			YouCloseItFrame(),
+		], transport0.getNew())
 
 
 		# Finally ACK those strings; connect a new transport; make sure
@@ -2474,7 +2486,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		self.assertEqual([], transport2.getNew())
 
-		self.assertEqual([StreamStatusFrame(SACK(1, ())), YouCloseItFrame()], transport1.getNew())
+		self.assertEqual([
+			SackFrame(SACK(3, ())),
+			StreamStatusFrame(SACK(1, ())),
+			YouCloseItFrame(),
+		], transport1.getNew())
 
 
 		# Send a reset over transport2; make sure transport2 is
@@ -2483,7 +2499,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport2.sendFrames([ResetFrame("testing", True)])
 
-		self.assertEqual([StreamStatusFrame(SACK(1, ())), YouCloseItFrame()], transport2.getNew())
+		self.assertEqual([
+			SackFrame(SACK(3, ())),
+			StreamStatusFrame(SACK(1, ())),
+			YouCloseItFrame(),
+		], transport2.getNew())
 
 		self.assertEqual([["streamReset", "testing", True]], proto.getNew())
 
@@ -2530,7 +2550,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		self.assertEqual([], transport1.getNew())
 
-		self.assertEqual([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport0.getNew())
+		self.assertEqual([
+			SackFrame(SACK(-1, ())),
+			StreamStatusFrame(SACK(-1, ())),
+			YouCloseItFrame(),
+		], transport0.getNew())
 
 
 		# Send another string S2C and make sure it is written to transport1
@@ -2675,7 +2699,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			ResetFrame("x", False),
 			_BadFrame('?')])
 
-		self.assertEqual([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport0.getNew())
+		self.assertEqual([
+			SackFrame(SACK(-1, ())),
+			StreamStatusFrame(SACK(-1, ())),
+			YouCloseItFrame()
+		], transport0.getNew())
 
 		proto = list(self.protocolFactory.instances)[0]
 		self.assertEqual([
@@ -2703,6 +2731,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		self.assertEqual([
 			StreamCreatedFrame(),
+			SackFrame(SACK(1, ())),
 			SackFrame(SACK(1, ())),
 			StreamStatusFrame(SACK(-1, ())),
 			YouCloseItFrame()
@@ -2738,8 +2767,13 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		transport0.sendFrames([ResetFrame("reason", True)])
 		transport1.sendFrames([ResetFrame("reason", False)])
 
-		self.assertEqual([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport0.getNew())
-		self.assertEqual([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()], transport1.getNew())
+		expectedFrames = [
+			SackFrame(SACK(-1, ())),
+			StreamStatusFrame(SACK(-1, ())),
+			YouCloseItFrame(),
+		]
+		self.assertEqual(expectedFrames, transport0.getNew())
+		self.assertEqual(expectedFrames, transport1.getNew())
 
 		proto = list(self.protocolFactory.instances)[0]
 		self.assertEqual([
@@ -2822,7 +2856,10 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			]
 
 			if clientResetsImmediately:
-				expected.extend([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()])
+				expected.extend([
+					SackFrame(SACK(-1, ())),
+					StreamStatusFrame(SACK(-1, ())),
+					YouCloseItFrame()])
 
 			self.assertEqual(expected, transport0.getNew())
 
@@ -2916,7 +2953,10 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			]
 
 			if clientResetsImmediately:
-				expected.extend([StreamStatusFrame(SACK(-1, ())), YouCloseItFrame()])
+				expected.extend([
+					SackFrame(SACK(1, ())),
+					StreamStatusFrame(SACK(-1, ())),
+					YouCloseItFrame()])
 
 			self.assertEqual(expected, transport0.getNew())
 
@@ -3028,13 +3068,14 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				out = resource.render(request)
 				self.assertEqual(server.NOT_DONE_YET, out)
 
-				encode = DelimitedStringDecoder.encode
 				expectedFrames = [
 					PaddingFrame(4),
 					StreamCreatedFrame(),
 					SackFrame(SACK(2, ()))]
 				if not streaming:
-					expectedFrames += [StreamStatusFrame(SACK(-1, ()))]
+					expectedFrames += [
+						SackFrame(SACK(2, ())),
+						StreamStatusFrame(SACK(-1, ()))]
 				self.assertEqual(expectedFrames, decodeResponseInMockRequest(request))
 				self.assertEqual(0 if streaming else 1, request.finished)
 
@@ -3142,7 +3183,9 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				SackFrame(SACK(0, ())),
 			]
 			if not streaming:
-				expectedFrames += [StreamStatusFrame(SACK(-1, ()))]
+				expectedFrames += [
+					SackFrame(SACK(0, ())),
+					StreamStatusFrame(SACK(-1, ()))]
 
 			self.assertEqual(expectedFrames, decodeResponseInMockRequest(request))
 			self.assertEqual(0 if streaming else 1, request.finished)
@@ -3176,7 +3219,9 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			StreamCreatedFrame(),
 		]
 		if not streaming:
-			expectedFrames += [StreamStatusFrame(SACK(-1, ()))]
+			expectedFrames += [
+				SackFrame(SACK(-1, ())),
+				StreamStatusFrame(SACK(-1, ()))]
 
 		# The first request is now finished, because it was used to
 		# create a Stream, and server sent StreamCreatedFrame.
@@ -3241,7 +3286,9 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				StringFrame('box1'),
 			]
 			if not streaming:
-				expectedFrames += [StreamStatusFrame(SACK(-1, ()))]
+				expectedFrames += [
+					SackFrame(SACK(-1, ())),
+					StreamStatusFrame(SACK(-1, ()))]
 
 			self.assertEqual(expectedFrames, decodeResponseInMockRequest(request))
 			self.assertEqual(0 if streaming else 1, request.finished)
@@ -3341,6 +3388,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			resource.render(request)
 			self.assertEqual([
 				PaddingFrame(4),
+				SackFrame(SACK(-1, ())),
 				StreamStatusFrame(SACK(-1, ()))
 			], decodeResponseInMockRequest(request))
 			self.assertEqual(1, request.finished)
@@ -3385,6 +3433,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 		self.assertEqual([
 			PaddingFrame(4),
+			SackFrame(SACK(-1, ())),
 			StreamStatusFrame(SACK(-1, ())),
 		], decodeResponseInMockRequest(request))
 		self.assertEqual(1, request.finished)

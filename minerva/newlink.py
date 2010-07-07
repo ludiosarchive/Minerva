@@ -1083,15 +1083,32 @@ class ServerTransport(object):
 		return self._parser.encode(frame.encode())
 
 
+	def _writeTerminationFrames(self):
+		if self.isAttached():
+			# Always write a SackFrame to avoid a complicated scenario where
+			# client creates a useless primary transport that is closed quickly.
+			# It can happen like this:
+			# 1) Client has a long-poll primary open; client app sends a string.
+			# 2) Client creates a secondary transport; server reacts to received string.
+			# 3) Server sends a string over primary and closes primary.
+			# 4) Client receives string/close over primary before receiving
+			#     SackFrame/close over secondary.
+			# 5) Client creates a new primary with a lastSackSeenByClient that does
+			#     not include the SackFrame that server sent over secondary.
+			# 6) Server thinks client needs a SackFrame because
+			#     lastSackSeenByClient is older than expected.  Server writes
+			#     SackFrame/close to the primary; client soon creates a
+			#     new primary with an up-to-date lastSackSeenByClient.
+			self._appendSack()
+
+			self._toSend += self._encodeFrame(StreamStatusFrame(
+				self._stream.lastSackSeenByServer))
+
+
 	def _closeWith(self, reason):
 		assert not self._terminating, self
 
-		if self._sackDirty:
-			self._appendSack()
-
-		if self.isAttached():
-			self._toSend += self._encodeFrame(StreamStatusFrame(
-				self._stream.lastSackSeenByServer))
+		self._writeTerminationFrames()
 		self._toSend += self._encodeFrame(TransportKillFrame(reason))
 		if self._mode != HTTP:
 			self._toSend += self._encodeFrame(YouCloseItFrame())
@@ -1105,9 +1122,7 @@ class ServerTransport(object):
 		"""
 		assert not self._terminating, self
 
-		if self.isAttached():
-			self._toSend += self._encodeFrame(StreamStatusFrame(
-				self._stream.lastSackSeenByServer))
+		self._writeTerminationFrames()
 		if self._mode != HTTP:
 			self._toSend += self._encodeFrame(YouCloseItFrame())
 		self._terminating = True
@@ -1192,7 +1207,8 @@ class ServerTransport(object):
 
 		# Write the initial SACK if we have not already written a SACK,
 		# but only if the client has an out-of-date impression of the SACK.
-		# We can't always send the SACK because of long-polling.
+		# We can't always send the SACK because long-poll transports
+		# require closing after sending anything.
 		if self._lastSackSeenByClient is not DontWriteSack:
 			currentSack = stream.getSACK()
 			if currentSack != self._lastSackSeenByClient:
