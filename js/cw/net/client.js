@@ -1867,26 +1867,26 @@ cw.net.DoNothingTransport = function(callQueue, stream, delay, times) {
 	 * @private
 	 */
 	this.countdown_ = times;
-
-	/**
-	 * @type {boolean}
-	 * @private
-	 */
-	this.started_ = false;
-
-	/**
-	 * @type {boolean}
-	 * @private
-	 */
-	this.canFlushMoreThanOnce_ = false;
-
-	/**
-	 * @type {?number}
-	 * @private
-	 */
-	this.goOfflineTicket_ = null;
 };
 goog.inherits(cw.net.DoNothingTransport, goog.Disposable);
+
+/**
+ * @type {boolean}
+ * @private
+ */
+cw.net.DoNothingTransport.prototype.started_ = false;
+
+/**
+ * @type {boolean}
+ * @private
+ */
+cw.net.DoNothingTransport.prototype.canFlushMoreThanOnce_ = false;
+
+/**
+ * @type {?number}
+ * @private
+ */
+cw.net.DoNothingTransport.prototype.goOfflineTicket_ = null;
 
 /**
  * The last SACK written to the peer.  Used by Stream.
