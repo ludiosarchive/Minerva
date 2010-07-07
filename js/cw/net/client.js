@@ -521,6 +521,37 @@ cw.net.Stream.prototype.__reprToPieces__ = function(sb) {
 };
 
 /**
+ * @return {number} The highest seqNum that was written to the peer over any
+ * 	currently-open transport, or -1 if none.
+ * @private
+ */
+cw.net.Stream.prototype.getHighestSeqNumSent_ = function() {
+	var nums = [-1]; // have -1 in case no primary or secondary
+	if(this.primaryTransport_) {
+		nums.push(this.primaryTransport_.ourSeqNum_);
+	}
+	if(this.secondaryTransport_) {
+		nums.push(this.secondaryTransport_.ourSeqNum_);
+	}
+	return Math.max.apply(Math.max, nums);
+};
+
+/**
+ * @param {!cw.net.SACK} sack
+ * @return {boolean} Have we already written sack `sack` over any
+ * 	currently-open transport?
+ */
+cw.net.Stream.prototype.hasAlreadyWrittenSack_ = function(sack) {
+	if(this.primaryTransport_ && sack.equals(this.primaryTransport_.lastSackWritten_)) {
+		return true;
+	} else if(this.secondaryTransport_ && sack.equals(this.secondaryTransport_.lastSackWritten_)) {
+		return true;
+	} else {
+		return false;
+	}
+};
+
+/**
  * @private
  */
 cw.net.Stream.prototype.tryToSend_ = function() {
@@ -537,17 +568,25 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 			"You should call Stream.start().");
 		return;
 	}
-	var currentSack = this.incoming_.getSACK();
 	var haveQueueItems = (this.queue_.getQueuedCount() != 0);
-	var maybeNeedToSendSack = !currentSack.equals(this.lastSackSeenByServer_);
+	var currentSack = this.incoming_.getSACK();
+	var maybeNeedToSendSack =
+		!currentSack.equals(this.lastSackSeenByServer_) &&
+		!this.hasAlreadyWrittenSack_(currentSack);
+	var highestSeqNumSent = this.getHighestSeqNumSent_();
+	var maybeNeedToSendStrings =
+		haveQueueItems && highestSeqNumSent < this.queue_.getLastItemNumber();
 
 //	this.logger_.finest('In tryToSend_, ' + cw.repr.repr({
+//		queue: this.queue_,
 //		currentSack: currentSack,
 //		lastSackSeenByServer_: this.lastSackSeenByServer_,
 //		haveQueueItems: haveQueueItems,
-//		maybeNeedToSendSack: maybeNeedToSendSack}));
+//		maybeNeedToSendSack: maybeNeedToSendSack,
+//		maybeNeedToSendStrings: maybeNeedToSendStrings,
+//		highestSeqNumSent: highestSeqNumSent}));
 
-	if(haveQueueItems || maybeNeedToSendSack) {
+	if(maybeNeedToSendStrings || maybeNeedToSendSack) {
 		// After we're in STARTED, we always have a primary transport,
 		// even if its underlying object hasn't connected yet.
 		if(this.primaryTransport_.canFlushMoreThanOnce_) {
@@ -556,8 +595,8 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 			if(maybeNeedToSendSack) {
 				this.primaryTransport_.writeSack_(currentSack);
 			}
-			if(haveQueueItems) {
-				this.primaryTransport_.writeStrings_(this.queue_, null);
+			if(maybeNeedToSendStrings) {
+				this.primaryTransport_.writeStrings_(this.queue_, highestSeqNumSent + 1);
 			}
 			this.primaryTransport_.flush_();
 		// For robustness reasons, wait until we know that Stream
@@ -572,7 +611,10 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 				this.logger_.finest(
 					"tryToSend_: creating secondary to send SACK/strings");
 				this.secondaryTransport_ = this.createNewTransport_(false);
-				this.secondaryTransport_.writeStrings_(this.queue_, null);
+				// No need to writeSack_ because a sack is included in the HelloFrame.
+				if(maybeNeedToSendStrings) {
+					this.secondaryTransport_.writeStrings_(this.queue_, highestSeqNumSent + 1);
+				}
 				this.secondaryTransport_.flush_();
 			}
 		} else {
@@ -854,8 +896,10 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 		var times = _[1];
 		if(transport == this.primaryTransport_) {
 			if(!times) {
+				var highestSeqNumSent = this.getHighestSeqNumSent_();
 				this.primaryTransport_ = this.createNewTransport_(true);
-				this.primaryTransport_.writeStrings_(this.queue_, null);
+				// No need to writeSack_ because a sack is included in the HelloFrame.
+				this.primaryTransport_.writeStrings_(this.queue_, highestSeqNumSent + 1);
 			} else {
 				this.primaryTransport_ = this.createWastingTransport_(delay, times);
 			}
@@ -1225,7 +1269,7 @@ cw.net.ClientTransport.prototype.lastSackWritten_ = null;
 cw.net.ClientTransport.prototype.framesDecoded_ = 0;
 
 /**
- * The seqNum of the next string we might send to the peer, minus 1.
+ * The seqNum of the last string we wrote to the peer, or -1 if none.
  * @type {number}
  * @private
  */
@@ -1550,7 +1594,10 @@ cw.net.ClientTransport.prototype.writeFrame_ = function(frame) {
  * @private
  */
 cw.net.ClientTransport.prototype.writeInitialFrames_ = function() {
-	this.writeFrame_(this.makeHelloFrame_());
+	var hello = this.makeHelloFrame_();
+	this.writeFrame_(hello);
+	// HelloFrame includes a sack.
+	this.lastSackWritten_ = /** @type {!cw.net.SACK} */ (hello.sack);
 };
 
 /**
@@ -1840,6 +1887,13 @@ cw.net.DoNothingTransport = function(callQueue, stream, delay, times) {
 	this.goOfflineTicket_ = null;
 };
 goog.inherits(cw.net.DoNothingTransport, goog.Disposable);
+
+/**
+ * The last SACK written to the peer.  Used by Stream.
+ * @type {null}
+ * @private
+ */
+cw.net.DoNothingTransport.prototype.lastSackWritten_ = null;
 
 /**
  * @type {!goog.debug.Logger}

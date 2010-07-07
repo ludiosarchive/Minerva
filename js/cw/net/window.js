@@ -216,15 +216,25 @@ cw.net.Queue.prototype.handleSACK = function(sack) {
 	return badSACK;
 };
 
-
+/**
+ * @return {number} How many items are in the queue.
+ */
 cw.net.Queue.prototype.getQueuedCount = function() {
 	return this.items_.getCount();
 };
 
 
 /**
- * @return {number} maximum possible consumption of the queued items,
- * 	in bytes. This only returns a correct number if the items are primitive
+ * @return {number}
+ */
+cw.net.Queue.prototype.getLastItemNumber = function() {
+	return this.counter_;
+};
+
+
+/**
+ * @return {number} The maximum possible consumption of the queued items,
+ * 	in bytes.  This only returns a correct number if the items are primitive
  * 	strings.
  */
 cw.net.Queue.prototype.getMaxConsumption = function() {
