@@ -542,9 +542,11 @@ cw.net.Stream.prototype.getHighestSeqNumSent_ = function() {
  * 	currently-open transport?
  */
 cw.net.Stream.prototype.hasAlreadyWrittenSack_ = function(sack) {
-	if(this.primaryTransport_ && sack.equals(this.primaryTransport_.lastSackWritten_)) {
+	if(this.primaryTransport_ &&
+	sack.equals(this.primaryTransport_.lastSackWritten_)) {
 		return true;
-	} else if(this.secondaryTransport_ && sack.equals(this.secondaryTransport_.lastSackWritten_)) {
+	} else if(this.secondaryTransport_ &&
+	sack.equals(this.secondaryTransport_.lastSackWritten_)) {
 		return true;
 	} else {
 		return false;
@@ -1144,7 +1146,8 @@ cw.net.TransportType_ = {
  * @extends {goog.Disposable}
  * @private
  */
-cw.net.ClientTransport = function(callQueue, stream, transportNumber, transportType, endpoint, becomePrimary) {
+cw.net.ClientTransport = function(callQueue, stream, transportNumber,
+transportType, endpoint, becomePrimary) {
 	goog.Disposable.call(this);
 
 	/**
@@ -1706,7 +1709,8 @@ cw.net.ClientTransport.prototype.flush_ = function() {
 			this.makeFlashConnection_(frames);
 		}
 	} else {
-		throw Error("flush_: Don't know what to do for this transportType: " + this.transportType_);
+		throw Error("flush_: Don't know what to do for this transportType: " +
+			this.transportType_);
 	}
 };
 
@@ -2061,12 +2065,11 @@ cw.net.FlashSocketConduit.prototype.isConnected = function() {
  */
 cw.net.FlashSocketConduit.prototype.writeFrames = function(frames) {
 	if(!this.isConnected()) {
-		this.logger_.finest(
-			"writeFrames: Not connected, can't write " + frames.length + " frame(s) yet.");
+		this.logger_.finest("writeFrames: Not connected, can't write " +
+			frames.length + " frame(s) yet.");
 		this.bufferedFrames_.push.apply(this.bufferedFrames_, frames);
 	} else {
-		this.logger_.finest(
-			"writeFrames: Writing " + frames.length + " frame(s).");
+		this.logger_.finest("writeFrames: Writing " + frames.length + " frame(s).");
 		this.socket_.writeFrames(frames);
 	}
 };
