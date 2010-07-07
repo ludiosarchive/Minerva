@@ -599,16 +599,16 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 				this.primaryTransport_.writeSack_(currentSack);
 			}
 			if(maybeNeedToSendStrings) {
-				this.primaryTransport_.writeStrings_(this.queue_, highestSeqNumSent + 1);
+				this.primaryTransport_.writeStrings_(
+					this.queue_, highestSeqNumSent + 1);
 			}
 			this.primaryTransport_.flush_();
 		// For robustness reasons, wait until we know that Stream
 		// exists on server before creating secondary transports.
 		} else if(this.secondaryTransport_ == null) {
 			if(!this.streamExistedAtServer_) {
-				this.logger_.finest(
-					"tryToSend_: not creating a secondary because Stream " +
-					"might not exist on server");
+				this.logger_.finest("tryToSend_: not creating a secondary " +
+					"because Stream might not exist on server");
 				this.secondaryIsWaitingForStreamToExist_ = true;
 			} else {
 				this.logger_.finest(
@@ -616,7 +616,8 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 				this.secondaryTransport_ = this.createNewTransport_(false);
 				// No need to writeSack_ because a sack is included in the HelloFrame.
 				if(maybeNeedToSendStrings) {
-					this.secondaryTransport_.writeStrings_(this.queue_, highestSeqNumSent + 1);
+					this.secondaryTransport_.writeStrings_(
+						this.queue_, highestSeqNumSent + 1);
 				}
 				this.secondaryTransport_.flush_();
 			}
