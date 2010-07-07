@@ -209,7 +209,7 @@ function(callQueue, stream, transportNumber, transportType, endpoint, becomePrim
 
 
 cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
-	// TODO: test for what happens if you `reset` a Stream before you `start it`.
+	// TODO: test for what happens if you `reset` a Stream before you `start` it.
 
 	/**
 	 * If sendStrings is called with an empty Array, it does not
@@ -259,6 +259,14 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 		self.assertThrows(Error, function() { stream.reset("a reasonString"); },
 			"reset: Can't send reset in state 3");
 	}
+
+	// TODO: add test: if secondary is sending strings, and primary closes,
+	// new primary should not send strings that are being sent over
+	// secondary right now.
+
+	// TODO: add test: if primary is sending strings, and more strings are
+	// queued, new secondary should not send strings that are being sent
+	// over primary right now.
 
 //	/**
 //	 * Calling stream.dispose() makes it call dispose() on all of its transports.

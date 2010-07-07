@@ -986,7 +986,7 @@ cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, avoidCreat
 	// queue more strings for sending. Note that in that case, tryToSend_
 	// has already been called.
 	//
-	// Long-polling transports set avoidCreatingTransports=true because
+	// Long-polling transports call with avoidCreatingTransports=true because
 	// Stream will create a new transport after that long-poll closes. We know
 	// it will close very soon because it just received strings. The new
 	// transport will have a SACK, so it is stupid to create a new secondary
