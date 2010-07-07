@@ -563,9 +563,6 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 			"removed item #0 from our queue?");
 	}
 	if(this.state_ == cw.net.StreamState_.UNSTARTED) {
-		this.logger_.finest(
-			"tryToSend_: haven't started yet; not sending anything. " +
-			"You should call Stream.start().");
 		return;
 	}
 	var haveQueueItems = (this.queue_.getQueuedCount() != 0);
