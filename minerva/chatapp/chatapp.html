@@ -13,10 +13,22 @@
 </head>
 <body>
 
-<div id="doc">
+<div id="info">
+<p>
 This page supports options ?mode=http, ?mode=flash, ?useSub=0, ?useSub=1
 (which can be combined).  Note: when using subdomains, you'll see fewer log
 messages because log messages in the iframes are not sent to this parent window.
+</p>
+
+Do all of these when testing:
+<ul>
+<li>Test this page with ?mode=flash.</li>
+<li>Test this page with ?mode=http&useSub=0.</li>
+<li>Test this page with ?mode=http&useSub=1.</li>
+<li>This server listens on both HTTP and HTTPS. Repeat above tests with both HTTP and HTTPS.</li>
+<li>For mode=http&useSub=1 : Hit F5 in Firefox a few times, make sure it still works.</li>
+<li>Load the page in a WebKit browser, make sure the spinner stops spinning after 4 seconds.</li>
+</ul>
 </div>
 
 <table id="controls">

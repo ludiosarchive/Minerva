@@ -972,6 +972,12 @@ HTTP_RESPONSE_PREAMBLE = ";)]}P" # "P" to indicate a PaddingFrame.
 DontWriteSack = Constant("DontWriteSack")
 
 
+def setNoCache(rawHeaders):
+	# Headers taken from the ones gmail sends
+	rawHeaders['cache-control'] = ['no-cache, no-store, max-age=0, must-revalidate']
+	rawHeaders['pragma'] = ['no-cache']
+	rawHeaders['expires'] = ['Fri, 01 Jan 1990 00:00:00 GMT']
+
 
 class ServerTransport(object):
 	"""
@@ -1602,11 +1608,7 @@ class ServerTransport(object):
 				"%r from %r" % (request, request.client))
 
 		headers = request.responseHeaders._rawHeaders
-
-		# Headers taken from the ones gmail sends
-		headers['cache-control'] = ['no-cache, no-store, max-age=0, must-revalidate']
-		headers['pragma'] = ['no-cache']
-		headers['expires'] = ['Fri, 01 Jan 1990 00:00:00 GMT']
+		setNoCache(headers)
 
 		# "For Webkit browsers, it's critical to specify a Content-Type of
 		# "text/plain" or "application/x-javascript" when returning script

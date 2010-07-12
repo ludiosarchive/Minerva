@@ -1,10 +1,10 @@
 /**
- * @fileoverview Minerva client and related functionality.
+ * @fileoverview Minerva client for web browsers.
  *
  * If you make modifications, keep in mind that the unit tests are not
  * complete enough to prevent regressions. You may want to use
- * the /chatapp/ page to check the behavior, as well as a tools like
- * HttpFox, Firebug, and Wireshark.
+ * the /chatapp/ page to check the behavior, and BrowserNode's
+ * /rtsgame/, as well as a tools like HttpFox, Firebug, and Wireshark.
  *
  * There is a lot of behavior we're optimizing for in this file:
  * 	- sending as little redundant data as possible
@@ -138,11 +138,13 @@ cw.net.HttpEndpoint.prototype.ensureSameOrigin_ = function() {
 	// Note: URLs for iframes can change, but we hold a reference to
 	// its window, not the iframe itself.  But, bad things might happen if
 	// we later make requests on a "dead" window.
-	if(!goog.uri.utils.haveSameDomain(this.primaryUrl, this.primaryWindow.location.href)) {
-		throw Error("primaryWindow not same origin as primaryUrl");
+	var primaryWindowHref = this.primaryWindow.location.href;
+	if(!goog.uri.utils.haveSameDomain(this.primaryUrl, primaryWindowHref)) {
+		throw Error("primaryWindow not same origin as primaryUrl: " + primaryWindowHref);
 	}
-	if(!goog.uri.utils.haveSameDomain(this.secondaryUrl, this.secondaryWindow.location.href)) {
-		throw Error("secondaryWindow not same origin as secondaryUrl");
+	var secondaryWindowHref = this.secondaryWindow.location.href;
+	if(!goog.uri.utils.haveSameDomain(this.secondaryUrl, secondaryWindowHref)) {
+		throw Error("secondaryWindow not same origin as secondaryUrl: " + secondaryWindowHref);
 	}
 };
 
