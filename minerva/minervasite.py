@@ -346,9 +346,9 @@ class XDRFrame(BetterResource):
 <body>
 <script>
 
-document.domain = %s;
-var frameNum = %d;
-var frameId = %s;
+document.domain = %(domain)s;
+var frameNum = %(frameNum)d;
+var frameId = %(frameId)s;
 
 // Firefox 3+ often loads the wrong iframe target when using Reload (F5).
 // The iframe src= on the parent page points to the new URL, but Firefox
@@ -397,7 +397,10 @@ if(atCorrectLocation) {
 </script>
 </body>
 </html>
-""" % (simplejson.dumps(self.domain), frameNum, simplejson.dumps(frameIdStr))
+""" % dict(
+	domain=simplejson.dumps(self.domain),
+	frameNum=frameNum,
+	frameId=simplejson.dumps(frameIdStr))
 
 
 
