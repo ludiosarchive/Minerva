@@ -1,7 +1,22 @@
-// This script should not be compiled with ADVANCED_OPTIMIZATIONS;
-// property renaming will destroy it.  This script must be run at document
-// load time, because it uses document.write.
+/**
+ * @fileoverview This script writes two iframes onto the page, which are
+ * 	later used for XHR requests.  This script is meant to be included
+ * 	directly in a page, even before Closure Library is available.  It must be
+ * 	run at document load time, because it uses document.write.
+ *
+ * 	This script must not be compiled with ADVANCED_OPTIMIZATIONS;
+ * 	property renaming will destroy it.
+ *
+ * 	The motivation for doing this outside of "normal" Closure-style code
+ * 	is so that we can start loading the iframes (which involve a DNS
+ * 	lookup) before the main script is loaded.
+ */
+
 (function() {
+	if(typeof __XDRSetup != "object") {
+		throw Error("__XDRSetup not an object?");
+	}
+
 	// Setting document.domain is serious business; don't overlook it.
 	document.domain = __XDRSetup.domain;
 
@@ -14,7 +29,11 @@
 	__XDRSetup.loaded = function(id) {
 		__XDRSetup.done.push(id);
 	};
+
+	// Note: cw.net.waitForXDRFrames later looks at this array and
+	// overrides .push if it needs to wait for more iframes.
 	__XDRSetup.done = [];
+
 	// We expect location.port to be an empty string if no :port is in
 	// the URL.  If there is an explicit port, we need to load the iframe
 	// with that port, even if it's the default port (80 or 443), because
