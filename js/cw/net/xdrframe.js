@@ -12,10 +12,10 @@ goog.provide('cw.net.xdrframe_');
  * wrong location in Firefox, or if intermediaries are rewriting pages.
  * See bootstrap_XDRSetup which describes the ridiculous Firefox bug that
  * necessitates this.
- *
  * @param {number} frameNum
  * @param {string} frameId
- * @return {boolean} Whether
+ * @return {boolean} Whether this iframe is already at the correct location
+ * 	(meaning a redirect is not necessary).
  * @private
  */
 cw.net.xdrframe_.redirectIfWrongLocation_ = function(frameNum, frameId) {
@@ -40,7 +40,6 @@ cw.net.xdrframe_.redirectIfWrongLocation_ = function(frameNum, frameId) {
 
 /**
  * Tell the parent that this iframe has loaded.
- *
  * @param {number} frameNum
  * @private
  */
@@ -57,7 +56,6 @@ cw.net.xdrframe_.notifyParent_ = function(frameNum) {
 /**
  * This function assumes that document.domain is already set, and that
  * parent page has already loaded and run bootstrap_XDRSetup.
- *
  * @param {number} frameNum
  * @param {string} frameId
  */
