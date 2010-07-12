@@ -345,33 +345,11 @@ class XDRFrame(BetterResource):
 </head>
 <body>
 <script>
-
-document.domain = %(domain)s;
-var frameNum = %(frameNum)d;
-var frameId = %(frameId)s;
-
-// Firefox 3+ often loads the wrong iframe target when using Reload (F5).
-// The iframe src= on the parent page points to the new URL, but Firefox
-// makes a new request to the old iframe URL.  See:
-// https://bugzilla.mozilla.org/show_bug.cgi?id=342905
-// https://bugzilla.mozilla.org/show_bug.cgi?id=279048
-// We use information from the parent page to decide whether to redirect.
-
-var atCorrectLocation = false;
-var correctId = parent.__XDRSetup["id" + frameNum];
-if(!correctId) {
-	throw Error("could not get correct id from parent");
-} else if(frameId != correctId) {
-	if(parent.__XDRSetup.redirectCountdown) {
-		parent.__XDRSetup.redirectCountdown--;
-		window.location = parent.__XDRSetup["xdrurl" + frameNum];
-	} else {
-		throw Error("still not at correct URL, but redirectCountdown is falsy");
-	}
-} else {
-	atCorrectLocation = true;
-}
-
+	document.domain = %(domain)s;
+</script>
+<script src="/JSPATH/cw/net/bootstrap_XDRFrame.js"></script>
+<script>
+	atCorrectLocation = redirectIfWrongLocation(%(frameNum)d, %(frameId)s);
 </script>
 <!--
 Always load scripts even if not atCorrectLocation, because document.write
@@ -379,21 +357,15 @@ and Closure Library's <script> tag writing doesn't mix in IE.
 -->
 <script src="/JSPATH/closure/goog/base.js"></script>
 <script src="/JSPATH/nongoog_deps.js"></script>
-<script>goog.require("cw.net.XHRSlave");</script>
 <script>
-
-function notifyParent() {
-	try {
-		parent.__XDRSetup.loaded(frameNum);
-	} catch(err) {
-		throw Error("could not call __XDRSetup.loaded on parent; err: " + err.message);
+	goog.require("cw.net.XHRSlave");
+</script>
+<script>
+	// Set window.onload last, to mitigate possible problems with onload
+	// firing too early.
+	if(atCorrectLocation) {
+		window.onload = function() { notifyParent(%(frameNum)d) };
 	}
-}
-
-if(atCorrectLocation) {
-	window.onload = notifyParent;
-}
-
 </script>
 </body>
 </html>
