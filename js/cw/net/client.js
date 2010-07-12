@@ -2329,7 +2329,7 @@ goog.global['__XHRMaster_oncomplete'] =
  * 	are loaded.
  */
 cw.net.waitForXDRFrames = function(globalName, expected) {
-	cw.net.logger_.info('Waiting for XDRFrames...');
+	cw.net.logger_.info('Waiting for XDRFrames (may take a while)...');
 	var d = new goog.async.Deferred();
 	var count = goog.global[globalName]['done'].length;
 	var need;

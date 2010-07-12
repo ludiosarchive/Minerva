@@ -62,16 +62,24 @@ whether there is probably an already-connected Stream in a tab.
 If no such cookie, write out the iframes immediately.
 -->
 <script>
+// Use just one preamble <script> to reduce page load time.
+(function() {
+	window.CSRF_TOKEN = {{ dumps(token) }};
+	// Setting document.domain is serious business; don't overlook it.
+	document.domain = {{ dumps(domain) }};
+
 	// Insert an image that takes a while to load, to make sure our
 	// WebKit spinner-killer works.
 	document.write('<img src="/wait_resource/?wait=4&zx=' +
 		Math.random() + '" width=1 height=1>');
 
-	// Use just one preamble <script> to reduce page load time.
+	// Copy/paste of cw.string.getCleanRandomString
+	var getCleanRandomString = function() {
+		return Math.floor(Math.random() * 2147483648).toString(36) +
+			Math.abs(Math.floor(Math.random() * 2147483648) ^ (+new Date)).toString(36);
+	};
 
-	window.CSRF_TOKEN = {{ dumps(token) }};
-	document.domain = {{ dumps(domain) }};
-	var __XDRFrame_loaded = function(id) {
+	window.__XDRFrame_loaded = function(id) {
 		__XDRFrame_loaded.done.push(id);
 	};
 	__XDRFrame_loaded.done = [];
@@ -80,16 +88,35 @@ If no such cookie, write out the iframes immediately.
 	// with that port, even if it's the default port (80 or 443), because
 	// a mismatch of "explicit port" and "implicit port" may prevent
 	// cross-subdomain interaction from working in some browsers.
-	__XDRFrame_loaded.portString = location.port ? ':' + location.port : "";
-	__XDRFrame_loaded.url1 = location.protocol + '//{{ sub1 }}.{{ domain }}' +
-		__XDRFrame_loaded.portString + '/';
-	__XDRFrame_loaded.url2 = location.protocol + '//{{ sub2 }}.{{ domain }}' +
-		__XDRFrame_loaded.portString + '/';
+	var portString = location.port ? ':' + location.port : "";
+	__XDRFrame_loaded.id1 = getCleanRandomString() + getCleanRandomString();
+	__XDRFrame_loaded.id2 = getCleanRandomString() + getCleanRandomString();
+	__XDRFrame_loaded.baseurl1 = location.protocol + '//{{ sub1 }}.{{ domain }}' + portString + '/';
+	__XDRFrame_loaded.baseurl2 = location.protocol + '//{{ sub2 }}.{{ domain }}' + portString + '/';
+	__XDRFrame_loaded.xdrurl1 = __XDRFrame_loaded.baseurl1 + 'xdrframe/?framenum=1&id=' + __XDRFrame_loaded.id1;
+	__XDRFrame_loaded.xdrurl2 = __XDRFrame_loaded.baseurl2 + 'xdrframe/?framenum=2&id=' + __XDRFrame_loaded.id2;
+
+	// Reload/F5 in Firefox 3+ has a long-standing bug with iframes: the new
+	// iframe src= in the DOM structure is ignored, and Firefox makes a
+	// request to an older iframe src=.  This also happens after session
+	// recovery. Another bug claims that iframe targets are sometimes
+	// mixed up, which implies some broken internal cache.
+	//
+	// Each frame should get 1 attempt to redirect itself to the correct URL.
+	// This counter needs to be in the parent page, not in the iframe (which
+	// may be loaded with some old URL).
+	__XDRFrame_loaded.redirectCountdown = 2;
+	//document.write('xdrurl1: ' + __XDRFrame_loaded.xdrurl1 + '<br>');
+	//document.write('xdrurl2: ' + __XDRFrame_loaded.xdrurl2 + '<br>');
+
 	document.write(
-		'<iframe width=16 height=16 src="' + __XDRFrame_loaded.url1 +
-			'xdrframe/?id=1" id="xdrframe-1"></iframe>' +
-		'<iframe width=16 height=16 src="' + __XDRFrame_loaded.url2 +
-			'xdrframe/?id=2" id="xdrframe-2"></iframe>');
+		'<iframe width=16 height=16 src="' + __XDRFrame_loaded.xdrurl1 +
+			'" id="xdrframe-1"></iframe>' +
+		'<iframe width=16 height=16 src="' + __XDRFrame_loaded.xdrurl2 +
+			'" id="xdrframe-2"></iframe>');
+})();
+
+
 </script>
 
 <div id="FlashConnectorSwf"></div>

@@ -73,16 +73,16 @@ cw.net.demo.getEndpoint = function(callQueue) {
 				var secondaryWindow = goog.dom.getFrameContentWindow(
 					/** @type {!HTMLIFrameElement} */ (goog.dom.getElement('xdrframe-2')));
 				if(!primaryWindow) {
-					throw Error("could not get xdrframe-1");
+					throw Error("could not get primaryWindow xdrframe");
 				}
 				if(!secondaryWindow) {
-					throw Error("could not get xdrframe-2");
+					throw Error("could not get secondaryWindow xdrframe");
 				}
 
-				var primaryUrl = new goog.Uri(goog.global[xdrLoadedGlobal]['url1']);
+				var primaryUrl = new goog.Uri(goog.global[xdrLoadedGlobal]['baseurl1']);
 				primaryUrl.setPath('/httpface/');
 
-				var secondaryUrl = new goog.Uri(goog.global[xdrLoadedGlobal]['url2']);
+				var secondaryUrl = new goog.Uri(goog.global[xdrLoadedGlobal]['baseurl2']);
 				secondaryUrl.setPath('/httpface/');
 
 				var endpoint = new cw.net.HttpEndpoint(

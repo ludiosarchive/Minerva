@@ -1,4 +1,5 @@
 import os
+import re
 import cgi
 import simplejson
 
@@ -325,10 +326,12 @@ class XDRFrame(BetterResource):
 
 
 	def render_GET(self, request):
+		frameNum = strToNonNegLimit(request.args['framenum'][0], 2**53)
 		frameIdStr = request.args['id'][0]
-		# 2**53 is the largest integral number that can be represented
-		# in JavaScript.
-		frameId = strToNonNegLimit(frameIdStr, 2**53)
+		if not re.match('^([A-Za-z0-9]*)$', frameIdStr):
+			raise ValueError("frameIdStr contained bad characters: %r" % (frameIdStr,))
+		if len(frameIdStr) > 50:
+			raise ValueError("frameIdStr too long: %r" % (frameIdStr,))
 
 		# Note: for the __XDRFrame_loaded call to work, document.domain
 		# on parent page must be set *before* the browser starts executing
@@ -341,26 +344,61 @@ class XDRFrame(BetterResource):
 	<title>XDRFrame</title>
 </head>
 <body>
+<script>
+
+document.domain = %s;
+var frameNum = %d;
+var frameId = %s;
+
+// Firefox 3+ often loads the wrong iframe target when using Reload (F5).
+// The iframe src= on the parent page points to the new URL, but Firefox
+// makes a new request to the old iframe URL.  See:
+// https://bugzilla.mozilla.org/show_bug.cgi?id=342905
+// https://bugzilla.mozilla.org/show_bug.cgi?id=279048
+// We use information from the parent page to decide whether to redirect.
+
+var atCorrectLocation = false;
+var correctId = parent.__XDRFrame_loaded["id" + frameNum];
+if(!correctId) {
+	throw Error("could not get correct id from parent");
+} else if(frameId != correctId) {
+	if(parent.__XDRFrame_loaded.redirectCountdown) {
+		parent.__XDRFrame_loaded.redirectCountdown--;
+		window.location = parent.__XDRFrame_loaded["xdrurl" + frameNum];
+	} else {
+		throw Error("still not at correct URL, but redirectCountdown is falsy");
+	}
+} else {
+	atCorrectLocation = true;
+}
+
+</script>
+<!--
+Always load scripts even if not atCorrectLocation, because document.write
+and Closure Library's <script> tag writing doesn't mix in IE.
+-->
 <script src="/JSPATH/closure/goog/base.js"></script>
 <script src="/JSPATH/nongoog_deps.js"></script>
+<script>goog.require("cw.net.XHRSlave");</script>
 <script>
-goog.require('cw.net.XHRSlave');
-</script>
-<script>
-	document.domain = %s;
-	function notifyParent() {
-		try {
-			parent.__XDRFrame_loaded(%s);
-		} catch(err) {
-			throw Error("could not call __XDRFrame_loaded on parent, " +
-				"perhaps document.domain not set? err: " + err.message);
-		}
+
+function notifyParent() {
+	try {
+		parent.__XDRFrame_loaded(frameNum);
+	} catch(err) {
+		throw Error("could not call __XDRFrame_loaded on parent, " +
+			"perhaps document.domain not set? err: " + err.message);
 	}
+}
+
+if(atCorrectLocation) {
 	window.onload = notifyParent;
+}
+
 </script>
 </body>
 </html>
-""" % (simplejson.dumps(self.domain), frameId)
+""" % (simplejson.dumps(self.domain), frameNum, simplejson.dumps(frameIdStr))
 
 
 
