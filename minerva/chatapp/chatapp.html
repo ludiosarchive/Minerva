@@ -63,15 +63,29 @@ If no such cookie, write out the iframes immediately.
 -->
 <script>
 // Use just one preamble <script> to reduce page load time.
-(function() {
-	window.CSRF_TOKEN = {{ dumps(token) }};
-	// Setting document.domain is serious business; don't overlook it.
-	document.domain = {{ dumps(domain) }};
 
-	// Insert an image that takes a while to load, to make sure our
-	// WebKit spinner-killer works.
-	document.write('<img src="/wait_resource/?wait=4&zx=' +
-		Math.random() + '" width=1 height=1>');
+// Insert an image that takes a while to load, to make sure our
+// WebKit spinner-killer works.
+document.write('<img src="/wait_resource/?wait=4&zx=' +
+	Math.random() + '" width=1 height=1>');
+
+// Don't define variables on "window" to avoid possible IE stack limit of 12
+// when calling through window.
+CSRF_TOKEN = {{ dumps(token) }};
+__XDRSetup = {
+	domain: {{ dumps(domain) }},
+	sub1: {{ dumps(sub1) }},
+	sub2: {{ dumps(sub2) }}
+};
+
+//{#{ dump_xdrframes_script(domain) }#}
+
+// This script should not be compiled with ADVANCED_OPTIMIZATIONS;
+// property renaming will destroy it.  This script must be run at document
+// load time, because it uses document.write.
+(function() {
+	// Setting document.domain is serious business; don't overlook it.
+	document.domain = __XDRSetup.domain;
 
 	// Copy/paste of cw.string.getCleanRandomString
 	var getCleanRandomString = function() {
@@ -79,10 +93,10 @@ If no such cookie, write out the iframes immediately.
 			Math.abs(Math.floor(Math.random() * 2147483648) ^ (+new Date)).toString(36);
 	};
 
-	window.__XDRFrame_loaded = function(id) {
-		__XDRFrame_loaded.done.push(id);
+	__XDRSetup.loaded = function(id) {
+		__XDRSetup.done.push(id);
 	};
-	__XDRFrame_loaded.done = [];
+	__XDRSetup.done = [];
 	// We expect location.port to be an empty string if no :port is in
 	// the URL.  If there is an explicit port, we need to load the iframe
 	// with that port, even if it's the default port (80 or 443), because
@@ -98,26 +112,27 @@ If no such cookie, write out the iframes immediately.
 	//
 	// A child iframe compares this id with the &id= from its URL, and if
 	// they don't match, iframe redirects itself to the correct xdrurl.
-	__XDRFrame_loaded.id1 = getCleanRandomString() + getCleanRandomString();
-	__XDRFrame_loaded.id2 = getCleanRandomString() + getCleanRandomString();
-	__XDRFrame_loaded.baseurl1 = location.protocol + '//{{ sub1 }}.{{ domain }}' + portString + '/';
-	__XDRFrame_loaded.baseurl2 = location.protocol + '//{{ sub2 }}.{{ domain }}' + portString + '/';
-	__XDRFrame_loaded.xdrurl1 = __XDRFrame_loaded.baseurl1 +
-		'xdrframe/?framenum=1&id=' + __XDRFrame_loaded.id1;
-	__XDRFrame_loaded.xdrurl2 = __XDRFrame_loaded.baseurl2 +
-		'xdrframe/?framenum=2&id=' + __XDRFrame_loaded.id2;
+	__XDRSetup.id1 = getCleanRandomString() + getCleanRandomString();
+	__XDRSetup.id2 = getCleanRandomString() + getCleanRandomString();
+	var suffix = '.' + __XDRSetup.domain + portString + '/';
+	__XDRSetup.baseurl1 = location.protocol + '//' + __XDRSetup.sub1 + suffix;
+	__XDRSetup.baseurl2 = location.protocol + '//' + __XDRSetup.sub2 + suffix;
+	__XDRSetup.xdrurl1 = __XDRSetup.baseurl1 +
+		'xdrframe/?framenum=1&id=' + __XDRSetup.id1;
+	__XDRSetup.xdrurl2 = __XDRSetup.baseurl2 +
+		'xdrframe/?framenum=2&id=' + __XDRSetup.id2;
 
 	// Each frame should get 1 attempt to redirect itself to the correct URL.
 	// This counter needs to be in the parent page, not in the iframe (which
 	// may be loaded with some old URL).
-	__XDRFrame_loaded.redirectCountdown = 2;
+	__XDRSetup.redirectCountdown = 2;
 
-	//document.write('xdrurl1: ' + __XDRFrame_loaded.xdrurl1 + '<br>');
-	//document.write('xdrurl2: ' + __XDRFrame_loaded.xdrurl2 + '<br>');
+	//document.write('xdrurl1: ' + __XDRSetup.xdrurl1 + '<br>');
+	//document.write('xdrurl2: ' + __XDRSetup.xdrurl2 + '<br>');
 	document.write(
-		'<iframe width=16 height=16 src="' + __XDRFrame_loaded.xdrurl1 +
+		'<iframe width=16 height=16 src="' + __XDRSetup.xdrurl1 +
 			'" id="xdrframe-1"></iframe>' +
-		'<iframe width=16 height=16 src="' + __XDRFrame_loaded.xdrurl2 +
+		'<iframe width=16 height=16 src="' + __XDRSetup.xdrurl2 +
 			'" id="xdrframe-2"></iframe>');
 })();
 

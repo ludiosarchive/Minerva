@@ -65,8 +65,8 @@ cw.net.demo.getEndpoint = function(callQueue) {
 	var useSub = Boolean(Number(queryData.get('useSub', '1')));
 	if(mode == 'http') {
 		if(useSub) {
-			var xdrLoadedGlobal = '__XDRFrame_loaded';
-			var d = cw.net.waitForXDRFrames(xdrLoadedGlobal, 2);
+			var xdrSetupGlobal = '__XDRSetup';
+			var d = cw.net.waitForXDRFrames(xdrSetupGlobal, 2);
 			d.addCallback(function() {
 				var primaryWindow = goog.dom.getFrameContentWindow(
 					/** @type {!HTMLIFrameElement} */ (goog.dom.getElement('xdrframe-1')));
@@ -79,10 +79,10 @@ cw.net.demo.getEndpoint = function(callQueue) {
 					throw Error("could not get secondaryWindow xdrframe");
 				}
 
-				var primaryUrl = new goog.Uri(goog.global[xdrLoadedGlobal]['baseurl1']);
+				var primaryUrl = new goog.Uri(goog.global[xdrSetupGlobal]['baseurl1']);
 				primaryUrl.setPath('/httpface/');
 
-				var secondaryUrl = new goog.Uri(goog.global[xdrLoadedGlobal]['baseurl2']);
+				var secondaryUrl = new goog.Uri(goog.global[xdrSetupGlobal]['baseurl2']);
 				secondaryUrl.setPath('/httpface/');
 
 				var endpoint = new cw.net.HttpEndpoint(

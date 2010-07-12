@@ -333,7 +333,7 @@ class XDRFrame(BetterResource):
 		if len(frameIdStr) > 50:
 			raise ValueError("frameIdStr too long: %r" % (frameIdStr,))
 
-		# Note: for the __XDRFrame_loaded call to work, document.domain
+		# Note: for the __XDRSetup call to work, document.domain
 		# on parent page must be set *before* the browser starts executing
 		# code in the iframe.
 		return """\
@@ -358,13 +358,13 @@ var frameId = %s;
 // We use information from the parent page to decide whether to redirect.
 
 var atCorrectLocation = false;
-var correctId = parent.__XDRFrame_loaded["id" + frameNum];
+var correctId = parent.__XDRSetup["id" + frameNum];
 if(!correctId) {
 	throw Error("could not get correct id from parent");
 } else if(frameId != correctId) {
-	if(parent.__XDRFrame_loaded.redirectCountdown) {
-		parent.__XDRFrame_loaded.redirectCountdown--;
-		window.location = parent.__XDRFrame_loaded["xdrurl" + frameNum];
+	if(parent.__XDRSetup.redirectCountdown) {
+		parent.__XDRSetup.redirectCountdown--;
+		window.location = parent.__XDRSetup["xdrurl" + frameNum];
 	} else {
 		throw Error("still not at correct URL, but redirectCountdown is falsy");
 	}
@@ -384,10 +384,9 @@ and Closure Library's <script> tag writing doesn't mix in IE.
 
 function notifyParent() {
 	try {
-		parent.__XDRFrame_loaded(frameNum);
+		parent.__XDRSetup.loaded(frameNum);
 	} catch(err) {
-		throw Error("could not call __XDRFrame_loaded on parent, " +
-			"perhaps document.domain not set? err: " + err.message);
+		throw Error("could not call __XDRSetup.loaded on parent; err: " + err.message);
 	}
 }
 
