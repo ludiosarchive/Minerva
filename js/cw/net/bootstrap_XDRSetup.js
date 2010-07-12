@@ -45,7 +45,9 @@
 	// iframe src= in the DOM structure is ignored, and Firefox makes a
 	// request to an older iframe src=.  This also happens after session
 	// recovery.  Another bug claims that iframe targets are sometimes
-	// mixed up, which implies some broken internal cache.
+	// mixed up, which implies some broken internal cache.  See:
+	// https://bugzilla.mozilla.org/show_bug.cgi?id=342905
+	// https://bugzilla.mozilla.org/show_bug.cgi?id=279048
 	//
 	// A child iframe compares this id with the &id= from its URL, and if
 	// they don't match, iframe redirects itself to the correct xdrurl.

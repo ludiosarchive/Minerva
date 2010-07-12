@@ -344,28 +344,15 @@ class XDRFrame(BetterResource):
 	<title>XDRFrame</title>
 </head>
 <body>
-<script>
-	document.domain = %(domain)s;
-</script>
-<script src="/JSPATH/cw/net/bootstrap_XDRFrame.js"></script>
-<script>
-	atCorrectLocation = redirectIfWrongLocation(%(frameNum)d, %(frameId)s);
-</script>
-<!--
-Always load scripts even if not atCorrectLocation, because document.write
-and Closure Library's <script> tag writing doesn't mix in IE.
--->
 <script src="/JSPATH/closure/goog/base.js"></script>
 <script src="/JSPATH/nongoog_deps.js"></script>
 <script>
-	goog.require("cw.net.XHRSlave");
+	goog.require('cw.net.XHRSlave');
+	goog.require('cw.net.setupXDRFrame');
 </script>
 <script>
-	// Set window.onload last, to mitigate possible problems with onload
-	// firing too early.
-	if(atCorrectLocation) {
-		window.onload = function() { notifyParent(%(frameNum)d) };
-	}
+	document.domain = %(domain)s;
+	cw.net.setupXDRFrame(%(frameNum)d, %(frameId)s);
 </script>
 </body>
 </html>
