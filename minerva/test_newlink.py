@@ -1710,7 +1710,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		If client sends a hello frame with a streamId that server doesn't
 		know about, the transport is killed with C{tk_stream_attach_failure}.
 		"""
-		for requestNewStream in (DeleteProperty, 0, 0.0, -0, -0.0, False):
+		for requestNewStream in (DeleteProperty, 0, 0.0, -0.0, False):
 			##print requestNewStream
 			frame0 = _makeHelloFrame(dict(requestNewStream=requestNewStream))
 			transport = self._makeTransport()
