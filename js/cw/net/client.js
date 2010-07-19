@@ -150,54 +150,11 @@ cw.net.HttpEndpoint.prototype.ensureSameOrigin_ = function() {
 
 
 
-
 /**
  * @type {cw.net.SocketEndpoint|cw.net.HttpEndpoint}
  */
 cw.net.Endpoint = goog.typedef;
 
-
-
-///**
-// * Implement this interface for your "endpoint locator" object.
-// *
-// * @interface
-// */
-//cw.net.IEndpointLocator = function() {
-//
-//};
-//
-//// XXX TODO: this API feels wrong. What if there are multiple available endpoints
-//// for an EndpointType? Remember: endpoints may change during runtime,
-//// and at initial page load, we may want to connect to everything to see what
-//// we can connect to.
-//
-///**
-// * @param {!cw.net.EndpointType} type The type of endpoint
-// *
-// * @return {?Array.<!(string|Object)>} The endpoint (with
-// * 	credentials) that Minerva client should connect to.
-// *
-// *	Return an array of [the endpoint URL, credentialsData], or, if no
-// * 	endpoint is suitable, return `null`.
-// *
-// * 	the endpoint URL: If `type` is `cw.net.EndpointType.{HTTP,HTTPS,WS,WSS}`, the
-// * 	full URL with an appropriate scheme (`http://` or `https://` or `ws://` or `ws://`).
-// * 	If `type` is `cw.net.EndpointType.TCP`, a URL that looks like "tcp://hostname:port"
-// * 	(both `hostname` and the `port` number are required.)
-// *
-// * 	credentialsData: `Object`, which may be looked at by Minerva server's
-// * 	firewall. Cannot be an `Array`, or anything but `Object`.
-// */
-//cw.net.IEndpointLocator.prototype.locate = function(type) {
-//
-//};
-
-
-// TODO: need some kind of interface to allow applications to control
-// timeout behavior. Control timeout for individual HTTP/WebSocket/Flash Socket transports?
-
-// If application wants to timeout Stream on the client-side,
 
 
 /**
