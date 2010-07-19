@@ -1045,7 +1045,7 @@ cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, avoidCreat
 	// transport right now to send a SACK redundantly.
 	// For HTTP streaming, the transport might not close for a while, so
 	// we do call tryToSend_.
-	if(!avoidCreatingTransports) { // maybe we want && !hitLimit?
+	if(!avoidCreatingTransports) { // TODO: maybe we want && !hitLimit?
 		this.tryToSend_();
 	}
 
