@@ -63,13 +63,6 @@ whether there is probably an already-connected Stream in a tab.
 If no such cookie, write out the iframes immediately.
 -->
 <script>
-// Use just one preamble <script> to reduce page load time.
-
-// Insert an image that takes a while to load, to make sure our
-// WebKit spinner-killer works.
-document.write('<img src="/wait_resource/?wait=4&zx=' +
-	Math.random() + '" width=1 height=1>');
-
 // Don't define variables on "window" to avoid possible IE stack limit of 12
 // when calling through window.
 CSRF_TOKEN = {{ dumps(token) }};
@@ -106,6 +99,14 @@ goog.require('cw.net.demo.getEndpoint');
 goog.require('cw.net.demo.makeCredentialsData');
 goog.require('cw.repr');
 goog.require('cw.string');
+</script>
+
+<script>
+// Insert an image that takes a while to load, to make sure our
+// WebKit spinner-killer works.  Do this after loading the resources
+// above, to prevent an HTTP pipeline stall (happens in Opera, at least).
+document.write('<img src="/wait_resource/?wait=4&zx=' +
+	Math.random() + '" width=1 height=1>');
 </script>
 
 <script>
