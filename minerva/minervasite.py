@@ -344,14 +344,26 @@ class XDRFrame(BetterResource):
 	<title>XDRFrame</title>
 </head>
 <body>
-<script src="/JSPATH/closure/goog/base.js"></script>
-<script src="/JSPATH/nongoog_deps.js"></script>
+<script>
+	document.domain = %(domain)s;
+	var parentUrlSplit = parent.location.href.split("/");
+	while(parentUrlSplit.length != 3) {
+		parentUrlSplit.pop();
+	}
+	var parentUrl = parentUrlSplit.join("/");
+	// Load JavaScript from the parent's domain instead of our own subdomain,
+	// subdomain is always random and the resources would not be usefully
+	// cached.
+	document.write('<script src="' + parentUrl + '/JSPATH/closure/goog/base.js"><\/s' + 'cript>');
+</script>
+<script>
+	document.write('<script src="' + parentUrl + '/JSPATH/nongoog_deps.js"><\/s' + 'cript>');
+</script>
 <script>
 	goog.require('cw.net.XHRSlave');
 	goog.require('cw.net.setupXDRFrame');
 </script>
 <script>
-	document.domain = %(domain)s;
 	cw.net.setupXDRFrame(%(frameNum)d, %(frameId)s);
 </script>
 </body>
