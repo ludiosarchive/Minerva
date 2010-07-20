@@ -68,9 +68,29 @@
 
 	//document.write('xdrurl1: ' + __XDRSetup.xdrurl1 + '<br>');
 	//document.write('xdrurl2: ' + __XDRSetup.xdrurl2 + '<br>');
-	document.write(
-		'<iframe width=16 height=16 src="' + __XDRSetup.xdrurl1 +
-			'" id="xdrframe-1"></iframe>' +
-		'<iframe width=16 height=16 src="' + __XDRSetup.xdrurl2 +
-			'" id="xdrframe-2"></iframe>');
+
+	// Insert iframes after a timeout to work around in an IE8 issue
+	// (maybe other IEs too).  If the iframes are document.write'ed or
+	// innerHTML'ed at page load time, and you later reach the page again via
+	// the 'back' button, the first iframe URL will be loaded in both iframes.
+	// You can reproduce this bug:
+	// 1) visit /chatapp/?mode=http
+	// 2) add &useSub=0 to the URL and hit enter
+	// 3) click the back button.  You should see an error from ensureSameOrigin_.
+	var detectedIe = eval('/*@cc_on!@*/false');
+	var insertIframes = function() {
+		document.getElementById('minerva-xdrframes').innerHTML =
+			'<iframe width=16 height=16 src="' + __XDRSetup.xdrurl1 +
+				'" id="xdrframe-1"><\/iframe>' +
+			'<iframe width=16 height=16 src="' + __XDRSetup.xdrurl2 +
+				'" id="xdrframe-2"><\/iframe>';
+	}
+	if(detectedIe) {
+		window.setTimeout(insertIframes, 0);
+	} else {
+		// Load faster by avoiding a setTimeout, and avoid rare problems
+		// with jumping clocks.  (Less of a problem in IE because it uses a
+		// monotonic clock for timers).
+		insertIframes();
+	}
 })();

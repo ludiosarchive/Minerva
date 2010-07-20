@@ -26,7 +26,8 @@ Do all of these when testing:
 <li>Test this page with ?mode=http&useSub=0.</li>
 <li>Test this page with ?mode=http&useSub=1.</li>
 <li>This server listens on both HTTP and HTTPS. Repeat above tests with both HTTP and HTTPS.</li>
-<li>For mode=http&useSub=1 : Hit F5 in Firefox a few times, make sure it still works.</li>
+<li>For mode=http&useSub=1 : Reload this page with F5.  Firefox 3+ has problems related to this.</li>
+<li>For mode=http&useSub=1 : Arrive to this page via Back button from another page.  IE has problems related to this.</li>
 <li>Load the page in a WebKit browser, make sure the spinner stops spinning after 4 seconds.</li>
 </ul>
 </div>
@@ -78,6 +79,8 @@ __XDRSetup = {
 	sub2: {{ dumps(sub2) }}
 };
 </script>
+
+<div id="minerva-xdrframes"></div>
 <script src="/JSPATH/cw/net/bootstrap_XDRSetup.js"></script>
 
 <div id="FlashConnectorSwf"></div>

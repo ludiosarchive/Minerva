@@ -5,6 +5,8 @@
 goog.provide('cw.net.setupXDRFrame');
 goog.provide('cw.net.xdrframe_');
 
+goog.require('goog.userAgent');
+
 
 /**
  * Redirect this iframe if it is at the wrong location (determined
@@ -60,7 +62,14 @@ cw.net.xdrframe_.notifyParent_ = function(frameNum) {
  * @param {string} frameId
  */
 cw.net.setupXDRFrame = function(frameNum, frameId) {
-	var atCorrectLocation = cw.net.xdrframe_.redirectIfWrongLocation_(frameNum, frameId);
+	var atCorrectLocation = true;
+	if(goog.userAgent.GECKO) {
+		// Only try this in Gecko, because that's the only browser that
+		// definitely needs this workaround.  Before I made this Gecko-only,
+		// I sometimes saw "still not at correct URL" in IE8 when clicking
+		// the back button.
+		atCorrectLocation = cw.net.xdrframe_.redirectIfWrongLocation_(frameNum, frameId);
+	}
 	// Set window.onload last, to mitigate possible problems with onload
 	// firing too early.
 	if(atCorrectLocation) {
