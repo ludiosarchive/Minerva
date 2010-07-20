@@ -18,6 +18,8 @@
 This page supports options ?mode=http, ?mode=flash, ?useSub=0, ?useSub=1
 (which can be combined).  Note: when using subdomains, you'll see fewer log
 messages because log messages in the iframes are not sent to this parent window.
+When testing with Opera, open the Error Console, because window.onerror does
+not work in Opera.
 </p>
 
 Do all of these when testing:
@@ -28,6 +30,7 @@ Do all of these when testing:
 <li>This server listens on both HTTP and HTTPS. Repeat above tests with both HTTP and HTTPS.</li>
 <li>For mode=http&useSub=1 : Reload this page with F5.  Firefox 3+ has problems related to this.</li>
 <li>For mode=http&useSub=1 : Arrive to this page via Back button from another page.  IE has problems related to this.</li>
+<li>For mode=flash : Arrive to this page via Back button from another page.  Opera has problems related to this.</li>
 <li>Load the page in a WebKit browser, make sure the spinner stops spinning after 4 seconds.</li>
 </ul>
 </div>
