@@ -75,6 +75,7 @@ class HelloFrameTests(unittest.TestCase):
 				streamingResponse=True,
 				maxReceiveBytes=2**30,
 				maxOpenTime=2**30,
+				heartbeatInterval=0,
 				credentialsData="",
 				needPaddingBytes=0,
 				httpFormat=None,
@@ -165,6 +166,7 @@ class HelloFrameTests(unittest.TestCase):
 			streamingResponse=[2, 3] + listWithout(genericBad, [True, False]),
 			maxReceiveBytes=genericBad,
 			maxOpenTime=genericBad,
+			heartbeatInterval=[None, 0.5, 1.5, 601],
 			credentialsData=["x" * 256, '\t', u'\ucccc'] + listWithout(genericBad, [""]),
 			# We can pass either a string or a SACK
 			sack=['', '|', SACK(-2, ()), SACK(-1, (-2,))],
@@ -193,7 +195,7 @@ class HelloFrameTests(unittest.TestCase):
 				ran += 1
 
 		# sanity check; make sure we actually tested things
-		assert ran == 126, "Ran %d times; change this assert as needed" % (ran,)
+		assert ran == 130, "Ran %d times; change this assert as needed" % (ran,)
 
 
 	def test_encode(self):
@@ -211,6 +213,7 @@ class HelloFrameTests(unittest.TestCase):
 			requestNewStream=True,
 			streamingResponse=True,
 			needPaddingBytes=0,
+			heartbeatInterval=1,
 			sack=SACK(-1, ())))
 		encodedDecodedHello = HelloFrame.decode(sf(hello.encode()))
 		self.assertEqual(hello, encodedDecodedHello)

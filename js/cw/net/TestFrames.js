@@ -75,6 +75,7 @@ cw.net.TestFrames.makeHelloFrame_ = function(extra, noDefaults) {
 			'streamingResponse': 1,
 			'maxReceiveBytes': Math.pow(2, 30),
 			'maxOpenTime': Math.pow(2, 30),
+			'heartbeatInterval': 0,
 			'lastSackSeenByClient': SK(-1, [])
 		});
 	}
@@ -251,6 +252,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 			'streamingResponse': concat([2, 3], listWithout(genericBad, [true, false])),
 			'maxReceiveBytes': genericBad,
 			'maxOpenTime': genericBad,
+			'heartbeatInterval': [null, 0.5, 1.5, 601],
 			'credentialsData': concat([rep('x', 256), '\t', '\ucccc'], listWithout(genericBad, [""])),
 			// We can pass either a string or a cw.net.SACK
 			'sack': ['', '|', SK(-2, []), SK(-1, [-2])],
@@ -288,7 +290,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 		}
 
 		// sanity check; make sure we actually tested things
-		goog.asserts.assert(ran == 126, "Ran " + ran + " times; change this assert as needed");
+		goog.asserts.assert(ran == 130, "Ran " + ran + " times; change this assert as needed");
 	},
 
 	function test_encode(self) {
@@ -307,6 +309,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 				'requestNewStream': true,
 				'streamingResponse': true,
 				'needPaddingBytes': 0,
+				'heartbeatInterval': 1,
 				'sack': SK(-1, [])}));
 		var encodedDecodedHello = HelloFrame.decode(hello.encode());
 		self.assertEqual(hello, encodedDecodedHello);

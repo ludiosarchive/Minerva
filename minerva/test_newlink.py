@@ -100,6 +100,7 @@ def _makeHelloFrame(extra={}):
 		streamingResponse=1,
 		maxReceiveBytes=2**30,
 		maxOpenTime=2**30,
+		heartbeatInterval=0,
 		lastSackSeenByClient=SACK(-1, ()))
 	for k, v in extra.iteritems():
 		if v == DeleteProperty:

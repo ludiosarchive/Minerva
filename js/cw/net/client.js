@@ -1537,6 +1537,7 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 	// the whole thing during XHR streaming.
 	hello.maxReceiveBytes = 300000;
 	hello.maxOpenTime = 25000;
+	hello.heartbeatInterval = this.isHttpTransport_() ? 0 : 10; // 10 sec
 	hello.useMyTcpAcks = false;
 	if(this.becomePrimary_) {
 		hello.succeedsTransport = null;
