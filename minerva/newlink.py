@@ -1270,7 +1270,7 @@ class ServerTransport(object):
 
 		# During authentication, stop reading from the underlying TCP socket.
 		# It doesn't make sense the pause an HTTPChannel, because
-		# we already received the full request. It does make sense to
+		# we already received the full request. But it does make sense to
 		# pause a socket transport because peer could send an unlimited
 		# amount of data after the HelloFrame.
 		if self._mode != HTTP:
