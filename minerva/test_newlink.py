@@ -1150,7 +1150,6 @@ class SocketTransportModeSelectionTests(unittest.TestCase):
 
 
 	def _resetConnection(self):
-		reactor = FakeReactor()
 		self.tcpTransport = DummyTCPTransport()
 		firewall = DummyFirewall(self._clock, rejectAll=False)
 		self.face = SocketFace(None, self.streamTracker, firewall,
