@@ -1349,8 +1349,8 @@ cw.net.ClientTransport.prototype.considerDelayingNextTransport_ = function() {
  * @private
  */
 cw.net.ClientTransport.prototype.getUnderlyingDuration_ = function() {
-	goog.asserts.assertNumber(this.underlyingStopTime_);
-	goog.asserts.assertNumber(this.underlyingStartTime_);
+	goog.asserts.assertNumber(this.underlyingStartTime_, "start time not a num");
+	goog.asserts.assertNumber(this.underlyingStopTime_, "stop time not a num");
 	return Math.max(0, this.underlyingStopTime_ - this.underlyingStartTime_);
 };
 
