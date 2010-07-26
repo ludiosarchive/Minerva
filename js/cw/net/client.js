@@ -166,6 +166,14 @@ cw.net.PROTOCOL_VERSION = 2;
 
 
 /**
+ * The default maximum duration of an HTTP transport.
+ * @type {number}
+ * @const
+ */
+cw.net.DEFAULT_HTTP_DURATION = 25000;
+
+
+/**
  * The heartbeat interval for non-HTTP transports, in milliseconds.  If not 0,
  * (no heartbeat), try to keep it divisible by 1000 to avoid wasted bandwidth.
  * If larger, it takes longer to detect a hung transport.
@@ -1562,7 +1570,7 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 	// TODO: investigate if any browsers are thrashing CPU by copying
 	// the whole thing during XHR streaming.
 	hello.maxReceiveBytes = 300000;
-	hello.maxOpenTime = 25;
+	hello.maxOpenTime = Math.floor(cw.net.DEFAULT_HTTP_DURATION / 1000);
 	hello.heartbeatInterval =
 		this.isHttpTransport_() ? 0 : Math.floor(cw.net.HEARTBEAT_INTERVAL / 1000);
 	hello.useMyTcpAcks = false;
