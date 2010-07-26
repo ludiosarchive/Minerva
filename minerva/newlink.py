@@ -1050,6 +1050,10 @@ class ServerTransport(object):
 
 
 	def _maybeWriteToPeer(self):
+		"""
+		Writes bytes in C{self._toSend} to the peer, and terminates the
+		transport if C{self._terminating} is truthy.
+		"""
 		if self._callingStream:
 			return
 
