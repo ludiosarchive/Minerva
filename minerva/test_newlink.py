@@ -1294,7 +1294,7 @@ class _BaseHelpers(object):
 
 	def _makeTransport(self, rejectAll=False, firewallActionTime=None):
 		firewall = DummyFirewall(self._clock, rejectAll, firewallActionTime)
-		faceFactory = SlotlessSocketFace(None, self.streamTracker, firewall)
+		faceFactory = SlotlessSocketFace(self._clock, self.streamTracker, firewall)
 
 		parser = self._makeParser()
 		transport = _makeTransportWithDecoder(parser, faceFactory)
@@ -2193,6 +2193,107 @@ class _BaseSocketTransportTests(_BaseHelpers):
 			TransportKillFrame(tk_stream_attach_failure),
 			YouCloseItFrame()
 		], transport.getNew())
+
+
+	def test_heartbeatOverAuthenticatedTransport(self):
+		"""
+		Heartbeats are sent over an authenticated transport.
+		"""
+		frame0 = _makeHelloFrame(dict(heartbeatInterval=2))
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
+		self.assertEqual([StreamCreatedFrame()], transport.getNew())
+		self._clock.advance(1)
+		self.assertEqual([], transport.getNew())
+		self._clock.advance(1)
+		self.assertEqual([PaddingFrame(4)], transport.getNew())
+		self._clock.advance(2)
+		self.assertEqual([PaddingFrame(4)], transport.getNew())
+
+
+	def test_heartbeatOverAuthenticatingTransport(self):
+		"""
+		Heartbeats are sent over an still-authenticating transport.
+		"""
+		frame0 = _makeHelloFrame(dict(heartbeatInterval=2))
+		transport = self._makeTransport(firewallActionTime=1000)
+		transport.sendFrames([frame0])
+		self.assertEqual([], transport.getNew())
+		self._clock.advance(1)
+		self.assertEqual([], transport.getNew())
+		self._clock.advance(1)
+		self.assertEqual([PaddingFrame(4)], transport.getNew())
+		self._clock.advance(2)
+		self.assertEqual([PaddingFrame(4)], transport.getNew())
+
+
+	def test_heartbeatTimerResetOnS2C(self):
+		"""
+		Any S2C writes reset the heartbeat timer.
+		"""
+		self._resetStreamTracker(realObjects=True)
+		frame0 = _makeHelloFrame(dict(succeedsTransport=None, heartbeatInterval=2))
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
+		self.assertEqual([StreamCreatedFrame()], transport.getNew())
+		stream = self.streamTracker.getStream('x'*26)
+
+		self._clock.advance(1)
+		stream.sendStrings(['s2c0'])
+		self.assertEqual([SeqNumFrame(0), StringFrame('s2c0')], transport.getNew())
+		self._clock.advance(1)
+		self.assertEqual([], transport.getNew())
+		self._clock.advance(1)
+		# 2 seconds have passed since the last S2C write, so a heartbeat
+		# should be written.
+		self.assertEqual([PaddingFrame(4)], transport.getNew())
+
+
+	def test_heartbeatNotSentOverTerminatingTransport1(self):
+		"""
+		Heartbeats are not sent over a terminating transport.  In this
+		test, test with termination caused by immediate authentication
+		failure.
+		"""
+		self._resetStreamTracker(realObjects=True)
+		frame0 = _makeHelloFrame(dict(heartbeatInterval=2))
+		transport = self._makeTransport(rejectAll=True)
+		transport.sendFrames([frame0])
+		self.assertEqual([
+			TransportKillFrame(tk_stream_attach_failure),
+			YouCloseItFrame(),
+		], transport.getNew())
+
+		self._clock.advance(2)
+		self.assertEqual([], transport.getNew())
+		self._clock.advance(2)
+		self.assertEqual([], transport.getNew())
+
+
+	def test_heartbeatNotSentOverTerminatingTransport2(self):
+		"""
+		Heartbeats are not sent over a terminating transport.  In this
+		test, test with termination caused by a call to
+		L{ServerTransport.closeGently}.
+		"""
+		self._resetStreamTracker(realObjects=True)
+		frame0 = _makeHelloFrame(dict(heartbeatInterval=2))
+		transport = self._makeTransport()
+		transport.sendFrames([frame0])
+		self.assertEqual([StreamCreatedFrame()], transport.getNew())
+
+		self._clock.advance(1)
+		self.assertEqual([], transport.getNew())
+
+		transport.closeGently()
+		self.assertEqual([
+			SackFrame(SACK(-1, ())),
+			StreamStatusFrame(SACK(-1, ())),
+			YouCloseItFrame()
+		], transport.getNew())
+
+		self._clock.advance(2)
+		self.assertEqual([], transport.getNew())
 
 
 
