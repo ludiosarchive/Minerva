@@ -1197,7 +1197,8 @@ class ServerTransport(object):
 		if self.isAttached():
 			self.closeGently()
 		else:
-			# TODO: cancel the Deferred returned by firewall.checkTransport(...)
+			# TODO: cancel the Deferred returned by firewall.checkTransport(...),
+			# to stop whatever request it has in progress.
 			pass
 
 
