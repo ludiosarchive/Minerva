@@ -999,7 +999,8 @@ class ServerTransport(object):
 		'streamId', 'credentialsData', 'transportNumber', 'factory', '_sackDirty',
 		'transport', '_maxReceiveBytes', '_maxOpenTime', '_callingStream',
 		'_lastSackSeenByClient', '_streamingResponse', '_needPaddingBytes',
-		'_wantsStrings', '_waitingFrames', '_clock', '_maxOpenDc')
+		'_wantsStrings', '_waitingFrames', '_clock', '_maxOpenDc',
+		'_heartbeatInterval', '_heartbeatDc')
 	# TODO: ~5 attributes above only for an HTTPSocketTransport, to save memory
 
 	maxLength = 1024*1024
@@ -1028,6 +1029,8 @@ class ServerTransport(object):
 		# want the request to get "stuck".
 
 		self._maxOpenDc = \
+		self._heartbeatDc = \
+		self._heartbeatInterval = \
 		self._stream = \
 		self._producer = \
 		self.writable = \
@@ -1060,6 +1063,10 @@ class ServerTransport(object):
 		toSend = self._toSend
 		if toSend:
 			self._toSend = ''
+			# Heartbeats are only sent when there's no S2C activity;
+			# heartbeatInterval really means "maximum inactivity time".
+			# Because we're sending something, reset the heartbeat DelayedCall.
+			self._resetHeartbeat()
 			self.writable.write(toSend)
 
 		terminating = self._terminating
@@ -1069,10 +1076,8 @@ class ServerTransport(object):
 			# and re-enters _maybeWriteToPeer.
 
 		if terminating:
-			if self._maxOpenDc is not None:
-				if self._maxOpenDc.active():
-					self._maxOpenDc.cancel()
-				self._maxOpenDc = None
+			self._cancelMaxOpenDc()
+			self._cancelHeartbeatDc()
 
 			# Tell Stream this transport is offline. Whether we still have a TCP
 			# connection open to the peer is irrelevant.
@@ -1206,6 +1211,35 @@ class ServerTransport(object):
 			pass
 
 
+	def _cancelMaxOpenDc(self):
+		if self._maxOpenDc is not None:
+			if self._maxOpenDc.active():
+				self._maxOpenDc.cancel()
+			self._maxOpenDc = None
+
+
+	def _cancelHeartbeatDc(self):
+		if self._heartbeatDc is not None:
+			if self._heartbeatDc.active():
+				self._heartbeatDc.cancel()
+			self._heartbeatDc = None
+
+
+	def _writeHeartbeat(self):
+		self._toSend += self._encodeFrame(PaddingFrame(4, 'beat'))
+		self._maybeWriteToPeer()
+		# Because _toSend non-empty, _maybeWriteToPeer calls _resetHeartbeat
+
+
+	def _resetHeartbeat(self):
+		self._cancelHeartbeatDc()
+
+		# Could be None if no HelloFrame, or 0 if HelloFrame received.
+		if self._heartbeatInterval:
+			self._heartbeatDc = self._clock.callLater(
+				self._heartbeatInterval, self._writeHeartbeat)
+
+
 	def _writeInitialFrames(self, stream, requestNewStream):
 		assert not self._terminating, self
 
@@ -1239,6 +1273,7 @@ class ServerTransport(object):
 		self.credentialsData = hello.credentialsData
 		self.transportNumber = hello.transportNumber
 		self._streamingResponse = hello.streamingResponse
+		self._heartbeatInterval = hello.heartbeatInterval
 		self._lastSackSeenByClient = hello.lastSackSeenByClient
 		self._wantsStrings = hello.wantsStrings()
 
@@ -1251,6 +1286,9 @@ class ServerTransport(object):
 				# after authentication.
 				self._maxOpenDc = self._clock.callLater(
 					self._maxOpenTime, self._exceededMaxOpenTime)
+
+		# We start sending heartbeats even before the transport is authenticated.
+		self._resetHeartbeat()
 
 		# We get/build a Stream instance before the firewall checkTransport
 		# because the firewall needs to know if we're working with a virgin
