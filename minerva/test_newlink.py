@@ -136,17 +136,6 @@ def _makeTransportWithDecoder(parser, faceFactory):
 	return transport
 
 
-
-class FakeBigString(str):
-	__slots__ = ()
-
-	def __sizeof__(self):
-		# Magic! The size of the string seems to be the int(...)
-		# of the string!
-		return int(self)
-
-
-
 class StreamTests(unittest.TestCase):
 	"""
 	Tests for L{newlink.Stream}
