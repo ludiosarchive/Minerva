@@ -1224,7 +1224,9 @@ class ServerTransport(object):
 
 	def _handleHelloFrame(self, hello):
 		"""
-		C{hello} is a L{HelloFrame}.
+		C{hello} is a L{HelloFrame}.  If a stream with the streamId in the
+		HelloFrame does not exist (and requestNewStream is falsy), raises
+		L{NoSuchStream}.
 		"""
 		sanitizeHelloFrame(hello, self._mode == HTTP)
 
@@ -1260,6 +1262,9 @@ class ServerTransport(object):
 				stream = self.factory.streamTracker.getStream(self.streamId)
 		else:
 			stream = self.factory.streamTracker.getStream(self.streamId)
+		# Above .getStream(...) calls may raise NoSuchStream, which is
+		# caught by our caller.
+
 		# Danger! Do not call anything on `stream` until we authenticate
 		# the transport.
 
