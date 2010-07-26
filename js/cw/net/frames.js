@@ -820,12 +820,17 @@ cw.net.YouCloseItFrame.prototype.encodeToPieces = function(sb) {
 
 
 /**
- * @param {number} numBytes How many bytes of padding
+ * @param {number} numBytes How many bytes of padding to use.
+ * @param {string=} customMessage An optional custom message for the
+ * 	PaddingFrame.  For equality purposes, make sure your numBytes is still
+ * 	correct.
  * @constructor
  */
-cw.net.PaddingFrame = function(numBytes) {
+cw.net.PaddingFrame = function(numBytes, customMessage) {
 	/** @type {number} */
 	this.numBytes = numBytes;
+	/** @type {?string} */
+	this.customMessage = customMessage ? customMessage : null;
 };
 
 /**
@@ -844,7 +849,9 @@ cw.net.PaddingFrame.prototype.equals = function(other, eqLog) {
  * @param {!Array.<string>} sb
  */
 cw.net.PaddingFrame.prototype.__reprToPieces__ = function(sb) {
-	sb.push('new PaddingFrame(', String(this.numBytes), ')');
+	sb.push('new PaddingFrame(', String(this.numBytes), ', ');
+	cw.repr.reprToPieces(this.customMessage, sb);
+	sb.push(')');
 };
 
 /**
@@ -861,7 +868,11 @@ cw.net.PaddingFrame.prototype.encode = cw.net.frameEncodeMethod_;
  * @param {!Array.<string>} sb
  */
 cw.net.PaddingFrame.prototype.encodeToPieces = function(sb) {
-	sb.push(goog.string.repeat(' ', this.numBytes), 'P');
+	if(this.customMessage) {
+		sb.push(this.customMessage, 'P');
+	} else {
+		sb.push(goog.string.repeat(' ', this.numBytes), 'P');
+	}
 };
 
 

@@ -496,15 +496,18 @@ class PaddingFrame(tuple):
 
 	numBytes = property(operator.itemgetter(1))
 
-	def __new__(cls, numBytes):
+	def __new__(cls, numBytes, customMessage=None):
 		"""
-		C{numBytes} is an L{int}.
+		C{numBytes} is an C{int} representing how many bytes of padding
+		to use.
+		C{customMessage} is a C{str}, if you want to send a custom message
+		in the PaddingFrame.  If used, numBytes will be ignored.
 		"""
-		return tuple.__new__(cls, (cls._MARKER, numBytes))
+		return tuple.__new__(cls, (cls._MARKER, numBytes, customMessage))
 
 
 	def __repr__(self):
-		return '%s(%d)' % (self.__class__.__name__, self[1])
+		return '%s(%d, %r)' % (self.__class__.__name__, self[1], self[2])
 
 
 	@classmethod
@@ -516,7 +519,10 @@ class PaddingFrame(tuple):
 
 
 	def encode(self):
-		return (' ' * self.numBytes) + 'P'
+		if self[2]:
+			return self[2] + 'P'
+		else:
+			return (' ' * self.numBytes) + 'P'
 
 
 

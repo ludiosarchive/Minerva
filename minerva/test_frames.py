@@ -458,7 +458,8 @@ class PaddingFrameTests(unittest.TestCase):
 
 
 	def test_repr(self):
-		self.assertEqual("PaddingFrame(4096)", repr(PaddingFrame(4096)))
+		self.assertEqual("PaddingFrame(4096, None)", repr(PaddingFrame(4096)))
+		self.assertEqual("PaddingFrame(4096, 'hi')", repr(PaddingFrame(4096, "hi")))
 
 
 	def test_decode(self):
@@ -472,6 +473,13 @@ class PaddingFrameTests(unittest.TestCase):
 	def test_encode(self):
 		self.assertEqual(' ' * 5 + 'P', PaddingFrame(5).encode())
 		self.assertEqual('P', PaddingFrame(0).encode())
+
+
+	def test_encodeCustomMessage(self):
+		self.assertEqual('beat' + 'P', PaddingFrame(4, "beat").encode())
+		# Wrong numBytes is okay
+		self.assertEqual('beat' + 'P', PaddingFrame(3, "beat").encode())
+		self.assertEqual('beat' + 'P', PaddingFrame(5, "beat").encode())
 
 
 

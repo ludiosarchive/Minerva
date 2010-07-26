@@ -591,10 +591,12 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'PaddingFrameTests').methods(
 
 	function test_publicAttr(self) {
 		self.assertEqual(4096, new PaddingFrame(4096).numBytes);
+		self.assertEqual('hi', new PaddingFrame(4096, 'hi').customMessage);
 	},
 
 	function test_repr(self) {
-		self.assertEqual("new PaddingFrame(4096)", repr(new PaddingFrame(4096)));
+		self.assertEqual('new PaddingFrame(4096, null)', repr(new PaddingFrame(4096)));
+		self.assertEqual('new PaddingFrame(4096, "hi")', repr(new PaddingFrame(4096, 'hi')));
 	},
 
 	function test_decode(self) {
@@ -608,6 +610,13 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'PaddingFrameTests').methods(
 	function test_encode(self) {
 		self.assertEqual(goog.string.repeat(' ', 5) + 'P', new PaddingFrame(5).encode());
 		self.assertEqual('P', new PaddingFrame(0).encode());
+	},
+
+	function test_encodeCustomMessage(self) {
+		self.assertEqual('beat' + 'P', new PaddingFrame(4, "beat").encode());
+		// Wrong numBytes is okay
+		self.assertEqual('beat' + 'P', new PaddingFrame(3, "beat").encode());
+		self.assertEqual('beat' + 'P', new PaddingFrame(5, "beat").encode());
 	}
 );
 
