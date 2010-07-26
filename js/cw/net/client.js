@@ -156,6 +156,13 @@ cw.net.HttpEndpoint.prototype.ensureSameOrigin_ = function() {
 cw.net.Endpoint = goog.typedef;
 
 
+/**
+ * The first frame we must see from an HTTP transport.
+ * @type {!cw.net.Frame}
+ * @const
+ */
+cw.net.HTTP_RESPONSE_PREAMBLE = new cw.net.CommentFrame(";)]}");
+
 
 /**
  * The Minerva-level protocol version.
@@ -1365,6 +1372,27 @@ cw.net.ClientTransport.prototype.isHttpTransport_ = function() {
 };
 
 /**
+ * @param {!cw.net.Frame} frame
+ * @return {boolean} True if {@code frame} was expected to be
+ * 	{@link #HTTP_RESPONSE_PREAMBLE} but was not, else undefined.
+ */
+cw.net.ClientTransport.prototype.ensurePreambleIfHttpAndFirstFrame_ = function(frame) {
+	// For HTTP transports, first frame must be the anti-script-inclusion
+	// preamble.  While intended to stop attackers who include script
+	// tags pointing to an HttpFace URL, it also provides good
+	// protection against us parsing and reading frames from a page
+	// returned by an intermediary like a proxy or a WiFi access paywall.
+	if(this.framesDecoded_ == 1 &&
+	!frame.equals(cw.net.HTTP_RESPONSE_PREAMBLE) &&
+	this.isHttpTransport_()) {
+		this.logger_.warning("Closing soon because got bad preamble: " +
+			cw.repr.repr(frame));
+		// No penalty because we want to treat this just like "cannot connect to peer".
+		return true;
+	}
+};
+
+/**
  * @type {Array.<!Array.<number|string>>} An Array of
  * 	(seqNum, string) pairs.
  * @private
@@ -1395,22 +1423,16 @@ cw.net.ClientTransport.prototype.handleStrings_ = function(bunchedStrings) {
  * @private
  */
 cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedStrings) {
-	// For HTTP transports, first frame must be the anti-script-inclusion preamble.
-	// This provides decent protection against us parsing and reading frames
-	// from a page returned by an intermediary like a proxy or a WiFi access paywall.
-	if(this.framesDecoded_ == 0 && frameStr != ";)]}^" && this.isHttpTransport_()) {
-		this.logger_.warning("Closing soon because got bad preamble: " +
-			cw.repr.repr(frameStr));
-		// No penalty because we want to treat this just like "cannot connect to peer".
-		return true;
-	}
-	// If it was the preamble, we're going to decode it again below.
-
 	try {
 		/** @type {!cw.net.Frame} Decoded frame */
 		var frame = cw.net.decodeFrameFromServer(frameStr);
 		this.framesDecoded_ += 1;
 		this.logger_.fine(this.getDescription_() + ' RECV ' + cw.repr.repr(frame));
+
+		if(this.ensurePreambleIfHttpAndFirstFrame_(frame)) {
+			return true;
+		}
+
 		if(frame instanceof cw.net.StringFrame) {
 			this.peerSeqNum_ += 1;
 			// Because we may have received multiple Minerva strings, collect
