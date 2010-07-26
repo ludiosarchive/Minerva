@@ -247,7 +247,7 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	obj.maxReceiveBytes = maxReceiveBytes;
 
 	// maxOpenTime is optional.  If missing, no limit.
-	// Time is in milliseconds.
+	// Time is in seconds.
 	var maxOpenTime = helloData.get(HP.maxOpenTime, MISSING_);
 	if(maxOpenTime != MISSING_) {
 		obj.maxOpenTime = cw.net.ensureNonNegIntegralInt_(maxOpenTime);

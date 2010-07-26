@@ -185,7 +185,7 @@ def helloDataToHelloFrame(helloData):
 		raise InvalidHello("bad maxReceiveBytes")
 
 	# maxOpenTime is optional.  If missing, no limit.
-	# Time is in milliseconds.
+	# Time is in seconds.
 	try:
 		obj.maxOpenTime = ensureNonNegIntLimit(
 			helloData[Hello_maxOpenTime], 2**53) # e: ValueError, TypeError

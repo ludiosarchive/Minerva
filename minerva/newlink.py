@@ -1250,7 +1250,7 @@ class ServerTransport(object):
 				# The "max open time" limit covers the time before and
 				# after authentication.
 				self._maxOpenDc = self._clock.callLater(
-					self._maxOpenTime / 1000.0, self._exceededMaxOpenTime)
+					self._maxOpenTime, self._exceededMaxOpenTime)
 
 		# We get/build a Stream instance before the firewall checkTransport
 		# because the firewall needs to know if we're working with a virgin

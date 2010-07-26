@@ -3404,7 +3404,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			succeedsTransport=None,
 			requestNewStream=False,
 			transportNumber=1,
-			maxOpenTime=2000))
+			maxOpenTime=2))
 		frames = [frame0]
 
 		request.content = StringIO(

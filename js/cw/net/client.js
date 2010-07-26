@@ -1546,7 +1546,7 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 	// TODO: investigate if any browsers are thrashing CPU by copying
 	// the whole thing during XHR streaming.
 	hello.maxReceiveBytes = 300000;
-	hello.maxOpenTime = 25000;
+	hello.maxOpenTime = 25;
 	hello.heartbeatInterval =
 		this.isHttpTransport_() ? 0 : Math.floor(cw.net.HEARTBEAT_INTERVAL / 1000);
 	hello.useMyTcpAcks = false;
