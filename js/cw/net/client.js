@@ -1791,7 +1791,8 @@ cw.net.ClientTransport.prototype.disposeInternal = function() {
  * @private
  */
 cw.net.ClientTransport.prototype.abortToStopSpinner_ = function() {
-	goog.asserts.assert(this.isHttpTransport_(), "only useful for http");
+	goog.asserts.assert(this.isHttpTransport_(),
+		"only needed for http transports; why are you doing this?");
 	this.abortedForSpinner_ = true;
 	this.dispose();
 };
