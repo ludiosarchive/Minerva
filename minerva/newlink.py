@@ -29,7 +29,7 @@ from minerva.interfaces import ISimpleConsumer
 from minerva.window import SACK, Queue, Incoming
 from minerva.frames import (
 	HelloFrame, StringFrame, SeqNumFrame, SackFrame, StreamStatusFrame,
-	StreamCreatedFrame, YouCloseItFrame, ResetFrame, PaddingFrame,
+	StreamCreatedFrame, YouCloseItFrame, ResetFrame, CommentFrame,
 	TransportKillFrame, InvalidFrame, decodeFrameFromClient)
 
 # Make globals that pypycpyo.optimizer can optimize away
@@ -966,7 +966,7 @@ def sanitizeHelloFrame(helloFrame, isHttp):
 # BENCODE is not used by real clients, only test_newlink.py
 UNKNOWN, POLICYFILE, INT32, BENCODE, HTTP = range(5)
 
-HTTP_RESPONSE_PREAMBLE = ";)]}P" # "P" to indicate a PaddingFrame.
+HTTP_RESPONSE_PREAMBLE = CommentFrame(";)]}")
 
 
 DontWriteSack = Constant("DontWriteSack")
@@ -1226,7 +1226,7 @@ class ServerTransport(object):
 
 
 	def _writeHeartbeat(self):
-		self._toSend += self._encodeFrame(PaddingFrame(4, 'beat'))
+		self._toSend += self._encodeFrame(CommentFrame('beat'))
 		self._maybeWriteToPeer()
 		# Because _toSend non-empty, _maybeWriteToPeer calls _resetHeartbeat
 
@@ -1677,7 +1677,7 @@ class ServerTransport(object):
 		# to reduce the chance of private information being leaked over
 		# "GET" HTTP transports.
 		# See http://code.google.com/p/doctype/wiki/ArticleScriptInclusion
-		request.write(HTTP_RESPONSE_PREAMBLE + "\n")
+		request.write(self._encodeFrame(HTTP_RESPONSE_PREAMBLE))
 
 		self.dataReceived(body)
 

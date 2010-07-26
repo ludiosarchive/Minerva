@@ -7,7 +7,7 @@ from mypy.strops import StringFragment
 
 from minerva.frames import (
 	HelloFrame, StreamCreatedFrame, StringFrame, SeqNumFrame,
-	SackFrame, StreamStatusFrame, YouCloseItFrame, ResetFrame, PaddingFrame,
+	SackFrame, StreamStatusFrame, YouCloseItFrame, ResetFrame, CommentFrame,
 	TransportKillFrame, InvalidFrame, InvalidHello, CannotEncode,
 	decodeFrameFromClient, decodeFrameFromServer)
 
@@ -254,6 +254,34 @@ class StringFrameTests(unittest.TestCase):
 
 
 
+class CommentFrameTests(unittest.TestCase):
+
+	def test_eq(self):
+		self.assertEqual(CommentFrame("Hello"), CommentFrame("Hello"))
+		self.assertNotEqual(CommentFrame("Hello"), CommentFrame("Hello2"))
+
+
+	def test_publicAttr(self):
+		self.assertEqual("Hello", CommentFrame("Hello").comment)
+
+
+	def test_repr(self):
+		self.assertEqual("CommentFrame('Hello')", repr(CommentFrame("Hello")))
+
+
+	def test_decode(self):
+		s = '\x00unchecked\xfftext' + '^'
+		self.assertEqual(
+			CommentFrame(s[:-1]),
+			CommentFrame.decode(sf(s)))
+
+
+	def test_encode(self):
+		s = '\x00unchecked\xfftext'
+		self.assertEqual(s + '^', CommentFrame(sf(s)).encode())
+
+
+
 class SeqNumFrameTests(unittest.TestCase):
 
 	def test_eq(self):
@@ -443,43 +471,6 @@ class YouCloseItFrameTests(unittest.TestCase):
 
 	def test_encode(self):
 		self.assertEqual('Y', YouCloseItFrame().encode())
-
-
-
-class PaddingFrameTests(unittest.TestCase):
-
-	def test_eq(self):
-		self.assertEqual(PaddingFrame(4096), PaddingFrame(4096))
-		self.assertNotEqual(PaddingFrame(4096), PaddingFrame(4097))
-
-
-	def test_publicAttr(self):
-		self.assertEqual(4096, PaddingFrame(4096).numBytes)
-
-
-	def test_repr(self):
-		self.assertEqual("PaddingFrame(4096, None)", repr(PaddingFrame(4096)))
-		self.assertEqual("PaddingFrame(4096, 'hi')", repr(PaddingFrame(4096, "hi")))
-
-
-	def test_decode(self):
-		s = 'completely ignored stuff' + 'P'
-		n = len(s) - 1
-		self.assertEqual(
-			PaddingFrame(n),
-			PaddingFrame.decode(sf(s)))
-
-
-	def test_encode(self):
-		self.assertEqual(' ' * 5 + 'P', PaddingFrame(5).encode())
-		self.assertEqual('P', PaddingFrame(0).encode())
-
-
-	def test_encodeCustomMessage(self):
-		self.assertEqual('beat' + 'P', PaddingFrame(4, "beat").encode())
-		# Wrong numBytes is okay
-		self.assertEqual('beat' + 'P', PaddingFrame(3, "beat").encode())
-		self.assertEqual('beat' + 'P', PaddingFrame(5, "beat").encode())
 
 
 

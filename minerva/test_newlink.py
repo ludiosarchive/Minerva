@@ -40,7 +40,7 @@ from minerva.newlink import (
 
 from minerva.frames import (
 	HelloFrame, StringFrame, SeqNumFrame, SackFrame, StreamStatusFrame,
-	StreamCreatedFrame, YouCloseItFrame, ResetFrame, PaddingFrame,
+	StreamCreatedFrame, YouCloseItFrame, ResetFrame, CommentFrame,
 	TransportKillFrame, decodeFrameFromServer)
 
 tk_stream_attach_failure = TransportKillFrame.stream_attach_failure
@@ -1598,7 +1598,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		frames = (
 			TransportKillFrame(tk_invalid_frame_type_or_arguments),
-			PaddingFrame(4096),
+			CommentFrame(' ' * 4096),
 		)
 
 		for frame in frames:
@@ -2206,9 +2206,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self._clock.advance(1)
 		self.assertEqual([], transport.getNew())
 		self._clock.advance(1)
-		self.assertEqual([PaddingFrame(4)], transport.getNew())
+		self.assertEqual([CommentFrame('beat')], transport.getNew())
 		self._clock.advance(2)
-		self.assertEqual([PaddingFrame(4)], transport.getNew())
+		self.assertEqual([CommentFrame('beat')], transport.getNew())
 
 
 	def test_heartbeatOverAuthenticatingTransport(self):
@@ -2222,9 +2222,9 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self._clock.advance(1)
 		self.assertEqual([], transport.getNew())
 		self._clock.advance(1)
-		self.assertEqual([PaddingFrame(4)], transport.getNew())
+		self.assertEqual([CommentFrame('beat')], transport.getNew())
 		self._clock.advance(2)
-		self.assertEqual([PaddingFrame(4)], transport.getNew())
+		self.assertEqual([CommentFrame('beat')], transport.getNew())
 
 
 	def test_heartbeatTimerResetOnS2C(self):
@@ -2246,7 +2246,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		self._clock.advance(1)
 		# 2 seconds have passed since the last S2C write, so a heartbeat
 		# should be written.
-		self.assertEqual([PaddingFrame(4)], transport.getNew())
+		self.assertEqual([CommentFrame('beat')], transport.getNew())
 
 
 	def test_heartbeatNotSentOverTerminatingTransport1(self):
@@ -3159,7 +3159,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				self.assertEqual(server.NOT_DONE_YET, out)
 
 				expectedFrames = [
-					PaddingFrame(4),
+					HTTP_RESPONSE_PREAMBLE,
 					StreamCreatedFrame(),
 					SackFrame(SACK(2, ()))]
 				if not streaming:
@@ -3265,7 +3265,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			self.assertEqual(server.NOT_DONE_YET, out)
 
 			expectedFrames = [
-				PaddingFrame(4),
+				HTTP_RESPONSE_PREAMBLE,
 				StreamCreatedFrame(),
 				SeqNumFrame(0),
 				StringFrame('box0'),
@@ -3305,7 +3305,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		self.assertEqual(server.NOT_DONE_YET, out)
 
 		expectedFrames = [
-			PaddingFrame(4),
+			HTTP_RESPONSE_PREAMBLE,
 			StreamCreatedFrame(),
 		]
 		if not streaming:
@@ -3318,10 +3318,6 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		self.assertEqual(0 if streaming else 1, request.finished)
 
 		self.assertEqual(expectedFrames, decodeResponseInMockRequest(request))
-		# Check that the PaddingFrame we received is the
-		# HTTP_RESPONSE_PREAMBLE. (This really applies to all HTTP
-		# responses we see from Minerva)
-		self.assertEqual(HTTP_RESPONSE_PREAMBLE, ''.join(request.written).split('\n')[0])
 
 
 	def test_S2CStringsSoonAvailable(self):
@@ -3364,13 +3360,13 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			resource.render(request)
 
 			self.assertEqual([
-				PaddingFrame(4)
+				HTTP_RESPONSE_PREAMBLE,
 			], decodeResponseInMockRequest(request))
 
 			stream.sendStrings(['box0', 'box1'])
 
 			expectedFrames = [
-				PaddingFrame(4),
+				HTTP_RESPONSE_PREAMBLE,
 				SeqNumFrame(0),
 				StringFrame('box0'),
 				StringFrame('box1'),
@@ -3477,7 +3473,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 			resource.render(request)
 			self.assertEqual([
-				PaddingFrame(4),
+				HTTP_RESPONSE_PREAMBLE,
 				SackFrame(SACK(-1, ())),
 				StreamStatusFrame(SACK(-1, ()))
 			], decodeResponseInMockRequest(request))
@@ -3512,17 +3508,21 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 		out = resource.render(request)
 		self.assertEqual(server.NOT_DONE_YET, out)
-		self.assertEqual([PaddingFrame(4)], decodeResponseInMockRequest(request))
+		self.assertEqual([
+			HTTP_RESPONSE_PREAMBLE,
+		], decodeResponseInMockRequest(request))
 		self._clock.advance(0.5)
 		# At this point, the ServerTransport is (hopefully) authenticated.
-		self.assertEqual([PaddingFrame(4)], decodeResponseInMockRequest(request))
+		self.assertEqual([
+			HTTP_RESPONSE_PREAMBLE,
+		], decodeResponseInMockRequest(request))
 		self._clock.advance(1.5)
 
 		# After 2 seconds, the ServerTransport is closed; there was no
 		# reason to close it other than the 2 second maxOpenTime.
 
 		self.assertEqual([
-			PaddingFrame(4),
+			HTTP_RESPONSE_PREAMBLE,
 			SackFrame(SACK(-1, ())),
 			StreamStatusFrame(SACK(-1, ())),
 		], decodeResponseInMockRequest(request))
@@ -3574,7 +3574,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			resource.render(request)
 
 			expected = [
-				PaddingFrame(4),
+				HTTP_RESPONSE_PREAMBLE,
 				SackFrame(SACK(2, ())),
 				# Because it's a reset, server doesn't send StreamStatusFrame
 				#StreamStatusFrame(SACK(-1, ())),

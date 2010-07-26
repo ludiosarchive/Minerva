@@ -278,7 +278,9 @@ class StringFrame(tuple):
 
 	def __new__(cls, string):
 		"""
-		C{string} is a L{StringFragment} or C{str}.
+		C{string} is a L{StringFragment} or C{str}.  Note: a StringFrame
+		instantiated with a L{StringFragment} is unequal to one with a
+		C{str}, even if they represent the same string.
 		"""
 		if not isinstance(string, StringFragment):
 			string = StringFragment(string, 0, len(string))
@@ -299,6 +301,36 @@ class StringFrame(tuple):
 
 	def encode(self):
 		return str(self.string) + ' '
+
+
+
+class CommentFrame(tuple):
+	__slots__ = ()
+	__metaclass__ = attachClassMarker('_MARKER')
+
+	comment = property(operator.itemgetter(1))
+
+	def __new__(cls, comment):
+		"""
+		C{comment} is a C{str}.
+		"""
+		return tuple.__new__(cls, (cls._MARKER, comment))
+
+
+	def __repr__(self):
+		return '%s(%r)' % (self.__class__.__name__, self[1])
+
+
+	@classmethod
+	def decode(cls, frameString):
+		"""
+		C{frameString} is a L{StringFragment} that ends with "^".
+		"""
+		return cls(str(frameString[:-1]))
+
+
+	def encode(self):
+		return str(self.comment) + '^'
 
 
 
@@ -490,42 +522,6 @@ class YouCloseItFrame(tuple):
 
 
 
-class PaddingFrame(tuple):
-	__slots__ = ()
-	__metaclass__ = attachClassMarker('_MARKER')
-
-	numBytes = property(operator.itemgetter(1))
-
-	def __new__(cls, numBytes, customMessage=None):
-		"""
-		C{numBytes} is an C{int} representing how many bytes of padding
-		to use.
-		C{customMessage} is a C{str}, if you want to send a custom message
-		in the PaddingFrame.  If used, numBytes will be ignored.
-		"""
-		return tuple.__new__(cls, (cls._MARKER, numBytes, customMessage))
-
-
-	def __repr__(self):
-		return '%s(%d, %r)' % (self.__class__.__name__, self[1], self[2])
-
-
-	@classmethod
-	def decode(cls, frameString):
-		"""
-		C{frameString} is a L{StringFragment} that ends with "P".
-		"""
-		return cls(len(frameString) - 1)
-
-
-	def encode(self):
-		if self[2]:
-			return self[2] + 'P'
-		else:
-			return (' ' * self.numBytes) + 'P'
-
-
-
 def isValidShortRestrictedString(string):
 	"""
 	Return C{True} if C{str} C{string} has 0-255 bytes,
@@ -662,7 +658,7 @@ class TransportKillFrame(tuple):
 #	'A': SackFrame,
 #	'C': StreamCreatedFrame,
 #	'Y': YouCloseItFrame,
-#	'P': PaddingFrame,
+#	'P': CommentFrame,
 #	'!': ResetFrame,
 #	'K': TransportKillFrame,
 
@@ -716,8 +712,8 @@ def decodeFrameFromServer(frameString):
 		return StreamStatusFrame.decode(frameString)
 	elif lastByte == "Y":
 		return YouCloseItFrame.decode(frameString)
-	elif lastByte == "P":
-		return PaddingFrame.decode(frameString)
+	elif lastByte == "^":
+		return CommentFrame.decode(frameString)
 	elif lastByte == "C":
 		return StreamCreatedFrame.decode(frameString)
 	elif lastByte == "!":
@@ -726,11 +722,6 @@ def decodeFrameFromServer(frameString):
 		return TransportKillFrame.decode(frameString)
 	else:
 		raise InvalidFrame("Invalid frame type %r" % lastByte)
-
-
-
-# Frames TODO: timestamp, start timestamps, stop timestamps,
-# "connect back in N seconds" frame
 
 
 from pypycpyo import optimizer

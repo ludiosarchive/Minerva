@@ -22,7 +22,7 @@ goog.require('cw.net.SackFrame');
 goog.require('cw.net.StreamStatusFrame');
 goog.require('cw.net.StreamCreatedFrame');
 goog.require('cw.net.YouCloseItFrame');
-goog.require('cw.net.PaddingFrame');
+goog.require('cw.net.CommentFrame');
 goog.require('cw.net.ResetFrame');
 goog.require('cw.net.TransportKillFrame');
 goog.require('cw.net.InvalidFrame');
@@ -39,7 +39,7 @@ var SackFrame = cw.net.SackFrame;
 var StreamStatusFrame = cw.net.StreamStatusFrame;
 var StreamCreatedFrame = cw.net.StreamCreatedFrame;
 var YouCloseItFrame = cw.net.YouCloseItFrame;
-var PaddingFrame = cw.net.PaddingFrame;
+var CommentFrame = cw.net.CommentFrame;
 var ResetFrame = cw.net.ResetFrame;
 var TransportKillFrame = cw.net.TransportKillFrame;
 
@@ -326,7 +326,6 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 );
 
 
-
 cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'StringFrameTests').methods(
 
 	function test_eq(self) {
@@ -352,6 +351,35 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'StringFrameTests').methods(
 	function test_encode(self) {
 		var s = '\x00unchecked\xfftext';
 		self.assertEqual(s + ' ', new StringFrame(s).encode());
+	}
+);
+
+
+cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'CommentFrameTests').methods(
+
+	function test_eq(self) {
+		self.assertEqual(new CommentFrame("Hello"), new CommentFrame("Hello"));
+		self.assertNotEqual(new CommentFrame("Hello"), new CommentFrame("Hello2"));
+	},
+
+	function test_publicAttr(self) {
+		self.assertEqual("Hello", new CommentFrame("Hello").comment);
+	},
+
+	function test_repr(self) {
+		self.assertEqual('new CommentFrame("Hello")', repr(new CommentFrame("Hello")));
+	},
+
+	function test_decode(self) {
+		var s = '\x00unchecked\xfftext' + '^';
+		self.assertEqual(
+			new CommentFrame(s.substr(0, s.length - 1)),
+			CommentFrame.decode(s));
+	},
+
+	function test_encode(self) {
+		var s = '\x00unchecked\xfftext';
+		self.assertEqual(s + '^', new CommentFrame(s).encode());
 	}
 );
 
@@ -578,45 +606,6 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'YouCloseItFrameTests').methods
 
 	function test_encode(self) {
 		self.assertEqual('Y', new YouCloseItFrame().encode());
-	}
-);
-
-
-cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'PaddingFrameTests').methods(
-
-	function test_eq(self) {
-		self.assertEqual(new PaddingFrame(4096), new PaddingFrame(4096));
-		self.assertNotEqual(new PaddingFrame(4096), new PaddingFrame(4097));
-	},
-
-	function test_publicAttr(self) {
-		self.assertEqual(4096, new PaddingFrame(4096).numBytes);
-		self.assertEqual('hi', new PaddingFrame(4096, 'hi').customMessage);
-	},
-
-	function test_repr(self) {
-		self.assertEqual('new PaddingFrame(4096, null)', repr(new PaddingFrame(4096)));
-		self.assertEqual('new PaddingFrame(4096, "hi")', repr(new PaddingFrame(4096, 'hi')));
-	},
-
-	function test_decode(self) {
-		var s = 'completely ignored stuff' + 'P';
-		var n = s.length - 1;
-		self.assertEqual(
-			new PaddingFrame(n),
-			PaddingFrame.decode(s));
-	},
-
-	function test_encode(self) {
-		self.assertEqual(goog.string.repeat(' ', 5) + 'P', new PaddingFrame(5).encode());
-		self.assertEqual('P', new PaddingFrame(0).encode());
-	},
-
-	function test_encodeCustomMessage(self) {
-		self.assertEqual('beat' + 'P', new PaddingFrame(4, "beat").encode());
-		// Wrong numBytes is okay
-		self.assertEqual('beat' + 'P', new PaddingFrame(3, "beat").encode());
-		self.assertEqual('beat' + 'P', new PaddingFrame(5, "beat").encode());
 	}
 );
 

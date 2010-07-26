@@ -41,7 +41,7 @@ goog.require('cw.net.SeqNumFrame');
 goog.require('cw.net.SackFrame');
 goog.require('cw.net.StreamCreatedFrame');
 goog.require('cw.net.YouCloseItFrame');
-goog.require('cw.net.PaddingFrame');
+goog.require('cw.net.CommentFrame');
 goog.require('cw.net.ResetFrame');
 goog.require('cw.net.TransportKillFrame');
 goog.require('cw.net.decodeFrameFromClient');
@@ -56,7 +56,7 @@ var SeqNumFrame = cw.net.SeqNumFrame;
 var SackFrame = cw.net.SackFrame;
 var StreamCreatedFrame = cw.net.StreamCreatedFrame;
 var YouCloseItFrame = cw.net.YouCloseItFrame;
-var PaddingFrame = cw.net.PaddingFrame;
+var CommentFrame = cw.net.CommentFrame;
 var ResetFrame = cw.net.ResetFrame;
 var TransportKillFrame = cw.net.TransportKillFrame;
 

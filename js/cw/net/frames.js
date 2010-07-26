@@ -12,7 +12,7 @@ goog.provide('cw.net.SackFrame');
 goog.provide('cw.net.StreamStatusFrame');
 goog.provide('cw.net.StreamCreatedFrame');
 goog.provide('cw.net.YouCloseItFrame');
-goog.provide('cw.net.PaddingFrame');
+goog.provide('cw.net.CommentFrame');
 goog.provide('cw.net.ResetFrame');
 goog.provide('cw.net.TransportKillFrame');
 goog.provide('cw.net.InvalidFrame');
@@ -512,6 +512,56 @@ cw.net.StringFrame.prototype.encodeToPieces = function(sb) {
 
 
 
+/**
+ * @param {string} comment
+ * @constructor
+ */
+cw.net.CommentFrame = function(comment) {
+	/** @type {string} */
+	this.comment = comment;
+};
+
+/**
+ * Test two frames for equality.
+ * @param {*} other
+ * @param {Array.<string>=} eqLog
+ * @return {boolean}
+ */
+cw.net.CommentFrame.prototype.equals = function(other, eqLog) {
+	return (
+		other instanceof cw.net.CommentFrame &&
+		this.comment == other.comment);
+};
+
+/**
+ * @param {!Array.<string>} sb
+ */
+cw.net.CommentFrame.prototype.__reprToPieces__ = function(sb) {
+	sb.push("new CommentFrame(");
+	cw.repr.reprToPieces(this.comment, sb);
+	sb.push(")");
+};
+
+/**
+ * @param {string} frameString A string that ends with "^".
+ * @return {!cw.net.CommentFrame}
+ */
+cw.net.CommentFrame.decode = function(frameString) {
+	// This is a waste of CPU when we're just decoding a 4KB block of
+	// padding, but oh well.
+	return new cw.net.CommentFrame(frameString.substr(0, frameString.length - 1));
+};
+
+cw.net.CommentFrame.prototype.encode = cw.net.frameEncodeMethod_;
+
+/**
+ * @param {!Array.<string>} sb
+ */
+cw.net.CommentFrame.prototype.encodeToPieces = function(sb) {
+	sb.push(this.comment, '^');
+};
+
+
 
 /**
  * @param {number} seqNum
@@ -818,65 +868,6 @@ cw.net.YouCloseItFrame.prototype.encodeToPieces = function(sb) {
 
 
 
-
-/**
- * @param {number} numBytes How many bytes of padding to use.
- * @param {string=} customMessage An optional custom message for the
- * 	PaddingFrame.  For equality purposes, make sure your numBytes is still
- * 	correct.
- * @constructor
- */
-cw.net.PaddingFrame = function(numBytes, customMessage) {
-	/** @type {number} */
-	this.numBytes = numBytes;
-	/** @type {?string} */
-	this.customMessage = customMessage ? customMessage : null;
-};
-
-/**
- * Test two frames for equality.
- * @param {*} other
- * @param {Array.<string>=} eqLog
- * @return {boolean}
- */
-cw.net.PaddingFrame.prototype.equals = function(other, eqLog) {
-	return (
-		other instanceof cw.net.PaddingFrame &&
-		this.numBytes == other.numBytes);
-};
-
-/**
- * @param {!Array.<string>} sb
- */
-cw.net.PaddingFrame.prototype.__reprToPieces__ = function(sb) {
-	sb.push('new PaddingFrame(', String(this.numBytes), ', ');
-	cw.repr.reprToPieces(this.customMessage, sb);
-	sb.push(')');
-};
-
-/**
- * @param {string} frameString A string that ends with "P".
- * @return {!cw.net.PaddingFrame}
- */
-cw.net.PaddingFrame.decode = function(frameString) {
-	return new cw.net.PaddingFrame(frameString.length - 1);
-};
-
-cw.net.PaddingFrame.prototype.encode = cw.net.frameEncodeMethod_;
-
-/**
- * @param {!Array.<string>} sb
- */
-cw.net.PaddingFrame.prototype.encodeToPieces = function(sb) {
-	if(this.customMessage) {
-		sb.push(this.customMessage, 'P');
-	} else {
-		sb.push(goog.string.repeat(' ', this.numBytes), 'P');
-	}
-};
-
-
-
 /**
  * @param {string} string
  * @return {boolean} Return true if {@code string} has 0-255 characters,
@@ -1052,7 +1043,7 @@ cw.net.TransportKillFrame.prototype.encodeToPieces = function(sb) {
  * 	cw.net.StreamStatusFrame|
  * 	cw.net.StreamCreatedFrame|
  * 	cw.net.YouCloseItFrame|
- * 	cw.net.PaddingFrame|
+ * 	cw.net.CommentFrame|
  * 	cw.net.ResetFrame|
  * 	cw.net.TransportKillFrame
  * 	)}
@@ -1114,8 +1105,8 @@ cw.net.decodeFrameFromServer = function(frameString) {
 		return cw.net.StreamStatusFrame.decode(frameString);
 	} else if(lastByte == "Y") {
 		return cw.net.YouCloseItFrame.decode(frameString);
-	} else if(lastByte == "P") {
-		return cw.net.PaddingFrame.decode(frameString);
+	} else if(lastByte == "^") {
+		return cw.net.CommentFrame.decode(frameString);
 	} else if(lastByte == "C") {
 		return cw.net.StreamCreatedFrame.decode(frameString);
 	} else if(lastByte == "!") {

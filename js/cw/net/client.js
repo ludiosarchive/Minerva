@@ -56,7 +56,7 @@ goog.require('cw.net.SeqNumFrame');
 goog.require('cw.net.SackFrame');
 goog.require('cw.net.StreamStatusFrame');
 goog.require('cw.net.YouCloseItFrame');
-goog.require('cw.net.PaddingFrame');
+goog.require('cw.net.CommentFrame');
 goog.require('cw.net.ResetFrame');
 goog.require('cw.net.TransportKillFrame');
 goog.require('cw.net.InvalidFrame');
@@ -1390,7 +1390,7 @@ cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedString
 	// For HTTP transports, first frame must be the anti-script-inclusion preamble.
 	// This provides decent protection against us parsing and reading frames
 	// from a page returned by an intermediary like a proxy or a WiFi access paywall.
-	if(this.framesDecoded_ == 0 && frameStr != ";)]}P" && this.isHttpTransport_()) {
+	if(this.framesDecoded_ == 0 && frameStr != ";)]}^" && this.isHttpTransport_()) {
 		this.logger_.warning("Closing soon because got bad preamble: " +
 			cw.repr.repr(frameStr));
 		// No penalty because we want to treat this just like "cannot connect to peer".
@@ -1433,7 +1433,7 @@ cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedString
 			// invalid_frame_type_or_arguments
 			this.logger_.finest("Closing soon because got " + cw.repr.repr(frame));
 			return true;
-		} else if(frame instanceof cw.net.PaddingFrame) {
+		} else if(frame instanceof cw.net.CommentFrame) {
 			// Ignore it
 		} else if(frame instanceof cw.net.StreamCreatedFrame) {
 			var avoidCreatingTransports = !this.s2cStreaming;
