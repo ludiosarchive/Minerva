@@ -175,6 +175,22 @@ cw.net.PROTOCOL_VERSION = 2;
 cw.net.HEARTBEAT_INTERVAL = 10000;
 
 
+/**
+ * The maximum duration a round trip should take, in milliseconds.
+ * @type {number}
+ * @const
+ */
+cw.net.DEFAULT_RTT_GUESS = 3000;
+
+
+/**
+ * The maximum duration we expect the Minerva server to freeze.
+ * @type {number}
+ * @const
+ */
+cw.net.MAX_SERVER_JANK = 3000;
+
+
 
 /**
  * An interface for string-based communication that abstracts
