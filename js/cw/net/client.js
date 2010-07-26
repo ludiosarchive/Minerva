@@ -159,10 +159,20 @@ cw.net.Endpoint = goog.typedef;
 
 /**
  * The Minerva-level protocol version.
- *
  * @type {number}
+ * @const
  */
-cw.net.protocolVersion_ = 2;
+cw.net.PROTOCOL_VERSION = 2;
+
+
+/**
+ * The heartbeat interval for non-HTTP transports, in milliseconds.  If not 0,
+ * (no heartbeat), try to keep it divisible by 1000 to avoid wasted bandwidth.
+ * If larger, it takes longer to detect a hung transport.
+ * @type {number}
+ * @const
+ */
+cw.net.HEARTBEAT_INTERVAL = 10000;
 
 
 
@@ -1520,7 +1530,7 @@ cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
 cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 	var hello = new cw.net.HelloFrame();
 	hello.transportNumber = this.transportNumber;
-	hello.protocolVersion = cw.net.protocolVersion_;
+	hello.protocolVersion = cw.net.PROTOCOL_VERSION;
 	hello.httpFormat = cw.net.HttpFormat.FORMAT_XHR;
 	if(!this.stream_.streamExistedAtServer_) {
 		hello.requestNewStream = true;
@@ -1537,7 +1547,8 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 	// the whole thing during XHR streaming.
 	hello.maxReceiveBytes = 300000;
 	hello.maxOpenTime = 25000;
-	hello.heartbeatInterval = this.isHttpTransport_() ? 0 : 10; // 10 sec
+	hello.heartbeatInterval =
+		this.isHttpTransport_() ? 0 : Math.floor(cw.net.HEARTBEAT_INTERVAL / 1000);
 	hello.useMyTcpAcks = false;
 	if(this.becomePrimary_) {
 		hello.succeedsTransport = null;
