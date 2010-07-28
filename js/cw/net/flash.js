@@ -61,6 +61,13 @@ cw.net.IFlashSocketProtocol.prototype.onframes = function(frames) {
 };
 
 /**
+ * Called when bytes were received, but no (encoded) frames were split.
+ */
+cw.net.IFlashSocketProtocol.prototype.onstillreceiving = function() {
+
+};
+
+/**
  * Called "when an input/output error occurs that causes the connection to fail."
  * @param {string} text
  */
@@ -157,6 +164,8 @@ cw.net.FlashSocket.prototype.__reprToPieces__ = function(sb) {
 cw.net.FlashSocket.prototype.dispatchEventToProto_ = function(event, arg1) {
 	if(event == "frames") {
 		this.proto_.onframes(arg1);
+	} else if(event == "stillreceiving") {
+		this.proto_.onstillreceiving();
 	} else if(event == "connect") {
 		this.proto_.onconnect();
 	} else if(event == "close") {

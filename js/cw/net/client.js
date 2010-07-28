@@ -2139,6 +2139,10 @@ cw.net.FlashSocketConduit.prototype.onframes = function(frames) {
 	this.clientTransport_.framesReceived_(frames);
 };
 
+cw.net.FlashSocketConduit.prototype.onstillreceiving = function() {
+	this.logger_.finest("onstillreceiving");
+};
+
 cw.net.FlashSocketConduit.prototype.disposeInternal = function() {
 	this.logger_.info("in disposeInternal.");
 	cw.net.FlashSocketConduit.superClass_.disposeInternal.call(this);

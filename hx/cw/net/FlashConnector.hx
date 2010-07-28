@@ -204,6 +204,10 @@ class FlashConnection {
 			ExternalInterface.call(
 				callbackFunc + "('" + id + "', 'frames', " +
 				outBuffer + "," + (hadError ? "true" : "false") + ")");
+		} else {
+			ExternalInterface.call(
+				callbackFunc + "('" + id + "', 'stillreceiving', " +
+				(hadError ? "true" : "false") + ")");
 		}
 	}
 
