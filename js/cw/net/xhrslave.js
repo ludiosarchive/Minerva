@@ -90,14 +90,10 @@ cw.net.XHRSlave.prototype.getUsefulHeaders_ = function() {
  * @private
  */
 cw.net.XHRSlave.prototype.readyStateChangeFired_ = function() {
-	var lastReadyState = this.readyState_;
 	this.readyState_ = this.underlying_.getReadyState();
-	// Filter out redundant readystatechange events.  (Note: streaming
-	// XHRs will still use the redundant event to know when to parse frames).
-	if(this.readyState_ != lastReadyState) {
-		var usefulHeaders = this.readyState_ >= 2 ? this.getUsefulHeaders_() : {};
-		goog.global.parent['__XHRMaster_onreadystatechange'](this.reqId_, this.readyState_, usefulHeaders);
-	}
+	var usefulHeaders = this.readyState_ >= 2 ? this.getUsefulHeaders_() : {};
+	goog.global.parent['__XHRMaster_onreadystatechange'](
+		this.reqId_, this.readyState_, usefulHeaders);
 };
 
 /**

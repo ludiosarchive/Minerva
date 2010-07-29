@@ -2358,8 +2358,6 @@ cw.net.XHRMaster.prototype.onframes_ = function(frames) {
 };
 
 /**
- * Note that here, state 3 is only dispatched once, even in browsers that
- * dispatch it many times.
  * @param {number} readyState The new readyState.
  * @param {!Object.<string, string>} usefulHeaders An object containing useful headers.
  * @private
