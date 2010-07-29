@@ -1561,6 +1561,63 @@ cw.net.ClientTransport.prototype.recordTimeAndDispose_ = function() {
 };
 
 /**
+ * Called by a timer if the transport can't connect in time, or if it stops
+ * receiving bytes.
+ * @private
+ */
+cw.net.ClientTransport.prototype.timedOut_ = function() {
+	this.logger_.warning('Timed out due to lack of connection or no data being received.');
+	this.recordTimeAndDispose_();
+};
+
+/**
+ * @private
+ */
+cw.net.ClientTransport.prototype.clearRecvTimeout_ = function() {
+	this.logger_.fine('Receive timeout cleared.');
+	if(this.recvTimeout_ != null) {
+		this.callQueue_.clock.clearTimeout(this.recvTimeout_);
+		this.recvTimeout_ = null;
+	}
+};
+
+/**
+ * @param {number} ms Milliseconds to set the receive timeout to.
+ * @private
+ */
+cw.net.ClientTransport.prototype.setRecvTimeout_ = function(ms) {
+	this.logger_.fine('Receive timeout set to ' + ms + ' ms.');
+	this.recvTimeout_ = this.callQueue_.clock.setTimeout(this.boundTimedOut_, ms);
+};
+
+/**
+ * Called by underlying_ when it connects or receives any bytes from the
+ * peer (even when it's not a full frame yet).
+ * @private
+ */
+cw.net.ClientTransport.prototype.peerStillAlive_ = function() {
+	this.clearRecvTimeout_();
+	if(this.transportType_ == cw.net.TransportType_.XHR_LONGPOLL) {
+		// peerStillAlive_ only called for readyState >= 2, so headers
+		// are available at this point.
+		//
+		// We don't know how long it will take to receive the data,
+		// so give underlying_ as long as it wants.
+		// (Timeout was already cleared above)
+		// TODO: set a timeout based on the response's Content-length
+		// and a pessimistic download speed.
+	} else if(this.transportType_ == cw.net.TransportType_.FLASH_SOCKET) {
+		this.setRecvTimeout_(
+			cw.net.DEFAULT_RTT_GUESS / 2 +
+			cw.net.MAX_SERVER_JANK +
+			cw.net.HEARTBEAT_INTERVAL);
+	} else {
+		throw Error("peerStillAlive_: Don't know what to do for this transportType: " +
+			this.transportType_);
+	}
+};
+
+/**
  * @private
  */
 cw.net.ClientTransport.prototype.httpResponseEnded_ = function() {
@@ -1581,12 +1638,31 @@ cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
 
 	var onFramesCallback = goog.bind(this.framesReceived_, this);
 	var onCompleteCallback = goog.bind(this.httpResponseEnded_, this);
+	var onPeerStillAliveCallback = goog.bind(this.peerStillAlive_, this);
 	goog.asserts.assert(this.underlying_ === null, 'already have an underlying_');
 	this.underlying_ = cw.net.theXHRMasterTracker_.createNew(
-		contentWindow, onFramesCallback, onCompleteCallback);
+		contentWindow, onFramesCallback, onPeerStillAliveCallback, onCompleteCallback);
 
 	this.underlyingStartTime_ = goog.Timer.getTime(this.callQueue_.clock);
 	this.underlying_.makeRequest(url, 'POST', payload);
+
+	var involvesSSL = (url.indexOf('https://') == 0);
+	// TCP usually takes one round trip; SSL usually takes another two.
+	var connectRTTs = involvesSSL ? 3 : 1;
+
+	// Set a timeout for the maximum duration we expect before a response.
+	// You might think that we can set a lower timeout here to just wait
+	// for the headers, but that is not the case: there are probably many
+	// proxies that wait for a full response before writing out the response
+	// headers.
+	//
+	// Give it 1 RTT for a DNS request, plus 3 or 1 RTTs for the connect,
+	// plus half an RTT for the request close, plus two server janks,
+	// plus the actual duration of the request.
+	this.setRecvTimeout_(
+		cw.net.DEFAULT_RTT_GUESS * (1.5 + connectRTTs) +
+		cw.net.MAX_SERVER_JANK * 2 +
+		cw.net.DEFAULT_HTTP_DURATION);
 };
 
 /**
@@ -1682,55 +1758,6 @@ cw.net.ClientTransport.prototype.flushBufferAsEncodedFrames_ = function() {
 cw.net.ClientTransport.prototype.flashSocketTerminated_ = function() {
 	// We treat close/ioerror/securityerror all the same.
 	this.recordTimeAndDispose_();
-};
-
-/**
- * Called by a timer if the transport can't connect in time, or if it stops
- * receiving bytes.
- * @private
- */
-cw.net.ClientTransport.prototype.timedOut_ = function() {
-	this.logger_.warning('Timed out due to lack of connection or no data being received.');
-	this.recordTimeAndDispose_();
-};
-
-/**
- * @private
- */
-cw.net.ClientTransport.prototype.clearRecvTimeout_ = function() {
-	if(this.recvTimeout_ != null) {
-		this.callQueue_.clock.clearTimeout(this.recvTimeout_);
-		this.recvTimeout_ = null;
-	}
-};
-
-/**
- * @param {number} ms Milliseconds to set the receive timeout to.
- * @private
- */
-cw.net.ClientTransport.prototype.setRecvTimeout_ = function(ms) {
-	this.logger_.fine('Receive timeout set to ' + ms + ' ms.');
-	this.recvTimeout_ = this.callQueue_.clock.setTimeout(this.boundTimedOut_, ms);
-};
-
-/**
- * Called by underlying_ when it connects or receives any bytes from the
- * peer (even when it's not a full frame yet).
- * @private
- */
-cw.net.ClientTransport.prototype.peerStillAlive_ = function() {
-	this.clearRecvTimeout_();
-	if(this.transportType_ == cw.net.TransportType_.XHR_LONGPOLL) {
-		throw Error("NIY");
-	} else if(this.transportType_ == cw.net.TransportType_.FLASH_SOCKET) {
-		this.setRecvTimeout_(
-			cw.net.DEFAULT_RTT_GUESS / 2 +
-			cw.net.MAX_SERVER_JANK +
-			cw.net.HEARTBEAT_INTERVAL);
-	} else {
-		throw Error("peerStillAlive_: Don't know what to do for this transportType: " +
-			this.transportType_);
-	}
 };
 
 /**
@@ -2257,7 +2284,7 @@ cw.net.FlashSocketConduit.prototype.disposeInternal = function() {
  * @extends {goog.Disposable}
  * @private
  */
-cw.net.XHRMaster = function(reqId, contentWindow, onFramesCallback, onCompleteCallback) {
+cw.net.XHRMaster = function(reqId, contentWindow, onFramesCallback, onPeerStillAliveCallback, onCompleteCallback) {
 	goog.Disposable.call(this);
 
 	/**
@@ -2278,10 +2305,20 @@ cw.net.XHRMaster = function(reqId, contentWindow, onFramesCallback, onCompleteCa
 	/**
 	 * @type {!Function}
 	 */
+	this.onPeerStillAliveCallback_ = onPeerStillAliveCallback;
+
+	/**
+	 * @type {!Function}
+	 */
 	this.onCompleteCallback_ = onCompleteCallback;
 };
 goog.inherits(cw.net.XHRMaster, goog.Disposable);
 
+/**
+ * @type {number}
+ * @private
+ */
+cw.net.XHRMaster.prototype.readyState_ = -1;
 
 /**
  * @param {string} url
@@ -2293,11 +2330,34 @@ cw.net.XHRMaster.prototype.makeRequest = function(url, method, payload) {
 };
 
 /**
+ * @return {number} The last-known readystate from the XHR object,
+ * 	or -1 if onreadystatechange was never dispatched.
+ */
+cw.net.XHRMaster.prototype.getReadyState = function() {
+	return this.readyState_;
+};
+
+/**
  * @param {!Array.<string>} frames
  * @private
  */
 cw.net.XHRMaster.prototype.onframes_ = function(frames) {
+	this.onPeerStillAliveCallback_();
 	this.onFramesCallback_(frames);
+};
+
+/**
+ * Note that here, state 3 is only dispatched once, even in browsers that
+ * dispatch it many times.
+ * @param {number} readyState The new readyState.
+ * @private
+ */
+cw.net.XHRMaster.prototype.onreadystatechange_ = function(readyState) {
+	this.readyState_ = readyState;
+	// readyState 1 does not indicate anything useful.
+	if(this.readyState_ >= 2) {
+		this.onPeerStillAliveCallback_();
+	}
 };
 
 /**
@@ -2345,10 +2405,10 @@ cw.net.XHRMasterTracker.prototype.logger_ =
  * @private
  */
 cw.net.XHRMasterTracker.prototype.createNew =
-function(contentWindow, onFramesCallback, onCompleteCallback) {
+function(contentWindow, onFramesCallback, onPeerStillAliveCallback, onCompleteCallback) {
 	var reqId = '_' + cw.string.getCleanRandomString();
 	var master = new cw.net.XHRMaster(
-		reqId, contentWindow, onFramesCallback, onCompleteCallback);
+		reqId, contentWindow, onFramesCallback, onPeerStillAliveCallback, onCompleteCallback);
 	this.masters_[reqId] = master;
 	return master;
 };
@@ -2375,6 +2435,22 @@ cw.net.XHRMasterTracker.prototype.onframes_ = function(reqId, frames) {
 		return;
 	}
 	master.onframes_(frames);
+};
+
+/**
+ * @param {string} reqId
+ * @param {number} readyState The new readyState.
+ * @private
+ */
+cw.net.XHRMasterTracker.prototype.onreadystatechange_ = function(reqId, readyState) {
+	this.logger_.fine('readyState for ' + cw.repr.repr(reqId) + ' now ' + readyState);
+	var master = this.masters_[reqId];
+	if(!master) {
+		this.logger_.severe(
+			"onreadystatechange_: no master for " + cw.repr.repr(reqId));
+		return;
+	}
+	master.onreadystatechange_(readyState);
 };
 
 /**
@@ -2422,6 +2498,9 @@ goog.global['__XHRMaster_onframes'] =
 
 goog.global['__XHRMaster_oncomplete'] =
 	goog.bind(cw.net.theXHRMasterTracker_.oncomplete_, cw.net.theXHRMasterTracker_);
+
+goog.global['__XHRMaster_onreadystatechange'] =
+	goog.bind(cw.net.theXHRMasterTracker_.onreadystatechange_, cw.net.theXHRMasterTracker_);
 
 
 

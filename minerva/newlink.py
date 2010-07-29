@@ -1678,6 +1678,9 @@ class ServerTransport(object):
 		# "GET" HTTP transports.
 		# See http://code.google.com/p/doctype/wiki/ArticleScriptInclusion
 		request.write(self._encodeFrame(HTTP_RESPONSE_PREAMBLE))
+		# TODO: don't write anything at this point for long-poll transports,
+		# because it would be very good for clients to know the Content-length
+		# of the request they are receiving.
 
 		self.dataReceived(body)
 

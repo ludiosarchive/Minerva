@@ -44,6 +44,12 @@ goog.inherits(cw.net.XHRSlave, goog.Disposable);
 cw.net.XHRSlave.prototype.underlying_ = null;
 
 /**
+ * @type {number}
+ * @private
+ */
+cw.net.XHRSlave.prototype.readyState_ = -1;
+
+/**
  * @private
  */
 cw.net.XHRSlave.prototype.httpResponseReceived_ = function() {
@@ -67,6 +73,19 @@ cw.net.XHRSlave.prototype.httpResponseReceived_ = function() {
 };
 
 /**
+ * @private
+ */
+cw.net.XHRSlave.prototype.readyStateChangeFired_ = function() {
+	var lastReadyState = this.readyState_;
+	this.readyState_ = this.underlying_.getReadyState();
+	// Filter out redundant readystatechange events.  (Note: streaming
+	// XHRs will still use the redundant event to know when to parse frames).
+	if(this.readyState_ != lastReadyState) {
+		goog.global.parent['__XHRMaster_onreadystatechange'](this.reqId_, this.readyState_);
+	}
+};
+
+/**
  * Make an HTTP request.  This makes Minerva-specific assumptions, including
  * the headers to send, and how to parse the response.
  *
@@ -78,6 +97,8 @@ cw.net.XHRSlave.prototype.httpResponseReceived_ = function() {
  */
 cw.net.XHRSlave.prototype.makeRequest = function(url, method, payload) {
 	this.underlying_ = new goog.net.XhrIo();
+	goog.events.listen(this.underlying_, goog.net.EventType.READY_STATE_CHANGE,
+		goog.bind(this.readyStateChangeFired_, this));
 	goog.events.listen(this.underlying_, goog.net.EventType.COMPLETE,
 		goog.bind(this.httpResponseReceived_, this));
 
