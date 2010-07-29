@@ -6,12 +6,13 @@ goog.provide('cw.net.TestDecoders');
 
 goog.require('cw.UnitTest');
 goog.require('cw.net.ResponseTextBencodeDecoder');
+goog.require('cw.net.ResponseTextNewlineDecoder');
 
 
 // anti-clobbering for JScript
 (function(){
 
-cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'ResponseTextBencodeDecoderNullTests').methods(
+cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'BencodeNullTests').methods(
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
@@ -208,10 +209,10 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'ResponseTextBencodeDecoderNu
  * Because we're passing in null, it doesn't know the length of {@code responseText}
  * in advance, so it should actually test something usefully.
  */
-cw.net.TestDecoders.ResponseTextBencodeDecoderNullTests.subclass(
-cw.net.TestDecoders, 'ResponseTextBencodeDecoderNullByteAtATimeTests').methods(
+cw.net.TestDecoders.BencodeNullTests.subclass(
+cw.net.TestDecoders, 'BencodeNullByteAtATimeTests').methods(
 	function setUp(self) {
-		cw.net.TestDecoders.ResponseTextBencodeDecoderNullByteAtATimeTests.upcall(self, 'setUp', []);
+		cw.net.TestDecoders.BencodeNullByteAtATimeTests.upcall(self, 'setUp', []);
 		// The _toSend logic is very tricky because of ParseError exceptions
 		self._toSend = 1;
 	},
@@ -238,8 +239,8 @@ cw.net.TestDecoders, 'ResponseTextBencodeDecoderNullByteAtATimeTests').methods(
 );
 
 
-cw.net.TestDecoders.ResponseTextBencodeDecoderNullTests.subclass(
-cw.net.TestDecoders, 'ResponseTextBencodeDecoderNumberTests').methods(
+cw.net.TestDecoders.BencodeNullTests.subclass(
+cw.net.TestDecoders, 'BencodeNumberTests').methods(
 	/**
 	 * Pretend that this is the number you get when you get XHR onprogress events.
 	 * This test class *does* know how many bytes were received.
@@ -254,10 +255,10 @@ cw.net.TestDecoders, 'ResponseTextBencodeDecoderNumberTests').methods(
  * it reports a smaller number for {@code responseTextLength} than
  * {@code responseText.length}.
  */
-cw.net.TestDecoders.ResponseTextBencodeDecoderNumberTests.subclass(
-cw.net.TestDecoders, 'ResponseTextBencodeDecoderNumberMinus1Tests').methods(
+cw.net.TestDecoders.BencodeNumberTests.subclass(
+cw.net.TestDecoders, 'BencodeNumberMinus1Tests').methods(
 	function setUp(self) {
-		cw.net.TestDecoders.ResponseTextBencodeDecoderNumberMinus1Tests.upcall(self, 'setUp', []);
+		cw.net.TestDecoders.BencodeNumberMinus1Tests.upcall(self, 'setUp', []);
 		self.misreportSubtract = 1;
 	},
 
@@ -280,16 +281,16 @@ cw.net.TestDecoders, 'ResponseTextBencodeDecoderNumberMinus1Tests').methods(
  * corrupted when it reports a smaller number for {@code responseTextLength}
  * than {@code responseText.length}.
  */
-cw.net.TestDecoders.ResponseTextBencodeDecoderNumberMinus1Tests.subclass(
-cw.net.TestDecoders, 'ResponseTextBencodeDecoderNumberMinus2Tests').methods(
+cw.net.TestDecoders.BencodeNumberMinus1Tests.subclass(
+cw.net.TestDecoders, 'BencodeNumberMinus2Tests').methods(
 	function setUp(self) {
-		cw.net.TestDecoders.ResponseTextBencodeDecoderNumberMinus2Tests.upcall(self, 'setUp', []);
+		cw.net.TestDecoders.BencodeNumberMinus2Tests.upcall(self, 'setUp', []);
 		self.misreportSubtract = 2;
 	}
 );
 
 
-cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'IgnoreResponseTextOptimizationTests').methods(
+cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'BencodeIgnoreResponseTextOptimizationTests').methods(
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
@@ -331,7 +332,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'IgnoreResponseTextOptimizati
  * Test that the decoder does not break when it gets a too-large
  * {@code responseTextLength}.
  */
-cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'ExaggeratedLengthTests').methods(
+cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'BencodeExaggeratedLengthTests').methods(
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
@@ -361,6 +362,47 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'ExaggeratedLengthTests').met
 		self.dummy.responseText = "10:helloworld4:xxxx";
 		self.assertArraysEqual(['xxxx'], self.decoder.getNewStrings(3+10+2+4));
 	}
-)
+);
+
+
+
+/**
+ * Tests for {@link cw.net.ResponseTextNewlineDecoder}
+ */
+cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'NewlineTests').methods(
+
+	function setUp(self) {
+		self.dummy = {responseText: ''};
+		self.decoder = new cw.net.ResponseTextNewlineDecoder(self.dummy);
+	},
+
+	function test_growingResponseText(self) {
+		self.assertArraysEqual([], self.decoder.getNewStrings());
+
+		self.dummy.responseText += 'hello\nworld';
+		self.assertArraysEqual(['hello'], self.decoder.getNewStrings());
+
+		self.dummy.responseText += '\n';
+		self.assertArraysEqual(['world'], self.decoder.getNewStrings());
+
+		self.dummy.responseText += 'full\npartial';
+		self.assertArraysEqual(['full'], self.decoder.getNewStrings());
+
+		self.dummy.responseText += 'done\n';
+		self.assertArraysEqual(['partialdone'], self.decoder.getNewStrings());
+
+		self.assertArraysEqual([], self.decoder.getNewStrings());
+
+		self.dummy.responseText += '\n';
+		self.assertArraysEqual([''], self.decoder.getNewStrings());
+
+		self.dummy.responseText += '\n\npartial';
+		self.assertArraysEqual(['', ''], self.decoder.getNewStrings());
+
+		self.dummy.responseText += 'done\n\n';
+		self.assertArraysEqual(['partialdone', ''], self.decoder.getNewStrings());
+	}
+);
+
 
 })(); // end anti-clobbering for JScript

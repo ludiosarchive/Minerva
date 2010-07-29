@@ -3,8 +3,9 @@
  * 	by inspecting the `responseText` property.
  */
 
-goog.provide('cw.net.ResponseTextBencodeDecoder');
 goog.provide('cw.net.ParseError');
+goog.provide('cw.net.ResponseTextBencodeDecoder');
+goog.provide('cw.net.ResponseTextNewlineDecoder');
 
 goog.require('cw.string');
 goog.require('cw.net.XHRLike');
@@ -73,7 +74,7 @@ cw.net.ResponseTextBencodeDecoder.prototype.logger_ =
 	goog.debug.Logger.getLogger('cw.net.ResponseTextBencodeDecoder');
 
 /**
- * The next location decoder will read
+ * The next location decoder will read.
  * @type {number}
  * @private
  */
@@ -115,7 +116,6 @@ cw.net.ResponseTextBencodeDecoder.prototype.maxLengthLen_ = String(
 
 /**
  * Set the maximum length.
- *
  * @param {number} maxLength The new maximum length for the decoder.
  */
 cw.net.ResponseTextBencodeDecoder.prototype.setMaxLength_ = function(maxLength) {
@@ -207,5 +207,82 @@ cw.net.ResponseTextBencodeDecoder.prototype.getNewStrings = function(responseTex
 		this.ignoreUntil_ = this.offset_ + this.modeOrReadLength_;
 	}
 	////console.log('ignoreUntil_ now', this.ignoreUntil_);
+	return strings;
+};
+
+
+
+/**
+ * A decoder that decodes newline-separated strings from an XHR object's
+ * responseText, which may grow over time.  This supports decoding
+ * unicode strings (characters outside of ASCII range).
+ *
+ * @param {!cw.net.XHRLike} xObject An XHR-like object with a
+ * 	{@code responseText} property which is a string.
+ *
+ * @param {number} maxLength The maximum length of string to parse
+ * 	(in characters, not bytes).
+ *
+ * @constructor
+ */
+cw.net.ResponseTextNewlineDecoder = function(xObject, maxLength) {
+	/**
+	 * The XHR or XHR-like object.
+	 * @type {!cw.net.XHRLike}
+	*/
+	this.xObject = xObject;
+
+	/**
+	 * @type {number}
+	 * @private
+	 */
+	this.maxLength_ = maxLength;
+};
+
+/**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.ResponseTextNewlineDecoder.prototype.logger_ =
+	goog.debug.Logger.getLogger('cw.net.ResponseTextNewlineDecoder');
+
+/**
+ * The last-known length of xObject's responseText.  We use this number
+ * to avoid searching for a newline in places we've already searched.
+ * @type {number}
+ * @private
+ */
+cw.net.ResponseTextNewlineDecoder.prototype.knownLength_ = 0;
+
+/**
+ * The start location of the next string.
+ * @type {number}
+ * @private
+ */
+cw.net.ResponseTextNewlineDecoder.prototype.offset_ = 0;
+
+/**
+ * Check for new data in {@code xObject.responseText} and return an array
+ * of new strings.
+ *
+ * @param {?number=} responseTextLength Ignored.  For compatibility
+ * 	with {@link cw.net.ResponseTextBencodeDecoder}.
+ */
+cw.net.ResponseTextNewlineDecoder.prototype.getNewStrings = function(responseTextLength) {
+	var nSearchPos = this.knownLength_;
+	var responseText = this.xObject.responseText;
+
+	var strings = [];
+	while(true) {
+		var nPos = responseText.indexOf('\n', nSearchPos);
+		if(nPos == -1) {
+			break;
+		}
+		strings.push(responseText.substr(this.offset_, nPos-this.offset_));
+		// TODO: strip \r first
+		this.offset_ = nSearchPos = nPos + 1;
+	}
+
+	this.knownLength_ = responseText.length;
 	return strings;
 };
