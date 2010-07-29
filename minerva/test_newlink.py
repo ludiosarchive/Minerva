@@ -3359,9 +3359,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				'\n'.join(f.encode() for f in frames) + '\n')
 			resource.render(request)
 
-			self.assertEqual([
-				HTTP_RESPONSE_PREAMBLE,
-			], decodeResponseInMockRequest(request))
+			self.assertEqual([], decodeResponseInMockRequest(request))
 
 			stream.sendStrings(['box0', 'box1'])
 
@@ -3508,14 +3506,10 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 		out = resource.render(request)
 		self.assertEqual(server.NOT_DONE_YET, out)
-		self.assertEqual([
-			HTTP_RESPONSE_PREAMBLE,
-		], decodeResponseInMockRequest(request))
+		self.assertEqual([], decodeResponseInMockRequest(request))
 		self._clock.advance(0.5)
 		# At this point, the ServerTransport is (hopefully) authenticated.
-		self.assertEqual([
-			HTTP_RESPONSE_PREAMBLE,
-		], decodeResponseInMockRequest(request))
+		self.assertEqual([], decodeResponseInMockRequest(request))
 		self._clock.advance(1.5)
 
 		# After 2 seconds, the ServerTransport is closed; there was no
