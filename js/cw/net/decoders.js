@@ -3,7 +3,7 @@
  * 	by inspecting the `responseText` property.
  */
 
-goog.provide('cw.net.ResponseTextDecoder');
+goog.provide('cw.net.ResponseTextBencodeDecoder');
 goog.provide('cw.net.ParseError');
 
 goog.require('cw.string');
@@ -12,7 +12,7 @@ goog.require('goog.debug.Logger');
 goog.require('goog.debug.Error');
 
 /**
- * This is thrown when {@code ResponseTextDecoder} aborts parsing.
+ * This is thrown when {@code ResponseTextBencodeDecoder} aborts parsing.
  * @param {string} msg Reason why parse failed
  * @constructor
  * @extends {goog.debug.Error}
@@ -53,7 +53,7 @@ cw.net.ParseError.prototype.name = 'cw.net.ParseError';
  *
  * @constructor
  */
-cw.net.ResponseTextDecoder = function(xObject, maxLength) {
+cw.net.ResponseTextBencodeDecoder = function(xObject, maxLength) {
 	/**
 	 * The XHR or XHR-like object.
 	 * @type {!cw.net.XHRLike}
@@ -69,15 +69,15 @@ cw.net.ResponseTextDecoder = function(xObject, maxLength) {
  * @type {!goog.debug.Logger}
  * @protected
  */
-cw.net.ResponseTextDecoder.prototype.logger_ =
-	goog.debug.Logger.getLogger('cw.net.ResponseTextDecoder');
+cw.net.ResponseTextBencodeDecoder.prototype.logger_ =
+	goog.debug.Logger.getLogger('cw.net.ResponseTextBencodeDecoder');
 
 /**
  * The next location decoder will read
  * @type {number}
  * @private
  */
-cw.net.ResponseTextDecoder.prototype.offset_ = 0;
+cw.net.ResponseTextBencodeDecoder.prototype.offset_ = 0;
 
 /**
  * A variable to optimize the decoder when the length of responseText
@@ -85,7 +85,7 @@ cw.net.ResponseTextDecoder.prototype.offset_ = 0;
  * @type {number}
  * @private
  */
-cw.net.ResponseTextDecoder.prototype.ignoreUntil_ = 1; // Need to have at least 1 byte before doing any parsing
+cw.net.ResponseTextBencodeDecoder.prototype.ignoreUntil_ = 1; // Need to have at least 1 byte before doing any parsing
 
 /**
  * Private variable representing both the "mode" and "length to read".
@@ -94,7 +94,7 @@ cw.net.ResponseTextDecoder.prototype.ignoreUntil_ = 1; // Need to have at least 
  * @type {number}
  * @private
  */
-cw.net.ResponseTextDecoder.prototype.modeOrReadLength_ = 0;
+cw.net.ResponseTextBencodeDecoder.prototype.modeOrReadLength_ = 0;
 
 /**
  * The size of the largest string that the decoder will accept (in characters,
@@ -102,15 +102,15 @@ cw.net.ResponseTextDecoder.prototype.modeOrReadLength_ = 0;
  * @type {number}
  * @private
  */
-cw.net.ResponseTextDecoder.prototype.maxLength_ = 20 * 1024 * 1024;
+cw.net.ResponseTextBencodeDecoder.prototype.maxLength_ = 20 * 1024 * 1024;
 
 /**
  * The length of {@code String(this.maxLength_)}
  * @type {number}
  * @private
  */
-cw.net.ResponseTextDecoder.prototype.maxLengthLen_ = String(
-	cw.net.ResponseTextDecoder.prototype.maxLength_).length;
+cw.net.ResponseTextBencodeDecoder.prototype.maxLengthLen_ = String(
+	cw.net.ResponseTextBencodeDecoder.prototype.maxLength_).length;
 
 
 /**
@@ -118,7 +118,7 @@ cw.net.ResponseTextDecoder.prototype.maxLengthLen_ = String(
  *
  * @param {number} maxLength The new maximum length for the decoder.
  */
-cw.net.ResponseTextDecoder.prototype.setMaxLength_ = function(maxLength) {
+cw.net.ResponseTextBencodeDecoder.prototype.setMaxLength_ = function(maxLength) {
 	this.maxLength_ = maxLength;
 	this.maxLengthLen_ = String(maxLength).length;
 };
@@ -144,7 +144,7 @@ cw.net.ResponseTextDecoder.prototype.setMaxLength_ = function(maxLength) {
  *
  * @return {!Array.<string>} an array of new strings
  */
-cw.net.ResponseTextDecoder.prototype.getNewStrings = function(responseTextLength) {
+cw.net.ResponseTextBencodeDecoder.prototype.getNewStrings = function(responseTextLength) {
 	if(responseTextLength !== null && responseTextLength < this.ignoreUntil_) {
 		// There certainly isn't enough data in responseText yet, so return.
 		return [];

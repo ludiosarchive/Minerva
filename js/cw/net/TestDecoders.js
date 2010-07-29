@@ -5,17 +5,17 @@
 goog.provide('cw.net.TestDecoders');
 
 goog.require('cw.UnitTest');
-goog.require('cw.net.ResponseTextDecoder');
+goog.require('cw.net.ResponseTextBencodeDecoder');
 
 
 // anti-clobbering for JScript
 (function(){
 
-cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'ResponseTextDecoderNullTests').methods(
+cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'ResponseTextBencodeDecoderNullTests').methods(
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
-		self.decoder = new cw.net.ResponseTextDecoder(self.dummy);
+		self.decoder = new cw.net.ResponseTextBencodeDecoder(self.dummy);
 	},
 
 	function _append(self, string) {
@@ -181,7 +181,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'ResponseTextDecoderNullTests
 		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
 	},
 
-	// Note that ResponseTextDecoder doesn't have full length-corruption-detection;
+	// Note that ResponseTextBencodeDecoder doesn't have full length-corruption-detection;
 	// it will only catch some problems.
 	function test_nonDigitsInLength(self) {
 		self._append("z:four")
@@ -208,10 +208,10 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'ResponseTextDecoderNullTests
  * Because we're passing in null, it doesn't know the length of {@code responseText}
  * in advance, so it should actually test something usefully.
  */
-cw.net.TestDecoders.ResponseTextDecoderNullTests.subclass(
-cw.net.TestDecoders, 'ResponseTextDecoderNullByteAtATimeTests').methods(
+cw.net.TestDecoders.ResponseTextBencodeDecoderNullTests.subclass(
+cw.net.TestDecoders, 'ResponseTextBencodeDecoderNullByteAtATimeTests').methods(
 	function setUp(self) {
-		cw.net.TestDecoders.ResponseTextDecoderNullByteAtATimeTests.upcall(self, 'setUp', []);
+		cw.net.TestDecoders.ResponseTextBencodeDecoderNullByteAtATimeTests.upcall(self, 'setUp', []);
 		// The _toSend logic is very tricky because of ParseError exceptions
 		self._toSend = 1;
 	},
@@ -238,8 +238,8 @@ cw.net.TestDecoders, 'ResponseTextDecoderNullByteAtATimeTests').methods(
 );
 
 
-cw.net.TestDecoders.ResponseTextDecoderNullTests.subclass(
-cw.net.TestDecoders, 'ResponseTextDecoderNumberTests').methods(
+cw.net.TestDecoders.ResponseTextBencodeDecoderNullTests.subclass(
+cw.net.TestDecoders, 'ResponseTextBencodeDecoderNumberTests').methods(
 	/**
 	 * Pretend that this is the number you get when you get XHR onprogress events.
 	 * This test class *does* know how many bytes were received.
@@ -254,10 +254,10 @@ cw.net.TestDecoders, 'ResponseTextDecoderNumberTests').methods(
  * it reports a smaller number for {@code responseTextLength} than
  * {@code responseText.length}.
  */
-cw.net.TestDecoders.ResponseTextDecoderNumberTests.subclass(
-cw.net.TestDecoders, 'ResponseTextDecoderNumberMinus1Tests').methods(
+cw.net.TestDecoders.ResponseTextBencodeDecoderNumberTests.subclass(
+cw.net.TestDecoders, 'ResponseTextBencodeDecoderNumberMinus1Tests').methods(
 	function setUp(self) {
-		cw.net.TestDecoders.ResponseTextDecoderNumberMinus1Tests.upcall(self, 'setUp', []);
+		cw.net.TestDecoders.ResponseTextBencodeDecoderNumberMinus1Tests.upcall(self, 'setUp', []);
 		self.misreportSubtract = 1;
 	},
 
@@ -280,10 +280,10 @@ cw.net.TestDecoders, 'ResponseTextDecoderNumberMinus1Tests').methods(
  * corrupted when it reports a smaller number for {@code responseTextLength}
  * than {@code responseText.length}.
  */
-cw.net.TestDecoders.ResponseTextDecoderNumberMinus1Tests.subclass(
-cw.net.TestDecoders, 'ResponseTextDecoderNumberMinus2Tests').methods(
+cw.net.TestDecoders.ResponseTextBencodeDecoderNumberMinus1Tests.subclass(
+cw.net.TestDecoders, 'ResponseTextBencodeDecoderNumberMinus2Tests').methods(
 	function setUp(self) {
-		cw.net.TestDecoders.ResponseTextDecoderNumberMinus2Tests.upcall(self, 'setUp', []);
+		cw.net.TestDecoders.ResponseTextBencodeDecoderNumberMinus2Tests.upcall(self, 'setUp', []);
 		self.misreportSubtract = 2;
 	}
 );
@@ -293,7 +293,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'IgnoreResponseTextOptimizati
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
-		self.decoder = new cw.net.ResponseTextDecoder(self.dummy);
+		self.decoder = new cw.net.ResponseTextBencodeDecoder(self.dummy);
 	},
 
 	function test_responseTextNotReadIfNoData(self) {
@@ -335,7 +335,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'ExaggeratedLengthTests').met
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
-		self.decoder = new cw.net.ResponseTextDecoder(self.dummy);
+		self.decoder = new cw.net.ResponseTextBencodeDecoder(self.dummy);
 	},
 
 	/**
