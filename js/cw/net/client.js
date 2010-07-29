@@ -1574,10 +1574,10 @@ cw.net.ClientTransport.prototype.timedOut_ = function() {
  * @private
  */
 cw.net.ClientTransport.prototype.clearRecvTimeout_ = function() {
-	this.logger_.fine('Receive timeout cleared.');
 	if(this.recvTimeout_ != null) {
 		this.callQueue_.clock.clearTimeout(this.recvTimeout_);
 		this.recvTimeout_ = null;
+		this.logger_.fine('Receive timeout cleared.');
 	}
 };
 
@@ -1586,8 +1586,8 @@ cw.net.ClientTransport.prototype.clearRecvTimeout_ = function() {
  * @private
  */
 cw.net.ClientTransport.prototype.setRecvTimeout_ = function(ms) {
-	this.logger_.fine('Receive timeout set to ' + ms + ' ms.');
 	this.recvTimeout_ = this.callQueue_.clock.setTimeout(this.boundTimedOut_, ms);
+	this.logger_.fine('Receive timeout set to ' + ms + ' ms.');
 };
 
 /**
