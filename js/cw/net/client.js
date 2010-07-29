@@ -163,7 +163,6 @@ cw.net.Endpoint = goog.typedef;
  */
 cw.net.HTTP_RESPONSE_PREAMBLE = new cw.net.CommentFrame(";)]}");
 
-
 /**
  * The Minerva-level protocol version.
  * @type {number}
@@ -171,14 +170,12 @@ cw.net.HTTP_RESPONSE_PREAMBLE = new cw.net.CommentFrame(";)]}");
  */
 cw.net.PROTOCOL_VERSION = 2;
 
-
 /**
  * The default maximum duration of an HTTP transport.
  * @type {number}
  * @const
  */
 cw.net.DEFAULT_HTTP_DURATION = 25000;
-
 
 /**
  * The heartbeat interval for non-HTTP transports, in milliseconds.  If not 0,
@@ -189,7 +186,6 @@ cw.net.DEFAULT_HTTP_DURATION = 25000;
  */
 cw.net.HEARTBEAT_INTERVAL = 10000;
 
-
 /**
  * The maximum duration a round trip should take, in milliseconds.
  * @type {number}
@@ -197,6 +193,12 @@ cw.net.HEARTBEAT_INTERVAL = 10000;
  */
 cw.net.DEFAULT_RTT_GUESS = 3000;
 
+/**
+ * The worst download speed we expect to see, in bytes/sec.
+ * @type {number}
+ * @const
+ */
+cw.net.DEFAULT_DL_SPEED = 3 * 1024;
 
 /**
  * The maximum duration we expect the Minerva server to freeze.
@@ -1586,8 +1588,27 @@ cw.net.ClientTransport.prototype.clearRecvTimeout_ = function() {
  * @private
  */
 cw.net.ClientTransport.prototype.setRecvTimeout_ = function(ms) {
-	this.recvTimeout_ = this.callQueue_.clock.setTimeout(this.boundTimedOut_, ms);
+	this.clearRecvTimeout_();
+	this.recvTimeout_ = this.callQueue_.clock.setTimeout(
+		this.boundTimedOut_, Math.round(ms));
 	this.logger_.fine('Receive timeout set to ' + ms + ' ms.');
+};
+
+/**
+ * Called by XHRMaster when/if it receives a Content-Length header that
+ * parses to a non-negative number.
+ * @param {number} contentLength
+ * @private
+ */
+cw.net.ClientTransport.prototype.contentLengthReceived_ = function(contentLength) {
+	this.logger_.fine('Got Content-Length: ' + contentLength);
+	// Only adjust the timeout for non-streaming HTTP, because only for
+	// non-streaming do we not have meaningful feedback as we download.
+	if(this.transportType_ == cw.net.TransportType_.XHR_LONGPOLL) {
+		this.setRecvTimeout_(
+			cw.net.MAX_SERVER_JANK +
+			(contentLength / cw.net.DEFAULT_DL_SPEED) * 1000);
+	}
 };
 
 /**
@@ -1596,16 +1617,10 @@ cw.net.ClientTransport.prototype.setRecvTimeout_ = function(ms) {
  * @private
  */
 cw.net.ClientTransport.prototype.peerStillAlive_ = function() {
-	this.clearRecvTimeout_();
 	if(this.transportType_ == cw.net.TransportType_.XHR_LONGPOLL) {
-		// peerStillAlive_ only called for readyState >= 2, so headers
-		// are available at this point.
-		//
-		// We don't know how long it will take to receive the data,
-		// so give underlying_ as long as it wants.
-		// (Timeout was already cleared above)
-		// TODO: set a timeout based on the response's Content-length
-		// and a pessimistic download speed.
+		// Ignore peerStillAlive_ for XHR_LONGPOLL because peerStillAlive_
+		// events for it are unreliable: it might only be fired once, even
+		// as it continues downloading.
 	} else if(this.transportType_ == cw.net.TransportType_.FLASH_SOCKET) {
 		this.setRecvTimeout_(
 			cw.net.DEFAULT_RTT_GUESS / 2 +
@@ -1636,12 +1651,9 @@ cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
 	var contentWindow = this.becomePrimary_ ?
 		this.endpoint_.primaryWindow : this.endpoint_.secondaryWindow;
 
-	var onFramesCallback = goog.bind(this.framesReceived_, this);
-	var onCompleteCallback = goog.bind(this.httpResponseEnded_, this);
-	var onPeerStillAliveCallback = goog.bind(this.peerStillAlive_, this);
 	goog.asserts.assert(this.underlying_ === null, 'already have an underlying_');
 	this.underlying_ = cw.net.theXHRMasterTracker_.createNew(
-		contentWindow, onFramesCallback, onPeerStillAliveCallback, onCompleteCallback);
+		this, contentWindow);
 
 	this.underlyingStartTime_ = goog.Timer.getTime(this.callQueue_.clock);
 	this.underlying_.makeRequest(url, 'POST', payload);
@@ -2278,14 +2290,20 @@ cw.net.FlashSocketConduit.prototype.disposeInternal = function() {
  * need SharedWorker.  And that SharedWorker will run the entire Stream,
  * not just an XHR request.
  *
- * @param {!Window} contentWindow
  * @param {string} reqId
+ * @param {!cw.net.ClientTransport} clientTransport
+ * @param {!Window} contentWindow
  * @constructor
  * @extends {goog.Disposable}
  * @private
  */
-cw.net.XHRMaster = function(reqId, contentWindow, onFramesCallback, onPeerStillAliveCallback, onCompleteCallback) {
+cw.net.XHRMaster = function(reqId, clientTransport, contentWindow) {
 	goog.Disposable.call(this);
+
+	/**
+	 * @type {!cw.net.ClientTransport}
+	 */
+	this.clientTransport_ = clientTransport;
 
 	/**
 	 * @type {string}
@@ -2296,23 +2314,15 @@ cw.net.XHRMaster = function(reqId, contentWindow, onFramesCallback, onPeerStillA
 	 * @type {!Window}
 	 */
 	this.contentWindow_ = contentWindow;
-
-	/**
-	 * @type {!Function}
-	 */
-	this.onFramesCallback_ = onFramesCallback;
-
-	/**
-	 * @type {!Function}
-	 */
-	this.onPeerStillAliveCallback_ = onPeerStillAliveCallback;
-
-	/**
-	 * @type {!Function}
-	 */
-	this.onCompleteCallback_ = onCompleteCallback;
 };
 goog.inherits(cw.net.XHRMaster, goog.Disposable);
+
+/**
+ * Did we see a Content-Length header? (even if it was not a usable number)
+ * @type {boolean}
+ * @private
+ */
+cw.net.XHRMaster.prototype.sawContentLength_ = false;
 
 /**
  * @type {number}
@@ -2342,21 +2352,33 @@ cw.net.XHRMaster.prototype.getReadyState = function() {
  * @private
  */
 cw.net.XHRMaster.prototype.onframes_ = function(frames) {
-	this.onPeerStillAliveCallback_();
-	this.onFramesCallback_(frames);
+	this.clientTransport_.peerStillAlive_();
+	this.clientTransport_.framesReceived_(frames);
 };
 
 /**
  * Note that here, state 3 is only dispatched once, even in browsers that
  * dispatch it many times.
  * @param {number} readyState The new readyState.
+ * @param {!Object.<string, string>} usefulHeaders An object containing useful headers.
  * @private
  */
-cw.net.XHRMaster.prototype.onreadystatechange_ = function(readyState) {
+cw.net.XHRMaster.prototype.onreadystatechange_ = function(readyState, usefulHeaders) {
 	this.readyState_ = readyState;
 	// readyState 1 does not indicate anything useful.
 	if(this.readyState_ >= 2) {
-		this.onPeerStillAliveCallback_();
+		this.clientTransport_.peerStillAlive_();
+	}
+	if(!this.sawContentLength_) {
+		if('Content-Length' in usefulHeaders) {
+			this.sawContentLength_ = true;
+			var contentLengthStr =  usefulHeaders['Content-Length'];
+			var contentLength = cw.string.strToNonNegLimit(
+				contentLengthStr, cw.math.LARGEST_INTEGER);
+			if(contentLength != null) {
+				this.clientTransport_.contentLengthReceived_(contentLength);
+			}
+		}
 	}
 };
 
@@ -2364,7 +2386,7 @@ cw.net.XHRMaster.prototype.onreadystatechange_ = function(readyState) {
  * @private
  */
 cw.net.XHRMaster.prototype.oncomplete_ = function() {
-	this.onCompleteCallback_();
+	this.clientTransport_.httpResponseEnded_();
 };
 
 cw.net.XHRMaster.prototype.disposeInternal = function() {
@@ -2401,14 +2423,14 @@ cw.net.XHRMasterTracker.prototype.logger_ =
 	goog.debug.Logger.getLogger('cw.net.XHRMasterTracker');
 
 /**
+ * @param {!cw.net.ClientTransport} clientTransport
  * @param {!Window} contentWindow
  * @private
  */
-cw.net.XHRMasterTracker.prototype.createNew =
-function(contentWindow, onFramesCallback, onPeerStillAliveCallback, onCompleteCallback) {
+cw.net.XHRMasterTracker.prototype.createNew = function(clientTransport, contentWindow) {
 	var reqId = '_' + cw.string.getCleanRandomString();
 	var master = new cw.net.XHRMaster(
-		reqId, contentWindow, onFramesCallback, onPeerStillAliveCallback, onCompleteCallback);
+		reqId, clientTransport, contentWindow);
 	this.masters_[reqId] = master;
 	return master;
 };
@@ -2440,9 +2462,10 @@ cw.net.XHRMasterTracker.prototype.onframes_ = function(reqId, frames) {
 /**
  * @param {string} reqId
  * @param {number} readyState The new readyState.
+ * @param {!Object.<string, string>} usefulHeaders An object containing useful headers.
  * @private
  */
-cw.net.XHRMasterTracker.prototype.onreadystatechange_ = function(reqId, readyState) {
+cw.net.XHRMasterTracker.prototype.onreadystatechange_ = function(reqId, readyState, usefulHeaders) {
 	this.logger_.fine('readyState for ' + cw.repr.repr(reqId) + ' now ' + readyState);
 	var master = this.masters_[reqId];
 	if(!master) {
@@ -2450,7 +2473,7 @@ cw.net.XHRMasterTracker.prototype.onreadystatechange_ = function(reqId, readySta
 			"onreadystatechange_: no master for " + cw.repr.repr(reqId));
 		return;
 	}
-	master.onreadystatechange_(readyState);
+	master.onreadystatechange_(readyState, usefulHeaders);
 };
 
 /**

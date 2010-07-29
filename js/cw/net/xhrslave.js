@@ -73,6 +73,20 @@ cw.net.XHRSlave.prototype.httpResponseReceived_ = function() {
 };
 
 /**
+ * @return {!Object.<string, string>} An object containing useful headers.
+ * @private
+ */
+cw.net.XHRSlave.prototype.getUsefulHeaders_ = function() {
+	var usefulHeaders = {};
+	try {
+		usefulHeaders['Content-Length'] =
+			this.underlying_.xhr_.getResponseHeader('Content-Length');
+	} catch(e) {
+	}
+	return usefulHeaders;
+};
+
+/**
  * @private
  */
 cw.net.XHRSlave.prototype.readyStateChangeFired_ = function() {
@@ -81,7 +95,8 @@ cw.net.XHRSlave.prototype.readyStateChangeFired_ = function() {
 	// Filter out redundant readystatechange events.  (Note: streaming
 	// XHRs will still use the redundant event to know when to parse frames).
 	if(this.readyState_ != lastReadyState) {
-		goog.global.parent['__XHRMaster_onreadystatechange'](this.reqId_, this.readyState_);
+		var usefulHeaders = this.readyState_ >= 2 ? this.getUsefulHeaders_() : {};
+		goog.global.parent['__XHRMaster_onreadystatechange'](this.reqId_, this.readyState_, usefulHeaders);
 	}
 };
 
