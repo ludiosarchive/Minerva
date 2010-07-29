@@ -966,6 +966,12 @@ def sanitizeHelloFrame(helloFrame, isHttp):
 # BENCODE is not used by real clients, only test_newlink.py
 UNKNOWN, POLICYFILE, INT32, BENCODE, HTTP = range(5)
 
+# HTTP_RESPONSE_PREAMBLE is sent as the first frame over HTTP transports.
+# Note that we have protection against all CSRF attacks with
+# streamId and credentialsData.  We use script-inclusion
+# protection to reduce the chance of private information
+# being leaked over "GET" HTTP transports.
+# See http://code.google.com/p/doctype/wiki/ArticleScriptInclusion
 HTTP_RESPONSE_PREAMBLE = CommentFrame(";)]}")
 
 
@@ -1061,8 +1067,14 @@ class ServerTransport(object):
 		if self._callingStream:
 			return
 
-		# TODO: set a Content-length here for long-poll requests (or if
-		# we otherwise know the length).
+		# If it's not a streaming response, we may have to write
+		# termination headers and terminate.
+		if self._toSend and not self._streamingResponse and not self._terminating:
+			self._writeTerminationFrames()
+			# Just in case we ever have a non-HTTP non-streamingResponse...
+			if self._mode != HTTP:
+				self._toSend += self._encodeFrame(YouCloseItFrame())
+			self._terminating = True
 
 		toSend = self._toSend
 		if toSend:
@@ -1072,24 +1084,18 @@ class ServerTransport(object):
 			# Because we're sending something, reset the heartbeat DelayedCall.
 			self._resetHeartbeat()
 
-			if self._mode == HTTP and not self._wrotePreamble:
-				# Note that we have protection against all CSRF attacks with
-				# streamId and credentialsData.  We use script-inclusion
-				# protection to reduce the chance of private information
-				# being leaked over "GET" HTTP transports.
-				# See http://code.google.com/p/doctype/wiki/ArticleScriptInclusion
-				self.writable.write(self._encodeFrame(HTTP_RESPONSE_PREAMBLE))
+			if self._mode == HTTP and not self._wrotePreamble: # TODO: use request.startedWriting instead?
+				encodedPreamble = self._encodeFrame(HTTP_RESPONSE_PREAMBLE)
+				if self._terminating:
+					headers = self.writable.responseHeaders._rawHeaders
+					headers['content-length'] = [str(len(encodedPreamble) + len(toSend))]
+
+				self.writable.write(encodedPreamble)
 				self._wrotePreamble = True
 
 			self.writable.write(toSend)
 
-		terminating = self._terminating
-		if toSend and not self._streamingResponse and not terminating:
-			self.closeGently()
-			# closeGently writes frames, sets self._terminating = True,
-			# and re-enters _maybeWriteToPeer.
-
-		if terminating:
+		if self._terminating:
 			self._cancelMaxOpenDc()
 			self._cancelHeartbeatDc()
 

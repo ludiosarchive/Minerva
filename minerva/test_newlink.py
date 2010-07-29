@@ -120,15 +120,20 @@ def _makeHelloFrameHttp(extra={}):
 	return _makeHelloFrame(extra)
 
 
+def _encodeFrames(parser, frames):
+	encoded = ''
+	for frame in frames:
+		encoded += parser.encode(frame.encode())
+	return encoded
+
+
 def _makeTransportWithDecoder(parser, faceFactory):
 	tcpTransport = FrameDecodingTcpTransport(parser)
 	transport = faceFactory.buildProtocol(addr=None)
 	transport.getNew = tcpTransport.getNew
 
 	def sendFrames(frames):
-		toSend = ''
-		for frame in frames:
-			toSend += parser.encode(frame.encode())
+		toSend = _encodeFrames(parser, frames)
 		transport.dataReceived(toSend)
 
 	transport.sendFrames = sendFrames
@@ -3129,6 +3134,17 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 #		return transport
 
 
+	def _assertContentLengthHeader(self, request, expectedLength):
+		if expectedLength is not None:
+			expectedHeaders = [str(expectedLength)]
+		else:
+			expectedHeaders = None
+
+		self.assertEqual(
+			expectedHeaders,
+			request.responseHeaders.getRawHeaders('content-length'))
+
+
 	def test_httpBodyFramesPassedToProtocol(self):
 		r"""
 		Frames in the body of the HTTP POST request are passed to the
@@ -3280,6 +3296,12 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			self.assertEqual(expectedFrames, decodeResponseInMockRequest(request))
 			self.assertEqual(0 if streaming else 1, request.finished)
 
+			# Make sure the content-length header is correct.
+			encodedExpectedFrames = _encodeFrames(
+				DelimitedStringDecoder(1024 * 1024), expectedFrames)
+			self._assertContentLengthHeader(
+				request, len(encodedExpectedFrames) if not streaming else None)
+
 			self._sendAnotherString(stream, request, streaming, expectedFrames)
 
 
@@ -3377,6 +3399,14 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			self.assertEqual(expectedFrames, decodeResponseInMockRequest(request))
 			self.assertEqual(0 if streaming else 1, request.finished)
 
+			# Make sure the content-length header is correct
+			encodedExpectedFrames = _encodeFrames(
+				DelimitedStringDecoder(1024 * 1024), expectedFrames)
+			##print "\n", repr(''.join(request.written))
+			##print repr(encodedExpectedFrames)
+			self._assertContentLengthHeader(
+				request, len(encodedExpectedFrames) if not streaming else None)
+
 			self._sendAnotherString(stream, request, streaming, expectedFrames)
 
 
@@ -3470,12 +3500,20 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				'\n'.join(f.encode() for f in frames) + '\n')
 
 			resource.render(request)
-			self.assertEqual([
+			expectedFrames = [
 				HTTP_RESPONSE_PREAMBLE,
 				SackFrame(SACK(-1, ())),
 				StreamStatusFrame(SACK(-1, ()))
-			], decodeResponseInMockRequest(request))
+			]
+			self.assertEqual(expectedFrames, decodeResponseInMockRequest(request))
 			self.assertEqual(1, request.finished)
+
+			# Make sure the content-length header is correct.  In this case,
+			# Content-length is present even if streaming.
+			encodedExpectedFrames = _encodeFrames(
+				DelimitedStringDecoder(1024 * 1024), expectedFrames)
+			self._assertContentLengthHeader(
+				request, len(encodedExpectedFrames))
 
 
 	def test_maxOpenTime(self):
