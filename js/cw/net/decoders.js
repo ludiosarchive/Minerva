@@ -214,7 +214,8 @@ cw.net.ResponseTextBencodeDecoder.prototype.getNewStrings = function(responseTex
 
 /**
  * A decoder that decodes newline-separated strings from an XHR object's
- * responseText, which may grow over time.  This supports decoding
+ * responseText, which may grow over time.  If a trailing carriage return ("\r")
+ * is present in a string, it is stripped.  This decoder supports decoding
  * unicode strings (characters outside of ASCII range).
  *
  * @param {!cw.net.XHRLike} xObject An XHR-like object with a
@@ -278,8 +279,9 @@ cw.net.ResponseTextNewlineDecoder.prototype.getNewStrings = function(responseTex
 		if(nPos == -1) {
 			break;
 		}
-		strings.push(responseText.substr(this.offset_, nPos-this.offset_));
-		// TODO: strip \r first
+		var str = responseText.substr(this.offset_, nPos-this.offset_);
+		str = str.replace(/\r$/, '');
+		strings.push(str);
 		this.offset_ = nSearchPos = nPos + 1;
 	}
 

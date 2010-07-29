@@ -401,6 +401,30 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'NewlineTests').methods(
 
 		self.dummy.responseText += 'done\n\n';
 		self.assertArraysEqual(['partialdone', ''], self.decoder.getNewStrings());
+	},
+
+	/**
+	 * If present, one "\r" before the "\n" is stripped.
+	 */
+	function test_carriageReturnStripped(self) {
+		self.dummy.responseText += 'hello\r\nworld';
+		self.assertArraysEqual(['hello'], self.decoder.getNewStrings());
+
+		// Mixed \r\n and \n is allowed.
+		self.dummy.responseText += '\n';
+		self.assertArraysEqual(['world'], self.decoder.getNewStrings());
+
+		self.dummy.responseText += '\r';
+		self.assertArraysEqual([], self.decoder.getNewStrings());
+
+		self.dummy.responseText += '\n';
+		self.assertArraysEqual([''], self.decoder.getNewStrings());
+
+		self.dummy.responseText += 'again\r';
+		self.assertArraysEqual([], self.decoder.getNewStrings());
+
+		self.dummy.responseText += '\r\n\n';
+		self.assertArraysEqual(['again\r', ''], self.decoder.getNewStrings());
 	}
 );
 
