@@ -5,12 +5,18 @@
 goog.provide('cw.net.TestDecoders');
 
 goog.require('cw.UnitTest');
+goog.require('cw.net.DecodeStatus');
 goog.require('cw.net.ResponseTextBencodeDecoder');
 goog.require('cw.net.ResponseTextNewlineDecoder');
 
 
-// anti-clobbering for JScript
+// anti-clobbering for JScript; aliases
 (function(){
+
+var OK = cw.net.DecodeStatus.OK;
+var TOO_LONG = cw.net.DecodeStatus.TOO_LONG;
+var FRAME_CORRUPTION = cw.net.DecodeStatus.FRAME_CORRUPTION;
+
 
 cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'BencodeNullTests').methods(
 
@@ -38,43 +44,43 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'BencodeNullTests').methods(
 	function test_oneMessage(self) {
 		self._append("2:hi")
 		var strings = self._informDecoder();
-		self.assertArraysEqual(['hi'], strings);
+		self.assertEqual(['hi'], strings);
 	},
 
 	function test_twoMessage(self) {
 		self._append("2:hi3:hey")
 		var strings = self._informDecoder();
-		self.assertArraysEqual(['hi', 'hey'], strings);
+		self.assertEqual(['hi', 'hey'], strings);
 	},
 
 	function test_threeBigMessages(self) {
 		var messages = [Array(1000+1).join('x'), Array(10000+1).join('y'), Array(100000+1).join('y')];
 		self._append("1000:" + messages[0] + "10000:" + messages[1] + "100000:" + messages[2]);
 		var strings = self._informDecoder();
-		self.assertArraysEqual(messages, strings);
+		self.assertEqual(messages, strings);
 	},
 
 	function test_completeMessagesInPieces(self) {
 		self._append("2:hi");
-		self.assertArraysEqual(['hi'], self._informDecoder());
+		self.assertEqual(['hi'], self._informDecoder());
 
 		self._append("3:hey");
-		self.assertArraysEqual(['hey'], self._informDecoder());
+		self.assertEqual(['hey'], self._informDecoder());
 	},
 
 	function test_incompleteLength(self) {
 		self._append("1");
-		self.assertArraysEqual([], self._informDecoder());
+		self.assertEqual([], self._informDecoder());
 
 		self._append("0");
-		self.assertArraysEqual([], self._informDecoder());
+		self.assertEqual([], self._informDecoder());
 
 		self._append(":");
-		self.assertArraysEqual([], self._informDecoder());
+		self.assertEqual([], self._informDecoder());
 
 		// "GARBAGE" is okay because MAX_LENGTH is 1024*1024*1024 which is a lot of digits
 		self._append("helloworldGARBAGE");
-		self.assertArraysEqual(['helloworld'], self._informDecoder());
+		self.assertEqual(['helloworld'], self._informDecoder());
 
 		// Now adding a colon should result in a ParseError
 		self._append(":");
@@ -118,28 +124,28 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'BencodeNullTests').methods(
 
 	function test_incompleteData(self) {
 		self._append("1");
-		self.assertArraysEqual([], self._informDecoder());
+		self.assertEqual([], self._informDecoder());
 
 		self._append("0:");
-		self.assertArraysEqual([], self._informDecoder());
+		self.assertEqual([], self._informDecoder());
 
 		self._append("helloworl");
-		self.assertArraysEqual([], self._informDecoder());
+		self.assertEqual([], self._informDecoder());
 
 		self._append("d");
-		self.assertArraysEqual(['helloworld'], self._informDecoder());
+		self.assertEqual(['helloworld'], self._informDecoder());
 	},
 
 	function test_maxLengthEdgeCase2(self) {
 		self.decoder.setMaxLength_(2);
 		self._append("2:hi2:hx");
-		self.assertArraysEqual(['hi', 'hx'], self._informDecoder());
+		self.assertEqual(['hi', 'hx'], self._informDecoder());
 	},
 
 	function test_maxLengthEdgeCase10(self) {
 		self.decoder.setMaxLength_(10);
 		self._append("10:helloworld10:hellow0rld");
-		self.assertArraysEqual(['helloworld', 'hellow0rld'], self._informDecoder());
+		self.assertEqual(['helloworld', 'hellow0rld'], self._informDecoder());
 	},
 
 	/**
@@ -302,27 +308,27 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'BencodeIgnoreResponseTextOpt
 		self.dummy.responseText = null;
 		// But it (hopefully) didn't.
 		var strings = self.decoder.getNewStrings(0);
-		self.assertArraysEqual([], strings);
+		self.assertEqual([], strings);
 	},
 
 	function test_responseTextNotReadIfNotEnoughData(self) {
 		self.dummy.responseText = "10:h";
-		self.assertArraysEqual([], self.decoder.getNewStrings(4));
+		self.assertEqual([], self.decoder.getNewStrings(4));
 		// Decoder now knows the length. It shouldn't even look at the xObject until it has 13 bytes.
 		self.dummy.responseText = null;
-		self.assertArraysEqual([], self.decoder.getNewStrings(3+10-1)); // 1 byte fewer than needed
+		self.assertEqual([], self.decoder.getNewStrings(3+10-1)); // 1 byte fewer than needed
 		self.dummy.responseText = "10:helloworld";
-		self.assertArraysEqual(['helloworld'], self.decoder.getNewStrings(3+10));
+		self.assertEqual(['helloworld'], self.decoder.getNewStrings(3+10));
 	},
 
 	function test_responseTextNotReadIfNotEnoughNumber(self) {
 		self.dummy.responseText = "10";
-		self.assertArraysEqual([], self.decoder.getNewStrings(2));
+		self.assertEqual([], self.decoder.getNewStrings(2));
 		// It shouldn't even look at the xObject until it has 1 more byte.
 		self.dummy.responseText = null;
-		self.assertArraysEqual([], self.decoder.getNewStrings(2));
+		self.assertEqual([], self.decoder.getNewStrings(2));
 		self.dummy.responseText = "10:helloworld";
-		self.assertArraysEqual(['helloworld'], self.decoder.getNewStrings(3+10));
+		self.assertEqual(['helloworld'], self.decoder.getNewStrings(3+10));
 	}
 
 );
@@ -344,7 +350,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'BencodeExaggeratedLengthTest
 	 */
 	function test_lying1(self) {
 		self.dummy.responseText = "10:helloworl";
-		self.assertArraysEqual([], self.decoder.getNewStrings(3+10));
+		self.assertEqual([], self.decoder.getNewStrings(3+10));
 	},
 
 	/**
@@ -352,15 +358,15 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'BencodeExaggeratedLengthTest
 	 */
 	function test_lying2(self) {
 		self.dummy.responseText = "10:helloworl";
-		self.assertArraysEqual([], self.decoder.getNewStrings(3+10));
-		self.assertArraysEqual([], self.decoder.getNewStrings(3+10));
+		self.assertEqual([], self.decoder.getNewStrings(3+10));
+		self.assertEqual([], self.decoder.getNewStrings(3+10));
 
 		self.dummy.responseText = "10:helloworld";
-		self.assertArraysEqual(['helloworld'], self.decoder.getNewStrings(3+10));
+		self.assertEqual(['helloworld'], self.decoder.getNewStrings(3+10));
 		self.dummy.responseText = "10:helloworld4:x";
-		self.assertArraysEqual([], self.decoder.getNewStrings(3+10+2+4));
+		self.assertEqual([], self.decoder.getNewStrings(3+10+2+4));
 		self.dummy.responseText = "10:helloworld4:xxxx";
-		self.assertArraysEqual(['xxxx'], self.decoder.getNewStrings(3+10+2+4));
+		self.assertEqual(['xxxx'], self.decoder.getNewStrings(3+10+2+4));
 	}
 );
 
@@ -373,34 +379,42 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'NewlineTests').methods(
 
 	function setUp(self) {
 		self.dummy = {responseText: ''};
-		self.decoder = new cw.net.ResponseTextNewlineDecoder(self.dummy);
+		self.decoder = new cw.net.ResponseTextNewlineDecoder(self.dummy, 1024*1024);
+	},
+
+	function getNewAndAssertOk_(self) {
+		var _ = self.decoder.getNewStrings();
+		var strings = _[0];
+		var status = _[1];
+		self.assertEqual(OK, status);
+		return strings;
 	},
 
 	function test_growingResponseText(self) {
-		self.assertArraysEqual([], self.decoder.getNewStrings());
+		self.assertEqual([], self.getNewAndAssertOk_());
 
 		self.dummy.responseText += 'hello\nworld';
-		self.assertArraysEqual(['hello'], self.decoder.getNewStrings());
+		self.assertEqual(['hello'], self.getNewAndAssertOk_());
 
 		self.dummy.responseText += '\n';
-		self.assertArraysEqual(['world'], self.decoder.getNewStrings());
+		self.assertEqual(['world'], self.getNewAndAssertOk_());
 
 		self.dummy.responseText += 'full\npartial';
-		self.assertArraysEqual(['full'], self.decoder.getNewStrings());
+		self.assertEqual(['full'], self.getNewAndAssertOk_());
 
 		self.dummy.responseText += 'done\n';
-		self.assertArraysEqual(['partialdone'], self.decoder.getNewStrings());
+		self.assertEqual(['partialdone'], self.getNewAndAssertOk_());
 
-		self.assertArraysEqual([], self.decoder.getNewStrings());
+		self.assertEqual([], self.getNewAndAssertOk_());
 
 		self.dummy.responseText += '\n';
-		self.assertArraysEqual([''], self.decoder.getNewStrings());
+		self.assertEqual([''], self.getNewAndAssertOk_());
 
 		self.dummy.responseText += '\n\npartial';
-		self.assertArraysEqual(['', ''], self.decoder.getNewStrings());
+		self.assertEqual(['', ''], self.getNewAndAssertOk_());
 
 		self.dummy.responseText += 'done\n\n';
-		self.assertArraysEqual(['partialdone', ''], self.decoder.getNewStrings());
+		self.assertEqual(['partialdone', ''], self.getNewAndAssertOk_());
 	},
 
 	/**
@@ -408,23 +422,76 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'NewlineTests').methods(
 	 */
 	function test_carriageReturnStripped(self) {
 		self.dummy.responseText += 'hello\r\nworld';
-		self.assertArraysEqual(['hello'], self.decoder.getNewStrings());
+		self.assertEqual(['hello'], self.getNewAndAssertOk_());
 
 		// Mixed \r\n and \n is allowed.
 		self.dummy.responseText += '\n';
-		self.assertArraysEqual(['world'], self.decoder.getNewStrings());
+		self.assertEqual(['world'], self.getNewAndAssertOk_());
 
 		self.dummy.responseText += '\r';
-		self.assertArraysEqual([], self.decoder.getNewStrings());
+		self.assertEqual([], self.getNewAndAssertOk_());
 
 		self.dummy.responseText += '\n';
-		self.assertArraysEqual([''], self.decoder.getNewStrings());
+		self.assertEqual([''], self.getNewAndAssertOk_());
 
 		self.dummy.responseText += 'again\r';
-		self.assertArraysEqual([], self.decoder.getNewStrings());
+		self.assertEqual([], self.getNewAndAssertOk_());
 
 		self.dummy.responseText += '\r\n\n';
-		self.assertArraysEqual(['again\r', ''], self.decoder.getNewStrings());
+		self.assertEqual(['again\r', ''], self.getNewAndAssertOk_());
+	},
+
+	/**
+	 * If a string is longer than the max length, getNewStrings returns
+	 * a cw.net.DecodeStatus.TOO_LONG status.
+	 */
+	function test_overMaxLength(self) {
+		self.decoder = new cw.net.ResponseTextNewlineDecoder(self.dummy, 4);
+		self.dummy.responseText += 'hell\nworld\n';
+		self.assertEqual([['hell'], TOO_LONG], self.decoder.getNewStrings());
+
+		// If we call it again, it just returns [], TOO_LONG
+		self.assertEqual([[], TOO_LONG], self.decoder.getNewStrings());
+	},
+
+	/**
+	 * The carriage return ("\r") does not count as part of the length of the string.
+	 */
+	function test_carriageReturnNotIncludedInLength(self) {
+		self.decoder = new cw.net.ResponseTextNewlineDecoder(self.dummy, 4);
+		self.dummy.responseText += 'hell\nworl\r\n';
+		self.assertEqual([['hell', 'worl'], OK], self.decoder.getNewStrings());
+	},
+
+	/**
+	 * If a string is unfinished but it could not possibly be <= maxLength_,
+	 * the decoder returns strings, TOO_LONG.
+	 */
+	function test_unfinishedStringTooLong(self) {
+		self.decoder = new cw.net.ResponseTextNewlineDecoder(self.dummy, 4);
+		self.dummy.responseText += 'hell\nsixchr';
+		self.assertEqual([['hell'], TOO_LONG], self.decoder.getNewStrings());
+
+		// If we call it again, it just returns [], TOO_LONG
+		self.assertEqual([[], TOO_LONG], self.decoder.getNewStrings());
+	},
+
+	/**
+	 * Like test_unfinishedStringTooLong, except test 1 character over the limit.
+	 * 1 extra character is OK because it could be a carriage return ("\r").
+	 */
+	function test_unfinishedStringAlmostTooLong(self) {
+		self.decoder = new cw.net.ResponseTextNewlineDecoder(self.dummy, 4);
+		self.dummy.responseText += 'hell\nfivec';
+		self.assertEqual([['hell'], OK], self.decoder.getNewStrings());
+
+		// Now that a newline is given, and no carriage return is stripped,
+		// it finally returns TOO_LONG.
+		self.dummy.responseText += '\n';
+		self.assertEqual([[], TOO_LONG], self.decoder.getNewStrings());
+
+		// If we call it again, it just returns [], TOO_LONG
+		self.assertEqual([[], TOO_LONG], self.decoder.getNewStrings());
 	}
 );
 

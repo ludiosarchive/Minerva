@@ -6,6 +6,7 @@
 goog.provide('cw.net.ParseError');
 goog.provide('cw.net.ResponseTextBencodeDecoder');
 goog.provide('cw.net.ResponseTextNewlineDecoder');
+goog.provide('cw.net.DecodeStatus');
 
 goog.require('cw.string');
 goog.require('cw.net.XHRLike');
@@ -23,6 +24,19 @@ cw.net.ParseError = function(msg) {
 };
 goog.inherits(cw.net.ParseError, goog.debug.Error);
 cw.net.ParseError.prototype.name = 'cw.net.ParseError';
+
+
+
+/**
+ * Status codes returned by {@code getNewString}.
+ * @enum {number}
+ */
+cw.net.DecodeStatus = {
+	OK: 1,
+	TOO_LONG: 2,
+	FRAME_CORRUPTION: 3
+};
+
 
 
 /**
@@ -123,6 +137,8 @@ cw.net.ResponseTextBencodeDecoder.prototype.setMaxLength_ = function(maxLength) 
 	this.maxLengthLen_ = String(maxLength).length;
 };
 
+// TODO: make getNewStrings below return a cw.net.DecodeStatus
+
 /**
  * Check for new data in {@code xObject.responseText} and return an array
  * of new strings.
@@ -176,7 +192,7 @@ cw.net.ResponseTextBencodeDecoder.prototype.getNewStrings = function(responseTex
 				// possibly-non-digits for maxLengthLen_ bytes.
 			}
 
-			var extractedLengthStr = text.substr(this.offset_, colon-this.offset_);
+			var extractedLengthStr = text.substr(this.offset_, colon - this.offset_);
 			// Accept only positive integers with no leading zero.
 			// TODO: maybe disable this check for long-time user agents with no problems
 			if(!cw.string.strictPositiveIntegerRe.test(extractedLengthStr)) {
@@ -256,28 +272,53 @@ cw.net.ResponseTextNewlineDecoder.prototype.knownLength_ = 0;
 cw.net.ResponseTextNewlineDecoder.prototype.offset_ = 0;
 
 /**
+ * Have we given up on decoding because we previously hit maxLength_
+ * and returned TOO_LONG?
+ * @type {boolean}
+ * @private
+ */
+cw.net.ResponseTextNewlineDecoder.prototype.failed_ = false;
+
+/**
  * Check for new data in {@code xObject.responseText} and return an array
  * of new strings.
  *
  * @param {?number=} responseTextLength Ignored.  For compatibility
  * 	with {@link cw.net.ResponseTextBencodeDecoder}.
+ *
+ * @return {!Array.<(!Array.<string>|!cw.net.DecodeStatus)>} an array of new strings
+ * // TODO: types for tuples
  */
 cw.net.ResponseTextNewlineDecoder.prototype.getNewStrings = function(responseTextLength) {
+	var strings = [];
+
+	if(this.failed_) {
+		return [strings, cw.net.DecodeStatus.TOO_LONG];
+	}
+
 	var nSearchPos = this.knownLength_;
 	var responseText = this.xObject.responseText;
+	this.knownLength_ = responseText.length;
 
-	var strings = [];
 	while(true) {
 		var nPos = responseText.indexOf('\n', nSearchPos);
 		if(nPos == -1) {
 			break;
 		}
-		var str = responseText.substr(this.offset_, nPos-this.offset_);
+		var str = responseText.substr(this.offset_, nPos - this.offset_);
 		str = str.replace(/\r$/, '');
+		if(str.length > this.maxLength_) {
+			this.failed_ = true;
+			return [strings, cw.net.DecodeStatus.TOO_LONG];
+		}
 		strings.push(str);
 		this.offset_ = nSearchPos = nPos + 1;
 	}
 
-	this.knownLength_ = responseText.length;
-	return strings;
+	if(this.knownLength_ - this.offset_ - 1 > this.maxLength_) { // -1 to allow for \r
+		this.failed_ = true;
+		return [strings, cw.net.DecodeStatus.TOO_LONG];
+	} else {
+		return [strings, cw.net.DecodeStatus.OK];
+	}
 };
