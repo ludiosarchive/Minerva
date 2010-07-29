@@ -241,13 +241,6 @@ cw.net.ResponseTextNewlineDecoder = function(xObject, maxLength) {
 };
 
 /**
- * @type {!goog.debug.Logger}
- * @protected
- */
-cw.net.ResponseTextNewlineDecoder.prototype.logger_ =
-	goog.debug.Logger.getLogger('cw.net.ResponseTextNewlineDecoder');
-
-/**
  * The last-known length of xObject's responseText.  We use this number
  * to avoid searching for a newline in places we've already searched.
  * @type {number}
