@@ -1217,6 +1217,12 @@ transportType, endpoint, becomePrimary) {
 	 */
 	this.s2cStreaming =
 		(this.transportType_ != cw.net.TransportType_.XHR_LONGPOLL);
+
+	/**
+	 * @type {function(): void}
+	 * @private
+	 */
+	this.boundTimedOut_ = goog.bind(this.timedOut_, this);
 };
 goog.inherits(cw.net.ClientTransport, goog.Disposable);
 
@@ -1246,6 +1252,13 @@ cw.net.ClientTransport.prototype.underlyingStartTime_ = null;
  * @private
  */
 cw.net.ClientTransport.prototype.underlyingStopTime_ = null;
+
+/**
+ * The ticket for the receive timeout, or null, if no timeout.
+ * @type {?number}
+ * @private
+ */
+cw.net.ClientTransport.prototype.recvTimeout_ = null;
 
 /**
  * Whether the underlying TCP connection or HTTP request has been made.
@@ -1542,11 +1555,18 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 /**
  * @private
  */
+cw.net.ClientTransport.prototype.recordTimeAndDispose_ = function() {
+	this.underlyingStopTime_ = goog.Timer.getTime(this.callQueue_.clock);
+	this.dispose();
+};
+
+/**
+ * @private
+ */
 cw.net.ClientTransport.prototype.httpResponseEnded_ = function() {
 	// TODO: is this really a good place to take the end time?  Keep
 	// in mind streaming XHR requests.
-	this.underlyingStopTime_ = goog.Timer.getTime(this.callQueue_.clock);
-	this.dispose();
+	this.recordTimeAndDispose_();
 };
 
 /**
@@ -1661,8 +1681,56 @@ cw.net.ClientTransport.prototype.flushBufferAsEncodedFrames_ = function() {
  */
 cw.net.ClientTransport.prototype.flashSocketTerminated_ = function() {
 	// We treat close/ioerror/securityerror all the same.
-	this.underlyingStopTime_ = goog.Timer.getTime(this.callQueue_.clock);
-	this.dispose();
+	this.recordTimeAndDispose_();
+};
+
+/**
+ * Called by a timer if the transport can't connect in time, or if it stops
+ * receiving bytes.
+ * @private
+ */
+cw.net.ClientTransport.prototype.timedOut_ = function() {
+	this.logger_.warning('Timed out due to lack of connection or no data being received.');
+	this.recordTimeAndDispose_();
+};
+
+/**
+ * @private
+ */
+cw.net.ClientTransport.prototype.clearRecvTimeout_ = function() {
+	if(this.recvTimeout_ != null) {
+		this.callQueue_.clock.clearTimeout(this.recvTimeout_);
+		this.recvTimeout_ = null;
+	}
+};
+
+/**
+ * @param {number} ms Milliseconds to set the receive timeout to.
+ * @private
+ */
+cw.net.ClientTransport.prototype.setRecvTimeout_ = function(ms) {
+	this.logger_.fine('Receive timeout set to ' + ms + ' ms.');
+	this.recvTimeout_ = this.callQueue_.clock.setTimeout(this.boundTimedOut_, ms);
+};
+
+/**
+ * Called by underlying_ when it connects or receives any bytes from the
+ * peer (even when it's not a full frame yet).
+ * @private
+ */
+cw.net.ClientTransport.prototype.peerStillAlive_ = function() {
+	this.clearRecvTimeout_();
+	if(this.transportType_ == cw.net.TransportType_.XHR_LONGPOLL) {
+		throw Error("NIY");
+	} else if(this.transportType_ == cw.net.TransportType_.FLASH_SOCKET) {
+		this.setRecvTimeout_(
+			cw.net.DEFAULT_RTT_GUESS / 2 +
+			cw.net.MAX_SERVER_JANK +
+			cw.net.HEARTBEAT_INTERVAL);
+	} else {
+		throw Error("peerStillAlive_: Don't know what to do for this transportType: " +
+			this.transportType_);
+	}
 };
 
 /**
@@ -1672,11 +1740,22 @@ cw.net.ClientTransport.prototype.flashSocketTerminated_ = function() {
 cw.net.ClientTransport.prototype.makeFlashConnection_ = function(frames) {
 	var endpoint = this.endpoint_;
 	this.underlying_ = new cw.net.FlashSocketConduit(this);
+	// TODO: pass a FlashSocketTracker to FlashSocketConduit's constructor;
+	// make it create the socket.
 	var socket = endpoint.tracker.createNew(this.underlying_);
 	this.underlying_.socket_ = socket;
 	this.underlyingStartTime_ = goog.Timer.getTime(this.callQueue_.clock);
 	this.underlying_.connect(endpoint.host, endpoint.port);
 	this.underlying_.writeFrames(frames);
+
+	// Give it 1 RTT for a DNS request, and 1 RTT for the TCP connection.
+	// This is optimistic, but our DEFAULT_RTT_GUESS is fairly high. Also,
+	// the DNS name might be already resolved.  Keep in mind that if this
+	// timeout is high enough (probably > 20000), then Flash itself might
+	// timeout with onsecurityerror.
+	this.setRecvTimeout_(
+		cw.net.DEFAULT_RTT_GUESS * 2 +
+		cw.net.MAX_SERVER_JANK);
 };
 
 /**
@@ -1796,7 +1875,9 @@ cw.net.ClientTransport.prototype.disposeInternal = function() {
 
 	this.toSendFrames_ = [];
 
-	// for all transportType_'s
+	this.clearRecvTimeout_();
+
+	// transportType_ doesn't matter; they're all Disposable.
 	if(this.underlying_) {
 		this.underlying_.dispose();
 	}
@@ -2102,6 +2183,8 @@ cw.net.FlashSocketConduit.prototype.connect = function(host, port) {
 
 cw.net.FlashSocketConduit.prototype.onconnect = function() {
 	this.logger_.info('onconnect');
+	this.clientTransport_.peerStillAlive_();
+
 	var frames = this.bufferedFrames_;
 	this.bufferedFrames_ = null;
 	if(frames.length) {
@@ -2136,11 +2219,13 @@ cw.net.FlashSocketConduit.prototype.onsecurityerror = function(errorText) {
  * @param {!Array.<string>} frames
  */
 cw.net.FlashSocketConduit.prototype.onframes = function(frames) {
+	this.clientTransport_.peerStillAlive_();
 	this.clientTransport_.framesReceived_(frames);
 };
 
 cw.net.FlashSocketConduit.prototype.onstillreceiving = function() {
 	this.logger_.finest("onstillreceiving");
+	this.clientTransport_.peerStillAlive_();
 };
 
 cw.net.FlashSocketConduit.prototype.disposeInternal = function() {
