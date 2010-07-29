@@ -173,11 +173,18 @@ class DummyRequest(_TwistedDummyRequest):
 	def __init__(self, *args, **kwargs):
 		_TwistedDummyRequest.__init__(self, *args, **kwargs)
 
+		self.startedWriting = False
+
 		# This is needed because _BaseHTTPTransport does
 		#     self.request.channel.transport.setTcpNoDelay(True)
 		self.channel = DummyChannel()
 
 		self.received_cookies = {}
+
+
+	def write(self, data):
+		self.startedWriting = True
+		_TwistedDummyRequest.write(self, data)
 
 
 	def setHeader(self, name, value):

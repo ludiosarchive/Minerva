@@ -1006,7 +1006,7 @@ class ServerTransport(object):
 		'transport', '_maxReceiveBytes', '_maxOpenTime', '_callingStream',
 		'_lastSackSeenByClient', '_streamingResponse', '_needPaddingBytes',
 		'_wantsStrings', '_waitingFrames', '_clock', '_maxOpenDc',
-		'_heartbeatInterval', '_heartbeatDc', '_wrotePreamble')
+		'_heartbeatInterval', '_heartbeatDc')
 	# TODO: ~5 attributes above only for an HTTPSocketTransport, to save memory
 
 	maxLength = 1024*1024
@@ -1029,7 +1029,6 @@ class ServerTransport(object):
 		self._streamingResponse = \
 		self._callingStream = \
 		self._sackDirty = \
-		self._wrotePreamble = \
 		self._paused = False
 		# _streamingResponse is False by default because client may fail
 		# to send a proper Hello frame in their HTTP request, and we don't
@@ -1084,14 +1083,12 @@ class ServerTransport(object):
 			# Because we're sending something, reset the heartbeat DelayedCall.
 			self._resetHeartbeat()
 
-			if self._mode == HTTP and not self._wrotePreamble: # TODO: use request.startedWriting instead?
+			if self._mode == HTTP and not self.writable.startedWriting:
 				encodedPreamble = self._encodeFrame(HTTP_RESPONSE_PREAMBLE)
 				if self._terminating:
 					headers = self.writable.responseHeaders._rawHeaders
 					headers['content-length'] = [str(len(encodedPreamble) + len(toSend))]
-
 				self.writable.write(encodedPreamble)
-				self._wrotePreamble = True
 
 			self.writable.write(toSend)
 
