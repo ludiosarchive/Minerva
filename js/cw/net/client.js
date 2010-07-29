@@ -1589,8 +1589,9 @@ cw.net.ClientTransport.prototype.clearRecvTimeout_ = function() {
  */
 cw.net.ClientTransport.prototype.setRecvTimeout_ = function(ms) {
 	this.clearRecvTimeout_();
+	ms = Math.round(ms);
 	this.recvTimeout_ = this.callQueue_.clock.setTimeout(
-		this.boundTimedOut_, Math.round(ms));
+		this.boundTimedOut_, ms);
 	this.logger_.fine('Receive timeout set to ' + ms + ' ms.');
 };
 
