@@ -1116,7 +1116,7 @@ class ServerTransport(object):
 
 
 	def _writeTerminationFrames(self):
-		if self.isAttached():
+		if self._stream is not None: # isAttached?
 			# Always write a SackFrame to avoid a complicated scenario where
 			# client creates a useless primary transport that is closed quickly.
 			# It can happen like this:
@@ -1220,7 +1220,7 @@ class ServerTransport(object):
 
 	def _exceededMaxOpenTime(self):
 		# Note: We might still be authenticating.
-		if self.isAttached():
+		if self._stream is not None: # isAttached?
 			self.closeGently()
 		else:
 			# TODO: cancel the Deferred returned by firewall.checkTransport(...),
