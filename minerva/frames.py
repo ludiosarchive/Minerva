@@ -31,7 +31,7 @@ class HelloFrameArguments(object):
 	needPaddingBytes = 'pad'
 	maxReceiveBytes = 'maxb'
 	maxOpenTime = 'maxt'
-	heartbeatInterval = 'hearti'
+	maxInactivity = 'maxia'
 	useMyTcpAcks = 'tcpack'
 	succeedsTransport = 'eeds'
 	sack = 'sack'
@@ -51,7 +51,7 @@ Hello_streamingResponse = _hfa.streamingResponse
 Hello_needPaddingBytes = _hfa.needPaddingBytes
 Hello_maxReceiveBytes = _hfa.maxReceiveBytes
 Hello_maxOpenTime = _hfa.maxOpenTime
-Hello_heartbeatInterval = _hfa.heartbeatInterval
+Hello_maxInactivity = _hfa.maxInactivity
 Hello_useMyTcpAcks = _hfa.useMyTcpAcks
 Hello_succeedsTransport = _hfa.succeedsTransport
 Hello_sack = _hfa.sack
@@ -194,13 +194,13 @@ def helloDataToHelloFrame(helloData):
 	except (TypeError, ValueError):
 		raise InvalidHello("bad maxOpenTime")
 
-	# heartbeatInterval is required.  If 0, no heartbeat.
+	# maxInactivity is required.  If 0, no heartbeat.
 	# Time is in seconds.
 	try:
-		obj.heartbeatInterval = ensureNonNegIntLimit(
-			helloData[Hello_heartbeatInterval], 600) # e: ValueError, TypeError
+		obj.maxInactivity = ensureNonNegIntLimit(
+			helloData[Hello_maxInactivity], 600) # e: ValueError, TypeError
 	except (KeyError, TypeError, ValueError):
-		raise InvalidHello("bad heartbeatInterval")
+		raise InvalidHello("bad maxInactivity")
 
 	return HelloFrame(obj)
 

@@ -1006,7 +1006,7 @@ class ServerTransport(object):
 		'transport', '_maxReceiveBytes', '_maxOpenTime', '_callingStream',
 		'_lastSackSeenByClient', '_streamingResponse', '_needPaddingBytes',
 		'_wantsStrings', '_waitingFrames', '_clock', '_maxOpenDc',
-		'_heartbeatInterval', '_heartbeatDc')
+		'_maxInactivity', '_heartbeatDc')
 	# TODO: ~5 attributes above only for an HTTPSocketTransport, to save memory
 
 	maxLength = 1024*1024
@@ -1036,7 +1036,7 @@ class ServerTransport(object):
 
 		self._maxOpenDc = \
 		self._heartbeatDc = \
-		self._heartbeatInterval = \
+		self._maxInactivity = \
 		self._stream = \
 		self._producer = \
 		self.writable = \
@@ -1079,7 +1079,6 @@ class ServerTransport(object):
 		if toSend:
 			self._toSend = ''
 			# Heartbeats are only sent when there's no S2C activity;
-			# heartbeatInterval really means "maximum inactivity time".
 			# Because we're sending something, reset the heartbeat DelayedCall.
 			self._resetHeartbeat()
 
@@ -1252,9 +1251,9 @@ class ServerTransport(object):
 		self._cancelHeartbeatDc()
 
 		# Could be None if no HelloFrame, or 0 if HelloFrame received.
-		if self._heartbeatInterval:
+		if self._maxInactivity:
 			self._heartbeatDc = self._clock.callLater(
-				self._heartbeatInterval, self._writeHeartbeat)
+				self._maxInactivity, self._writeHeartbeat)
 
 
 	def _writeInitialFrames(self, stream, requestNewStream):
@@ -1290,7 +1289,7 @@ class ServerTransport(object):
 		self.credentialsData = hello.credentialsData
 		self.transportNumber = hello.transportNumber
 		self._streamingResponse = hello.streamingResponse
-		self._heartbeatInterval = hello.heartbeatInterval
+		self._maxInactivity = hello.maxInactivity
 		self._lastSackSeenByClient = hello.lastSackSeenByClient
 		self._wantsStrings = hello.wantsStrings()
 

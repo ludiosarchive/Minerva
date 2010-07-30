@@ -76,7 +76,7 @@ cw.net.HelloProperty_ = {
 	needPaddingBytes: 'pad',
 	maxReceiveBytes: 'maxb',
 	maxOpenTime: 'maxt',
-	heartbeatInterval: 'hearti',
+	maxInactivity: 'maxia',
 	useMyTcpAcks: 'tcpack',
 	succeedsTransport: 'eeds',
 	sack: 'sack',
@@ -258,14 +258,14 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 		obj.maxOpenTime = null;
 	}
 
-	// heartbeatInterval is required.  If 0, no heartbeat.
+	// maxInactivity is required.  If 0, no heartbeat.
 	// Time is in seconds.
-	var heartbeatInterval = cw.checktype.ensureIntInRange(
-		helloData.get(HP.heartbeatInterval, -1), 0, 600);
-	if(heartbeatInterval == null) {
-		throw new cw.net.InvalidHello("bad heartbeatInterval");
+	var maxInactivity = cw.checktype.ensureIntInRange(
+		helloData.get(HP.maxInactivity, -1), 0, 600);
+	if(maxInactivity == null) {
+		throw new cw.net.InvalidHello("bad maxInactivity");
 	}
-	obj.heartbeatInterval = heartbeatInterval;
+	obj.maxInactivity = maxInactivity;
 
 	return obj;
 };
@@ -309,7 +309,7 @@ cw.net.HelloFrame = function() {
 	/** @type {?number} */
 	this.maxOpenTime;
 	/** @type {?number} */
-	this.heartbeatInterval;
+	this.maxInactivity;
 	/** @type {boolean} */
 	this.useMyTcpAcks;
 	/** @type {undefined|?number} */
@@ -395,7 +395,7 @@ cw.net.HelloFrame.makePropertyArray_ = function(helloFrame) {
 		helloFrame.needPaddingBytes,
 		helloFrame.maxReceiveBytes,
 		helloFrame.maxOpenTime,
-		helloFrame.heartbeatInterval,
+		helloFrame.maxInactivity,
 		helloFrame.useMyTcpAcks,
 		helloFrame.succeedsTransport,
 		helloFrame.sack,
@@ -422,7 +422,7 @@ cw.net.HelloFrame.prototype.encodeToPieces = function(sb) {
 	compact[HP.needPaddingBytes] = this.needPaddingBytes;
 	compact[HP.maxReceiveBytes] = this.maxReceiveBytes;
 	compact[HP.maxOpenTime] = this.maxOpenTime;
-	compact[HP.heartbeatInterval] = this.heartbeatInterval;
+	compact[HP.maxInactivity] = this.maxInactivity;
 	compact[HP.useMyTcpAcks] = this.useMyTcpAcks;
 	compact[HP.succeedsTransport] = this.succeedsTransport;
 

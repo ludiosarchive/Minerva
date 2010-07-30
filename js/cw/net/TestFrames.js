@@ -75,7 +75,7 @@ cw.net.TestFrames.makeHelloFrame_ = function(extra, noDefaults) {
 			'streamingResponse': 1,
 			'maxReceiveBytes': Math.pow(2, 30),
 			'maxOpenTime': Math.pow(2, 30),
-			'heartbeatInterval': 0,
+			'maxInactivity': 0,
 			'lastSackSeenByClient': SK(-1, [])
 		});
 	}
@@ -252,7 +252,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 			'streamingResponse': concat([2, 3], listWithout(genericBad, [true, false])),
 			'maxReceiveBytes': genericBad,
 			'maxOpenTime': genericBad,
-			'heartbeatInterval': [null, 0.5, 1.5, 601],
+			'maxInactivity': [null, 0.5, 1.5, 601],
 			'credentialsData': concat([rep('x', 256), '\t', '\ucccc'], listWithout(genericBad, [""])),
 			// We can pass either a string or a cw.net.SACK
 			'sack': ['', '|', SK(-2, []), SK(-1, [-2])],
@@ -309,7 +309,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 				'requestNewStream': true,
 				'streamingResponse': true,
 				'needPaddingBytes': 0,
-				'heartbeatInterval': 1,
+				'maxInactivity': 1,
 				'sack': SK(-1, [])}));
 		var encodedDecodedHello = HelloFrame.decode(hello.encode());
 		self.assertEqual(hello, encodedDecodedHello);

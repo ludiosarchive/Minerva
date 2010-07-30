@@ -100,7 +100,7 @@ def _makeHelloFrame(extra={}):
 		streamingResponse=1,
 		maxReceiveBytes=2**30,
 		maxOpenTime=2**30,
-		heartbeatInterval=0,
+		maxInactivity=0,
 		lastSackSeenByClient=SACK(-1, ()))
 	for k, v in extra.iteritems():
 		if v == DeleteProperty:
@@ -2204,7 +2204,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		Heartbeats are sent over an authenticated transport.
 		"""
-		frame0 = _makeHelloFrame(dict(heartbeatInterval=2))
+		frame0 = _makeHelloFrame(dict(maxInactivity=2))
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		self.assertEqual([StreamCreatedFrame()], transport.getNew())
@@ -2220,7 +2220,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		"""
 		Heartbeats are sent over an still-authenticating transport.
 		"""
-		frame0 = _makeHelloFrame(dict(heartbeatInterval=2))
+		frame0 = _makeHelloFrame(dict(maxInactivity=2))
 		transport = self._makeTransport(firewallActionTime=1000)
 		transport.sendFrames([frame0])
 		self.assertEqual([], transport.getNew())
@@ -2237,7 +2237,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		Any S2C writes reset the heartbeat timer.
 		"""
 		self._resetStreamTracker(realObjects=True)
-		frame0 = _makeHelloFrame(dict(succeedsTransport=None, heartbeatInterval=2))
+		frame0 = _makeHelloFrame(dict(succeedsTransport=None, maxInactivity=2))
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		self.assertEqual([StreamCreatedFrame()], transport.getNew())
@@ -2261,7 +2261,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		failure.
 		"""
 		self._resetStreamTracker(realObjects=True)
-		frame0 = _makeHelloFrame(dict(heartbeatInterval=2))
+		frame0 = _makeHelloFrame(dict(maxInactivity=2))
 		transport = self._makeTransport(rejectAll=True)
 		transport.sendFrames([frame0])
 		self.assertEqual([
@@ -2282,7 +2282,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 		L{ServerTransport.closeGently}.
 		"""
 		self._resetStreamTracker(realObjects=True)
-		frame0 = _makeHelloFrame(dict(heartbeatInterval=2))
+		frame0 = _makeHelloFrame(dict(maxInactivity=2))
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		self.assertEqual([StreamCreatedFrame()], transport.getNew())
