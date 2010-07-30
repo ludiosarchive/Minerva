@@ -14,6 +14,7 @@
  * 	- low latency (no excessive setTimeout(..., 0) )
  */
 
+goog.provide('cw.net.MAX_FRAME_LENGTH');
 goog.provide('cw.net.SocketEndpoint');
 goog.provide('cw.net.HttpEndpoint');
 goog.provide('cw.net.Endpoint');
@@ -207,6 +208,12 @@ cw.net.DEFAULT_DL_SPEED = 3 * 1024;
  */
 cw.net.MAX_SERVER_JANK = 3000;
 
+/**
+ * The maximum frame length we expect to receive, in bytes.
+ * @type {number}
+ * @const
+ */
+cw.net.MAX_FRAME_LENGTH = 1024 * 1024;
 
 
 /**
@@ -2319,6 +2326,13 @@ cw.net.XHRMaster = function(reqId, clientTransport, contentWindow) {
 goog.inherits(cw.net.XHRMaster, goog.Disposable);
 
 /**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.XHRMaster.prototype.logger_ =
+	goog.debug.Logger.getLogger('cw.net.XHRMaster');
+
+/**
  * Did we see a Content-Length header? (even if it was not a usable number)
  * @type {boolean}
  * @private
@@ -2350,9 +2364,15 @@ cw.net.XHRMaster.prototype.getReadyState = function() {
 
 /**
  * @param {!Array.<string>} frames
+ * @param {!cw.net.DecodeStatus} status
  * @private
  */
-cw.net.XHRMaster.prototype.onframes_ = function(frames) {
+cw.net.XHRMaster.prototype.onframes_ = function(frames, status) {
+	if(status != cw.net.DecodeStatus.OK) {
+		this.logger_.severe(
+			cw.repr.repr(this.reqId_) + ' got status != OK: ' + status +
+			'; XHRSlave should dispose soon.');
+	}
 	this.clientTransport_.peerStillAlive_();
 	this.clientTransport_.framesReceived_(frames);
 };
@@ -2437,9 +2457,10 @@ cw.net.XHRMasterTracker.prototype.createNew = function(clientTransport, contentW
 /**
  * @param {string} reqId
  * @param {!Array.<string>} frames
+ * @param {!cw.net.DecodeStatus} status
  * @private
  */
-cw.net.XHRMasterTracker.prototype.onframes_ = function(reqId, frames) {
+cw.net.XHRMasterTracker.prototype.onframes_ = function(reqId, frames, status) {
 	// Make a copy of the Array for two reasons:
 	// 1)	We don't want to keep an additional reference to the iframe's
 	// 		global object. (ClientTransport might keep the Array around,
@@ -2455,7 +2476,7 @@ cw.net.XHRMasterTracker.prototype.onframes_ = function(reqId, frames) {
 			"onframes_: no master for " + cw.repr.repr(reqId));
 		return;
 	}
-	master.onframes_(frames);
+	master.onframes_(frames, status);
 };
 
 /**
@@ -2465,7 +2486,9 @@ cw.net.XHRMasterTracker.prototype.onframes_ = function(reqId, frames) {
  * @private
  */
 cw.net.XHRMasterTracker.prototype.onreadystatechange_ = function(reqId, readyState, usefulHeaders) {
-	this.logger_.fine('readyState for ' + cw.repr.repr(reqId) + ' now ' + readyState);
+	if(readyState != 1) { // nobody cares about readyState 1
+		this.logger_.fine(cw.repr.repr(reqId) + ' readyState is ' + readyState);
+	}
 	var master = this.masters_[reqId];
 	if(!master) {
 		this.logger_.severe(

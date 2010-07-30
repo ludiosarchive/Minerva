@@ -15,6 +15,10 @@ goog.require('goog.events');
 goog.require('goog.object');
 goog.require('goog.net.XhrIo');
 goog.require('goog.net.EventType');
+goog.require('goog.userAgent');
+goog.require('cw.net.DecodeStatus');
+goog.require('cw.net.ResponseTextNewlineDecoder');
+goog.require('cw.net.MAX_FRAME_LENGTH');
 
 /**
  * @param {!cw.net.XHRSlaveTracker} tracker
@@ -44,6 +48,12 @@ goog.inherits(cw.net.XHRSlave, goog.Disposable);
 cw.net.XHRSlave.prototype.underlying_ = null;
 
 /**
+ * @type {!cw.net.ResponseTextNewlineDecoder}
+ * @private
+ */
+cw.net.XHRSlave.prototype.decoder_;
+
+/**
  * @type {number}
  * @private
  */
@@ -52,19 +62,22 @@ cw.net.XHRSlave.prototype.readyState_ = -1;
 /**
  * @private
  */
-cw.net.XHRSlave.prototype.httpResponseReceived_ = function() {
-	var responseText = this.underlying_.getResponseText();
-	//parent['__childIframeLogger'].fine(
-	//	'XHRSlave.httpResponseReceived_ with ' + responseText.length + ' chars.');
-
-	// Proxies might convert \n to \r\n, so convert terminators if necessary.
-	if(responseText.indexOf('\r\n') != -1) {
-		responseText = responseText.replace(/\r\n/g, '\n');
+cw.net.XHRSlave.prototype.decodeNewStrings_ = function() {
+	var _ = this.decoder_.getNewStrings();
+	var frames = _[0];
+	var status = _[1];
+	goog.global.parent['__XHRMaster_onframes'](this.reqId_, frames, status);
+	if(status != cw.net.DecodeStatus.OK) {
+		this.dispose();
 	}
-	var frames = responseText.split('\n');
-	var last = frames.pop();
-	// TODO: warn parent about incomplete frame `last`, if non-empty
-	goog.global.parent['__XHRMaster_onframes'](this.reqId_, frames);
+};
+
+/**
+ * @private
+ */
+cw.net.XHRSlave.prototype.httpResponseReceived_ = function() {
+	// TODO: warn parent about incomplete frame at end, if one exists.
+	this.decodeNewStrings_();
 	// The above onframes call may have synchronously disposed us.
 	if(!this.isDisposed()) {
 		goog.global.parent['__XHRMaster_oncomplete'](this.reqId_);
@@ -91,9 +104,21 @@ cw.net.XHRSlave.prototype.getUsefulHeaders_ = function() {
  */
 cw.net.XHRSlave.prototype.readyStateChangeFired_ = function() {
 	this.readyState_ = this.underlying_.getReadyState();
+
+	// Note: In most browsers, headers are available at readyState >= 2.
+	// In Opera 10.70, headers are available at readyState >= 3.
+
+	// TODO: grab headers only once.
 	var usefulHeaders = this.readyState_ >= 2 ? this.getUsefulHeaders_() : {};
 	goog.global.parent['__XHRMaster_onreadystatechange'](
 		this.reqId_, this.readyState_, usefulHeaders);
+
+	// IE's responseText is always "" before the request is done, so don't
+	// bother in IE.  In other browsers, always try to pull frames out, even
+	// for non-streaming transports.
+	if(!goog.userAgent.IE && this.readyState_ == 3) {
+		this.decodeNewStrings_();
+	}
 };
 
 /**
@@ -118,10 +143,17 @@ cw.net.XHRSlave.prototype.makeRequest = function(url, method, payload) {
 	// We use "application/octet-stream" instead of
 	// "application/x-www-form-urlencoded;charset=utf-8" because we don't
 	// want Minerva server or intermediaries to try to urldecode the POST body.
+
+	// MAX_FRAME_LENGTH is in bytes, not chars, but it's okay because
+	// we don't expect non-ASCII from the server.
+	this.decoder_ = new cw.net.ResponseTextNewlineDecoder(
+		/** @type {!XMLHttpRequest} */ (this.underlying_.xhr_),
+		cw.net.MAX_FRAME_LENGTH);
 };
 
 cw.net.XHRSlave.prototype.disposeInternal = function() {
 	//parent['__childIframeLogger'].fine('XHRSlave.disposeInternal.');
+	delete this.decoder_;
 	if(this.underlying_) {
 		this.underlying_.dispose();
 	}
