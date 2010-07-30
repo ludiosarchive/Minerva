@@ -1680,6 +1680,9 @@ cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
 	// Give it 1 RTT for a DNS request, plus 3 or 1 RTTs for the connect,
 	// plus half an RTT for the request close, plus two server janks,
 	// plus the actual duration of the request.
+	//
+	// Note: we assume that the HTTP response headers are small enough
+	// to not stall even a slow connection.
 	this.setRecvTimeout_(
 		cw.net.DEFAULT_RTT_GUESS * (1.5 + connectRTTs) +
 		cw.net.MAX_SERVER_JANK * 2 +
