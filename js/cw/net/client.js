@@ -1609,8 +1609,9 @@ cw.net.ClientTransport.prototype.setRecvTimeout_ = function(ms) {
  */
 cw.net.ClientTransport.prototype.contentLengthReceived_ = function(contentLength) {
 	this.logger_.fine('Got Content-Length: ' + contentLength);
-	// Only adjust the timeout for non-streaming HTTP, because only for
-	// non-streaming do we not have meaningful feedback as we download.
+	// Only adjust the timeout for XHR_LONGPOLL.  For all other transports,
+	// we have proper feedback as we receive data, and can rely on the timeout
+	// set by peerStillAlive_.
 	if(this.transportType_ == cw.net.TransportType_.XHR_LONGPOLL) {
 		this.setRecvTimeout_(
 			cw.net.MAX_SERVER_JANK +
