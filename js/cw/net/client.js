@@ -1629,7 +1629,9 @@ cw.net.ClientTransport.prototype.peerStillAlive_ = function() {
 		// Ignore peerStillAlive_ for XHR_LONGPOLL because peerStillAlive_
 		// events for it are unreliable: it might only be fired once, even
 		// as it continues downloading.
-	} else if(this.transportType_ == cw.net.TransportType_.FLASH_SOCKET) {
+	} else if(
+	this.transportType_ == cw.net.TransportType_.FLASH_SOCKET ||
+	this.transportType_ == cw.net.TransportType_.XHR_STREAM) {
 		this.setRecvTimeout_(
 			cw.net.DEFAULT_RTT_GUESS / 2 +
 			cw.net.MAX_SERVER_JANK +
@@ -1710,7 +1712,7 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 	hello.maxReceiveBytes = 300000;
 	hello.maxOpenTime = Math.floor(cw.net.DEFAULT_HTTP_DURATION / 1000);
 	hello.heartbeatInterval =
-		this.isHttpTransport_() ? 0 : Math.floor(cw.net.HEARTBEAT_INTERVAL / 1000);
+		this.s2cStreaming ? Math.floor(cw.net.HEARTBEAT_INTERVAL / 1000) : 0;
 	hello.useMyTcpAcks = false;
 	if(this.becomePrimary_) {
 		hello.succeedsTransport = null;
