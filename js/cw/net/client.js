@@ -1843,7 +1843,7 @@ cw.net.ClientTransport.prototype.flush_ = function() {
 			this.getDescription_() + ' SEND ' + cw.repr.repr(frame));
 	}
 
-	if(this.transportType_ == cw.net.TransportType_.XHR_LONGPOLL) {
+	if(this.isHttpTransport_()) {
 		var payload = this.flushBufferAsHttpPayload_();
 		this.makeHttpRequest_(payload);
 	} else if(this.transportType_ == cw.net.TransportType_.FLASH_SOCKET) {
