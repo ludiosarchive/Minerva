@@ -1407,8 +1407,8 @@ cw.net.ClientTransport.prototype.ensurePreambleIfHttpAndFirstFrame_ = function(f
 	if(this.framesDecoded_ == 1 &&
 	!frame.equals(cw.net.HTTP_RESPONSE_PREAMBLE) &&
 	this.isHttpTransport_()) {
-		this.logger_.warning("Closing soon because got bad preamble: " +
-			cw.repr.repr(frame));
+		this.logger_.warning(this.getDescription_() + " is closing soon because " +
+			"got bad preamble: " + cw.repr.repr(frame));
 		// No penalty because we want to treat this just like "cannot connect to peer".
 		return true;
 	}
@@ -1463,7 +1463,8 @@ cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedString
 			bunchedStrings.push([this.peerSeqNum_, frame.string]);
 		} else if(frame instanceof cw.net.SackFrame) {
 			if(this.stream_.sackReceived_(frame.sack)) {
-				this.logger_.warning("Closing soon because got bad SackFrame");
+				this.logger_.warning(this.getDescription_() +
+					" is closing soon because got bad SackFrame");
 				this.hadProblems_ = true;
 				return true;
 			}
@@ -1472,7 +1473,8 @@ cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedString
 		} else if(frame instanceof cw.net.StreamStatusFrame) {
 			this.stream_.streamStatusReceived_(frame.lastSackSeen);
 		} else if(frame instanceof cw.net.YouCloseItFrame) {
-			this.logger_.finest("Closing soon because got YouCloseItFrame");
+			this.logger_.finest(this.getDescription_() +
+				" is closing soon because got YouCloseItFrame");
 			return true;
 		} else if(frame instanceof cw.net.TransportKillFrame) {
 			this.hadProblems_ = true;
@@ -1483,7 +1485,8 @@ cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedString
 			}
 			// No penalty for frame_corruption, rwin_overflow, or
 			// invalid_frame_type_or_arguments
-			this.logger_.finest("Closing soon because got " + cw.repr.repr(frame));
+			this.logger_.finest(this.getDescription_() +
+				" is closing soon because got " + cw.repr.repr(frame));
 			return true;
 		} else if(frame instanceof cw.net.CommentFrame) {
 			// Ignore it
@@ -1501,15 +1504,16 @@ cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedString
 				// will dispose all transports, but we'll dispose ourselves anyway.
 				return true;
 			} else {
-				throw Error("Unexpected state in framesReceived_.");
+				throw Error(this.getDescription_() +
+					" had unexpected state in framesReceived_.");
 			}
 		}
 	} catch(e) {
 		if(!(e instanceof cw.net.InvalidFrame)) {
 			throw e;
 		}
-		this.logger_.warning("Closing soon because got InvalidFrame: " +
-			cw.repr.repr(frameStr));
+		this.logger_.warning(this.getDescription_() +
+			" is closing soon because got InvalidFrame: " + cw.repr.repr(frameStr));
 		// No penalty because this cause is almost certainly
 		// due to corruption by intermediary.
 		this.hadProblems_ = true;
@@ -1575,7 +1579,8 @@ cw.net.ClientTransport.prototype.recordTimeAndDispose_ = function() {
  * @private
  */
 cw.net.ClientTransport.prototype.timedOut_ = function() {
-	this.logger_.warning('Timed out due to lack of connection or no data being received.');
+	this.logger_.warning(this.getDescription_() +
+		" timed out due to lack of connection or no data being received.");
 	this.recordTimeAndDispose_();
 };
 
@@ -1598,7 +1603,7 @@ cw.net.ClientTransport.prototype.setRecvTimeout_ = function(ms) {
 	ms = Math.round(ms);
 	this.recvTimeout_ = this.callQueue_.clock.setTimeout(
 		this.boundTimedOut_, ms);
-	this.logger_.fine('Receive timeout set to ' + ms + ' ms.');
+	this.logger_.fine(this.getDescription_() + "'s receive timeout set to " + ms + " ms.");
 };
 
 /**
@@ -1608,7 +1613,7 @@ cw.net.ClientTransport.prototype.setRecvTimeout_ = function(ms) {
  * @private
  */
 cw.net.ClientTransport.prototype.contentLengthReceived_ = function(contentLength) {
-	this.logger_.fine('Got Content-Length: ' + contentLength);
+	this.logger_.fine(this.getDescription_() + " got Content-Length: " + contentLength);
 	// Only adjust the timeout for XHR_LONGPOLL.  For all other transports,
 	// we have proper feedback as we receive data, and can rely on the timeout
 	// set by peerStillAlive_.
@@ -1827,8 +1832,8 @@ cw.net.ClientTransport.prototype.flush_ = function() {
 	}
 
 	if(this.spinning_) {
-		this.logger_.finest(
-			"flush_: Returning because spinning right now.");
+		this.logger_.finest(this.getDescription_() +
+			" flush_: Returning because spinning right now.");
 		return;
 	}
 
@@ -1920,8 +1925,7 @@ cw.net.ClientTransport.prototype.writeStrings_ = function(queue, start) {
  * @private
  */
 cw.net.ClientTransport.prototype.disposeInternal = function() {
-	this.logger_.info(
-		this.getDescription_() + " in disposeInternal.");
+	this.logger_.info(this.getDescription_() + " in disposeInternal.");
 
 	cw.net.ClientTransport.superClass_.disposeInternal.call(this);
 
@@ -1960,7 +1964,7 @@ cw.net.ClientTransport.prototype.abortToStopSpinner_ = function() {
  * @private
  */
 cw.net.ClientTransport.prototype.causedRwinOverflow_ = function() {
-	this.logger_.severe("Peer caused rwin overflow.");
+	this.logger_.severe(this.getDescription_() + "'s peer caused rwin overflow.");
 	this.dispose();
 };
 
@@ -2388,6 +2392,11 @@ cw.net.XHRMaster.prototype.onframes_ = function(frames, status) {
  * @private
  */
 cw.net.XHRMaster.prototype.onreadystatechange_ = function(readyState, usefulHeaders) {
+	if(readyState != 1) { // nobody cares about readyState 1
+		this.logger_.fine(this.clientTransport_.getDescription_() +
+			"'s XHR's readyState is " + readyState);
+	}
+
 	this.readyState_ = readyState;
 	// readyState 1 does not indicate anything useful.
 	if(this.readyState_ >= 2) {
@@ -2491,9 +2500,6 @@ cw.net.XHRMasterTracker.prototype.onframes_ = function(reqId, frames, status) {
  * @private
  */
 cw.net.XHRMasterTracker.prototype.onreadystatechange_ = function(reqId, readyState, usefulHeaders) {
-	if(readyState != 1) { // nobody cares about readyState 1
-		this.logger_.fine(cw.repr.repr(reqId) + ' readyState is ' + readyState);
-	}
 	var master = this.masters_[reqId];
 	if(!master) {
 		this.logger_.severe(
