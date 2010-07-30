@@ -1586,7 +1586,6 @@ cw.net.ClientTransport.prototype.clearRecvTimeout_ = function() {
 	if(this.recvTimeout_ != null) {
 		this.callQueue_.clock.clearTimeout(this.recvTimeout_);
 		this.recvTimeout_ = null;
-		this.logger_.fine('Receive timeout cleared.');
 	}
 };
 
