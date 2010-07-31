@@ -19,6 +19,8 @@ goog.provide('cw.net.SocketEndpoint');
 goog.provide('cw.net.HttpEndpoint');
 goog.provide('cw.net.Endpoint');
 goog.provide('cw.net.IMinervaProtocol');
+goog.provide('cw.net.HttpStreamingMode');
+goog.provide('cw.net.IStreamPolicy');
 goog.provide('cw.net.Stream');
 goog.provide('cw.net.EventType');
 goog.provide('cw.net.ClientTransport');
@@ -216,6 +218,55 @@ cw.net.MAX_SERVER_JANK = 3000;
 cw.net.MAX_FRAME_LENGTH = 1024 * 1024;
 
 
+
+/**
+ * The HTTP streaming mode.
+ * @enum {number}
+ * @private
+ */
+cw.net.HttpStreamingMode = {
+	NO_STREAMING: 1, // don't stream
+	STREAMING: 2, // do stream, with normal maxInactivity
+	STREAMING_PARANOID: 3 // do stream, with lower maxInactivity
+};
+
+
+
+/**
+ * An interface for an object that provides credentialsData, decides what kind
+ * of transport to use, and gets feedback about whether a transport is working.
+ * @interface
+ */
+cw.net.IStreamPolicy = function() {
+
+};
+
+/**
+ * @return {string} The credentialsData string that Minerva client should send
+ * 	as part of HelloFrame.
+ */
+cw.net.IStreamPolicy.prototype.getCredentialsData = function() {
+
+};
+
+/**
+ * @return {!cw.net.HttpStreamingMode}
+ */
+cw.net.IStreamPolicy.prototype.getHttpStreamingMode = function() {
+
+};
+
+
+
+/**
+ * @typedef { {
+ *	getCredentialsData: function(): string,
+ *	getHttpStreamingMode: function(): !cw.net.HttpStreamingMode} }
+ */
+cw.net.StreamPolicyObject;
+
+
+
 /**
  * An interface for string-based communication that abstracts
  * away the Comet logic and transports.
@@ -322,13 +373,12 @@ cw.net.StreamState_ = {
  * @param {!cw.eventual.CallQueue} callQueue
  * @param {!Object} protocol
  * @param {!cw.net.Endpoint} endpoint
- * @param {function(): string} makeCredentialsCallable Function that returns a
- * 	credentialsData string.
+ * @param {!cw.net.StreamPolicyObject} streamPolicy
  *
  * @constructor
  * @extends {goog.events.EventTarget}
  */
-cw.net.Stream = function(callQueue, protocol, endpoint, makeCredentialsCallable) {
+cw.net.Stream = function(callQueue, protocol, endpoint, streamPolicy) {
 	goog.events.EventTarget.call(this);
 
 	/**
@@ -352,10 +402,10 @@ cw.net.Stream = function(callQueue, protocol, endpoint, makeCredentialsCallable)
 	this.endpoint_ = endpoint;
 
 	/**
-	 * @type {function(): string}
+	 * @type {!cw.net.StreamPolicyObject}
 	 * @private
 	 */
-	this.makeCredentialsCallable_ = makeCredentialsCallable;
+	this.streamPolicy_ = streamPolicy;
 
 	/**
 	 * @type {!goog.structs.Set}
@@ -678,11 +728,17 @@ cw.net.Stream.prototype.sendStrings = function(strings) {
  * @return {!cw.net.TransportType_}
  */
 cw.net.Stream.prototype.getTransportType_ = function() {
+	var transportType;
 	if(this.endpoint_ instanceof cw.net.HttpEndpoint) {
-		var transportType = cw.net.TransportType_.XHR_LONGPOLL;
-		// TODO: sometimes XHR_STREAM
+		var httpStreamingMode = this.streamPolicy_.getHttpStreamingMode();
+		if(httpStreamingMode == cw.net.HttpStreamingMode.NO_STREAMING) {
+			transportType = cw.net.TransportType_.XHR_LONGPOLL;
+		} else {
+			transportType = cw.net.TransportType_.XHR_STREAM;
+		}
+		// TODO: lower maxInactivity for STREAMING_PARANOID.
 	} else if(this.endpoint_ instanceof cw.net.SocketEndpoint) {
-		var transportType = cw.net.TransportType_.FLASH_SOCKET;
+		transportType = cw.net.TransportType_.FLASH_SOCKET;
 	} else {
 		throw Error("Don't support endpoint " + cw.repr.repr(this.endpoint_));
 	}
@@ -980,16 +1036,23 @@ cw.net.Stream.prototype.reset = function(reasonString) {
 };
 
 /**
+ * @private
+ */
+cw.net.Stream.prototype.disposeAllTransports_ = function() {
+	var transports = this.transports_.getValues();
+	for(var i=0; i < transports.length; i++) {
+		transports[i].dispose();
+	}
+};
+
+/**
  * @param {string} reasonString
  * @param {boolean} applicationLevel
  * @private
  */
 cw.net.Stream.prototype.doReset_ = function(reasonString, applicationLevel) {
 	this.state_ = cw.net.StreamState_.DISCONNECTED;
-	var transports = this.transports_.getValues();
-	for(var i=0; i < transports.length; i++) {
-		transports[i].dispose();
-	}
+	this.disposeAllTransports_();
 	this.protocol_.streamReset(reasonString, applicationLevel);
 	// Fire event after streamReset, to be consistent with the call
 	// ordering that happens if the client application resets instead.
@@ -1110,6 +1173,13 @@ cw.net.Stream.prototype.disposeInternal = function() {
 	if(goog.userAgent.WEBKIT && this.windowLoadEvent_) {
 		goog.events.unlistenByKey(this.windowLoadEvent_);
 	}
+	this.disposeAllTransports_();
+	// Clear any likely circular references
+	delete this.transports_;
+	delete this.primaryTransport_;
+	delete this.secondaryTransport_;
+	delete this.resettingTransport_;
+	delete this.protocol_;
 };
 
 // notifyFinish?
@@ -1708,7 +1778,7 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 		hello.requestNewStream = true;
 		// TODO: maybe sometimes client needs to send credentialsData
 		// even when it's not a new Stream?
-		hello.credentialsData = this.stream_.makeCredentialsCallable_();
+		hello.credentialsData = this.stream_.streamPolicy_.getCredentialsData();
 	}
 	hello.streamId = this.stream_.streamId;
 	hello.streamingResponse = this.s2cStreaming;

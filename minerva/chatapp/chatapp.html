@@ -15,7 +15,7 @@
 
 <div id="info">
 <p>
-This page supports options ?mode=http, ?mode=flash, ?useSub=0, ?useSub=1
+This page supports options ?mode=http, ?mode=flash, ?useSub=0, ?useSub=1, ?httpStreaming=1
 (which can be combined).  Note: when using subdomains, you'll see fewer log
 messages because log messages in the iframes are not sent to this parent window.
 When testing with Opera, open the Error Console, because window.onerror does
@@ -98,6 +98,7 @@ goog.require('cw.eventual');
 goog.require('cw.string');
 goog.require('cw.net.Stream');
 goog.require('cw.net.IMinervaProtocol');
+goog.require('cw.net.HttpStreamingMode');
 goog.require('cw.net.demo.getEndpoint');
 goog.require('cw.net.demo.makeCredentialsData');
 goog.require('cw.repr');
@@ -240,12 +241,14 @@ chatapp.clickListen = goog.events.listen(
 
 
 chatapp.startStream = function() {
+	var streamPolicy = new cw.net.demo.DemoStreamPolicy(
+		cw.net.HttpStreamingMode.NO_STREAMING);
 	chatapp.lastProto = new chatapp.ChatProtocol();
 	chatapp.activityDetected();
 	var endpointD = cw.net.demo.getEndpoint(chatapp.callQueue);
 	endpointD.addCallback(function(endpoint) {
 		var stream = new cw.net.Stream(
-			chatapp.callQueue, chatapp.lastProto, endpoint, cw.net.demo.makeCredentialsData);
+			chatapp.callQueue, chatapp.lastProto, endpoint, streamPolicy);
 		stream.start();
 	});
 };

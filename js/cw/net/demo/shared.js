@@ -14,21 +14,43 @@ goog.require('goog.dom');
 goog.require('cw.loadflash');
 goog.require('cw.whoami');
 goog.require('cw.eventual');
+goog.require('cw.net.IStreamPolicy');
 goog.require('cw.net.FlashSocketTracker');
 goog.require('cw.net.SocketEndpoint');
 goog.require('cw.net.HttpEndpoint');
+goog.require('cw.net.HttpStreamingMode');
 goog.require('cw.net.waitForXDRFrames');
 // Needed when useSub=0
 goog.require('cw.net.XHRSlave');
 
 
 /**
+ * @constructor
+ * @implements {cw.net.IStreamPolicy}
+ */
+cw.net.demo.DemoStreamPolicy = function() {
+
+};
+
+/**
  * @return {string}
  */
-cw.net.demo.makeCredentialsData = function() {
+cw.net.demo.DemoStreamPolicy.prototype.getCredentialsData = function() {
 	// Already base64-url-safe encoded
 	var uaId = cw.whoami.getUaId();
 	return uaId + '|' + goog.global['CSRF_TOKEN'];
+};
+
+/**
+ * @return {!cw.net.HttpStreamingMode}
+ */
+cw.net.demo.DemoStreamPolicy.prototype.getHttpStreamingMode = function() {
+	var url = new goog.Uri(document.location);
+	var queryData = url.getQueryData();
+	var httpStreaming = Boolean(Number(queryData.get('httpStreaming', '0')));
+	return httpStreaming ?
+		cw.net.HttpStreamingMode.STREAMING :
+		cw.net.HttpStreamingMode.NO_STREAMING;
 };
 
 
