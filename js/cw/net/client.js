@@ -210,16 +210,17 @@ cw.net.DEFAULT_DL_SPEED = 3 * 1024;
  * @type {number}
  * @const
  */
-cw.net.MAX_SERVER_JANK = 3000;
+cw.net.MAX_SERVER_JANK = 2000;
 
 /**
  * The maximum duration we expect transport authentication to take
- * on the Minerva server.
+ * on the Minerva server, in milliseconds.  The most common server behavior is
+ * to synchronously look up an item in a dictionary, which shouldn't take long.
  * TODO: provide a way for application authors to modify this.
  * @type {number}
  * @const
  */
-cw.net.MAX_AUTH_TIME = cw.net.MAX_SERVER_JANK;
+cw.net.MAX_AUTH_TIME = 2;
 
 /**
  * The maximum frame length we expect to receive, in bytes.
