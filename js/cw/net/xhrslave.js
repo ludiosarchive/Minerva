@@ -6,6 +6,8 @@
  * XHRMasterTracker and FlashSocketTracker.  We go through a lot
  * of hoops to be able to reference XhrIo objects with strings, across
  * a Worker/SharedWorker boundary.
+ *
+ * LICENSE note: includes a constant from Closure Library.
  */
 
 goog.provide('cw.net.XHRSlave');
@@ -19,6 +21,17 @@ goog.require('goog.userAgent');
 goog.require('cw.net.DecodeStatus');
 goog.require('cw.net.ResponseTextNewlineDecoder');
 goog.require('cw.net.MAX_FRAME_LENGTH');
+
+
+/**
+ * Minimum version of Safari that receives a non-null responseText in ready
+ * state interactive.  (From Closure Library channelrequest.js)
+ * @type {string}
+ * @private
+ */
+cw.net.MIN_WEBKIT_FOR_INTERACTIVE_ = '420+';
+
+
 
 /**
  * @param {!cw.net.XHRSlaveTracker} tracker
@@ -46,6 +59,20 @@ goog.inherits(cw.net.XHRSlave, goog.Disposable);
  * @private
  */
 cw.net.XHRSlave.prototype.underlying_ = null;
+
+/**
+ * Safe to read responseText during readyState INTERACTIVE (3)?
+ *
+ * IE's responseText is always "" before the request is done, so don't
+ * bother in IE.  In WebKit < 420+, a bug causes responseText to be
+ * null during INTERACTIVE.
+ * @type {boolean}
+ * @private
+ */
+cw.net.XHRSlave.prototype.readDuringInteractive_ = !(
+	goog.userAgent.IE ||
+	(goog.userAgent.WEBKIT && !goog.userAgent.isVersion(
+		cw.net.MIN_WEBKIT_FOR_INTERACTIVE_)));
 
 /**
  * @type {!cw.net.ResponseTextNewlineDecoder}
@@ -113,10 +140,9 @@ cw.net.XHRSlave.prototype.readyStateChangeFired_ = function() {
 	goog.global.parent['__XHRMaster_onreadystatechange'](
 		this.reqId_, this.readyState_, usefulHeaders);
 
-	// IE's responseText is always "" before the request is done, so don't
-	// bother in IE.  In other browsers, always try to pull frames out, even
-	// for non-streaming transports.
-	if(!goog.userAgent.IE && this.readyState_ == 3) {
+	// In browsers where we're allowed to, always try to decode new frames,
+	// even if the transport is not meant to be streaming.
+	if(this.readyDuringInteractive_ && this.readyState_ == 3) {
 		this.decodeNewStrings_();
 	}
 };
