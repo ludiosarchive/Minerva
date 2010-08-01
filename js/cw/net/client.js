@@ -190,7 +190,9 @@ cw.net.DEFAULT_HTTP_DURATION = 25000;
 cw.net.HEARTBEAT_INTERVAL = 10000;
 
 /**
- * The maximum duration a round trip should take, in milliseconds.
+ * The maximum duration a round trip should take, in milliseconds.  This
+ * includes any underlying TCP retransmits that TCP needs.  Thus, this is
+ * not like a ping time, but rather a "TCP round trip time".
  * @type {number}
  * @const
  */
@@ -1708,7 +1710,6 @@ cw.net.ClientTransport.prototype.peerStillAlive_ = function() {
 	this.transportType_ == cw.net.TransportType_.FLASH_SOCKET ||
 	this.transportType_ == cw.net.TransportType_.XHR_STREAM) {
 		this.setRecvTimeout_(
-			cw.net.DEFAULT_RTT_GUESS / 2 +
 			cw.net.MAX_SERVER_JANK +
 			cw.net.HEARTBEAT_INTERVAL);
 	} else {
