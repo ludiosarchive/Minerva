@@ -44,8 +44,16 @@ cw.net.IFlashSocketProtocol.prototype.onconnect = function() {
 };
 
 /**
- * Called when the connection has been closed by the peer. Not called if
- * you call FlashSocket.close() yourself.
+ * Called when the Flash applet has probably crashed.  If a crash
+ * is detected while closing, oncrash is called, but onclose is not.
+ */
+cw.net.IFlashSocketProtocol.prototype.oncrash = function() {
+
+};
+
+/**
+ * Called when the connection has been closed by the peer, or when
+ * you call FlashSocket.dispose() yourself.
  */
 cw.net.IFlashSocketProtocol.prototype.onclose = function() {
 
@@ -132,14 +140,22 @@ cw.net.FlashSocket = function(tracker, proto) {
 	 * @private
 	 */
 	this.bridge_ = tracker.bridge_;
-
-	/**
-	 * Do we need to call `close` on the underlying socket when we dispose?
-	 * @type {boolean}
-	 */
-	this.needToCallClose_ = true;
 };
 goog.inherits(cw.net.FlashSocket, goog.Disposable);
+
+/**
+ * Do we need to call `close` on the underlying socket when we dispose?
+ * @type {boolean}
+ * @private
+ */
+cw.net.FlashSocket.prototype.needToCallClose_ = true;
+
+/**
+ * Has the Flash applet (probably) crashed?
+ * @type {boolean}
+ * @private
+ */
+cw.net.FlashSocket.prototype.crashed_ = false;
 
 /**
  * @type {!goog.debug.Logger}
@@ -170,7 +186,6 @@ cw.net.FlashSocket.prototype.dispatchEventToProto_ = function(event, arg1) {
 		this.proto_.onconnect();
 	} else if(event == "close") {
 		this.needToCallClose_ = false;
-		this.proto_.onclose();
 		this.dispose();
 	} else if(event == "ioerror") {
 		this.needToCallClose_ = false;
@@ -186,6 +201,17 @@ cw.net.FlashSocket.prototype.dispatchEventToProto_ = function(event, arg1) {
 };
 
 /**
+ * @return {undefined}
+ * @private
+ */
+cw.net.FlashSocket.prototype.handleCrash_ = function() {
+	this.crashed_ = true;
+	// If it crashed, the `close` call won't work anyway.
+	this.needToCallClose_ = false;
+	this.dispose();
+};
+
+/**
  * @param {string} host Hostname to connect to
  * @param {number} port Port to connect to
  * TODO: @param {number} timeout Flash-level timeout: "Indicates the number
@@ -193,8 +219,15 @@ cw.net.FlashSocket.prototype.dispatchEventToProto_ = function(event, arg1) {
  */
 cw.net.FlashSocket.prototype.connect = function(host, port) { // , timeout
 	// TODO: instead of passing <int32>\n, maybe pass some sort of mode?
-	var ret = this.bridge_.CallFunction(
-		cw.externalinterface.request('__FC_connect', this.id_, host, port, '<int32/>\n'));
+	try {
+		var ret = this.bridge_.CallFunction(
+			cw.externalinterface.request('__FC_connect', this.id_, host, port, '<int32/>\n'));
+	} catch(e) {
+		this.logger_.severe("connect: could not call __FC_connect; " +
+			"Flash probably crashed. Disposing now. Error was: " + e.message);
+		return this.handleCrash_();
+	}
+
 	if(ret != '"OK"') {
 		throw Error('__FC_connect failed? ret: ' + ret);
 	}
@@ -207,10 +240,17 @@ cw.net.FlashSocket.prototype.connect = function(host, port) { // , timeout
  * @param {!Array.<string>} strings
  */
 cw.net.FlashSocket.prototype.writeFrames = function(strings) {
-	var ret = this.bridge_.CallFunction(
-		cw.externalinterface.request('__FC_writeFrames', this.id_, strings));
-	if(ret == '"OK"') {
+	try {
+		var ret = this.bridge_.CallFunction(
+			cw.externalinterface.request('__FC_writeFrames', this.id_, strings));
+	} catch(e) {
+		this.logger_.severe("writeFrames: could not call __FC_writeFrames; " +
+			"Flash probably crashed. Disposing now. Error was: " + e.message);
+		return this.handleCrash_();
+	}
 
+	if(ret == '"OK"') {
+		// Great.
 	} else if(ret == '"no such instance"') {
 		this.logger_.warning(
 			"Flash no longer knows of " + this.id_ + "; disposing.");
@@ -226,17 +266,29 @@ cw.net.FlashSocket.prototype.writeFrames = function(strings) {
 cw.net.FlashSocket.prototype.disposeInternal = function() {
 	this.logger_.info(
 		'in disposeInternal, needToCallClose_=' + this.needToCallClose_);
-
 	cw.net.FlashSocket.superClass_.disposeInternal.call(this);
 
-	delete this.proto_; // possible circular reference.
 	var bridge = this.bridge_;
 	delete this.bridge_;
 
 	if(this.needToCallClose_) {
-		var ret = bridge.CallFunction(cw.externalinterface.request('__FC_close', this.id_));
-		this.logger_.info("disposeInternal: __FC_close ret: " + ret);
+		try 	{
+			var ret = bridge.CallFunction(
+				cw.externalinterface.request('__FC_close', this.id_));
+			this.logger_.info("disposeInternal: __FC_close ret: " + ret);
+		} catch(e) {
+			this.logger_.severe("disposeInternal: could not call __FC_close; " +
+				"Flash probably crashed. Error was: " + e.message);
+			this.crashed_ = true;
+		}
 	}
+
+	if(!this.crashed_) {
+		this.proto_.onclose();
+	} else {
+		this.proto_.oncrash();
+	}
+	delete this.proto_; // possible circular reference.
 
 	this.tracker_.socketOffline_(this);
 };

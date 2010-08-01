@@ -19,7 +19,8 @@ This page supports options ?mode=http, ?mode=flash, ?useSub=0, ?useSub=1, ?httpS
 (which can be combined).  Note: when using subdomains, you'll see fewer log
 messages because log messages in the iframes are not sent to this parent window.
 When testing with Opera, open the Error Console, because window.onerror does
-not work in Opera.
+not work in Opera.  Do the same in Chrome, because not all errors are caught by
+window.onerror (such as when calling a nonexistent method on an HTMLEmbedElement).
 </p>
 
 Do all of these when testing:
@@ -32,6 +33,9 @@ Do all of these when testing:
 <li>For mode=http&useSub=1 : Arrive to this page via Back button from another page.  IE has problems related to this.</li>
 <li>For mode=flash : Arrive to this page via Back button from another page.  Opera has problems related to this.</li>
 <li>Load the page in a WebKit browser, make sure the spinner stops spinning after 4 seconds.</li>
+<li>If the browser loads Flash out-of-process, kill the plugin container process
+	and make sure Minerva keeps working (though Stream may reset).
+	In Firefox, kill plugin-container.exe.  In Chrome, use shift-Esc and end the Flash process.</li>
 </ul>
 </div>
 

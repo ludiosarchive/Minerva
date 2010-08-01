@@ -1853,9 +1853,17 @@ cw.net.ClientTransport.prototype.flushBufferAsEncodedFrames_ = function() {
 
 /**
  * Called by our this.underlying_, a `FlashSocketConduit`.
+ * @param {boolean} probablyCrashed Did Flash Player probably crash?
  * @private
  */
-cw.net.ClientTransport.prototype.flashSocketTerminated_ = function() {
+cw.net.ClientTransport.prototype.flashSocketTerminated_ = function(probablyCrashed) {
+	if(probablyCrashed) {
+		// Right now, we don't support switching endpoints, so increase the
+		// penalty, which will usually make Stream give up very soon.
+		// TODO: remove this after we can switch to another Endpoint.
+		this.penalty_ += 0.5;
+	}
+
 	// We treat close/ioerror/securityerror all the same.
 	this.recordTimeAndDispose_();
 };
@@ -1873,7 +1881,17 @@ cw.net.ClientTransport.prototype.makeFlashConnection_ = function(frames) {
 	this.underlying_.socket_ = socket;
 	this.underlyingStartTime_ = goog.Timer.getTime(this.callQueue_.clock);
 	this.underlying_.connect(endpoint.host, endpoint.port);
+	// .connect may detect a Flash Player crash and call oncrash, which
+	// disposes the FlashSocketConduit.
+	if(this.underlying_.isDisposed()) {
+		return;
+	}
 	this.underlying_.writeFrames(frames);
+	// .writeFrames may detect a Flash Player crash and call oncrash, which
+	// disposes the FlashSocketConduit.
+	if(this.underlying_.isDisposed()) {
+		return;
+	}
 
 	// Give it 1 RTT for a DNS request, and 1 RTT for the TCP connection.
 	// This is optimistic, but our DEFAULT_RTT_GUESS is fairly high. Also,
@@ -2322,7 +2340,12 @@ cw.net.FlashSocketConduit.prototype.onconnect = function() {
 
 cw.net.FlashSocketConduit.prototype.onclose = function() {
 	this.logger_.info('onclose');
-	this.clientTransport_.flashSocketTerminated_();
+	this.clientTransport_.flashSocketTerminated_(false);
+};
+
+cw.net.FlashSocketConduit.prototype.oncrash = function() {
+	this.logger_.warning('oncrash');
+	this.clientTransport_.flashSocketTerminated_(true);
 };
 
 /**
@@ -2330,7 +2353,7 @@ cw.net.FlashSocketConduit.prototype.onclose = function() {
  */
 cw.net.FlashSocketConduit.prototype.onioerror = function(errorText) {
 	this.logger_.warning('onioerror: ' + cw.repr.repr(errorText));
-	this.clientTransport_.flashSocketTerminated_();
+	this.clientTransport_.flashSocketTerminated_(false);
 };
 
 /**
@@ -2338,7 +2361,7 @@ cw.net.FlashSocketConduit.prototype.onioerror = function(errorText) {
  */
 cw.net.FlashSocketConduit.prototype.onsecurityerror = function(errorText) {
 	this.logger_.warning('onsecurityerror: ' + cw.repr.repr(errorText));
-	this.clientTransport_.flashSocketTerminated_();
+	this.clientTransport_.flashSocketTerminated_(false);
 };
 
 /**
@@ -2357,8 +2380,9 @@ cw.net.FlashSocketConduit.prototype.onstillreceiving = function() {
 cw.net.FlashSocketConduit.prototype.disposeInternal = function() {
 	this.logger_.info("in disposeInternal.");
 	cw.net.FlashSocketConduit.superClass_.disposeInternal.call(this);
+	// This will call our onclose or oncrash.
+	this.socket_.dispose();
 	delete this.clientTransport_; // possible circular reference
-	this.socket_.disposeInternal();
 };
 
 
