@@ -1788,12 +1788,14 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 	// TODO: investigate if any browsers are thrashing CPU by copying
 	// the whole thing during XHR streaming.
 	hello.maxReceiveBytes = 300000;
-	hello.maxOpenTime = Math.floor(cw.net.DEFAULT_HTTP_DURATION / 1000);
 	hello.maxInactivity =
 		this.s2cStreaming ? Math.floor(cw.net.HEARTBEAT_INTERVAL / 1000) : 0;
 	hello.useMyTcpAcks = false;
 	if(this.becomePrimary_) {
 		hello.succeedsTransport = null;
+		// Only use maxOpenTime for primary transports, because we trust
+		// the server to quickly close secondary transports.
+		hello.maxOpenTime = Math.floor(cw.net.DEFAULT_HTTP_DURATION / 1000);
 	}
 	hello.sack = this.stream_.getSACK_();
 	hello.lastSackSeenByClient = this.stream_.lastSackSeenByClient_;

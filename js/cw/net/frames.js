@@ -412,6 +412,7 @@ cw.net.HelloFrame.prototype.encodeToPieces = function(sb) {
 	var HP = cw.net.HelloProperty_;
 
 	var compact = {};
+	// TODO: optional parameters should probably be only set if goog.isDef(...)
 	compact[HP.transportNumber] = this.transportNumber;
 	compact[HP.protocolVersion] = this.protocolVersion;
 	compact[HP.httpFormat] = this.httpFormat;
@@ -421,7 +422,9 @@ cw.net.HelloFrame.prototype.encodeToPieces = function(sb) {
 	compact[HP.streamingResponse] = this.streamingResponse;
 	compact[HP.needPaddingBytes] = this.needPaddingBytes;
 	compact[HP.maxReceiveBytes] = this.maxReceiveBytes;
-	compact[HP.maxOpenTime] = this.maxOpenTime;
+	if(goog.isDef(this.maxOpenTime)) {
+		compact[HP.maxOpenTime] = this.maxOpenTime;
+	}
 	compact[HP.maxInactivity] = this.maxInactivity;
 	compact[HP.useMyTcpAcks] = this.useMyTcpAcks;
 	compact[HP.succeedsTransport] = this.succeedsTransport;
