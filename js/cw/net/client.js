@@ -213,6 +213,15 @@ cw.net.DEFAULT_DL_SPEED = 3 * 1024;
 cw.net.MAX_SERVER_JANK = 3000;
 
 /**
+ * The maximum duration we expect transport authentication to take
+ * on the Minerva server.
+ * TODO: provide a way for application authors to modify this.
+ * @type {number}
+ * @const
+ */
+cw.net.MAX_AUTH_TIME = cw.net.MAX_SERVER_JANK;
+
+/**
  * The maximum frame length we expect to receive, in bytes.
  * @type {number}
  * @const
@@ -1760,10 +1769,15 @@ cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
 	//
 	// Note: we assume that the HTTP response headers are small enough
 	// to not stall even a slow connection.
+	if(this.becomePrimary_) {
+		var duration = cw.net.DEFAULT_HTTP_DURATION;
+	} else {
+		var duration = cw.net.MAX_AUTH_TIME;
+	}
 	this.setRecvTimeout_(
 		cw.net.DEFAULT_RTT_GUESS * (1.5 + connectRTTs) +
 		cw.net.MAX_SERVER_JANK * 2 +
-		cw.net.DEFAULT_HTTP_DURATION);
+		duration);
 };
 
 /**
