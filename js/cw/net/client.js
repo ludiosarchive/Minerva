@@ -199,6 +199,13 @@ cw.net.HEARTBEAT_INTERVAL = 10000;
 cw.net.DEFAULT_RTT_GUESS = 3000;
 
 /**
+ * The maximum variance we expect for the "RTT guess" above.
+ * @type {number}
+ * @const
+ */
+cw.net.DEFAULT_RTT_VARIANCE = 1500;
+
+/**
  * The worst download speed we expect to see, in bytes/sec.
  * @type {number}
  * @const
@@ -1721,6 +1728,7 @@ cw.net.ClientTransport.prototype.peerStillAlive_ = function() {
 	this.transportType_ == cw.net.TransportType_.XHR_STREAM) {
 		this.setRecvTimeout_(
 			cw.net.MAX_SERVER_JANK +
+			cw.net.DEFAULT_RTT_VARIANCE +
 			cw.net.HEARTBEAT_INTERVAL);
 	} else {
 		throw Error("peerStillAlive_: Don't know what to do for this transportType: " +
@@ -1912,7 +1920,7 @@ cw.net.ClientTransport.prototype.makeFlashConnection_ = function(frames) {
 	}
 
 	// Give it 1 RTT for a DNS request, and 1 RTT for the TCP connection.
-	// This is optimistic, but our DEFAULT_RTT_GUESS is fairly high. Also,
+	// Our DEFAULT_RTT_GUESS covers any underlying retransmits.  Also,
 	// the DNS name might be already resolved.  Keep in mind that if this
 	// timeout is high enough (probably > 20000), then Flash itself might
 	// timeout with onsecurityerror.
