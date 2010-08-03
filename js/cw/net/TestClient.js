@@ -9,6 +9,7 @@ goog.require('goog.array');
 goog.require('goog.asserts');
 goog.require('goog.dom');
 goog.require('goog.string');
+goog.require('goog.userAgent');
 goog.require('goog.Uri');
 goog.require('goog.async.Deferred');
 goog.require('goog.async.DeferredList');
@@ -591,6 +592,11 @@ cw.net.TestClient.RealHttpTests.subclass(cw.net.TestClient, 'RealHttpStreamingTe
 			throw new cw.UnitTest.SkipTest(
 				"This browser might not be able to read during readyState "+
 				"INTERACTIVE, so this test might hang if we ran it.");
+		}
+		if(goog.userAgent.OPERA) {
+			throw new cw.UnitTest.SkipTest(
+				"Opera dispatches only one readyState INTERACTIVE " +
+				"event, and XHRSlave doesn't poll the responseText.");
 		}
 		return self.__class__.upcall(self, 'setUp', []);
 	},
