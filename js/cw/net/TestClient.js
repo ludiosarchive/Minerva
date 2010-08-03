@@ -34,6 +34,7 @@ goog.require('cw.net.DoNothingTransport');
 // Load xhrslave into the test page window, because some tests use
 // goog.global for the two contentWindow arguments in HttpEndpoint.
 goog.require('cw.net.XHRSlave');
+goog.require('cw.net.READ_DURING_INTERACTIVE');
 
 goog.require('cw.net.HelloFrame');
 goog.require('cw.net.StringFrame');
@@ -584,6 +585,15 @@ cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealHttpTests')
  * Test Stream and ClientTransport with real HTTP requests and HTTP streaming enabled.
  */
 cw.net.TestClient.RealHttpTests.subclass(cw.net.TestClient, 'RealHttpStreamingTests').methods(
+
+	function setUp(self) {
+		if(!cw.net.READ_DURING_INTERACTIVE) {
+			throw new cw.UnitTest.SkipTest(
+				"This browser might not be able to read during readyState "+
+				"INTERACTIVE, so this test might hang if we ran it.");
+		}
+		return self.__class__.upcall(self, 'setUp', []);
+	},
 
 	function getHttpStreamingMode_() {
 		return cw.net.HttpStreamingMode.STREAMING;

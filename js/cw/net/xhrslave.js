@@ -11,6 +11,7 @@
  */
 
 goog.provide('cw.net.XHRSlave');
+goog.provide('cw.net.READ_DURING_INTERACTIVE');
 
 goog.require('goog.Disposable');
 goog.require('goog.events');
@@ -31,6 +32,19 @@ goog.require('cw.net.MAX_FRAME_LENGTH');
  */
 cw.net.MIN_WEBKIT_FOR_INTERACTIVE_ = '420+';
 
+
+/**
+ * Safe to read responseText during readyState INTERACTIVE (3)?
+ *
+ * IE's responseText is always "" before the request is done, so don't
+ * bother in IE.  In WebKit < 420+, a bug causes responseText to be
+ * null during INTERACTIVE.
+ * @type {boolean}
+ */
+cw.net.READ_DURING_INTERACTIVE = !(
+	goog.userAgent.IE ||
+	(goog.userAgent.WEBKIT && !goog.userAgent.isVersion(
+		cw.net.MIN_WEBKIT_FOR_INTERACTIVE_)));
 
 
 /**
@@ -59,20 +73,6 @@ goog.inherits(cw.net.XHRSlave, goog.Disposable);
  * @private
  */
 cw.net.XHRSlave.prototype.underlying_ = null;
-
-/**
- * Safe to read responseText during readyState INTERACTIVE (3)?
- *
- * IE's responseText is always "" before the request is done, so don't
- * bother in IE.  In WebKit < 420+, a bug causes responseText to be
- * null during INTERACTIVE.
- * @type {boolean}
- * @private
- */
-cw.net.XHRSlave.prototype.readDuringInteractive_ = !(
-	goog.userAgent.IE ||
-	(goog.userAgent.WEBKIT && !goog.userAgent.isVersion(
-		cw.net.MIN_WEBKIT_FOR_INTERACTIVE_)));
 
 /**
  * @type {!cw.net.ResponseTextNewlineDecoder}
@@ -142,7 +142,7 @@ cw.net.XHRSlave.prototype.readyStateChangeFired_ = function() {
 
 	// In browsers where we're allowed to, always try to decode new frames,
 	// even if the transport is not meant to be streaming.
-	if(this.readDuringInteractive_ && this.readyState_ == 3) {
+	if(cw.net.READ_DURING_INTERACTIVE && this.readyState_ == 3) {
 		this.decodeNewStrings_();
 	}
 };
