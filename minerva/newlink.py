@@ -7,7 +7,6 @@ See minerva.minervasite for an idea of how to use the classes below,
 especially `makeMinervaAndHttp` and `DemoProtocol`.
 """
 
-import traceback
 from zope.interface import Interface, Attribute, implements
 from random import randint
 

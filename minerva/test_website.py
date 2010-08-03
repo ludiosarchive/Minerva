@@ -14,7 +14,6 @@ from minerva.mocks import (
 from minerva.website import (
 	RejectTransport, ITransportFirewall, CsrfTransportFirewall,
 	NoopTransportFirewall, ICsrfStopper, CsrfStopper, RejectToken,
-	IStreamNotificationReceiver
 )
 
 

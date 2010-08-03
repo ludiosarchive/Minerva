@@ -1,11 +1,6 @@
 import operator
-import warnings
+
 from mypy.strops import StringFragment
-from mypy.constant import Constant
-from collections import deque
-
-from twisted.python import log
-
 from mypy.objops import totalSizeOf
 from mypy.constant import attachClassMarker
 

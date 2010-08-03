@@ -1,6 +1,6 @@
 from zope.interface import implements
 
-from twisted.internet import protocol, defer, address, interfaces, task
+from twisted.internet import defer, address, interfaces, task
 from twisted.web import server, resource
 from twisted.web.test.test_web import DummyRequest as _TwistedDummyRequest
 from twisted.test.proto_helpers import StringTransport

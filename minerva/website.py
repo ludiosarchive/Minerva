@@ -3,13 +3,11 @@ Classes for things that are closer to website-specific behavior,
 and not necessary for the use of Minerva faces.  
 """
 
-import cgi
 import base64
 import binascii
 import hashlib
 import hmac
 from twisted.internet import defer
-from twisted.web import resource
 try:
 	from twisted.python.util import slowStringCompare
 except ImportError:
@@ -19,9 +17,6 @@ except ImportError:
 		return s1 == s2
 
 from zope.interface import implements, Interface
-from collections import defaultdict
-
-from minerva.interfaces import IStreamNotificationReceiver
 
 _postImportVars = vars().keys()
 

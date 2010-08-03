@@ -2,7 +2,7 @@ import jinja2
 import simplejson
 
 from twisted.python.filepath import FilePath
-from twisted.web import resource, static
+from twisted.web import static
 
 from cwtools.htmltools import getTestPageCSS
 
