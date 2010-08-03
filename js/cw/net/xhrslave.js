@@ -142,7 +142,7 @@ cw.net.XHRSlave.prototype.readyStateChangeFired_ = function() {
 
 	// In browsers where we're allowed to, always try to decode new frames,
 	// even if the transport is not meant to be streaming.
-	if(this.readyDuringInteractive_ && this.readyState_ == 3) {
+	if(this.readDuringInteractive_ && this.readyState_ == 3) {
 		this.decodeNewStrings_();
 	}
 };
