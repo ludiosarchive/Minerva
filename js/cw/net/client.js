@@ -1564,6 +1564,12 @@ cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedString
 		}
 
 		if(frame instanceof cw.net.StringFrame) {
+			// Check that the string does not have illegal characters.
+			// If it does, it's probably because of HTTP response corruption.
+			if(!cw.net.isRestrictedString_(frame.string)) {
+				this.hadProblems_ = true;
+				return true;
+			}
 			this.peerSeqNum_ += 1;
 			// Because we may have received multiple Minerva strings, collect
 			// them into a Array and then deliver them all at once to Stream.
