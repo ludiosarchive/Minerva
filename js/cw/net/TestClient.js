@@ -598,7 +598,7 @@ cw.net.TestClient.RealHttpTests.subclass(cw.net.TestClient, 'RealHttpStreamingTe
 				"Opera dispatches only one readyState INTERACTIVE " +
 				"event, and XHRSlave doesn't poll the responseText.");
 		}
-		return self.__class__.upcall(self, 'setUp', []);
+		return cw.net.TestClient.RealHttpStreamingTests.upcall(self, 'setUp', []);
 	},
 
 	function getHttpStreamingMode_() {
