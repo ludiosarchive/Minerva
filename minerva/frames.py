@@ -296,6 +296,10 @@ class StringFrame(tuple):
 	def decode(cls, frameString):
 		"""
 		C{frameString} is a L{StringFragment} that ends with " ".
+
+		Restricted string validation is not performed here, to accomodate
+		a future extension that allows expanding the allowed byte/char
+		range mid-Stream.
 		"""
 		return cls(frameString[:-1])
 
