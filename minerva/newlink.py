@@ -1304,6 +1304,8 @@ class ServerTransport(object):
 					self._maxOpenTime, self._exceededMaxOpenTime)
 
 		# We start sending heartbeats even before the transport is authenticated.
+		if self._maxInactivity:
+			self._writeHeartbeat()
 		self._resetHeartbeat()
 
 		# We get/build a Stream instance before the firewall checkTransport

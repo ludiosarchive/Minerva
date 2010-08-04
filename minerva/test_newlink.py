@@ -2228,7 +2228,10 @@ class _BaseServerTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame(dict(maxInactivity=2))
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
-		self.assertEqual([StreamCreatedFrame()], transport.getNew())
+		self.assertEqual([
+			CommentFrame('beat'),
+			StreamCreatedFrame()
+		], transport.getNew())
 		self._clock.advance(1)
 		self.assertEqual([], transport.getNew())
 		self._clock.advance(1)
@@ -2244,7 +2247,8 @@ class _BaseServerTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame(dict(maxInactivity=2))
 		transport = self._makeTransport(firewallActionTime=1000)
 		transport.sendFrames([frame0])
-		self.assertEqual([], transport.getNew())
+		# the initial heartbeat
+		self.assertEqual([CommentFrame('beat')], transport.getNew())
 		self._clock.advance(1)
 		self.assertEqual([], transport.getNew())
 		self._clock.advance(1)
@@ -2261,7 +2265,10 @@ class _BaseServerTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame(dict(succeedsTransport=None, maxInactivity=2))
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
-		self.assertEqual([StreamCreatedFrame()], transport.getNew())
+		self.assertEqual([
+			CommentFrame('beat'),
+			StreamCreatedFrame()
+		], transport.getNew())
 		stream = self.streamTracker.getStream('x'*26)
 
 		self._clock.advance(1)
@@ -2286,6 +2293,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 		transport = self._makeTransport(rejectAll=True)
 		transport.sendFrames([frame0])
 		self.assertEqual([
+			CommentFrame('beat'), # first heartbeat is always sent
 			TransportKillFrame(tk_stream_attach_failure),
 			YouCloseItFrame(),
 		], transport.getNew())
@@ -2306,7 +2314,10 @@ class _BaseServerTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame(dict(maxInactivity=2))
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
-		self.assertEqual([StreamCreatedFrame()], transport.getNew())
+		self.assertEqual([
+			CommentFrame('beat'), # first heartbeat is always sent
+			StreamCreatedFrame()
+		], transport.getNew())
 
 		self._clock.advance(1)
 		self.assertEqual([], transport.getNew())
