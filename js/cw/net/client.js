@@ -999,8 +999,8 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 			}
 			this.primaryTransport_.flush_();
 		} else if(transport == this.secondaryTransport_) {
+			this.secondaryTransport_ = null;
 			if(!times) {
-				this.secondaryTransport_ = null;
 				// More data might have been queued while the secondary transport
 				// was getting a response. It's also possible that the server didn't
 				// ACK what we just sent, so we have to send it again.
