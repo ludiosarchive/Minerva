@@ -37,6 +37,9 @@ Do all of these when testing:
 	and make sure Minerva keeps working (though Stream may reset).
 	In Firefox, kill plugin-container.exe.  In Chrome, use shift-Esc and end the Flash process.</li>
 </ul>
+
+If you want to see what's in the send queue, enter this into your URL bar:
+<code>javascript:alert(cw.repr.repr(chatapp.lastProto.stream_.queue_.items_.map_))</code>
 </div>
 
 <table id="controls">
