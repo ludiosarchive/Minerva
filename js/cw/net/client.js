@@ -584,6 +584,12 @@ cw.net.Stream.prototype.primaryDelayCount_ = 0;
 cw.net.Stream.prototype.secondaryDelayCount_ = 0;
 
 /**
+ * Validate strings passed to {@link #sendStrings}?
+ * @type {boolean}
+ */
+cw.net.Stream.prototype.outgoingStringValidation = true;
+
+/**
  * @param {!Array.<string>} sb
  */
 cw.net.Stream.prototype.__reprToPieces__ = function(sb) {
@@ -736,6 +742,15 @@ cw.net.Stream.prototype.sendStrings = function(strings) {
 	}
 	if(!strings.length) {
 		return;
+	}
+	if(this.outgoingStringValidation) {
+		for(var i=0; i < strings.length; i++) {
+			var s = strings[i];
+			if(!cw.net.isRestrictedString_(s)) {
+				throw Error("sendStrings: string #" + i +
+					" has illegal chars: " + cw.repr.repr(s));
+			}
+		}
 	}
 	this.queue_.extend(strings);
 	this.tryToSend_();

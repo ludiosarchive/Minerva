@@ -270,6 +270,44 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 	},
 
 	/**
+	 * If sendStrings is called with a string that has characters outside
+	 * of the restricted string range, it throws an Error.  If any of strings
+	 * are illegal, nothing is appended to the send queue.
+	 */
+	function test_sendStringsWithIllegalCharacters(self) {
+		var proto = new cw.net.TestClient.RecordingProtocol();
+		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
+		var stream = new cw.net.Stream(
+			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
+		var badStrings = ["\x00", "\xff", "\n", "\x1f", "\x7f", "hello\tworld"];
+		goog.array.forEach(badStrings, function(string) {
+			self.assertThrows(Error, function() { stream.sendStrings([string]); });
+		});
+		// Test with a legal first string:
+		goog.array.forEach(badStrings, function(string) {
+			self.assertThrows(Error, function() { stream.sendStrings(['good string', string]); });
+		});
+		self.assertEqual(0, stream.queue_.getQueuedCount());
+	},
+
+	/**
+	 * If sendStrings is called with a string that has characters outside
+	 * of the restricted string range, but outgoing string validation is
+	 * disabled, it does not throw an Error, and the illegal strings are
+	 * appended to the send queue.
+	 */
+	function test_sendStringsIllegalButNoValidation(self) {
+		var proto = new cw.net.TestClient.RecordingProtocol();
+		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
+		var stream = new cw.net.Stream(
+			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
+		var badStrings = ["\x00", "\xff", "\n", "\x1f", "\x7f", "hello\tworld"];
+		stream.outgoingStringValidation = false;
+		stream.sendStrings(badStrings);
+		self.assertEqual(badStrings.length, stream.queue_.getQueuedCount());
+	},
+
+	/**
 	 * If Stream is already reset, calling Stream.sendStrings throws an Error.
 	 */
 	function test_cannotSendStringsAfterAlreadyReset(self) {
