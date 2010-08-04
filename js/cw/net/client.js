@@ -174,11 +174,18 @@ cw.net.HTTP_RESPONSE_PREAMBLE = new cw.net.CommentFrame(";)]}");
 cw.net.PROTOCOL_VERSION = 2;
 
 /**
- * The default maximum duration of an HTTP transport.
+ * The default maximum duration for long-polling HTTP transports.
  * @type {number}
  * @const
  */
-cw.net.DEFAULT_HTTP_DURATION = 25000;
+cw.net.DEFAULT_HTTP_LONGPOLL_DURATION = 25000;
+
+/**
+ * The default maximum duration for streaming HTTP transports.
+ * @type {number}
+ * @const
+ */
+cw.net.DEFAULT_HTTP_STREAMING_DURATION = (3600 - 20) * 1000;
 
 /**
  * The heartbeat interval for non-HTTP transports, in milliseconds.  If not 0,
@@ -1713,6 +1720,7 @@ cw.net.ClientTransport.prototype.clearRecvTimeout_ = function() {
  * @private
  */
 cw.net.ClientTransport.prototype.setRecvTimeout_ = function(ms) {
+	goog.asserts.assert(!isNaN(ms), 'ms is NaN');
 	this.clearRecvTimeout_();
 	ms = Math.round(ms);
 	this.recvTimeout_ = this.callQueue_.clock.setTimeout(
@@ -1803,10 +1811,15 @@ cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
 	//
 	// Note: we assume that the HTTP response headers are small enough
 	// to not stall even a slow connection.
-	if(this.becomePrimary_) {
-		var duration = cw.net.DEFAULT_HTTP_DURATION;
+	var duration;
+	if(this.s2cStreaming) {
+		// Server writes the first heartbeat before it even starts
+		// authenticating the transport.
+		duration = 0;
+	} else if(this.becomePrimary_) {
+		duration = cw.net.DEFAULT_HTTP_LONGPOLL_DURATION;
 	} else {
-		var duration = cw.net.MAX_AUTH_TIME;
+		duration = cw.net.MAX_AUTH_TIME;
 	}
 	this.setRecvTimeout_(
 		cw.net.DEFAULT_RTT_GUESS * (1.5 + connectRTTs) +
@@ -1842,9 +1855,12 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 	hello.useMyTcpAcks = false;
 	if(this.becomePrimary_) {
 		hello.succeedsTransport = null;
+		var duration = this.s2cStreaming ?
+			cw.net.DEFAULT_HTTP_STREAMING_DURATION :
+			cw.net.DEFAULT_HTTP_LONGPOLL_DURATION;
 		// Only use maxOpenTime for primary transports, because we trust
 		// the server to quickly close secondary transports.
-		hello.maxOpenTime = Math.floor(cw.net.DEFAULT_HTTP_DURATION / 1000);
+		hello.maxOpenTime = Math.floor(duration / 1000);
 	}
 	hello.sack = this.stream_.getSACK_();
 	hello.lastSackSeenByClient = this.stream_.lastSackSeenByClient_;
