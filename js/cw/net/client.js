@@ -985,6 +985,10 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 		var delay = _[0];
 		var times = _[1];
 		if(transport == this.primaryTransport_) {
+			// Must null primaryTransport_ before calling
+			// this.getHighestSeqNumSent_(), so that it doesn't assume
+			// primaryTransport_ is still connected.
+			this.primaryTransport_ = null;
 			if(!times) {
 				var highestSeqNumSent = this.getHighestSeqNumSent_();
 				this.primaryTransport_ = this.createNewTransport_(true);
