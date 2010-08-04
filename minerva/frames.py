@@ -91,7 +91,8 @@ def helloDataToHelloFrame(helloData):
 	obj.credentialsData = helloData[Hello_credentialsData] if \
 		Hello_credentialsData in helloData else ""
 	if not isinstance(obj.credentialsData, str) or \
-	not isValidShortRestrictedString(obj.credentialsData):
+	len(obj.credentialsData) > 255 or \
+	not isRestrictedString(obj.credentialsData):
 		raise InvalidHello("bad credentialsData")
 
 	# sack is always optional.
@@ -522,15 +523,13 @@ class YouCloseItFrame(tuple):
 
 
 
-def isValidShortRestrictedString(string):
+def isRestrictedString(string):
 	"""
-	Return C{True} if C{str} C{string} has 0-255 bytes,
-	and all bytes are within inclusive range 0x20 " " - 0x7E "~"
+	Return C{True} if C{str} C{string}'s bytes are within inclusive
+	range 0x20 " " - 0x7E "~"
 
 	C{string} is assumed to be a C{str}.
 	"""
-	if len(string) > 255:
-		return False
 	for c in string:
 		if not ' ' <= c <= '~':
 			return False
@@ -570,8 +569,8 @@ class ResetFrame(tuple):
 			applicationLevel = {'0': False, '1': True}[applicationLevelStr]
 		except KeyError:
 			raise InvalidFrame("bad applicationLevel")
-		if not isValidShortRestrictedString(reasonString):
-			raise InvalidFrame("illegal bytes in reasonString")
+		if len(reasonString) > 255 or not isRestrictedString(reasonString):
+			raise InvalidFrame("reasonString too long or has illegal bytes")
 
 		return cls(reasonString, applicationLevel)
 

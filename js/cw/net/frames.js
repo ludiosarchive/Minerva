@@ -137,7 +137,8 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	// credentialsData is always optional.
 	var credentialsData = helloData.get(HP.credentialsData, "");
 	if(!(goog.isString(credentialsData)) ||
-	!(cw.net.isValidShortRestrictedString_(credentialsData))) {
+	credentialsData.length > 255 ||
+	!cw.net.isRestrictedString_(credentialsData)) {
 		throw new cw.net.InvalidHello("bad credentialsData");
 	}
 	obj.credentialsData = /** @type {string} */ (credentialsData);
@@ -873,12 +874,12 @@ cw.net.YouCloseItFrame.prototype.encodeToPieces = function(sb) {
 
 /**
  * @param {string} string
- * @return {boolean} Return true if {@code string} has 0-255 characters,
- *	and all bytes are within inclusive range 0x20 " " - 0x7E "~".
+ * @return {boolean} Return true if {@code string}'s characters are all
+ * 	within inclusive range 0x20 " " - 0x7E "~".
  * @private
  */
-cw.net.isValidShortRestrictedString_ = function(string) {
-	return string.length <= 255 && /^([ -~]*)$/.test(string);
+cw.net.isRestrictedString_ = function(string) {
+	return /^([ -~]*)$/.test(string);
 };
 
 
@@ -928,8 +929,8 @@ cw.net.ResetFrame.prototype.__reprToPieces__ = function(sb) {
 cw.net.ResetFrame.decode = function(frameString) {
 	var reasonString = frameString.substr(0, frameString.length - 3);
 
-	if(!cw.net.isValidShortRestrictedString_(reasonString)) {
-		throw new cw.net.InvalidFrame("illegal bytes in reasonString");
+	if(reasonString.length > 255 || !cw.net.isRestrictedString_(reasonString)) {
+		throw new cw.net.InvalidFrame("illegal chars in reasonString");
 	}
 
 	// Either "|0" or "|1"
