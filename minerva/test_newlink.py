@@ -1940,6 +1940,27 @@ class _BaseServerTransportTests(_BaseHelpers):
 		self.assertEqual([SackFrame(SACK(0, (2,)))], transport.getNew())
 
 
+	def test_stringWithIllegalBytes(self):
+		"""
+		If client writes a StringFrame with a byte outside of the
+		restricted string range, the client receives a
+		`TransportKillFrame(tk_invalid_frame_type_or_arguments)`.
+		"""
+		for badString in ["\x00", "\xff", "\n", "\x1f", "\x7f", "hello\tworld"]:
+			frame0 = _makeHelloFrame()
+			transport = self._makeTransport()
+			transport.sendFrames([frame0])
+			self.assertEqual([StreamCreatedFrame()], transport.getNew())
+
+			transport.sendFrames([StringFrame(badString)])
+			self.assertEqual([
+				SackFrame(SACK(-1, ())),
+				StreamStatusFrame(SACK(-1, ())),
+				TransportKillFrame(tk_invalid_frame_type_or_arguments),
+				YouCloseItFrame()
+			], transport.getNew())
+
+
 	def test_sackFrameValid(self):
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()

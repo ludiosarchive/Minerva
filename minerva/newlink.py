@@ -29,7 +29,8 @@ from minerva.window import SACK, Queue, Incoming
 from minerva.frames import (
 	HelloFrame, StringFrame, SeqNumFrame, SackFrame, StreamStatusFrame,
 	StreamCreatedFrame, YouCloseItFrame, ResetFrame, CommentFrame,
-	TransportKillFrame, InvalidFrame, decodeFrameFromClient)
+	TransportKillFrame, InvalidFrame, decodeFrameFromClient,
+	isRestrictedString)
 
 # Make globals that pypycpyo.optimizer can optimize away
 tk_stream_attach_failure = TransportKillFrame.stream_attach_failure
@@ -1467,6 +1468,13 @@ class ServerTransport(object):
 					break
 
 			elif frameType == StringFrame:
+				# Make sure the string only contains bytes in the restricted
+				# string range.  In the future, we could support dynamic
+				# switching to strings that allow a wider byte/char range.
+				if not isRestrictedString(frame.string):
+					self._closeWith(tk_invalid_frame_type_or_arguments)
+					break
+
 				self._peerSeqNum += 1
 				# Because we may have received multiple Minerva strings, collect
 				# them into a list and then deliver them all at once to Stream.
