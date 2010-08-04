@@ -62,14 +62,14 @@ from minerva.mocks import (
 )
 
 
-class SlotlessSocketTransport(ServerTransport):
+class SlotlessServerTransport(ServerTransport):
 	# No __slots__ so that .getNew can be assigned on it
 	pass
 
 
 
 class SlotlessSocketFace(SocketFace):
-	protocol = SlotlessSocketTransport
+	protocol = SlotlessServerTransport
 
 
 def sf(s):
@@ -1143,7 +1143,7 @@ def decodeResponseInMockRequest(request):
 	return decodeHttpResponseFromServer(''.join(request.written))
 
 
-class SocketTransportModeSelectionTests(unittest.TestCase):
+class ServerTransportModeSelectionTests(unittest.TestCase):
 	"""
 	Test the very initial stage of the communication, where the
 	mode is selected.
@@ -1314,7 +1314,7 @@ def withoutUnimportantStreamCalls(log):
 
 # TODO: generalize many of these tests and test them for the HTTP face as well.
 
-class _BaseSocketTransportTests(_BaseHelpers):
+class _BaseServerTransportTests(_BaseHelpers):
 
 	def test_implements(self):
 		transport = self._makeTransport()
@@ -2302,7 +2302,7 @@ class _BaseSocketTransportTests(_BaseHelpers):
 
 
 
-class SocketTransportTestsWithBencode(_BaseSocketTransportTests, unittest.TestCase):
+class ServerTransportTestsWithBencode(_BaseServerTransportTests, unittest.TestCase):
 
 	def _makeParser(self):
 		return BencodeStringDecoder(maxLength=1024*1024)
@@ -2313,7 +2313,7 @@ class SocketTransportTestsWithBencode(_BaseSocketTransportTests, unittest.TestCa
 
 
 
-class SocketTransportTestsWithInt32(_BaseSocketTransportTests, unittest.TestCase):
+class ServerTransportTestsWithInt32(_BaseServerTransportTests, unittest.TestCase):
 
 	def _makeParser(self):
 		return Int32StringDecoder(maxLength=1024*1024)
