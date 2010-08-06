@@ -38,7 +38,7 @@ goog.require('goog.Timer');
 goog.require('goog.net.XhrIo');
 goog.require('goog.uri.utils');
 goog.require('goog.userAgent');
-goog.require('goog.userAgent.product');
+goog.require('cw.dethrobber');
 goog.require('cw.eventual');
 goog.require('cw.repr');
 goog.require('cw.string');
@@ -860,47 +860,6 @@ cw.net.Stream.prototype.streamStatusReceived_ = function(lastSackSeen) {
 };
 
 /**
- * Return a delay after which we can assume that the spinner has stopped
- * spinning.  This applies only to WebKit browsers.
- *
- * @return {!Array.<number>} (Delay in milliseconds, times to repeat delay).
- * @private
- * // TODO: types for tuples
- */
-cw.net.Stream.prototype.getDelayToStopSpinner_ = function() {
-	goog.asserts.assert(goog.userAgent.WEBKIT, "not WebKit?");
-
-	// In Chrome, a 0ms one time is enough, but in Safari, it is not.
-	// See http://ludios.net/browser_bugs/spinner_behavior/xhr_onload_and_0ms.html
-	//
-	// The numbers below were carefully determined by testing some
-	// worst-case scenarios with modal dialogs completely freezing
-	// Safari for a while.
-	//
-	// To get the lowest acceptable numbers here, load /chatapp/ (which
-	// has an image that takes 4 seconds to load).  Then, somehow freeze
-	// Safari, then unfreeze it.  An easy but untested way would be to use
-	// the OS's process management utils (for example, `kill` with the right
-	// signal).
-	//
-	// On OS X, I managed to make this happen by forcing an SSL
-	// certificate warning, then clicking to making OS X's modal
-	// password prompt dialog appear.  See:
-	// Minerva/docs/safari_password_prompt_loading_spinner_stays.png
-	//
-	// On Windows XP, I managed to make this happen by pressing Ctrl-P
-	// to print, which in my specific virtual machine caused Safari to lock
-	// up for 20 seconds while it tried to connect to my printer.
-	if(goog.userAgent.product.CHROME) {
-		return [0, 1];
-	} else {
-		// Assume every WebKit browser but Chrome misbehaves like Safari.
-		// Note: this could probably go lower, but I don't want to risk it.
-		return [9, 20];
-	}
-};
-
-/**
  * Return a suitable delay for the next transport, based on transport's
  * properties (and whether it is primary/secondary).  If times=0, it is safe
  * to create a new real transport right away, even under caller's stack frame.
@@ -915,7 +874,7 @@ cw.net.Stream.prototype.getDelayForNextTransport_ = function(transport) {
 	var times;
 	var isWaster = transport instanceof cw.net.DoNothingTransport;
 	if(!isWaster && transport.abortedForSpinner_) {
-		var _ = this.getDelayToStopSpinner_();
+		var _ = cw.dethrobber.getDelayToStopSpinner();
 		delay = _[0];
 		times = _[1];
 		this.logger_.finest("getDelayForNextTransport_: " +
