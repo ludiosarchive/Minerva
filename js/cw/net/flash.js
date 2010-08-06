@@ -12,6 +12,7 @@
 goog.provide('cw.net.IFlashSocketProtocol');
 goog.provide('cw.net.FlashSocket');
 goog.provide('cw.net.FlashSocketTracker');
+goog.provide('cw.net.FlashSocketConduit');
 
 goog.require('goog.asserts');
 goog.require('goog.object');
@@ -469,6 +470,144 @@ cw.net.FlashSocketTracker.prototype.disposeInternal = function() {
 	// Not `delete' because IE can't
 	goog.global[this.callbackFunc_] = undefined;
 };
+
+
+
+/**
+ * A convenient wrapper over cw.net.FlashSocket.  Note that writing data to a
+ * not-yet-open Flash Socket is (probably) an error.  This class buffers
+ * initial data, so that ClientTransport can assume it is connected and write
+ * frames to it, even when it is not connected yet.  This simplifies the
+ * ClientTransport logic.  It also makes it possible to easily support a
+ * possible improvement where client sends data before the connection
+ * is established.
+ *
+ * @param {!cw.net.ClientTransport} clientTransport
+ * @constructor
+ * @extends {goog.Disposable}
+ * @private
+ * @implements {cw.net.IFlashSocketProtocol}
+ */
+cw.net.FlashSocketConduit = function(clientTransport) {
+	goog.Disposable.call(this);
+	/**
+	 * @type {!cw.net.ClientTransport}
+	 */
+	this.clientTransport_ = clientTransport;
+
+	/**
+	 * Encoded frames that we need to send after we connect,
+	 * or {@code null} if we already sent them.
+	 * @type {Array.<string>}
+	 */
+	this.bufferedFrames_ = [];
+
+	/**
+	 * @type {!cw.net.FlashSocket}
+	 * This property should be set by the code that calls
+	 * {@code aFlashSocketTracker.createNew}.
+	 */
+	this.socket_;
+};
+goog.inherits(cw.net.FlashSocketConduit, goog.Disposable);
+
+/**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.FlashSocketConduit.prototype.logger_ =
+	goog.debug.Logger.getLogger('cw.net.FlashSocketConduit');
+
+/**
+ * @return {boolean}
+ */
+cw.net.FlashSocketConduit.prototype.isConnected = function() {
+	// Remember: [] is truthy, null is not.
+	return !this.bufferedFrames_;
+};
+
+/**
+ * @param {!Array.<string>} frames Encoded frames
+ */
+cw.net.FlashSocketConduit.prototype.writeFrames = function(frames) {
+	if(!this.isConnected()) {
+		this.logger_.finest("writeFrames: Not connected, can't write " +
+			frames.length + " frame(s) yet.");
+		this.bufferedFrames_.push.apply(this.bufferedFrames_, frames);
+	} else {
+		this.logger_.finest("writeFrames: Writing " + frames.length + " frame(s).");
+		this.socket_.writeFrames(frames);
+	}
+};
+
+/**
+ * @param {string} host Hostname to connect to
+ * @param {number} port Port to connect to
+ */
+cw.net.FlashSocketConduit.prototype.connect = function(host, port) {
+	this.socket_.connect(host, port);
+};
+
+cw.net.FlashSocketConduit.prototype.onconnect = function() {
+	this.logger_.info('onconnect');
+	this.clientTransport_.peerStillAlive_();
+
+	var frames = this.bufferedFrames_;
+	this.bufferedFrames_ = null;
+	if(frames.length) {
+		this.logger_.finest(
+			"onconnect: Writing " + frames.length + " buffered frame(s).");
+		this.socket_.writeFrames(frames);
+	}
+};
+
+cw.net.FlashSocketConduit.prototype.onclose = function() {
+	this.logger_.info('onclose');
+	this.clientTransport_.flashSocketTerminated_(false);
+};
+
+cw.net.FlashSocketConduit.prototype.oncrash = function() {
+	this.logger_.warning('oncrash');
+	this.clientTransport_.flashSocketTerminated_(true);
+};
+
+/**
+ * @param {string} errorText
+ */
+cw.net.FlashSocketConduit.prototype.onioerror = function(errorText) {
+	this.logger_.warning('onioerror: ' + cw.repr.repr(errorText));
+	this.clientTransport_.flashSocketTerminated_(false);
+};
+
+/**
+ * @param {string} errorText
+ */
+cw.net.FlashSocketConduit.prototype.onsecurityerror = function(errorText) {
+	this.logger_.warning('onsecurityerror: ' + cw.repr.repr(errorText));
+	this.clientTransport_.flashSocketTerminated_(false);
+};
+
+/**
+ * @param {!Array.<string>} frames
+ */
+cw.net.FlashSocketConduit.prototype.onframes = function(frames) {
+	this.clientTransport_.peerStillAlive_();
+	this.clientTransport_.framesReceived_(frames);
+};
+
+cw.net.FlashSocketConduit.prototype.onstillreceiving = function() {
+	this.logger_.finest("onstillreceiving");
+	this.clientTransport_.peerStillAlive_();
+};
+
+cw.net.FlashSocketConduit.prototype.disposeInternal = function() {
+	this.logger_.info("in disposeInternal.");
+	cw.net.FlashSocketConduit.superClass_.disposeInternal.call(this);
+	// This will call our onclose or oncrash.
+	this.socket_.dispose();
+	delete this.clientTransport_; // possible circular reference
+};
+
 
 
 
