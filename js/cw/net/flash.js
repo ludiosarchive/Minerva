@@ -343,6 +343,8 @@ cw.net.FlashSocketTracker = function(callQueue, bridge) {
 	 */
 	this.callbackFunc_ = '__FST_' + cw.string.getCleanRandomString();
 
+	// Don't use entryPointRegistry to protect this, because what we really
+	// need to protect are all the setTimeouts.
 	goog.global[this.callbackFunc_] = goog.bind(this.eiCallback_, this);
 
 	var ret = bridge.CallFunction(

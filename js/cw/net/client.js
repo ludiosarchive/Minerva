@@ -35,6 +35,7 @@ goog.require('goog.events');
 goog.require('goog.events.EventTarget');
 goog.require('goog.structs.Set');
 goog.require('goog.debug.Logger');
+goog.require('goog.debug.entryPointRegistry');
 goog.require('goog.Disposable');
 goog.require('goog.Timer');
 goog.require('goog.net.XhrIo');
@@ -2718,6 +2719,20 @@ goog.global['__XHRMaster_oncomplete'] =
 
 goog.global['__XHRMaster_onreadystatechange'] =
 	goog.bind(cw.net.theXHRMasterTracker_.onreadystatechange_, cw.net.theXHRMasterTracker_);
+
+goog.debug.entryPointRegistry.register(
+	/**
+	 * @param {goog.debug.EntryPointMonitor} monitor The monitor.
+	 */
+	function(monitor) {
+		goog.global['__XHRMaster_onframes'] =
+			monitor.wrap(goog.global['__XHRMaster_onframes']);
+		goog.global['__XHRMaster_oncomplete'] =
+			monitor.wrap(goog.global['__XHRMaster_oncomplete']);
+		goog.global['__XHRMaster_onreadystatechange'] =
+			monitor.wrap(goog.global['__XHRMaster_onreadystatechange']);
+	}
+);
 
 
 
