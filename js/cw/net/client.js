@@ -2745,7 +2745,7 @@ goog.debug.entryPointRegistry.register(
  * 	are loaded.
  */
 cw.net.waitForXDRFrames = function(globalName, expected) {
-	cw.net.logger_.info('Waiting for XDRFrames (may take a while)...');
+	cw.net.waitForXDRFrames.logger_.info('Waiting for XDRFrames (may take a while)...');
 	var d = new goog.async.Deferred();
 	var count = goog.global[globalName]['done'].length;
 	var need;
@@ -2753,14 +2753,14 @@ cw.net.waitForXDRFrames = function(globalName, expected) {
 		count += 1;
 		need = expected - count;
 		if(!need) {
-			cw.net.logger_.info('Got XDRFrames after waiting.');
+			cw.net.waitForXDRFrames.logger_.info('Got XDRFrames after waiting.');
 			d.callback(null);
 		}
 	}
 	goog.global[globalName]['done'] = {'push': gotAnotherIframe};
 	need = expected - count;
 	if(!need) {
-		cw.net.logger_.info('Already had all XDRFrames.');
+		cw.net.waitForXDRFrames.logger_.info('Already had all XDRFrames.');
 		d.callback(null);
 	}
 	return d;
@@ -2771,7 +2771,7 @@ cw.net.waitForXDRFrames = function(globalName, expected) {
  * @type {!goog.debug.Logger}
  * @private
  */
-cw.net.logger_ = goog.debug.Logger.getLogger('cw.net');
+cw.net.waitForXDRFrames.logger_ = goog.debug.Logger.getLogger('cw.net.waitForXDRFrames');
 
 
 
