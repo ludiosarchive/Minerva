@@ -1500,8 +1500,12 @@ cw.net.SeqNumStringPairs_ = goog.typedef;
  * @private
  */
 cw.net.ClientTransport.prototype.handleStrings_ = function(bunchedStrings) {
-	// bunchedStrings is already sorted 99.99%+ of the time
-	bunchedStrings.sort();
+	// bunchedStrings is already sorted 99.99%+ of the time, but we
+	// must sort it anyway.
+	var compareZeroth = function(a, b) {
+		return a[0] > b[0] ? 1 : a[0] < b[0] ? -1 : 0;
+	};
+	goog.array.sort(bunchedStrings, compareZeroth);
 	var avoidCreatingTransports = !this.s2cStreaming;
 	this.stream_.stringsReceived_(this, bunchedStrings, avoidCreatingTransports);
 	// Remember that a lot can happen underneath that stringsReceived call,
