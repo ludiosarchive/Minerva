@@ -133,12 +133,12 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 
 	function test_handleSACKToHigherNum(self) {
 		var q = new Queue();
-		q.extend([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+		q.extend([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 		self.assertEqual(false, q.handleSACK(SK(1, [])));
 		self.assertEqual(false, q.handleSACK(SK(3, [])));
 
 		// There should be 5 items left in the queue
-		self.assertEqual([[4,4], [5,5], [6,6], [7,7], [8,8]], q.getItems(4));
+		self.assertEqual([[4,4], [5,5], [6,6], [7,7], [8,8], [9,9], [10,10]], q.getItems(4));
 	},
 
 	/**
@@ -221,6 +221,15 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingTests').methods(
 		var i = new Incoming();
 		self.assertEqual([['box0', 'box1'], false], i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']]));
 		self.assertEqual(SK(1, [4, 6]), i.getSACK());
+	},
+
+	/**
+	 * Test that the sackList is sorted by the numeric value of the numbers.
+	 */
+	function test_twoRangesMissingAbove9(self) {
+		var i = new Incoming();
+		self.assertEqual([['box0', 'box1'], false], i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [10, 'box10']]));
+		self.assertEqual(SK(1, [4, 10]), i.getSACK());
 	},
 
 	function test_twoRangesMissingThenFill(self) {

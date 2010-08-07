@@ -9,6 +9,7 @@ goog.provide('cw.net.SACK')
 
 goog.require('cw.repr');
 goog.require('cw.objsize');
+goog.require('goog.array');
 goog.require('goog.asserts');
 goog.require('goog.structs.Map');
 
@@ -126,9 +127,10 @@ cw.net.Queue.prototype.__reprToPieces__ = function(sb) {
  */
 cw.net.Queue.prototype.getQueuedKeys = function() {
 	this.items_.cleanupKeysArray_();
-	// goog.structs.Map (probably) doesn't mind having its keys_ sorted.
+	// goog.structs.Map (probably) doesn't mind having its keys_ reordered.
 	// TODO: file a .sortKeys() feature request upstream.
-	this.items_.keys_.sort();
+	// Don't use native .sort() because it does [1, 10, 11, 2].
+	goog.array.sort(this.items_.keys_);
 	return this.items_.keys_;
 };
 
@@ -353,7 +355,10 @@ cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
  * Caller may modify the Array in the returned SACK object.
  */
 cw.net.Incoming.prototype.getSACK = function() {
-	return new cw.net.SACK(this.lastAck_, this.cached_.getKeys().sort());
+	var keys = this.cached_.getKeys();
+	// Don't use native .sort() because it does [1, 10, 11, 2].
+	goog.array.sort(keys);
+	return new cw.net.SACK(this.lastAck_, keys);
 };
 
 

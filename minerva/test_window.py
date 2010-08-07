@@ -115,12 +115,12 @@ class QueueTests(unittest.TestCase):
 
 	def test_handleSACKToHigherNum(self):
 		q = Queue()
-		q.extend([0, 1, 2, 3, 4, 5, 6, 7, 8])
+		q.extend([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 		self.assertEqual(False, q.handleSACK(SACK(1, ())))
 		self.assertEqual(False, q.handleSACK(SACK(3, ())))
 
 		# There should be 5 items left in the queue
-		self.assertEqual([(4,4), (5,5), (6,6), (7,7), (8,8)], list(q.iterItems(start=4)))
+		self.assertEqual([(4,4), (5,5), (6,6), (7,7), (8,8), (9,9), (10,10)], list(q.iterItems(start=4)))
 
 
 	def test_iterItemsNoStartNumber(self):
@@ -202,6 +202,17 @@ class IncomingTests(unittest.TestCase):
 		i = Incoming()
 		self.assertEqual((['box0', 'box1'], False), i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']]))
 		self.assertEqual(SACK(1, (4, 6)), i.getSACK())
+
+
+	def test_twoRangesMissingAbove9(self):
+		"""
+		Test that the sackList is sorted by the numeric value of the
+		numbers.  This test was ported from Javascript and is not really
+		necessary in Python.
+		"""
+		i = Incoming()
+		self.assertEqual((['box0', 'box1'], False), i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [10, 'box6']]))
+		self.assertEqual(SACK(1, (4, 10)), i.getSACK())
 
 
 	def test_twoRangesMissingThenFill(self):
