@@ -283,15 +283,6 @@ cw.net.IStreamPolicy.prototype.getHttpStreamingMode = function() {
 
 
 /**
- * @typedef { {
- *	getCredentialsData: function(): string,
- *	getHttpStreamingMode: function(): !cw.net.HttpStreamingMode} }
- */
-cw.net.StreamPolicyObject;
-
-
-
-/**
  * An interface for string-based communication that abstracts
  * away the Comet logic and transports.
  *
@@ -397,7 +388,7 @@ cw.net.StreamState_ = {
  * @param {!cw.eventual.CallQueue} callQueue
  * @param {!Object} protocol
  * @param {!cw.net.Endpoint} endpoint
- * @param {!cw.net.StreamPolicyObject} streamPolicy
+ * @param {!cw.net.IStreamPolicy} streamPolicy
  *
  * @constructor
  * @extends {goog.events.EventTarget}
@@ -426,7 +417,7 @@ cw.net.Stream = function(callQueue, protocol, endpoint, streamPolicy) {
 	this.endpoint_ = endpoint;
 
 	/**
-	 * @type {!cw.net.StreamPolicyObject}
+	 * @type {!cw.net.IStreamPolicy}
 	 * @private
 	 */
 	this.streamPolicy_ = streamPolicy;
