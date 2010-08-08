@@ -291,8 +291,7 @@ cw.net.Incoming.prototype.size_ = 0;
  * @param {number} itemLimit
  * @param {number} sizeLimit
  *
- * @return {!Array.<(!Array.<string>|boolean)>} (Array of deliverable items, hitLimit?)
- * // TODO: types for tuples
+ * @return {![!Array.<string>, boolean]} (Array of deliverable items, hitLimit?)
  */
 cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
 	// TODO: maybe immediately reject items that have little chance

@@ -386,7 +386,7 @@ cw.net.StreamState_ = {
 
 /**
  * @param {!cw.eventual.CallQueue} callQueue
- * @param {!Object} protocol
+ * @param {!cw.net.IMinervaProtocol} protocol
  * @param {!cw.net.Endpoint} endpoint
  * @param {!cw.net.IStreamPolicy} streamPolicy
  *
@@ -403,7 +403,7 @@ cw.net.Stream = function(callQueue, protocol, endpoint, streamPolicy) {
 	this.callQueue_ = callQueue;
 
 	/**
-	 * @type {!Object}
+	 * @type {!cw.net.IMinervaProtocol}
 	 * @private
 	 */
 	this.protocol_ = protocol;
