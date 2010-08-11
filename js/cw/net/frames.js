@@ -933,7 +933,7 @@ cw.net.ResetFrame.decode = function(frameString) {
 	var reasonString = frameString.substr(0, frameString.length - 3);
 
 	if(reasonString.length > 255 || !cw.net.isRestrictedString_(reasonString)) {
-		throw new cw.net.InvalidFrame("illegal chars in reasonString");
+		throw new cw.net.InvalidFrame("bad reasonString");
 	}
 
 	// Either "|0" or "|1"
