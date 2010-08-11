@@ -367,7 +367,7 @@ cw.net.makeStreamId_ = function() {
  * @enum {string}
  */
 cw.net.EventType = {
-	DISCONNECTED: 'disconnected'
+	DISCONNECTED: goog.events.getUniqueId('disconnected')
 };
 
 
