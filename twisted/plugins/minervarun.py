@@ -1,6 +1,6 @@
 from twisted.application.service import ServiceMaker
 
-TwistedWeb = ServiceMaker(
+MinervaRun = ServiceMaker(
 	"Minerva test server",
 	"minerva.tap",
 	"Minerva test server",
