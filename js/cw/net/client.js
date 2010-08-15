@@ -251,7 +251,8 @@ cw.net.MAX_FRAME_LENGTH = 1024 * 1024;
 cw.net.HttpStreamingMode = {
 	NO_STREAMING: 1, // don't stream
 	STREAMING: 2, // do stream, with normal maxInactivity
-	STREAMING_PARANOID: 3 // do stream, with lower maxInactivity
+	STREAMING_PARANOID: 3 // do stream, with lower maxInactivity.
+	// STREAMING_PARANOID is not really implemented yet.
 };
 
 
