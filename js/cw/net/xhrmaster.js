@@ -286,15 +286,16 @@ goog.global['__XHRMaster_onreadystatechange'] =
 
 goog.debug.entryPointRegistry.register(
 	/**
-	 * @param {goog.debug.EntryPointMonitor} monitor The monitor.
+	 * @param {function(!Function): !Function} transformer The transforming
+	 * 	function.
 	 */
-	function(monitor) {
+	function(transformer) {
 		goog.global['__XHRMaster_onframes'] =
-			monitor.wrap(goog.global['__XHRMaster_onframes']);
+			transformer(goog.global['__XHRMaster_onframes']);
 		goog.global['__XHRMaster_oncomplete'] =
-			monitor.wrap(goog.global['__XHRMaster_oncomplete']);
+			transformer(goog.global['__XHRMaster_oncomplete']);
 		goog.global['__XHRMaster_onreadystatechange'] =
-			monitor.wrap(goog.global['__XHRMaster_onreadystatechange']);
+			transformer(goog.global['__XHRMaster_onreadystatechange']);
 	}
 );
 
