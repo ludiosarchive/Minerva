@@ -352,10 +352,11 @@ class XDRFrame(BetterResource):
 	// Load JavaScript from the parent's domain instead of our own subdomain,
 	// subdomain is always random and the resources would not be usefully
 	// cached.
+	document.write('<script>CLOSURE_NO_DEPS = true;<\/s' + 'cript>');
 	document.write('<script src="' + parentUrl + '/JSPATH/closure/goog/base.js"><\/s' + 'cript>');
 </script>
 <script>
-	document.write('<script src="' + parentUrl + '/JSPATH/nongoog_deps.js"><\/s' + 'cript>');
+	document.write('<script src="' + parentUrl + '/JSPATH/all_deps.js"><\/s' + 'cript>');
 </script>
 <script>
 	goog.require('cw.net.XHRSlave');
