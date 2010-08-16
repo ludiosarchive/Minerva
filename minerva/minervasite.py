@@ -1,5 +1,6 @@
 import os
 import re
+import jinja2
 import simplejson
 
 from twisted.python import log
@@ -331,46 +332,14 @@ class XDRFrame(BetterResource):
 		if len(frameIdStr) > 50:
 			raise ValueError("frameIdStr too long: %r" % (frameIdStr,))
 
-		# Note: for the __XDRSetup call to work, document.domain
-		# on parent page must be set *before* the browser starts executing
-		# code in the iframe.
-		return """\
-<!doctype html>
-<html>
-<head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<title>XDRFrame</title>
-</head>
-<body>
-<script>
-	document.domain = %(domain)s;
-	var parentUrlSplit = parent.location.href.split("/");
-	while(parentUrlSplit.length != 3) {
-		parentUrlSplit.pop();
-	}
-	var parentUrl = parentUrlSplit.join("/");
-	// Load JavaScript from the parent's domain instead of our own subdomain,
-	// subdomain is always random and the resources would not be usefully
-	// cached.
-	document.write('<script>CLOSURE_NO_DEPS = true;<\/s' + 'cript>');
-	document.write('<script src="' + parentUrl + '/JSPATH/closure/goog/base.js"><\/s' + 'cript>');
-</script>
-<script>
-	document.write('<script src="' + parentUrl + '/JSPATH/all_deps.js"><\/s' + 'cript>');
-</script>
-<script>
-	goog.require('cw.net.XHRSlave');
-	goog.require('cw.net.setupXDRFrame');
-</script>
-<script>
-	cw.net.setupXDRFrame(%(frameNum)d, %(frameId)s);
-</script>
-</body>
-</html>
-""" % dict(
-	domain=simplejson.dumps(self.domain),
-	frameNum=frameNum,
-	frameId=simplejson.dumps(frameIdStr))
+		template = FilePath(__file__).parent().child('xdrframe_dev.html').getContent()
+		dictionary = dict(
+			domain=simplejson.dumps(self.domain),
+			frameNum=frameNum,
+			frameId=simplejson.dumps(frameIdStr))
+
+		rendered = jinja2.Environment().from_string(template).render(dictionary)
+		return rendered.encode('utf-8')
 
 
 
