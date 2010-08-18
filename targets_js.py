@@ -3,5 +3,10 @@
 
 targets = [
 	{"inputs": ["cw/net/xhrslave.js", "cw/net/xdrframe.js"],
-	"output": "minerva/compiled_client/xdrframe.js"}
+	"output": "minerva/compiled_client/xdrframe.js"},
+
+	{"inputs": ["cw/net/bootstrap_XDRSetup.js"],
+	"output": "minerva/compiled_client/bootstrap_XDRSetup.js",
+	"prefix": "",
+	"suffix": ""},
 ]
