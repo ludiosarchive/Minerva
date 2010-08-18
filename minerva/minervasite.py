@@ -28,6 +28,8 @@ from webmagic.untwist import (
 	CookieInstaller, BetterResource, BetterFile, HelpfulNoResource,
 	ConnectionTrackingSite, DisplayConnections)
 
+from brequire import requireFile, requireFiles
+
 
 
 class NoOriginHeader(BetterResource):
@@ -308,6 +310,11 @@ class ResourcesForTest(BetterResource):
 
 
 
+requireFiles([
+	FilePath(__file__).parent().child('xdrframe.html'),
+	FilePath(__file__).parent().child('compiled_client').child('bootstrap_XDRSetup.js'),
+	FilePath(__file__).parent().child('compiled_client').child('xdrframe.js')])
+
 class XDRFrame(BetterResource):
 	"""
 	A page suitable for loading into an iframe.  It sets a document.domain
@@ -343,6 +350,8 @@ class XDRFrame(BetterResource):
 		return rendered.encode('utf-8')
 
 
+
+requireFile(FilePath(__file__).parent().child('xdrframe_dev.html'))
 
 class XDRFrameDev(XDRFrame):
 	"""
