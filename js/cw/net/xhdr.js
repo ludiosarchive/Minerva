@@ -2,7 +2,6 @@
  * @fileoverview XMLHttpRequest, XMLHTTP, and XDomainRequest wrappers.
  */
 
-goog.provide('cw.net.XHRLike');
 goog.provide('cw.net.getXHRObject');
 goog.provide('cw.net.RequestStillActive');
 goog.provide('cw.net.RequestAborted');
@@ -13,17 +12,12 @@ goog.provide('cw.net.UsableXDR');
 goog.provide('cw.net.UsableXHR');
 goog.provide('cw.net.simpleRequest');
 
+goog.require('cw.net.XHRLike');
 goog.require('goog.debug.Error');
 goog.require('goog.async.Deferred');
 goog.require('goog.userAgent');
 goog.require('goog.debug.Logger');
 goog.require('goog.json');
-
-
-/**
- * @type {(XMLHttpRequest|ActiveXObject|XDomainRequest)}
- */
-cw.net.XHRLike = goog.typedef;
 
 
 /**

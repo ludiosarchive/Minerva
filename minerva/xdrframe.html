@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>XDRFrame</title>
+</head>
+<body>
+<script>
+	document.domain = {{ domain }};
+	var parentUrlSplit = parent.location.href.split("/");
+	while(parentUrlSplit.length != 3) {
+		parentUrlSplit.pop();
+	}
+	var parentUrl = parentUrlSplit.join("/");
+	// Load JavaScript from the parent's domain instead of our own subdomain,
+	// subdomain is always random and the resources would not be usefully
+	// cached.
+	document.write('<script src="' + parentUrl + '/compiled_client/xdrframe.js"><\/s' + 'cript>');
+</script>
+<script>
+	__xdrframe_setupXDRFrame({{ frameNum }}, {{ frameId }});
+</script>
+</body>
+</html>

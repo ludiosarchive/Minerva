@@ -77,6 +77,7 @@ If no such cookie, write out the iframes immediately.
 // when calling through window.
 CSRF_TOKEN = {{ dumps(token) }};
 __XDRSetup = {
+	dev: true,
 	domain: {{ dumps(domain) }},
 	sub1: {{ dumps(sub1) }},
 	sub2: {{ dumps(sub2) }}

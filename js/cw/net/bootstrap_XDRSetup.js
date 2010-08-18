@@ -56,10 +56,11 @@
 	__XDRSetup.suffix = '.' + __XDRSetup.domain + portString + '/';
 	__XDRSetup.baseurl1 = location.protocol + '//' + __XDRSetup.sub1 + __XDRSetup.suffix;
 	__XDRSetup.baseurl2 = location.protocol + '//' + __XDRSetup.sub2 + __XDRSetup.suffix;
+	var resource = __XDRSetup.dev ? 'xdrframe_dev/' : 'xdrframe/';
 	__XDRSetup.xdrurl1 = __XDRSetup.baseurl1 +
-		'xdrframe/?framenum=1&id=' + __XDRSetup.id1;
+		resource + '?framenum=1&id=' + __XDRSetup.id1;
 	__XDRSetup.xdrurl2 = __XDRSetup.baseurl2 +
-		'xdrframe/?framenum=2&id=' + __XDRSetup.id2;
+		resource + '?framenum=2&id=' + __XDRSetup.id2;
 
 	// Each frame should get 1 attempt to redirect itself to the correct URL.
 	// This counter needs to be in the parent page, not in the iframe (which

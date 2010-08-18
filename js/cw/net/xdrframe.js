@@ -78,3 +78,6 @@ cw.net.setupXDRFrame = function(frameNum, frameId) {
 		};
 	}
 };
+
+
+goog.exportSymbol('__xdrframe_setupXDRFrame', cw.net.setupXDRFrame);

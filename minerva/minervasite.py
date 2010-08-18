@@ -314,11 +314,12 @@ class XDRFrame(BetterResource):
 	so that it can communicate with the parent page (which must also set
 	document.domain).  It is capable of making XHR requests.
 
-	Note: in production code, this could be a static page with static JavaScript
+	TODO: in production code, this could be a static page with static JavaScript
 	(maybe even the same .js file as the main page.)  Client-side code can
 	extract ?id= instead of the server.
 	"""
 	isLeaf = True
+	template = FilePath(__file__).parent().child('xdrframe.html')
 
 	def __init__(self, domain):
 		self.domain = domain
@@ -332,14 +333,24 @@ class XDRFrame(BetterResource):
 		if len(frameIdStr) > 50:
 			raise ValueError("frameIdStr too long: %r" % (frameIdStr,))
 
-		template = FilePath(__file__).parent().child('xdrframe_dev.html').getContent()
+		templateContent = self.template.getContent()
 		dictionary = dict(
 			domain=simplejson.dumps(self.domain),
 			frameNum=frameNum,
 			frameId=simplejson.dumps(frameIdStr))
 
-		rendered = jinja2.Environment().from_string(template).render(dictionary)
+		rendered = jinja2.Environment().from_string(templateContent).render(dictionary)
 		return rendered.encode('utf-8')
+
+
+
+class XDRFrameDev(XDRFrame):
+	"""
+	Like XDRFrame, except load the uncompiled JavaScript code, instead of
+	the compiled xdrframe.js.
+	"""
+	isLeaf = True
+	template = FilePath(__file__).parent().child('xdrframe_dev.html')
 
 
 
@@ -375,6 +386,7 @@ class Root(BetterResource):
 		self.putChild('flashtest', FlashTestPage(csrfStopper, cookieInstaller))
 		self.putChild('chatapp', ChatAppPage(csrfStopper, cookieInstaller, domain))
 		self.putChild('xdrframe', XDRFrame(domain))
+		self.putChild('xdrframe_dev', XDRFrameDev(domain))
 
 		# Used by chatapp
 		self.putChild('wait_resource', WaitResource(clock=reactor))
