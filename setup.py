@@ -10,6 +10,7 @@ setup(
 	name='Minerva',
 	version=minerva.__version__,
 	description="Minerva",
-	packages=['minerva', 'minerva.sample', 'minerva.flashtest', 'twisted.plugins'],
+	packages=['minerva', 'minerva.sample', 'minerva.flashtest',
+		'minerva.chatapp', 'twisted.plugins'],
 	package_data={'minerva': ['*.html', '*/*.swf', '*/*.html'],},
 )
