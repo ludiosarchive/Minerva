@@ -311,9 +311,9 @@ class ResourcesForTest(BetterResource):
 
 
 requireFiles([
-	FilePath(__file__).parent().child('xdrframe.html'),
-	FilePath(__file__).parent().child('compiled_client').child('bootstrap_XDRSetup.js'),
-	FilePath(__file__).parent().child('compiled_client').child('xdrframe.js')])
+	FilePath(__file__).parent().child('xdrframe.html').path,
+	FilePath(__file__).parent().child('compiled_client').child('bootstrap_XDRSetup.js').path,
+	FilePath(__file__).parent().child('compiled_client').child('xdrframe.js').path])
 
 class XDRFrame(BetterResource):
 	"""
@@ -351,7 +351,7 @@ class XDRFrame(BetterResource):
 
 
 
-requireFile(FilePath(__file__).parent().child('xdrframe_dev.html'))
+requireFile(FilePath(__file__).parent().child('xdrframe_dev.html').path)
 
 class XDRFrameDev(XDRFrame):
 	"""
