@@ -12,5 +12,6 @@ setup(
 	description="Minerva",
 	packages=['minerva', 'minerva.sample', 'minerva.flashtest',
 		'minerva.chatapp', 'twisted.plugins'],
-	package_data={'minerva': ['*.html', '*/*.swf', '*/*.html'],},
+	package_data={'minerva': ['*.html', '*/*.swf', '*/*.html',
+		'compiled_client/*.js', 'compiled_client/*.swf']},
 )
