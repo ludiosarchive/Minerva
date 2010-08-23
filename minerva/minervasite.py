@@ -1,23 +1,19 @@
 import os
-import re
-import jinja2
 import simplejson
 
 from twisted.python import log
 from twisted.python.filepath import FilePath
 from twisted.internet.task import LoopingCall
 
-from zope.interface import implements
-
 from cwtools import testing
 from mypy import randgen
-from mypy.objops import strToNonNegLimit
 
 from minerva.newlink import (
 	BasicMinervaProtocol, BasicMinervaFactory, StreamTracker, HttpFace, SocketFace)
 
 from minerva.website import (
-	CsrfTransportFirewall, NoopTransportFirewall, CsrfStopper)
+	CsrfTransportFirewall, NoopTransportFirewall, CsrfStopper, XDRFrame,
+	XDRFrameDev)
 
 from minerva.flashtest.pages import FlashTestPage
 from minerva.chatapp.pages import ChatAppPage
@@ -307,59 +303,6 @@ class ResourcesForTest(BetterResource):
 		self.putChild('UnicodeRainbow', UnicodeRainbow())
 		self.putChild('NoOriginHeader', NoOriginHeader())
 		self.putChild('GetTokenPage', GetTokenPage(csrfStopper, cookieInstaller))
-
-
-
-requireFiles([
-	FilePath(__file__).parent().child('xdrframe.html').path,
-	FilePath(__file__).parent().child('compiled_client').child('bootstrap_XDRSetup.js').path,
-	FilePath(__file__).parent().child('compiled_client').child('xdrframe.js').path])
-
-class XDRFrame(BetterResource):
-	"""
-	A page suitable for loading into an iframe.  It sets a document.domain
-	so that it can communicate with the parent page (which must also set
-	document.domain).  It is capable of making XHR requests.
-
-	TODO: in production code, this could be a static page with static JavaScript
-	(maybe even the same .js file as the main page.)  Client-side code can
-	extract ?id= instead of the server.
-	"""
-	isLeaf = True
-	template = FilePath(__file__).parent().child('xdrframe.html')
-
-	def __init__(self, domain):
-		self.domain = domain
-
-
-	def render_GET(self, request):
-		frameNum = strToNonNegLimit(request.args['framenum'][0], 2**53)
-		frameIdStr = request.args['id'][0]
-		if not re.match('^([A-Za-z0-9]*)$', frameIdStr):
-			raise ValueError("frameIdStr contained bad characters: %r" % (frameIdStr,))
-		if len(frameIdStr) > 50:
-			raise ValueError("frameIdStr too long: %r" % (frameIdStr,))
-
-		templateContent = self.template.getContent()
-		dictionary = dict(
-			domain=simplejson.dumps(self.domain),
-			frameNum=frameNum,
-			frameId=simplejson.dumps(frameIdStr))
-
-		rendered = jinja2.Environment().from_string(templateContent).render(dictionary)
-		return rendered.encode('utf-8')
-
-
-
-requireFile(FilePath(__file__).parent().child('xdrframe_dev.html').path)
-
-class XDRFrameDev(XDRFrame):
-	"""
-	Like XDRFrame, except load the uncompiled JavaScript code, instead of
-	the compiled xdrframe.js.
-	"""
-	isLeaf = True
-	template = FilePath(__file__).parent().child('xdrframe_dev.html')
 
 
 
