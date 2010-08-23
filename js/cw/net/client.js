@@ -1682,17 +1682,24 @@ cw.net.ClientTransport.prototype.setRecvTimeout_ = function(ms) {
 };
 
 /**
- * Called by XHRMaster when/if it receives a Content-Length header that
- * parses to a non-negative number.
- * @param {number} contentLength
+ * Called by XHRMaster after it receives headers.
+ * @param {?number} contentLength The Content-Length if a valid one was
+ * 	received, or null.
  * @private
  */
-cw.net.ClientTransport.prototype.contentLengthReceived_ = function(contentLength) {
+cw.net.ClientTransport.prototype.contentLengthMaybeReceived_ = function(contentLength) {
 	this.logger_.fine(this.getDescription_() + " got Content-Length: " + contentLength);
 	// Only adjust the timeout for XHR_LONGPOLL.  For all other transports,
 	// we have proper feedback as we receive data, and can rely on the timeout
 	// set by peerStillAlive_.
 	if(this.transportType_ == cw.net.TransportType_.XHR_LONGPOLL) {
+		if(contentLength == null) {
+			this.logger_.warning("Expected to receive a valid " +
+				"Content-Length, but did not.");
+			// The response could be even bigger, but we don't have any
+			// information to go on.
+			contentLength = 500000;
+		}
 		this.setRecvTimeout_(
 			cw.net.MAX_SERVER_JANK +
 			(contentLength / cw.net.DEFAULT_DL_SPEED) * 1000);

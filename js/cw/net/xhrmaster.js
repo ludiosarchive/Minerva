@@ -111,14 +111,13 @@ cw.net.XHRMaster.prototype.onframes_ = function(frames, status) {
  */
 cw.net.XHRMaster.prototype.ongotheaders_ = function(usefulHeaders) {
 	this.logger_.fine('ongotheaders_: ' + cw.repr.repr(usefulHeaders));
+	var contentLength = null;
 	if('Content-Length' in usefulHeaders) {
 		var contentLengthStr =  usefulHeaders['Content-Length'];
-		var contentLength = cw.string.strToNonNegLimit(
+		contentLength = cw.string.strToNonNegLimit(
 			contentLengthStr, cw.math.LARGEST_INTEGER);
-		if(contentLength != null) {
-			this.clientTransport_.contentLengthReceived_(contentLength);
-		}
 	}
+	this.clientTransport_.contentLengthMaybeReceived_(contentLength);
 };
 
 
