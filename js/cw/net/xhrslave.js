@@ -16,6 +16,7 @@ goog.provide('cw.net.READ_DURING_INTERACTIVE');
 goog.require('goog.Disposable');
 goog.require('goog.events');
 goog.require('goog.object');
+goog.require('goog.structs.Map');
 goog.require('goog.net.XhrIo');
 goog.require('goog.net.EventType');
 goog.require('goog.userAgent');
@@ -87,6 +88,23 @@ cw.net.XHRSlave.prototype.decoder_;
 cw.net.XHRSlave.prototype.readyState_ = -1;
 
 /**
+ * @type {boolean}
+ * @private
+ */
+cw.net.XHRSlave.prototype.gotHeaders_ = false;
+
+/**
+ * An Array of header names that we should try to collect from the response.
+ * There should be enough headers here so we collect at least one of these
+ * headers when we receive the headers.
+ * @type {!Array.<string>}
+ * @private
+ */
+cw.net.XHRSlave.prototype.headerNames_ = [
+	'Content-Length', 'Server', 'Date', 'Expires', 'Keep-Alive',
+	'Content-Type', 'Transfer-Encoding', 'Cache-Control'];
+
+/**
  * @private
  */
 cw.net.XHRSlave.prototype.decodeNewStrings_ = function() {
@@ -113,15 +131,19 @@ cw.net.XHRSlave.prototype.httpResponseReceived_ = function() {
 };
 
 /**
- * @return {!Object.<string, string>} An object containing useful headers.
+ * @return {!goog.structs.Map} A Map containing useful headers.
  * @private
  */
 cw.net.XHRSlave.prototype.getUsefulHeaders_ = function() {
-	var usefulHeaders = {};
-	try {
-		usefulHeaders['Content-Length'] =
-			this.underlying_.xhr_.getResponseHeader('Content-Length');
-	} catch(e) {
+	var usefulHeaders = new goog.structs.Map();
+	var n = this.headerNames_.length;
+	while(n--) {
+		var headerName =  this.headerNames_[n];
+		try {
+			usefulHeaders.set(headerName,
+				this.underlying_.xhr_.getResponseHeader(headerName));
+		} catch(e) {
+		}
 	}
 	return usefulHeaders;
 };
@@ -135,10 +157,18 @@ cw.net.XHRSlave.prototype.readyStateChangeFired_ = function() {
 	// Note: In most browsers, headers are available at readyState >= 2.
 	// In Opera 10.70, headers are available at readyState >= 3.
 
-	// TODO: grab headers only once.
-	var usefulHeaders = this.readyState_ >= 2 ? this.getUsefulHeaders_() : {};
+	var grabHeaders = this.readyState_ >= 2 && !this.gotHeaders_;
+	if(grabHeaders) {
+		var usefulHeaders = this.getUsefulHeaders_();
+		if(usefulHeaders.getCount()) {
+			this.gotHeaders_ = true;
+			goog.global.parent['__XHRMaster_ongotheaders'](
+				this.reqId_, usefulHeaders.toObject());
+		}
+	}
+
 	goog.global.parent['__XHRMaster_onreadystatechange'](
-		this.reqId_, this.readyState_, usefulHeaders);
+		this.reqId_, this.readyState_);
 
 	// In browsers where we're allowed to, always try to decode new frames,
 	// even if the transport is not meant to be streaming.

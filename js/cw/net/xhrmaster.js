@@ -68,13 +68,6 @@ cw.net.XHRMaster.prototype.logger_ =
 	goog.debug.Logger.getLogger('cw.net.XHRMaster');
 
 /**
- * Did we see a Content-Length header? (even if it was not a usable number)
- * @type {boolean}
- * @private
- */
-cw.net.XHRMaster.prototype.sawContentLength_ = false;
-
-/**
  * @type {number}
  * @private
  */
@@ -113,11 +106,27 @@ cw.net.XHRMaster.prototype.onframes_ = function(frames, status) {
 };
 
 /**
- * @param {number} readyState The new readyState.
  * @param {!Object.<string, string>} usefulHeaders An object containing useful headers.
  * @private
  */
-cw.net.XHRMaster.prototype.onreadystatechange_ = function(readyState, usefulHeaders) {
+cw.net.XHRMaster.prototype.ongotheaders_ = function(usefulHeaders) {
+	this.logger_.fine('ongotheaders_: ' + cw.repr.repr(usefulHeaders));
+	if('Content-Length' in usefulHeaders) {
+		var contentLengthStr =  usefulHeaders['Content-Length'];
+		var contentLength = cw.string.strToNonNegLimit(
+			contentLengthStr, cw.math.LARGEST_INTEGER);
+		if(contentLength != null) {
+			this.clientTransport_.contentLengthReceived_(contentLength);
+		}
+	}
+};
+
+
+/**
+ * @param {number} readyState The new readyState.
+ * @private
+ */
+cw.net.XHRMaster.prototype.onreadystatechange_ = function(readyState) {
 	if(readyState != 1) { // nobody cares about readyState 1
 		this.logger_.fine(this.clientTransport_.getDescription_() +
 			"'s XHR's readyState is " + readyState);
@@ -127,17 +136,6 @@ cw.net.XHRMaster.prototype.onreadystatechange_ = function(readyState, usefulHead
 	// readyState 1 does not indicate anything useful.
 	if(this.readyState_ >= 2) {
 		this.clientTransport_.peerStillAlive_();
-	}
-	if(!this.sawContentLength_) {
-		if('Content-Length' in usefulHeaders) {
-			this.sawContentLength_ = true;
-			var contentLengthStr =  usefulHeaders['Content-Length'];
-			var contentLength = cw.string.strToNonNegLimit(
-				contentLengthStr, cw.math.LARGEST_INTEGER);
-			if(contentLength != null) {
-				this.clientTransport_.contentLengthReceived_(contentLength);
-			}
-		}
 	}
 };
 
@@ -221,18 +219,32 @@ cw.net.XHRMasterTracker.prototype.onframes_ = function(reqId, frames, status) {
 
 /**
  * @param {string} reqId
- * @param {number} readyState The new readyState.
  * @param {!Object.<string, string>} usefulHeaders An object containing useful headers.
  * @private
  */
-cw.net.XHRMasterTracker.prototype.onreadystatechange_ = function(reqId, readyState, usefulHeaders) {
+cw.net.XHRMasterTracker.prototype.ongotheaders_ = function(reqId, usefulHeaders) {
+	var master = this.masters_[reqId];
+	if(!master) {
+		this.logger_.severe(
+			"ongotheaders_: no master for " + cw.repr.repr(reqId));
+		return;
+	}
+	master.ongotheaders_(usefulHeaders);
+};
+
+/**
+ * @param {string} reqId
+ * @param {number} readyState The new readyState.
+ * @private
+ */
+cw.net.XHRMasterTracker.prototype.onreadystatechange_ = function(reqId, readyState) {
 	var master = this.masters_[reqId];
 	if(!master) {
 		this.logger_.severe(
 			"onreadystatechange_: no master for " + cw.repr.repr(reqId));
 		return;
 	}
-	master.onreadystatechange_(readyState, usefulHeaders);
+	master.onreadystatechange_(readyState);
 };
 
 /**
@@ -281,6 +293,9 @@ goog.global['__XHRMaster_onframes'] =
 goog.global['__XHRMaster_oncomplete'] =
 	goog.bind(cw.net.theXHRMasterTracker_.oncomplete_, cw.net.theXHRMasterTracker_);
 
+goog.global['__XHRMaster_ongotheaders'] =
+	goog.bind(cw.net.theXHRMasterTracker_.ongotheaders_, cw.net.theXHRMasterTracker_);
+
 goog.global['__XHRMaster_onreadystatechange'] =
 	goog.bind(cw.net.theXHRMasterTracker_.onreadystatechange_, cw.net.theXHRMasterTracker_);
 
@@ -292,8 +307,13 @@ goog.debug.entryPointRegistry.register(
 	function(transformer) {
 		goog.global['__XHRMaster_onframes'] =
 			transformer(goog.global['__XHRMaster_onframes']);
+
 		goog.global['__XHRMaster_oncomplete'] =
 			transformer(goog.global['__XHRMaster_oncomplete']);
+
+		goog.global['__XHRMaster_ongotheaders'] =
+			transformer(goog.global['__XHRMaster_ongotheaders']);
+
 		goog.global['__XHRMaster_onreadystatechange'] =
 			transformer(goog.global['__XHRMaster_onreadystatechange']);
 	}
