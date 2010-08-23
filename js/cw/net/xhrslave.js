@@ -7,6 +7,11 @@
  * of hoops to be able to reference XhrIo objects with strings, across
  * a Worker/SharedWorker boundary.
  *
+ * Note: In Firefox 3.6 (and maybe other browsers), as as the page is
+ * unloading, goog.global.parent becomes null.  This is why several places
+ * check if it is null.  We don't keep a reference to the parent because
+ * that *might* cause garbage collection problems in some browsers.
+ *
  * LICENSE note: includes a constant from Closure Library.
  */
 
@@ -111,7 +116,12 @@ cw.net.XHRSlave.prototype.decodeNewStrings_ = function() {
 	var _ = this.decoder_.getNewStrings();
 	var frames = _[0];
 	var status = _[1];
-	goog.global.parent['__XHRMaster_onframes'](this.reqId_, frames, status);
+	var parent = goog.global.parent;
+	if(!parent) {
+		this.dispose();
+		return;
+	}
+	parent['__XHRMaster_onframes'](this.reqId_, frames, status);
 	if(status != cw.net.DecodeStatus.OK) {
 		this.dispose();
 	}
@@ -125,7 +135,10 @@ cw.net.XHRSlave.prototype.httpResponseReceived_ = function() {
 	this.decodeNewStrings_();
 	// The above onframes call may have synchronously disposed us.
 	if(!this.isDisposed()) {
-		goog.global.parent['__XHRMaster_oncomplete'](this.reqId_);
+		var parent = goog.global.parent;
+		if(parent) {
+			parent['__XHRMaster_oncomplete'](this.reqId_);
+		}
 		this.dispose();
 	}
 };
@@ -152,6 +165,12 @@ cw.net.XHRSlave.prototype.getUsefulHeaders_ = function() {
  * @private
  */
 cw.net.XHRSlave.prototype.readyStateChangeFired_ = function() {
+	var parent = goog.global.parent;
+	if(!parent) {
+		this.dispose();
+		return;
+	}
+
 	this.readyState_ = this.underlying_.getReadyState();
 
 	// Note: In most browsers, headers are available at readyState >= 2.
@@ -162,13 +181,16 @@ cw.net.XHRSlave.prototype.readyStateChangeFired_ = function() {
 		var usefulHeaders = this.getUsefulHeaders_();
 		if(usefulHeaders.getCount()) {
 			this.gotHeaders_ = true;
-			goog.global.parent['__XHRMaster_ongotheaders'](
+			parent['__XHRMaster_ongotheaders'](
 				this.reqId_, usefulHeaders.toObject());
+			// The above ongotheaders call may have synchronously disposed us.
+			if(this.isDisposed()) {
+				return;
+			}
 		}
 	}
 
-	goog.global.parent['__XHRMaster_onreadystatechange'](
-		this.reqId_, this.readyState_);
+	parent['__XHRMaster_onreadystatechange'](this.reqId_, this.readyState_);
 
 	// In browsers where we're allowed to, always try to decode new frames,
 	// even if the transport is not meant to be streaming.
