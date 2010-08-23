@@ -306,6 +306,8 @@ class ResourcesForTest(BetterResource):
 
 
 
+requireFile(FilePath(__file__).parent().child('index.html').path)
+
 class Root(BetterResource):
 
 	def __init__(self, reactor, httpFace, csrfStopper, cookieInstaller, domain):
