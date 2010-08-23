@@ -11,6 +11,7 @@ from zope.interface import Interface, Attribute, implements
 from random import randint
 
 from twisted.python import log
+from twisted.python.filepath import FilePath
 from twisted.internet import protocol, defer
 from twisted.internet.interfaces import (
 	IPushProducer, IPullProducer, IProtocol, IProtocolFactory)
@@ -31,6 +32,8 @@ from minerva.frames import (
 	StreamCreatedFrame, YouCloseItFrame, ResetFrame, CommentFrame,
 	TransportKillFrame, InvalidFrame, decodeFrameFromClient,
 	isRestrictedString)
+
+from brequire import requireFile
 
 # Make globals that pypycpyo.optimizer can optimize away
 tk_stream_attach_failure = TransportKillFrame.stream_attach_failure
@@ -1736,6 +1739,9 @@ class ServerTransport(object):
 		return self._mode == HTTP
 
 
+
+requireFile(FilePath(__file__).parent().child('compiled_client').child('FlashConnector.swf').path)
+requireFile(FilePath(__file__).parent().child('compiled_client').child('expressInstall.swf').path)
 
 class SocketFace(protocol.ServerFactory):
 	implements(IProtocolFactory)
