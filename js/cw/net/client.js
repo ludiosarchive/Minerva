@@ -310,7 +310,7 @@ cw.net.IMinervaProtocol = function() {
 
 /**
  * Called when this stream has just started.  You may want to keep the
- * stream around with {@code this.stream = stream}.
+ * stream around with {@code this.stream = stream} or similar.
  *
  * You must *not* throw any error. Wrap your code in try/catch if necessary.
  *
@@ -322,7 +322,7 @@ cw.net.IMinervaProtocol.prototype.streamStarted = function(stream) {
 
 /**
  * Called when this stream has reset, either internally by Minerva client's
- * Stream, or a call to Stream.reset, or by a reset frame from the peer.
+ * Stream, or a call to Stream.reset, or by a ResetFrame from the peer.
  *
  * You must *not* throw any error. Wrap your code in try/catch if necessary.
  *
