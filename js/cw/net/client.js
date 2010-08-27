@@ -386,6 +386,13 @@ cw.net.StreamState_ = {
 
 
 /**
+ * The client-side representation of a Minerva Stream.
+ *
+ * Stream is sort-of analogous to {@code twisted.internet.tcp.Connection}.
+ * Stream can span many TCP connections/HTTP requests.  Because Stream
+ * has no built-in timeouts, the application code is in full control of how
+ * long a Stream lasts without contact from the peer.
+ *
  * @param {!cw.eventual.CallQueue} callQueue
  * @param {!cw.net.IMinervaProtocol} protocol
  * @param {!cw.net.Endpoint} endpoint
@@ -404,6 +411,7 @@ cw.net.Stream = function(callQueue, protocol, endpoint, streamPolicy) {
 	this.callQueue_ = callQueue;
 
 	/**
+	 * The protocol that this Stream is associated with.
 	 * @type {!cw.net.IMinervaProtocol}
 	 * @private
 	 */
@@ -418,30 +426,37 @@ cw.net.Stream = function(callQueue, protocol, endpoint, streamPolicy) {
 	this.endpoint_ = endpoint;
 
 	/**
+	 * The stream policy object.
 	 * @type {!cw.net.IStreamPolicy}
 	 * @private
 	 */
 	this.streamPolicy_ = streamPolicy;
 
 	/**
+	 * A set of all currently-online transports.
 	 * @type {!goog.structs.Set}
+	 * @private
 	 */
 	this.transports_ = new goog.structs.Set();
 
 	/**
+	 * This Stream's unique ID.  Note that client may pick a bad ID that
+	 * collides with another bad ID, but this is entirely the client's fault.
 	 * @type {string}
 	 */
 	this.streamId = cw.net.makeStreamId_();
 
 	/**
-	 * The send queue.
+	 * The send queue.  Outgoing strings land here before being sent to the
+	 * peer.
 	 * @type {!cw.net.Queue}
 	 * @private
 	 */
 	this.queue_ = new cw.net.Queue();
 
 	/**
-	 * The receive window.
+	 * The receive window.  Incoming strings land here before being sent to
+	 * a {@link cw.net.IMinervaProtocol}.
 	 * @type {!cw.net.Incoming}
 	 * @private
 	 */
@@ -450,6 +465,7 @@ cw.net.Stream = function(callQueue, protocol, endpoint, streamPolicy) {
 	/**
 	 * The numeric key for our window.onload listener (if we listen).
 	 * @type {?number}
+	 * @private
 	 */
 	this.windowLoadEvent_ = null;
 
@@ -474,12 +490,15 @@ cw.net.Stream.prototype.logger_ =
 	goog.debug.Logger.getLogger('cw.net.Stream');
 
 /**
+ * The last SACK we have received.
  * @type {!cw.net.SACK}
  * @private
  */
 cw.net.Stream.prototype.lastSackSeenByClient_ = new cw.net.SACK(-1, []);
 
 /**
+ * The last SACK the server has definitely received, as far as we know.  This
+ * information is used to decide whether to (re)send a SackFrame.
  * @type {!cw.net.SACK}
  * @private
  */
@@ -500,12 +519,13 @@ cw.net.Stream.prototype.maxUndeliveredStrings = 50;
 cw.net.Stream.prototype.maxUndeliveredBytes = 1 * 1024 * 1024;
 
 /**
- * Has the server ever known about the Stream? Set to `true` after
- * we get a StreamCreatedFrame. Never set back to `false`.
+ * Has the server ever known about the Stream?  Set to `true` after
+ * we get a {@link cw.net.StreamCreatedFrame}.  Never set back to `false`.
  *
  * If `false`, the transports that Stream makes must have HelloFrame with
  * `requestNewStream` and `credentialsData`.
  * @type {boolean}
+ * @private
  */
 cw.net.Stream.prototype.streamExistedAtServer_ = false;
 
@@ -533,32 +553,35 @@ cw.net.Stream.prototype.state_ = cw.net.StreamState_.UNSTARTED;
 cw.net.Stream.prototype.transportCount_ = -1;
 
 /**
- * The primary transport, for receiving S2C strings.
+ * The primary transport, for receiving S2C strings (and possibly sending C2S
+ * strings).
  * @type {cw.net.ClientTransport|cw.net.DoNothingTransport}
  * @private
  */
 cw.net.Stream.prototype.primaryTransport_ = null;
 
 /**
- * The secondary transport, for sending S2C strings (especially if primary
- * 	cannot after it has been created).
+ * The secondary transport.  It is created to send strings/sacks if the primary
+ * transport cannot send anything after it has been created.  This is the
+ * case for any HTTP transport.
  * @type {cw.net.ClientTransport|cw.net.DoNothingTransport}
  * @private
  */
 cw.net.Stream.prototype.secondaryTransport_ = null;
 
 /**
- * The transport dedicated to resetting the Stream. Note that sometimes
- * the ResetFrame is sent over primaryTransport_ instead.
+ * The transport dedicated to resetting the Stream.  If primary transport is
+ * capable of sending after being created, this type of transport is not
+ * created, and the ResetFrame is sent over the primary transport instead.
  * @type {cw.net.ClientTransport}
  * @private
  */
 cw.net.Stream.prototype.resettingTransport_ = null;
 
 /**
- * The current penalty for the Stream. Increased when transports die with
- * errors that suggest the Stream is permanently broken or unreachable.
- * Reset back to 0 when a transport with no penalty goes offline.
+ * The current penalty for the Stream.  Increased when transports die with
+ * errors that suggest that the Stream is permanently broken.  Reset back to
+ * 0 when a transport with no penalty goes offline.
  * @type {number}
  * @private
  */
@@ -566,7 +589,7 @@ cw.net.Stream.prototype.streamPenalty_ = 0;
 
 /**
  * How many times in a row the primary transport has been followed
- * by a DoNothingTransport.
+ * by a {@link cw.net.DoNothingTransport}.
  * @type {number}
  * @private
  */
@@ -574,14 +597,15 @@ cw.net.Stream.prototype.primaryDelayCount_ = 0;
 
 /**
  * How many times in a row the secondary transport has been followed
- * by a DoNothingTransport.
+ * by a {@link cw.net.DoNothingTransport}.
  * @type {number}
  * @private
  */
 cw.net.Stream.prototype.secondaryDelayCount_ = 0;
 
 /**
- * Validate strings passed to {@link #sendStrings}?
+ * Validate strings passed to {@link #sendStrings} before sending them?
+ * Set this to `false` after creating the Stream for a slight speedup.
  * @type {boolean}
  */
 cw.net.Stream.prototype.outgoingStringValidation = true;

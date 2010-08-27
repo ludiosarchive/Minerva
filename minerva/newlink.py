@@ -287,10 +287,12 @@ class SuperFactory(object):
 # L{twisted.internet.tcp.Server}s in Twisted.
 class Stream(object):
 	"""
+	The server-side representation of a Minerva Stream.
+
 	Stream is sort-of analogous to L{twisted.internet.tcp.Connection}.
 	Stream can span many TCP connections/HTTP requests.  Because Stream
-	in Minerva server has no built-in timeouts, the application code is in
-	full control of how long a Stream lasts without contact from the peer.
+	has no built-in timeouts, the application code is in full control of how
+	long a Stream lasts without contact from the peer.
 
 	The producer/consumer here is designed to deal with TCP bandwidth
 	pressure (and "lack of any S2C transport" pressure).  It does not help
