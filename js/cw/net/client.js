@@ -883,6 +883,7 @@ cw.net.Stream.prototype.streamStatusReceived_ = function(lastSackSeen) {
  * @param {!(cw.net.ClientTransport|cw.net.DoNothingTransport)} transport The
  * 	previous transport.
  * @return {!Array.<number>} (Delay in milliseconds, times to repeat delay).
+ * @private
  * // TODO: types for tuples
  */
 cw.net.Stream.prototype.getDelayForNextTransport_ = function(transport) {
@@ -1227,7 +1228,7 @@ cw.net.TransportType_ = {
  * 	- We have no Interface defined for ClientTransport.
  * 	- ClientTransport makes connections, ServerTransport receives connections.
  * 	- ClientTransport deals with unicode strings (though restricted in range),
- * 		ServerTransport deals with bytes.
+ * 		ServerTransport deals with bytes (also restricted in range).
  * 	- ClientTransport may have subtly different ResetFrame behavior (more
  * 		StringFrames make it through? Really? TODO: describe)
  *
@@ -1254,6 +1255,7 @@ transportType, endpoint, becomePrimary) {
 	this.callQueue_ = callQueue;
 
 	/**
+	 * The Stream we're associated with.
 	 * @type {cw.net.Stream}
 	 * @private
 	 */
@@ -1271,6 +1273,7 @@ transportType, endpoint, becomePrimary) {
 	this.transportType_ = transportType;
 
 	/**
+	 * Where we should connect to.
 	 * @type {!cw.net.Endpoint}
 	 * @private
 	 */
@@ -1400,7 +1403,7 @@ cw.net.ClientTransport.prototype.ourSeqNum_ = -1;
 cw.net.ClientTransport.prototype.peerSeqNum_ = -1;
 
 /**
- * Has `writeReset_` been called on this transport?
+ * Has {@link #writeReset_} been called on this transport?
  * @type {boolean}
  * @private
  */
@@ -1416,14 +1419,14 @@ cw.net.ClientTransport.prototype.abortedForSpinner_ = false;
 
 /**
  * The additional likelihood that Stream is dead on server or permanently
- * unreachable. This is a guess based on the data we received.
+ * unreachable.  This is a guess based on what this transport has received.
  * @type {number}
  * @private
  */
 cw.net.ClientTransport.prototype.penalty_ = 0;
 
 /**
- * Did the transport receive data that suggests we should possibly delay
+ * Did the transport receive data that suggests Stream should possibly delay
  * the next transport?
  * @type {boolean}
  * @private
@@ -1442,8 +1445,8 @@ cw.net.ClientTransport.prototype.__reprToPieces__ = function(sb) {
 };
 
 /**
- * Return a short description of the transport. Used only for log messages.
- * @return {string}
+ * @return {string} A short description of the transport.  Used only for log
+ * 	messages.
  * @private
  */
 cw.net.ClientTransport.prototype.getDescription_ = function() {
@@ -1451,8 +1454,8 @@ cw.net.ClientTransport.prototype.getDescription_ = function() {
 };
 
 /**
- * Should Stream consider a DoNothingTransport for the next transport?
- * @return {boolean}
+ * @return {boolean} Whether Stream should consider a
+ * 	{@link cw.net.DoNothingTransport} for the next transport.
  * @private
  */
 cw.net.ClientTransport.prototype.considerDelayingNextTransport_ = function() {
@@ -1460,9 +1463,9 @@ cw.net.ClientTransport.prototype.considerDelayingNextTransport_ = function() {
 };
 
 /**
- * Return how many milliseconds the underlying TCP connection or HTTP request
- * was open.  The returned number may be too low or too high if the clock jumped.
- * @return {number} Duration in milliseconds.
+ * @return {number} How many milliseconds the underlying TCP connection or
+ * 	HTTP request was open.  Note that the returned number may be too low or
+ * 	too high if the clock jumped.
  * @private
  */
 cw.net.ClientTransport.prototype.getUnderlyingDuration_ = function() {
@@ -1530,10 +1533,9 @@ cw.net.ClientTransport.prototype.handleStrings_ = function(bunchedStrings) {
 
 /**
  * @param {string} frameStr
- * @param {!cw.net.SeqNumStringPairs_} bunchedStrings Unsorted Array of
- * 	(seqNum, string) pairs that this method can push into, or clear.
- * @return {boolean} Whether ClientTransport must close (dispose) the
- * 	transport.
+ * @param {!cw.net.SeqNumStringPairs_} bunchedStrings An unsorted Array of
+ * 	[seqNum, string] pairs that this method can push into, or clear.
+ * @return {boolean} Whether ClientTransport must now dispose.
  * @private
  */
 cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedStrings) {
@@ -1630,8 +1632,8 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 		var closeSoon = false;
 		var bunchedStrings = [];
 		for(var i=0, len=frames.length; i < len; i++) {
-			// Inside the loop, we call stream_ for many reasons, which
-			// can synchronously dispose us for one of several reasons.
+			// handleFrame_ below calls methods on stream_ for many
+			// reasons, and those methods can synchronously dispose us.
 			// Note that we might have been disposed before entering
 			// framesReceived_; for example, if we were disposed while
 			// making an HTTP request.
@@ -1706,7 +1708,7 @@ cw.net.ClientTransport.prototype.setRecvTimeout_ = function(ms) {
 };
 
 /**
- * Called by XHRMaster after it receives headers.
+ * Called by {@link cw.net.XHRMaster} after it receives headers.
  * @param {?number} contentLength The Content-Length if a valid one was
  * 	received, or null.
  * @private
@@ -1763,7 +1765,7 @@ cw.net.ClientTransport.prototype.httpResponseEnded_ = function() {
 };
 
 /**
- * @param {string} payload
+ * @param {string} payload The request body (containing encoded frames).
  * @private
  */
 cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
@@ -1903,7 +1905,7 @@ cw.net.ClientTransport.prototype.flushBufferAsEncodedFrames_ = function() {
 };
 
 /**
- * Called by our this.underlying_, a `FlashSocketConduit`.
+ * Called by our underlying_, a {@link cw.net.FlashSocketConduit}.
  * @param {boolean} probablyCrashed Did Flash Player probably crash?
  * @private
  */
@@ -2059,10 +2061,6 @@ cw.net.ClientTransport.prototype.writeStrings_ = function(queue, start) {
 	}
 };
 
-/**
- * Call `dispose` to close this transport. If it is called again, this is a no-op.
- * @private
- */
 cw.net.ClientTransport.prototype.disposeInternal = function() {
 	this.logger_.info(this.getDescription_() + " in disposeInternal.");
 
@@ -2108,8 +2106,8 @@ cw.net.ClientTransport.prototype.causedRwinOverflow_ = function() {
 };
 
 /**
- * Send a reset frame over this transport. Depending on what you want,
- * 	you must `close` or `start` the transport after you call this.
+ * Send a ResetFrame over this transport.  Remember to either `close` or
+ * 	`start` the transport after you call this.
  * @param {string} reasonString Textual reason why Stream is resetting.
  * @param {boolean} applicationLevel Whether this reset was made by the
  * 	application.
@@ -2251,7 +2249,7 @@ cw.net.DoNothingTransport.prototype.__reprToPieces__ = function(sb) {
 };
 
 /**
- * Note: Stream.restartHttpRequests_ needs this.
+ * Note: {@link cw.net.Stream.restartHttpRequests_} needs this.
  * @return {boolean}
  * @private
  */
@@ -2260,8 +2258,8 @@ cw.net.DoNothingTransport.prototype.isHttpTransport_ = function() {
 };
 
 /**
- * Return a short description of the transport. Used only for log messages.
- * @return {string}
+ * @return {string} A short description of the transport.  Used only for log
+ * 	messages.
  * @private
  */
 cw.net.DoNothingTransport.prototype.getDescription_ = function() {
@@ -2269,18 +2267,14 @@ cw.net.DoNothingTransport.prototype.getDescription_ = function() {
 };
 
 /**
- * Should Stream consider a DoNothingTransport for the next transport?
- * @return {boolean}
+ * @return {boolean} Whether Stream consider a
+ * 	{@link cw.net.DoNothingTransport} for the next transport.
  * @private
  */
 cw.net.DoNothingTransport.prototype.considerDelayingNextTransport_ = function() {
 	return false;
 };
 
-/**
- * Call `dispose` to close this transport. If it is called again, this is a no-op.
- * @private
- */
 cw.net.DoNothingTransport.prototype.disposeInternal = function() {
 	this.logger_.info(
 		this.getDescription_() + " in disposeInternal.");
