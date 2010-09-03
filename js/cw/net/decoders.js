@@ -286,7 +286,8 @@ cw.net.ResponseTextNewlineDecoder.prototype.failed_ = false;
  * @param {?number=} responseTextLength Ignored.  For compatibility
  * 	with {@link cw.net.ResponseTextBencodeDecoder}.
  *
- * @return {!Array.<(!Array.<string>|!cw.net.DecodeStatus)>} an array of new strings
+ * @return {!Array.<(!Array.<string>|!cw.net.DecodeStatus)>} An array of new
+ * 	strings, and a decode status.
  * // TODO: types for tuples
  */
 cw.net.ResponseTextNewlineDecoder.prototype.getNewStrings = function(responseTextLength) {
