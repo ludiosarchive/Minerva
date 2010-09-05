@@ -5,6 +5,7 @@
 
 goog.provide('cw.net.demo.loadFlashConnector');
 goog.provide('cw.net.demo.getEndpoint');
+goog.provide('cw.net.demo.getEndpointByQueryArgs');
 goog.provide('cw.net.demo.makeCredentialsData');
 
 goog.require('goog.ui.media.FlashObject');
@@ -74,19 +75,17 @@ cw.net.demo.loadFlashConnector = function(callQueue) {
 };
 
 
-
 /**
  * @param {!cw.eventual.CallQueue} callQueue
+ * @param {boolean} useSubdomains
+ * @param {boolean} useFlash
+ * @param {string} httpFacePath
  * @return {!goog.async.Deferred} Deferred that fires with a {!cw.net.Endpoint}
  */
-cw.net.demo.getEndpoint = function(callQueue) {
+cw.net.demo.getEndpoint = function(callQueue, useSubdomains, useFlash, httpFacePath) {
 	var url = new goog.Uri(document.location);
-	var queryData = url.getQueryData();
-	var mode = queryData.get('mode');
-	// Use subdomains for HTTP communication?
-	var useSub = Boolean(Number(queryData.get('useSub', '1')));
-	if(mode == 'http') {
-		if(useSub) {
+	if(!useFlash) {
+		if(useSubdomains) {
 			var xdrSetupGlobal = '__XDRSetup';
 			var d = cw.net.waitForXDRFrames(xdrSetupGlobal, 2);
 			d.addCallback(function() {
@@ -102,10 +101,10 @@ cw.net.demo.getEndpoint = function(callQueue) {
 				}
 
 				var primaryUrl = new goog.Uri(goog.global[xdrSetupGlobal]['baseurl1']);
-				primaryUrl.setPath('/httpface/');
+				primaryUrl.setPath(httpFacePath);
 
 				var secondaryUrl = new goog.Uri(goog.global[xdrSetupGlobal]['baseurl2']);
-				secondaryUrl.setPath('/httpface/');
+				secondaryUrl.setPath(httpFacePath);
 
 				var endpoint = new cw.net.HttpEndpoint(
 					primaryUrl.toString(), primaryWindow, secondaryUrl.toString(), secondaryWindow);
@@ -114,7 +113,7 @@ cw.net.demo.getEndpoint = function(callQueue) {
 			return d;
 		} else {
 			var endpointUrl = url.clone();
-			endpointUrl.setPath('/httpface/');
+			endpointUrl.setPath(httpFacePath);
 			endpointUrl.setQuery('');
 			var primaryUrl = endpointUrl;
 			var secondaryUrl = endpointUrl;
@@ -136,4 +135,19 @@ cw.net.demo.getEndpoint = function(callQueue) {
 		});
 		return d;
 	}
+};
+
+
+/**
+ * @param {!cw.eventual.CallQueue} callQueue
+ * @return {!goog.async.Deferred} Deferred that fires with a {!cw.net.Endpoint}
+ */
+cw.net.demo.getEndpointByQueryArgs = function(callQueue) {
+	var url = new goog.Uri(document.location);
+	var queryData = url.getQueryData();
+	var useFlash = (queryData.get('mode') != 'http');
+	// Use subdomains for HTTP communication?
+	var useSubdomains = Boolean(Number(queryData.get('useSub', '1')));
+	var httpFacePath = '/httpface/';
+	return cw.net.demo.getEndpoint(callQueue, useSubdomains, useFlash, httpFacePath);
 };
