@@ -631,23 +631,6 @@ class Stream(object):
 		return self._incoming.getSACK()
 
 
-	def serverShuttingDown(self):
-		"""
-		Private. Do not call this.
-
-		Called by L{StreamTracker} to tell me that the server is shutting down.
-
-		@return: a L{Deferred} that fires when it's okay to shut down,
-			or a L{int}/L{float} that says in how many seconds it is
-			okay to shut down.
-
-		TODO: decide if serverShuttingDown should be both an application level
-			and Minerva-level event? Should applications have to use their own
-			serverShuttingDown?
-		"""
-		1/0
-
-
 	# This API resembles L{twisted.web.server.Request.notifyFinish}
 	def notifyFinish(self):
 		"""
@@ -768,7 +751,6 @@ class StreamTracker(object):
 		# way for a face to locate a Stream.
 		self._streams = {}
 		self._observers = set()
-		self._reactor.addSystemEventTrigger('before', 'shutdown', self._disconnectAll)
 
 		self._preKey = secureRandom(3)
 		self._postKey = secureRandom(3)
@@ -833,20 +815,6 @@ class StreamTracker(object):
 			o.streamDown(stream)
 
 		# Last reference to the stream should be gone soon.
-
-
-	def _disconnectAll(self):
-		# TODO: block new connections - stop listening on the faces?
-		# Reject their requests quickly?
-		log.msg('in StreamTracker._disconnectAll; TODO: implement something')
-
-#		while True:
-#			try:
-#				s = self._streams.pop()
-#			except KeyError:
-#				break
-#
-#			numOrD = s.serverShuttingDown()
 
 
 	def observeStreams(self, obj):
