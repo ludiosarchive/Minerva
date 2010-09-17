@@ -1666,14 +1666,6 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 };
 
 /**
- * @private
- */
-cw.net.ClientTransport.prototype.recordTimeAndDispose_ = function() {
-	this.underlyingStopTime_ = goog.Timer.getTime(this.callQueue_.clock);
-	this.dispose();
-};
-
-/**
  * Called by a timer if the transport can't connect in time, or if it stops
  * receiving bytes.
  * @private
@@ -1681,7 +1673,7 @@ cw.net.ClientTransport.prototype.recordTimeAndDispose_ = function() {
 cw.net.ClientTransport.prototype.timedOut_ = function() {
 	this.logger_.warning(this.getDescription_() +
 		" timed out due to lack of connection or no data being received.");
-	this.recordTimeAndDispose_();
+	this.dispose();
 };
 
 /**
@@ -1756,12 +1748,11 @@ cw.net.ClientTransport.prototype.peerStillAlive_ = function() {
 };
 
 /**
+ * Called by XHRMaster.
  * @private
  */
 cw.net.ClientTransport.prototype.httpResponseEnded_ = function() {
-	// TODO: is this really a good place to take the end time?  Keep
-	// in mind streaming XHR requests.
-	this.recordTimeAndDispose_();
+	this.dispose();
 };
 
 /**
@@ -1918,7 +1909,7 @@ cw.net.ClientTransport.prototype.flashSocketTerminated_ = function(probablyCrash
 	}
 
 	// We treat close/ioerror/securityerror all the same.
-	this.recordTimeAndDispose_();
+	this.dispose();
 };
 
 /**
@@ -2065,6 +2056,11 @@ cw.net.ClientTransport.prototype.disposeInternal = function() {
 	this.logger_.info(this.getDescription_() + " in disposeInternal.");
 
 	cw.net.ClientTransport.superClass_.disposeInternal.call(this);
+
+	// TODO: is this really a good place to take the end time?  Keep
+	// in mind streaming XHR requests, as well as slow application code
+	// (called synchronously).
+	this.underlyingStopTime_ = goog.Timer.getTime(this.callQueue_.clock);
 
 	this.toSendFrames_ = [];
 
