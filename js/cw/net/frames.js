@@ -340,12 +340,13 @@ cw.net.HelloFrame.prototype.equals = function(other, eqLog) {
 
 /**
  * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
  */
-cw.net.HelloFrame.prototype.__reprToPieces__ = function(sb) {
+cw.net.HelloFrame.prototype.__reprToPieces__ = function(sb, stack) {
 	// TODO: Make it actually human-readable, perhaps we need
 	// an ordered HelloProperty_ list
 	sb.push('<HelloFrame properties=');
-	cw.repr.reprToPieces(cw.net.HelloFrame.makePropertyArray_(this), sb);
+	cw.repr.reprToPieces(cw.net.HelloFrame.makePropertyArray_(this), sb, stack);
 	sb.push('>');
 };
 
@@ -490,10 +491,11 @@ cw.net.StringFrame.prototype.equals = function(other, eqLog) {
 
 /**
  * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
  */
-cw.net.StringFrame.prototype.__reprToPieces__ = function(sb) {
+cw.net.StringFrame.prototype.__reprToPieces__ = function(sb, stack) {
 	sb.push("new StringFrame(");
-	cw.repr.reprToPieces(this.string, sb);
+	cw.repr.reprToPieces(this.string, sb, stack);
 	sb.push(")");
 };
 
@@ -542,10 +544,11 @@ cw.net.CommentFrame.prototype.equals = function(other, eqLog) {
 
 /**
  * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
  */
-cw.net.CommentFrame.prototype.__reprToPieces__ = function(sb) {
+cw.net.CommentFrame.prototype.__reprToPieces__ = function(sb, stack) {
 	sb.push("new CommentFrame(");
-	cw.repr.reprToPieces(this.comment, sb);
+	cw.repr.reprToPieces(this.comment, sb, stack);
 	sb.push(")");
 };
 
@@ -593,8 +596,9 @@ cw.net.SeqNumFrame.prototype.equals = function(other, eqLog) {
 
 /**
  * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
  */
-cw.net.SeqNumFrame.prototype.__reprToPieces__ = function(sb) {
+cw.net.SeqNumFrame.prototype.__reprToPieces__ = function(sb, stack) {
 	sb.push('new SeqNumFrame(', String(this.seqNum), ')');
 };
 
@@ -693,10 +697,11 @@ cw.net.SackFrame.prototype.equals = function(other, eqLog) {
 
 /**
  * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
  */
-cw.net.SackFrame.prototype.__reprToPieces__ = function(sb) {
+cw.net.SackFrame.prototype.__reprToPieces__ = function(sb, stack) {
 	sb.push('new SackFrame(');
-	cw.repr.reprToPieces(this.sack, sb);
+	cw.repr.reprToPieces(this.sack, sb, stack);
 	sb.push(')');
 };
 
@@ -749,10 +754,11 @@ cw.net.StreamStatusFrame.prototype.equals = function(other, eqLog) {
 
 /**
  * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
  */
-cw.net.StreamStatusFrame.prototype.__reprToPieces__ = function(sb) {
+cw.net.StreamStatusFrame.prototype.__reprToPieces__ = function(sb, stack) {
 	sb.push('new StreamStatusFrame(');
-	cw.repr.reprToPieces(this.lastSackSeen, sb);
+	cw.repr.reprToPieces(this.lastSackSeen, sb, stack);
 	sb.push(')');
 };
 
@@ -791,8 +797,9 @@ cw.net.StreamCreatedFrame = function() {
 
 /**
  * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
  */
-cw.net.StreamCreatedFrame.prototype.__reprToPieces__ = function(sb) {
+cw.net.StreamCreatedFrame.prototype.__reprToPieces__ = function(sb, stack) {
 	sb.push('new StreamCreatedFrame()');
 };
 
@@ -838,8 +845,9 @@ cw.net.YouCloseItFrame = function() {
 
 /**
  * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
  */
-cw.net.YouCloseItFrame.prototype.__reprToPieces__ = function(sb) {
+cw.net.YouCloseItFrame.prototype.__reprToPieces__ = function(sb, stack) {
 	sb.push('new YouCloseItFrame()');
 };
 
@@ -918,10 +926,11 @@ cw.net.ResetFrame.prototype.equals = function(other, eqLog) {
 
 /**
  * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
  */
-cw.net.ResetFrame.prototype.__reprToPieces__ = function(sb) {
+cw.net.ResetFrame.prototype.__reprToPieces__ = function(sb, stack) {
 	sb.push("new ResetFrame(");
-	cw.repr.reprToPieces(this.reasonString, sb);
+	cw.repr.reprToPieces(this.reasonString, sb, stack);
 	sb.push(", ", String(this.applicationLevel), ")");
 };
 
@@ -1009,10 +1018,11 @@ cw.net.TransportKillFrame.prototype.equals = function(other, eqLog) {
 
 /**
  * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
  */
-cw.net.TransportKillFrame.prototype.__reprToPieces__ = function(sb) {
+cw.net.TransportKillFrame.prototype.__reprToPieces__ = function(sb, stack) {
 	sb.push('new TransportKillFrame(');
-	cw.repr.reprToPieces(this.reason, sb);
+	cw.repr.reprToPieces(this.reason, sb, stack);
 	sb.push(')');
 };
 

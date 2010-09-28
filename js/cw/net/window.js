@@ -45,10 +45,11 @@ cw.net.SACK.prototype.equals = function(other, eqLog) {
 
 /**
  * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
  */
-cw.net.SACK.prototype.__reprToPieces__ = function(sb) {
+cw.net.SACK.prototype.__reprToPieces__ = function(sb, stack) {
 	sb.push('new SACK(', String(this.ackNumber), ', ');
-	cw.repr.reprToPieces(this.sackList, sb);
+	cw.repr.reprToPieces(this.sackList, sb, stack);
 	sb.push(')');
 };
 
@@ -113,8 +114,9 @@ cw.net.Queue.prototype.extend = function(items) {
 
 /**
  * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
  */
-cw.net.Queue.prototype.__reprToPieces__ = function(sb) {
+cw.net.Queue.prototype.__reprToPieces__ = function(sb, stack) {
 	sb.push(
 		'<Queue with ', String(this.items_.getCount()) ,' item(s), ' +
 		'counter=#', String(this.counter_), ', size=', String(this.size_) ,'>');
