@@ -461,6 +461,8 @@ cw.net.FlashSocketTracker.prototype.eiCallback_ = function(id, event, arg1, arg2
  * FlashSocketTracker.
  */
 cw.net.FlashSocketTracker.prototype.disposeInternal = function() {
+	cw.net.FlashSocketTracker.superClass_.disposeInternal.call(this);
+
 	var flashSockets = goog.object.getValues(this.instances_);
 	while(flashSockets.length) {
 		flashSockets.pop().dispose();
