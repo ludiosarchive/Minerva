@@ -146,6 +146,7 @@ cw.net.XHRMaster.prototype.oncomplete_ = function() {
 };
 
 cw.net.XHRMaster.prototype.disposeInternal = function() {
+	cw.net.XHRMaster.superClass_.disposeInternal.call(this);
 	// Note: it might already know it is offline, if oncomplete_ was called.
 	cw.net.theXHRMasterTracker_.masterOffline_(this);
 	this.contentWindow_['__XHRSlave_dispose'](this.reqId_);
@@ -270,6 +271,7 @@ cw.net.XHRMasterTracker.prototype.masterOffline_ = function(master) {
 };
 
 cw.net.XHRMasterTracker.prototype.disposeInternal = function() {
+	cw.net.XHRMasterTracker.superClass_.disposeInternal.call(this);
 	var masters = goog.object.getValues(this.masters_);
 	while(masters.length) {
 		masters.pop().dispose();

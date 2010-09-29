@@ -231,6 +231,7 @@ cw.net.XHRSlave.prototype.makeRequest = function(url, method, payload) {
 
 cw.net.XHRSlave.prototype.disposeInternal = function() {
 	//parent['__childIframeLogger'].fine('XHRSlave.disposeInternal.');
+	cw.net.XHRSlave.superClass_.disposeInternal.call(this);
 	delete this.decoder_;
 	if(this.underlying_) {
 		this.underlying_.dispose();
@@ -297,6 +298,7 @@ cw.net.XHRSlaveTracker.prototype.slaveOffline_ = function(slave) {
 };
 
 cw.net.XHRSlaveTracker.prototype.disposeInternal = function() {
+	cw.net.XHRSlaveTracker.superClass_.disposeInternal.call(this);
 	var slaves = goog.object.getValues(this.slaves_);
 	while(slaves.length) {
 		slaves.pop().dispose();
