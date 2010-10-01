@@ -1660,7 +1660,7 @@ cw.net.ClientTransport.prototype.framesReceived_ = function(frames) {
 			this.flush_();
 		}
 		if(closeSoon) {
-			this.logger_.finest(this.getDescription_() + "closeSoon is " +
+			this.logger_.finest(this.getDescription_() + " closeSoon is " +
 				"true.  Frames were: " + cw.repr.repr(frames));
 			this.dispose();
 		}
