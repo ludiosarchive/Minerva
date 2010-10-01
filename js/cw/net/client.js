@@ -767,6 +767,7 @@ cw.net.Stream.prototype.tryToSend_ = function() {
  * @private
  */
 cw.net.Stream.prototype.restartHttpRequests_ = function() {
+	this.windowLoadEvent_ = null;
 	if(this.primaryTransport_ && this.primaryTransport_.isHttpTransport_()) {
 		this.logger_.info("restartHttpRequests_: aborting primary");
 		this.primaryTransport_.abortToStopSpinner_();
@@ -1232,6 +1233,7 @@ cw.net.Stream.prototype.disposeInternal = function() {
 
 	if(goog.userAgent.WEBKIT && this.windowLoadEvent_) {
 		goog.events.unlistenByKey(this.windowLoadEvent_);
+		this.windowLoadEvent_ = null;
 	}
 
 	// Clear any likely circular references
