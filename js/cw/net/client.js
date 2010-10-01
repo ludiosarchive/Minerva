@@ -699,6 +699,9 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 	if(this.state_ == cw.net.StreamState_.UNSTARTED) {
 		return;
 	}
+	goog.asserts.assert(
+		this.state_ == cw.net.StreamState_.STARTED,
+		"tryToSend_: state is " + this.state_);
 	var haveQueueItems = (this.queue_.getQueuedCount() != 0);
 	var currentSack = this.incoming_.getSACK();
 	var maybeNeedToSendSack =
@@ -958,15 +961,6 @@ cw.net.Stream.prototype.getDelayForNextTransport_ = function(transport) {
 };
 
 /**
- * @private
- */
-cw.net.Stream.prototype.fireDisconnectedEvent_ = function() {
-	this.dispatchEvent({
-		type: cw.net.EventType.DISCONNECTED
-	});
-};
-
-/**
  * ClientTransport calls this to tell Stream that it has disconnected.
  * @param {!cw.net.ClientTransport|cw.net.DoNothingTransport} transport
  * @private
@@ -993,12 +987,12 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 	if(this.state_ > cw.net.StreamState_.STARTED) {
 		if(this.state_ == cw.net.StreamState_.RESETTING &&
 		transport.wroteResetFrame_) {
-			this.logger_.info("Was RESETTING, now DISCONNECTED.");
-			this.state_ = cw.net.StreamState_.DISCONNECTED;
-			this.fireDisconnectedEvent_();
+			this.logger_.fine('Disposing because resettingTransport_ is done.');
+			this.dispose();
+		} else {
+			this.logger_.fine(
+				"Not creating a transport because Stream is in state " + this.state_);
 		}
-		this.logger_.fine(
-			"Not creating a transport because Stream is in state " + this.state_);
 	} else {
 		var _ = this.getDelayForNextTransport_(transport);
 		var delay = _[0];
@@ -1093,12 +1087,11 @@ cw.net.Stream.prototype.disposeAllTransports_ = function() {
  * @private
  */
 cw.net.Stream.prototype.doReset_ = function(reasonString, applicationLevel) {
-	this.state_ = cw.net.StreamState_.DISCONNECTED;
-	this.disposeAllTransports_();
 	this.protocol_.streamReset(reasonString, applicationLevel);
-	// Fire event after streamReset, to be consistent with the call
-	// ordering that happens if the client application resets instead.
-	this.fireDisconnectedEvent_();
+	// Keep in mind both the "Minerva does reset" and "client app calls
+	// reset" cases, and keep the streamReset and DISCONNECTED firing
+	// order sane.
+	this.dispose();
 };
 
 /**
@@ -1123,6 +1116,13 @@ cw.net.Stream.prototype.internalReset_ = function(reasonString) {
 };
 
 /**
+ * @return {boolean}
+ */
+cw.net.Stream.prototype.isResettingOrDisposed_ = function() {
+	return this.state_ == cw.net.StreamState_.RESETTING || this.isDisposed();
+};
+
+/**
  * ClientTransport calls this to tell Stream about received strings.
  * @param {!cw.net.ClientTransport} transport The transport that received
  * 	these boxes.
@@ -1143,6 +1143,12 @@ cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, avoidCreat
 	var hitLimit = _[1];
 	if(items) {
 		this.protocol_.stringsReceived(items);
+		// Under stringsReceived, the state may have changed completely!
+		// The Stream may be RESETTING or disposed.
+	}
+
+	if(this.isResettingOrDisposed_()) {
+		return;
 	}
 
 	// Because we received strings, we may need to send a SACK.
@@ -1201,27 +1207,41 @@ cw.net.Stream.prototype.start = function() {
 		this.state_ == cw.net.StreamState_.UNSTARTED,
 		'start: bad Stream state_: ' + this.state_);
 
+	this.state_ = cw.net.StreamState_.STARTED;
+
 	// Call streamStarted before we even connect one transport successfully.
 	this.protocol_.streamStarted(this);
+	// Under streamStarted, the state may have changed completely!
+	// The Stream may be RESETTING or disposed.
+	if(this.isResettingOrDisposed_()) {
+		return;
+	}
 
-	this.state_ = cw.net.StreamState_.STARTED;
 	this.primaryTransport_ = this.createNewTransport_(true);
 	this.primaryTransport_.writeStrings_(this.queue_, null);
 	this.primaryTransport_.flush_();
 };
 
 cw.net.Stream.prototype.disposeInternal = function() {
-	cw.net.Stream.superClass_.disposeInternal.call(this);
+	this.logger_.info(cw.repr.repr(this) + " in disposeInternal.");
+	this.state_ = cw.net.StreamState_.DISCONNECTED;
+	this.disposeAllTransports_();
+	this.dispatchEvent({
+		type: cw.net.EventType.DISCONNECTED
+	});
+
 	if(goog.userAgent.WEBKIT && this.windowLoadEvent_) {
 		goog.events.unlistenByKey(this.windowLoadEvent_);
 	}
-	this.disposeAllTransports_();
+
 	// Clear any likely circular references
 	delete this.transports_;
 	delete this.primaryTransport_;
 	delete this.secondaryTransport_;
 	delete this.resettingTransport_;
 	delete this.protocol_;
+
+	cw.net.Stream.superClass_.disposeInternal.call(this);
 };
 
 // notifyFinish?
