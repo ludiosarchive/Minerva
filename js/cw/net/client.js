@@ -673,6 +673,25 @@ cw.net.Stream.prototype.ensureQueueIntegrity_ = function() {
 };
 
 /**
+ * @param {boolean} maybeNeedToSendStrings
+ * @param {boolean} maybeNeedToSendSack
+ * @return {string} Some text to be used in a log message
+ * @private
+ */
+cw.net.Stream.prototype.getSendingWhatText_ = function(
+maybeNeedToSendStrings, maybeNeedToSendSack) {
+	if(maybeNeedToSendStrings && maybeNeedToSendSack) {
+		return "string(s)+SACK";
+	} else if(maybeNeedToSendStrings) {
+		return "string(s)";
+	} else if(maybeNeedToSendSack) {
+		return "SACK";
+	} else {
+		return "nothing!?";
+	}
+};
+
+/**
  * @private
  */
 cw.net.Stream.prototype.tryToSend_ = function() {
@@ -698,11 +717,14 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 //		highestSeqNumSent: highestSeqNumSent}));
 
 	if(maybeNeedToSendStrings || maybeNeedToSendSack) {
+		var sendingWhat = this.getSendingWhatText_(
+			maybeNeedToSendStrings, maybeNeedToSendSack);
+
 		// After we're in STARTED, we always have a primary transport,
 		// even if its underlying object hasn't connected yet.
 		if(this.primaryTransport_.canFlushMoreThanOnce_) {
 			this.logger_.finest(
-				"tryToSend_: writing SACK/strings to primary");
+				"tryToSend_: writing " + sendingWhat + " to primary");
 			if(maybeNeedToSendSack) {
 				this.primaryTransport_.writeSack_(currentSack);
 			}
@@ -720,7 +742,7 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 				this.secondaryIsWaitingForStreamToExist_ = true;
 			} else {
 				this.logger_.finest(
-					"tryToSend_: creating secondary to send SACK/strings");
+					"tryToSend_: creating secondary to send " + sendingWhat);
 				this.secondaryTransport_ = this.createNewTransport_(false);
 				// No need to writeSack_ because a sack is included in the HelloFrame.
 				if(maybeNeedToSendStrings) {
@@ -731,7 +753,7 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 			}
 		} else {
 			this.logger_.finest(
-				"tryToSend_: need to send SACK/strings, but can't right now");
+				"tryToSend_: need to send " + sendingWhat + ", but can't right now");
 		}
 	}
 };
