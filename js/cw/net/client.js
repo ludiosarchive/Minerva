@@ -1208,8 +1208,6 @@ cw.net.Stream.prototype.start = function() {
 		this.state_ == cw.net.StreamState_.UNSTARTED,
 		'start: bad Stream state_: ' + this.state_);
 
-	this.state_ = cw.net.StreamState_.STARTED;
-
 	// Call streamStarted before we even connect one transport successfully.
 	this.protocol_.streamStarted(this);
 	// Under streamStarted, the state may have changed completely!
@@ -1217,6 +1215,10 @@ cw.net.Stream.prototype.start = function() {
 	if(this.isResettingOrDisposed_()) {
 		return;
 	}
+	// state_ must be set after streamStarted, because the streamStarted
+	// function may call sendStrings (which will think the primaryTransport_
+	// below has already been created.)
+	this.state_ = cw.net.StreamState_.STARTED;
 
 	this.primaryTransport_ = this.createNewTransport_(true);
 	this.primaryTransport_.writeStrings_(this.queue_, null);

@@ -335,6 +335,26 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 		stream.reset("a reasonString");
 		self.assertThrows(Error, function() { stream.reset("a reasonString"); },
 			"reset: Can't send reset in state 3");
+	},
+
+	/**
+	 * If protocol calls sendStrings inside its streamStarted, everything
+	 * works fine.  This tests for the regression introduced in
+	 * "Fix a serious re-entrancy bug caught" on Fri Oct 1 11:50:04 2010.
+	 */
+	function test_sendStringsInStreamStarted(self) {
+		var proto = new cw.net.TestClient.RecordingProtocol();
+		proto.streamStarted = function(stream) {
+			this.stream_ = stream;
+			this.log.push(['streamStarted', stream]);
+			stream.sendStrings(['sent-at-start']);
+		};
+		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
+		var stream = new cw.net.Stream(
+			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
+		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
+		stream.start();
+		// No errors.
 	}
 
 	// TODO: add test: if secondary is sending strings, and primary closes,
