@@ -338,13 +338,12 @@ class Stream(object):
 		self._incoming = Incoming()
 		self.lastSackSeenByServer = SACK(-1, ())
 		self.lastReceived = clock.rightNow
-		# The default value assumes that client is making contact at least
-		# every 25 seconds, and is not very forgiving if client has a bad
-		# connection.  If you want to be more forgiving, make your protocol
-		# set this attribute to a higher number.  Especially consider being
+		# This value needs to be somewhat forgiving, to allow for bad
+		# connections.  You can change this; just make your protocol
+		# set this attribute to a higher number.  Consider being even more
 		# forgiving if you have high probability of getting some type of
 		# disconnect string on page unload.
-		self.maxIdleTime = 45 # seconds
+		self.maxIdleTime = 120 # seconds
 
 
 	def __repr__(self):
