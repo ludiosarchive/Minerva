@@ -567,6 +567,51 @@ class StreamTests(unittest.TestCase):
 			self.assertEqual([["closeGently"]], t2.getNew())
 
 
+	def test_lastReceived(self):
+		"""
+		L{Stream.lastReceived} is updated whenever Stream receives
+		contact from the peer.
+		"""
+		factory, s, t1 = self._makeStuff()
+
+		self.assertEqual(None, s.lastReceived)
+
+		self._clock.advance(1.0)
+		# lastReceived is updated on transportOnline
+		s.transportOnline(t1, False, None)
+		self.assertEqual(1.0, s.lastReceived)
+
+		self._clock.advance(1.0)
+		# lastReceived is updated on stringsReceived
+		s.stringsReceived(t1, [(0, 'c2s0')])
+		self.assertEqual(2.0, s.lastReceived)
+
+		self._clock.advance(1.0)
+		# lastReceived is updated on sackReceived
+		s.sackReceived(SACK(-1, ()))
+		self.assertEqual(3.0, s.lastReceived)
+
+		# lastReceived is *not* updated on transportOffline, because that
+		# doesn't necessarily imply that anything from the client was received.
+		# (For example, when an HTTP transport is closed, or if an intermediary
+		# RSTs a socket transport.)
+		self._clock.advance(1.0)
+		# lastReceived is updated on sackReceived
+		s.transportOffline(t1)
+		self.assertEqual(3.0, s.lastReceived)
+
+		# Unnecessarily connect a new transport, because the next step may
+		# break in the future without a transport.
+		t2 = DummySocketLikeTransport()
+		s.transportOnline(t2, False, None)
+		self.assertEqual(4.0, s.lastReceived) # now 4.0 because of the new transport
+
+		self._clock.advance(1.0)
+		# lastReceived is updated on resetFromPeer
+		s.resetFromPeer("reason", True)
+		self.assertEqual(5.0, s.lastReceived)
+
+
 	def test_registerUnregisterProducerWithNoActiveTransport(self):
 		"""
 		Test that registerProducer and unregisterProducer seem to work,
