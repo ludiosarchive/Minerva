@@ -1657,6 +1657,14 @@ class ServerTransport(object):
 	def connectionLost(self, reason):
 		if self.noisy:
 			log.msg('Connection lost for %r reason %r' % (self, reason))
+
+		if self._stream:
+			# We need to update lastReceived to give the client some time
+			# to connect a new transport (otherwise, disconnectInactive
+			# would reset Streams that just happened to have no
+			# transports at that instant).
+			self._stream.lastReceived = self._clock.rightNow
+
 		# It might already be terminating, but often not.
 		self._terminating = True
 		self._maybeWriteToPeer()
