@@ -1201,7 +1201,7 @@ cw.net.Stream.prototype.getSACK_ = function() {
 };
 
 /**
- * Start the stream.
+ * Called by application to start the Stream.
  */
 cw.net.Stream.prototype.start = function() {
 	goog.asserts.assert(
