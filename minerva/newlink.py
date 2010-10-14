@@ -311,7 +311,7 @@ class Stream(object):
 		'_clock', 'streamId', '_streamProtocolFactory', '_protocol', 'virgin', '_primaryTransport',
 		'_notifications', '_transports', 'disconnected', 'queue', '_incoming', '_pretendAcked',
 		'_producer', '_streamingProducer', '_primaryHasProducer', '_primaryPaused',
-		'lastSackSeenByServer')
+		'lastSackSeenByServer', 'lastReceived')
 
 	def __init__(self, clock, streamId, streamProtocolFactory):
 		self._clock = clock
@@ -321,7 +321,8 @@ class Stream(object):
 		self._protocol = \
 		self._primaryTransport = \
 		self._pretendAcked = \
-		self._producer = None
+		self._producer = \
+		self.lastReceived = None
 
 		self.disconnected = \
 		self._streamingProducer = \
@@ -427,6 +428,7 @@ class Stream(object):
 		"""
 		if self.disconnected:
 			return
+		self.lastReceived = self._clock.rightNow
 		self.disconnected = True
 		# .copy() because _transports shrinks as transports call Stream.transportOffline
 		for t in self._transports.copy():
@@ -471,6 +473,8 @@ class Stream(object):
 		if self.disconnected:
 			return
 
+		self.lastReceived = self._clock.rightNow
+
 		items, hitLimit = self._incoming.give(
 			pairs, self.maxUndeliveredStrings, self.maxUndeliveredBytes)
 		if items:
@@ -493,6 +497,7 @@ class Stream(object):
 
 		Returns C{True} if SACK was bad, C{False} otherwise.
 		"""
+		self.lastReceived = self._clock.rightNow
 		# No need to pretend any more, because we just got a
 		# likely-up-to-date SACK from the client.
 		wasPretending = self._pretendAcked
@@ -527,6 +532,7 @@ class Stream(object):
 		If L{succeedsTransport} != None, temporarily assume that all strings written to
 		#<succeedsTransport> were SACKed.
 		"""
+		self.lastReceived = self._clock.rightNow
 		self._transports.add(transport)
 		self.virgin = False
 

@@ -145,13 +145,17 @@ class StreamTests(unittest.TestCase):
 	"""
 	Tests for L{newlink.Stream}
 	"""
+	def setUp(self):
+		self._clock = task.Clock()
+
+
 	def test_implements(self):
-		s = Stream(None, 'some fake id', None)
+		s = Stream(self._clock, 'some fake id', None)
 		verify.verifyObject(ISimpleConsumer, s)
 
 
 	def test_repr(self):
-		s = Stream(None, 'some fake id', None)
+		s = Stream(self._clock, 'some fake id', None)
 		r = repr(s)
 		self.assertIn('<Stream', r)
 		self.assertIn('streamId=', r)
@@ -160,14 +164,14 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_notifyFinishReturnsDeferred(self):
-		s = Stream(None, 'some fake id', None)
+		s = Stream(self._clock, 'some fake id', None)
 		d = s.notifyFinish()
 		self.assertEqual(defer.Deferred, type(d))
 
 
 	def test_notifyFinishActuallyCalled(self):
 		factory = MockMinervaProtocolFactory()
-		s = Stream(None, 'some fake id', factory)
+		s = Stream(self._clock, 'some fake id', factory)
 		# We need to attach a transport to the Stream, so that a MinervaProtocol
 		# is instantiated. This is necessary because s.reset below is only called by
 		# "application code."
@@ -192,7 +196,7 @@ class StreamTests(unittest.TestCase):
 		attaches, Stream calls the `streamStarted` method on the MinervaProtocol.
 		"""
 		factory = MockMinervaProtocolFactory()
-		s = Stream(None, 'some fake id', factory)
+		s = Stream(self._clock, 'some fake id', factory)
 		self.assertEqual(0, len(factory.instances))
 
 		t = DummySocketLikeTransport()
@@ -208,7 +212,7 @@ class StreamTests(unittest.TestCase):
 		the StreamProtocol instance actually gets the strings.
 		"""
 		factory = MockMinervaProtocolFactory()
-		s = Stream(None, 'some fake id', factory)
+		s = Stream(self._clock, 'some fake id', factory)
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 
@@ -227,7 +231,7 @@ class StreamTests(unittest.TestCase):
 		keeps only 50 of them.
 		"""
 		factory = MockMinervaProtocolFactory()
-		s = Stream(None, 'some fake id', factory)
+		s = Stream(self._clock, 'some fake id', factory)
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 
@@ -256,7 +260,7 @@ class StreamTests(unittest.TestCase):
 		for notManyStrings, expectedKept in cases:
 			##print len(notManyStrings), expectedKept
 			factory = MockMinervaProtocolFactory()
-			s = Stream(None, 'some fake id', factory)
+			s = Stream(self._clock, 'some fake id', factory)
 			t = DummySocketLikeTransport()
 			s.transportOnline(t, False, None)
 
@@ -279,7 +283,7 @@ class StreamTests(unittest.TestCase):
 		# Essentially, it doesn't matter whether the transport claims None or an invalid
 		# transport number; they're both treated as `None`.
 		for succeedsTransportArgFor2ndTransport in (None, 20):
-			s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
+			s = Stream(self._clock, 'some fake id', MockMinervaProtocolFactory())
 			t1 = DummySocketLikeTransport()
 			t1.transportNumber = 30
 			s.sendStrings(['box0', 'box1'])
@@ -318,7 +322,7 @@ class StreamTests(unittest.TestCase):
 		and two new boxes are supposed to be sent,
 		Stream calls transport's writeStrings but tells it to skip over boxes 0 through 4.
 		"""
-		s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
+		s = Stream(self._clock, 'some fake id', MockMinervaProtocolFactory())
 		t1 = DummySocketLikeTransport()
 		t1.transportNumber = 30
 		s.sendStrings(['box0', 'box1', 'box2', 'box3', 'box4'])
@@ -361,7 +365,7 @@ class StreamTests(unittest.TestCase):
 		"""
 		for connectIrrelevantTransport in (True, False):
 
-			s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
+			s = Stream(self._clock, 'some fake id', MockMinervaProtocolFactory())
 
 			if connectIrrelevantTransport:
 				tIrrelevant = DummySocketLikeTransport()
@@ -376,7 +380,7 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_getSACK(self):
-		s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
+		s = Stream(self._clock, 'some fake id', MockMinervaProtocolFactory())
 
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
@@ -394,7 +398,7 @@ class StreamTests(unittest.TestCase):
 		"""
 		After the first transport is attached to a Stream, it is no longer a virgin.
 		"""
-		s = Stream(None, 'some fake id', MockMinervaProtocolFactory())
+		s = Stream(self._clock, 'some fake id', MockMinervaProtocolFactory())
 
 		self.assertIs(True, s. virgin)
 
