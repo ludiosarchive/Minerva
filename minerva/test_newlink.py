@@ -567,51 +567,6 @@ class StreamTests(unittest.TestCase):
 			self.assertEqual([["closeGently"]], t2.getNew())
 
 
-	def test_lastReceived(self):
-		"""
-		L{Stream.lastReceived} is updated whenever Stream receives
-		contact from the peer.
-		"""
-		factory, s, t1 = self._makeStuff()
-
-		self.assertEqual(None, s.lastReceived)
-
-		self._clock.advance(1.0)
-		# lastReceived is updated on transportOnline
-		s.transportOnline(t1, False, None)
-		self.assertEqual(1.0, s.lastReceived)
-
-		self._clock.advance(1.0)
-		# lastReceived is updated on stringsReceived
-		s.stringsReceived(t1, [(0, 'c2s0')])
-		self.assertEqual(2.0, s.lastReceived)
-
-		self._clock.advance(1.0)
-		# lastReceived is updated on sackReceived
-		s.sackReceived(SACK(-1, ()))
-		self.assertEqual(3.0, s.lastReceived)
-
-		# lastReceived is *not* updated on transportOffline, because that
-		# doesn't necessarily imply that anything from the client was received.
-		# (For example, when an HTTP transport is closed, or if an intermediary
-		# RSTs a socket transport.)
-		self._clock.advance(1.0)
-		# lastReceived is updated on sackReceived
-		s.transportOffline(t1)
-		self.assertEqual(3.0, s.lastReceived)
-
-		# Unnecessarily connect a new transport, because the next step may
-		# break in the future without a transport.
-		t2 = DummySocketLikeTransport()
-		s.transportOnline(t2, False, None)
-		self.assertEqual(4.0, s.lastReceived) # now 4.0 because of the new transport
-
-		self._clock.advance(1.0)
-		# lastReceived is updated on resetFromPeer
-		s.resetFromPeer("reason", True)
-		self.assertEqual(5.0, s.lastReceived)
-
-
 	def test_registerUnregisterProducerWithNoActiveTransport(self):
 		"""
 		Test that registerProducer and unregisterProducer seem to work,
@@ -976,7 +931,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		observeStreams works and doesn't actually call anything on the observer yet.
 		"""
 		reactor = FakeReactor()
-		st = StreamTracker(reactor, None, None)
+		st = StreamTracker(reactor, task.Clock(), None)
 		o = MockObserver()
 		st.observeStreams(o)
 		self.assertEqual([], o.getNew())
@@ -988,7 +943,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		only registered once.
 		"""
 		reactor = FakeReactor()
-		st = StreamTracker(reactor, None, None)
+		st = StreamTracker(reactor, task.Clock(), None)
 		o = MockObserver()
 		st.observeStreams(o)
 		st.observeStreams(o)
@@ -1001,7 +956,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		unobserveStreams removes the observer properly
 		"""
 		reactor = FakeReactor()
-		st = StreamTracker(reactor, None, None)
+		st = StreamTracker(reactor, task.Clock(), None)
 		o = MockObserver()
 		st.observeStreams(o)
 		stream = st.buildStream('some fake id')
@@ -1019,7 +974,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		observer.
 		"""
 		reactor = FakeReactor()
-		st = StreamTracker(reactor, None, None)
+		st = StreamTracker(reactor, task.Clock(), None)
 		o = MockObserver()
 		self.assertRaises(RuntimeError, lambda: st.unobserveStreams(o))
 
@@ -1029,7 +984,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		calling unobserveStreams for same observer raises L{RuntimeError}
 		"""
 		reactor = FakeReactor()
-		st = StreamTracker(reactor, None, None)
+		st = StreamTracker(reactor, task.Clock(), None)
 		o = MockObserver()
 		st.observeStreams(o)
 		st.unobserveStreams(o)
@@ -1041,7 +996,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		still works when there are many observers
 		"""
 		reactor = FakeReactor()
-		st = StreamTracker(reactor, None, None)
+		st = StreamTracker(reactor, task.Clock(), None)
 
 		observers = []
 
@@ -1063,7 +1018,7 @@ class StreamTrackerObserverTests(unittest.TestCase):
 		which no longer gets notified
 		"""
 		reactor = FakeReactor()
-		st = StreamTracker(reactor, None, None)
+		st = StreamTracker(reactor, task.Clock(), None)
 
 		irrelevantObservers = []
 
@@ -1143,7 +1098,7 @@ class StreamTrackerTests(unittest.TestCase):
 		"""
 		buildStream returns an instance of L{Stream}"""
 		reactor = FakeReactor()
-		st = StreamTracker(reactor, None, None)
+		st = StreamTracker(reactor, task.Clock(), None)
 		stream = st.buildStream('some fake id')
 		self.assertIs(Stream, type(stream))
 
@@ -1154,7 +1109,7 @@ class StreamTrackerTests(unittest.TestCase):
 		already-existing id
 		"""
 		reactor = FakeReactor()
-		st = StreamTracker(reactor, None, None)
+		st = StreamTracker(reactor, task.Clock(), None)
 		id = 'some fake id'
 		act = lambda: st.buildStream(id)
 		act()
@@ -1168,7 +1123,7 @@ class StreamTrackerTests(unittest.TestCase):
 		made short hash()-colliding strings, we could make a better test.
 		"""
 		reactor = FakeReactor()
-		st = StreamTracker(reactor, None, None)
+		st = StreamTracker(reactor, task.Clock(), None)
 		id = 'some fake id'
 		act = lambda: st.buildStream(id)
 		act()
@@ -2576,7 +2531,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		parser = Int32StringDecoder(maxLength=1024*1024)
 		# is it okay to make a new one every time?
 		faceFactory = SlotlessSocketFace(
-			None, self.streamTracker, DummyFirewall(self._clock, rejectAll=False))
+			self._clock, self.streamTracker, DummyFirewall(self._clock, rejectAll=False))
 		transport = _makeTransportWithDecoder(parser, faceFactory)
 		transport.dataReceived('<int32/>\n')
 		return transport

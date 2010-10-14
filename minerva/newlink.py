@@ -321,8 +321,7 @@ class Stream(object):
 		self._protocol = \
 		self._primaryTransport = \
 		self._pretendAcked = \
-		self._producer = \
-		self.lastReceived = None
+		self._producer = None
 
 		self.disconnected = \
 		self._streamingProducer = \
@@ -338,6 +337,7 @@ class Stream(object):
 		self.queue = Queue()
 		self._incoming = Incoming()
 		self.lastSackSeenByServer = SACK(-1, ())
+		self.lastReceived = clock.rightNow
 		# The default value assumes that client is making contact at least
 		# every 25 seconds, and is not very forgiving if client has a bad
 		# connection.  If you want to be more forgiving, make your protocol
@@ -435,7 +435,6 @@ class Stream(object):
 		"""
 		if self.disconnected:
 			return
-		self.lastReceived = self._clock.rightNow
 		self.disconnected = True
 		# .copy() because _transports shrinks as transports call Stream.transportOffline
 		for t in self._transports.copy():
@@ -484,8 +483,6 @@ class Stream(object):
 		if self.disconnected:
 			return
 
-		self.lastReceived = self._clock.rightNow
-
 		items, hitLimit = self._incoming.give(
 			pairs, self.maxUndeliveredStrings, self.maxUndeliveredBytes)
 		if items:
@@ -508,7 +505,6 @@ class Stream(object):
 
 		Returns C{True} if SACK was bad, C{False} otherwise.
 		"""
-		self.lastReceived = self._clock.rightNow
 		# No need to pretend any more, because we just got a
 		# likely-up-to-date SACK from the client.
 		wasPretending = self._pretendAcked
@@ -543,7 +539,6 @@ class Stream(object):
 		If L{succeedsTransport} != None, temporarily assume that all strings written to
 		#<succeedsTransport> were SACKed.
 		"""
-		self.lastReceived = self._clock.rightNow
 		self._transports.add(transport)
 		self.virgin = False
 
@@ -838,10 +833,11 @@ class StreamTracker(object):
 		"""
 		Disconnect Streams for which the client appears to be MIA.
 		"""
-		# Make a copy with .values() because s.timedOut() below calls our
+		# Make a "copy" with .values() because s.timedOut() below calls our
 		# self._forgetStream, which mutates self._streams.
 		for s in self._streams.values():
-			if s.lastReceived + s.maxIdleTime <= self._clock.rightNow:
+			if not s._transports and (
+			s.lastReceived + s.maxIdleTime <= self._clock.rightNow):
 				s.timedOut()
 
 
@@ -1598,6 +1594,10 @@ class ServerTransport(object):
 			self._closeWith(tk_frame_corruption)
 		else:
 			raise RuntimeError("Got unknown code from parser %r: %r" % (self._parser, code))
+
+		if self._stream:
+			self._stream.lastReceived = self._clock.rightNow
+
 		self._maybeWriteToPeer()
 
 
