@@ -357,6 +357,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 		// No errors.
 	}
 
+	// TODO: test that stream.reset from within proto.streamStarted works.
+
 	// TODO: add test: if secondary is sending strings, and primary closes,
 	// new primary should not send strings that are being sent over
 	// secondary right now.
