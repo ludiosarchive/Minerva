@@ -445,11 +445,10 @@ class StreamTests(unittest.TestCase):
 
 	def _makeStuff(self):
 		factory = MockMinervaProtocolFactory()
-		clock = task.Clock()
-		s = Stream(clock, 'some fake id', factory)
+		s = Stream(self._clock, 'some fake id', factory)
 		t1 = DummySocketLikeTransport()
 
-		return factory, clock, s, t1
+		return factory, s, t1
 
 
 	def test_resetCallsAllTransports(self):
@@ -457,7 +456,7 @@ class StreamTests(unittest.TestCase):
 		When L{Stream.reset} is called, all connected transports are told
 		to write a reset frame.
 		"""
-		factory, clock, s, t1 = self._makeStuff()
+		factory, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
 		t2 = DummySocketLikeTransport()
 		s.transportOnline(t2, False, None)
@@ -476,7 +475,7 @@ class StreamTests(unittest.TestCase):
 		TODO: Perhaps test this in a more indirect way that doesn't involve
 		calling a "really private" method.
 		"""
-		factory, clock, s, t1 = self._makeStuff()
+		factory, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
 		t2 = DummySocketLikeTransport()
 		s.transportOnline(t2, False, None)
@@ -494,14 +493,14 @@ class StreamTests(unittest.TestCase):
 		L{RuntimeError}.
 		"""
 		# original reset caused by "application code"
-		factory, clock, s, t1 = self._makeStuff()
+		factory, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
 		s.reset('reason')
 		self.assertRaises(RuntimeError, lambda: s.reset('reason'))
 		self.assertRaises(RuntimeError, lambda: s.reset('reason'))
 
 		# original reset caused by a transport
-		factory, clock, s, t1 = self._makeStuff()
+		factory, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
 		s.resetFromPeer('reason', True)
 		self.assertRaises(RuntimeError, lambda: s.reset('reason'))
@@ -514,14 +513,14 @@ class StreamTests(unittest.TestCase):
 		L{RuntimeError}.
 		"""
 		# original reset caused by "application code"
-		factory, clock, s, t1 = self._makeStuff()
+		factory, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
 		s.reset('reason')
 		self.assertRaises(RuntimeError, lambda: s.sendStrings(["somebox"]))
 		self.assertRaises(RuntimeError, lambda: s.sendStrings(["somebox"]))
 
 		# original reset caused by a transport
-		factory, clock, s, t1 = self._makeStuff()
+		factory, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
 		s.resetFromPeer('reason', True)
 		self.assertRaises(RuntimeError, lambda: s.sendStrings(["somebox"]))
@@ -534,7 +533,7 @@ class StreamTests(unittest.TestCase):
 		empty list), it does not call any transports.
 		"""
 		# original reset caused by "application code"
-		factory, clock, s, t1 = self._makeStuff()
+		factory, s, t1 = self._makeStuff()
 		s.transportOnline(t1, True, None)
 		s.sendStrings(['box0'])
 		self.assertEqual([['writeStrings', s.queue, None]], t1.getNew())
@@ -552,7 +551,7 @@ class StreamTests(unittest.TestCase):
 		transports are closed gently.
 		"""
 		for applicationLevel in (True, False):
-			factory, clock, s, t1 = self._makeStuff()
+			factory, s, t1 = self._makeStuff()
 			s.transportOnline(t1, False, None)
 			t2 = DummySocketLikeTransport()
 			s.transportOnline(t2, False, None)
@@ -573,7 +572,7 @@ class StreamTests(unittest.TestCase):
 		Test that registerProducer and unregisterProducer seem to work,
 		with desired error conditions and idempotency.
 		"""
-		factory, clock, s, t1 = self._makeStuff()
+		factory, s, t1 = self._makeStuff()
 
 		producer1 = MockProducer()
 		# Unregister is basically a no-op if no producer is registered.
@@ -596,7 +595,7 @@ class StreamTests(unittest.TestCase):
 
 	def test_registerUnregisterProducerWithActiveTransport(self):
 		for streaming in (True, False):
-			factory, clock, s, t1 = self._makeStuff()
+			factory, s, t1 = self._makeStuff()
 
 			s.transportOnline(t1, True, None)
 
@@ -629,7 +628,7 @@ class StreamTests(unittest.TestCase):
 		If L{Stream} was already paused, new push producers are paused
 		when registered.
 		"""
-		factory, clock, s, t1 = self._makeStuff()
+		factory, s, t1 = self._makeStuff()
 
 		# Need to do this to have at least one connected transport,
 		# otherwise all push producers all paused when registered.
@@ -660,7 +659,7 @@ class StreamTests(unittest.TestCase):
 		If L{Stream} was already paused, new pull producers are *not*
 		paused (because pull producers cannot be paused).
 		"""
-		factory, clock, s, t1 = self._makeStuff()
+		factory, s, t1 = self._makeStuff()
 		s.transportOnline(t1, True, None)
 		s.pauseProducing()
 
@@ -677,7 +676,7 @@ class StreamTests(unittest.TestCase):
 		L{Stream}, the push producer is resumed. After it goes offline,
 		the push producer is paused again.
 		"""
-		factory, clock, s, t1 = self._makeStuff()
+		factory, s, t1 = self._makeStuff()
 
 		producer1 = MockProducer()
 		s.registerProducer(producer1, streaming=True)
@@ -701,7 +700,7 @@ class StreamTests(unittest.TestCase):
 		A newly-registered pull producer is not paused (because pull
 		producers cannot be paused).
 		"""
-		factory, clock, s, t1 = self._makeStuff()
+		factory, s, t1 = self._makeStuff()
 
 		s.transportOnline(t1, True, None)
 
@@ -729,7 +728,7 @@ class StreamTests(unittest.TestCase):
 		does not call C{pauseProducing} on the Minerva protocol
 		during this replacement.
 		"""
-		factory, clock, s, t1 = self._makeStuff()
+		factory, s, t1 = self._makeStuff()
 
 		s.transportOnline(t1, True, None)
 
@@ -747,7 +746,7 @@ class StreamTests(unittest.TestCase):
 		Stream's producer is resumed if the old primary transport called
 		paused, and a new primary transport is attached.
 		"""
-		factory, clock, s, t1 = self._makeStuff()
+		factory, s, t1 = self._makeStuff()
 
 		s.transportOnline(t1, True, None)
 
@@ -769,7 +768,7 @@ class StreamTests(unittest.TestCase):
 		sure Stream doesn't do strange things (like resumeProducing twice
 		in a row when another transport connects.)
 		"""
-		factory, clock, s, t1 = self._makeStuff()
+		factory, s, t1 = self._makeStuff()
 
 		s.transportOnline(t1, True, None)
 
@@ -802,7 +801,7 @@ class StreamTests(unittest.TestCase):
 		When a stream has no transports attached, the pull producer is
 		untouched.
 		"""
-		factory, clock, s, t1 = self._makeStuff()
+		factory, s, t1 = self._makeStuff()
 
 		producer1 = MockProducer()
 		s.registerProducer(producer1, streaming=False)
@@ -815,7 +814,7 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_transportOfflineOnlyPausesIfTransportIsPrimary(self):
-		factory, clock, s, t1 = self._makeStuff()
+		factory, s, t1 = self._makeStuff()
 
 		s.transportOnline(t1, True, None)
 
@@ -834,7 +833,7 @@ class StreamTests(unittest.TestCase):
 		Regression test for a mistake in the code, where code forgot to check
 		for non-C{None} C{self._producer}.
 		"""
-		factory, clock, s, t1 = self._makeStuff()
+		factory, s, t1 = self._makeStuff()
 
 		producer1 = MockProducer()
 		s.registerProducer(producer1, streaming=True)
@@ -845,7 +844,7 @@ class StreamTests(unittest.TestCase):
 
 	def test_downstreamProducerRegistration(self):
 		for streaming in (True, False):
-			factory, clock, s, t1 = self._makeStuff()
+			factory, s, t1 = self._makeStuff()
 
 			producer1 = MockProducer()
 
@@ -868,7 +867,7 @@ class StreamTests(unittest.TestCase):
 
 	def test_producerRegistrationWithNewPrimaryTransport(self):
 		for streaming in (True, False):
-			factory, clock, s, t1 = self._makeStuff()
+			factory, s, t1 = self._makeStuff()
 
 			producer1 = MockProducer()
 
@@ -896,7 +895,7 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_transportOfflineEffectOnTransports(self):
-		factory, clock, s, t1 = self._makeStuff()
+		factory, s, t1 = self._makeStuff()
 
 		s.transportOnline(t1, True, None)
 
