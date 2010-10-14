@@ -311,7 +311,7 @@ class Stream(object):
 		'_clock', 'streamId', '_streamProtocolFactory', '_protocol', 'virgin', '_primaryTransport',
 		'_notifications', '_transports', 'disconnected', 'queue', '_incoming', '_pretendAcked',
 		'_producer', '_streamingProducer', '_primaryHasProducer', '_primaryPaused',
-		'lastSackSeenByServer', 'lastReceived')
+		'lastSackSeenByServer', 'lastReceived', 'maxIdleTime')
 
 	def __init__(self, clock, streamId, streamProtocolFactory):
 		self._clock = clock
@@ -338,6 +338,13 @@ class Stream(object):
 		self.queue = Queue()
 		self._incoming = Incoming()
 		self.lastSackSeenByServer = SACK(-1, ())
+		# The default value assumes that client is making contact at least
+		# every 25 seconds, and is not very forgiving if client has a bad
+		# connection.  If you want to be more forgiving, make your protocol
+		# set this attribute to a higher number.  Especially consider being
+		# forgiving if you have high probability of getting some type of
+		# disconnect string on page unload.
+		self.maxIdleTime = 45 # seconds
 
 
 	def __repr__(self):
@@ -459,6 +466,10 @@ class Stream(object):
 			self._protocol.streamReset(reasonString, False)
 		finally:
 			del self._protocol
+
+
+	def timedOut(self):
+		self._internalReset("no activity from peer")
 
 
 	def stringsReceived(self, transport, pairs):
@@ -821,6 +832,17 @@ class StreamTracker(object):
 			o.streamDown(stream)
 
 		# Last reference to the stream should be gone soon.
+
+
+	def disconnectInactive(self):
+		"""
+		Disconnect Streams for which the client appears to be MIA.
+		"""
+		# Make a copy with .values() because s.timedOut() below calls our
+		# self._forgetStream, which mutates self._streams.
+		for s in self._streams.values():
+			if s.lastReceived + s.maxIdleTime <= self._clock.rightNow:
+				s.timedOut()
 
 
 	def observeStreams(self, obj):
