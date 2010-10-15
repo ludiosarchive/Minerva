@@ -216,6 +216,9 @@ chatapp.callQueue = new cw.eventual.CallQueue(goog.global['window']);
 
 
 chatapp.idleFired = function() {
+	if(!chatapp.lastProto) {
+		return;
+	}
 	chatapp.resetStream("idle timeout fired");
 	chatapp.lastProto = null;
 };
