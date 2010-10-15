@@ -163,6 +163,7 @@ chatapp.ChatProtocol.prototype.streamReset = function(reasonString, applicationL
 	chatapp.logger.info(
 		'streamReset: reasonString=' + cw.repr.repr(reasonString) +
 		', applicationLevel=' + applicationLevel);
+	chatapp.lastProto = null;
 };
 
 chatapp.ChatProtocol.prototype.handleString_ = function(s) {
