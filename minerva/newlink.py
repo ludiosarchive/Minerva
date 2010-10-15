@@ -236,7 +236,7 @@ class SuperProtocol(object):
 				except UnknownSubprotocol:
 					self.stream.reset("unknown subprotocol")
 			elif self._childProtocol is not None:
-				self._childProtocol.stringsReceived(s)
+				self._childProtocol.stringsReceived([s])
 			else:
 				self.stream.reset(
 					"no subprotocol; send a subprotocol:... string first")
