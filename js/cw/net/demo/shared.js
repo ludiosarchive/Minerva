@@ -151,3 +151,13 @@ cw.net.demo.getEndpointByQueryArgs = function(callQueue) {
 	var httpFacePath = '/httpface/';
 	return cw.net.demo.getEndpoint(callQueue, useSubdomains, useFlash, httpFacePath);
 };
+
+
+/**
+ * @return {boolean}
+ */
+cw.net.demo.isLoggingEnabled = function() {
+	var url = new goog.Uri(document.location);
+	var queryData = url.getQueryData();
+	return (queryData.get('logging') == '1');
+}
