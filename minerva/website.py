@@ -8,6 +8,7 @@ import binascii
 import hashlib
 import hmac
 import re
+from random import randint
 
 import simplejson
 import jinja2
@@ -23,7 +24,9 @@ except ImportError:
 	def slowStringCompare(s1, s2):
 		return s1 == s2
 
+import minerva
 from brequire import requireFile, requireFiles
+from cwtools.htmltools import getTestPageCSS
 from mypy.objops import strToNonNegLimit
 from webmagic.untwist import BetterResource
 
@@ -323,6 +326,73 @@ class XDRFrameDev(XDRFrame):
 	"""
 	isLeaf = True
 	template = FilePath(__file__).parent().child('xdrframe_dev.html')
+
+
+
+def getRandomSubdomain(prefix, digits):
+	"""
+	Get a random subdomain name that starts with C{prefix}.
+	and has C{digits} extra digits.   C{prefix} must start with a
+	lowercase letter a-z.
+	"""
+	# Always have C{digits} digits.  Use only random digits (not letters) to
+	# prevent forming words that may be blocked by proxies.
+	return prefix + str(randint(10**(digits - 1), 10**digits - 1))
+
+
+
+class MinervaBootstrap(BetterResource):
+	"""
+	HTML pages that use JS Minerva typically use bootstrapping code to speed
+	up the time to an established Minerva Stream.  This Resource helps you
+	do this, but you're not required to use it.  The Minerva demos in the
+	`Minerva` and `Browsernode` projects use this class.
+
+	Feel free to copy/paste this class if it doesn't suit your needs.
+	"""
+	isLeaf = True
+
+	def __init__(self, csrfStopper, cookieInstaller, domain, templateFile):
+		"""
+		C{csrfStopper} is a L{ICsrfStopper} provider.
+		C{cookieInstaller} is an L{untwist.CookieInstaller}.
+		C{domain} is a C{str} representing the base domain name.
+		C{templateFile} is a L{FilePath} representing the jinja2 template to
+			use.
+		"""
+		BetterResource.__init__(self)
+		self._csrfStopper = csrfStopper
+		self._cookieInstaller = cookieInstaller
+		self._domain = domain
+		self._templateFile = templateFile
+
+		self._jinja2Env = jinja2.Environment()
+
+
+	def render_GET(self, request):
+		cookie = self._cookieInstaller.getSet(request)
+		token = self._csrfStopper.makeToken(cookie)
+
+		sub1 = getRandomSubdomain('ml', 20)
+		sub2 = getRandomSubdomain('ml', 20)
+
+		# Allow the template to include the contents in the page, so
+		# that the client doesn't have to make another HTTP request.
+		bootstrap_XDRSetup_contents = FilePath(minerva.__file__).parent().\
+			child('compiled_client').child('bootstrap_XDRSetup.js').getContent()
+
+		# This jinja2 stuff is for the html page, not the JavaScript
+		template = self._templateFile.getContent().decode('utf-8')
+		dictionary = dict(
+			getTestPageCSS=getTestPageCSS,
+			token=token,
+			bootstrap_XDRSetup_contents=bootstrap_XDRSetup_contents,
+			domain=self._domain,
+			sub1=sub1,
+			sub2=sub2,
+			dumps=simplejson.dumps)
+		rendered = self._jinja2Env.from_string(template).render(dictionary)
+		return rendered.encode('utf-8')
 
 
 
