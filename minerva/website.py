@@ -341,6 +341,11 @@ def getRandomSubdomain(prefix, digits):
 
 
 
+class ConflictingTemplateVars(Exception):
+	pass
+
+
+
 class MinervaBootstrap(BetterResource):
 	"""
 	HTML pages that use JS Minerva typically use bootstrapping code to speed
@@ -373,7 +378,7 @@ class MinervaBootstrap(BetterResource):
 
 	def render_GET(self, request):
 		cookie = self._cookieInstaller.getSet(request)
-		token = self._csrfStopper.makeToken(cookie)
+		csrfToken = self._csrfStopper.makeToken(cookie)
 
 		sub1 = getRandomSubdomain('ml', 20)
 		sub2 = getRandomSubdomain('ml', 20)
@@ -385,13 +390,25 @@ class MinervaBootstrap(BetterResource):
 
 		# This jinja2 stuff is for the html page, not the JavaScript
 		template = self._templateFile.getContent().decode('utf-8')
+
+		bootstrapDict = {}
+		# TODO: get rid of getTestPageCSS soon
+		bootstrapDict['getTestPageCSS'] = getTestPageCSS
+		bootstrapDict['bootstrap_csrf_token'] = csrfToken
+		bootstrapDict['bootstrap_XDRSetup_contents'] = bootstrap_XDRSetup_contents
+		bootstrapDict['bootstrap_sub1'] = sub1
+		bootstrapDict['bootstrap_sub2'] = sub2
+		bootstrapDict['dumps'] = simplejson.dumps
+
 		dictionary = self._dictionary.copy()
-		dictionary['getTestPageCSS'] = getTestPageCSS
-		dictionary['token'] = token
-		dictionary['bootstrap_XDRSetup_contents'] = bootstrap_XDRSetup_contents
-		dictionary['sub1'] = sub1
-		dictionary['sub2'] = sub2
-		dictionary['dumps'] = simplejson.dumps
+		for k, v in bootstrapDict.iteritems():
+			if k in dictionary:
+				raise ConflictingTemplateVars(
+					"Key %r is already in dictionary: %r.  "
+					"Don't use this key name because %s uses it." % (
+						k, dictionary, self.__class__.__name__))
+			dictionary[k] = v
+
 		rendered = self._jinja2Env.from_string(template).render(dictionary)
 		return rendered.encode('utf-8')
 
