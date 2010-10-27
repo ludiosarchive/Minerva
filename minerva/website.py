@@ -394,10 +394,12 @@ class MinervaBootstrap(BetterResource):
 		bootstrapDict = {}
 		# TODO: get rid of getTestPageCSS soon
 		bootstrapDict['getTestPageCSS'] = getTestPageCSS
-		bootstrapDict['bootstrap_csrf_token'] = csrfToken
-		bootstrapDict['bootstrap_XDRSetup_contents'] = bootstrap_XDRSetup_contents
-		bootstrapDict['bootstrap_sub1'] = sub1
-		bootstrapDict['bootstrap_sub2'] = sub2
+		bootstrapDict['bootstrap'] = {
+			'csrf_token': csrfToken,
+			'XDRSetup_contents': bootstrap_XDRSetup_contents,
+			'sub1': sub1,
+			'sub2': sub2,
+		}
 		bootstrapDict['dumps'] = simplejson.dumps
 
 		dictionary = self._dictionary.copy()

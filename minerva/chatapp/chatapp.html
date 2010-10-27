@@ -75,12 +75,12 @@ If no such cookie, write out the iframes immediately.
 <script>
 // Don't define variables on "window" to avoid possible IE stack limit of 12
 // when calling through window.
-CSRF_TOKEN = {{ dumps(bootstrap_csrf_token) }};
+CSRF_TOKEN = {{ dumps(bootstrap.csrf_token) }};
 __XDRSetup = {
 	dev: true,
 	domain: {{ dumps(domain) }},
-	sub1: {{ dumps(bootstrap_sub1) }},
-	sub2: {{ dumps(bootstrap_sub2) }}
+	sub1: {{ dumps(bootstrap.sub1) }},
+	sub2: {{ dumps(bootstrap.sub2) }}
 };
 </script>
 
