@@ -12,4 +12,4 @@ class ChatAppPage(BetterResource):
 
 		templateFile = FilePath(__file__).parent().child('chatapp.html')
 		self.putChild('', MinervaBootstrap(
-			csrfStopper, cookieInstaller, domain, templateFile))
+			csrfStopper, cookieInstaller, templateFile, dict(domain=domain)))

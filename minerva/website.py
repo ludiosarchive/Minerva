@@ -352,19 +352,21 @@ class MinervaBootstrap(BetterResource):
 	"""
 	isLeaf = True
 
-	def __init__(self, csrfStopper, cookieInstaller, domain, templateFile):
+	def __init__(self, csrfStopper, cookieInstaller, templateFile, dictionary):
 		"""
 		C{csrfStopper} is a L{ICsrfStopper} provider.
 		C{cookieInstaller} is an L{untwist.CookieInstaller}.
-		C{domain} is a C{str} representing the base domain name.
 		C{templateFile} is a L{FilePath} representing the jinja2 template to
 			use.
+		C{dictionary} is a C{dict} whose keys are passed to the template.
+			If this is mutated, new requests will have the new dictionary
+			contents.
 		"""
 		BetterResource.__init__(self)
 		self._csrfStopper = csrfStopper
 		self._cookieInstaller = cookieInstaller
-		self._domain = domain
 		self._templateFile = templateFile
+		self._dictionary = dictionary
 
 		self._jinja2Env = jinja2.Environment()
 
@@ -383,14 +385,13 @@ class MinervaBootstrap(BetterResource):
 
 		# This jinja2 stuff is for the html page, not the JavaScript
 		template = self._templateFile.getContent().decode('utf-8')
-		dictionary = dict(
-			getTestPageCSS=getTestPageCSS,
-			token=token,
-			bootstrap_XDRSetup_contents=bootstrap_XDRSetup_contents,
-			domain=self._domain,
-			sub1=sub1,
-			sub2=sub2,
-			dumps=simplejson.dumps)
+		dictionary = self._dictionary.copy()
+		dictionary['getTestPageCSS'] = getTestPageCSS
+		dictionary['token'] = token
+		dictionary['bootstrap_XDRSetup_contents'] = bootstrap_XDRSetup_contents
+		dictionary['sub1'] = sub1
+		dictionary['sub2'] = sub2
+		dictionary['dumps'] = simplejson.dumps
 		rendered = self._jinja2Env.from_string(template).render(dictionary)
 		return rendered.encode('utf-8')
 
