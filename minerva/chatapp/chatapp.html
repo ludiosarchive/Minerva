@@ -60,6 +60,7 @@ If you want to see what's in the send queue, enter this into your URL bar:
 </td>
 </tr>
 </table>
+<div id="minerva-xdrframes"></div>
 
 <!--
 Think about this: if in the future we have cross-tab sharing
@@ -76,16 +77,8 @@ If no such cookie, write out the iframes immediately.
 // Don't define variables on "window" to avoid possible IE stack limit of 12
 // when calling through window.
 CSRF_TOKEN = {{ dumps(bootstrap.csrf_token) }};
-__XDRSetup = {
-	dev: true,
-	domain: {{ dumps(domain) }},
-	sub1: {{ dumps(bootstrap.sub1) }},
-	sub2: {{ dumps(bootstrap.sub2) }}
-};
+{{ bootstrap.getXDRSetup(dev_mode, domain) }}
 </script>
-
-<div id="minerva-xdrframes"></div>
-<script src="/JSPATH/cw/net/bootstrap_XDRSetup.js"></script>
 
 <div id="FlashConnectorSwf"></div>
 <div id="log"></div>

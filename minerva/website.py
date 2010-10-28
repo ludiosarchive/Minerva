@@ -383,14 +383,26 @@ class MinervaBootstrap(BetterResource):
 		self._jinja2Env = jinja2.Environment()
 
 
+	def _getXDRSetup(self, dev_mode, domain):
+		__XDRSetup = {
+			'dev': dev_mode,
+			'domain': domain,
+			'sub1': getRandomSubdomain('ml', 20),
+			'sub2': getRandomSubdomain('ml', 20),
+		}
+
+		bootstrap_XDRSetup_contents, _ = self._fileCache.getContent(
+			self.bootstrap_XDRSetup_filename)
+
+		return """\
+__XDRSetup = %s;
+%s
+""" % (simplejson.dumps(__XDRSetup), bootstrap_XDRSetup_contents)
+
+
 	def render_GET(self, request):
 		cookie = self._cookieInstaller.getSet(request)
 		csrfToken = self._csrfStopper.makeToken(cookie)
-
-		# Allow the template to include the contents in the page, so
-		# that the client doesn't have to make another HTTP request.
-		bootstrap_XDRSetup_contents, _ = self._fileCache.getContent(
-			self.bootstrap_XDRSetup_filename)
 
 		# This jinja2 stuff is for the html page, not the JavaScript
 		templateBytes, maybeNew = self._fileCache.getContent(self._templateFile.path)
@@ -400,9 +412,7 @@ class MinervaBootstrap(BetterResource):
 		bootstrapDict = {}
 		bootstrapDict['bootstrap'] = {
 			'csrf_token': csrfToken,
-			'XDRSetup_contents': bootstrap_XDRSetup_contents,
-			'sub1': getRandomSubdomain('ml', 20),
-			'sub2': getRandomSubdomain('ml', 20),
+			'getXDRSetup': self._getXDRSetup,
 		}
 		bootstrapDict['dumps'] = simplejson.dumps
 
