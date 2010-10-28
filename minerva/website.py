@@ -367,7 +367,8 @@ class MinervaBootstrap(BetterResource):
 		C{csrfStopper} is a L{ICsrfStopper} provider.
 		C{cookieInstaller} is an L{untwist.CookieInstaller}.
 		C{templateFile} is a L{FilePath} representing the jinja2 template to
-			use.
+			use.  The file contents are cached forever, even if you delete
+			your references to the L{MinervaBootstrap}.
 		C{dictionary} is a C{dict} whose keys are passed to the template.
 			If this is mutated, new requests will have the new dictionary
 			contents.
@@ -388,11 +389,13 @@ class MinervaBootstrap(BetterResource):
 
 		# Allow the template to include the contents in the page, so
 		# that the client doesn't have to make another HTTP request.
-		bootstrap_XDRSetup_contents = self._fileCache.getContent(
+		bootstrap_XDRSetup_contents, _ = self._fileCache.getContent(
 			self.bootstrap_XDRSetup_filename)
 
 		# This jinja2 stuff is for the html page, not the JavaScript
-		template = self._templateFile.getContent().decode('utf-8')
+		# TODO: cache the decoded unicode
+		templateBytes, maybeNew = self._fileCache.getContent(self._templateFile.path)
+		template = templateBytes.decode('utf-8')
 
 		bootstrapDict = {}
 		# TODO: get rid of getTestPageCSS soon
