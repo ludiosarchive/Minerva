@@ -380,9 +380,6 @@ class MinervaBootstrap(BetterResource):
 		cookie = self._cookieInstaller.getSet(request)
 		csrfToken = self._csrfStopper.makeToken(cookie)
 
-		sub1 = getRandomSubdomain('ml', 20)
-		sub2 = getRandomSubdomain('ml', 20)
-
 		# Allow the template to include the contents in the page, so
 		# that the client doesn't have to make another HTTP request.
 		bootstrap_XDRSetup_contents = FilePath(minerva.__file__).parent().\
@@ -397,8 +394,8 @@ class MinervaBootstrap(BetterResource):
 		bootstrapDict['bootstrap'] = {
 			'csrf_token': csrfToken,
 			'XDRSetup_contents': bootstrap_XDRSetup_contents,
-			'sub1': sub1,
-			'sub2': sub2,
+			'sub1': getRandomSubdomain('ml', 20),
+			'sub2': getRandomSubdomain('ml', 20),
 		}
 		bootstrapDict['dumps'] = simplejson.dumps
 
