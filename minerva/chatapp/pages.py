@@ -2,7 +2,7 @@ from twisted.python.filepath import FilePath
 
 from webmagic.untwist import BetterResource
 from minerva.website import MinervaBootstrap
-
+from cwtools.htmltools import getTestPageCSS
 
 
 class ChatAppPage(BetterResource):
@@ -13,4 +13,4 @@ class ChatAppPage(BetterResource):
 		templateFile = FilePath(__file__).parent().child('chatapp.html')
 		self.putChild('', MinervaBootstrap(
 			fileCache, csrfStopper, cookieInstaller, templateFile,
-			dict(domain=domain)))
+			dict(domain=domain, getTestPageCSS=getTestPageCSS)))

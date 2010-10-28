@@ -26,7 +26,6 @@ except ImportError:
 
 import minerva
 from brequire import requireFile, requireFiles
-from cwtools.htmltools import getTestPageCSS
 from mypy.objops import strToNonNegLimit
 from webmagic.untwist import BetterResource
 
@@ -399,8 +398,6 @@ class MinervaBootstrap(BetterResource):
 			self._cachedTemplate = templateBytes.decode('utf-8')
 
 		bootstrapDict = {}
-		# TODO: get rid of getTestPageCSS soon
-		bootstrapDict['getTestPageCSS'] = getTestPageCSS
 		bootstrapDict['bootstrap'] = {
 			'csrf_token': csrfToken,
 			'XDRSetup_contents': bootstrap_XDRSetup_contents,
