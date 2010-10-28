@@ -292,7 +292,7 @@ class XDRFrame(BetterResource):
 	extract ?id= instead of the server.
 	"""
 	isLeaf = True
-	template = FilePath(__file__).parent().child('xdrframe.html')
+	templateFilename = FilePath(__file__).parent().child('xdrframe.html').path
 
 	def __init__(self, fileCache, domain):
 		self._fileCache = fileCache
@@ -307,7 +307,7 @@ class XDRFrame(BetterResource):
 		if len(frameIdStr) > 50:
 			raise ValueError("frameIdStr too long: %r" % (frameIdStr,))
 
-		templateContent = self.template.getContent()
+		templateContent, _ = self._fileCache.getContent(self.templateFilename)
 		dictionary = dict(
 			domain=simplejson.dumps(self.domain),
 			frameNum=frameNum,
