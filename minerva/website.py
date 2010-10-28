@@ -378,6 +378,7 @@ class MinervaBootstrap(BetterResource):
 		self._csrfStopper = csrfStopper
 		self._cookieInstaller = cookieInstaller
 		self._templateFile = templateFile
+		self._cachedTemplate = None
 		self._dictionary = dictionary
 
 		self._jinja2Env = jinja2.Environment()
@@ -393,9 +394,9 @@ class MinervaBootstrap(BetterResource):
 			self.bootstrap_XDRSetup_filename)
 
 		# This jinja2 stuff is for the html page, not the JavaScript
-		# TODO: cache the decoded unicode
 		templateBytes, maybeNew = self._fileCache.getContent(self._templateFile.path)
-		template = templateBytes.decode('utf-8')
+		if maybeNew or self._cachedTemplate is None:
+			self._cachedTemplate = templateBytes.decode('utf-8')
 
 		bootstrapDict = {}
 		# TODO: get rid of getTestPageCSS soon
@@ -417,7 +418,7 @@ class MinervaBootstrap(BetterResource):
 						k, dictionary, self.__class__.__name__))
 			dictionary[k] = v
 
-		rendered = self._jinja2Env.from_string(template).render(dictionary)
+		rendered = self._jinja2Env.from_string(self._cachedTemplate).render(dictionary)
 		return rendered.encode('utf-8')
 
 
