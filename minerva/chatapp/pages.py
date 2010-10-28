@@ -7,9 +7,10 @@ from minerva.website import MinervaBootstrap
 
 class ChatAppPage(BetterResource):
 
-	def __init__(self, csrfStopper, cookieInstaller, domain):
+	def __init__(self, fileCache, csrfStopper, cookieInstaller, domain):
 		BetterResource.__init__(self)
 
 		templateFile = FilePath(__file__).parent().child('chatapp.html')
 		self.putChild('', MinervaBootstrap(
-			csrfStopper, cookieInstaller, templateFile, dict(domain=domain)))
+			fileCache, csrfStopper, cookieInstaller, templateFile,
+			dict(domain=domain)))

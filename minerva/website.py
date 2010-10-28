@@ -294,7 +294,8 @@ class XDRFrame(BetterResource):
 	isLeaf = True
 	template = FilePath(__file__).parent().child('xdrframe.html')
 
-	def __init__(self, domain):
+	def __init__(self, fileCache, domain):
+		self._fileCache = fileCache
 		self.domain = domain
 
 
@@ -357,8 +358,12 @@ class MinervaBootstrap(BetterResource):
 	"""
 	isLeaf = True
 
-	def __init__(self, csrfStopper, cookieInstaller, templateFile, dictionary):
+	bootstrap_XDRSetup_filename = FilePath(minerva.__file__).parent().\
+		child('compiled_client').child('bootstrap_XDRSetup.js').path
+
+	def __init__(self, fileCache, csrfStopper, cookieInstaller, templateFile, dictionary):
 		"""
+		C{fileCache} is a L{mypy.filecache.FileCache}.
 		C{csrfStopper} is a L{ICsrfStopper} provider.
 		C{cookieInstaller} is an L{untwist.CookieInstaller}.
 		C{templateFile} is a L{FilePath} representing the jinja2 template to
@@ -368,6 +373,7 @@ class MinervaBootstrap(BetterResource):
 			contents.
 		"""
 		BetterResource.__init__(self)
+		self._fileCache = fileCache
 		self._csrfStopper = csrfStopper
 		self._cookieInstaller = cookieInstaller
 		self._templateFile = templateFile
@@ -382,8 +388,8 @@ class MinervaBootstrap(BetterResource):
 
 		# Allow the template to include the contents in the page, so
 		# that the client doesn't have to make another HTTP request.
-		bootstrap_XDRSetup_contents = FilePath(minerva.__file__).parent().\
-			child('compiled_client').child('bootstrap_XDRSetup.js').getContent()
+		bootstrap_XDRSetup_contents = self._fileCache.getContent(
+			self.bootstrap_XDRSetup_filename)
 
 		# This jinja2 stuff is for the html page, not the JavaScript
 		template = self._templateFile.getContent().decode('utf-8')

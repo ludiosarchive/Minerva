@@ -5,6 +5,7 @@ import os
 from twisted.python import usage
 from twisted.application import service, strports
 
+from mypy.filecache import FileCache
 from webmagic import sharedopts
 
 from minerva import minervasite
@@ -81,7 +82,9 @@ def makeService(config):
 	csrfSecret = config['secret']
 	domain = config['domain']
 
-	socketFace, httpSite = minervasite.makeMinervaAndHttp(reactor, csrfSecret, domain)
+	doReloading = bool(os.environ.get('PYRELOADING'))
+	fileCache = FileCache(lambda: reactor.rightNow, 0.1 if doReloading else -1)
+	socketFace, httpSite = minervasite.makeMinervaAndHttp(reactor, fileCache, csrfSecret, domain)
 	httpSite.displayTracebacks = not config["notracebacks"]
 
 	for httpStrport in config['http']:
@@ -92,7 +95,7 @@ def makeService(config):
 		minervaServer = strports.service(minervaStrport, socketFace)
 		minervaServer.setServiceParent(multi)
 
-	if os.environ.get('PYRELOADING'):
+	if doReloading:
 		print 'Enabling reloader.'
 		from pypycpyo import detector
 

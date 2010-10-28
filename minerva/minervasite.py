@@ -310,7 +310,7 @@ requireFile(FilePath(__file__).parent().child('index.html').path)
 
 class Root(BetterResource):
 
-	def __init__(self, reactor, httpFace, csrfStopper, cookieInstaller, domain):
+	def __init__(self, reactor, httpFace, fileCache, csrfStopper, cookieInstaller, domain):
 		import cwtools
 		import minerva
 
@@ -338,9 +338,9 @@ class Root(BetterResource):
 
 		# Demos that use httpFace and/or socketFace
 		self.putChild('flashtest', FlashTestPage(csrfStopper, cookieInstaller))
-		self.putChild('chatapp', ChatAppPage(csrfStopper, cookieInstaller, domain))
-		self.putChild('xdrframe', XDRFrame(domain))
-		self.putChild('xdrframe_dev', XDRFrameDev(domain))
+		self.putChild('chatapp', ChatAppPage(fileCache, csrfStopper, cookieInstaller, domain))
+		self.putChild('xdrframe', XDRFrame(fileCache, domain))
+		self.putChild('xdrframe_dev', XDRFrameDev(fileCache, domain))
 
 		# Used by chatapp
 		self.putChild('wait_resource', WaitResource(clock=reactor))
@@ -354,7 +354,7 @@ class Root(BetterResource):
 
 
 
-def makeMinervaAndHttp(reactor, csrfSecret, domain):
+def makeMinervaAndHttp(reactor, fileCache, csrfSecret, domain):
 	clock = reactor
 
 	cookieInstaller = CookieInstaller(randgen.secureRandom)
@@ -371,7 +371,7 @@ def makeMinervaAndHttp(reactor, csrfSecret, domain):
 	httpFace = HttpFace(clock, tracker, firewall)
 	socketFace = SocketFace(clock, tracker, firewall, policyString=policyString)
 
-	root = Root(reactor, httpFace, csrfStopper, cookieInstaller, domain)
+	root = Root(reactor, httpFace, fileCache, csrfStopper, cookieInstaller, domain)
 
 	def _disconnectInactive():
 		"""
