@@ -4,6 +4,7 @@ from twisted.trial import unittest
 
 from mypy.constant import Constant
 from mypy.strops import StringFragment
+from mypy.testhelpers import ReallyEqualMixin
 
 from minerva.frames import (
 	HelloFrame, StreamCreatedFrame, StringFrame, SeqNumFrame,
@@ -32,17 +33,20 @@ def dumpToJson7Bit(data):
 	return simplejson.dumps(data, separators=(',', ':'), allow_nan=False)
 
 
-class HelloFrameTests(unittest.TestCase):
+class HelloFrameTests(unittest.TestCase, ReallyEqualMixin):
 
 	def test_eq(self):
-		self.assertTrue(HelloFrame({"a": 1}) == HelloFrame({"a": 1}))
-		self.assertFalse(HelloFrame({"a": 1}) != HelloFrame({"a": 1}))
-		self.assertTrue(HelloFrame({"a": 1}) != HelloFrame({"a": 2}))
-		self.assertFalse(HelloFrame({"a": 1}) == HelloFrame({"a": 2}))
-		self.assertTrue(HelloFrame({"a": 1}) != HelloFrame({"a": 1, "b": 1}))
-		self.assertFalse(HelloFrame({"a": 1}) == HelloFrame({"a": 1, "b": 1}))
-		self.assertTrue(HelloFrame({"a": 1}) != None)
-		self.assertFalse(HelloFrame({"a": 1}) == None)
+		for a, b in [
+			(HelloFrame({"a": 1}), HelloFrame({"a": 1})),
+		]:
+			self.assertReallyEqual(a, b)
+
+		for a, b in [
+			(HelloFrame({"a": 1}), HelloFrame({"a": 2})),
+			(HelloFrame({"a": 1}), HelloFrame({"a": 1, "b": 1})),
+			(HelloFrame({"a": 1}), None),
+		]:
+			self.assertReallyNotEqual(a, b)
 
 
 	def test_publicAttr(self):
