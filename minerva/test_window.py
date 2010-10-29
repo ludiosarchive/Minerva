@@ -2,8 +2,8 @@ from twisted.trial import unittest
 
 from mypy.strops import StringFragment
 from mypy.objops import totalSizeOf
+from mypy.testhelpers import todo
 
-from minerva.helpers import todo
 from minerva.window import SACK, Queue, Incoming, _wasSF
 
 
