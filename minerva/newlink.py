@@ -19,6 +19,7 @@ from twisted.web.server import NOT_DONE_YET
 from mypy.randgen import secureRandom
 from mypy.strops import StringFragment
 from mypy.constant import Constant
+from mypy.dictops import securedict
 
 from webmagic.untwist import BetterResource
 
@@ -759,43 +760,29 @@ class StreamTracker(object):
 		self._streamProtocolFactory = streamProtocolFactory
 		# We have to keep a map of streamId->Stream, otherwise there is no
 		# way for a face to locate a Stream.
-		self._streams = {}
+		self._streams = securedict()
 		self._observers = set()
 
 		self._preKey = secureRandom(3)
 		self._postKey = secureRandom(3)
 
 
-	def _makeSafeKey(self, key):
-		"""
-		Because the client has full control of deciding the streamId, and
-		StreamTracker's streamId -> Stream dictionary is long-lasting and
-		impacts many users, an attacker could deny access to everyone by
-		opening many Streams with streamIds that hash() to the same number.
-		Our anti-ACA patch for Python does not help here. We use a key
-		prefix and suffix that is unknown to the public to stop this attack.
-		"""
-		# TODO: maybe use salted md5 or salted sha1 to be safer
-		return self._preKey + key + self._postKey
-
-
 	def getStream(self, streamId):
 		try:
-			return self._streams[self._makeSafeKey(streamId)]
+			return self._streams[streamId]
 		except KeyError:
 			raise NoSuchStream("I don't know about %r" % (streamId,))
 
 
 	def buildStream(self, streamId):
-		safeKey = self._makeSafeKey(streamId)
-		if safeKey in self._streams:
+		if streamId in self._streams:
 			raise StreamAlreadyExists(
 				"cannot make stream with id %r because it already exists" % (streamId,))
 
 		s = self.stream(self._clock, streamId, self._streamProtocolFactory)
 		# Do this first, in case an observer wants to use
 		# L{StreamTracker.getStream}.
-		self._streams[safeKey] = s
+		self._streams[streamId] = s
 
 		try:
 			# copy() in case `unobserveStreams' changes it.
@@ -803,7 +790,7 @@ class StreamTracker(object):
 				o.streamUp(s)
 		except:
 			# If an exception happened, at least we can clean up our part of the mess.
-			del self._streams[safeKey]
+			del self._streams[streamId]
 			raise
 		# If an exception happened in an observer, it is re-raised.
 		# If an exception happened, we don't call streamDown(s) because
@@ -816,9 +803,8 @@ class StreamTracker(object):
 
 
 	def _forgetStream(self, _ignoredNone, streamId):
-		safeKey = self._makeSafeKey(streamId)
-		stream = self._streams[safeKey]
-		del self._streams[safeKey]
+		stream = self._streams[streamId]
+		del self._streams[streamId]
 
 		# Do this after the `del' above in case some buggy observer raises an exception.
 		for o in self._observers.copy(): # copy() in case `unobserveStreams' changes it

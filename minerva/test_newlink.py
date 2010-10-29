@@ -1116,20 +1116,6 @@ class StreamTrackerTests(unittest.TestCase):
 		self.assertRaises(StreamAlreadyExists, act)
 
 
-	def test_antiACAImplementation(self):
-		"""
-		Verify that the implementation appears to have some protection
-		against ACA. This is kind of a bad test. If we had a generator that
-		made short hash()-colliding strings, we could make a better test.
-		"""
-		reactor = FakeReactor()
-		st = StreamTracker(reactor, task.Clock(), None)
-		id = 'some fake id'
-		act = lambda: st.buildStream(id)
-		act()
-		self.assertEqual(len(id) + 6, len(st._streams.keys()[0]))
-
-
 
 def decodeFramesFromServer(encodedFrames):
 	return [decodeFrameFromServer(f) for f in encodedFrames]
