@@ -37,18 +37,20 @@ class NetStringDecoder(object):
 	This uses djb's Netstrings protocol to break up the
 	input into strings.
 
-	When one or more strings are parsed, they are returned by getNewFrames. Strings
-	for which a comma has not yet arrived are not included. This decoder *does* accept
-	0-length strings.
+	When one or more strings are parsed, they are returned by getNewFrames.
+	Strings for which a comma has not yet arrived are not included.  This
+	decoder *does* accept 0-length strings.
 
 	Security features:
-		1. Messages are limited in size, useful if you don't want someone
-		   sending you a 500MB netstring (change maxLength to the maximum
-		   length you wish to accept).
-		2. An error code is returned if an illegal message is received.
-		3. Small messages received at once don't cause excessive string copying.
-		4. Sending long bogus "lengths" doesn't cause exponential slowdown through
-			excessive .find()  
+
+	1.	Messages are limited in size; useful if you don't want someone
+		sending you a 500MB netstring (change maxLength to the maximum
+		length you wish to accept).
+	2.	An error code is returned if an illegal message is received.
+	3.	Small messages received at once don't cause excessive string
+		copying.
+	4.	Sending long bogus "lengths" doesn't cause exponential slowdown
+		through excessive .find()
 	"""
 
 	# Does this decoder also decode the JSON inside every frame?
@@ -212,7 +214,8 @@ def strictDecodeOne(s):
 	"""
 	decoded, at = strictDecoder.raw_decode(s)
 	if at != len(s):
-		raise ParseError("strictDecodeOne expected to reach the end of the string")
+		raise ParseError(
+			"strictDecodeOne expected to reach the end of the string")
 	return decoded
 
 
@@ -224,7 +227,9 @@ class DelimitedStringDecoder(object):
 	Returns L{mypy.strops.StringFragment} objects instead of C{str}
 	objects to reduce copying.
 	"""
-	delimiter = '\n' # MUST be 1 byte. Do not change this after any data has been received.
+	# delimiter *must* be 1 byte.  Do not change it after any data has been
+	# received.
+	delimiter = '\n'
 
 	__slots__ = ('maxLength', '_buffer')
 	decodesJson = False
@@ -263,7 +268,8 @@ class DelimitedStringDecoder(object):
 				return completeStrings, TOO_LONG
 			# Note that if the user keeps the StringFragment around, the next
 			# `self._buffer += data` will not be optimized (in CPython).
-			completeStrings.append(StringFragment(self._buffer, at, endsAt - at))
+			completeStrings.append(
+				StringFragment(self._buffer, at, endsAt - at))
 			at = endsAt + 1
 			# If there's no delimiter after that delimiter, break.
 			if self._buffer.find(de, at) == -1:
@@ -277,17 +283,18 @@ class DelimitedStringDecoder(object):
 
 class DelimitedJSONDecoder(object):
 	r"""
-	Decodes a stream of (1-byte-delimiter)-terminated JSON documents into Python objects.
-	The stream is assumed to be UTF-8.
+	Decodes a stream of (1-byte-delimiter)-terminated JSON documents into
+	Python objects.  The stream is assumed to be UTF-8.
 	
 	Rejects NaN, Infinity, and -Infinity even though simplejson supports them.
 
-	`delimiter' in this decoder not very strict; garbage is ignored between the
-	end of the JSON document and the actual delimiter. In practice, this allows a `delimiter'
-	of `\n' to simultaneously delimit both `\n` and `\r\n`
+	`delimiter' in this decoder not very strict; garbage is ignored between
+	the	end of the JSON document and the actual delimiter. In practice, this
+	allows a `delimiter' of `\n' to simultaneously delimit both `\n` and
+	`\r\n`
 
-		Note: the `\r` in `\r\n` "eats into" the max length. So if maxLength is 5,
-		"hello\n" can be received, but "hello\r\n" can not!
+		Note: the `\r` in `\r\n` "eats into" the max length. So if
+		maxLength is 5, "hello\n" can be received, but "hello\r\n" can not!
 
 	Implementation note:
 		String append is fast enough in CPython 2.5+. On Windows CPython,
@@ -295,12 +302,15 @@ class DelimitedJSONDecoder(object):
 
 	Think hard before using this. Make sure your Python is patched to stop
 	algorithmic complexity attacks, and make sure your simplejson is patched
-	to limit the allowed depth (otherwise, you may segfault from stack overflow).
+	to limit the allowed depth (otherwise, you may segfault from stack
+	overflow).
 
 	Returns L{mypy.strops.StringFragment} objects instead of C{str}
 	objects to reduce copying.
 	"""
-	delimiter = '\n' # MUST be 1 byte. Do not change this after any data has been received.
+	# delimiter *must* be 1 byte.  Do not change it after any data has been
+	# received.
+	delimiter = '\n'
 
 	__slots__ = ('maxLength', 'lastJsonError', '_buffer')
 	decodesJson = True
@@ -360,12 +370,12 @@ class IntNStringDecoder(object):
 	"""
 	Generic class for length prefixed protocols.
 
-	@cvar structFormat: format used for struct packing/unpacking. Define it in
-		subclass.
+	@cvar structFormat: format used for struct packing/unpacking.  Define it
+		in a subclass.
 	@type structFormat: C{str}
 
-	@cvar prefixLength: length of the prefix, in bytes. Define it in subclass,
-		using C{struct.calcsize(structFormat)}
+	@cvar prefixLength: length of the prefix, in bytes.  Define it in a
+		subclass, using C{struct.calcsize(structFormat)}
 	@type prefixLength: C{int}
 
 	@cvar maxPossibleLength: maximum possible length of a string, in bytes.
@@ -402,9 +412,10 @@ class IntNStringDecoder(object):
 		# This should re-return TOO_LONG when more data is fed into it, if
 		# TOO_LONG was already returned.
 
-		# This function will sometimes unpack the prefix many times for the same string,
-		# depending on how many getNewFrames calls it takes to arrive. struct.unpack is
-		# fast in CPython 2.7, so this doesn't matter.
+		# This function will sometimes unpack the prefix many times for
+		# the same string, depending on how many getNewFrames calls it
+		# takes to arrive. struct.unpack is fast in CPython 2.7, so this
+		# doesn't matter.
 
 		self._buffer += data
 		pLen = self.prefixLength
