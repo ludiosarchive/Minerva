@@ -4,6 +4,7 @@ import simplejson
 from twisted.trial import unittest
 
 from mypy.strops import StringFragment
+from mypy.dictops import securedict
 from minerva import decoders
 from mypy.testhelpers import todo
 
@@ -57,6 +58,17 @@ def fstValueToStrs(tup):
 	fst, snd = tup
 	fst = fragmentsToStr(fst)
 	return (fst, snd)
+
+
+
+class StrictDecoders(unittest.TestCase):
+
+	def test_strictDecodeOne(self):
+		out = decoders.strictDecodeOne('{"a": {}}')
+		self.assertEqual(securedict({"a": securedict()}), out)
+		self.assertTrue(isinstance(out, securedict), type(out))
+		self.assertTrue(isinstance(out["a"], securedict), type(out))
+
 
 
 class CommonTests(object):

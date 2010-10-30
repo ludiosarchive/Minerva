@@ -12,6 +12,7 @@ import struct
 import simplejson
 from mypy.objops import strToNonNeg
 from mypy.strops import StringFragment
+from mypy.dictops import securedict
 
 _postImportVars = vars().keys()
 
@@ -194,12 +195,20 @@ class BencodeStringDecoder(NetStringDecoder):
 def _raise(obj):
 	raise ParseError("I reject NaN, Infinity, and -Infinity")
 
-strictDecoder = simplejson.decoder.JSONDecoder(parse_constant=_raise)
+
+strictDecoder = simplejson.decoder.JSONDecoder(
+	parse_constant=_raise,
+	object_pairs_hook=securedict)
+
+strictInsecureDecoder = simplejson.decoder.JSONDecoder(
+	parse_constant=_raise)
 
 def strictDecodeOne(s):
 	"""
 	Decode bytestring `s` to *one* object, forbidding any whitespace or
-	trailing bytes. 
+	trailing bytes.
+
+	JSON objects are decoded to L{securedict}s instead of L{dict}s.
 	"""
 	decoded, at = strictDecoder.raw_decode(s)
 	if at != len(s):
