@@ -85,6 +85,15 @@ def helloDataToHelloFrame(helloData):
 	if not isinstance(helloData, dict):
 		raise InvalidHello("helloData not a dict")
 
+	# simplejson without speedups will give us unicode instead of str
+	for k, v in helloData.iteritems():
+		if isinstance(v, unicode):
+			try:
+				helloData[k] = v.encode('ascii')
+			except UnicodeEncodeError:
+				raise InvalidHello("could not encode value for key "
+					"%r to ascii; was %r" % (k, v))
+
 	obj = attrdict()
 
 	# credentialsData is always optional.
