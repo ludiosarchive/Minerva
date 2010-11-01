@@ -181,7 +181,7 @@ class StreamTests(unittest.TestCase):
 		d = s.notifyFinish()
 		called = [False]
 		def cb(val):
-			self.assertIs(None, val)
+			self.assertIdentical(None, val)
 			called[0] = True
 		d.addCallback(cb)
 		s.reset('because we want to see if the notifyFinish deferreds get called')
@@ -400,19 +400,19 @@ class StreamTests(unittest.TestCase):
 		"""
 		s = Stream(self._clock, 'some fake id', MockMinervaProtocolFactory())
 
-		self.assertIs(True, s. virgin)
+		self.assertIdentical(True, s. virgin)
 
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
-		self.assertIs(False, s.virgin)
+		self.assertIdentical(False, s.virgin)
 
 		# no longer a virgin ever
 		s.transportOffline(t)
-		self.assertIs(False, s.virgin)
+		self.assertIdentical(False, s.virgin)
 
 		t2 = DummySocketLikeTransport()
 		s.transportOnline(t2, False, None)
-		self.assertIs(False, s.virgin)
+		self.assertIdentical(False, s.virgin)
 
 
 	def test_transportOnline(self):
@@ -1100,7 +1100,7 @@ class StreamTrackerTests(unittest.TestCase):
 		reactor = FakeReactor()
 		st = StreamTracker(reactor, task.Clock(), None)
 		stream = st.buildStream('some fake id')
-		self.assertIs(Stream, type(stream))
+		self.assertIdentical(Stream, type(stream))
 
 
 	def test_buildStreamCannotBuildWithSameId(self):
@@ -2372,8 +2372,8 @@ class TransportProducerTests(unittest.TestCase):
 			producer1 = MockProducer()
 			self.transport.registerProducer(producer1, streaming=streaming)
 			# The Minerva transport is registered, not the producer itself
-			self.assertIs(self.tcpTransport.producer, self.transport)
-			self.assertIs(self.tcpTransport.streaming, streaming)
+			self.assertIdentical(self.tcpTransport.producer, self.transport)
+			self.assertIdentical(self.tcpTransport.streaming, streaming)
 
 			# pauseProducing/resumeProducing calls are sent directly to producer
 			# (even when it is a pull producer), without much thinking.

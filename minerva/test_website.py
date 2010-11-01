@@ -187,7 +187,7 @@ class _CsrfTransportFirewallTests(object):
 		ms.virgin = False
 		act = lambda: firewall.checkTransport(transport, ms)
 		def cb(v):
-			self.assertIs(None, v)
+			self.assertIdentical(None, v)
 		return act().addCallback(cb)
 
 
@@ -199,7 +199,7 @@ class _CsrfTransportFirewallTests(object):
 		ms = MockStream()
 		act = lambda: firewall.checkTransport(transport, ms)
 		def cb(v):
-			self.assertIs(None, v)
+			self.assertIdentical(None, v)
 		return act().addCallback(cb)
 
 
