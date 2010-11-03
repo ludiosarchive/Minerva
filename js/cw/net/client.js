@@ -294,13 +294,9 @@ cw.net.IStreamPolicy.prototype.getHttpStreamingMode = function() {
  * your own application-level strings to determine that it is safe to
  * close, then call reset.
  *
- * Note: the stream never ends due to inactivity (there
- * are no timeouts in Stream). If you want to end the stream,
- * call stream.reset("reason why")
-
- * The simplest way to end dead Streams is to use an application-level
- * ping message that your server application sends (say every 55 seconds),
- * and end the Stream if no such message has been received for 2 minutes.
+ * Note: the client-side Stream never ends due to inactivity (there are no
+ * timeouts in the client-side Stream).  If you want to end the stream, call
+ * stream.reset("reason why").
  *
  * @interface
  */
@@ -389,9 +385,7 @@ cw.net.StreamState_ = {
  * The client-side representation of a Minerva Stream.
  *
  * Stream is sort-of analogous to {@code twisted.internet.tcp.Connection}.
- * Stream can span many TCP connections/HTTP requests.  Because Stream
- * has no built-in timeouts, the application code is in full control of how
- * long a Stream lasts without contact from the peer.
+ * Stream can span many TCP connections/HTTP requests.
  *
  * @param {!cw.eventual.CallQueue} callQueue
  * @param {!cw.net.IMinervaProtocol} protocol

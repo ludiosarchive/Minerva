@@ -58,10 +58,6 @@ class IMinervaProtocol(Interface):
 	your own application-level strings to determine that it is safe to
 	close, then call reset.
 
-	Note: the stream never ends due to inactivity (there
-	are no timeouts in Stream). If you want to end the stream,
-	call stream.reset("reason why")
-
 	The simplest way to end dead Streams is to use an application-level
 	ping message that your client application sends (say every 55 seconds),
 	and end the Stream if no such message has been received for 2 minutes.
@@ -290,9 +286,7 @@ class Stream(object):
 	The server-side representation of a Minerva Stream.
 
 	Stream is sort-of analogous to L{twisted.internet.tcp.Connection}.
-	Stream can span many TCP connections/HTTP requests.  Because Stream
-	has no built-in timeouts, the application code is in full control of how
-	long a Stream lasts without contact from the peer.
+	Stream can span many TCP connections/HTTP requests.
 
 	The producer/consumer here is designed to deal with TCP bandwidth
 	pressure (and "lack of any S2C transport" pressure).  It does not help
@@ -338,6 +332,8 @@ class Stream(object):
 		self._incoming = Incoming()
 		self.lastSackSeenByServer = SACK(-1, ())
 		self.lastReceived = clock.rightNow
+		# If no transports and nothing received in this many seconds,
+		# reset the Stream.
 		# This value needs to be somewhat forgiving, to allow for bad
 		# connections.  You can change this; just make your protocol
 		# set this attribute to a higher number.  Consider being even more
