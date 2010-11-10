@@ -523,6 +523,7 @@ cw.net.UsableXHR.prototype.handler_poll_ = function() {
 };
 
 /**
+ * @param {!Object} ev
  * @private
  */
 cw.net.UsableXHR.prototype.handler_onprogress_ = function(ev) {
