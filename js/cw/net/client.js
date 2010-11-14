@@ -305,18 +305,6 @@ cw.net.IMinervaProtocol = function() {
 };
 
 /**
- * Called when this stream has just started.  You may want to keep the
- * stream around with {@code this.stream = stream} or similar.
- *
- * You must *not* throw any error. Wrap your code in try/catch if necessary.
- *
- * @param {!cw.net.Stream} stream the Stream that was just started.
- */
-cw.net.IMinervaProtocol.prototype.streamStarted = function(stream) {
-
-};
-
-/**
  * Called when this stream has reset, either internally by Minerva client's
  * Stream, or a call to Stream.reset, or by a ResetFrame from the peer.
  *
@@ -1202,18 +1190,7 @@ cw.net.Stream.prototype.start = function() {
 		this.state_ == cw.net.StreamState_.UNSTARTED,
 		'start: bad Stream state_: ' + this.state_);
 
-	// Call streamStarted before we even connect one transport successfully.
-	this.protocol_.streamStarted(this);
-	// Under streamStarted, the state may have changed completely!
-	// The Stream may be RESETTING or disposed.
-	if(this.isResettingOrDisposed_()) {
-		return;
-	}
-	// state_ must be set after streamStarted, because the streamStarted
-	// function may call sendStrings (which will think the primaryTransport_
-	// below has already been created.)
 	this.state_ = cw.net.StreamState_.STARTED;
-
 	this.primaryTransport_ = this.createNewTransport_(true);
 	this.primaryTransport_.writeStrings_(this.queue_, null);
 	this.primaryTransport_.flush_();

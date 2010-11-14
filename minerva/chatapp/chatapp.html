@@ -146,9 +146,11 @@ chatapp.ChatProtocol = function() {
 
 };
 
-chatapp.ChatProtocol.prototype.streamStarted = function(stream) {
+chatapp.ChatProtocol.prototype.setStream = function(stream) {
 	this.stream_ = stream;
-	chatapp.logger.info('streamStarted');
+};
+
+chatapp.ChatProtocol.prototype.sendInitialStrings = function() {
 	this.stream_.sendStrings(['begin_chat']);
 };
 
@@ -255,6 +257,8 @@ chatapp.startStream = function() {
 	endpointD.addCallback(function(endpoint) {
 		var stream = new cw.net.Stream(
 			chatapp.callQueue, chatapp.lastProto, endpoint, streamPolicy);
+		chatapp.lastProto.setStream(stream);
+		chatapp.lastProto.sendInitialStrings();
 		stream.start();
 	});
 };

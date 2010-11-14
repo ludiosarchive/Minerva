@@ -189,9 +189,8 @@ cw.net.TestClient.RecordingProtocol = function() {
 	this.gotStrings = [];
 };
 
-cw.net.TestClient.RecordingProtocol.prototype.streamStarted = function(stream) {
+cw.net.TestClient.RecordingProtocol.prototype.setStream = function(stream) {
 	this.stream_ = stream;
-	this.log.push(['streamStarted', stream]);
 };
 
 cw.net.TestClient.RecordingProtocol.prototype.streamReset = function(reasonString, applicationLevel) {
@@ -261,6 +260,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
 		stream.tryToSend_ = goog.testing.recordFunction(goog.bind(stream.tryToSend_, stream));
+		proto.setStream(stream);
 		stream.start();
 		self.assertEqual(0, stream.tryToSend_.getCallCount());
 		stream.sendStrings(['hello']); // Non-empty Array causes a tryToSend_ call
@@ -279,6 +279,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.Stream(
 			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
+		proto.setStream(stream);
 		var badStrings = ["\x00", "\xff", "\n", "\x1f", "\x7f", "hello\tworld"];
 		goog.array.forEach(badStrings, function(string) {
 			self.assertThrows(Error, function() { stream.sendStrings([string]); });
@@ -303,6 +304,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
 		var badStrings = ["\x00", "\xff", "\n", "\x1f", "\x7f", "hello\tworld"];
 		stream.outgoingStringValidation = false;
+		proto.setStream(stream);
 		stream.sendStrings(badStrings);
 		self.assertEqual(badStrings.length, stream.queue_.getQueuedCount());
 	},
@@ -316,6 +318,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 		var stream = new cw.net.Stream(
 			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
+		proto.setStream(stream);
 		stream.start();
 		stream.reset("a reasonString");
 		self.assertThrows(Error, function() { stream.sendStrings(["a string"]); },
@@ -331,33 +334,12 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 		var stream = new cw.net.Stream(
 			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
+		proto.setStream(stream);
 		stream.start();
 		stream.reset("a reasonString");
 		self.assertThrows(Error, function() { stream.reset("a reasonString"); },
 			"reset: Can't send reset in state 3");
-	},
-
-	/**
-	 * If protocol calls sendStrings inside its streamStarted, everything
-	 * works fine.  This tests for the regression introduced in
-	 * "Fix a serious re-entrancy bug caught" on Fri Oct 1 11:50:04 2010.
-	 */
-	function test_sendStringsInStreamStarted(self) {
-		var proto = new cw.net.TestClient.RecordingProtocol();
-		proto.streamStarted = function(stream) {
-			this.stream_ = stream;
-			this.log.push(['streamStarted', stream]);
-			stream.sendStrings(['sent-at-start']);
-		};
-		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
-		var stream = new cw.net.Stream(
-			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
-		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
-		stream.start();
-		// No errors.
 	}
-
-	// TODO: test that stream.reset from within proto.streamStarted works.
 
 	// TODO: add test: if secondary is sending strings, and primary closes,
 	// new primary should not send strings that are being sent over
@@ -528,7 +510,6 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 			});
 
 		self.assertEqual([
-			["streamStarted", stream],
 			["streamReset", "done testing things", true]
 		], logWithoutStringsReceived);
 
@@ -555,6 +536,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.Stream(
 			callQueue, proto, self.endpoint_, self.streamPolicy_);
+		proto.setStream(stream);
 		stream.start();
 		stream.sendStrings(['echo_twice:hello world']);
 
@@ -577,6 +559,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.Stream(
 			callQueue, proto, self.endpoint_, self.streamPolicy_);
+		proto.setStream(stream);
 		stream.sendStrings(['echo_twice:hello world']);
 		stream.start();
 
@@ -607,13 +590,13 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.Stream(
 			callQueue, proto, self.endpoint_, self.streamPolicy_);
+		proto.setStream(stream);
 		stream.sendStrings(['reset_me:test_streamReset']);
 		stream.start();
 
 		function streamResetAssertions() {
-			self.assertEqual(2, proto.log.length);
-			self.assertEqual("streamStarted", proto.log[0][0]);
-			self.assertEqual("streamReset", proto.log[1][0]);
+			self.assertEqual(1, proto.log.length);
+			self.assertEqual("streamReset", proto.log[0][0]);
 		}
 
 		var d = new goog.async.Deferred();
