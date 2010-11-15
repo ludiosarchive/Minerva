@@ -1726,8 +1726,8 @@ class ServerTransport(object):
 
 
 
-requireFile(FilePath(__file__).parent().child('compiled_client').child('FlashConnector.swf').path)
-requireFile(FilePath(__file__).parent().child('compiled_client').child('expressInstall.swf').path)
+requireFile(FilePath(__file__).sibling('compiled_client').child('FlashConnector.swf').path)
+requireFile(FilePath(__file__).sibling('compiled_client').child('expressInstall.swf').path)
 
 class SocketFace(protocol.ServerFactory):
 	implements(IProtocolFactory)

@@ -306,7 +306,7 @@ class ResourcesForTest(BetterResource):
 
 
 
-requireFile(FilePath(__file__).parent().child('index.html').path)
+requireFile(FilePath(__file__).sibling('index.html').path)
 
 class Root(BetterResource):
 
@@ -346,7 +346,7 @@ class Root(BetterResource):
 		self.putChild('wait_resource', WaitResource(clock=reactor))
 
 		# The docs are outside of the minerva package
-		docsDir = FilePath(__file__).parent().parent().child('docs')
+		docsDir = FilePath(__file__).parent().sibling('docs')
 		if docsDir.exists():
 			self.putChild('docs', BetterFile(docsDir.path))
 

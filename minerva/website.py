@@ -276,9 +276,9 @@ class CsrfTransportFirewall(object):
 
 
 requireFiles([
-	FilePath(__file__).parent().child('xdrframe.html').path,
-	FilePath(__file__).parent().child('compiled_client').child('bootstrap_XDRSetup.js').path,
-	FilePath(__file__).parent().child('compiled_client').child('xdrframe.js').path])
+	FilePath(__file__).sibling('xdrframe.html').path,
+	FilePath(__file__).sibling('compiled_client').child('bootstrap_XDRSetup.js').path,
+	FilePath(__file__).sibling('compiled_client').child('xdrframe.js').path])
 
 class XDRFrame(BetterResource):
 	"""
@@ -291,7 +291,7 @@ class XDRFrame(BetterResource):
 	extract ?id= instead of the server.
 	"""
 	isLeaf = True
-	templateFilename = FilePath(__file__).parent().child('xdrframe.html').path
+	templateFilename = FilePath(__file__).sibling('xdrframe.html').path
 
 	def __init__(self, fileCache, domain):
 		self._fileCache = fileCache
@@ -317,7 +317,7 @@ class XDRFrame(BetterResource):
 
 
 
-requireFile(FilePath(__file__).parent().child('xdrframe_dev.html').path)
+requireFile(FilePath(__file__).sibling('xdrframe_dev.html').path)
 
 class XDRFrameDev(XDRFrame):
 	"""
@@ -325,7 +325,7 @@ class XDRFrameDev(XDRFrame):
 	the compiled xdrframe.js.
 	"""
 	isLeaf = True
-	template = FilePath(__file__).parent().child('xdrframe_dev.html')
+	template = FilePath(__file__).sibling('xdrframe_dev.html')
 
 
 

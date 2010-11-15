@@ -45,4 +45,4 @@ class FlashTestPage(BetterResource):
 		BetterResource.__init__(self)
 
 		self.putChild('', Index(csrfStopper, cookieInstaller))
-		self.putChild('app.swf', static.File(FilePath(__file__).parent().child('app.swf').path))
+		self.putChild('app.swf', static.File(FilePath(__file__).sibling('app.swf').path))
