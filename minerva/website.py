@@ -349,6 +349,14 @@ class ConflictingTemplateVars(Exception):
 
 
 
+def getResourceForUrl(site, url):
+	rootResource = site.resource
+	postpath = url.split('/')
+	postpath.pop(0)
+	dummyRequest = DummyRequest(postpath)
+	return getChildForRequest(rootResource, dummyRequest)
+
+
 def makeCacheBreakLink(fileCache, request):
 	def cacheBreakLink(href):
 		"""
@@ -364,11 +372,7 @@ def makeCacheBreakLink(fileCache, request):
 		"""
 		joinedUrl = uriparse.urljoin(request.path, href)
 		site = request.channel.site
-		rootResource = site.resource
-		postpath = joinedUrl.split('/')
-		postpath.pop(0)
-		dummyRequest = DummyRequest(postpath)
-		staticResource = getChildForRequest(rootResource, dummyRequest)
+		staticResource = getResourceForUrl(site, joinedUrl)
 		content, maybeNew = fileCache.getContent(staticResource.path)
 		breaker = hashlib.md5(content).hexdigest()
 		# TODO: Because some (terrible) proxies cache based on the
