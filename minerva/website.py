@@ -376,6 +376,7 @@ def makeCacheBreakLink(fileCache, request):
 		# /cachebreaker/ instead of ?cachebreaker.  This would require
 		# some work on static.File and nginx, though.
 		return href + '?m=' + breaker
+
 	return cacheBreakLink
 
 
