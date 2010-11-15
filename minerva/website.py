@@ -353,7 +353,7 @@ def makeCacheBreakLink(fileCache, request):
 	def cacheBreakLink(href):
 		"""
 		A function that takes an C{href} and returns
-		C{href + '?m=' + (md5sum of contents of href)}.
+		C{href + '?cb=' + (md5sum of contents of href)}.
 
 		This requires that C{href} is somewhere on the L{site.Site}'s
 		resource tree and that it is a L{static.File}.
@@ -375,7 +375,7 @@ def makeCacheBreakLink(fileCache, request):
 		# non-query portion of the URL, it would be nice to append
 		# /cachebreaker/ instead of ?cachebreaker.  This would require
 		# some work on static.File and nginx, though.
-		return href + '?m=' + breaker
+		return href + '?cb=' + breaker
 
 	return cacheBreakLink
 
