@@ -312,9 +312,10 @@ class XDRFrame(BetterResource):
 
 		templateContent, _ = self._fileCache.getContent(self.templateFile.path)
 		rendered = jinja2.Environment().from_string(templateContent).render(dict(
-			domain=simplejson.dumps(self.domain),
+			dumps=simplejson.dumps,
+			domain=self.domain,
 			frameNum=frameNum,
-			frameId=simplejson.dumps(frameIdStr),
+			frameIdStr=frameIdStr,
 			**self.dictionary))
 		return rendered.encode('utf-8')
 
