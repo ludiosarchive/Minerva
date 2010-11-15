@@ -12,10 +12,12 @@
 		parentUrlSplit.pop();
 	}
 	var parentUrl = parentUrlSplit.join("/");
+	// {#
 	// Load JavaScript from the parent's domain instead of our own subdomain,
 	// subdomain is always random and the resources would not be usefully
 	// cached.
 	// TODO: server-side "jsdomain" option, instead of grabbing the parent's URL.
+	// #}
 	document.write('<script src="' + parentUrl + '/compiled_client/xdrframe.js"><\/s' + 'cript>');
 </script>
 <script>
