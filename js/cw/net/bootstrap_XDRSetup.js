@@ -56,6 +56,8 @@
 	__XDRSetup['baseurl1'] = window.location.protocol + '//' + __XDRSetup['sub1'] + __XDRSetup['suffix'];
 	__XDRSetup['baseurl2'] = window.location.protocol + '//' + __XDRSetup['sub2'] + __XDRSetup['suffix'];
 	var resource = __XDRSetup['dev'] ? 'xdrframe_dev/' : 'xdrframe/';
+	// Because our subdomains are random, we don't need to append
+	// ?cachebreakers to the URLs.
 	__XDRSetup['xdrurl1'] = __XDRSetup['baseurl1'] +
 		resource + '?framenum=1&id=' + __XDRSetup['id1'];
 	__XDRSetup['xdrurl2'] = __XDRSetup['baseurl2'] +
