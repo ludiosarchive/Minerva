@@ -42,7 +42,7 @@
 {% else %}
 
 <script>
-	document.write('<script src="' + parentUrl + '/compiled_client/xdrframe.js"><\/s' + 'cript>');
+	document.write('<script src="' + parentUrl + '{{ cacheBreakLink("/compiled_client/xdrframe.js") }}"><\/s' + 'cript>');
 </script>
 
 {% endif %}

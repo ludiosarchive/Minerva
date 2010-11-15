@@ -319,6 +319,7 @@ class XDRFrame(BetterResource):
 			self.templateFile.path, transform=_contentToTemplate)
 		rendered = template.render(dict(
 			dumps=simplejson.dumps,
+			cacheBreakLink=makeCacheBreakLink(self._fileCache, request),
 			domain=self.domain,
 			frameNum=frameNum,
 			frameIdStr=frameIdStr,
