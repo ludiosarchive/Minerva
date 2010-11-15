@@ -278,6 +278,11 @@ class CsrfTransportFirewall(object):
 
 
 
+
+def _contentToTemplate(content):
+	return jinja2.Environment().from_string(content.decode('utf-8'))
+
+
 requireFiles([
 	FilePath(__file__).sibling('xdrframe.html').path,
 	FilePath(__file__).sibling('compiled_client').child('bootstrap_XDRSetup.js').path,
@@ -310,8 +315,9 @@ class XDRFrame(BetterResource):
 		if len(frameIdStr) > 50:
 			raise ValueError("frameIdStr too long: %r" % (frameIdStr,))
 
-		templateContent, _ = self._fileCache.getContent(self.templateFile.path)
-		rendered = jinja2.Environment().from_string(templateContent).render(dict(
+		template, _ = self._fileCache.getContent(
+			self.templateFile.path, transform=_contentToTemplate)
+		rendered = template.render(dict(
 			dumps=simplejson.dumps,
 			domain=self.domain,
 			frameNum=frameNum,
@@ -414,7 +420,6 @@ class MinervaBootstrap(BetterResource):
 		self._csrfStopper = csrfStopper
 		self._cookieInstaller = cookieInstaller
 		self._templateFile = templateFile
-		self._cachedTemplate = None
 		self._dictionary = dictionary
 
 		self._jinja2Env = jinja2.Environment()
@@ -442,9 +447,8 @@ __XDRSetup = %s;
 		csrfToken = self._csrfStopper.makeToken(cookie)
 
 		# This jinja2 stuff is for the html page, not the JavaScript
-		templateBytes, maybeNew = self._fileCache.getContent(self._templateFile.path)
-		if maybeNew or self._cachedTemplate is None:
-			self._cachedTemplate = templateBytes.decode('utf-8')
+		template, _ = self._fileCache.getContent(
+			self._templateFile.path, transform=_contentToTemplate)
 
 		bootstrapDict = {}
 		bootstrapDict['bootstrap'] = {
@@ -463,7 +467,7 @@ __XDRSetup = %s;
 						k, dictionary, self.__class__.__name__))
 			dictionary[k] = v
 
-		rendered = self._jinja2Env.from_string(self._cachedTemplate).render(dictionary)
+		rendered = template.render(dictionary)
 		return rendered.encode('utf-8')
 
 
