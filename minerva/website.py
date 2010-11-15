@@ -16,6 +16,8 @@ import jinja2
 from zope.interface import implements, Interface
 from twisted.python.filepath import FilePath
 from twisted.internet import defer
+from twisted.web.resource import getChildForRequest
+from twisted.web.test.test_web import DummyRequest
 try:
 	from twisted.python.util import slowStringCompare
 except ImportError:
@@ -28,6 +30,7 @@ import minerva
 from brequire import requireFile, requireFiles
 from mypy.objops import strToNonNegLimit
 from webmagic.untwist import BetterResource
+from webmagic import uriparse
 
 _postImportVars = vars().keys()
 
@@ -346,6 +349,32 @@ class ConflictingTemplateVars(Exception):
 
 
 
+def makeCacheBreakLink(fileCache, request):
+	def cacheBreakLink(href):
+		"""
+		A function that takes an C{href} and returns
+		C{href + '?m=' + (md5sum of contents of href)}.
+
+		This requires that C{href} is somewhere on the L{site.Site}'s
+		resource tree and that it is a L{static.File}.
+
+		Warning: the contents of the file at C{href} will be cached, and
+		items from this cache are never removed.  Don't use this on
+		dynamically-generated static files.
+		"""
+		joinedUrl = uriparse.urljoin(request.path, href)
+		site = request.channel.site
+		rootResource = site.resource
+		postpath = joinedUrl.split('/')
+		postpath.pop(0)
+		dummyRequest = DummyRequest(postpath)
+		staticResource = getChildForRequest(rootResource, dummyRequest)
+		content, maybeNew = fileCache.getContent(staticResource.path)
+		breaker = hashlib.md5(content).hexdigest()
+		return href + '?m=' + breaker
+	return cacheBreakLink
+
+
 class MinervaBootstrap(BetterResource):
 	"""
 	HTML pages that use JS Minerva typically use bootstrapping code to speed
@@ -415,6 +444,7 @@ __XDRSetup = %s;
 			'getXDRSetup': self._getXDRSetup,
 		}
 		bootstrapDict['dumps'] = simplejson.dumps
+		bootstrapDict['cacheBreakLink'] =  makeCacheBreakLink(self._fileCache, request)
 
 		dictionary = self._dictionary.copy()
 		for k, v in bootstrapDict.iteritems():
