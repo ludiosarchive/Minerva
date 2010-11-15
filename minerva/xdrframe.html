@@ -5,6 +5,11 @@
 	<title>XDRFrame</title>
 </head>
 <body>
+{#
+	Note: for the __XDRSetup call to work, document.domain
+	on parent page must be set *before* the browser starts executing
+	code in the iframe.
+#}
 <script>
 	document.domain = {{ domain }};
 	var parentUrlSplit = parent.location.href.split("/");
@@ -18,8 +23,30 @@
 	// cached.
 	// TODO: server-side "jsdomain" option, instead of grabbing the parent's URL.
 	// #}
+</script>
+
+{% if dev_mode %}
+
+<script>
+	document.write('<script>CLOSURE_NO_DEPS = true;<\/s' + 'cript>');
+	document.write('<script src="' + parentUrl + '/JSPATH/closure/goog/base.js"><\/s' + 'cript>');
+</script>
+<script>
+	document.write('<script src="' + parentUrl + '/JSPATH/all_deps.js"><\/s' + 'cript>');
+</script>
+<script>
+	goog.require('cw.net.XHRSlave');
+	goog.require('cw.net.setupXDRFrame');
+</script>
+
+{% else %}
+
+<script>
 	document.write('<script src="' + parentUrl + '/compiled_client/xdrframe.js"><\/s' + 'cript>');
 </script>
+
+{% endif %}
+
 <script>
 	__xdrframe_setupXDRFrame({{ frameNum }}, {{ frameId }});
 </script>

@@ -294,7 +294,8 @@ class XDRFrame(BetterResource):
 	extract ?id= instead of the server.
 	"""
 	isLeaf = True
-	templateFilename = FilePath(__file__).sibling('xdrframe.html').path
+	dictionary = {'dev_mode': False}
+	templateFile = FilePath(__file__).sibling('xdrframe.html')
 
 	def __init__(self, fileCache, domain):
 		self._fileCache = fileCache
@@ -309,26 +310,22 @@ class XDRFrame(BetterResource):
 		if len(frameIdStr) > 50:
 			raise ValueError("frameIdStr too long: %r" % (frameIdStr,))
 
-		templateContent, _ = self._fileCache.getContent(self.templateFilename)
-		dictionary = dict(
+		templateContent, _ = self._fileCache.getContent(self.templateFile.path)
+		rendered = jinja2.Environment().from_string(templateContent).render(dict(
 			domain=simplejson.dumps(self.domain),
 			frameNum=frameNum,
-			frameId=simplejson.dumps(frameIdStr))
-
-		rendered = jinja2.Environment().from_string(templateContent).render(dictionary)
+			frameId=simplejson.dumps(frameIdStr),
+			**self.dictionary))
 		return rendered.encode('utf-8')
 
 
-
-requireFile(FilePath(__file__).sibling('xdrframe_dev.html').path)
 
 class XDRFrameDev(XDRFrame):
 	"""
 	Like XDRFrame, except load the uncompiled JavaScript code, instead of
 	the compiled xdrframe.js.
 	"""
-	isLeaf = True
-	template = FilePath(__file__).sibling('xdrframe_dev.html')
+	dictionary = {'dev_mode': True}
 
 
 
