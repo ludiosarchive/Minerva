@@ -354,9 +354,16 @@ class ConflictingTemplateVars(Exception):
 
 
 
-def getResourceForUrl(site, url):
+def getResourceForPath(site, path):
+	"""
+	C{site} is a L{server.Site}.
+	C{path} is a C{str} path that starts with C{"/"}.
+
+	Returns a resource from C{site}'s resource tree that corresponds
+	to C{path}.
+	"""
 	rootResource = site.resource
-	postpath = url.split('/')
+	postpath = path.split('/')
 	postpath.pop(0)
 	dummyRequest = DummyRequest(postpath)
 	return getChildForRequest(rootResource, dummyRequest)
@@ -375,9 +382,9 @@ def makeCacheBreakLink(fileCache, request):
 		items from this cache are never removed.  Don't use this on
 		dynamically-generated static files.
 		"""
-		joinedUrl = uriparse.urljoin(request.path, href)
+		joinedPath = uriparse.urljoin(request.path, href)
 		site = request.channel.site
-		staticResource = getResourceForUrl(site, joinedUrl)
+		staticResource = getResourceForPath(site, joinedPath)
 		md5digest, maybeNew = fileCache.getContent(
 			staticResource.path,
 			transform=lambda content: hashlib.md5(content).hexdigest())
