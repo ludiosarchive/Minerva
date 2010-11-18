@@ -28,8 +28,8 @@ import minerva
 from brequire import requireFile, requireFiles
 from mypy.objops import strToNonNegLimit
 from mypy import transforms
-from webmagic.untwist import BetterResource, makeCacheBreakLink
-from webmagic import uriparse
+from webmagic.untwist import BetterResource
+from webmagic.pathmanip import makeCacheBreakLink
 
 _postImportVars = vars().keys()
 
