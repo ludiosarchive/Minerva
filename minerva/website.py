@@ -16,8 +16,6 @@ import jinja2
 from zope.interface import implements, Interface
 from twisted.python.filepath import FilePath
 from twisted.internet import defer
-from twisted.web.resource import getChildForRequest
-from twisted.web.test.test_web import DummyRequest
 try:
 	from twisted.python.util import slowStringCompare
 except ImportError:
@@ -30,7 +28,7 @@ import minerva
 from brequire import requireFile, requireFiles
 from mypy.objops import strToNonNegLimit
 from mypy import transforms
-from webmagic.untwist import BetterResource
+from webmagic.untwist import BetterResource, makeCacheBreakLink
 from webmagic import uriparse
 
 _postImportVars = vars().keys()
@@ -353,55 +351,6 @@ def getRandomSubdomain(prefix, digits):
 class ConflictingTemplateVars(Exception):
 	pass
 
-
-
-def getResourceForPath(site, path):
-	"""
-	C{site} is a L{server.Site}.
-	C{path} is a C{str} path that starts with C{"/"}.
-
-	Returns a resource from C{site}'s resource tree that corresponds
-	to C{path}.
-	"""
-	rootResource = site.resource
-	postpath = path.split('/')
-	postpath.pop(0)
-	dummyRequest = DummyRequest(postpath)
-	return getChildForRequest(rootResource, dummyRequest)
-
-
-def makeCacheBreakLink(fileCache, request):
-	def cacheBreakLink(href):
-		"""
-		A function that takes an C{href} and returns
-		C{href + '?cb=' + (md5sum of contents of href)}.
-
-		This requires that C{href} is somewhere on the L{site.Site}'s
-		resource tree and that it is a L{static.File}.
-
-		Warning: the contents of the file at C{href} will be cached, and
-		items from this cache are never removed.  Don't use this on
-		dynamically-generated static files.
-		"""
-		joinedPath = uriparse.urljoin(request.path, href)
-		site = request.channel.site
-		staticResource = getResourceForPath(site, joinedPath)
-		# First try the getCacheBreaker method on the Resource, otherwise
-		# assume it is a static.File and calculate the breaker ourselves.
-		getCacheBreaker = getattr(staticResource, 'getCacheBreaker', None)
-		if getCacheBreaker:
-			breaker = getCacheBreaker()
-		else:
-			breaker, maybeNew = fileCache.getContent(
-				staticResource.path,
-				transform=transforms.md5hexdigest)
-		# TODO: Because some (terrible) proxies cache based on the
-		# non-query portion of the URL, it would be nice to append
-		# /cachebreaker/ instead of ?cachebreaker.  This would require
-		# some work on static.File and nginx, though.
-		return href + '?cb=' + breaker
-
-	return cacheBreakLink
 
 
 class MinervaBootstrap(BetterResource):
