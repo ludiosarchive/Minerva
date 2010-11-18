@@ -29,6 +29,7 @@ except ImportError:
 import minerva
 from brequire import requireFile, requireFiles
 from mypy.objops import strToNonNegLimit
+from mypy import transforms
 from webmagic.untwist import BetterResource
 from webmagic import uriparse
 
@@ -387,7 +388,7 @@ def makeCacheBreakLink(fileCache, request):
 		staticResource = getResourceForPath(site, joinedPath)
 		md5digest, maybeNew = fileCache.getContent(
 			staticResource.path,
-			transform=lambda content: hashlib.md5(content).hexdigest())
+			transform=transforms.md5hexdigest)
 		# TODO: Because some (terrible) proxies cache based on the
 		# non-query portion of the URL, it would be nice to append
 		# /cachebreaker/ instead of ?cachebreaker.  This would require
