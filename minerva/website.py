@@ -386,14 +386,20 @@ def makeCacheBreakLink(fileCache, request):
 		joinedPath = uriparse.urljoin(request.path, href)
 		site = request.channel.site
 		staticResource = getResourceForPath(site, joinedPath)
-		md5digest, maybeNew = fileCache.getContent(
-			staticResource.path,
-			transform=transforms.md5hexdigest)
+		# First try the getCacheBreaker method on the Resource, otherwise
+		# assume it is a static.File and calculate the breaker ourselves.
+		getCacheBreaker = getattr(staticResource, 'getCacheBreaker', None)
+		if getCacheBreaker:
+			breaker = getCacheBreaker()
+		else:
+			breaker, maybeNew = fileCache.getContent(
+				staticResource.path,
+				transform=transforms.md5hexdigest)
 		# TODO: Because some (terrible) proxies cache based on the
 		# non-query portion of the URL, it would be nice to append
 		# /cachebreaker/ instead of ?cachebreaker.  This would require
 		# some work on static.File and nginx, though.
-		return href + '?cb=' + md5digest
+		return href + '?cb=' + breaker
 
 	return cacheBreakLink
 

@@ -49,16 +49,17 @@ tk_invalid_frame_type_or_arguments =  TransportKillFrame.invalid_frame_type_or_a
 tk_frame_corruption =  TransportKillFrame.frame_corruption
 tk_rwin_overflow =  TransportKillFrame.rwin_overflow
 
-from minerva.frames import (
-	FORMAT_XHR, FORMAT_HTMLFILE,
+from minerva.frames import FORMAT_XHR, FORMAT_HTMLFILE
+
+from webmagic.fakes import (
+	FakeReactor, DummyChannel, DummyRequest, MockProducer,
 )
 
 from minerva.mocks import (
-	FakeReactor, DummyChannel, DummyRequest, MockProducer,
 	FrameDecodingTcpTransport, MockStream, MockMinervaProtocol,
-	MockMinervaProtocolFactory, DummySocketLikeTransport, MockObserver,
-	BrokenOnPurposeError, BrokenMockObserver, DummyStreamTracker,
-	DummyFirewall, DummyTCPTransport, strictGetNewFrames
+	MockMinervaProtocolFactory, MockObserver, BrokenOnPurposeError,
+	BrokenMockObserver, DummyStreamTracker, DummyFirewall, DummyTCPTransport,
+	DummySocketLikeTransport, strictGetNewFrames,
 )
 
 

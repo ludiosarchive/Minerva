@@ -7,10 +7,9 @@ from twisted.internet.defer import Deferred
 from twisted.web.test.test_web import DummyChannel
 from twisted.web.server import Request
 
-from minerva.mocks import (
-	DummyRequest, DummySocketLikeTransport, MockStream
-)
+from webmagic.fakes import DummyRequest
 
+from minerva.mocks import MockStream, DummySocketLikeTransport
 from minerva.website import (
 	RejectTransport, ITransportFirewall, CsrfTransportFirewall,
 	NoopTransportFirewall, ICsrfStopper, CsrfStopper, RejectToken,
