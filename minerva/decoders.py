@@ -262,8 +262,8 @@ class DelimitedStringDecoder(object):
 			return completeStrings, OK
 		at = 0
 		while True:
-			# Find the delimiter that ends the string were about to extract
-			endsAt = self._buffer.find(de, at)
+			# Find the delimiter that ends the string we're about to extract
+			endsAt = self._buffer.index(de, at)
 			if endsAt - at > m:
 				return completeStrings, TOO_LONG
 			# Note that if the user keeps the StringFragment around, the next
@@ -352,7 +352,7 @@ class DelimitedJSONDecoder(object):
 				return docs, INTRAFRAME_CORRUPTION
 			docs.append(doc)
 			# Find the delimiter that ends the document we just extracted
-			endsAt = self._buffer.find(de, end)
+			endsAt = self._buffer.index(de, end)
 			if endsAt - at > m:
 				return docs, TOO_LONG
 			at = endsAt + 1
