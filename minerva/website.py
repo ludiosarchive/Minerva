@@ -169,7 +169,8 @@ class ITransportFirewall(Interface):
 			If it is a new Stream that has never seen transports, C{stream.virgin}
 			will be C{True}.
 
-		@return: Deferred that errbacks with L{RejectTransport} if the transport should not be attached.
+		@return: Deferred that errbacks with L{RejectTransport} if the
+			transport should not be attached.
 		@return: Deferred that callbacks with L{None} if the transport should be attached.
 
 		This should not be used for application-level user login or similar
