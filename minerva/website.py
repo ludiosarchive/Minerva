@@ -9,6 +9,7 @@ import hashlib
 import hmac
 import re
 from random import randint
+from functools import partial
 
 import simplejson
 import jinja2
@@ -29,7 +30,7 @@ from brequire import requireFile, requireFiles
 from mypy.objops import strToNonNegLimit
 from mypy import transforms
 from webmagic.untwist import BetterResource
-from webmagic.pathmanip import makeCacheBreakLink
+from webmagic.pathmanip import getCacheBrokenHref
 
 _postImportVars = vars().keys()
 
@@ -318,7 +319,8 @@ class XDRFrame(BetterResource):
 			self.templateFile.path, transform=_contentToTemplate)
 		rendered = template.render(dict(
 			dumps=simplejson.dumps,
-			cacheBreakLink=makeCacheBreakLink(self._fileCache, request),
+			cacheBreakLink=partial(
+				getCacheBrokenHref, self._fileCache, request),
 			domain=self.domain,
 			frameNum=frameNum,
 			frameIdStr=frameIdStr,
@@ -420,7 +422,8 @@ __XDRSetup = %s;
 			'getXDRSetup': self._getXDRSetup,
 		}
 		bootstrapDict['dumps'] = simplejson.dumps
-		bootstrapDict['cacheBreakLink'] =  makeCacheBreakLink(self._fileCache, request)
+		bootstrapDict['cacheBreakLink'] =  partial(
+			getCacheBrokenHref, self._fileCache, request)
 
 		dictionary = self._dictionary.copy()
 		for k, v in bootstrapDict.iteritems():
