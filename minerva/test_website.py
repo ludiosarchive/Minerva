@@ -13,6 +13,7 @@ from minerva.mocks import MockStream, DummySocketLikeTransport
 from minerva.website import (
 	RejectTransport, ITransportFirewall, CsrfTransportFirewall,
 	NoopTransportFirewall, ICsrfStopper, CsrfStopper, RejectToken,
+	htmldumps,
 )
 
 
@@ -248,3 +249,10 @@ class CsrfTransportFirewallTestsSocketLikeTransport(_CsrfTransportFirewallTests,
 		transport = DummySocketLikeTransport()
 		transport.credentialsData = _makeCredentialsData(uaId, csrfTokenStr)
 		return firewall, transport
+
+
+
+class TestHtmlDumps(unittest.TestCase):
+
+	def test_htmldumps(self):
+		self.assertEqual(r'["<\/script>"]', htmldumps(["</script>"]))

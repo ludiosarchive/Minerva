@@ -278,6 +278,12 @@ class CsrfTransportFirewall(object):
 # See Minerva git history before 2010-05-31 for this feature.
 
 
+def htmldumps(*args, **kwargs):
+	"""
+	Like L{simplejson.dumps}, but backslash every '/' to prevent
+	an HTML closing tag from closing a script.
+	"""
+	return simplejson.dumps(*args, **kwargs).replace('/', r'\/')
 
 
 def _contentToTemplate(content):
@@ -319,7 +325,7 @@ class XDRFrame(BetterResource):
 		template, _ = self._fileCache.getContent(
 			self.templateFile.path, transform=_contentToTemplate)
 		rendered = template.render(dict(
-			dumps=simplejson.dumps,
+			htmldumps=htmldumps,
 			cacheBreakLink=partial(
 				getCacheBrokenHref, self._fileCache, request),
 			domain=self.domain,
@@ -348,7 +354,6 @@ def getRandomSubdomain(prefix, digits):
 	# Always have C{digits} digits.  Use only random digits (not letters) to
 	# prevent forming words that may be blocked by proxies.
 	return prefix + str(randint(10**(digits - 1), 10**digits - 1))
-
 
 
 class ConflictingTemplateVars(Exception):
@@ -406,7 +411,7 @@ class MinervaBootstrap(BetterResource):
 		return """\
 __XDRSetup = %s;
 %s
-""" % (simplejson.dumps(__XDRSetup), bootstrap_XDRSetup_contents)
+""" % (htmldumps(__XDRSetup), bootstrap_XDRSetup_contents)
 
 
 	def render_GET(self, request):
@@ -422,7 +427,7 @@ __XDRSetup = %s;
 			'csrf_token': csrfToken,
 			'getXDRSetup': self._getXDRSetup,
 		}
-		bootstrapDict['dumps'] = simplejson.dumps
+		bootstrapDict['htmldumps'] = htmldumps
 		bootstrapDict['cacheBreakLink'] =  partial(
 			getCacheBrokenHref, self._fileCache, request)
 

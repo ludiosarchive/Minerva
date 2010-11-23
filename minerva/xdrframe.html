@@ -10,7 +10,7 @@
 	code in the iframe.
 #}
 <script>
-	document.domain = {{ dumps(domain) }};
+	document.domain = {{ htmldumps(domain) }};
 	var parentUrlSplit = parent.location.href.split("/");
 	while(parentUrlSplit.length != 3) {
 		parentUrlSplit.pop();
@@ -47,7 +47,7 @@
 {% endif %}
 
 <script>
-	__xdrframe_setupXDRFrame({{ frameNum }}, {{ dumps(frameIdStr) }});
+	__xdrframe_setupXDRFrame({{ frameNum }}, {{ htmldumps(frameIdStr) }});
 </script>
 </body>
 </html>
