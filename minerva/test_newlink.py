@@ -3446,7 +3446,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		headers = dict(request.responseHeaders.getAllRawHeaders())
 		self.assertEqual(['no-cache'], headers['Pragma'])
 		self.assertEqual(['no-cache, no-store, max-age=0, must-revalidate'], headers['Cache-Control'])
-		self.assertEqual(['Fri, 01 Jan 1990 00:00:00 GMT'], headers['Expires'])
+		self.assertEqual(['-1'], headers['Expires'])
 
 		# Possibly prevents initial buffering of streaming responses in WebKit browsers
 		self.assertEqual(['text/plain'], headers['Content-Type'])
