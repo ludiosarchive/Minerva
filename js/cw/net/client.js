@@ -596,16 +596,16 @@ cw.net.Stream.prototype.outgoingStringValidation = true;
  * @param {!Array.<string>} sb
  * @param {!Array.<*>} stack
  */
-cw.net.Stream.prototype.__reprToPieces__ = function(sb, stack) {
+cw.net.Stream.prototype.__reprPush__ = function(sb, stack) {
 	sb.push('<Stream id=');
-	cw.repr.reprToPieces(this.streamId, sb, stack);
+	cw.repr.reprPush(this.streamId, sb, stack);
 	sb.push(', state=', String(this.state_));
 	sb.push(', primary=');
-	cw.repr.reprToPieces(this.primaryTransport_, sb, stack);
+	cw.repr.reprPush(this.primaryTransport_, sb, stack);
 	sb.push(', secondary=');
-	cw.repr.reprToPieces(this.secondaryTransport_, sb, stack);
+	cw.repr.reprPush(this.secondaryTransport_, sb, stack);
 	sb.push(', resetting=');
-	cw.repr.reprToPieces(this.resettingTransport_, sb, stack);
+	cw.repr.reprPush(this.resettingTransport_, sb, stack);
 };
 
 /**
@@ -1457,7 +1457,7 @@ cw.net.ClientTransport.prototype.hadProblems_ = false;
  * @param {!Array.<*>} stack
  * @private
  */
-cw.net.ClientTransport.prototype.__reprToPieces__ = function(sb, stack) {
+cw.net.ClientTransport.prototype.__reprPush__ = function(sb, stack) {
 	sb.push(
 		'<ClientTransport #', String(this.transportNumber),
 		', becomePrimary=', String(this.becomePrimary_), '>');
@@ -2261,7 +2261,7 @@ cw.net.DoNothingTransport.prototype.flush_ = function() {
  * @param {!Array.<*>} stack
  * @private
  */
-cw.net.DoNothingTransport.prototype.__reprToPieces__ = function(sb, stack) {
+cw.net.DoNothingTransport.prototype.__reprPush__ = function(sb, stack) {
 	sb.push(
 		'<DoNothingTransport delay=', String(this.delay_), '>');
 };

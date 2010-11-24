@@ -169,7 +169,7 @@ cw.net.FlashSocket.prototype.logger_ =
  * @param {!Array.<string>} sb
  * @param {!Array.<*>} stack
  */
-cw.net.FlashSocket.prototype.__reprToPieces__ = function(sb, stack) {
+cw.net.FlashSocket.prototype.__reprPush__ = function(sb, stack) {
 	sb.push("<FlashSocket id='");
 	sb.push(this.id_);
 	sb.push("'>");
@@ -368,9 +368,9 @@ cw.net.FlashSocketTracker.prototype.logger_ =
  * @param {!Array.<string>} sb
  * @param {!Array.<*>} stack
  */
-cw.net.FlashSocketTracker.prototype.__reprToPieces__ = function(sb, stack) {
+cw.net.FlashSocketTracker.prototype.__reprPush__ = function(sb, stack) {
 	sb.push("<FlashSocketTracker instances=");
-	cw.repr.reprToPieces(this.instances_, sb, stack);
+	cw.repr.reprPush(this.instances_, sb, stack);
 	sb.push(">");
 };
 
