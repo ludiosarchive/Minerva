@@ -7,6 +7,8 @@ See minerva.minervasite for an idea of how to use the classes below,
 especially `makeMinervaAndHttp` and `DemoProtocol`.
 """
 
+import sys
+
 from zope.interface import Interface, Attribute, implements
 
 from twisted.python import log
@@ -35,7 +37,7 @@ from minerva.frames import (
 
 from brequire import requireFile
 
-# Make globals that pypycpyo.optimizer can optimize away
+# Make globals that mypy.optimizer can optimize away
 tk_stream_attach_failure = TransportKillFrame.stream_attach_failure
 tk_acked_unsent_strings = TransportKillFrame.acked_unsent_strings
 tk_invalid_frame_type_or_arguments = TransportKillFrame.invalid_frame_type_or_arguments
@@ -1810,5 +1812,6 @@ class HttpFace(BetterResource):
 
 
 
-from pypycpyo import optimizer
-optimizer.bind_all_many(vars(), _postImportVars)
+from mypy import constant_binder
+constant_binder.bindRecursive(sys.modules[__name__], _postImportVars)
+del constant_binder

@@ -3,6 +3,7 @@ Classes for things that are closer to website-specific behavior,
 and not necessary for the use of Minerva faces.  
 """
 
+import sys
 import base64
 import binascii
 import hashlib
@@ -445,5 +446,6 @@ __XDRSetup = %s;
 
 
 
-from pypycpyo import optimizer
-optimizer.bind_all_many(vars(), _postImportVars)
+from mypy import constant_binder
+constant_binder.bindRecursive(sys.modules[__name__], _postImportVars)
+del constant_binder

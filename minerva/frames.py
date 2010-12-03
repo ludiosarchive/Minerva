@@ -4,6 +4,7 @@ it is suitable for both both Minerva server, and a Python Minerva client (not
 yet written).
 """
 
+import sys
 import operator
 from simplejson import dumps
 from simplejson.decoder import JSONDecodeError
@@ -736,5 +737,6 @@ def decodeFrameFromServer(frameString):
 		raise InvalidFrame("Invalid frame type %r" % lastByte)
 
 
-from pypycpyo import optimizer
-optimizer.bind_all_many(vars(), _postImportVars)
+from mypy import constant_binder
+constant_binder.bindRecursive(sys.modules[__name__], _postImportVars)
+del constant_binder

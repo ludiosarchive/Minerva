@@ -8,6 +8,7 @@ code will be parsing the streams.
 # XXX confusion: getNewFrames functions in this file return either strings
 # or frames, depending on the decoder.
 
+import sys
 import struct
 import simplejson
 from mypy.objops import strToNonNeg
@@ -460,5 +461,6 @@ class Int32StringDecoder(IntNStringDecoder):
 
 
 
-from pypycpyo import optimizer
-optimizer.bind_all_many(vars(), _postImportVars)
+from mypy import constant_binder
+constant_binder.bindRecursive(sys.modules[__name__], _postImportVars)
+del constant_binder
