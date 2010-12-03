@@ -40,7 +40,7 @@ class HelloFrameArguments(object):
 
 
 
-# Make globals that mypy.constant_binder can optimize away
+# Make globals that mypy.refbinder can optimize away
 _hfa = HelloFrameArguments
 Hello_transportNumber = _hfa.transportNumber
 Hello_protocolVersion = _hfa.protocolVersion
@@ -737,6 +737,6 @@ def decodeFrameFromServer(frameString):
 		raise InvalidFrame("Invalid frame type %r" % lastByte)
 
 
-from mypy import constant_binder
-constant_binder.bindRecursive(sys.modules[__name__], _postImportVars)
-del constant_binder
+from mypy import refbinder
+refbinder.bindRecursive(sys.modules[__name__], _postImportVars)
+del refbinder

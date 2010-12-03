@@ -461,6 +461,6 @@ class Int32StringDecoder(IntNStringDecoder):
 
 
 
-from mypy import constant_binder
-constant_binder.bindRecursive(sys.modules[__name__], _postImportVars)
-del constant_binder
+from mypy import refbinder
+refbinder.bindRecursive(sys.modules[__name__], _postImportVars)
+del refbinder
