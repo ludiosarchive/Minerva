@@ -1,3 +1,7 @@
-#!/bin/zsh -e
+#!/bin/sh -e
 
-time PY_OPTIMIZER_DONT_OPTIMIZE=1 python -N -W all `which trial` minerva
+                                  time python -N -W all `which trial` minerva
+MYPY_CONSTANT_BINDER_AUTOENABLE=1 time python -N -W all `which trial` minerva
+
+                                  time pypy      -W all `which trial` minerva
+MYPY_CONSTANT_BINDER_AUTOENABLE=1 time pypy      -W all `which trial` minerva
