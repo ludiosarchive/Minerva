@@ -40,7 +40,7 @@ class HelloFrameArguments(object):
 
 
 
-# Make globals that pypycpyo.optimizer can optimize away
+# Make globals that mypy.constant_binder can optimize away
 _hfa = HelloFrameArguments
 Hello_transportNumber = _hfa.transportNumber
 Hello_protocolVersion = _hfa.protocolVersion
