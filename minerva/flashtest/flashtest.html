@@ -11,7 +11,7 @@
 		}
 	</style>
 	<script>
-		window.CSRF_TOKEN = {{ dumps(token) }};
+		window.CSRF_TOKEN = {{ htmldumps(token) }};
 	</script>
 </head>
 <body>

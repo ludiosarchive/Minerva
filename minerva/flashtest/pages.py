@@ -4,6 +4,8 @@ import simplejson
 from twisted.python.filepath import FilePath
 from twisted.web import static
 
+from minerva.website import htmldumps
+
 from cwtools.htmltools import getTestPageCSS
 
 from webmagic.untwist import BetterResource
@@ -33,7 +35,7 @@ class Index(BetterResource):
 		dictionary = dict(
 			getTestPageCSS=getTestPageCSS,
 			token=token,
-			dumps=simplejson.dumps)
+			htmldumps=htmldumps)
 		rendered = self._jinja2Env.from_string(template).render(dictionary)
 		return rendered.encode('utf-8')
 
