@@ -84,42 +84,42 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'BencodeNullTests').methods(
 
 		// Now adding a colon should result in a ParseError
 		self._append(":");
-		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, goog.bind(self._informDecoder, self));
 	},
 
 	function test_corruptLength0(self) {
 		self._append("0:");
-		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, goog.bind(self._informDecoder, self));
 	},
 
 	function test_corruptLengthLeading0(self) {
 		self._append("02:");
-		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, goog.bind(self._informDecoder, self));
 	},
 
 	function test_corruptLengthNegative(self) {
 		self._append("-1:");
-		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, goog.bind(self._informDecoder, self));
 	},
 	
 	function test_corruptLengthDot(self) {
 		self._append("1.:");
-		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, goog.bind(self._informDecoder, self));
 	},
 	
 	function test_corruptLengthLettersBefore(self) {
 		self._append("f1:");
-		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, goog.bind(self._informDecoder, self));
 	},
 
 	function test_corruptLengthLettersAfter(self) {
 		self._append("1f:");
-		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, goog.bind(self._informDecoder, self));
 	},
 
 	function test_corruptLengthLettersAfterMore(self) {
 		self._append("123456f:");
-		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, goog.bind(self._informDecoder, self));
 	},
 
 	function test_incompleteData(self) {
@@ -154,9 +154,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'BencodeNullTests').methods(
 	function test_lengthOverflowByValueCausesPermanentError(self) {
 		self.decoder.setMaxLength_(2);
 		self._append("3:hey4:four");
-		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, goog.bind(self._informDecoder, self));
 		self._append("2:hi");
-		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, goog.bind(self._informDecoder, self));
 	},
 
 	/**
@@ -165,34 +165,34 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'BencodeNullTests').methods(
 	function test_lengthOverflowByDigitsCausesPermanentError(self) {
 		self.decoder.setMaxLength_(2);
 		self._append("10:helloworld");
-		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, goog.bind(self._informDecoder, self));
 		self._append("2:hi");
-		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, goog.bind(self._informDecoder, self));
 	},
 
 	function test_lengthTooLongNoColon(self) {
 		self.decoder.setMaxLength_(99);
 		self._append("100");
-		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, goog.bind(self._informDecoder, self));
 	},
 
 	function test_lengthTooLongColon(self) {
 		self.decoder.setMaxLength_(99);
 		self._append("100:");
-		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, goog.bind(self._informDecoder, self));
 	},
 
 	function test_lengthTooLongSameAmountOfDigits(self) {
 		self.decoder.setMaxLength_(3);
 		self._append("4:four")
-		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, goog.bind(self._informDecoder, self));
 	},
 
 	// Note that ResponseTextBencodeDecoder doesn't have full length-corruption-detection;
 	// it will only catch some problems.
 	function test_nonDigitsInLength(self) {
 		self._append("z:four")
-		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, goog.bind(self._informDecoder, self));
 	},
 
 	/**
@@ -200,9 +200,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestDecoders, 'BencodeNullTests').methods(
 	 */
 	function test_badDigitsCausePermanentError(self) {
 		self._append("z:four")
-		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, goog.bind(self._informDecoder, self));
 		self._append("3:hey4:four");
-		self.assertThrows(cw.net.ParseError, function(){self._informDecoder();});
+		self.assertThrows(cw.net.ParseError, goog.bind(self._informDecoder, self));
 	}
 );
 
