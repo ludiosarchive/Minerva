@@ -214,7 +214,7 @@ cw.net.TestXHDR._BaseUsableXHDRLogicTests.subclass(cw.net.TestXHDR, 'UsableXHRLo
 	function _setupDummies(self) {
 		self.target.setUrlProperty('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestXHDR.MockXHR();
-		self.xhdr = new cw.net.UsableXHR(window, function(){return self.mock});
+		self.xhdr = new cw.net.UsableXHR(window, function() { return self.mock; });
 		self.requestD = self.xhdr.request_('POST', self.target.toString(), '');
 	},
 
@@ -276,7 +276,7 @@ cw.net.TestXHDR._BaseUsableXHDRLogicTests.subclass(cw.net.TestXHDR, 'UsableXDRLo
 	function _setupDummies(self) {
 		self.target.setUrlProperty('path', '/@testres_Minerva/404/');
 		self.mock = cw.net.TestXHDR.MockXDR();
-		self.xhdr = new cw.net.UsableXDR(window, function(){return self.mock});
+		self.xhdr = new cw.net.UsableXDR(window, function() { return self.mock; });
 		self.requestD = self.xhdr.request_('POST', self.target.toString());
 	},
 
@@ -466,7 +466,7 @@ cw.net.TestXHDR._BaseRealRequestTests.subclass(cw.net.TestXHDR, 'UsableXHRRealRe
 
 	function setUp(self) {
 		self.target = new cw.uri.URL(String(window.location));
-		self.xhdr = new cw.net.UsableXHR(window, function(){ return cw.net.getXHRObject() });
+		self.xhdr = new cw.net.UsableXHR(window, function() { return cw.net.getXHRObject() });
 	},
 
 
@@ -511,7 +511,9 @@ cw.net.TestXHDR._BaseRealRequestTests.subclass(cw.net.TestXHDR, 'UsableXDRRealRe
 			throw new cw.UnitTest.SkipTest("XDomainRequest is required for this test.");
 		}
 		self.target = new cw.uri.URL(String(window.location));
-		self.xhdr = new cw.net.UsableXDR(window, function(){return new XDomainRequest()});
+		self.xhdr = new cw.net.UsableXDR(window, function() {
+			return new XDomainRequest();
+		});
 	},
 
 	// A	 lot more codepoints are banned for XDR. Banned codepoints are replaced with
@@ -570,7 +572,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XDRErrorsTests').methods(
 			throw new cw.UnitTest.SkipTest("XDomainRequest is required for this test.");
 		}
 		self.target = new cw.uri.URL(String(window.location));
-		self.xdr = new cw.net.UsableXDR(window, function(){return new XDomainRequest()});
+		self.xdr = new cw.net.UsableXDR(window, function() {
+			return new XDomainRequest();
+		});
 	},
 
 
@@ -626,7 +630,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackTests').metho
 	 * is called.
 	 */
 	function test_onreadystatechangeCallsProgress(self) {
-		self.xhr = new cw.net.UsableXHR(self.clock, function(){ return self.mock; });
+		self.xhr = new cw.net.UsableXHR(self.clock, function() { return self.mock; });
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
 			calls.push([obj, position, totalSize]);
@@ -650,7 +654,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackTests').metho
 	 * {@code progressCallback} is called with good numbers.
 	 */
 	function test_onprogressFillsNumbers(self) {
-		self.xhr = new cw.net.UsableXHR(self.clock, function(){ return self.mock; });
+		self.xhr = new cw.net.UsableXHR(self.clock, function() { return self.mock; });
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
 			calls.push([obj, position, totalSize]);
@@ -678,7 +682,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackTests').metho
 	 * with (obj, null, lastKnownTotalSize)
 	 */
 	function test_onprogressFirefoxBugWorkaround(self) {
-		self.xhr = new cw.net.UsableXHR(self.clock, function(){ return self.mock; });
+		self.xhr = new cw.net.UsableXHR(self.clock, function() { return self.mock; });
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
 			calls.push([obj, position, totalSize]);
@@ -704,7 +708,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackTests').metho
 	 * Zero is an acceptable totalSize.
 	 */
 	function test_zeroTotalSizeIsOkay(self) {
-		self.xhr = new cw.net.UsableXHR(self.clock, function(){ return self.mock; });
+		self.xhr = new cw.net.UsableXHR(self.clock, function() { return self.mock; });
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
 			calls.push([obj, position, totalSize]);
@@ -725,7 +729,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackTests').metho
 	 * Undefined or negative or large `totalSize's are treated as "unknown totalSize"
 	 */
 	function test_invalidTotalSizes(self) {
-		self.xhr = new cw.net.UsableXHR(self.clock, function(){ return self.mock; });
+		self.xhr = new cw.net.UsableXHR(self.clock, function() { return self.mock; });
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
 			calls.push([obj, position, totalSize]);
@@ -774,7 +778,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackOperaWorkarou
 	 * called every 50ms, even if no new data has been received.
 	 */
 	function test_progressCallbackCreatesPoller(self) {
-		self.xhr = new cw.net.UsableXHR(self.clock, function(){ return self.mock; });
+		self.xhr = new cw.net.UsableXHR(self.clock, function() { return self.mock; });
 		var calls = []
 		function progressCallback(obj, position, totalSize) {
 			calls.push([obj, position, totalSize]);
@@ -797,7 +801,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackOperaWorkarou
 	 * not 3, progressCallback is not called.
 	 */
 	function test_progressCallbackButNotReadyState3(self) {
-		self.xhr = new cw.net.UsableXHR(self.clock, function(){ return self.mock; });
+		self.xhr = new cw.net.UsableXHR(self.clock, function() { return self.mock; });
 		var calls = []
 		function progressCallback(obj, position, totalSize) {
 			calls.push([obj, position, totalSize]);
@@ -826,7 +830,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackOperaWorkarou
 	 * In Opera, if {@code progressCallback} is falsy, no setInterval is set.
 	 */
 	function test_noProgressCallbackNoPoller(self) {
-		self.xhr = new cw.net.UsableXHR(self.clock, function(){ return self.mock; });
+		self.xhr = new cw.net.UsableXHR(self.clock, function() { return self.mock; });
 		self.xhr.request_('GET', self.target.toString(), '', null);
 		self.assertEqual(0, self.clock.getCallsArray_().length);
 		self.mock.readyState = 3;
@@ -855,7 +859,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XDRProgressCallbackTests').metho
 	 * is called.
 	 */
 	function test_onprogressCallsProgress(self) {
-		self.xhr = new cw.net.UsableXDR(self.clock, function(){return self.mock});
+		self.xhr = new cw.net.UsableXDR(self.clock, function() { return self.mock; });
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
 			calls.push([obj, position, totalSize]);
@@ -879,7 +883,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XDRProgressCallbackTests').metho
 	 * is called.
 	 */
 	function test_onloadCallsProgress(self) {
-		self.xhr = new cw.net.UsableXDR(self.clock, function(){return self.mock});
+		self.xhr = new cw.net.UsableXDR(self.clock, function() { return self.mock; });
 		var calls = [];
 		function progressCallback(obj, position, totalSize) {
 			calls.push([obj, position, totalSize]);

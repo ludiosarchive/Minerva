@@ -36,11 +36,11 @@ cw.net.xhrObjectName_ = null;
 cw.net.getXHRObject = function() {
 	// Order taken from goog.net.xmlhttp
 	var things = [
-		'MSXML2.XMLHTTP.6.0', function(){return new ActiveXObject("MSXML2.XMLHTTP.6.0")},
-		'MSXML2.XMLHTTP.3.0', function(){return new ActiveXObject("MSXML2.XMLHTTP.3.0")},
-		'MSXML2.XMLHTTP', function(){return new ActiveXObject("MSXML2.XMLHTTP")},
-		'Microsoft.XMLHTTP', function(){return new ActiveXObject("Microsoft.XMLHTTP")},
-		'XMLHttpRequest', function(){return new XMLHttpRequest()}
+		'MSXML2.XMLHTTP.6.0', function() { return new ActiveXObject("MSXML2.XMLHTTP.6.0"); },
+		'MSXML2.XMLHTTP.3.0', function() { return new ActiveXObject("MSXML2.XMLHTTP.3.0"); },
+		'MSXML2.XMLHTTP', function() { return new ActiveXObject("MSXML2.XMLHTTP"); },
+		'Microsoft.XMLHTTP', function() { return new ActiveXObject("Microsoft.XMLHTTP"); },
+		'XMLHttpRequest', function() { return new XMLHttpRequest(); }
 	];
 
 	for (var n=1; n < things.length; n+=2) {
