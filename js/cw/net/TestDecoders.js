@@ -11,7 +11,7 @@ goog.require('cw.net.ResponseTextNewlineDecoder');
 
 
 // anti-clobbering for JScript; aliases
-(function(){
+(function() {
 
 var OK = cw.net.DecodeStatus.OK;
 var TOO_LONG = cw.net.DecodeStatus.TOO_LONG;

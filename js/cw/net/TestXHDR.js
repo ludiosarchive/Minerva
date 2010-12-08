@@ -19,7 +19,7 @@ goog.require('goog.string');
 
 
 // anti-clobbering for JScript
-(function(){
+(function() {
 
 /**
  * @type {!goog.debug.Logger}
@@ -358,7 +358,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 			return d2;
 		});
 
-		d.addCallback(function(){
+		d.addCallback(function() {
 			self.assertEqual([
 				'{"you_sent_args": {"b": ["0"]}}',
 				'{"you_sent_args": {"b": ["1"]}}'
@@ -385,7 +385,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 			return d2;
 		});
 
-		d.addCallback(function(){
+		d.addCallback(function() {
 			self.assertEqual([
 				'{"you_posted_utf8": "A"}',
 				'{"you_posted_utf8": "B"}'
@@ -414,7 +414,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 
 		// Note that errback won't always get fired. Sometimes it'll be callback
 		// because browser couldn't abort before the request finished.
-		requestD.addErrback(function(){
+		requestD.addErrback(function() {
 			return undefined;
 		});
 
