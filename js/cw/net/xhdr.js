@@ -603,9 +603,11 @@ cw.net.UsableXHR.prototype.handler_onreadystatechange_ = function() {
  * 	body when the request is complete, or with an error.
  */
 cw.net.simpleRequest = function(verb, url, post) {
-	var xhr = new cw.net.UsableXHR(window, function() { return cw.net.getXHRObject() });
+	var xhr = new cw.net.UsableXHR(window, function() {
+		return cw.net.getXHRObject();
+	});
 	var d = xhr.request_(verb, url, post);
-	d.addCallback(function(obj){
+	d.addCallback(function(obj) {
 		return obj.responseText;
 	});
 	return d;
