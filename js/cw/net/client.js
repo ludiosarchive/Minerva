@@ -34,10 +34,10 @@ goog.require('goog.events.EventTarget');
 goog.require('goog.structs.Set');
 goog.require('goog.debug.Logger');
 goog.require('goog.Disposable');
-goog.require('goog.Timer');
 goog.require('goog.net.XhrIo');
 goog.require('goog.uri.utils');
 goog.require('goog.userAgent');
+goog.require('cw.clock');
 goog.require('cw.dethrobber');
 goog.require('cw.eventual');
 goog.require('cw.repr');
@@ -1790,7 +1790,7 @@ cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
 	this.underlying_ = cw.net.theXHRMasterTracker_.createNew(
 		this, contentWindow);
 
-	this.underlyingStartTime_ = goog.Timer.getTime(this.callQueue_.clock);
+	this.underlyingStartTime_ = cw.clock.getTime(this.callQueue_.clock);
 	this.underlying_.makeRequest(url, 'POST', payload);
 
 	var involvesSSL = (url.indexOf('https://') == 0);
@@ -1944,7 +1944,7 @@ cw.net.ClientTransport.prototype.makeFlashConnection_ = function(frames) {
 	// make it create the socket.
 	var socket = endpoint.tracker.createNew(this.underlying_);
 	this.underlying_.socket_ = socket;
-	this.underlyingStartTime_ = goog.Timer.getTime(this.callQueue_.clock);
+	this.underlyingStartTime_ = cw.clock.getTime(this.callQueue_.clock);
 	this.underlying_.connect(endpoint.host, endpoint.port);
 	// .connect may detect a Flash Player crash and call oncrash, which
 	// disposes the FlashSocketConduit.
@@ -2081,7 +2081,7 @@ cw.net.ClientTransport.prototype.disposeInternal = function() {
 	// TODO: is this really a good place to take the end time?  Keep
 	// in mind streaming XHR requests, as well as slow application code
 	// (called synchronously).
-	this.underlyingStopTime_ = goog.Timer.getTime(this.callQueue_.clock);
+	this.underlyingStopTime_ = cw.clock.getTime(this.callQueue_.clock);
 
 	this.toSendFrames_ = [];
 
