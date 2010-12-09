@@ -414,8 +414,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 
 		// Note that errback won't always get fired. Sometimes it'll be callback
 		// because browser couldn't abort before the request finished.
-		requestD.addErrback(function() {
-			return undefined;
+		requestD.addErrback(function(e) {
+			return null;
 		});
 
 		return requestD;
