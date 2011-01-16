@@ -8,6 +8,7 @@ goog.provide('cw.net.demo.getEndpoint');
 goog.provide('cw.net.demo.getEndpointByQueryArgs');
 goog.provide('cw.net.demo.makeCredentialsData');
 
+goog.require('cw.net.breaker_FlashConnector_swf');
 goog.require('goog.ui.media.FlashObject');
 goog.require('goog.async.Deferred');
 goog.require('goog.Uri');
@@ -62,7 +63,8 @@ cw.net.demo.DemoStreamPolicy.prototype.getHttpStreamingMode = function() {
  *	 element.
  */
 cw.net.demo.loadFlashConnector = function(callQueue) {
-	var flashObject = new goog.ui.media.FlashObject('/compiled_client/FlashConnector.swf');
+	var flashObject = new goog.ui.media.FlashObject(
+		'/compiled_client/FlashConnector.swf?cb=' + cw.net.breaker_FlashConnector_swf);
 	flashObject.setBackgroundColor("#777777");
 	flashObject.setSize(300, 30);
 	var renderInto = goog.dom.getElement("FlashConnectorSwf");
