@@ -833,8 +833,7 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
 	var transport = this.instantiateTransport_(
 		this.callQueue_, this, this.transportCount_, transportType,
 			this.endpoint_, becomePrimary);
-	this.logger_.finest(
-		"Created: " + transport.getDescription_());
+	this.logger_.finest("Created: " + transport.getDescription_());
 	this.transports_.add(transport);
 	return transport;
 };
@@ -848,8 +847,7 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
 cw.net.Stream.prototype.createWastingTransport_ = function(delay, times) {
 	var transport = new cw.net.DoNothingTransport(
 		this.callQueue_, this, delay, times);
-	this.logger_.finest(
-		"Created: " + transport.getDescription_() +
+	this.logger_.finest("Created: " + transport.getDescription_() +
 		", delay=" + delay + ", times=" + times);
 	this.transports_.add(transport);
 	return transport;
