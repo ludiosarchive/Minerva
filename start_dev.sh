@@ -4,7 +4,7 @@ export PYTHONPATH=$HOME/Projects/Coreweb:$HOME/Projects/Minerva:$HOME/Projects/W
 #export MYPY_REFBINDER_PRINT_DEBUG=1
 export MYPY_REFBINDER_AUTOENABLE=1
 export PYRELOADING=1
-export INTERFACE="192.168.0.119"
+export INTERFACE="192.168.213.133"
 
 echo "Using `which twistd`"
 
