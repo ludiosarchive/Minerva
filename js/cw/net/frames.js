@@ -665,8 +665,8 @@ cw.net.sackStringToSack_ = function(sackString) {
 
 /**
  * @param {cw.net.SACK} sack
- * @param {!Array.<string>} sb
- * @return {string} A serialized SACK.
+ * @param {!Array.<string>} sb The string buffer to append pieces of the
+ * 	serialized SACK to.
  * @private
  */
 cw.net.sackToSackStringPieces_ = function(sack, sb) {

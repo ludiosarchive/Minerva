@@ -1520,6 +1520,7 @@ cw.net.ClientTransport.prototype.ensurePreambleIfHttpAndFirstFrame_ = function(f
 		// No penalty because we want to treat this just like "cannot connect to peer".
 		return true;
 	}
+	return false;
 };
 
 /**
