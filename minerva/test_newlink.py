@@ -3451,10 +3451,6 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		# Possibly prevents initial buffering of streaming responses in WebKit browsers
 		self.assertEqual(['text/plain'], headers['Content-Type'])
 
-		# Possibly prevents Avast from doing response buffering
-		self.assertEqual(1, len(headers['Server']))
-		self.assertTrue(headers['Server'][0].startswith('DWR-Reverse-Ajax'), headers['Server'])
-
 
 	def test_clientAbortsRequest(self):
 		"""

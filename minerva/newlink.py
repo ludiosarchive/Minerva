@@ -1674,14 +1674,6 @@ class ServerTransport(object):
 		# - http://www.kylescholz.com/blog/2010/01/progressive_xmlhttprequest_1.html
 		setRawHeaders('content-type', ['text/plain'])
 
-		# This is rumored to prevent Avast from buffering a streaming HTTP
-		# response. "Z/1" is our actual server name.
-		# Someone confirmed this hack works on 2010-04-09:
-		# http://groups.google.com/group/meteorserver/browse_thread/thread/85958fd268225911
-		# TODO: Lightstreamer + latest Avast manages to stream just fine
-		# with a Server: Lightstreamer[...] header, remove this if it's unnecesary.
-		setRawHeaders('server', ['DWR-Reverse-Ajax Z/1'])
-
 		self.dataReceived(body)
 
 
