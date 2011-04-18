@@ -18,17 +18,11 @@ import jinja2
 from zope.interface import implements, Interface
 from twisted.python.filepath import FilePath
 from twisted.internet import defer
-try:
-	from twisted.python.util import slowStringCompare
-except ImportError:
-	print ("minerva.website: DANGER! DANGER! "
-		"No twisted.python.util.slowStringCompare; vulnerable to timing attacks.")
-	def slowStringCompare(s1, s2):
-		return s1 == s2
 
 import minerva
 from brequire import requireFile, requireFiles
 from mypy.objops import strToNonNegLimit
+from mypy.strops import slowStringCompare
 from mypy import transforms
 from webmagic.untwist import BetterResource
 from webmagic.pathmanip import getCacheBrokenHref
