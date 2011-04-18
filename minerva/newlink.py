@@ -333,7 +333,7 @@ class Stream(object):
 		self.queue = Queue()
 		self._incoming = Incoming()
 		self.lastSackSeenByServer = SACK(-1, ())
-		self.lastReceived = clock.rightNow
+		self.lastReceived = clock.seconds()
 		# If no transports and nothing received in this many seconds,
 		# reset the Stream.
 		# This value needs to be somewhat forgiving, to allow for bad
@@ -819,7 +819,7 @@ class StreamTracker(object):
 		# self._forgetStream, which mutates self._streams.
 		for s in self._streams.values():
 			if not s._transports and (
-			s.lastReceived + s.maxIdleTime <= self._clock.rightNow):
+			s.lastReceived + s.maxIdleTime <= self._clock.seconds()):
 				s.timedOut()
 
 
@@ -1578,7 +1578,7 @@ class ServerTransport(object):
 			raise RuntimeError("Got unknown code from parser %r: %r" % (self._parser, code))
 
 		if self._stream:
-			self._stream.lastReceived = self._clock.rightNow
+			self._stream.lastReceived = self._clock.seconds()
 
 		self._maybeWriteToPeer()
 
@@ -1645,7 +1645,7 @@ class ServerTransport(object):
 			# to connect a new transport (otherwise, disconnectInactive
 			# would reset Streams that just happened to have no
 			# transports at that instant).
-			self._stream.lastReceived = self._clock.rightNow
+			self._stream.lastReceived = self._clock.seconds()
 
 		# It might already be terminating, but often not.
 		self._terminating = True
