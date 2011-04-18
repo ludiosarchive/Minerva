@@ -23,7 +23,7 @@ from mypy.strops import StringFragment
 from mypy.constant import Constant
 from mypy.dictops import securedict
 
-from webmagic.untwist import BetterResource
+from webmagic.untwist import BetterResource, setNoCacheNoStoreHeaders
 
 from minerva import decoders
 from minerva.website import RejectTransport
@@ -957,13 +957,6 @@ HTTP_RESPONSE_PREAMBLE = CommentFrame(";)]}")
 DontWriteSack = Constant("DontWriteSack")
 
 
-def _setNoCacheNoStoreHeaders(rawHeaders):
-	# Headers are similar to the ones gmail sends
-	rawHeaders['cache-control'] = ['no-cache, no-store, max-age=0, must-revalidate']
-	rawHeaders['pragma'] = ['no-cache']
-	rawHeaders['expires'] = ['-1']
-
-
 class ServerTransport(object):
 	"""
 	Private.  Use SocketFace or HttpFace, which will build this object
@@ -1671,14 +1664,15 @@ class ServerTransport(object):
 			log.msg("Unusual: found a CRLF in POST body for "
 				"%r from %r" % (request, request.client))
 
-		headers = request.responseHeaders._rawHeaders
-		_setNoCacheNoStoreHeaders(headers)
+		setNoCacheNoStoreHeaders(request)
+
+		setRawHeaders = request.responseHeaders.setRawHeaders
 
 		# "For Webkit browsers, it's critical to specify a Content-Type of
 		# "text/plain" or "application/x-javascript" when returning script
 		# content to an XHR for progressive handling."
 		# - http://www.kylescholz.com/blog/2010/01/progressive_xmlhttprequest_1.html
-		headers['content-type'] = ['text/plain']
+		setRawHeaders('content-type', ['text/plain'])
 
 		# This is rumored to prevent Avast from buffering a streaming HTTP
 		# response. "Z/1" is our actual server name.
@@ -1686,7 +1680,7 @@ class ServerTransport(object):
 		# http://groups.google.com/group/meteorserver/browse_thread/thread/85958fd268225911
 		# TODO: Lightstreamer + latest Avast manages to stream just fine
 		# with a Server: Lightstreamer[...] header, remove this if it's unnecesary.
-		headers['server'] = ['DWR-Reverse-Ajax Z/1']
+		setRawHeaders('server', ['DWR-Reverse-Ajax Z/1'])
 
 		self.dataReceived(body)
 
