@@ -85,7 +85,10 @@ def makeFace(clock=reactor):
 
 	root = Root(clock, tracker, firewall)
 
-	site = server.Site(root, clock=clock)
+	try:
+		site = server.Site(root, clock=clock)
+	except TypeError:
+		site = server.Site(root)
 	so = SocketFace(clock, tracker, firewall, policyString=policyString)
 
 	return so
