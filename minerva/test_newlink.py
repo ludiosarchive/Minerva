@@ -167,7 +167,7 @@ class StreamTests(unittest.TestCase):
 	def test_notifyFinishReturnsDeferred(self):
 		s = Stream(self._clock, 'some fake id', None)
 		d = s.notifyFinish()
-		self.assertEqual(defer.Deferred, type(d))
+		self.assertTrue(isinstance(d, defer.Deferred))
 
 
 	def test_notifyFinishActuallyCalled(self):
