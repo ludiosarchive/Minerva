@@ -1057,8 +1057,9 @@ class ServerTransport(object):
 			if self._mode == HTTP and not self.writable.startedWriting:
 				encodedPreamble = self._encodeFrame(HTTP_RESPONSE_PREAMBLE)
 				if self._terminating:
-					headers = self.writable.responseHeaders._rawHeaders
-					headers['content-length'] = [str(len(encodedPreamble) + len(toSend))]
+					headers = self.writable.responseHeaders
+					headers.setRawHeaders('content-length',
+						[str(len(encodedPreamble) + len(toSend))])
 				self.writable.write(encodedPreamble)
 
 			self.writable.write(toSend)
