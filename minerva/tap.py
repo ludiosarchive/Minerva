@@ -2,7 +2,7 @@ from __future__ import with_statement
 
 import os
 
-from twisted.python import usage
+from twisted.python import usage, log
 from twisted.application import service, strports
 
 from mypy.filecache import FileCache
@@ -97,13 +97,13 @@ def makeService(config):
 
 	if doReloading:
 		print 'Enabling reloader.'
-		from pypycpyo import detector
+		from pyquitter import detector
 
-		stopper = detector.SourceChangesDetector(
+		stopper = detector.ChangeDetector(
 			lambda: reactor.callWhenRunning(reactor.stop),
-			pyLaunchTime=2**31)
+			logCallable=log.msg)
 
-		looping = task.LoopingCall(stopper.checkForChanges)
-		looping.start(1.5, now=True)
+		looping = task.LoopingCall(stopper.poll)
+		looping.start(2.5, now=True)
 
 	return multi
