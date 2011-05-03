@@ -206,6 +206,18 @@ strictDecoder = simplejson.decoder.JSONDecoder(
 strictInsecureDecoder = simplejson.decoder.JSONDecoder(
 	parse_constant=_raise)
 
+def _isDecodeBuggy():
+	"""
+	Returns C{True} if simplejson has this bug:
+	http://code.google.com/p/simplejson/issues/detail?id=85
+	"""
+	o, at = strictDecoder.raw_decode('{"a": {}}')
+	assert at in (8, 9), at
+	return at == 8
+
+_posOffBy1 = _isDecodeBuggy()
+
+
 def strictDecodeOne(s):
 	"""
 	Decode bytestring `s` to *one* object, forbidding any whitespace or
@@ -214,6 +226,8 @@ def strictDecodeOne(s):
 	JSON objects are decoded to L{securedict}s instead of L{dict}s.
 	"""
 	decoded, at = strictDecoder.raw_decode(s)
+	if _posOffBy1:
+		at += 1
 	if at != len(s):
 		raise ParseError(
 			"strictDecodeOne expected to reach the end of the string")
@@ -348,6 +362,8 @@ class DelimitedJSONDecoder(object):
 		while True:
 			try:
 				doc, end = strictDecoder.raw_decode(self._buffer, at)
+				if _posOffBy1:
+					end += 1
 			except (simplejson.decoder.JSONDecodeError, ParseError), e:
 				self.lastJsonError = e
 				return docs, INTRAFRAME_CORRUPTION
