@@ -12,7 +12,7 @@ from minerva import minervasite
 
 
 
-class Options(sharedopts.BaseOptions):
+class Options(sharedopts.WebOptions):
 	"""
 	Define the options accepted by the I{twistd minervarun} plugin.
 	"""
@@ -52,7 +52,7 @@ descriptions.
 """
 
 	def __init__(self):
-		sharedopts.BaseOptions.__init__(self)
+		sharedopts.WebOptions.__init__(self)
 		self['http'] = []
 		self['minerva'] = []
 	
@@ -66,7 +66,7 @@ descriptions.
 
 
 	def postOptions(self):
-		sharedopts.BaseOptions.postOptions(self)
+		sharedopts.WebOptions.postOptions(self)
 		if not self['http'] and not self['minerva']:
 			raise usage.UsageError("You probably want to start at least 1 http server or 1 minerva server.")
 		if not self['domain']:
