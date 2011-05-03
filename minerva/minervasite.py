@@ -372,30 +372,6 @@ def makeMinervaAndHttp(reactor, fileCache, csrfSecret, domain):
 	socketFace = SocketFace(clock, tracker, firewall, policyString=policyString)
 
 	root = Root(reactor, httpFace, fileCache, csrfStopper, cookieInstaller, domain)
-
-	def _disconnectInactive():
-		"""
-		Disconnect idle HTTP channels (applies to Twisted z9trunk), and
-		disconnect inactive Streams.
-		"""
-		# Twisted z9trunk does not disconnect idle HTTP connections,
-		# but provides a function to disconnect all idle-for-too-long
-		# connections.
-		httpDisconnectIdle = getattr(httpSite, 'disconnectIdle', None)
-		if httpDisconnectIdle:
-			httpDisconnectIdle()
-
-		tracker.disconnectInactive()
-
-	try:
-		# Twisted z9trunk can take a clock argument
-		httpSite = ConnectionTrackingSite(root, clock=clock)
-	except TypeError:
-		# Twisted trunk cannot take a clock argument
-		httpSite = ConnectionTrackingSite(root)
-
-	idleKiller = LoopingCall(_disconnectInactive)
-	idleKiller.clock = clock
-	idleKiller.start(60, now=True) # `now` to exercise the code early.
+	httpSite = ConnectionTrackingSite(root, timeout=75)
 
 	return (socketFace, httpSite)
