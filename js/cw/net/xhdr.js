@@ -1,5 +1,9 @@
 /**
- * @fileoverview XMLHttpRequest, XMLHTTP, and XDomainRequest wrappers.
+ * @fileoverview A unified API that wraps XHR and XDomainRequest.  It supports
+ * streaming response bodies.
+ *
+ * Note that this is not used by Minerva and might be removed.  Minerva uses
+ * Closure Library's {@code goog.net.XhrIo}.
  */
 
 goog.provide('cw.net.getXHRObject');
@@ -420,7 +424,8 @@ cw.net.UsableXHR.prototype.request_ = function(verb, url, post, progressCallback
 	this.progressCallback_ = progressCallback ? progressCallback : goog.nullFunction;
 	this.poller_ = null;
 
-	// To reuse the XMLHTTP object in IE7, the order must be: open, onreadystatechange, send
+	// To reuse the XMLHTTP object in IE7, the order must be:
+	// open, onreadystatechange, send
 
 	this.requestActive_ = true;
 
@@ -582,8 +587,10 @@ cw.net.UsableXHR.prototype.handler_onreadystatechange_ = function() {
 	// because U+FEFF is stripped in Safari 3 and U+0000 is stripped in Opera 9.5 (maybe 10 too).
 
 	if(readyState == 4) {
-		// TODO: maybe do this in IE only? // TODO: xhrio does it differently: either null or nullFunction depending on browser
-		// Note: xmlhttp/xhrio might be doing it wrong, because it'll do
+		// TODO: maybe do this in IE only?
+		// Note: XhrIo does it differently: either null or nullFunction,
+		// depending on the browser.
+		// Note: xmlhttp/XhrIo might be doing it wrong, because it does
 		// onreadystatechange = null; if it's using an XMLHttpRequest object (in IE 7+).
 		this.object_.onreadystatechange = goog.nullFunction;
 		this.finishAndReset_(null);
