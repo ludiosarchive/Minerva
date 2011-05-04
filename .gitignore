@@ -1,7 +1,8 @@
 /build
+/dist
 /_trial_temp
+/MANIFEST
 *.pyc
 *.pyo
-*.swf
 /twistd.pid
 /twisted/plugins/dropin.cache
