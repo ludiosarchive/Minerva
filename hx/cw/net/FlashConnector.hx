@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2010, Minerva team. All rights reserved.
+ * Copyright (c) 2009-2011, Minerva team. All rights reserved.
  *
  * Copyright (c) 2008-2009, Maries Ionel Cristian
  *
@@ -346,8 +346,6 @@ class FlashConnector {
 	}
 
 	public static inline function registerCallbacks() {
-		// TODO: maybe obfuscate these names
-
 		//ExternalInterface.addCallback("__FC_loadPolicyFile", loadPolicyFile);
 		ExternalInterface.addCallback("__FC_setCallbackFunc", setCallbackFunc);
 		ExternalInterface.addCallback("__FC_connect", connect);
