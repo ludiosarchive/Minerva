@@ -529,11 +529,12 @@ cw.net.UsableXHR.prototype.handler_poll_ = function() {
 cw.net.UsableXHR.prototype.handler_onprogress_ = function(ev) {
 	//this.logger_.finest('handler_onprogress_: ' + goog.json.serialize(ev));
 
+	var totalSize = ev['totalSize']; // obsolete progress events are not in externs
 	// In Safari 4.0.3 and Firefox 3.5.2/3.0.7, e.totalSize === 4294967295
 	// when length is unknown.
 	// In Chrome 3, e.totalSize === -1 when length is unknown.
-	if(ev.totalSize !== undefined && ev.totalSize < 2147483647 /* 2**31 - 1 */ && ev.totalSize >= 0) {
-		this.totalSize_ = ev.totalSize;
+	if(goog.isDef(totalSize) && totalSize < 2147483647 /* 2**31 - 1 */ && totalSize >= 0) {
+		this.totalSize_ = totalSize;
 	}
 
 	// In Firefox 3.5.3, Safari 4, and Chrome 3.0.195.21, onprogress fires before
@@ -544,8 +545,8 @@ cw.net.UsableXHR.prototype.handler_onprogress_ = function(ev) {
 	// than the last this.position_ (though we do not know the new position right now).
 	// This strange `undefined' event happens once or twice per request.
 	// Firefox 3.0.7 does not seem to have the `undefined' event problem.
-	if(ev.position !== undefined) {
-		this.position_ = ev.position;
+	if(goog.isDef(ev['position'])) {
+		this.position_ = ev['position']; // obsolete progress events are not in externs
 	} else {
 		// this.position_ stays the same
 		try {
