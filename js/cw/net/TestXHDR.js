@@ -153,7 +153,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseUsableXHDRLogicTests').meth
 		self.xhdr.abort_();
 		self._finishRequest();
 
-		self.requestD.addErrback(function(e){cw.net.TestXHDR.logger.info('Ignoring error in requestD Deferred: ' + e)});
+		self.requestD.addErrback(function(e) {
+			cw.net.TestXHDR.logger.info('Ignoring error in requestD Deferred: ' + e);
+		});
 
 		// Make the second request
 		self.requestD = self.xhdr.request_('POST', self.target.toString(), 'second');
@@ -199,7 +201,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseUsableXHDRLogicTests').meth
 		self.xhdr.abort_();
 		self.xhdr.abort_();
 		self.assertEqual(self.mock.log, [['open', 'POST', self.target.toString(), true], ['send', ''], ['abort']]);
-		self.requestD.addErrback(function(e){cw.net.TestXHDR.logger.info('Ignoring error in requestD Deferred: ' + e)});
+		self.requestD.addErrback(function(e) {
+			cw.net.TestXHDR.logger.info('Ignoring error in requestD Deferred: ' + e);
+		});
 	}
 
 );
@@ -260,7 +264,9 @@ cw.net.TestXHDR._BaseUsableXHDRLogicTests.subclass(cw.net.TestXHDR, 'UsableXHRLo
 		self.mock.onreadystatechange(null);
 		self.assertIdentical(goog.nullFunction, self.mock.onreadystatechange);
 
-		self.requestD.addErrback(function(e){cw.net.TestXHDR.logger.info('Ignoring error in requestD Deferred: ' + e)});
+		self.requestD.addErrback(function(e) {
+			cw.net.TestXHDR.logger.info('Ignoring error in requestD Deferred: ' + e);
+		});
 	}
 
 );
@@ -318,7 +324,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 	 * If it fails to work around it, you'll see {"a": ["0#ignored1"]} instead of {"a": ["0"]}
 	 */
 	function test_fragmentIsIgnoredGET(self) {
-		self.target.setPath('/@testres_Minerva/SimpleResponse/').setQuery('a=0').setFragment('ignored1');
+		self.target.setPath('/@testres_Minerva/SimpleResponse/').
+			setQuery('a=0').setFragment('ignored1');
 		var d = self.xhdr.request_('GET', self.target.toString());
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_sent_args": {"a": ["0"]}}', obj.responseText);
@@ -333,7 +340,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 	 * If it fails to work around it, you'll see {"a": ["0#ignored2"]} instead of {"a": ["0"]}
 	 */
 	function test_fragmentIsIgnoredPOST(self) {
-		self.target.setPath('/@testres_Minerva/SimpleResponse/').setQuery('a=0').setFragment('ignored2');
+		self.target.setPath('/@testres_Minerva/SimpleResponse/').
+			setQuery('a=0').setFragment('ignored2');
 		var d = self.xhdr.request_('GET', self.target.toString());
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_sent_args": {"a": ["0"]}}', obj.responseText);
@@ -351,7 +359,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 		d.addCallback(function(obj){
 			responses.push(obj.responseText);
 			// This mutation is okay
-			var d2 = self.xhdr.request_('GET', self.target.setPath('/@testres_Minerva/SimpleResponse/').setQuery('b=1').toString());
+			var d2 = self.xhdr.request_('GET', self.target.
+				setPath('/@testres_Minerva/SimpleResponse/').setQuery('b=1').toString());
 			d2.addCallback(function(obj2){
 				responses.push(obj2.responseText);
 			});
@@ -378,7 +387,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 		d.addCallback(function(obj){
 			responses.push(obj.responseText);
 			// This mutation is okay
-			var d2 = self.xhdr.request_('POST', self.target.setPath('/@testres_Minerva/SimpleResponse/').toString(), 'B');
+			var d2 = self.xhdr.request_('POST', self.target.
+				setPath('/@testres_Minerva/SimpleResponse/').toString(), 'B');
 			d2.addCallback(function(obj2){
 				responses.push(obj2.responseText);
 			});
@@ -434,7 +444,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 			var expectedChar = expected.substr(n, 1);
 			var gotChar = text.substr(n, 1);
 			if(expectedChar != gotChar) {
-				cw.net.TestXHDR.logger.severe(goog.string.subs("Expected %s got %s", ser(expectedChar), ser(gotChar)));
+				cw.net.TestXHDR.logger.severe(goog.string.subs(
+					"Expected %s got %s", ser(expectedChar), ser(gotChar)));
 			}
 		}
 	},
@@ -476,7 +487,8 @@ cw.net.TestXHDR._BaseRealRequestTests.subclass(cw.net.TestXHDR, 'UsableXHRRealRe
 	 */
 	function test_unicodeRainbowSkipFFFEAndFFFF(self) {
 		if(goog.userAgent.WEBKIT && !goog.userAgent.isVersion('530.17')) {
-			throw new cw.UnitTest.SkipTest("Safari < 4 strips U+FEFF. Make a new test for if you care.");
+			throw new cw.UnitTest.SkipTest(
+				"Safari < 4 strips U+FEFF, so just skipping this test.");
 		}
 		var i;
 		var buffer = [];
@@ -552,7 +564,8 @@ cw.net.TestXHDR._BaseRealRequestTests.subclass(cw.net.TestXHDR, 'UsableXDRRealRe
 			buffer.push(String.fromCharCode(i));
 		}
 		var expected = buffer.join('');
-		self.target.setPath('/@testres_Minerva/UnicodeRainbow/').setQuery('ranges=1-55295,57344-64975,65008-65519,65529-65533');
+		self.target.setPath('/@testres_Minerva/UnicodeRainbow/').
+			setQuery('ranges=1-55295,57344-64975,65008-65519,65529-65533');
 		var requestD = self.xhdr.request_('POST', self.target.toString(), '');
 		requestD.addCallback(function(obj){
 			var text = obj.responseText;
