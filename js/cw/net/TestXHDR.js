@@ -9,13 +9,13 @@ goog.require('cw.clock');
 goog.require('cw.net.UsableXDR');
 goog.require('cw.net.UsableXHR');
 goog.require('cw.net.simpleRequest');
-goog.require('cw.uri');
 goog.require('cw.Class');
 goog.require('goog.debug');
 goog.require('goog.debug.Logger');
 goog.require('goog.userAgent');
 goog.require('goog.json.Serializer');
 goog.require('goog.string');
+goog.require('goog.Uri');
 
 
 // anti-clobbering for JScript
@@ -125,7 +125,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'GetXHRObjectTests').methods(
 cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseUsableXHDRLogicTests').methods(
 
 	function setUp(self) {
-		self.target = new cw.uri.URL(String(window.location)).setUrlProperty('fragment', null);
+		self.target = new goog.Uri(String(window.location)).setFragment("");
 	},
 
 	// Subclasses override _setupDummies
@@ -212,7 +212,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseUsableXHDRLogicTests').meth
 cw.net.TestXHDR._BaseUsableXHDRLogicTests.subclass(cw.net.TestXHDR, 'UsableXHRLogicTests').methods(
 
 	function _setupDummies(self) {
-		self.target.setUrlProperty('path', '/@testres_Minerva/404/');
+		self.target.setPath('/@testres_Minerva/404/');
 		self.mock = cw.net.TestXHDR.MockXHR();
 		self.xhdr = new cw.net.UsableXHR(window, function() { return self.mock; });
 		self.requestD = self.xhdr.request_('POST', self.target.toString(), '');
@@ -274,7 +274,7 @@ cw.net.TestXHDR._BaseUsableXHDRLogicTests.subclass(cw.net.TestXHDR, 'UsableXHRLo
 cw.net.TestXHDR._BaseUsableXHDRLogicTests.subclass(cw.net.TestXHDR, 'UsableXDRLogicTests').methods(
 
 	function _setupDummies(self) {
-		self.target.setUrlProperty('path', '/@testres_Minerva/404/');
+		self.target.setPath('/@testres_Minerva/404/');
 		self.mock = cw.net.TestXHDR.MockXDR();
 		self.xhdr = new cw.net.UsableXDR(window, function() { return self.mock; });
 		self.requestD = self.xhdr.request_('POST', self.target.toString());
@@ -293,7 +293,7 @@ cw.net.TestXHDR._BaseUsableXHDRLogicTests.subclass(cw.net.TestXHDR, 'UsableXDRLo
 cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 
 	function test_simpleResponseGET(self) {
-		self.target.setUrlProperty('path', '/@testres_Minerva/SimpleResponse/?a=0');
+		self.target.setPath('/@testres_Minerva/SimpleResponse/').setQuery('a=0');
 		var d = self.xhdr.request_('GET', self.target.toString());
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_sent_args": {"a": ["0"]}}', obj.responseText);
@@ -303,7 +303,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 
 
 	function test_simpleResponsePOST(self) {
-		self.target.setUrlProperty('path', '/@testres_Minerva/SimpleResponse/');
+		self.target.setPath('/@testres_Minerva/SimpleResponse/');
 		var d = self.xhdr.request_('POST', self.target.toString(), 'hello\u00ff');
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_posted_utf8": "hello\\u00ff"}', obj.responseText);
@@ -318,7 +318,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 	 * If it fails to work around it, you'll see {"a": ["0#ignored1"]} instead of {"a": ["0"]}
 	 */
 	function test_fragmentIsIgnoredGET(self) {
-		self.target.setUrlProperty('path', '/@testres_Minerva/SimpleResponse/?a=0').setUrlProperty('fragment', 'ignored1');
+		self.target.setPath('/@testres_Minerva/SimpleResponse/').setQuery('a=0').setFragment('ignored1');
 		var d = self.xhdr.request_('GET', self.target.toString());
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_sent_args": {"a": ["0"]}}', obj.responseText);
@@ -333,7 +333,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 	 * If it fails to work around it, you'll see {"a": ["0#ignored2"]} instead of {"a": ["0"]}
 	 */
 	function test_fragmentIsIgnoredPOST(self) {
-		self.target.setUrlProperty('path', '/@testres_Minerva/SimpleResponse/?a=0').setUrlProperty('fragment', 'ignored2');
+		self.target.setPath('/@testres_Minerva/SimpleResponse/').setQuery('a=0').setFragment('ignored2');
 		var d = self.xhdr.request_('GET', self.target.toString());
 		d.addCallback(function(obj){
 			self.assertEqual('{"you_sent_args": {"a": ["0"]}}', obj.responseText);
@@ -344,14 +344,14 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 
 	function test_simpleReuseGET(self) {
 		var responses = [];
-		self.target.setUrlProperty('path', '/@testres_Minerva/SimpleResponse/?b=0');
+		self.target.setPath('/@testres_Minerva/SimpleResponse/').setQuery('b=0');
 
 		var d = self.xhdr.request_('GET', self.target.toString());
 
 		d.addCallback(function(obj){
 			responses.push(obj.responseText);
 			// This mutation is okay
-			var d2 = self.xhdr.request_('GET', self.target.setUrlProperty('path', '/@testres_Minerva/SimpleResponse/?b=1').toString());
+			var d2 = self.xhdr.request_('GET', self.target.setPath('/@testres_Minerva/SimpleResponse/').setQuery('b=1').toString());
 			d2.addCallback(function(obj2){
 				responses.push(obj2.responseText);
 			});
@@ -371,14 +371,14 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 
 	function test_simpleReusePOST(self) {
 		var responses = [];
-		self.target.setUrlProperty('path', '/@testres_Minerva/SimpleResponse/');
+		self.target.setPath('/@testres_Minerva/SimpleResponse/');
 
 		var d = self.xhdr.request_('POST', self.target.toString(), 'A');
 
 		d.addCallback(function(obj){
 			responses.push(obj.responseText);
 			// This mutation is okay
-			var d2 = self.xhdr.request_('POST', self.target.setUrlProperty('path', '/@testres_Minerva/SimpleResponse/').toString(), 'B');
+			var d2 = self.xhdr.request_('POST', self.target.setPath('/@testres_Minerva/SimpleResponse/').toString(), 'B');
 			d2.addCallback(function(obj2){
 				responses.push(obj2.responseText);
 			});
@@ -405,7 +405,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 	 * really fast, and are done before you call .abort_().
 	 */
 	function test_abort(self) {
-		self.target.setUrlProperty('path', '/@testres_Minerva/404/');
+		self.target.setPath('/@testres_Minerva/404/');
 		var requestD = self.xhdr.request_('POST', self.target.toString(), '');
 
 		self.assertIdentical(undefined, self.xhdr.abort_());
@@ -449,7 +449,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 			buffer.push(String.fromCharCode(i));
 		}
 		var expected = buffer.join('');
-		self.target.setUrlProperty('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-126');
+		self.target.setPath('/@testres_Minerva/UnicodeRainbow/').setQuery('ranges=1-126');
 		var requestD = self.xhdr.request_('POST', self.target.toString(), '');
 		requestD.addCallback(function(obj){
 			var text = obj.responseText;
@@ -465,7 +465,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 cw.net.TestXHDR._BaseRealRequestTests.subclass(cw.net.TestXHDR, 'UsableXHRRealRequestTests').methods(
 
 	function setUp(self) {
-		self.target = new cw.uri.URL(String(window.location));
+		self.target = new goog.Uri(String(window.location));
 		self.xhdr = new cw.net.UsableXHR(window, function() { return cw.net.getXHRObject() });
 	},
 
@@ -488,7 +488,7 @@ cw.net.TestXHDR._BaseRealRequestTests.subclass(cw.net.TestXHDR, 'UsableXHRRealRe
 			buffer.push(String.fromCharCode(i));
 		}
 		var expected = buffer.join('');
-		self.target.setUrlProperty('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-65533');
+		self.target.setPath('/@testres_Minerva/UnicodeRainbow/').setQuery('ranges=1-55295,57344-65533');
 		var requestD = self.xhdr.request_('POST', self.target.toString(), '');
 		requestD.addCallback(function(obj){
 			var text = obj.responseText;
@@ -510,7 +510,7 @@ cw.net.TestXHDR._BaseRealRequestTests.subclass(cw.net.TestXHDR, 'UsableXDRRealRe
 		if(!cw.net.TestXHDR.hasXDomainRequest()) {
 			throw new cw.UnitTest.SkipTest("XDomainRequest is required for this test.");
 		}
-		self.target = new cw.uri.URL(String(window.location));
+		self.target = new goog.Uri(String(window.location));
 		self.xhdr = new cw.net.UsableXDR(window, function() {
 			return new XDomainRequest();
 		});
@@ -552,7 +552,7 @@ cw.net.TestXHDR._BaseRealRequestTests.subclass(cw.net.TestXHDR, 'UsableXDRRealRe
 			buffer.push(String.fromCharCode(i));
 		}
 		var expected = buffer.join('');
-		self.target.setUrlProperty('path', '/@testres_Minerva/UnicodeRainbow/?ranges=1-55295,57344-64975,65008-65519,65529-65533');
+		self.target.setPath('/@testres_Minerva/UnicodeRainbow/').setQuery('ranges=1-55295,57344-64975,65008-65519,65529-65533');
 		var requestD = self.xhdr.request_('POST', self.target.toString(), '');
 		requestD.addCallback(function(obj){
 			var text = obj.responseText;
@@ -571,7 +571,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XDRErrorsTests').methods(
 		if(!cw.net.TestXHDR.hasXDomainRequest()) {
 			throw new cw.UnitTest.SkipTest("XDomainRequest is required for this test.");
 		}
-		self.target = new cw.uri.URL(String(window.location));
+		self.target = new goog.Uri(String(window.location));
 		self.xdr = new cw.net.UsableXDR(window, function() {
 			return new XDomainRequest();
 		});
@@ -583,7 +583,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XDRErrorsTests').methods(
 	 * causes a {@code NetworkProblem}.
 	 */
 	function test_networkProblemGET(self) {
-		self.target.setUrlProperty('path', '/@testres_Minerva/NoOriginHeader/');
+		self.target.setPath('/@testres_Minerva/NoOriginHeader/');
 		var requestD = self.xdr.request_('GET', self.target.toString());
 		var d = self.assertFailure(requestD, [cw.net.NetworkProblem]);
 		return d;
@@ -595,7 +595,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XDRErrorsTests').methods(
 	 * causes a {@code NetworkProblem}.
 	 */
 	function test_networkProblemPOST(self) {
-		self.target.setUrlProperty('path', '/@testres_Minerva/NoOriginHeader/');
+		self.target.setPath('/@testres_Minerva/NoOriginHeader/');
 		var requestD = self.xdr.request_('POST', self.target.toString());
 		var d = self.assertFailure(requestD, [cw.net.NetworkProblem]);
 		return d;
@@ -606,7 +606,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XDRErrorsTests').methods(
 	 * Requesting something on 0.0.0.0 causes a {@code NetworkProblem}.
 	 */
 	function test_networkProblemBadIP(self) {
-		self.target.setUrlProperty('host', '0.0.0.0');
+		self.target.setDomain('0.0.0.0');
 		var requestD = self.xdr.request_('GET', self.target.toString());
 		var d = self.assertFailure(requestD, [cw.net.NetworkProblem]);
 		return d;
@@ -618,8 +618,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XDRErrorsTests').methods(
 cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackTests').methods(
 
 	function setUp(self) {
-		self.target = new cw.uri.URL(String(window.location));
-		self.target.setUrlProperty('path', '/@testres_Minerva/404/');
+		self.target = new goog.Uri(String(window.location));
+		self.target.setPath('/@testres_Minerva/404/');
 		self.mock = cw.net.TestXHDR.MockXHR();
 		// Never .advance the clock, to prevent Opera from doing a call at 50ms intervals.
 		self.clock = new cw.clock.Clock();
@@ -767,8 +767,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XHRProgressCallbackOperaWorkarou
 		}
 		self.clock = new cw.clock.Clock();
 
-		self.target = new cw.uri.URL(String(window.location));
-		self.target.setUrlProperty('path', '/@testres_Minerva/404/');
+		self.target = new goog.Uri(String(window.location));
+		self.target.setPath('/@testres_Minerva/404/');
 		self.mock = cw.net.TestXHDR.MockXHR();
 
 	},
@@ -848,8 +848,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XDRProgressCallbackTests').metho
 		if(!cw.net.TestXHDR.hasXDomainRequest()) {
 			throw new cw.UnitTest.SkipTest("XDomainRequest is required for this test.");
 		}
-		self.target = new cw.uri.URL(String(window.location));
-		self.target.setUrlProperty('path', '/@testres_Minerva/404/');
+		self.target = new goog.Uri(String(window.location));
+		self.target.setPath('/@testres_Minerva/404/');
 		self.mock = cw.net.TestXHDR.MockXHR();
 		self.clock = new cw.clock.Clock();
 	},
@@ -910,8 +910,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'XDRProgressCallbackTests').metho
  */
 cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, 'SimpleRequestTests').methods(
 	function test_simpleRequest(self) {
-		self.target = new cw.uri.URL(String(window.location));
-		self.target.setUrlProperty('path', '/@testres_Minerva/SimpleResponse/?a=hello');
+		self.target = new goog.Uri(String(window.location));
+		self.target.setPath('/@testres_Minerva/SimpleResponse/').setQuery('a=hello');
 		var d = cw.net.simpleRequest('GET', self.target.toString(), "");
 		d.addCallback(function(response) {
 			self.assertEqual('{"you_sent_args": {"a": ["hello"]}}', response);
