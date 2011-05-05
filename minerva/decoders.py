@@ -13,7 +13,7 @@ import struct
 import simplejson
 from mypy.objops import strToNonNeg
 from mypy.strops import StringFragment
-from mypy.dictops import securedict
+from securedict import securedict
 
 _postImportVars = vars().keys()
 

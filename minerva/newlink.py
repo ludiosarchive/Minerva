@@ -21,7 +21,7 @@ from twisted.web.server import NOT_DONE_YET
 from mypy.randgen import secureRandom
 from mypy.strops import StringFragment
 from mypy.constant import Constant
-from mypy.dictops import securedict
+from securedict import securedict
 
 from webmagic.untwist import BetterResource, setNoCacheNoStoreHeaders
 
