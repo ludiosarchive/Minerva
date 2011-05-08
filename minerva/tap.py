@@ -3,6 +3,7 @@ from __future__ import with_statement
 import os
 
 from twisted.python import usage, log
+from twisted.python.filepath import FilePath
 from twisted.application import service, strports
 
 from mypy.filecache import FileCache
@@ -38,7 +39,10 @@ class Options(sharedopts.WebOptions):
 		# for example.)  We require that the document.domain be
 		# manually specified.
 		["domain", "d", None, "The domain to set document.domain values to. " +
-			"Do not include the port number."]
+			"Do not include the port number."],
+
+		["closure-library", "c", "../closure-library",
+			'Path to closure-library'],
 	]
 
 	longdesc = """\
@@ -84,7 +88,8 @@ def makeService(config):
 
 	doReloading = bool(int(os.environ.get('PYRELOADING')))
 	fileCache = FileCache(lambda: reactor.seconds(), 0.1 if doReloading else -1)
-	socketFace, httpSite = minervasite.makeMinervaAndHttp(reactor, fileCache, csrfSecret, domain)
+	socketFace, httpSite = minervasite.makeMinervaAndHttp(
+		reactor, fileCache, csrfSecret, domain, FilePath(config['closure-library']))
 	httpSite.displayTracebacks = not config["notracebacks"]
 
 	for httpStrport in config['http']:

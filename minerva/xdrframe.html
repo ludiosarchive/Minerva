@@ -27,11 +27,11 @@
 {% if dev_mode %}
 
 <script>
-	document.write('<script>CLOSURE_NO_DEPS = true;<\/s' + 'cript>');
-	document.write('<script src="' + parentUrl + '/JSPATH/closure/goog/base.js"><\/s' + 'cript>');
+	document.write('<script src="' + parentUrl + '/closure-library/closure/goog/base.js"><\/s' + 'cript>');
 </script>
 <script>
-	document.write('<script src="' + parentUrl + '/JSPATH/all_deps.js"><\/s' + 'cript>');
+	document.write('<script src="' + parentUrl + '/js_coreweb/deps.js"><\/s' + 'cript>');
+	document.write('<script src="' + parentUrl + '/js_minerva/deps.js"><\/s' + 'cript>');
 </script>
 <script>
 	goog.require('cw.net.XHRSlave');
