@@ -18,7 +18,7 @@ from minerva.website import (
 from minerva.flashtest.pages import FlashTestPage
 from minerva.chatapp.pages import ChatAppPage
 
-from lytics.endpoint import WaitResource
+from webmagic.special import WaitResource
 
 from webmagic.untwist import (
 	CookieInstaller, BetterResource, BetterFile, HelpfulNoResource,
