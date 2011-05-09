@@ -5,9 +5,6 @@ Useful for testing. Most of the time, JavaScript/Flash
 code will be parsing the streams.
 """
 
-# XXX confusion: getNewFrames functions in this file return either strings
-# or frames, depending on the decoder.
-
 import sys
 import struct
 import simplejson
@@ -53,10 +50,6 @@ class NetStringDecoder(object):
 	4.	Sending long bogus "lengths" doesn't cause exponential slowdown
 		through excessive .find()
 	"""
-
-	# Does this decoder also decode the JSON inside every frame?
-	decodesJson = False
-
 	noisy = False
 
 	__slots__ = (
@@ -247,7 +240,6 @@ class DelimitedStringDecoder(object):
 	delimiter = '\n'
 
 	__slots__ = ('maxLength', '_buffer')
-	decodesJson = False
 
 	def __init__(self, maxLength):
 		self.maxLength = maxLength
@@ -296,93 +288,6 @@ class DelimitedStringDecoder(object):
 
 
 
-class DelimitedJSONDecoder(object):
-	r"""
-	Decodes a stream of (1-byte-delimiter)-terminated JSON documents into
-	Python objects.  The stream is assumed to be UTF-8.
-	
-	Rejects NaN, Infinity, and -Infinity even though simplejson supports them.
-
-	`delimiter' in this decoder not very strict; garbage is ignored between
-	the	end of the JSON document and the actual delimiter. In practice, this
-	allows a `delimiter' of `\n' to simultaneously delimit both `\n` and
-	`\r\n`
-
-		Note: the `\r` in `\r\n` "eats into" the max length. So if
-		maxLength is 5, "hello\n" can be received, but "hello\r\n" can not!
-
-	Implementation note:
-		String append is fast enough in CPython 2.5+. On Windows CPython,
-		it can still be ~5x slower than list-based buffers.
-
-	Think hard before using this. Make sure your Python is patched to stop
-	algorithmic complexity attacks, and make sure your simplejson is patched
-	to limit the allowed depth (otherwise, you may segfault from stack
-	overflow).
-
-	Returns L{strfrag.StringFragment} objects instead of C{str} objects to
-	reduce copying.
-	"""
-	# delimiter *must* be 1 byte.  Do not change it after any data has been
-	# received.
-	delimiter = '\n'
-
-	__slots__ = ('maxLength', 'lastJsonError', '_buffer')
-	decodesJson = True
-
-	def __init__(self, maxLength):
-		self.maxLength = maxLength
-		self._buffer = ''
-
-
-	@classmethod
-	def encode(cls, obj):
-		s = simplejson.dumps(obj, separators=(',', ':'), allow_nan=False)
-		s += cls.delimiter
-		return s
-
-
-	def getNewFrames(self, data):
-		# This should re-return the correct error code when more data is
-		# fed into it, even after the error code was already returned.
-		de = self.delimiter
-		m = self.maxLength
-
-		self.lastJsonError = None
-		self._buffer += data
-		docs = []
-		# Stop the "dribble in bytes slowly" attack (where entire buffer is
-		# repeatedly scanned for \n). This trick works here because our
-		# delimiter is 1 byte.
-		if de not in data:
-			if len(self._buffer) > m:
-				return docs, TOO_LONG
-			return docs, OK
-		at = 0
-		while True:
-			try:
-				doc, end = strictDecoder.raw_decode(self._buffer, at)
-				if _posOffBy1:
-					end += 1
-			except (simplejson.decoder.JSONDecodeError, ParseError), e:
-				self.lastJsonError = e
-				return docs, INTRAFRAME_CORRUPTION
-			docs.append(doc)
-			# Find the delimiter that ends the document we just extracted
-			endsAt = self._buffer.index(de, end)
-			if endsAt - at > m:
-				return docs, TOO_LONG
-			at = endsAt + 1
-			# If there's no delimiter after that delimiter, break.
-			if self._buffer.find(de, at) == -1:
-				break
-		self._buffer = self._buffer[at:]
-		if len(self._buffer) > m:
-			return docs, TOO_LONG
-		return docs, OK
-
-
-
 class IntNStringDecoder(object):
 	"""
 	Generic class for length prefixed protocols.
@@ -401,7 +306,6 @@ class IntNStringDecoder(object):
 	"""
 
 	__slots__ = ('maxLength', '_buffer')
-	decodesJson = False
 
 	def __init__(self, maxLength):
 		self.maxLength = maxLength

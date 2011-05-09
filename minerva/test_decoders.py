@@ -239,10 +239,6 @@ class DelimitedStringDecoderTests(CommonTests, unittest.TestCase):
 
 	strings = ['', 'hello', 'world', 'how', 'are', 'you123']
 
-	def test_decodesJsonAttr(self):
-		self.assertEqual(False, self.receiver.decodesJson)
-
-
 	def test_encode(self):
 		self.assertEqual('\n', self.receiver.encode(""))
 		self.assertEqual('h\n', self.receiver.encode("h"))
@@ -283,116 +279,6 @@ class DelimitedStringDecoderTests(CommonTests, unittest.TestCase):
 		got, code = a.getNewFrames(toSend)
 		got = fragmentsToStr(got)
 		self.assertEqual((strings, decoders.TOO_LONG), (got, code))
-
-
-
-class DelimitedJSONDecoderTests(CommonTests, unittest.TestCase):
-	receiver = decoders.DelimitedJSONDecoder
-
-	corruptedSequences = [] # No such thing for this decoder
-
-	# All of these are post-serialization strings. Oversize string tested with maxLength 50
-	jsonCorruptedSequences = [
-		'[Infinity]\n',
-		'[-Infinity]\n',
-		'[NaN]\n',
-		'{\n',
-		'}\n',
-		'[\n',
-		']\n',
-		'z\n',
-		' \n',
-		'\n',
-	]
-
-	# For maxLength == 50
-	tooLongSequences = [
-		'"%s"\n' % ("x" * 49),
-	]
-
-	# Not really strings but JSON-safe objects.
-	strings = ["hello world", u"unicode", {}, [], {"key": ["val1", "val2"]}, None, False, True, 0.0, -0.5, 0.5, 5, 12738123912, 2**50]
-
-	def test_decodesJsonAttr(self):
-		self.assertEqual(True, self.receiver.decodesJson)
-
-
-	def test_bufferWithTrailingBytes(self):
-		"""
-		Test what CommonTests.test_buffer tests, but append various bytes
-		before the delimiter. The parser should still parse these correctly.
-		"""
-		# simplejson has some interesting (and nice) parsing. Something like "abcdef" can
-		# be tacked on to any parsable JSON. "e" can be tacked on too, but not "e4" (because that changes numbers).
-		for whitespace in (' ', '  ', '\t', '\r', '\r\r\r\r', 'abcdef'):
-			##print repr(whitespace)
-			toSend = ''
-			for s in self.strings:
-				toSend += self.receiver.encode(s)[:-1] + whitespace + '\n'
-
-			for packetSize in range(1, 20):
-				##print "packetSize", packetSize
-				a = self.receiver(maxLength=699)
-				got = []
-
-				for s in diceString(toSend, packetSize):
-					##print 'sending', repr(s)
-					out, code = a.getNewFrames(s)
-					self.assertEqual(decoders.OK, code)
-					got.extend(out)
-
-				self.assertEqual(self.strings, got)
-
-
-	def test_encode(self):
-		self.assertEqual('"h"\n', self.receiver.encode("h"))
-		self.assertEqual('"h"\n', self.receiver.encode(u"h"))
-		self.assertEqual('[{}]\n', self.receiver.encode([{}]))
-		self.assertEqual('"\\n"\n', self.receiver.encode("\n"))
-
-
-	def test_bufferSizeLimit(self):
-		"""
-		If 200 bytes of data are delivered, and maxLength is 9, and data
-		has delimiter at every 10th byte, the strings are extracted without
-		a TOO_LONG error code.
-		"""
-		strings = []
-		for i in xrange(20):
-			strings.append(chr(65+i) * 7)
-		
-		toSend = ''
-		for s in strings:
-			toSend += '"%s"\n' % s
-		
-		a = self.receiver(maxLength=10)
-		self.assertEqual((strings, decoders.OK), a.getNewFrames(toSend))
-
-
-	def test_someDocumentsParsedButRemainingBufferTooLong(self):
-		"""
-		If some lines can be extracted but the remaining buffer is too long,
-		the parser returns those lines and returns TOO_LONG.
-		"""
-		toSend = '"hello"\n"there"\n"8chars"'
-		a = self.receiver(maxLength=7)
-		strings = ['hello', 'there']
-		self.assertEqual((strings, decoders.TOO_LONG), a.getNewFrames(toSend))
-
-
-	def test_lastJsonError(self):
-		"""
-		When a JSON parse error occurs, the C{lastJsonError} attribute on the decoder is set to
-		this JSONDecodeError.
-		"""
-		a = self.receiver(maxLength=10)
-		self.assertFalse(hasattr(a, 'lastJsonError'))
-
-		out, code = a.getNewFrames("}\n")
-		self.assertEqual([], out)
-		self.assertEqual(decoders.INTRAFRAME_CORRUPTION, code)
-
-		self.assertTrue(isinstance(a.lastJsonError, simplejson.decoder.JSONDecodeError))
 
 
 
