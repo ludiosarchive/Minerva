@@ -402,8 +402,8 @@ class MinervaBootstrap(BetterResource):
 	"""
 	isLeaf = True
 
-	bootstrap_XDRSetup_filename = FilePath(minerva.__file__).parent().\
-		child('compiled_client').child('bootstrap_XDRSetup.js').path
+	bootstrap_XDRSetup_filename = FilePath(minerva.__file__).\
+		sibling('compiled_client').child('bootstrap_XDRSetup.js').path
 
 	def __init__(self, fileCache, csrfStopper, cookieInstaller, templateFile, dictionary):
 		"""
