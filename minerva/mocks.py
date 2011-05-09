@@ -2,7 +2,7 @@ from zope.interface import implements
 
 from twisted.internet import defer
 
-from mypy.strops import StringFragment
+from strfrag import StringFragment
 
 from minerva.window import SACK, Queue, Incoming
 from minerva.newlink import (

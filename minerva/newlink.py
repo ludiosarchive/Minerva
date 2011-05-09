@@ -19,7 +19,7 @@ from twisted.internet.interfaces import (
 from twisted.web.server import NOT_DONE_YET
 
 from mypy.randgen import secureRandom
-from mypy.strops import StringFragment
+from strfrag import StringFragment
 from mypy.constant import Constant
 from securetypes import securedict
 

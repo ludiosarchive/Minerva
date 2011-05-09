@@ -1,7 +1,7 @@
 import sys
 import operator
 
-from mypy.strops import StringFragment
+from strfrag import StringFragment
 from mypy.objops import totalSizeOf
 from mypy.constant import attachClassMarker
 

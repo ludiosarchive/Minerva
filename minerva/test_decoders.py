@@ -3,7 +3,7 @@ import simplejson
 
 from twisted.trial import unittest
 
-from mypy.strops import StringFragment
+from strfrag import StringFragment
 from securetypes import securedict
 from minerva import decoders
 from mypy.testhelpers import todo

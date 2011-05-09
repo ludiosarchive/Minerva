@@ -3,7 +3,7 @@ import simplejson
 from twisted.trial import unittest
 
 from mypy.constant import Constant
-from mypy.strops import StringFragment
+from strfrag import StringFragment
 
 from minerva.frames import (
 	HelloFrame, StreamCreatedFrame, StringFrame, SeqNumFrame,

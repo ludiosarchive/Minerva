@@ -12,7 +12,7 @@ from simplejson.decoder import JSONDecodeError
 from mypy.dictops import attrdict
 from mypy.objops import (
 	ensureBool, ensureNonNegIntLimit, strToNonNegLimit, strToIntInRange)
-from mypy.strops import StringFragment
+from strfrag import StringFragment
 from mypy.constant import Constant, attachClassMarker
 from minerva.decoders import strictDecoder, ParseError
 from minerva.window import SACK

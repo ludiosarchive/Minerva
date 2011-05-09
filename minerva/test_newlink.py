@@ -21,7 +21,7 @@ from twisted.internet.interfaces import (
 	IPushProducer, IPullProducer, IProtocol, IProtocolFactory)
 from twisted.internet.error import ConnectionLost
 from mypy import constant
-from mypy.strops import StringFragment
+from strfrag import StringFragment
 from mypy.testhelpers import todo
 
 from minerva.window import SACK, Queue

@@ -1,6 +1,6 @@
 from twisted.trial import unittest
 
-from mypy.strops import StringFragment
+from strfrag import StringFragment
 from mypy.objops import totalSizeOf
 from mypy.testhelpers import todo
 
