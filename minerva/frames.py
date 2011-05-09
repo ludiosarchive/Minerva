@@ -55,7 +55,7 @@ class HelloFrameArguments(object):
 
 
 
-# Make globals that mypy.refbinder can optimize away
+# Make globals that refbinder can optimize away
 _hfa = HelloFrameArguments
 Hello_transportNumber = _hfa.transportNumber
 Hello_protocolVersion = _hfa.protocolVersion
