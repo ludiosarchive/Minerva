@@ -18,7 +18,6 @@ from twisted.internet.interfaces import (
 	IPushProducer, IPullProducer, IProtocol, IProtocolFactory)
 from twisted.web.server import NOT_DONE_YET
 
-from mypy.randgen import secureRandom
 from strfrag import StringFragment
 from mypy.constant import Constant
 from securetypes import securedict
@@ -748,7 +747,7 @@ class StreamTracker(object):
 	You do not want to subclass this.
 	"""
 	__slots__  = ('_reactor', '_clock', '_streamProtocolFactory', '_streams',
-		'_observers', '_preKey', '_postKey')
+		'_observers')
 
 	stream = Stream
 
@@ -760,9 +759,6 @@ class StreamTracker(object):
 		# way for a face to locate a Stream.
 		self._streams = securedict()
 		self._observers = set()
-
-		self._preKey = secureRandom(3)
-		self._postKey = secureRandom(3)
 
 
 	def getStream(self, streamId):
