@@ -52,13 +52,6 @@ class ReallyEqualMixin(object):
 
 
 
-# simplejson.loads('NaN') always works, but float('nan') => 0
-# in Python ICC builds with floating point optimizations
-nan = simplejson.loads('NaN')
-inf = simplejson.loads('Infinity')
-neginf = simplejson.loads('-Infinity')
-
-
 DeleteProperty = ("DeleteProperty",)
 
 
@@ -168,7 +161,7 @@ class HelloFrameTests(unittest.TestCase, ReallyEqualMixin):
 		If L{HelloFrame} contains NaN, Infinity, or -Infinity,
 		L{InvalidHello} is raised.
 		"""
-		for bad in (nan, inf, neginf):
+		for bad in (float('nan'), float('inf'), float('-inf')):
 			hello = _makeHelloFrame(dict(transportNumber=bad))
 			s = simplejson.dumps(dict(hello._yieldMapping()))
 			self.assertRaises(InvalidHello, lambda: HelloFrame.decode(sf(s)))
