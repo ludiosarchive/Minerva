@@ -20,8 +20,8 @@ from twisted.python.filepath import FilePath
 from twisted.internet import defer
 
 import minerva
+from minerva.objcheck import strToNonNegLimit
 from brequire import requireFile, requireFiles
-from mypy.objops import strToNonNegLimit
 from webmagic.untwist import BetterResource
 from webmagic.pathmanip import getCacheBrokenHref
 

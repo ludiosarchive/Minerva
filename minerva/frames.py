@@ -9,7 +9,7 @@ import operator
 from simplejson import dumps
 from simplejson.decoder import JSONDecodeError
 
-from mypy.objops import (
+from minerva.objcheck import (
 	ensureBool, ensureNonNegIntLimit, strToNonNegLimit, strToIntInRange)
 from strfrag import StringFragment
 from minerva.decoders import strictDecoder, ParseError
