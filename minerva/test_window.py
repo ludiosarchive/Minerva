@@ -1,9 +1,8 @@
 from twisted.trial import unittest
 
 from strfrag import StringFragment
-from mypy.objops import totalSizeOf
 
-from minerva.window import SACK, Queue, Incoming, _wasSF
+from minerva.window import totalSizeOf, SACK, Queue, Incoming, _wasSF
 
 
 class QueueTests(unittest.TestCase):
@@ -114,12 +113,12 @@ class QueueTests(unittest.TestCase):
 
 	def test_handleSACKToHigherNum(self):
 		q = Queue()
-		q.extend([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+		q.extend(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'])
 		self.assertEqual(False, q.handleSACK(SACK(1, ())))
 		self.assertEqual(False, q.handleSACK(SACK(3, ())))
 
 		# There should be 5 items left in the queue
-		self.assertEqual([(4,4), (5,5), (6,6), (7,7), (8,8), (9,9), (10,10)], list(q.iterItems(start=4)))
+		self.assertEqual([(4,'4'), (5,'5'), (6,'6'), (7,'7'), (8,'8'), (9,'9'), (10,'10')], list(q.iterItems(start=4)))
 
 
 	def test_iterItemsNoStartNumber(self):
@@ -376,13 +375,21 @@ class IncomingConsumptionTests(unittest.TestCase):
 		Incoming does *not* go into an inconsistent state (for example,
 		thinking that _size is < 0)
 		"""
+		class LengthChangingString(str):
+			def __len__(self2):
+				return self2.sayLength
+
 		i = Incoming()
-		mutable = []
+		mutable = LengthChangingString("hi")
+		mutable.sayLength = 2
+		assert len(mutable) == 2, len(mutable)
+
 		i.give([[1, mutable]])
 		sizeBefore = i.getMaxConsumption()
 		self.assertTrue(sizeBefore > 0, sizeBefore)
 
-		mutable.extend([None] * 100)
+		mutable.sayLength = 3
+		assert len(mutable) == 3, len(mutable)
 
 		i.give([[0, "0"]])
 		sizeAfter = i.getMaxConsumption()

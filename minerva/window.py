@@ -2,7 +2,6 @@ import sys
 import operator
 
 from strfrag import StringFragment
-from mypy.objops import totalSizeOf
 
 _postImportVars = vars().keys()
 
@@ -31,13 +30,23 @@ class SACK(tuple):
 
 
 
+def totalSizeOf(s):
+	"""
+	@type s: C{str} or L{StringFragment}
+
+	@return An estimate of how much memory (in bytes) string C{s} consumes.
+	@rtype: C{int}
+	"""
+	return 30 + len(s)
+
+
 class Queue(object):
 	"""
 	A send queue which assigns a monotonically increasing integer
-	to each item. It keeps items until they are SACKed.
+	to each string.  It keeps each string until it is SACKed.
 
-	Useful if you need to queue items that may need to be sent
-	multiple times (if a connection/transport fails). It keeps track
+	Useful if you need to queue strings that may need to be sent
+	multiple times (if a connection/transport fails).  It keeps track
 	of how much memory the Queue is using, in case you want to
 	do flow control.
 	"""
@@ -194,8 +203,9 @@ class Incoming(object):
 		"""
 		Simultaneously give new items, and get deliverable items.
 
-		@param numAndItemSeq: a sequence of *already sorted* (seqNum, object).
+		@param numAndItemSeq: a sequence of *already sorted* (seqNum, strObj).
 			C{seqNum} may be an C{int}, C{long}, or integral C{float}.
+			C{strObj} may be a C{str} or L{StringFragment}.
 
 		@return: (list of deliverable items, hitLimit?) 
 		"""
@@ -207,6 +217,7 @@ class Incoming(object):
 		deliverable = []
 		hitLimit = False
 		for num, item in numAndItemSeq:
+			assert isinstance(item, (str, StringFragment)), type(item)
 			if num < 0:
 				raise ValueError("Sequence num must be 0 or above, was %r" % (num,))
 
