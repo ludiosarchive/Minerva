@@ -138,11 +138,9 @@ class HelloFrameTests(unittest.TestCase, ReallyEqualMixin):
 		"""
 		If the L{HelloFrame} has too much nesting of objects,
 		L{InvalidHello} is raised.
-
-		If this test fails, you need to install our patched simplejson.
 		"""
-		nestingLimit = 32
-		s = '{"":' * nestingLimit + '1' + '}' * nestingLimit
+		level = 20000
+		s = '{"":' * level + '1' + '}' * level
 		self.assertRaises(InvalidHello, lambda: HelloFrame.decode(sf(s)))
 
 
@@ -150,11 +148,9 @@ class HelloFrameTests(unittest.TestCase, ReallyEqualMixin):
 		"""
 		If the L{HelloFrame} has too much nesting of arrays,
 		L{InvalidHello} is raised.
-
-		If this test fails, you need to install our patched simplejson.
 		"""
-		nestingLimit = 32
-		s = '[' * nestingLimit + '1' + ']' * nestingLimit
+		level = 20000
+		s = '[' * level + '1' + ']' * level
 		self.assertRaises(InvalidHello, lambda: HelloFrame.decode(sf(s)))
 
 

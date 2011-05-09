@@ -260,7 +260,8 @@ class HelloFrame(object):
 			# Reach into the private attributes, we know what we're doing.
 			helloData, stoppedAt = strictDecoder.raw_decode(
 				frameString._string, frameString._pos)
-		except (JSONDecodeError, ParseError):
+		except (JSONDecodeError, ParseError, RuntimeError):
+			# Note: RuntimeError raised if stack overflows
 			raise InvalidHello("corrupt JSON")
 		# `- 1` because we expect to stop before the trailing "H"
 		if stoppedAt != frameString._pos + frameString.size - 1:
