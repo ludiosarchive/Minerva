@@ -185,12 +185,12 @@ class EnsureBoolTests(unittest.TestCase):
 
 	def test_True(self):
 		for t in (1, 1.0, True):
-			self.assertEqual(True, objcheck.ensureBool(t))
+			self.assertIdentical(True, objcheck.ensureBool(t))
 
 
 	def test_False(self):
 		for f in (0, 0.0, -0.0, False):
-			self.assertEqual(False, objcheck.ensureBool(f))
+			self.assertIdentical(False, objcheck.ensureBool(f))
 
 
 	def test_ValueError(self):
