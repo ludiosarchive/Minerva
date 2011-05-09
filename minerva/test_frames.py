@@ -2,7 +2,6 @@ import simplejson
 
 from twisted.trial import unittest
 
-from mypy.constant import Constant
 from strfrag import StringFragment
 
 from minerva.frames import (
@@ -60,7 +59,7 @@ inf = simplejson.loads('Infinity')
 neginf = simplejson.loads('-Infinity')
 
 
-DeleteProperty = Constant("DeleteProperty")
+DeleteProperty = ("DeleteProperty",)
 
 
 def dumpToJson7Bit(data):

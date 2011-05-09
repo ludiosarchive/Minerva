@@ -20,7 +20,6 @@ from twisted.internet import defer, task
 from twisted.internet.interfaces import (
 	IPushProducer, IPullProducer, IProtocol, IProtocolFactory)
 from twisted.internet.error import ConnectionLost
-from mypy import constant
 from strfrag import StringFragment
 
 from minerva.window import SACK, Queue
@@ -89,7 +88,7 @@ class _BadFrame(object):
 		return self.encodesTo
 
 
-DeleteProperty = constant.Constant("DeleteProperty")
+DeleteProperty = ("DeleteProperty",)
 
 def _makeHelloFrame(extra={}):
 	_extra = dict(

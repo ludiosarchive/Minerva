@@ -19,7 +19,6 @@ from twisted.internet.interfaces import (
 from twisted.web.server import NOT_DONE_YET
 
 from strfrag import StringFragment
-from mypy.constant import Constant
 from securetypes import securedict
 
 from webmagic.untwist import BetterResource, setNoCacheNoStoreHeaders
@@ -950,7 +949,7 @@ UNKNOWN, POLICYFILE, INT32, BENCODE, HTTP = range(5)
 HTTP_RESPONSE_PREAMBLE = CommentFrame(";)]}")
 
 
-DontWriteSack = Constant("DontWriteSack")
+DontWriteSack = ("DontWriteSack",)
 
 
 class ServerTransport(object):
