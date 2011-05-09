@@ -6,7 +6,6 @@ from twisted.trial import unittest
 from strfrag import StringFragment
 from securetypes import securedict
 from minerva import decoders
-from mypy.testhelpers import todo
 
 
 

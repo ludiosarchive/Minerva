@@ -239,8 +239,8 @@ class DelimitedStringDecoder(object):
 	r"""
 	Decodes a stream of (1-byte-delimiter)-terminated bytestrings.
 
-	Returns L{mypy.strops.StringFragment} objects instead of C{str}
-	objects to reduce copying.
+	Returns L{strfrag.StringFragment} objects instead of C{str} objects to
+	reduce copying.
 	"""
 	# delimiter *must* be 1 byte.  Do not change it after any data has been
 	# received.
@@ -320,8 +320,8 @@ class DelimitedJSONDecoder(object):
 	to limit the allowed depth (otherwise, you may segfault from stack
 	overflow).
 
-	Returns L{mypy.strops.StringFragment} objects instead of C{str}
-	objects to reduce copying.
+	Returns L{strfrag.StringFragment} objects instead of C{str} objects to
+	reduce copying.
 	"""
 	# delimiter *must* be 1 byte.  Do not change it after any data has been
 	# received.

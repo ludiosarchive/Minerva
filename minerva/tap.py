@@ -6,7 +6,7 @@ from twisted.python import usage, log
 from twisted.python.filepath import FilePath
 from twisted.application import service, strports
 
-from mypy.filecache import FileCache
+from webmagic.filecache import FileCache
 from webmagic import sharedopts
 
 from minerva import minervasite

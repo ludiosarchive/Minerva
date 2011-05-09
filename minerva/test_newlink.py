@@ -22,7 +22,6 @@ from twisted.internet.interfaces import (
 from twisted.internet.error import ConnectionLost
 from mypy import constant
 from strfrag import StringFragment
-from mypy.testhelpers import todo
 
 from minerva.window import SACK, Queue
 from minerva.test_decoders import diceString

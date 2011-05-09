@@ -22,7 +22,6 @@ from twisted.internet import defer
 import minerva
 from brequire import requireFile, requireFiles
 from mypy.objops import strToNonNegLimit
-from mypy import transforms
 from webmagic.untwist import BetterResource
 from webmagic.pathmanip import getCacheBrokenHref
 
@@ -408,7 +407,7 @@ class MinervaBootstrap(BetterResource):
 
 	def __init__(self, fileCache, csrfStopper, cookieInstaller, templateFile, dictionary):
 		"""
-		C{fileCache} is a L{mypy.filecache.FileCache}.
+		C{fileCache} is a L{webmagic.filecache.FileCache}.
 		C{csrfStopper} is a L{ICsrfStopper} provider.
 		C{cookieInstaller} is an L{untwist.CookieInstaller}.
 		C{templateFile} is a L{FilePath} representing the jinja2 template to

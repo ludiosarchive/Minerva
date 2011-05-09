@@ -37,7 +37,7 @@ from minerva.frames import (
 
 from brequire import requireFile
 
-# Make globals that mypy.optimizer can optimize away
+# Make globals that refbinder can optimize away
 tk_stream_attach_failure = TransportKillFrame.stream_attach_failure
 tk_acked_unsent_strings = TransportKillFrame.acked_unsent_strings
 tk_invalid_frame_type_or_arguments = TransportKillFrame.invalid_frame_type_or_arguments
