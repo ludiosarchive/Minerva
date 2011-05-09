@@ -22,12 +22,48 @@ from twisted.internet import defer
 import minerva
 from brequire import requireFile, requireFiles
 from mypy.objops import strToNonNegLimit
-from mypy.strops import slowStringCompare
 from mypy import transforms
 from webmagic.untwist import BetterResource
 from webmagic.pathmanip import getCacheBrokenHref
 
 _postImportVars = vars().keys()
+
+
+def constantTimeCompare(s1, s2):
+	"""
+	Compare C{s1} and C{s2} for equality, but always take the same amount
+	of time when both strings are of the same length.  This is intended to stop
+	U{timing attacks<http://rdist.root.org/2009/05/28/timing-attack-in-google-keyczar-library/>}.
+
+	This implementation should do what keyczar does:
+
+	http://code.google.com/p/keyczar/source/browse/trunk/python/src/keyczar/keys.py?r=471#352
+	http://rdist.root.org/2010/01/07/timing-independent-array-comparison/
+
+	@param s1: string to compare to s2
+	@type s1: C{str}
+
+	@param s2: string to compare to s1
+	@type s2: C{str}
+
+	@return: C{True} if strings are equivalent, else C{False}.
+	@rtype: C{bool}
+
+	@warning: if C{s1} and C{s2} are of unequal length, the comparison will take
+		less time.  An attacker may be able to guess how long the expected
+		string is.  To avoid this problem, compare only fixed-length hashes.
+	"""
+	if isinstance(s1, unicode):
+		raise TypeError("First object %r was unicode; expected str" % (s1,))
+	if isinstance(s2, unicode):
+		raise TypeError("Second object %r was unicode; expected str" % (s2,))
+
+	if len(s1) != len(s2):
+		return False
+	result = 0
+	for x, y in zip(s1, s2):
+		result |= ord(x) ^ ord(y)
+	return result == 0
 
 
 # Web browsers are annoying and send the user's cookie to the website
@@ -124,7 +160,7 @@ class CsrfStopper(object):
 		except TypeError:
 			raise RejectToken()
 
-		if not slowStringCompare(expected, self.version + self._hash(uuidStr)):
+		if not constantTimeCompare(expected, self.version + self._hash(uuidStr)):
 			raise RejectToken()
 
 
