@@ -609,11 +609,6 @@ class ResetFrame(tuple):
 
 
 
-class _TransportKillReason(Constant):
-	__slots__ = ()
-
-
-
 class TransportKillFrame(tuple):
 	__slots__ = ()
 	__metaclass__ = attachClassMarker('_MARKER')
@@ -621,38 +616,30 @@ class TransportKillFrame(tuple):
 	reason = property(operator.itemgetter(1))
 
 	# Either because no such Stream, or bad credentialsData
-	stream_attach_failure = _TransportKillReason("stream_attach_failure")
+	stream_attach_failure = "stream_attach_failure"
 
 	# Peer acked strings that we never sent
-	acked_unsent_strings = _TransportKillReason("acked_unsent_strings")
+	acked_unsent_strings = "acked_unsent_strings"
 
 	# Peer sent frames that we don't understand
-	invalid_frame_type_or_arguments = _TransportKillReason("invalid_frame_type_or_arguments")
+	invalid_frame_type_or_arguments = "invalid_frame_type_or_arguments"
 
 	# Peer sent data that could not even be decoded to frames
 	# (only applies to some decoders).
-	frame_corruption = _TransportKillReason("frame_corruption")
+	frame_corruption = "frame_corruption"
 
 	# Peer has caused our receive window to overflow
-	rwin_overflow = _TransportKillReason("rwin_overflow")
+	rwin_overflow = "rwin_overflow"
 
-	allReasons = (
+	allReasons = set([
 		stream_attach_failure, acked_unsent_strings,
-		 invalid_frame_type_or_arguments, frame_corruption,
-		 rwin_overflow)
-
-	stringToConstant = {}
-	constantToString = {}
-	for _c in allReasons:
-		stringToConstant[_c.value] = _c
-		constantToString[_c] = _c.value
-	del _c
-
+		invalid_frame_type_or_arguments, frame_corruption,
+		rwin_overflow])
 
 	def __new__(cls, reason):
 		"""
-		C{reason} is a one of the L{_TransportKillReason}s defined on
-		this class.
+		@param reason: a valid transport kill reason
+		@type reason: str
 		"""
 		return tuple.__new__(cls, (cls._MARKER, reason))
 
@@ -667,16 +654,14 @@ class TransportKillFrame(tuple):
 		C{frameString} is a L{StringFragment} that ends with "K".
 		"""
 		string = str(frameString[:-1])
-		try:
-			reason = cls.stringToConstant[string]
-		except KeyError:
+		if not string in cls.allReasons:
 			raise InvalidFrame("unknown kill reason %r" % string)
 
-		return cls(reason)
+		return cls(string)
 
 
 	def encode(self):
-		return self.constantToString[self.reason] + 'K'
+		return self.reason + 'K'
 
 
 # A readable mapping for your reference:

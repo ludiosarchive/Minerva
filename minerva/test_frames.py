@@ -579,7 +579,7 @@ class TransportKillFrameTests(unittest.TestCase):
 
 	def test_repr(self):
 		self.assertEqual(
-			"TransportKillFrame(_TransportKillReason('frame_corruption'))",
+			"TransportKillFrame('frame_corruption')",
 			repr(TransportKillFrame(tk.frame_corruption)))
 
 
@@ -589,7 +589,7 @@ class TransportKillFrameTests(unittest.TestCase):
 
 	def test_decode(self):
 		for reason in tk.allReasons:
-			s = reason.value + 'K'
+			s = reason + 'K'
 			self.assertEqual(
 				TransportKillFrame(reason),
 				TransportKillFrame.decode(sf(s)))
