@@ -3,7 +3,6 @@ import operator
 
 from strfrag import StringFragment
 from mypy.objops import totalSizeOf
-from mypy.constant import attachClassMarker
 
 _postImportVars = vars().keys()
 
@@ -13,7 +12,7 @@ class SACK(tuple):
 	Represents a SACK.
 	"""
 	__slots__ = ()
-	__metaclass__ = attachClassMarker('_MARKER')
+	_MARKER = object()
 
 	ackNumber = property(operator.itemgetter(1))
 	sackList = property(operator.itemgetter(2))

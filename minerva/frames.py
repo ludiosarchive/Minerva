@@ -12,7 +12,6 @@ from simplejson.decoder import JSONDecodeError
 from mypy.objops import (
 	ensureBool, ensureNonNegIntLimit, strToNonNegLimit, strToIntInRange)
 from strfrag import StringFragment
-from mypy.constant import Constant, attachClassMarker
 from minerva.decoders import strictDecoder, ParseError
 from minerva.window import SACK
 
@@ -298,7 +297,7 @@ class HelloFrame(object):
 
 class StringFrame(tuple):
 	__slots__ = ()
-	__metaclass__ = attachClassMarker('_MARKER')
+	_MARKER = object()
 
 	string = property(operator.itemgetter(1))
 
@@ -336,7 +335,7 @@ class StringFrame(tuple):
 
 class CommentFrame(tuple):
 	__slots__ = ()
-	__metaclass__ = attachClassMarker('_MARKER')
+	_MARKER = object()
 
 	comment = property(operator.itemgetter(1))
 
@@ -366,7 +365,7 @@ class CommentFrame(tuple):
 
 class SeqNumFrame(tuple):
 	__slots__ = ()
-	__metaclass__ = attachClassMarker('_MARKER')
+	_MARKER = object()
 
 	seqNum = property(operator.itemgetter(1))
 
@@ -426,7 +425,7 @@ def sackToSackString(sack):
 
 class SackFrame(tuple):
 	__slots__ = ()
-	__metaclass__ = attachClassMarker('_MARKER')
+	_MARKER = object()
 
 	sack = property(operator.itemgetter(1))
 
@@ -460,7 +459,7 @@ class SackFrame(tuple):
 
 class StreamStatusFrame(tuple):
 	__slots__ = ()
-	__metaclass__ = attachClassMarker('_MARKER')
+	_MARKER = object()
 
 	lastSackSeen = property(operator.itemgetter(1))
 
@@ -494,7 +493,7 @@ class StreamStatusFrame(tuple):
 
 class StreamCreatedFrame(tuple):
 	__slots__ = ()
-	__metaclass__ = attachClassMarker('_MARKER')
+	_MARKER = object()
 
 	def __new__(cls):
 		"""
@@ -524,7 +523,7 @@ class StreamCreatedFrame(tuple):
 
 class YouCloseItFrame(tuple):
 	__slots__ = ()
-	__metaclass__ = attachClassMarker('_MARKER')
+	_MARKER = object()
 
 	def __new__(cls):
 		"""
@@ -571,7 +570,7 @@ class ResetFrame(tuple):
 	A reset frame from the server implies a transport kill as well.
 	"""
 	__slots__ = ()
-	__metaclass__ = attachClassMarker('_MARKER')
+	_MARKER = object()
 
 	reasonString = property(operator.itemgetter(1))
 	applicationLevel = property(operator.itemgetter(2))
@@ -611,7 +610,7 @@ class ResetFrame(tuple):
 
 class TransportKillFrame(tuple):
 	__slots__ = ()
-	__metaclass__ = attachClassMarker('_MARKER')
+	_MARKER = object()
 
 	reason = property(operator.itemgetter(1))
 
