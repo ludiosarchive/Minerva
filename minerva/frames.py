@@ -737,6 +737,6 @@ def decodeFrameFromServer(frameString):
 		raise InvalidFrame("Invalid frame type %r" % lastByte)
 
 
-from mypy import refbinder
-refbinder.bindRecursive(sys.modules[__name__], _postImportVars)
-del refbinder
+try: from refbinder.api import bindRecursive
+except ImportError: pass
+else: bindRecursive(sys.modules[__name__], _postImportVars)

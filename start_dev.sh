@@ -1,7 +1,7 @@
 #!/bin/sh -e
 export PYTHONPATH=$HOME/Projects/Coreweb:$HOME/Projects/Minerva:$HOME/Projects/Webmagic
-#export MYPY_REFBINDER_PRINT_DEBUG=1
-export MYPY_REFBINDER_AUTOENABLE=1
+export REFBINDER_PRINT_DEBUG=1
+export REFBINDER_AUTOENABLE=1
 export PYRELOADING=1
 export INTERFACE="192.168.213.133"
 
