@@ -9,7 +9,6 @@ import operator
 from simplejson import dumps
 from simplejson.decoder import JSONDecodeError
 
-from mypy.dictops import attrdict
 from mypy.objops import (
 	ensureBool, ensureNonNegIntLimit, strToNonNegLimit, strToIntInRange)
 from strfrag import StringFragment
@@ -18,6 +17,22 @@ from minerva.decoders import strictDecoder, ParseError
 from minerva.window import SACK
 
 _postImportVars = vars().keys()
+
+
+class attrdict(dict):
+	"""
+	A dict that can be modified by setting and getting attributes.
+	This may be broken in funny ways; use with care.
+	"""
+	__slots__ = ()
+
+	def __setattr__(self, key, value):
+		self[key] = value
+
+
+	def __getattribute__(self, key):
+		return self[key]
+
 
 
 # Property key names for the hello frame.
