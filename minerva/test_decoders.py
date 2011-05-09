@@ -1,5 +1,4 @@
 import struct
-import simplejson
 
 from twisted.trial import unittest
 

@@ -3,7 +3,6 @@ import simplejson
 
 from twisted.python import log
 from twisted.python.filepath import FilePath
-from twisted.internet.task import LoopingCall
 
 from cwtools import testing
 
@@ -20,10 +19,10 @@ from minerva.chatapp.pages import ChatAppPage
 from webmagic.special import WaitResource
 
 from webmagic.untwist import (
-	CookieInstaller, BetterResource, BetterFile, HelpfulNoResource,
-	ConnectionTrackingSite, DisplayConnections)
+	CookieInstaller, BetterResource, BetterFile, ConnectionTrackingSite,
+	DisplayConnections)
 
-from brequire import requireFile, requireFiles
+from brequire import requireFile
 
 
 
