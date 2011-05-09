@@ -4,7 +4,6 @@ from twisted.trial import unittest
 
 from mypy.constant import Constant
 from mypy.strops import StringFragment
-from mypy.testhelpers import ReallyEqualMixin
 
 from minerva.frames import (
 	HelloFrame, StreamCreatedFrame, StringFrame, SeqNumFrame,
@@ -18,6 +17,41 @@ from minerva.frames import (
 
 from minerva.window import SACK
 from minerva.test_newlink import _makeHelloFrame, sf
+
+
+class ReallyEqualMixin(object):
+	"""
+	A mixin for your L{unittest.TestCase}s to better test object equality
+	and inequality.  Details at:
+
+	http://ludios.org/ivank/2010/10/testing-your-eq-ne-cmp/
+	"""
+	def assertReallyEqual(self, a, b):
+		# assertEqual first, because it will have a good message if the
+		# assertion fails.
+		self.assertEqual(a, b)
+		self.assertEqual(b, a)
+		self.assertTrue(a == b)
+		self.assertTrue(b == a)
+		self.assertFalse(a != b)
+		self.assertFalse(b != a)
+		self.assertEqual(0, cmp(a, b))
+		self.assertEqual(0, cmp(b, a))
+
+
+	def assertReallyNotEqual(self, a, b):
+		# assertNotEqual first, because it will have a good message if the
+		# assertion fails.
+		self.assertNotEqual(a, b)
+		self.assertNotEqual(b, a)
+		self.assertFalse(a == b)
+		self.assertFalse(b == a)
+		self.assertTrue(a != b)
+		self.assertTrue(b != a)
+		self.assertNotEqual(0, cmp(a, b))
+		self.assertNotEqual(0, cmp(b, a))
+
+
 
 # simplejson.loads('NaN') always works, but float('nan') => 0
 # in Python ICC builds with floating point optimizations
