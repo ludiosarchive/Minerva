@@ -1481,8 +1481,7 @@ cw.net.ClientTransport.prototype.considerDelayingNextTransport_ = function() {
 
 /**
  * @return {number} How many milliseconds the underlying TCP connection or
- * 	HTTP request was open.  Note that the returned number may be too low or
- * 	too high if the clock jumped.
+ * 	HTTP request was open.
  * @private
  */
 cw.net.ClientTransport.prototype.getUnderlyingDuration_ = function() {

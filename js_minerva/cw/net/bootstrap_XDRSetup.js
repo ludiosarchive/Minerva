@@ -90,9 +90,6 @@
 	if(detectedIe) {
 		window.setTimeout(insertIframes, 0);
 	} else {
-		// Load faster by avoiding a setTimeout, and avoid rare problems
-		// with jumping clocks.  (Less of a problem in IE because it uses a
-		// monotonic clock for timers).
 		insertIframes();
 	}
 })();
