@@ -59,7 +59,7 @@ goog.require('goog.events');
 goog.require('goog.Uri');
 goog.require('goog.ui.media.FlashObject');
 goog.require('cw.eventual');
-goog.require('cw.whoami');
+goog.require('cw.cookie');
 goog.require('cw.string');
 goog.require('cw.repr');
 goog.require('cw.net.IFlashSocketProtocol');
@@ -170,7 +170,7 @@ function makeHelloData(uaId, transportNumber) {
  * Create an array of frames that will convince the server to send us data.
  */
 function makeC2SFramesForTesting() {
-	var uaId = cw.whoami.getUaId();
+	var uaId = cw.cookie.getHttpOrHttpsCookie('__', '_s');
 	var transportNumber = ++transportCount;
 	var helloData = makeHelloData(uaId, transportNumber);
 	var helloFrame = serializer.serialize(helloData) + 'H';

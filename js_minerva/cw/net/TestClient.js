@@ -19,7 +19,7 @@ goog.require('cw.clock');
 goog.require('cw.eventual');
 goog.require('cw.loadflash');
 goog.require('goog.ui.media.FlashObject');
-goog.require('cw.whoami');
+goog.require('cw.cookie');
 
 goog.require('cw.net.Queue');
 goog.require('cw.net.TransportType_');
@@ -93,7 +93,7 @@ cw.net.TestClient.DumbStreamPolicy = function(httpStreamingMode, csrfToken) {
  */
 cw.net.TestClient.DumbStreamPolicy.prototype.getCredentialsData = function() {
 	// Already base64-url-safe encoded
-	var uaId = cw.whoami.getUaId();
+	var uaId = cw.cookie.getHttpOrHttpsCookie('__', '_s');
 	goog.asserts.assert(uaId !== undefined, "uaId is undefined");
 	goog.asserts.assert(this.csrfToken !== undefined, "this.csrfToken is undefined");
 	return uaId + '|' + this.csrfToken;

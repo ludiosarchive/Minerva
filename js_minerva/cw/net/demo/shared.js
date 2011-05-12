@@ -14,7 +14,7 @@ goog.require('goog.async.Deferred');
 goog.require('goog.Uri');
 goog.require('goog.dom');
 goog.require('cw.loadflash');
-goog.require('cw.whoami');
+goog.require('cw.cookie');
 goog.require('cw.eventual');
 goog.require('cw.net.IStreamPolicy');
 goog.require('cw.net.FlashSocketTracker');
@@ -39,7 +39,7 @@ cw.net.demo.DemoStreamPolicy = function() {
  */
 cw.net.demo.DemoStreamPolicy.prototype.getCredentialsData = function() {
 	// Already base64-url-safe encoded
-	var uaId = cw.whoami.getUaId();
+	var uaId = cw.cookie.getHttpOrHttpsCookie('__', '_s');
 	return uaId + '|' + goog.global['CSRF_TOKEN'];
 };
 
