@@ -9,6 +9,10 @@
  * 	lookup) before the main script is loaded.
  */
 
+if(0) { // Below is a dummy provide for our closurebuilder build
+goog.provide("cw.net.bootstrap_XDRSetup");
+}
+
 (function() {
 	var __XDRSetup = window['__XDRSetup'];
 
