@@ -1,5 +1,6 @@
 #!/bin/sh -e
 
+./build_autocachebreakers.py
 ./build_depsjs.sh
 
 COMMON="../closure-library/closure/bin/build/closurebuilder.py \
