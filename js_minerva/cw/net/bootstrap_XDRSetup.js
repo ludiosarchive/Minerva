@@ -9,7 +9,7 @@
  * 	lookup) before the main script is loaded.
  */
 
-if(0) { // Below is a dummy provide for our closurebuilder build
+if(window.__pretend_to_have_a_useful_namespace_for_closurebuilder) {
 goog.provide("cw.net.bootstrap_XDRSetup");
 }
 
