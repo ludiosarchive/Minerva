@@ -1052,7 +1052,7 @@ cw.net.TransportKillFrame.prototype.encodeToPieces = function(sb) {
 
 
 /**
- * @type {(
+ * @typedef {(
  * 	cw.net.HelloFrame|
  * 	cw.net.StringFrame|
  * 	cw.net.SeqNumFrame|
@@ -1065,7 +1065,7 @@ cw.net.TransportKillFrame.prototype.encodeToPieces = function(sb) {
  * 	cw.net.TransportKillFrame
  * 	)}
  */
-cw.net.Frame = goog.typedef;
+cw.net.Frame;
 
 
 /**

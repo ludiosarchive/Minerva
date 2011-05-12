@@ -152,9 +152,9 @@ cw.net.HttpEndpoint.prototype.ensureSameOrigin_ = function() {
 
 
 /**
- * @type {cw.net.SocketEndpoint|cw.net.HttpEndpoint}
+ * @typedef {cw.net.SocketEndpoint|cw.net.HttpEndpoint}
  */
-cw.net.Endpoint = goog.typedef;
+cw.net.Endpoint;
 
 
 /**
@@ -1523,12 +1523,12 @@ cw.net.ClientTransport.prototype.ensurePreambleIfHttpAndFirstFrame_ = function(f
 };
 
 /**
- * @type {Array.<!Array.<number|string>>} An Array of
+ * @typedef {Array.<!Array.<number|string>>} An Array of
  * 	(seqNum, string) pairs.
  * @private
  * // TODO: types for tuples
  */
-cw.net.SeqNumStringPairs_ = goog.typedef;
+cw.net.SeqNumStringPairs_;
 
 /**
  * @param {!cw.net.SeqNumStringPairs_} bunchedStrings Unsorted Array of

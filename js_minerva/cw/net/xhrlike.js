@@ -6,6 +6,6 @@ goog.provide('cw.net.XHRLike');
 
 
 /**
- * @type {(XMLHttpRequest|ActiveXObject|XDomainRequest)}
+ * @typedef {(XMLHttpRequest|ActiveXObject|XDomainRequest)}
  */
-cw.net.XHRLike = goog.typedef;
+cw.net.XHRLike;
