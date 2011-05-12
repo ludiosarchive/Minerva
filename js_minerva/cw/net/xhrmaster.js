@@ -171,6 +171,7 @@ cw.net.XHRMasterTracker = function() {
 	 */
 	this.masters_ = {};
 };
+goog.inherits(cw.net.XHRMasterTracker, goog.Disposable);
 
 /**
  * @type {!goog.debug.Logger}
