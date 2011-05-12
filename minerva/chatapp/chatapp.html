@@ -250,7 +250,7 @@ chatapp.clickListen = goog.events.listen(
 
 chatapp.startStream = function() {
 	var streamPolicy = new cw.net.demo.DemoStreamPolicy(
-		cw.net.HttpStreamingMode.NO_STREAMING);
+		'minervasite_uaid', 'minervasite_uaid_secure');
 	chatapp.lastProto = new chatapp.ChatProtocol();
 	chatapp.activityDetected();
 	var endpointD = cw.net.demo.getEndpointByQueryArgs(chatapp.callQueue);

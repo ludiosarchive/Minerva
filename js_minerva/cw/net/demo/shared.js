@@ -27,11 +27,14 @@ goog.require('cw.net.XHRSlave');
 
 
 /**
+ * @param {string} httpName HTTP uaid cookie name
+ * @param {string} httpsName HTTPS uaid cookie name
  * @constructor
  * @implements {cw.net.IStreamPolicy}
  */
-cw.net.demo.DemoStreamPolicy = function() {
-
+cw.net.demo.DemoStreamPolicy = function(httpName, httpsName) {
+	this.httpName_ = httpName;
+	this.httpsName_ = httpsName;
 };
 
 /**
@@ -39,7 +42,7 @@ cw.net.demo.DemoStreamPolicy = function() {
  */
 cw.net.demo.DemoStreamPolicy.prototype.getCredentialsData = function() {
 	// Already base64-url-safe encoded
-	var uaId = cw.cookie.getHttpOrHttpsCookie('__', '_s');
+	var uaId = cw.cookie.getHttpOrHttpsCookie(this.httpName_, this.httpsName_);
 	return uaId + '|' + goog.global['CSRF_TOKEN'];
 };
 

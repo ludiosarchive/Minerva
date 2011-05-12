@@ -93,7 +93,8 @@ cw.net.TestClient.DumbStreamPolicy = function(httpStreamingMode, csrfToken) {
  */
 cw.net.TestClient.DumbStreamPolicy.prototype.getCredentialsData = function() {
 	// Already base64-url-safe encoded
-	var uaId = cw.cookie.getHttpOrHttpsCookie('__', '_s');
+	var uaId = cw.cookie.getHttpOrHttpsCookie(
+		'minervasite_uaid', 'minervasite_uaid_secure');
 	goog.asserts.assert(uaId !== undefined, "uaId is undefined");
 	goog.asserts.assert(this.csrfToken !== undefined, "this.csrfToken is undefined");
 	return uaId + '|' + this.csrfToken;

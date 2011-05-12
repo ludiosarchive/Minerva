@@ -170,7 +170,8 @@ function makeHelloData(uaId, transportNumber) {
  * Create an array of frames that will convince the server to send us data.
  */
 function makeC2SFramesForTesting() {
-	var uaId = cw.cookie.getHttpOrHttpsCookie('__', '_s');
+	var uaId = cw.cookie.getHttpOrHttpsCookie(
+		'minervasite_uaid', 'minervasite_uaid_secure');
 	var transportNumber = ++transportCount;
 	var helloData = makeHelloData(uaId, transportNumber);
 	var helloFrame = serializer.serialize(helloData) + 'H';
