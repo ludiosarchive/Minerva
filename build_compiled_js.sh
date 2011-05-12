@@ -1,5 +1,7 @@
 #!/bin/sh -e
 
+./build_depsjs.sh
+
 COMMON="../closure-library/closure/bin/build/closurebuilder.py \
 --output_mode=compiled \
 --compiler_jar=../closure-compiler/build/compiler.jar \
@@ -14,6 +16,10 @@ COMMON="../closure-library/closure/bin/build/closurebuilder.py \
 --root=../closure-library \
 --root=../Coreweb/js_coreweb \
 --root=js_minerva \
+--compiler_flags=--js=../closure-library/closure/goog/deps.js \
+--compiler_flags=--js=../closure-library/third_party/closure/goog/deps.js \
+--compiler_flags=--js=../Coreweb/js_coreweb/deps.js \
+--compiler_flags=--js=js_minerva/deps.js \
 "
 
 $COMMON \
