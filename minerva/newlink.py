@@ -3,7 +3,7 @@ The core of Minerva server.
 
 Please read the files in Minerva/docs/ to begin understanding how this works.
 
-See minerva.minervasite for an idea of how to use the classes below,
+See minerva.minerva_site for an idea of how to use the classes below,
 especially `makeMinervaAndHttp` and `DemoProtocol`.
 """
 

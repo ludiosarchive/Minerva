@@ -4,5 +4,5 @@ MinervaRun = ServiceMaker(
 	"Minerva test server",
 	"minerva.tap",
 	"Minerva test server",
-	"minervarun"
+	"minerva_site"
 )

@@ -11,7 +11,7 @@ looper python -N \
 -W all \
 -W 'ignore:Not importing directory' \
 -W 'ignore:the sets module is deprecated' \
-`which twistd` -r epoll -n minervarun \
+`which twistd` -r epoll -n minerva_site \
 --secretfile dev_keys/csrf_secret \
 --domain 'linuxwan.com' \
 -h tcp:8111:interface=$INTERFACE \

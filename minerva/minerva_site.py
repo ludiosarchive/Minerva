@@ -4,8 +4,6 @@ import simplejson
 from twisted.python import log
 from twisted.python.filepath import FilePath
 
-from cwtools import testing
-
 from minerva.newlink import (
 	BasicMinervaProtocol, BasicMinervaFactory, StreamTracker, HttpFace, SocketFace)
 
@@ -309,7 +307,7 @@ requireFile(FilePath(__file__).sibling('index.html').path)
 class Root(BetterResource):
 
 	def __init__(self, reactor, httpFace, fileCache, csrfStopper, cookieInstaller, domain, closureLibrary):
-		import cwtools
+		import coreweb
 		import minerva
 
 		import js_minerva
@@ -328,7 +326,7 @@ class Root(BetterResource):
 		self.putChild('compiled_client', BetterFile(minervaPath.child('compiled_client').path))
 
 		# testres_Coreweb always needed for running tests.
-		testres_Coreweb = FilePath(cwtools.__path__[0]).child('testres').path
+		testres_Coreweb = FilePath(coreweb.__path__[0]).child('testres').path
 		self.putChild('@testres_Coreweb', BetterFile(testres_Coreweb))
 
 		testres_Minerva = ResourcesForTest(reactor, csrfStopper, cookieInstaller)
@@ -362,7 +360,7 @@ def makeMinervaAndHttp(reactor, fileCache, csrfSecret, domain, closureLibrary):
 	clock = reactor
 
 	cookieInstaller = CookieInstaller(
-		os.urandom, 'minervasite_uaid', 'minervasite_uaid_secure')
+		os.urandom, 'minerva_site_uaid', 'minerva_site_uaid_secure')
 
 	# In the real world, you might want this to be more restrictive.
 	# Minerva has its own CSRF protection, so it's not critical.

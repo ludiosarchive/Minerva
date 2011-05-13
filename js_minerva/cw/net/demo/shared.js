@@ -1,6 +1,6 @@
 /**
  * Code shared across demos.  This makes assumptions about
- * what minervasite serves.
+ * what minerva_site serves.
  */
 
 goog.provide('cw.net.demo.loadFlashConnector');

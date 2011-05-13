@@ -5,8 +5,6 @@ from twisted.web import static
 
 from minerva.website import htmldumps
 
-from cwtools.htmltools import getTestPageCSS
-
 from webmagic.untwist import BetterResource
 
 
@@ -31,7 +29,6 @@ class Index(BetterResource):
 		# This jinja2 stuff is for the html page, not the JavaScript
 		template = self._basePath.child(self._fileName).getContent().decode('utf-8')
 		dictionary = dict(
-			getTestPageCSS=getTestPageCSS,
 			token=token,
 			htmldumps=htmldumps)
 		rendered = self._jinja2Env.from_string(template).render(dictionary)

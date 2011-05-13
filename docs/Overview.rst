@@ -770,5 +770,5 @@ Minerva should work on both 32-bit and 64-bit Python. You should
 probably run it on 32-bit Python to save memory. Saving memory is almost always
 important, because you want memory available for the kernel's page cache. If you need
 to guess, you can assume that 32-bit Python will use 60% of the memory
-and 115% the time of 64-bit Python.  After starting, ``minervasite``
+and 115% the time of 64-bit Python.  After starting, ``minerva_site``
 uses approximately 16MB on 32-bit, and 26MB on 64-bit.

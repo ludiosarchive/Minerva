@@ -9,7 +9,7 @@ from twisted.application import service, strports
 from webmagic.filecache import FileCache
 from webmagic import sharedopts
 
-from minerva import minervasite
+from minerva import minerva_site
 
 
 
@@ -46,7 +46,7 @@ class Options(sharedopts.WebOptions):
 	]
 
 	longdesc = """\
-This starts the Minerva test server (minervasite), from which you can
+This starts the Minerva test server (minerva_site), from which you can
 run the client-side unit tests in a browser, and try a few demo applications
 that use Minerva.
 
@@ -88,7 +88,7 @@ def makeService(config):
 
 	doReloading = bool(int(os.environ.get('PYRELOADING')))
 	fileCache = FileCache(lambda: reactor.seconds(), 0.1 if doReloading else -1)
-	socketFace, httpSite = minervasite.makeMinervaAndHttp(
+	socketFace, httpSite = minerva_site.makeMinervaAndHttp(
 		reactor, fileCache, csrfSecret, domain, FilePath(config['closure-library']))
 	httpSite.displayTracebacks = not config["notracebacks"]
 

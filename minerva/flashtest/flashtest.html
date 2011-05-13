@@ -3,9 +3,8 @@
 <head>
 	<meta http-equiv="charset" content="text/html; charset=utf-8">
 	<title></title>
+	<link rel="stylesheet" href="/@testres_Coreweb/test_page.css" type="text/css">
 	<style>
-		{{ getTestPageCSS() }}
-
 		#controls tr td {
 			padding: 0.5em 0 0.5em 0;
 		}
@@ -171,7 +170,7 @@ function makeHelloData(uaId, transportNumber) {
  */
 function makeC2SFramesForTesting() {
 	var uaId = cw.cookie.getHttpOrHttpsCookie(
-		'minervasite_uaid', 'minervasite_uaid_secure');
+		'minerva_site_uaid', 'minerva_site_uaid_secure');
 	var transportNumber = ++transportCount;
 	var helloData = makeHelloData(uaId, transportNumber);
 	var helloFrame = serializer.serialize(helloData) + 'H';
