@@ -73,8 +73,6 @@ whether there is probably an already-connected Stream in a tab.
 If no such cookie, write out the iframes immediately.
 -->
 <script>
-// Don't define variables on "window" to avoid possible IE stack limit of 12
-// when calling through window.
 CSRF_TOKEN = {{ htmldumps(bootstrap.csrf_token) }};
 {{ bootstrap.getXDRSetup(dev_mode, domain) }}
 </script>
