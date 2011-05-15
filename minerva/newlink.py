@@ -923,7 +923,7 @@ class IMinervaTransport(ISimpleConsumer):
 
 
 
-def sanitizeHelloFrame(helloFrame, isHttp):
+def _sanitizeHelloFrame(helloFrame, isHttp):
 	"""
 	Mutate a L{HelloFrame} to sanitize it: disable some options for
 	non-HTTP transports (because clients should not be using them anyway).
@@ -1254,7 +1254,7 @@ class ServerTransport(object):
 		HelloFrame does not exist (and requestNewStream is falsy), raises
 		L{NoSuchStream}.
 		"""
-		sanitizeHelloFrame(hello, self._mode == HTTP)
+		_sanitizeHelloFrame(hello, self._mode == HTTP)
 
 		# self._protocolVersion = protocolVersion # Not needed at the moment
 		self.streamId = hello.streamId
