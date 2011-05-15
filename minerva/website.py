@@ -302,12 +302,6 @@ class CsrfTransportFirewall(object):
 
 
 
-# Back when we read the uaId from a cookie (for HTTP transports), we thought
-# we it might be a good idea to provide additional protection with an
-# "AntiHijackTransportFirewall".
-# See Minerva git history before 2010-05-31 for this feature.
-
-
 def htmldumps(*args, **kwargs):
 	"""
 	Like L{simplejson.dumps}, but backslash every '/' to prevent
