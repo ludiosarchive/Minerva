@@ -302,9 +302,10 @@ class Stream(object):
 	maxUndeliveredBytes = 1 * 1024 * 1024 # bytes
 
 	__slots__ = (
-		'_clock', 'streamId', '_streamProtocolFactory', '_protocol', 'virgin', '_primaryTransport',
-		'_notifications', '_transports', 'disconnected', 'queue', '_incoming', '_pretendAcked',
-		'_producer', '_streamingProducer', '_primaryHasProducer', '_primaryPaused',
+		'_clock', 'streamId', '_streamProtocolFactory', '_protocol',
+		'virgin', '_primaryTransport', '_notifications', '_transports',
+		'disconnected', 'queue', '_incoming', '_pretendAcked', '_producer',
+		'_streamingProducer', '_primaryHasProducer', '_primaryPaused',
 		'lastSackSeenByServer', 'lastReceived', 'maxIdleTime')
 
 	def __init__(self, clock, streamId, streamProtocolFactory):
@@ -385,12 +386,13 @@ class Stream(object):
 		if not strings:
 			return
 
-		# We don't need to self._producer.pauseProducing() if queue is too big here,
-		# because:
-		#     1) active S2C transport are responsible for pausing if there is TCP pressure
-		#     2) if there is no active S2C transport, we already paused it
-		# TODO: actually implement flow control if Queue is too big, since clients can
-		# resource-exhaust by never sending Minerva ACKs.
+		# We don't need to self._producer.pauseProducing() if queue is too
+		# big here, because:
+		# 1)	Active S2C transport are responsible for pausing if there
+		# 		is TCP pressure.
+		# 2)	If there is no active S2C transport, we already paused it.
+		# TODO: actually implement flow control if Queue is too big, since
+		# clients can resource-exhaust by never sending Minerva ACKs.
 		self.queue.extend(strings)
 		self._tryToSend()
 
@@ -525,14 +527,15 @@ class Stream(object):
 		Called by faces to tell me that new transport C{transport} has connected.
 		This is called even for very-short-term C2S HTTP transports.
 
-		Caller is responsible for verifying that a transport should really be attached
-		to this stream before calling L{transportOnline}. Usually this is done by
-		authenticating based on data in the `hello' frame.
+		Caller is responsible for verifying that a transport should really
+		be attached to this stream before calling L{transportOnline}.
+		Usually this is done by authenticating based on data in the
+		HelloFrame.
 
 		If L{wantsStrings} is truthy, this transport wants to receive strings.
 
-		If L{succeedsTransport} != None, temporarily assume that all strings written to
-		#<succeedsTransport> were SACKed.
+		If L{succeedsTransport} != None, temporarily assume that all strings
+		written to #<succeedsTransport> were SACKed.
 		"""
 		self._transports.add(transport)
 		self.virgin = False
@@ -665,16 +668,17 @@ class Stream(object):
 		Register to receive data from a producer that creates S2C strings.
 
 		This sets this stream to be a consumer for producer C{producer}.
-		When this stream runs out of data on a write() call, it will ask C{producer}
-		to resumeProducing(). When the (active S2C transport)'s internal data buffer is
-		filled, it will ask C{producer} to pauseProducing(). If the stream
-		is ended, Stream calls C{producer}'s stopProducing() method.
+		When this stream runs out of data on a write() call, it will ask
+		C{producer} to resumeProducing().  When the (active S2C transport)'s
+		internal data buffer is filled, it will ask C{producer} to
+		pauseProducing().  If the stream is ended, Stream calls C{producer}'s
+		stopProducing() method.
 
-		If C{streaming} is C{True}, C{producer} should provide the L{IPushProducer}
-		interface. Otherwise, it is assumed that producer provides the
-		L{IPullProducer} interface. In this case, C{producer} won't be asked
-		to pauseProducing(), but it has to be careful to write() data only
-		when its resumeProducing() method is called.
+		If C{streaming} is C{True}, C{producer} should provide the
+		L{IPushProducer} interface.  Otherwise, it is assumed that producer
+		provides the L{IPullProducer} interface. In this case, C{producer}
+		won't be asked to pauseProducing(), but it has to be careful to
+		write() data only when its resumeProducing() method is called.
 		"""
 		if self._producer:
 			raise RuntimeError("Cannot register producer %s, "
@@ -1473,7 +1477,8 @@ class ServerTransport(object):
 
 				if frameType == ResetFrame:
 					self._callingStream = True
-					self._stream.resetFromPeer(frame.reasonString, frame.applicationLevel)
+					self._stream.resetFromPeer(
+						frame.reasonString, frame.applicationLevel)
 					self._callingStream = False
 					break # No need to process any frames after the reset frame
 
@@ -1522,13 +1527,15 @@ class ServerTransport(object):
 				self._mode = BENCODE
 				frameData = self._initialBuffer[len('<bencode/>\n'):]
 				del self._initialBuffer
-				self._parser = decoders.BencodeStringDecoder(maxLength=self.maxLength)
+				self._parser = decoders.BencodeStringDecoder(
+					maxLength=self.maxLength)
 
 			elif self._initialBuffer.startswith('<int32/>\n'):
 				self._mode = INT32
 				frameData = self._initialBuffer[len('<int32/>\n'):]
 				del self._initialBuffer
-				self._parser = decoders.Int32StringDecoder(maxLength=self.maxLength)
+				self._parser = decoders.Int32StringDecoder(
+					maxLength=self.maxLength)
 
 			# TODO: <int32-zlib/> with <x/> alias
 			# TODO: if we support compression, make sure people can't
@@ -1566,7 +1573,8 @@ class ServerTransport(object):
 		elif code in (decoders.TOO_LONG, decoders.FRAME_CORRUPTION):
 			self._closeWith(tk_frame_corruption)
 		else:
-			raise RuntimeError("Got unknown code from parser %r: %r" % (self._parser, code))
+			raise RuntimeError("Got unknown code from parser %r: %r" % (
+				self._parser, code))
 
 		if self._stream:
 			self._stream.lastReceived = self._clock.seconds()
@@ -1578,7 +1586,8 @@ class ServerTransport(object):
 	def registerProducer(self, producer, streaming):
 		if self._producer:
 			raise RuntimeError("Cannot register producer %s, "
-				"because producer %s was never unregistered." % (producer, self._producer))
+				"because producer %s was never unregistered." % (
+					producer, self._producer))
 
 		# no 'disconnected' check?
 
