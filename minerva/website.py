@@ -376,7 +376,7 @@ def getRandomSubdomain(prefix, digits):
 	lowercase letter a-z.
 	"""
 	# Always have C{digits} digits.  Use only random digits (not letters) to
-	# prevent forming words that may be blocked by proxies.
+	# avoid forming words that may be blocked by proxies.
 	return prefix + str(randint(10**(digits - 1), 10**digits - 1))
 
 
