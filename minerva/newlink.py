@@ -1506,14 +1506,16 @@ class ServerTransport(object):
 				self.writable.write(self.factory.policyStringWithNull)
 				self._terminating = True
 
-				# No need to loseConnection here, because Flash player will close it:
-				# "The server must send a null byte to terminate a policy file and may then close
-				#	the connection; if the server does not close the connection, the Flash Player will
-				#	do so upon receiving the terminating null byte."
-				#	http://www.adobe.com/devnet/flash/articles/fplayer_security_03.html
+				# No need to loseConnection here, because Flash player
+				# (hopefully) will close it: "The server must send a null
+				# byte to terminate a policy file and may then close
+				# the connection; if the server does not close the
+				# connection, the Flash Player will do so upon receiving
+				# the terminating null byte." http://goo.gl/op7yg
 
-				# TODO: loseConnection in 5-10 seconds, if client doesn't. Don't use loseWriteConnection
-				# because the client doesn't send anything else over this connection anyway.
+				# TODO: loseConnection in 5-10 seconds, if client doesn't.
+				# Don't use loseWriteConnection because the client doesn't
+				# send anything else over this connection anyway.
 				return
 
 			elif self._initialBuffer.startswith('<bencode/>\n'):
