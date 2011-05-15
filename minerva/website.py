@@ -120,13 +120,14 @@ class CsrfStopper(object):
 	"""
 	An implementation of L{ICsrfStopper} that uses a secret and hmac-sha256
 	to make and check tokens. Keeping the secret secret is of paramount
-	importance. If the secret is leaked, anyone can CSRF someone else's session.
+	importance.  If the secret is leaked, anyone can CSRF someone else's
+	session.
 
 	The purpose of this is to create a 1:1 mapping of user IDs <-> CSRF tokens.
-	The CSRF token should be handed to the client but *not* somewhere where it is
-	automatically sent by the browser (whenever browser makes a request to your domain).
-	Putting the CSRF token in a cookie is completely wrong; writing the token
-	out to the JavaScript in your HTML might be okay.
+	The CSRF token should be handed to the client but *not* somewhere where
+	it is automatically sent by the browser (whenever browser makes a request
+	to your domain).  Putting the CSRF token in a cookie is completely wrong;
+	writing the token out to the JavaScript in your HTML might be okay.
 	"""
 	implements(ICsrfStopper)
 	__slots__ = ('_secretString')
@@ -138,7 +139,8 @@ class CsrfStopper(object):
 
 
 	def _hash(self, what):
-		return hmac.new(self._secretString, what, hashlib.sha256).digest()[:16] # pull first 128 bits out of 256 bits
+		# Take the first 128 bits from the 256 bits
+		return hmac.new(self._secretString, what, hashlib.sha256).digest()[:16]
 
 
 	def makeToken(self, uuid):
