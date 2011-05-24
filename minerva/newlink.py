@@ -197,8 +197,9 @@ class UnknownSubprotocol(Exception):
 
 
 def _callStringsOrStringReceived(proto, strings):
-	if hasattr(proto, 'stringsReceived'):
-		proto.stringsReceived(strings)
+	stringsReceived = getattr(proto, 'stringsReceived', None)
+	if stringsReceived and callable(stringsReceived):
+		stringsReceived(strings)
 	else:
 		for s in strings:
 			proto.stringReceived(str(s))
