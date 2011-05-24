@@ -478,9 +478,10 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 		goog.global['window'].__GetTokenPage_gotToken = function(token) {
 			self.streamPolicy_ = new cw.net.TestClient.DumbStreamPolicy(
 				self.getHttpStreamingMode_(), token);
-			// To reduce our exposure to browser bugs, callback the Deferred
-			// with a stack from this window, not from the iframe.
-			window.setTimeout(function() { iframeD.callback(null); }, 0);
+			// Note: In Firefox 4, this will sometimes raise an uncaught
+			// "CustomError: Already called" because it runs the JavaScript
+			// in the iframe multiple times.
+			iframeD.callback(null);
 		};
 
 		// the iframe calls __GetTokenPage_gotToken
