@@ -1814,7 +1814,7 @@ class HttpFace(BetterResource):
 
 	def render_GET(self, request):
 		request.setResponseCode(500)
-		return "HttpFace can only respond to POST requests"
+		return "HttpFace can respond only to POST requests"
 
 
 	def render_POST(self, request):
