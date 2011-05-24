@@ -7,7 +7,7 @@ These tests has seven main sections:
 4.	Tests for ServerTransport's producer logic
 5.	Tests for SocketFace
 6.	Integration tests for SocketFace/ServerTransport/StreamTracker/Stream
-7.	Tests for HttpFace
+7.	Tests for HttpFace and ServerTransport's HTTP support
 
 Notes on understanding this test file:
 
@@ -3223,9 +3223,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 class HttpTests(_BaseHelpers, unittest.TestCase):
 	"""
-	TODO: don't compare the encoded frames in asserts; compare
-	decoded frames instead, which will make things simpler to decipher
-	when asserts fail.
+	Tests for L{HttpFace} and L{ServerTransport}'s HTTP support.
 	"""
 	# Inherit setUp, _resetStreamTracker
 
