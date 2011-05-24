@@ -435,7 +435,6 @@ class Stream(object):
 		assert not self.disconnected, self
 		self.disconnected = True
 		# .copy() because _transports shrinks as transports call Stream.transportOffline
-		# TODO: add explicit test that makes this .copy() necessary
 		for t in self._transports.copy():
 			t.writeReset(reasonString, False)
 		self._fireNotifications()
@@ -596,8 +595,6 @@ class Stream(object):
 			# is no longer relevant, so go back to resume.
 			if self._primaryPaused and self._producer and self._streamingProducer:
 				self._producer.resumeProducing()
-			# TODO low-priority: can we make a test that fails if
-			# this is indented right once?
 			self._primaryPaused = False
 			# TODO: test that transport calls transportOffline right after this happens.
 			self._primaryTransport.closeGently()
@@ -957,7 +954,6 @@ class ServerTransport(object):
 		'_lastSackSeenByClient', '_streamingResponse', '_needPaddingBytes',
 		'_wantsStrings', '_waitingFrames', '_clock', '_maxOpenDc',
 		'_maxInactivity', '_heartbeatDc')
-	# TODO: ~5 attributes above only for an HTTPSocketTransport, to save memory
 
 	maxLength = 1024*1024
 	noisy = True
@@ -1515,16 +1511,9 @@ class ServerTransport(object):
 				del self._initialBuffer
 				self._parser = decoders.Int32StringDecoder(
 					maxLength=self.maxLength)
+			# TODO: implement <int32-zlib/> but beware of zlib bombs
 
-			# TODO: <int32-zlib/> with <x/> alias
-			# TODO: if we support compression, make sure people can't
-			# zlib-bomb us with exploding strings:
-			#	use the zlib Decompression Object and
-			#	decompress(string[, max_length]), then check unconsumed_tail.
-			# Note: there's probably one excess memory-copy with the
-			#	unconsumed_tail stuff, but that's okay.
-
-			# TODO: raise or lower `512`, depending on how much we really need.
+			# We need far less than 512, but stay on the safe side.
 			elif len(self._initialBuffer) >= 512:
 				# Terminating, but we can't even send any type of frame.
 				self._terminating = True
