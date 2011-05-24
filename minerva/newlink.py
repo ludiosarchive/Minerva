@@ -151,11 +151,6 @@ class IMinervaFactory(Interface):
 
 
 
-class UnknownSubprotocol(Exception):
-	pass
-
-
-
 def _callStringsOrStringReceived(proto, strings):
 	stringsReceived = getattr(proto, 'stringsReceived', None)
 	if stringsReceived and callable(stringsReceived):
@@ -163,6 +158,11 @@ def _callStringsOrStringReceived(proto, strings):
 	else:
 		for s in strings:
 			proto.stringReceived(str(s))
+
+
+class UnknownSubprotocol(Exception):
+	pass
+
 
 
 class SuperProtocol(object):
