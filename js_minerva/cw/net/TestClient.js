@@ -202,13 +202,10 @@ cw.net.TestClient.RecordingProtocol.prototype.handleString_ = function(s) {
 	throw Error("override handleString_ on your RecordingProtocol");
 };
 
-cw.net.TestClient.RecordingProtocol.prototype.stringsReceived = function(strings) {
-	this.log.push(['stringsReceived', strings]);
-	this.gotStrings.push.apply(this.gotStrings, strings);
-	for(var i=0; i < strings.length; i++) {
-		var s = strings[i];
-		this.handleString_(s);
-	}
+cw.net.TestClient.RecordingProtocol.prototype.stringReceived = function(s) {
+	this.log.push(['stringReceived', s]);
+	this.gotStrings.push(s);
+	this.handleString_(s);
 };
 
 
@@ -501,18 +498,11 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 	},
 
 	function runAssertions_(self, stream, proto) {
-		// For every transport that is not XHR_LONGPOLL, the
-		// `stringsReceived` calls might be coalesced.  So we don't
-		// know if we'll get one or two `stringsReceived` calls.
-
-		var logWithoutStringsReceived =
-			goog.array.filter(proto.log, function(elem, idx, arr) {
-				return elem[0] != "stringsReceived";
-			});
-
 		self.assertEqual([
+			["stringReceived", "hello world"],
+			["stringReceived", "hello world"],
 			["streamReset", "done testing things", true]
-		], logWithoutStringsReceived);
+		], proto.log);
 
 		self.assertEqual(["hello world", "hello world"], proto.gotStrings);
 	},

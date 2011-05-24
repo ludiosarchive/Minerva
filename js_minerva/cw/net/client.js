@@ -319,20 +319,14 @@ cw.net.IMinervaProtocol.prototype.streamReset = function(reasonString, applicati
 };
 
 /**
- * Called whenever one or more strings are received.
+ * Called when a restricted string is received from the peer.
  *
  * You must *not* throw any error. Wrap your code in try/catch
- * if necessary. You may mutate the Array and keep references
- * to the Array and strings.
+ * if necessary.
  *
- * This is `stringsReceived` instead of `stringReceived` only as an
- * optimization for JScript. The number of strings you will receive at
- * once is subject to variances in TCP activity. Do *not* rely on being
- * called with a certain number of strings.
- *
- * @param {!Array.<string>} strings Array of received strings.
+ * @param {string} s The restricted string
  */
-cw.net.IMinervaProtocol.prototype.stringsReceived = function(strings) {
+cw.net.IMinervaProtocol.prototype.stringReceived = function(s) {
 
 };
 
@@ -1123,13 +1117,15 @@ cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, avoidCreat
 	var items = _[0];
 	var hitLimit = _[1];
 	if(items) {
-		this.protocol_.stringsReceived(items);
-		// Under stringsReceived, the state may have changed completely!
-		// The Stream may be RESETTING or disposed.
-	}
-
-	if(this.isResettingOrDisposed_()) {
-		return;
+		for(var i=0; i < items.length; i++) {
+			var s = items[i];
+			this.protocol_.stringReceived(s);
+			// Under stringReceived, the state may have changed completely!
+			// The Stream may be RESETTING or disposed.
+			if(this.isResettingOrDisposed_()) {
+				return;
+			}
+		}
 	}
 
 	// Because we received strings, we may need to send a SACK.
@@ -1148,10 +1144,10 @@ cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, avoidCreat
 		this.tryToSend_();
 	}
 
-	// We deliver the deliverable strings even if the receive window is overflowing,
-	// just in case the peer sent something useful.
-	// Note: Underneath the stringsReceived call (above), someone may have
-	// reset the Stream! This is why we check that we're not disconnected.
+	// Above, we deliver the deliverable strings even if the receive window
+	// is overflowing, just in case the peer sent something useful.
+	// Note: Underneath the stringReceived call (above), someone may have
+	// reset the Stream! This is why we check that we're not disconnected. // OBSOLETE comment?
 	if(hitLimit && this.state_ == cw.net.StreamState_.STARTED) {
 		// Minerva used to do an _internalReset here, but now it kills the transport.
 		transport.causedRwinOverflow_();
