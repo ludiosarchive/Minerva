@@ -3637,7 +3637,3 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 # TODO: test_pushProducerOnQueuedRequest
 	# verify that attaching a push producer to a queued Request does not result in multiple pauseProducing calls
-
-# Old TODO:
-#		# TODO: test that transportOffline is called when client causes this after transport attached to a Stream
-#		603: ('tk_invalid_frame_type_or_arguments', 0, 0),

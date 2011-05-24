@@ -590,4 +590,4 @@ class TransportKillFrameTests(unittest.TestCase):
 			lambda: TransportKillFrame.decode(sf(s)))
 
 
-# TODO: maybe explicit tests for decodeFrameFromClient, decodeFrameFromServer
+# TODO: add direct tests for decodeFrameFromClient, decodeFrameFromServer
