@@ -1,4 +1,14 @@
 """
+These tests has seven main sections:
+
+1.	Tests that test *just* Stream, using dummy transports.
+2.	Tests for StreamTracker
+3.	Tests for *just* ServerTransport, usually using a dummy Stream
+4.	Tests for ServerTransport's producer logic
+5.	Tests for SocketFace
+6.	Integration tests for SocketFace/ServerTransport/StreamTracker/Stream
+7.	Tests for HttpFace
+
 Notes on understanding this test file:
 
 -	Minerva's newlink was originally designed to transfer "boxes"
