@@ -1116,6 +1116,8 @@ cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, avoidCreat
 
 	var items = _[0];
 	var hitLimit = _[1];
+	// Don't look at hitLimit yet; deliver the deliverable strings even if
+	// the receive window is overflowing.
 	if(items) {
 		for(var i=0; i < items.length; i++) {
 			var s = items[i];
@@ -1144,12 +1146,12 @@ cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, avoidCreat
 		this.tryToSend_();
 	}
 
-	// Above, we deliver the deliverable strings even if the receive window
-	// is overflowing, just in case the peer sent something useful.
-	// Note: Underneath the stringReceived call (above), someone may have
-	// reset the Stream! This is why we check that we're not disconnected. // OBSOLETE comment?
-	if(hitLimit && this.state_ == cw.net.StreamState_.STARTED) {
-		// Minerva used to do an _internalReset here, but now it kills the transport.
+	// Possibly unnecessary at this writing.
+	if(this.isResettingOrDisposed_()) {
+		return;
+	}
+
+	if(hitLimit) {
 		transport.causedRwinOverflow_();
 	}
 };
