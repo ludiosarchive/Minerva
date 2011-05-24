@@ -54,8 +54,9 @@ from webmagic.fakes import (
 )
 
 from minerva.mocks import (
-	FrameDecodingTcpTransport, MockStream, MockMinervaProtocol,
-	MockMinervaProtocolFactory, MockObserver, BrokenOnPurposeError,
+	FrameDecodingTcpTransport, MockStream, MockMinervaStringsProtocol,
+	MockMinervaStringsProtocolFactory, MockMinervaStringProtocol,
+	MockMinervaStringProtocolFactory, MockObserver, BrokenOnPurposeError,
 	BrokenMockObserver, DummyStreamTracker, DummyFirewall, DummyTCPTransport,
 	DummySocketLikeTransport, strictGetNewFrames,
 )
@@ -169,7 +170,7 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_notifyFinishActuallyCalled(self):
-		factory = MockMinervaProtocolFactory()
+		factory = MockMinervaStringsProtocolFactory()
 		s = Stream(self._clock, 'some fake id', factory)
 		# We need to attach a transport to the Stream, so that a MinervaProtocol
 		# is instantiated. This is necessary because s.reset below is only called by
@@ -194,7 +195,7 @@ class StreamTests(unittest.TestCase):
 		create a MinervaProtocol instance. When the first transport
 		attaches, Stream calls the `streamStarted` method on the MinervaProtocol.
 		"""
-		factory = MockMinervaProtocolFactory()
+		factory = MockMinervaStringsProtocolFactory()
 		s = Stream(self._clock, 'some fake id', factory)
 		self.assertEqual(0, len(factory.instances))
 
@@ -210,7 +211,7 @@ class StreamTests(unittest.TestCase):
 		Test that when Stream.stringsReceived is called,
 		the StreamProtocol instance actually gets the strings.
 		"""
-		factory = MockMinervaProtocolFactory()
+		factory = MockMinervaStringsProtocolFactory()
 		s = Stream(self._clock, 'some fake id', factory)
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
@@ -223,13 +224,32 @@ class StreamTests(unittest.TestCase):
 		self.assertEqual([['stringsReceived', [sf('box0'), sf('box1')]]], i.getNew())
 
 
+	def test_stringReceived(self):
+		"""
+		Test that when Stream.stringsReceived is called,
+		the StreamProtocol instance actually gets the strings
+		(when it has a stringReceived method but no stringsReceived).
+		"""
+		factory = MockMinervaStringProtocolFactory()
+		s = Stream(self._clock, 'some fake id', factory)
+		t = DummySocketLikeTransport()
+		s.transportOnline(t, False, None)
+
+		s.stringsReceived(t, [(1, sf('box1'))])
+		i = list(factory.instances)[0]
+		self.assertEqual([['streamStarted', s]], i.getNew())
+
+		s.stringsReceived(t, [(0, sf('box0'))])
+		self.assertEqual([['stringReceived', 'box0'], ['stringReceived', 'box1']], i.getNew())
+
+
 	def test_exhaustedReceiveWindowTooManyStrings(self):
 		"""
 		If too many strings are stuck in Incoming, the transport that received
 		"the last straw" is killed with C{tk_rwin_overflow}. Stream._incoming
 		keeps only 50 of them.
 		"""
-		factory = MockMinervaProtocolFactory()
+		factory = MockMinervaStringsProtocolFactory()
 		s = Stream(self._clock, 'some fake id', factory)
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
@@ -258,7 +278,7 @@ class StreamTests(unittest.TestCase):
 		)
 		for notManyStrings, expectedKept in cases:
 			##print len(notManyStrings), expectedKept
-			factory = MockMinervaProtocolFactory()
+			factory = MockMinervaStringsProtocolFactory()
 			s = Stream(self._clock, 'some fake id', factory)
 			t = DummySocketLikeTransport()
 			s.transportOnline(t, False, None)
@@ -282,7 +302,7 @@ class StreamTests(unittest.TestCase):
 		# Essentially, it doesn't matter whether the transport claims None or an invalid
 		# transport number; they're both treated as `None`.
 		for succeedsTransportArgFor2ndTransport in (None, 20):
-			s = Stream(self._clock, 'some fake id', MockMinervaProtocolFactory())
+			s = Stream(self._clock, 'some fake id', MockMinervaStringsProtocolFactory())
 			t1 = DummySocketLikeTransport()
 			t1.transportNumber = 30
 			s.sendStrings(['box0', 'box1'])
@@ -321,7 +341,7 @@ class StreamTests(unittest.TestCase):
 		and two new boxes are supposed to be sent,
 		Stream calls transport's writeStrings but tells it to skip over boxes 0 through 4.
 		"""
-		s = Stream(self._clock, 'some fake id', MockMinervaProtocolFactory())
+		s = Stream(self._clock, 'some fake id', MockMinervaStringsProtocolFactory())
 		t1 = DummySocketLikeTransport()
 		t1.transportNumber = 30
 		s.sendStrings(['box0', 'box1', 'box2', 'box3', 'box4'])
@@ -364,7 +384,7 @@ class StreamTests(unittest.TestCase):
 		"""
 		for connectIrrelevantTransport in (True, False):
 
-			s = Stream(self._clock, 'some fake id', MockMinervaProtocolFactory())
+			s = Stream(self._clock, 'some fake id', MockMinervaStringsProtocolFactory())
 
 			if connectIrrelevantTransport:
 				tIrrelevant = DummySocketLikeTransport()
@@ -379,7 +399,7 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_getSACK(self):
-		s = Stream(self._clock, 'some fake id', MockMinervaProtocolFactory())
+		s = Stream(self._clock, 'some fake id', MockMinervaStringsProtocolFactory())
 
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
@@ -397,7 +417,7 @@ class StreamTests(unittest.TestCase):
 		"""
 		After the first transport is attached to a Stream, it is no longer a virgin.
 		"""
-		s = Stream(self._clock, 'some fake id', MockMinervaProtocolFactory())
+		s = Stream(self._clock, 'some fake id', MockMinervaStringsProtocolFactory())
 
 		self.assertIdentical(True, s. virgin)
 
@@ -416,14 +436,14 @@ class StreamTests(unittest.TestCase):
 
 	def test_transportOnline(self):
 		clock = task.Clock()
-		s = Stream(clock, 'some fake id', MockMinervaProtocolFactory())
+		s = Stream(clock, 'some fake id', MockMinervaStringsProtocolFactory())
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 
 
 	def test_transportOnlineOffline(self):
 		clock = task.Clock()
-		s = Stream(clock, 'some fake id', MockMinervaProtocolFactory())
+		s = Stream(clock, 'some fake id', MockMinervaStringsProtocolFactory())
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 		s.transportOffline(t)
@@ -435,7 +455,7 @@ class StreamTests(unittest.TestCase):
 		L{RuntimeError}
 		"""
 		clock = task.Clock()
-		s = Stream(clock, 'some fake id', MockMinervaProtocolFactory())
+		s = Stream(clock, 'some fake id', MockMinervaStringsProtocolFactory())
 		t = DummySocketLikeTransport()
 		self.assertRaises(RuntimeError, lambda: s.transportOffline(t))
 
@@ -443,7 +463,7 @@ class StreamTests(unittest.TestCase):
 
 
 	def _makeStuff(self):
-		factory = MockMinervaProtocolFactory()
+		factory = MockMinervaStringsProtocolFactory()
 		s = Stream(self._clock, 'some fake id', factory)
 		t1 = DummySocketLikeTransport()
 
@@ -1138,7 +1158,7 @@ class ServerTransportModeSelectionTests(unittest.TestCase):
 	"""
 	def setUp(self):
 		self._clock = task.Clock()
-		self.protocolFactory = MockMinervaProtocolFactory()
+		self.protocolFactory = MockMinervaStringsProtocolFactory()
 		self.streamTracker = DummyStreamTracker(self._clock, self.protocolFactory, {})
 
 
@@ -1271,7 +1291,7 @@ class TransportIsHttpTests(unittest.TestCase):
 
 class _BaseHelpers(object):
 
-	def _resetStreamTracker(self, protocolFactoryClass=MockMinervaProtocolFactory, realObjects=False):
+	def _resetStreamTracker(self, protocolFactoryClass=MockMinervaStringsProtocolFactory, realObjects=False):
 		self._clock = task.Clock()
 		self.protocolFactory = protocolFactoryClass()
 		if realObjects:
@@ -2352,7 +2372,7 @@ class TransportProducerTests(unittest.TestCase):
 		reactor = FakeReactor()
 		clock = task.Clock()
 
-		self.proto = MockMinervaProtocol()
+		self.proto = MockMinervaStringsProtocol()
 		self.tracker = StreamTracker(reactor, clock, self.proto)
 
 		factory = SocketFace(clock, self.tracker, DummyFirewall(clock, rejectAll=False), None)
@@ -2902,7 +2922,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		If Stream.sendStrings and Stream.reset are called underneath a call
 		to protocol's streamStarted, everything works as usual.
 		"""
-		class MyFactory(MockMinervaProtocolFactory):
+		class MyFactory(MockMinervaStringsProtocolFactory):
 			def buildProtocol(self):
 				obj = self.protocol(callFrom=('streamStarted',), callWhat=('sendStrings', 'reset'))
 				obj.factory = self
@@ -2943,7 +2963,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		If Stream.sendStrings is called underneath a call to protocol's
 		streamStarted, everything works as usual.
 		"""
-		class MyFactory(MockMinervaProtocolFactory):
+		class MyFactory(MockMinervaStringsProtocolFactory):
 			def buildProtocol(self):
 				obj = self.protocol(callFrom=('streamStarted',), callWhat=('sendStrings',))
 				obj.factory = self
@@ -2990,7 +3010,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		If Stream.sendStrings and Stream.reset are called underneath a call
 		to protocol's stringsReceived, everything works as usual.
 		"""
-		class MyFactory(MockMinervaProtocolFactory):
+		class MyFactory(MockMinervaStringsProtocolFactory):
 			def buildProtocol(self):
 				obj = self.protocol(callFrom=('stringsReceived',), callWhat=('sendStrings', 'reset'))
 				obj.factory = self
@@ -3035,7 +3055,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		If Stream.sendStrings is called underneath a call to protocol's
 		stringsReceived, everything works as usual.
 		"""
-		class MyFactory(MockMinervaProtocolFactory):
+		class MyFactory(MockMinervaStringsProtocolFactory):
 			def buildProtocol(self):
 				obj = self.protocol(callFrom=('stringsReceived',), callWhat=('sendStrings',))
 				obj.factory = self
@@ -3093,7 +3113,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		and also sends a reset frame, the C2S boxes are sack'ed before
 		the transport is terminated.
 		"""
-		class MyFactory(MockMinervaProtocolFactory):
+		class MyFactory(MockMinervaStringsProtocolFactory):
 			def buildProtocol(self):
 				obj = self.protocol(callFrom=('stringsReceived',), callWhat=('reset',))
 				obj.factory = self
@@ -3583,7 +3603,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		but tests a real (but short-lived) regression in newlink's `cbAuthOkay`,
 		where `_terminating` was not checked before calling `closeGently`.
 		"""
-		class MyFactory(MockMinervaProtocolFactory):
+		class MyFactory(MockMinervaStringsProtocolFactory):
 			def buildProtocol(self):
 				obj = self.protocol(callFrom=('stringsReceived',), callWhat=('reset',))
 				obj.factory = self

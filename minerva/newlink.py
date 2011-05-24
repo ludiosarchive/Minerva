@@ -95,8 +95,20 @@ class IMinervaProtocol(Interface):
 		"""
 
 
+	def stringReceived(s):
+		"""
+		@type s: C{str}
+		@param s: A restricted string from the peer.
+		"""
+	del stringReceived # Because it's optional.  TODO: Interface subclass?
+
+
 	def stringsReceived(strings):
 		"""
+		NOTE: Implement `stringReceived` instead.  It's safer and simpler
+		to use.  If this method is implemented, `stringReceived` (singular)
+		will not be called.
+
 		Called whenever one or more strings are received.
 
 		You must *not* raise any exception. Wrap your code in try/except
@@ -113,6 +125,7 @@ class IMinervaProtocol(Interface):
 			in L{StringFragment} form because they may consume more
 			memory than you expect.
 		"""
+	del stringsReceived # Because it's optional.  TODO: Interface subclass?
 
 
 
@@ -183,6 +196,14 @@ class UnknownSubprotocol(Exception):
 
 
 
+def _callStringsOrStringReceived(proto, strings):
+	if hasattr(proto, 'stringsReceived'):
+		proto.stringsReceived(strings)
+	else:
+		for s in strings:
+			proto.stringReceived(str(s))
+
+
 class SuperProtocol(object):
 	"""
 	An implementation of L{IMinervaProtocol} that creates and proxies
@@ -218,7 +239,7 @@ class SuperProtocol(object):
 
 		if self._childProtocol is not None:
 			self._stringsReceived += len(strings)
-			self._childProtocol.stringsReceived(strings)
+			_callStringsOrStringReceived(self._childProtocol, strings)
 			return
 
 		for s in strings:
@@ -232,7 +253,7 @@ class SuperProtocol(object):
 				except UnknownSubprotocol:
 					self.stream.reset("unknown subprotocol")
 			elif self._childProtocol is not None:
-				self._childProtocol.stringsReceived([s])
+				_callStringsOrStringReceived(self._childProtocol, [s])
 			else:
 				self.stream.reset(
 					"no subprotocol; send a subprotocol:... string first")
@@ -483,7 +504,7 @@ class Stream(object):
 		items, hitLimit = self._incoming.give(
 			pairs, self.maxUndeliveredStrings, self.maxUndeliveredBytes)
 		if items:
-			self._protocol.stringsReceived(items)
+			_callStringsOrStringReceived(self._protocol, items)
 		# We deliver the deliverable strings even if the receive window is overflowing,
 		# just in case the peer sent something useful.
 		# Note: Underneath the stringsReceived call (above), someone may have

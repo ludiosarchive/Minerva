@@ -142,7 +142,7 @@ class MockStream(GetNewMixin):
 
 
 
-class MockMinervaProtocol(GetNewMixin):
+class _MockMinervaProtocol(GetNewMixin):
 	implements(IMinervaProtocol)
 
 	def __init__(self, callFrom=(), callWhat=()):
@@ -171,6 +171,9 @@ class MockMinervaProtocol(GetNewMixin):
 		self.log.append(['streamReset', reasonString, applicationLevel])
 
 
+
+class MockMinervaStringsProtocol(_MockMinervaProtocol):
+
 	def stringsReceived(self, strings):
 		self.log.append(['stringsReceived', strings])
 		if 'stringsReceived' in self._callFrom:
@@ -178,10 +181,35 @@ class MockMinervaProtocol(GetNewMixin):
 
 
 
-class MockMinervaProtocolFactory(object):
+class MockMinervaStringProtocol(_MockMinervaProtocol):
+
+	def stringReceived(self, s):
+		self.log.append(['stringReceived', s])
+		if 'stringReceived' in self._callFrom:
+			self._callStuff()
+
+
+
+class MockMinervaStringsProtocolFactory(object):
 	implements(IMinervaFactory)
 
-	protocol = MockMinervaProtocol
+	protocol = MockMinervaStringsProtocol
+
+	def __init__(self):
+		self.instances = set()
+
+
+	def buildProtocol(self):
+		obj = self.protocol()
+		obj.factory = self
+		return obj
+
+
+
+class MockMinervaStringProtocolFactory(object):
+	implements(IMinervaFactory)
+
+	protocol = MockMinervaStringProtocol
 
 	def __init__(self):
 		self.instances = set()
