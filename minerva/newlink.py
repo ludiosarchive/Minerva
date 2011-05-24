@@ -151,25 +151,6 @@ class IMinervaFactory(Interface):
 
 
 
-class BasicMinervaFactory(object):
-	"""
-	A "base" implementation of L{IMinervaFactory} that you don't
-	have to subclass, but can.
-
-	Override the C{protocol} attribute.
-	"""
-	implements(IMinervaFactory)
-	__slots__ = ()
-
-	protocol = None
-
-	def buildProtocol(self):
-		obj = self.protocol()
-		obj.factory = self
-		return obj
-
-
-
 class UnknownSubprotocol(Exception):
 	pass
 

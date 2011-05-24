@@ -2,7 +2,7 @@ from twisted.python import log
 from twisted.internet import reactor
 from twisted.web import resource, server
 
-from minerva.newlink import BasicMinervaFactory, StreamTracker
+from minerva.newlink import StreamTracker
 from minerva.newlink import HttpFace, SocketFace
 
 from minerva.website import (
@@ -42,7 +42,7 @@ class DemoProtocol(object):
 
 
 
-class DemoFactory(BasicMinervaFactory):
+class DemoFactory(object):
 	protocol = DemoProtocol
 
 	def __init__(self, clock):

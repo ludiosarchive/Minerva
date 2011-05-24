@@ -4,8 +4,7 @@ import simplejson
 from twisted.python import log
 from twisted.python.filepath import FilePath
 
-from minerva.newlink import (
-	BasicMinervaFactory, StreamTracker, HttpFace, SocketFace)
+from minerva.newlink import StreamTracker, HttpFace, SocketFace
 
 from minerva.website import (
 	CsrfTransportFirewall, NoopTransportFirewall, CsrfStopper, XDRFrame,
@@ -243,8 +242,7 @@ class DemoProtocol(object):
 
 
 
-class DemoFactory(BasicMinervaFactory):
-	protocol = DemoProtocol
+class DemoFactory(object):
 
 	def __init__(self, clock):
 		self._clock = clock
@@ -252,7 +250,7 @@ class DemoFactory(BasicMinervaFactory):
 
 
 	def buildProtocol(self):
-		stream = self.protocol(self._clock)
+		stream = DemoProtocol(self._clock)
 		stream.factory = self
 		return stream
 
