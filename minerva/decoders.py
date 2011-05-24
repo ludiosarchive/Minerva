@@ -16,11 +16,17 @@ _postImportVars = vars().keys()
 
 
 class ParseError(Exception):
-	"""The incoming data is not in a valid format format."""
+	"""
+	The incoming data is not in a valid format format.
+	"""
+
 
 
 class StringTooLongError(Exception):
-	"""The string is too long to encode."""
+	"""
+	The string is too long to encode.
+	"""
+
 
 
 # possible result codes for the (frames, result_code) return values
