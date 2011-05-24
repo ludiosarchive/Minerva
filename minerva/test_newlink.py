@@ -25,8 +25,7 @@ from strfrag import StringFragment
 from minerva.window import SACK, Queue
 from minerva.test_decoders import diceString
 
-from minerva.decoders import (
-	BencodeStringDecoder, Int32StringDecoder, DelimitedStringDecoder)
+from minerva.decoders import Int32StringDecoder, DelimitedStringDecoder
 
 from minerva.newlink import (
 	Stream, StreamTracker, NoSuchStream,
@@ -1194,30 +1193,6 @@ class ServerTransportModeSelectionTests(unittest.TestCase):
 		return toSend
 
 
-	def test_modeBencode(self):
-		def resetParser():
-			self.parser = BencodeStringDecoder(maxLength=1024*1024)
-
-		for packetSize in range(1, 20):
-			self._resetConnection()
-			resetParser()
-
-			# Send some helloData that errors with tk_stream_attach_failure. We do this just so
-			# we know we're getting frames correctly. This error is a good one to test for, unlike
-			# any "frame corruption" error, to distinguish things properly.
-			frame0 = _makeHelloFrame(
-				dict(streamId='\x00'*26, requestNewStream=DeleteProperty))
-			toSend = '<bencode/>\n' + self._serializeFrames([frame0])
-
-			for s in diceString(toSend, packetSize):
-				self.transport.dataReceived(s)
-			frames, code = strictGetNewFrames(self.parser, self.tcpTransport.value())
-			# f instead of str(f) because BencodeStringDecoder delivers C{str}s
-			decodedFrames = decodeFramesFromServer(frames)
-			self.assertEqual([TransportKillFrame(tk_stream_attach_failure), YouCloseItFrame()], decodedFrames)
-
-
-	# copy/paste from test_modeBencode
 	def test_modeInt32(self):
 		def resetParser():
 			self.parser = Int32StringDecoder(maxLength=1024*1024)
@@ -1547,7 +1522,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 
 		This test was designed for Bencode, but it works for Int32 as well.
 		"""
-		# TODO: no early detection of "too long" for WebSocket or HTTP. Only run for Bencode and int32?
+		# TODO: no early detection of "too long" for WebSocket or HTTP. Only run for Int32?
 		transport = self._makeTransport()
 		transport.dataReceived('%d:' % (1024*1024 + 1,))
 		self.assertEqual([TransportKillFrame(tk_frame_corruption), YouCloseItFrame()], transport.getNew())
@@ -2338,17 +2313,6 @@ class _BaseServerTransportTests(_BaseHelpers):
 
 		self._clock.advance(2)
 		self.assertEqual([], transport.getNew())
-
-
-
-class ServerTransportTestsWithBencode(_BaseServerTransportTests, unittest.TestCase):
-
-	def _makeParser(self):
-		return BencodeStringDecoder(maxLength=1024*1024)
-
-
-	def _getModeInitializer(self):
-		return '<bencode/>\n'
 
 
 

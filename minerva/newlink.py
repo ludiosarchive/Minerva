@@ -917,8 +917,7 @@ def _sanitizeHelloFrame(helloFrame, isHttp):
 
 # Acceptable protocol modes for ServerTransport to be in.
 # POLICYFILE and INT32 are for Flash Socket.
-# BENCODE is not used by real clients, only test_newlink.py
-UNKNOWN, POLICYFILE, INT32, BENCODE, HTTP = range(5)
+UNKNOWN, POLICYFILE, INT32, HTTP = range(4)
 
 # HTTP_RESPONSE_PREAMBLE is sent as the first frame over HTTP transports.
 # Note that we have protection against all CSRF attacks with
@@ -1497,13 +1496,6 @@ class ServerTransport(object):
 				# Don't use loseWriteConnection because the client doesn't
 				# send anything else over this connection anyway.
 				return
-
-			elif self._initialBuffer.startswith('<bencode/>\n'):
-				self._mode = BENCODE
-				frameData = self._initialBuffer[len('<bencode/>\n'):]
-				del self._initialBuffer
-				self._parser = decoders.BencodeStringDecoder(
-					maxLength=self.maxLength)
 
 			elif self._initialBuffer.startswith('<int32/>\n'):
 				self._mode = INT32
