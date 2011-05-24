@@ -31,7 +31,7 @@ from minerva.decoders import (
 from minerva.newlink import (
 	Stream, StreamTracker, NoSuchStream,
 	StreamAlreadyExists, ISimpleConsumer, IMinervaProtocol,
-	IMinervaFactory, BasicMinervaProtocol, BasicMinervaFactory,
+	IMinervaFactory, BasicMinervaFactory,
 	IMinervaTransport, ServerTransport, SocketFace, HttpFace,
 	HTTP_RESPONSE_PREAMBLE,
 )
@@ -2496,15 +2496,6 @@ class SocketFaceTests(unittest.TestCase):
 
 
 
-class BasicMinervaProtocolTests(unittest.TestCase):
-	"""
-	Tests for {newlink.BasicMinervaProtocol}
-	"""
-	def test_implements(self):
-		verify.verifyObject(IMinervaProtocol, BasicMinervaProtocol())
-
-
-
 class BasicMinervaFactoryTests(unittest.TestCase):
 	"""
 	Tests for {newlink.BasicMinervaFactory}
@@ -2514,12 +2505,15 @@ class BasicMinervaFactoryTests(unittest.TestCase):
 
 
 	def test_factory(self):
+		class Dummy(object):
+			pass
+
 		class WorkingBasicMinervaFactory(BasicMinervaFactory):
-			protocol = BasicMinervaProtocol
+			protocol = Dummy
 
 		f = WorkingBasicMinervaFactory()
 		proto = f.buildProtocol()
-		self.assertTrue(isinstance(proto, BasicMinervaProtocol))
+		self.assertTrue(isinstance(proto, Dummy))
 
 
 	def test_unmodifiedFactoryIsNotCallable(self):

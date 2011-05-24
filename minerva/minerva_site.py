@@ -5,7 +5,7 @@ from twisted.python import log
 from twisted.python.filepath import FilePath
 
 from minerva.newlink import (
-	BasicMinervaProtocol, BasicMinervaFactory, StreamTracker, HttpFace, SocketFace)
+	BasicMinervaFactory, StreamTracker, HttpFace, SocketFace)
 
 from minerva.website import (
 	CsrfTransportFirewall, NoopTransportFirewall, CsrfStopper, XDRFrame,
@@ -147,17 +147,22 @@ def getRestrictedStringAlphabet():
 	return "".join(chr(n) for n in range(0x20, 0x7E + 1))
 
 
-class DemoProtocol(BasicMinervaProtocol):
+class DemoProtocol(object):
 
 	counter = 0
 
 	def __init__(self, clock):
 		self._clock = clock
+		self.stream = None
 		self._reset = False
 		self._chatting = False
 		self._id = DemoProtocol.counter
 		self.chatting = False
 		DemoProtocol.counter += 1
+
+
+	def streamStarted(self, stream):
+		self.stream = stream
 
 
 	def _sendDemo(self, iteration):

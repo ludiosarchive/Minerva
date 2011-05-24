@@ -129,27 +129,6 @@ class IMinervaProtocol(Interface):
 
 
 
-class BasicMinervaProtocol(object):
-	"""
-	A "base" implementation of L{IMinervaProtocol} that you don't
-	have to subclass, but can.
-	"""
-	implements(IMinervaProtocol)
-	__slots__ = ('stream', 'factory')
-
-	def streamStarted(self, stream):
-		self.stream = stream
-
-
-	def streamReset(self, reasonString, applicationLevel):
-		del self.stream
-
-
-	def stringsReceived(self, strings):
-		pass
-
-
-
 class IMinervaFactory(Interface):
 	"""
 	Interface for L{MinervaProtocol} factories.
@@ -681,10 +660,7 @@ class Stream(object):
 	# Stream.
 
 	# The only reason we have this is because not all MinervaProtocols will
-	# be L{IProducer}s (some will be very simple).  Why not just implement
-	# pause/resume/stopProducing in BasicMinervaProtocol with ': pass'
-	# methods?  Because the protocol wouldn't change its behavior.  That
-	# doesn't break anything, but it seems wrong.
+	# be L{IProducer}s (some will be very simple).
 	def registerProducer(self, producer, streaming):
 		"""
 		Register to receive data from a producer that creates S2C strings.
