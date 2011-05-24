@@ -1530,7 +1530,7 @@ class ServerTransport(object):
 		if code == decoders.OK:
 			##print out
 			self._framesReceived(out)
-		elif code in (decoders.TOO_LONG, decoders.FRAME_CORRUPTION):
+		elif code == decoders.TOO_LONG:
 			self._closeWith(tk_frame_corruption)
 		else:
 			raise RuntimeError("Got unknown code from parser %r: %r" % (

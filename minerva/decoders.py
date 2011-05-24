@@ -24,7 +24,7 @@ class StringTooLongError(Exception):
 
 
 # possible result codes for the (frames, result_code) return values
-OK, TOO_LONG, FRAME_CORRUPTION, INTRAFRAME_CORRUPTION = range(4)
+OK, TOO_LONG = range(2)
 
 
 def _raise(obj):

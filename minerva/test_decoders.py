@@ -100,7 +100,6 @@ class CommonTests(object):
 		Assert that illegal strings return the correct error code
 		even when they arrive in variable packet sizes.
 		"""
-
 		def sendData(a, sequence, packetSize):
 			got = []
 			for s in diceString(sequence, packetSize):
@@ -112,9 +111,7 @@ class CommonTests(object):
 			return got, code
 
 		for sequences, expectedCode in (
-			(self.corruptedSequences, decoders.FRAME_CORRUPTION),
 			(self.tooLongSequences, decoders.TOO_LONG),
-			(self.jsonCorruptedSequences, decoders.INTRAFRAME_CORRUPTION),
 		):
 			##print sequences
 			for sequence in sequences:
@@ -130,10 +127,6 @@ class CommonTests(object):
 
 class DelimitedStringDecoderTests(CommonTests, unittest.TestCase):
 	receiver = decoders.DelimitedStringDecoder
-
-	corruptedSequences = [] # No such thing for this decoder
-
-	jsonCorruptedSequences = []
 
 	# For maxLength == 50
 	tooLongSequences = [
@@ -191,8 +184,6 @@ class Int32StringDecoderTests(CommonTests, unittest.TestCase):
 	strings = ["", "a", "b" * 16, "c" * 17, "d" * 255, "e" * 256]
 	partialStrings = ["\x00\x00\x00\xffhello there"]
 	tooLongSequences = ["\xff\x00\x00\x00XX", "\xff\xff\xff\xffXX"]
-	corruptedSequences = [] # No such thing for this decoder
-	jsonCorruptedSequences = []
 
 	def test_receive(self):
 		"""
