@@ -111,7 +111,8 @@ cw.net.HttpEndpoint = function(primaryUrl, primaryWindow, secondaryUrl, secondar
 
 	// Doing XHR with relative URLs is broken in some older browsers
 	// (if I recall correctly, in Safari when XHR is done from iframes).
-	// So, disallow relative URLs.
+	// Also, some logic in client.js checks for "https://".  So, disallow
+	// relative URLs.
 	this.ensureAbsoluteURLs_();
 
 	this.ensureSameOrigin_();

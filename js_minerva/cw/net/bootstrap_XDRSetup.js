@@ -20,8 +20,15 @@ goog.provide("cw.net.bootstrap_XDRSetup");
 		throw Error("__XDRSetup not an object?");
 	}
 
-	// Setting document.domain is serious business; don't overlook it.
-	document.domain = __XDRSetup['domain'];
+	var useSub = __XDRSetup['domain'] != null;
+	// Expose useSub for other bootstrap-related scripts
+	__XDRSetup['use_subdomains'] = useSub;
+
+	if(useSub) {
+		// Setting document.domain is serious business; it may affect things
+		// you don't expect to be affected.
+		document.domain = __XDRSetup['domain'];
+	}
 
 	// Copy/paste of cw.string.getCleanRandomString
 	var getCleanRandomString = function() {
@@ -37,12 +44,14 @@ goog.provide("cw.net.bootstrap_XDRSetup");
 	// overrides .push if it needs to wait for more iframes.
 	__XDRSetup['done'] = [];
 
+	var loc = window.location;
+
 	// We expect location.port to be an empty string if no :port is in
 	// the URL.  If there is an explicit port, we need to load the iframe
 	// with that port, even if it's the default port (80 or 443), because
 	// a mismatch of "explicit port" and "implicit port" may prevent
 	// cross-subdomain interaction from working in some browsers.
-	var portString = window.location.port ? ':' + window.location.port : "";
+	var portString = loc.port ? ':' + loc.port : "";
 
 	// Reload/F5 in Firefox 3+ has a long-standing bug with iframes: the new
 	// iframe src= in the DOM structure is ignored, and Firefox makes a
@@ -56,9 +65,21 @@ goog.provide("cw.net.bootstrap_XDRSetup");
 	// they don't match, iframe redirects itself to the correct xdrurl.
 	__XDRSetup['id1'] = getCleanRandomString() + getCleanRandomString();
 	__XDRSetup['id2'] = getCleanRandomString() + getCleanRandomString();
-	__XDRSetup['suffix'] = '.' + __XDRSetup['domain'] + portString + '/';
-	__XDRSetup['baseurl1'] = window.location.protocol + '//' + __XDRSetup['sub1'] + __XDRSetup['suffix'];
-	__XDRSetup['baseurl2'] = window.location.protocol + '//' + __XDRSetup['sub2'] + __XDRSetup['suffix'];
+	if(useSub) {
+		var host1 = __XDRSetup['sub1'] + '.' + __XDRSetup['domain'] + portString;
+		var host2 = __XDRSetup['sub2'] + '.' + __XDRSetup['domain'] + portString;
+	} else {
+		var host1 = loc.host;
+		var host2 = loc.host;
+	}
+
+	// Expose host names for other bootstrap-related scripts
+	__XDRSetup['host1'] = host1;
+	__XDRSetup['host2'] = host2;
+
+	__XDRSetup['baseurl1'] = loc.protocol + '//' + host1 + '/';
+	__XDRSetup['baseurl2'] = loc.protocol + '//' + host2 + '/';
+
 	var resource = __XDRSetup['dev'] ? 'xdrframe_dev/' : 'xdrframe/';
 	// Because our subdomains are random, we don't need to append
 	// ?cachebreakers to the URLs.

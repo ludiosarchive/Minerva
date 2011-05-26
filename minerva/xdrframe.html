@@ -10,7 +10,10 @@
 	code in the iframe.
 #}
 <script>
-	document.domain = {{ htmldumps(domain) }};
+	var domain = {{ htmldumps(domain) }};
+	if(domain) {
+		document.domain = domain;
+	}
 	var parentUrlSplit = parent.location.href.split("/");
 	while(parentUrlSplit.length != 3) {
 		parentUrlSplit.pop();

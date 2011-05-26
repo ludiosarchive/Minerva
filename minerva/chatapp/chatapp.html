@@ -110,8 +110,13 @@ goog.require('cw.string');
 // prevent an HTTP pipeline stall.  Note that this doesn't actually help
 // in any known browser.  Opera for some reason waits for this image
 // to load, but not because of pipelining.
-document.write('<img src="//wait-' + __XDRSetup.sub1 + __XDRSetup.suffix +
-	'wait_resource/?wait=4&zx=' + Math.random() + '" width=16 height=16 border=2>');
+if(__XDRSetup['use_subdomains']) {
+	document.write('<img src="//wait-' + __XDRSetup['host1'] +
+		'/wait_resource/?wait=4&zx=' + Math.random() + '" width=16 height=16 border=2>');
+} else {
+	document.write('<img src="/wait_resource/?wait=4&zx=' + Math.random() +
+		'" width=16 height=16 border=2>');
+}
 </script>
 
 <script>
