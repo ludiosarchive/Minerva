@@ -7,7 +7,6 @@ See minerva.minerva_site for an idea of how to use the classes below,
 especially `makeMinervaAndHttp` and `DemoProtocol`.
 """
 
-import re
 import sys
 
 from zope.interface import Interface, Attribute, implements
@@ -261,8 +260,6 @@ class SuperFactory(object):
 
 
 
-RESTRICTED_STRING_RE = re.compile(r"^([ -~]*)$")
-
 # There is no factory for customizing the construction of L{Stream}s,
 # just like there is no factory for customizing the construction of
 # L{twisted.internet.tcp.Server}s in Twisted.
@@ -375,7 +372,7 @@ class Stream(object):
 			for s in strings:
 				if isinstance(s, unicode):
 					raise TypeError("String %r must be a str, not unicode" % (s,))
-				if not RESTRICTED_STRING_RE.match(s):
+				if not isRestrictedString(s):
 					raise ValueError("String %r contains illegal characters.  "
 						"Only 0x20 (SPACE) - 0x7E (~) is allowed.  "
 						"Consider using JSON or Base64 encoding." % (s,))
@@ -1437,7 +1434,7 @@ class ServerTransport(object):
 				# Make sure the string only contains bytes in the restricted
 				# string range.  In the future, we could support dynamic
 				# switching to strings that allow a wider byte/char range.
-				if not isRestrictedString(frame.string):
+				if not isRestrictedString(frame.string.as_buffer()):
 					self._closeWith(tk_invalid_frame_type_or_arguments)
 					break
 

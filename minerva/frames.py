@@ -4,6 +4,7 @@ it is suitable for both both Minerva server, and a Python Minerva client (not
 yet written).
 """
 
+import re
 import sys
 import operator
 from simplejson import dumps
@@ -552,17 +553,17 @@ class YouCloseItFrame(tuple):
 
 
 
+RESTRICTED_STRING_RE = re.compile(r"\A[ -~]*\Z")
+
 def isRestrictedString(string):
 	"""
 	Return C{True} if C{str} C{string}'s bytes are within inclusive
 	range 0x20 " " - 0x7E "~"
 
-	C{string} is assumed to be a C{str}.
+	@param string: The string to validate.
+	@type string: C{str} or C{buffer}
 	"""
-	for c in string:
-		if not ' ' <= c <= '~':
-			return False
-	return True
+	return not not RESTRICTED_STRING_RE.match(string)
 
 
 class ResetFrame(tuple):

@@ -589,8 +589,9 @@ class StreamTests(unittest.TestCase):
 		# Test the boundaries
 		s.sendStrings([' ~'])
 
-		self.assertRaises(ValueError, lambda: s.sendStrings(['okay\t']))
-		self.assertRaises(TypeError, lambda: s.sendStrings([u'okay\t']))
+		self.assertRaises(ValueError, lambda: s.sendStrings(['bad\t']))
+		self.assertRaises(ValueError, lambda: s.sendStrings(['bad\n']))
+		self.assertRaises(TypeError, lambda: s.sendStrings([u'bad\t']))
 
 		# Now with validation off
 		s.sendStrings(['okay\t'], validate=False)
@@ -2024,6 +2025,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 		`TransportKillFrame(tk_invalid_frame_type_or_arguments)`.
 		"""
 		for badString in ["\x00", "\xff", "\n", "\x1f", "\x7f", "hello\tworld"]:
+			##print repr(badString)
 			frame0 = _makeHelloFrame()
 			transport = self._makeTransport()
 			transport.sendFrames([frame0])
