@@ -7,6 +7,7 @@ See minerva.minerva_site for an idea of how to use the classes below,
 especially `makeMinervaAndHttp` and `DemoProtocol`.
 """
 
+import re
 import sys
 
 from zope.interface import Interface, Attribute, implements
@@ -260,6 +261,8 @@ class SuperFactory(object):
 
 
 
+RESTRICTED_STRING_RE = re.compile(r"^([ -~]*)$")
+
 # There is no factory for customizing the construction of L{Stream}s,
 # just like there is no factory for customizing the construction of
 # L{twisted.internet.tcp.Server}s in Twisted.
@@ -351,17 +354,31 @@ class Stream(object):
 		self._notifications = None
 
 
-	def sendStrings(self, strings):
+	def sendStrings(self, strings, validate=True):
 		"""
 		Send strings C{strings} to the peer. You are severely restricted
 		as to which bytes may be in the string; by default you are allowed
 		inclusive range 0x20 (SPACE) - 0x7E (~).
 
-		@param strings: a sequence of C{str} objects
-		@type strings: a sequence
+		@param strings: a list of C{str} objects
+		@type strings: C{list}
+
+		@param validate: validate the contents of every string?  Once
+			your application works correctly, set this to False for a
+			performance gain.
+		@type validate: C{bool}
 		"""
 		if isinstance(strings, basestring):
 			raise TypeError("Need a sequence of str objects, not a %r" % (type(strings),))
+
+		if validate:
+			for s in strings:
+				if isinstance(s, unicode):
+					raise TypeError("String %r must be a str, not unicode" % (s,))
+				if not RESTRICTED_STRING_RE.match(s):
+					raise ValueError("String %r contains illegal characters.  "
+						"Only 0x20 (SPACE) - 0x7E (~) is allowed.  "
+						"Consider using JSON or Base64 encoding." % (s,))
 
 		if self.disconnected:
 			raise RuntimeError("Cannot sendStrings on disconnected Stream %r" % (self,))

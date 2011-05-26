@@ -574,8 +574,27 @@ class StreamTests(unittest.TestCase):
 		self.assertEqual([['writeStrings', s.queue, None]], t1.getNew())
 		s.sendStrings([])
 		self.assertEqual([], t1.getNew())
-		s.sendStrings(None) # implementation detail, hopefully no one relies on this
-		self.assertEqual([], t1.getNew())
+
+
+	def test_sendStringsValidate(self):
+		"""
+		sendStrings raises ValueError if you give it a string with illegal characters
+		(not in the restricted string range).
+		"""
+		factory, s, t1 = self._makeStuff()
+
+		s.sendStrings(['okay'])
+		# Empty strings are also okay
+		s.sendStrings([])
+		# Test the boundaries
+		s.sendStrings([' ~'])
+
+		self.assertRaises(ValueError, lambda: s.sendStrings(['okay\t']))
+		self.assertRaises(TypeError, lambda: s.sendStrings([u'okay\t']))
+
+		# Now with validation off
+		s.sendStrings(['okay\t'], validate=False)
+		s.sendStrings([u'okay\t'], validate=False)
 
 
 	def test_resetFromPeer(self):
