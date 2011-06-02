@@ -58,6 +58,21 @@ var SK = function(ackNumber, sackList) {
 var repr = cw.repr.repr;
 var rep = goog.string.repeat;
 
+
+cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'IsRestrictedStringTests').methods(
+
+	function test_isRestrictedString(self) {
+		self.assertTrue(cw.net.isRestrictedString_(""));
+		self.assertTrue(cw.net.isRestrictedString_("hi"));
+		self.assertTrue(cw.net.isRestrictedString_(" ~"));
+		self.assertFalse(cw.net.isRestrictedString_("hi\t"));
+		self.assertFalse(cw.net.isRestrictedString_("hi\n"));
+		self.assertFalse(cw.net.isRestrictedString_("\n"));
+		self.assertFalse(cw.net.isRestrictedString_("hi\nhi"));
+	}
+);
+
+
 var DeleteProperty = {'DeleteProperty': 'JUST_A_CONSTANT'};
 
 cw.net.TestFrames.makeHelloFrame_ = function(extra, noDefaults) {
