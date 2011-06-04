@@ -581,13 +581,6 @@ cw.net.Stream.prototype.primaryDelayCount_ = 0;
 cw.net.Stream.prototype.secondaryDelayCount_ = 0;
 
 /**
- * Validate strings passed to {@link #sendStrings} before sending them?
- * Set this to `false` after creating the Stream for a slight speedup.
- * @type {boolean}
- */
-cw.net.Stream.prototype.outgoingStringValidation = true;
-
-/**
  * @param {!Array.<string>} sb
  * @param {!Array.<*>} stack
  */
@@ -760,15 +753,20 @@ cw.net.Stream.prototype.restartHttpRequests_ = function() {
  * Send strings `strings` to the peer. You may call this even before the
  * 	Stream is started with {@link #start}.
  * @param {!Array.<string>} strings Strings to send.
+ * @param {boolean=} validate Validate strings before sending them?
+ * 	Default true.  Set this to `false` for a slight speedup.
  */
-cw.net.Stream.prototype.sendStrings = function(strings) {
+cw.net.Stream.prototype.sendStrings = function(strings, validate) {
+	if(!goog.isDef(validate)) {
+		validate = true;
+	}
 	if(this.state_ > cw.net.StreamState_.STARTED) {
 		throw Error("sendStrings: Can't send strings in state " + this.state_);
 	}
 	if(!strings.length) {
 		return;
 	}
-	if(this.outgoingStringValidation) {
+	if(validate) {
 		for(var i=0; i < strings.length; i++) {
 			var s = strings[i];
 			if(!cw.net.isRestrictedString_(s)) {

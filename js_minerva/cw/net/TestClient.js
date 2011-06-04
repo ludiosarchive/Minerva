@@ -301,9 +301,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 		var stream = new cw.net.Stream(
 			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
 		var badStrings = ["\x00", "\xff", "\n", "\x1f", "\x7f", "hello\tworld"];
-		stream.outgoingStringValidation = false;
 		proto.setStream(stream);
-		stream.sendStrings(badStrings);
+		stream.sendStrings(badStrings, /*validate=*/false);
 		self.assertEqual(badStrings.length, stream.queue_.getQueuedCount());
 	},
 
