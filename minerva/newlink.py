@@ -24,7 +24,6 @@ from securetypes import securedict
 from webmagic.untwist import BetterResource, setNoCacheNoStoreHeaders
 
 from minerva import decoders
-from minerva.website import RejectTransport
 from minerva.interfaces import ISimpleConsumer
 from minerva.window import SACK, Queue, Incoming
 from minerva.frames import (
@@ -523,11 +522,6 @@ class Stream(object):
 		Called by faces to tell me that new transport C{transport} has connected.
 		This is called even for very-short-term C2S HTTP transports.
 
-		Caller is responsible for verifying that a transport should really
-		be attached to this stream before calling L{transportOnline}.
-		Usually this is done by authenticating based on data in the
-		HelloFrame.
-
 		If L{wantsStrings} is truthy, this transport wants to receive strings.
 
 		If L{succeedsTransport} != None, temporarily assume that all strings
@@ -1012,8 +1006,7 @@ class ServerTransport(object):
 	def isAttached(self):
 		"""
 		Is this ServerTransport currently attached to a Stream?
-		This is always C{False} if not authenticated, and C{False} after
-		we call L{Stream.transportOffline}.
+		This is always C{False} after L{Stream.transportOffline}.
 		"""
 		return self._stream is not None
 
@@ -1179,13 +1172,8 @@ class ServerTransport(object):
 
 
 	def _exceededMaxOpenTime(self):
-		# Note: We might still be authenticating.
 		if self._stream is not None: # isAttached?
 			self.closeGently()
-		else:
-			# TODO: cancel the Deferred returned by firewall.checkTransport(...),
-			# to stop whatever request it has in progress.
-			pass
 
 
 	def _cancelMaxOpenDc(self):
@@ -1259,24 +1247,16 @@ class ServerTransport(object):
 			self._maxReceiveBytes = hello.maxReceiveBytes
 			self._maxOpenTime = hello.maxOpenTime
 			if self._maxOpenTime is not None:
-				# The "max open time" limit covers the time before and
-				# after authentication.
 				self._maxOpenDc = self._clock.callLater(
 					self._maxOpenTime, self._exceededMaxOpenTime)
 
-		# We start sending heartbeats even before the transport is authenticated.
 		if self._maxInactivity:
 			self._writeHeartbeat()
 		self._resetHeartbeat()
 
-		# We get/build a Stream instance before the firewall checkTransport
-		# because the firewall needs to know if we're working with a virgin
-		# Stream or not. And there's no way to reliably know this before
-		# doing the buildStream/getStream stuff, because requestNewStream=True
-		# doesn't always imply that a new stream will actually be created.
-
-		requestNewStream = hello.requestNewStream
-		if requestNewStream:
+		# Note that requestNewStream=True doesn't always imply that a
+		# new stream will actually be created.
+		if hello.requestNewStream:
 			try:
 				stream = self.factory.streamTracker.buildStream(self.streamId)
 			except StreamAlreadyExists:
@@ -1286,72 +1266,37 @@ class ServerTransport(object):
 		# Above .getStream(...) calls may raise NoSuchStream, which is
 		# caught by our caller.
 
-		# Danger! Do not call anything on `stream` until we authenticate
-		# the transport.
+		self._writeInitialFrames(stream, hello.requestNewStream)
+		if hello.sack is not None:
+			# Call sackReceived before transportOnline:
+			# * If hello.sack is a bad SACK, we never tell Stream about the transport.
+			# * If this transport is succeeding another transport, the hello.sack
+			#    removes strings from server's Queue but keeps this new
+			#    transport in _pretendAcked mode.
+			if stream.sackReceived(hello.sack):
+				# It was a bad SACK, so close.
+				self._closeWith(tk_acked_unsent_strings)
+				return
 
-		# During authentication, stop reading from the underlying TCP socket.
-		# It doesn't make sense the pause an HTTPChannel, because
-		# we already received the full request. But it does make sense to
-		# pause a socket transport because peer could send an unlimited
-		# amount of data after the HelloFrame.
-		if self._mode != HTTP:
-			self.writable.pauseProducing()
-
-		# Check every transport, not just those with `requestNewStream`.
-		d = self.factory.firewall.checkTransport(self, stream)
-
-		# Keep only the variables we need for the cbAuthOkay closure
+		# Note: self._stream being non-None implies that we are attached to
+		# the Stream (i.e. have called transportOnline, or are calling it right now).
+		self._stream = stream
+		self._callingStream = True
 		succeedsTransport = hello.succeedsTransport if self._wantsStrings else None
-		sack = hello.sack
-
-		def cbAuthOkay(_):
-			if self._terminating:
-				return
-			self._writeInitialFrames(stream, requestNewStream)
-			if sack is not None:
-				# Call sackReceived before transportOnline:
-				# * If hello.sack is a bad SACK, we never tell Stream about the transport.
-				# * If this transport is succeeding another transport, the hello.sack
-				#    removes strings from server's Queue but keeps this new
-				#    transport in _pretendAcked mode.
-				if stream.sackReceived(sack):
-					# It was a bad SACK, so close.
-					self._closeWith(tk_acked_unsent_strings)
-					return
-
-			# Note: self._stream being non-None implies that were are authed,
-			# and that we have called transportOnline (or are calling it right now).
-			self._stream = stream
-			self._callingStream = True
-			self._stream.transportOnline(self, self._wantsStrings, succeedsTransport)
-			self._callingStream = False
-			# Remember that a lot can happen underneath that
-			# transportOnline call, because it may construct a
-			# MinervaProtocol, which may even call reset.
-			if not self._terminating:
-				waitedFrames = self._waitingFrames
-				self._waitingFrames = None
-				self._framesReceived(waitedFrames)
-				# Remember that a lot can happen underneath that
-				# _framesReceived call, including a reset.
-				if not self._terminating and self._mode == HTTP and not self._wantsStrings:
-					self.closeGently()
-			self._maybeWriteToPeer()
-
-		def cbAuthFailed(f):
-			f.trap(RejectTransport)
-			if self._terminating:
-				return
+		self._stream.transportOnline(self, self._wantsStrings, succeedsTransport)
+		self._callingStream = False
+		# Remember that a lot can happen underneath that
+		# transportOnline call, because it may construct a
+		# MinervaProtocol, which may even call reset.
+		if not self._terminating:
+			waitedFrames = self._waitingFrames
 			self._waitingFrames = None
-			self._closeWith(tk_stream_attach_failure)
-
-		def resumeWritable(_):
-			if self._mode != HTTP:
-				self.writable.resumeProducing()
-
-		d.addCallbacks(cbAuthOkay, cbAuthFailed)
-		d.addErrback(log.err)
-		d.addBoth(resumeWritable)
+			self._framesReceived(waitedFrames)
+			# Remember that a lot can happen underneath that
+			# _framesReceived call, including a reset.
+			if not self._terminating and self._mode == HTTP and not self._wantsStrings:
+				self.closeGently()
+		self._maybeWriteToPeer()
 
 
 	def _appendSack(self):
@@ -1685,7 +1630,6 @@ class ServerTransport(object):
 			log.msg('Connection made for %r' % (self,))
 
 
-	# Typically called by L{website.ITransportFirewall}s
 	def isHttp(self):
 		if self.writable is None:
 			raise RuntimeError("Don't know if this is HTTP or not. Maybe ask later.")
@@ -1698,25 +1642,22 @@ requireFile(FilePath(__file__).sibling('compiled_client').child('expressInstall.
 
 class SocketFace(protocol.ServerFactory):
 	implements(IProtocolFactory)
-	__slots__ = ('_clock', 'streamTracker', 'firewall', 'policyStringWithNull')
+	__slots__ = ('_clock', 'streamTracker', 'policyStringWithNull')
 
 	protocol = ServerTransport
 
-	def __init__(self, clock, streamTracker, firewall, policyString=None):
+	def __init__(self, clock, streamTracker, policyString=None):
 		"""
 		@param clock: must provide L{IReactorTime}
 		@param streamTracker: The StreamTracker that will know about all
 			active Streams.
 		@type streamTracker: L{StreamTracker}
-		@param firewall: The transport firewall to use. Must provide
-			L{website.ITransportFirewall}
 		@param policyString: a Flash/Silverlight policy file as a string,
 			sent in response to <policy-file-request/>C{NULL}.
 		@type policyString: C{str} or C{NoneType}
 		"""
 		self._clock = clock
 		self.streamTracker = streamTracker
-		self.firewall = firewall
 		self.setPolicyString(policyString)
 
 
@@ -1751,15 +1692,14 @@ class SocketFace(protocol.ServerFactory):
 
 
 class HttpFace(BetterResource):
-	__slots__ = ('_clock', 'streamTracker', 'firewall')
+	__slots__ = ('_clock', 'streamTracker')
 	isLeaf = True
 	protocol = ServerTransport
 
-	def __init__(self, clock, streamTracker, firewall):
+	def __init__(self, clock, streamTracker):
 		BetterResource.__init__(self)
 		self._clock = clock
 		self.streamTracker = streamTracker
-		self.firewall = firewall
 
 
 	def render_GET(self, request):

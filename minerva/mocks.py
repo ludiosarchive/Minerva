@@ -8,7 +8,6 @@ from minerva.window import SACK, Queue, Incoming
 from minerva.newlink import (
 	NoSuchStream, IMinervaProtocol, IMinervaFactory, StreamAlreadyExists)
 from minerva.decoders import OK
-from minerva.website import RejectTransport
 from minerva.frames import decodeFrameFromServer
 
 from webmagic.fakes import GetNewMixin, DummyTCPTransport
@@ -355,26 +354,3 @@ class DummyStreamTracker(object):
 
 	def countStreams(self):
 		return len(self._streams)
-
-
-
-class DummyFirewall(object):
-
-	def __init__(self, clock=None, rejectAll=False, actionTime=None):
-		self._clock = clock
-		self._rejectAll = rejectAll
-		self._actionTime = actionTime
-
-
-	def checkTransport(self, transport, requestNewStream):
-		d = defer.Deferred()
-		def act():
-			if not self._rejectAll:
-				d.callback(None)
-			else:
-				d.errback(RejectTransport("%s rejecting this transport" % self.__class__.__name__))
-		if self._actionTime is None:
-			act()
-		else:
-			self._clock.callLater(self._actionTime, act)
-		return d

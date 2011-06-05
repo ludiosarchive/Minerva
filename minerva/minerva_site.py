@@ -6,9 +6,7 @@ from twisted.python.filepath import FilePath
 
 from minerva.newlink import StreamTracker, HttpFace, SocketFace
 
-from minerva.website import (
-	CsrfTransportFirewall, NoopTransportFirewall, CsrfStopper, XDRFrame,
-	XDRFrameDev)
+from minerva.website import CsrfStopper, XDRFrame, XDRFrameDev
 
 from minerva.flashtest.pages import FlashTestPage
 from minerva.chatapp.pages import ChatAppPage
@@ -371,11 +369,10 @@ def makeMinervaAndHttp(reactor, fileCache, csrfSecret, domain, closureLibrary):
 <cross-domain-policy><allow-access-from domain="*" to-ports="*"/></cross-domain-policy>'''.strip()
 
 	csrfStopper = CsrfStopper(csrfSecret)
-	firewall = CsrfTransportFirewall(NoopTransportFirewall(), csrfStopper)
 	tracker = StreamTracker(reactor, clock, DemoFactory(clock))
 
-	httpFace = HttpFace(clock, tracker, firewall)
-	socketFace = SocketFace(clock, tracker, firewall, policyString=policyString)
+	httpFace = HttpFace(clock, tracker)
+	socketFace = SocketFace(clock, tracker, policyString=policyString)
 
 	root = Root(reactor, httpFace, fileCache, csrfStopper, cookieInstaller, domain, closureLibrary)
 	httpSite = ConnectionTrackingSite(root, timeout=75)

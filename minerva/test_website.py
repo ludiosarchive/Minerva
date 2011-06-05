@@ -10,11 +10,8 @@ from twisted.web.server import Request
 from webmagic.fakes import DummyRequest
 
 from minerva.mocks import MockStream, DummySocketLikeTransport
-from minerva.website import (
-	RejectTransport, ITransportFirewall, CsrfTransportFirewall,
-	NoopTransportFirewall, ICsrfStopper, CsrfStopper, RejectToken,
-	htmldumps,
-)
+from minerva.website import ICsrfStopper, CsrfStopper, RejectToken, htmldumps
+
 
 
 def _makeCredentialsData(uaId, csrfTokenStr):
@@ -125,130 +122,6 @@ class CsrfStopperTests(unittest.TestCase):
 		##self.assertRaises(RejectToken, lambda: c.checkToken(i, token + '='))
 		##self.assertRaises(RejectToken, lambda: c.checkToken(i, token + '=='))
 		##self.assertRaises(RejectToken, lambda: c.checkToken(i, token + '==='))
-
-
-
-class NoopTransportFirewallTests(unittest.TestCase):
-
-	def test_implements(self):
-		verify.verifyObject(ITransportFirewall, NoopTransportFirewall())
-
-
-
-class _CsrfTransportFirewallTests(object):
-
-	timeout = 3
-
-	def _makeThings(self, stopper, uaId, csrfTokenStr):
-		firewall = CsrfTransportFirewall(NoopTransportFirewall(), stopper)
-		request = DummyRequest([])
-		request.isSecure = lambda: self.isSecure
-		transport = DummySocketLikeTransport(request)
-		transport.writable = request
-		transport.credentialsData = _makeCredentialsData(uaId, csrfTokenStr)
-		return firewall, transport
-
-
-	def test_implements(self):
-		verify.verifyObject(ITransportFirewall, CsrfTransportFirewall(NoopTransportFirewall(), None))
-
-
-	# Tests below are for "first transport" only
-
-	def test_stopsBadHttpMissingCsrfAndUaId(self):
-		stopper = CsrfStopper("secret string")
-		firewall, transport = self._makeThings(stopper, None, None)
-		ms = MockStream()
-		act = lambda: firewall.checkTransport(transport, ms)
-		return self.assertFailure(act(), RejectTransport)
-
-
-	def test_stopsBadHttpMissingCsrf(self):
-		stopper = CsrfStopper("secret string")
-		firewall, transport = self._makeThings(stopper, 'some fake uaId', None)
-		ms = MockStream()
-		act = lambda: firewall.checkTransport(transport, ms)
-		return self.assertFailure(act(), RejectTransport)
-
-
-	def test_stopsBadHttpMissingUaId(self):
-		stopper = CsrfStopper("secret string")
-		firewall, transport = self._makeThings(stopper, None, 'some fake csrf key')
-		ms = MockStream()
-		act = lambda: firewall.checkTransport(transport, ms)
-		return self.assertFailure(act(), RejectTransport)
-
-	#
-
-	def test_firstTransportEqualsNoChecking(self):
-		stopper = CsrfStopper("secret string")
-		firewall, transport = self._makeThings(stopper, None, None)
-		ms = MockStream()
-		ms.virgin = False
-		act = lambda: firewall.checkTransport(transport, ms)
-		def cb(v):
-			self.assertIdentical(None, v)
-		return act().addCallback(cb)
-
-
-	def test_validCsrf(self):
-		stopper = CsrfStopper("secret string")
-		uaId = "id of funny length probably"
-		token = stopper.makeToken(uaId)
-		firewall, transport = self._makeThings(stopper, uaId, token)
-		ms = MockStream()
-		act = lambda: firewall.checkTransport(transport, ms)
-		def cb(v):
-			self.assertIdentical(None, v)
-		return act().addCallback(cb)
-
-
-	def test_invalidCsrf(self):
-		stopper = CsrfStopper("secret string")
-		uaId = "id of funny length probably"
-		token = stopper.makeToken(uaId)
-		newUaId =  'AAA' + base64.b64encode(uaId)[3:]
-		firewall, transport = self._makeThings(stopper, newUaId, token)
-		ms = MockStream()
-
-		def check(f):
-			f.trap(RejectTransport)
-			msg = f.getErrorMessage()
-			self.assertIn('got RejectToken', msg)
-
-		d = Deferred()
-		act = lambda _: firewall.checkTransport(transport, ms)
-		d.addCallback(act)
-		d.addErrback(check)
-		d.callback(None)
-		return d
-
-
-	# TODO: consider checking uaId length in the future?
-
-
-
-class CsrfTransportFirewallTestsHttpTransport(_CsrfTransportFirewallTests, unittest.TestCase):
-
-	isSecure = False
-
-
-
-class CsrfTransportFirewallTestsHttpsTransport(_CsrfTransportFirewallTests, unittest.TestCase):
-
-	isSecure = True
-
-
-
-class CsrfTransportFirewallTestsSocketLikeTransport(_CsrfTransportFirewallTests, unittest.TestCase):
-
-	isSecure = True
-
-	def _makeThings(self, stopper, uaId, csrfTokenStr):
-		firewall = CsrfTransportFirewall(NoopTransportFirewall(), stopper)
-		transport = DummySocketLikeTransport()
-		transport.credentialsData = _makeCredentialsData(uaId, csrfTokenStr)
-		return firewall, transport
 
 
 

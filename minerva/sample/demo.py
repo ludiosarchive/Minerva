@@ -5,9 +5,6 @@ from twisted.web import resource, server
 from minerva.newlink import StreamTracker
 from minerva.newlink import HttpFace, SocketFace
 
-from minerva.website import (
-	CsrfTransportFirewall, NoopTransportFirewall, CsrfStopper)
-
 from minerva.sample import secrets
 
 
@@ -67,10 +64,10 @@ class IndexPage(resource.Resource):
 
 class Root(resource.Resource):
 
-	def __init__(self, clock, tracker, firewall):
+	def __init__(self, clock, tracker):
 		resource.Resource.__init__(self)
 
-		self.putChild('m', HttpFace(clock, tracker, firewall))
+		self.putChild('m', HttpFace(clock, tracker))
 
 		# Add the rest of your website here, if needed
 		self.putChild('', IndexPage())
@@ -84,17 +81,15 @@ def makeFace(clock=reactor):
 	policyString = '''\
 <cross-domain-policy><allow-access-from domain="*" to-ports="*"/></cross-domain-policy>'''.strip()
 
-	csrfStopper = CsrfStopper(secrets.CSRF_SECRET)
-	firewall = CsrfTransportFirewall(NoopTransportFirewall(), csrfStopper)
 	tracker = StreamTracker(reactor, clock, DemoFactory(clock))
 
-	root = Root(clock, tracker, firewall)
+	root = Root(clock, tracker)
 
 	try:
 		site = server.Site(root, clock=clock)
 	except TypeError:
 		site = server.Site(root)
-	so = SocketFace(clock, tracker, firewall, policyString=policyString)
+	so = SocketFace(clock, tracker, policyString=policyString)
 
 	return so
 

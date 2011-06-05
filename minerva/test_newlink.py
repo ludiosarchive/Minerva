@@ -65,7 +65,7 @@ from minerva.mocks import (
 	FrameDecodingTcpTransport, MockStream, MockMinervaStringsProtocol,
 	MockMinervaStringsProtocolFactory, MockMinervaStringProtocol,
 	MockMinervaStringProtocolFactory, MockObserver, BrokenOnPurposeError,
-	BrokenMockObserver, DummyStreamTracker, DummyFirewall, DummyTCPTransport,
+	BrokenMockObserver, DummyStreamTracker, DummyTCPTransport,
 	DummySocketLikeTransport, strictGetNewFrames,
 )
 
@@ -1219,8 +1219,7 @@ class ServerTransportModeSelectionTests(unittest.TestCase):
 
 	def _resetConnection(self):
 		self.tcpTransport = DummyTCPTransport()
-		firewall = DummyFirewall(self._clock, rejectAll=False)
-		self.face = SocketFace(None, self.streamTracker, firewall,
+		self.face = SocketFace(None, self.streamTracker,
 			policyString='<nonsense-policy/>')
 		self.transport = self.face.buildProtocol(addr=None)
 		self.transport.makeConnection(self.tcpTransport)
@@ -1342,9 +1341,8 @@ class _BaseHelpers(object):
 		self._resetStreamTracker()
 
 
-	def _makeTransport(self, rejectAll=False, firewallActionTime=None):
-		firewall = DummyFirewall(self._clock, rejectAll, firewallActionTime)
-		faceFactory = SlotlessSocketFace(self._clock, self.streamTracker, firewall)
+	def _makeTransport(self, rejectAll=False):
+		faceFactory = SlotlessSocketFace(self._clock, self.streamTracker)
 
 		parser = self._makeParser()
 		transport = _makeTransportWithDecoder(parser, faceFactory)
@@ -1770,87 +1768,6 @@ class _BaseServerTransportTests(_BaseHelpers):
 			self._resetStreamTracker()
 
 
-	def test_validHelloButFirewallRejectsTransport(self):
-		"""
-		If the Minerva firewall rejects the transport, the transport is
-		killed with C{tk_stream_attach_failure}.
-		"""
-		frame0 = _makeHelloFrame()
-		transport = self._makeTransport(rejectAll=True)
-		transport.sendFrames([frame0])
-		self.assertEqual([
-			TransportKillFrame(tk_stream_attach_failure),
-			YouCloseItFrame(),
-		], transport.getNew())
-		self._testExtraDataReceivedIgnored(transport)
-
-
-	def test_validHelloButFirewallRejectsTransportIn1Sec(self):
-		"""
-		If the Minerva firewall rejects the transport (after 1 second),
-		the transport is killed with C{tk_stream_attach_failure}.
-		"""
-		frame0 = _makeHelloFrame()
-		transport = self._makeTransport(rejectAll=True, firewallActionTime=1.0)
-		transport.sendFrames([frame0])
-		self.assertEqual([], transport.getNew())
-		self._clock.advance(1.0)
-		self.assertEqual([
-			TransportKillFrame(tk_stream_attach_failure),
-			YouCloseItFrame(),
-		], transport.getNew())
-		self._testExtraDataReceivedIgnored(transport)
-
-
-	def test_c2sStringFrameDuringAuthentication(self):
-		"""
-		If client sends a StringFrame during authentication, it is buffered until
-		the transport is authenticated.
-		"""
-		frame0 = _makeHelloFrame()
-		transport = self._makeTransport(firewallActionTime=1.0)
-		transport.sendFrames([
-			frame0,
-			StringFrame("c2s_0"),
-			StringFrame("c2s_1"),
-		])
-		self.assertEqual([], transport.getNew())
-		transport.sendFrames([StringFrame("c2s_2")])
-		self.assertEqual([], transport.getNew())
-
-		self._clock.advance(1.0)
-		self.assertEqual([
-			StreamCreatedFrame(),
-			SackFrame(SACK(2, ())),
-		], transport.getNew())
-
-		# Make sure Stream received all of those strings
-		stream = self.streamTracker.getStream('x'*26)
-		self.assertEqual([
-			['transportOnline', transport, False, None],
-			['stringsReceived', transport, [
-				(0, sf("c2s_0")),
-				(1, sf("c2s_1")),
-				(2, sf("c2s_2")),
-			]],
-		], withoutUnimportantStreamCalls(stream.getNew()))
-
-
-	def test_transportPausedDuringAuthentication(self):
-		"""
-		During authentication, Minerva stops reading from the underlying
-		TCP socket for the transport. Note: this is not applicable to HTTP
-		transports.
-		"""
-		frame0 = _makeHelloFrame()
-		transport = self._makeTransport(firewallActionTime=1.0)
-		self.assertEqual('producing', transport.writable.producerState)
-		transport.sendFrames([frame0])
-		self.assertEqual('paused', transport.writable.producerState)
-		self._clock.advance(1.0)
-		self.assertEqual('producing', transport.writable.producerState)
-
-
 	def test_newStreamMoreThanOnceOk(self):
 		"""
 		If a hello frame includes requestNewStream=1, but the
@@ -2147,29 +2064,6 @@ class _BaseServerTransportTests(_BaseHelpers):
 		], withoutUnimportantStreamCalls(stream.getNew()))
 
 
-	def test_sackInHelloFrameDelayedUntilAuthenticated(self):
-		"""
-		If client sends a `sack` argument in the HelloFrame, `sackReceived` isn't
-		called on Stream until the transport is authenticated.
-		"""
-		frame0 = _makeHelloFrame(dict(sack=SACK(-1, ())))
-		transport = self._makeTransport(firewallActionTime=1.0)
-		transport.sendFrames([frame0])
-
-		stream = self.streamTracker.getStream('x'*26)
-		# Stream.sackReceived has not been called yet
-		self.assertEqual([], withoutUnimportantStreamCalls(stream.getNew()))
-
-		self._clock.advance(1.0)
-
-		self.assertEqual([
-			['sackReceived', SACK(-1, ())],
-			['transportOnline', transport, False, None],
-		], withoutUnimportantStreamCalls(stream.getNew()))
-
-		self.assertEqual([StreamCreatedFrame()], transport.getNew())
-
-
 	def test_resetValid(self):
 		"""
 		If client sends a valid reset frame, the transport calls
@@ -2193,117 +2087,9 @@ class _BaseServerTransportTests(_BaseHelpers):
 				self._resetStreamTracker()
 
 
-	def test_transportOfflineNotCalledIfNeverAuthed(self):
+	def test_heartbeatsSent(self):
 		"""
-		A regression test: make sure ServerTransport only calls transportOffline
-		if it called transportOnline.
-		"""
-		frame0 = _makeHelloFrame()
-		transport = self._makeTransport(rejectAll=False, firewallActionTime=1.0)
-		transport.sendFrames([frame0])
-		self.assertEqual([], transport.getNew())
-		transport.connectionLost(ValueError("testing"))
-
-		stream = self.streamTracker.getStream('x'*26)
-
-		self.assertEqual([], withoutUnimportantStreamCalls(stream.getNew()))
-
-
-	def test_causeTerminationDuringAuthentication(self):
-		"""
-		If the transport is authenticating, test what happens if the client either:
-			- sends a bad frame
-			- disconnects the transport
-
-		In the first case, client sends frames during authentication
-		that normally cause a TransportKillFrame, but because those
-		frames are buffered during authentication, client receives the
-		TransportKillFrame after authentication is complete.
-		"""
-		expected = defaultdict(dict)
-		# expected[terminationMethod][rejectAll] = [frame0, frame1, ...]
-
-		expected['bad_frame'][True] = [
-			TransportKillFrame(tk_stream_attach_failure),
-			YouCloseItFrame()]
-
-		expected['bad_frame'][False] = [
-			StreamCreatedFrame(),
-			SackFrame(SACK(-1, ())),
-			StreamStatusFrame(SACK(-1, ())),
-			TransportKillFrame(tk_invalid_frame_type_or_arguments),
-			YouCloseItFrame()]
-
-		expected['client_closed'][True] = []
-
-		expected['client_closed'][False] = []
-
-		for rejectAll in (True, False):
-			for terminationMethod in ('bad_frame', 'client_closed'):
-				self._resetStreamTracker()
-
-				##print dict(rejectAll=rejectAll, terminationMethod=terminationMethod)
-
-				transport = self._makeTransport(
-					rejectAll=rejectAll, firewallActionTime=1.0)
-				frame0 = _makeHelloFrame()
-				transport.sendFrames([frame0])
-				self.assertEqual([], transport.getNew())
-				if terminationMethod == 'bad_frame':
-					transport.sendFrames([_BadFrame('?')])
-				elif terminationMethod == 'client_closed':
-					transport.connectionLost(ValueError("testing"))
-				else:
-					1/0
-
-				self.assertEqual([], transport.getNew())
-
-				stream = self.streamTracker.getStream('x'*26)
-
-				self.assertEqual([], withoutUnimportantStreamCalls(stream.getNew()))
-
-				self._clock.advance(1.0)
-				expectedFrames = expected[terminationMethod][rejectAll]
-				self.assertEqual(expectedFrames, transport.getNew())
-
-				if rejectAll == False and terminationMethod == 'bad_frame':
-					# Because the transport authenticated, we tell Stream about it.
-					# Then we deal with the buffered frames. One is a bad frame,
-					# so the transport promptly terminates and calls Stream.transportOffline
-					self.assertEqual([
-						['transportOnline', transport, False, None],
-						['transportOffline', transport],
-					], withoutUnimportantStreamCalls(stream.getNew()))
-				else:
-					# Because the transport was disconnect during authentication,
-					# we don't even tell Stream that it ever went online.
-					self.assertEqual([], withoutUnimportantStreamCalls(stream.getNew()))
-
-
-	def test_sentFramesIgnoredIfTransportAuthFails(self):
-		"""
-		If client sends valid frames while transport is authenticating,
-		those frames are completely ignored if transport auth fails.
-
-		This is a test for a real regression.
-		"""
-		frame0 = _makeHelloFrame()
-		transport = self._makeTransport(rejectAll=True, firewallActionTime=1.0)
-		transport.sendFrames([frame0])
-		self.assertEqual([], transport.getNew())
-
-		transport.sendFrames([SackFrame(SACK(2, ())), StringFrame("hello")])
-		self.assertEqual([], transport.getNew())
-		self._clock.advance(1.0)
-		self.assertEqual([
-			TransportKillFrame(tk_stream_attach_failure),
-			YouCloseItFrame()
-		], transport.getNew())
-
-
-	def test_heartbeatOverAuthenticatedTransport(self):
-		"""
-		Heartbeats are sent over an authenticated transport.
+		Heartbeats are sent.
 		"""
 		frame0 = _makeHelloFrame(dict(maxInactivity=2))
 		transport = self._makeTransport()
@@ -2312,23 +2098,6 @@ class _BaseServerTransportTests(_BaseHelpers):
 			CommentFrame('beat'),
 			StreamCreatedFrame()
 		], transport.getNew())
-		self._clock.advance(1)
-		self.assertEqual([], transport.getNew())
-		self._clock.advance(1)
-		self.assertEqual([CommentFrame('beat')], transport.getNew())
-		self._clock.advance(2)
-		self.assertEqual([CommentFrame('beat')], transport.getNew())
-
-
-	def test_heartbeatOverAuthenticatingTransport(self):
-		"""
-		Heartbeats are sent over an still-authenticating transport.
-		"""
-		frame0 = _makeHelloFrame(dict(maxInactivity=2))
-		transport = self._makeTransport(firewallActionTime=1000)
-		transport.sendFrames([frame0])
-		# the initial heartbeat
-		self.assertEqual([CommentFrame('beat')], transport.getNew())
 		self._clock.advance(1)
 		self.assertEqual([], transport.getNew())
 		self._clock.advance(1)
@@ -2360,28 +2129,6 @@ class _BaseServerTransportTests(_BaseHelpers):
 		# 2 seconds have passed since the last S2C write, so a heartbeat
 		# should be written.
 		self.assertEqual([CommentFrame('beat')], transport.getNew())
-
-
-	def test_heartbeatNotSentOverTerminatingTransport1(self):
-		"""
-		Heartbeats are not sent over a terminating transport.  In this
-		test, test with termination caused by immediate authentication
-		failure.
-		"""
-		self._resetStreamTracker(realObjects=True)
-		frame0 = _makeHelloFrame(dict(maxInactivity=2))
-		transport = self._makeTransport(rejectAll=True)
-		transport.sendFrames([frame0])
-		self.assertEqual([
-			CommentFrame('beat'), # first heartbeat is always sent
-			TransportKillFrame(tk_stream_attach_failure),
-			YouCloseItFrame(),
-		], transport.getNew())
-
-		self._clock.advance(2)
-		self.assertEqual([], transport.getNew())
-		self._clock.advance(2)
-		self.assertEqual([], transport.getNew())
 
 
 	def test_heartbeatNotSentOverTerminatingTransport2(self):
@@ -2436,7 +2183,7 @@ class TransportProducerTests(unittest.TestCase):
 		self.proto = MockMinervaStringsProtocol()
 		self.tracker = StreamTracker(reactor, clock, self.proto)
 
-		factory = SocketFace(clock, self.tracker, DummyFirewall(clock, rejectAll=False), None)
+		factory = SocketFace(clock, self.tracker, None)
 		self.transport = factory.buildProtocol(addr=None)
 
 		self.tcpTransport = DummyTCPTransport()
@@ -2546,17 +2293,17 @@ class SocketFaceTests(unittest.TestCase):
 	Tests for L{newlink.SocketFace}
 	"""
 	def test_policyStringOkay(self):
-		face = SocketFace(clock=None, streamTracker=None, firewall=DummyFirewall())
+		face = SocketFace(clock=None, streamTracker=None)
 		face.setPolicyString('okay')
 
 
 	def test_policyStringCannotBeUnicode(self):
-		face = SocketFace(clock=None, streamTracker=None, firewall=DummyFirewall())
+		face = SocketFace(clock=None, streamTracker=None)
 		self.assertRaises(TypeError, lambda: face.setPolicyString(u'hi'))
 
 
 	def test_policyStringCannotContainNull(self):
-		face = SocketFace(clock=None, streamTracker=None, firewall=DummyFirewall())
+		face = SocketFace(clock=None, streamTracker=None)
 		self.assertRaises(ValueError, lambda: face.setPolicyString("hello\x00"))
 		self.assertRaises(ValueError, lambda: face.setPolicyString("\x00"))
 
@@ -2569,8 +2316,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 	def _makeTransport(self):
 		parser = Int32StringDecoder(maxLength=1024*1024)
 		# is it okay to make a new one every time?
-		faceFactory = SlotlessSocketFace(
-			self._clock, self.streamTracker, DummyFirewall(self._clock, rejectAll=False))
+		faceFactory = SlotlessSocketFace(self._clock, self.streamTracker)
 		transport = _makeTransportWithDecoder(parser, faceFactory)
 		transport.dataReceived('<int32/>\n')
 		return transport
@@ -3248,9 +2994,8 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 	"""
 	# Inherit setUp, _resetStreamTracker
 
-	def _makeResource(self, rejectAll=False, firewallActionTime=None):
-		firewall = DummyFirewall(self._clock, rejectAll, firewallActionTime)
-		resource = HttpFace(self._clock, self.streamTracker, firewall)
+	def _makeResource(self, rejectAll=False):
+		resource = HttpFace(self._clock, self.streamTracker)
 		return resource
 
 #		parser = self._makeParser()
@@ -3439,8 +3184,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			self._sendAnotherString(stream, request, streaming, expectedFrames)
 
 
-	def _attachFirstHttpTransportWithFrames(self,
-	resource, frames, streaming, expectedFirewallActionTime=None):
+	def _attachFirstHttpTransportWithFrames(self, resource, frames, streaming):
 		"""
 		Send a request to C{resource} that does nothing but create a new
 		Stream (and assert a few things we expect to see after doing this).
@@ -3457,8 +3201,6 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			'\n'.join(f.encode() for f in frames) + '\n')
 
 		out = resource.render(request)
-		if expectedFirewallActionTime is not None:
-			self._clock.advance(expectedFirewallActionTime)
 		self.assertEqual(server.NOT_DONE_YET, out)
 
 		expectedFrames = [
@@ -3656,14 +3398,11 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		"""
 		If HelloFrame has a maxOpenTime, the HTTP request is closed N
 		miiliseconds after the HelloFrame is processed.
-
-		Both the authentication time and the post-authentication time
-		eat up the maxOpenTime.
 		"""
 		self._resetStreamTracker(realObjects=True)
-		resource = self._makeResource(firewallActionTime=0.5)
+		resource = self._makeResource()
 		self._attachFirstHttpTransportWithFrames(
-			resource, frames=[], streaming=False, expectedFirewallActionTime=0.5)
+			resource, frames=[], streaming=False)
 
 		request = DummyRequest(postpath=[])
 		request.method = 'POST'
@@ -3681,10 +3420,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		out = resource.render(request)
 		self.assertEqual(server.NOT_DONE_YET, out)
 		self.assertEqual([], decodeResponseInMockRequest(request))
-		self._clock.advance(0.5)
-		# At this point, the ServerTransport is (hopefully) authenticated.
-		self.assertEqual([], decodeResponseInMockRequest(request))
-		self._clock.advance(1.5)
+		self._clock.advance(2)
 
 		# After 2 seconds, the ServerTransport is closed; there was no
 		# reason to close it other than the 2 second maxOpenTime.
@@ -3700,7 +3436,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 	def test_secondaryTransportTerminatedUnderFramesReceivedCall(self): # keywords: reentrant
 		"""
 		This is similar to L{IntegrationTests.test_serverResetsUnderneathStringsReceivedCall},
-		but tests a real (but short-lived) regression in newlink's `cbAuthOkay`,
+		but tests a real (but short-lived) regression in newlink's (now-deleted) `cbAuthOkay`,
 		where `_terminating` was not checked before calling `closeGently`.
 		"""
 		class MyFactory(MockMinervaStringsProtocolFactory):
@@ -3765,10 +3501,6 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 	# TODO: test numPaddingBytes
 
 	# TODO: test maxReceiveBytes
-
-
-# TODO: integration test that uses a real Minerva firewall (we had a
-# regression based on this)
 
 # TODO: test_pushProducerOnQueuedRequest
 	# verify that attaching a push producer to a queued Request
