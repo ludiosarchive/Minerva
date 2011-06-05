@@ -1081,6 +1081,9 @@ function Jb(a, b) {
   return c.join("")
 }
 function Kb(a) {
+  if(Lb[a]) {
+    return Lb[a]
+  }
   a = String(a);
   if(!Lb[a]) {
     var b = /function ([^\(]+)/.exec(a);
