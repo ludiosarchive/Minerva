@@ -963,31 +963,35 @@ class ServerTransport(object):
 	def __init__(self, clock):
 		self._clock = clock
 
-		self.ourSeqNum = -1
-		self._peerSeqNum = -1
-		self.receivedCounter = -1
-		self._lastStartParam = 2**64
-		self._mode = UNKNOWN
+		self._stream = None
+		self.writable = None
+
 		# _initialBuffer buffers data while determining the mode
 		self._initialBuffer = ''
 		self._toSend = ''
-
-		self.connected = False
-		self._terminating = False
-		self._streamingResponse = False
-		self._callingStream = False
 		self._sackDirty = False
-		self._paused = False
+		self._terminating = False
+		self._callingStream = False
+		self._mode = UNKNOWN
+		self.receivedCounter = -1
+		self._lastStartParam = 2**64
+
+		self.ourSeqNum = -1
+		self._peerSeqNum = -1
+
+		self._maxInactivity = None
 		# _streamingResponse is False by default because client may fail
 		# to send a proper Hello frame in their HTTP request, and we don't
 		# want the request to get "stuck".
+		self._streamingResponse = False
+
+		self.connected = False
+
+		self._producer = None
+		self._paused = False
 
 		self._maxOpenDc = None
 		self._heartbeatDc = None
-		self._maxInactivity = None
-		self._stream = None
-		self._producer = None
-		self.writable = None
 
 
 	def __repr__(self):
