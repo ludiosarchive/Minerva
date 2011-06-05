@@ -950,7 +950,7 @@ class ServerTransport(object):
 
 	__slots__ = (
 		'ourSeqNum', '_lastStartParam', '_mode', '_peerSeqNum',
-		'_initialBuffer', '_toSend', 'writable', 'connected', 'receivedCounter',
+		'_initialBuffer', '_toSend', 'writable', 'receivedCounter',
 		'_terminating', '_paused', '_stream', '_producer', '_parser',
 		'streamId', 'transportNumber', 'factory', '_sackDirty',
 		'transport', '_maxReceiveBytes', '_maxOpenTime', '_callingStream',
@@ -984,8 +984,6 @@ class ServerTransport(object):
 		# to send a proper Hello frame in their HTTP request, and we don't
 		# want the request to get "stuck".
 		self._streamingResponse = False
-
-		self.connected = False
 
 		self._producer = None
 		self._paused = False
@@ -1623,7 +1621,6 @@ class ServerTransport(object):
 
 	# Called by Twisted when a TCP connection is made
 	def makeConnection(self, transport):
-		self.connected = True
 		self.writable = transport
 		# This is needed for non-HTTP connections. twisted.web sets NO_DELAY
 		# on HTTP connections for us.
