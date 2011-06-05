@@ -1401,8 +1401,6 @@ class ServerTransport(object):
 			elif frameType == SeqNumFrame:
 				self._peerSeqNum = frame.seqNum - 1
 
-			# TODO: support "start timestamps", "stop timestamps" frames
-
 			else:
 				# Deliver the strings before processing client's reset frame. This
 				# is an implementation detail that may change.
