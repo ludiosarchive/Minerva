@@ -294,14 +294,14 @@ class Stream(object):
 		self.streamId = streamId
 		self._streamProtocolFactory = streamProtocolFactory
 
-		self._protocol = \
-		self._primaryTransport = \
-		self._pretendAcked = \
+		self._protocol = None
+		self._primaryTransport = None
+		self._pretendAcked = None
 		self._producer = None
 
-		self.disconnected = \
-		self._streamingProducer = \
-		self._primaryHasProducer = \
+		self.disconnected = False
+		self._streamingProducer = False
+		self._primaryHasProducer = False
 		self._primaryPaused = False
 		# _primaryPaused: Does the primary transport think it is paused?
 		# Or if no primary transport, False.
@@ -963,30 +963,30 @@ class ServerTransport(object):
 	def __init__(self, clock):
 		self._clock = clock
 
-		self.ourSeqNum = \
-		self._peerSeqNum = \
+		self.ourSeqNum = -1
+		self._peerSeqNum = -1
 		self.receivedCounter = -1
 		self._lastStartParam = 2**64
 		self._mode = UNKNOWN
 		# _initialBuffer buffers data while determining the mode
-		self._initialBuffer = \
+		self._initialBuffer = ''
 		self._toSend = ''
 
-		self.connected = \
-		self._terminating = \
-		self._streamingResponse = \
-		self._callingStream = \
-		self._sackDirty = \
+		self.connected = False
+		self._terminating = False
+		self._streamingResponse = False
+		self._callingStream = False
+		self._sackDirty = False
 		self._paused = False
 		# _streamingResponse is False by default because client may fail
 		# to send a proper Hello frame in their HTTP request, and we don't
 		# want the request to get "stuck".
 
-		self._maxOpenDc = \
-		self._heartbeatDc = \
-		self._maxInactivity = \
-		self._stream = \
-		self._producer = \
+		self._maxOpenDc = None
+		self._heartbeatDc = None
+		self._maxInactivity = None
+		self._stream = None
+		self._producer = None
 		self.writable = None
 
 
