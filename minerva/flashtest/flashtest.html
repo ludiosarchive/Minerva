@@ -140,7 +140,7 @@ var streamId = getRandom();
 var lastFlashSocket = null;
 var lastXhr = null;
 
-function makeHelloData(uaId, transportNumber) {
+function makeHelloData(transportNumber) {
 	var HP = cw.net.HelloProperty_;
 
 	var helloData = {};
@@ -166,7 +166,7 @@ function makeC2SFramesForTesting() {
 	var uaId = cw.cookie.getHttpOrHttpsCookie(
 		'minerva_site_uaid', 'minerva_site_uaid_secure');
 	var transportNumber = ++transportCount;
-	var helloData = makeHelloData(uaId, transportNumber);
+	var helloData = makeHelloData(transportNumber);
 	var helloFrame = serializer.serialize(helloData) + 'H';
 	// If the server receives this more than once, it is
 	// subsequently ignored because the seqNum is always 0,
