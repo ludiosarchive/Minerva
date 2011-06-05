@@ -1317,10 +1317,6 @@ class ServerTransport(object):
 
 
 	def _framesReceived(self, frames):
-		if self._waitingFrames is not None:
-			self._waitingFrames.extend(frames)
-			return
-
 		# Mutable outside list to work around Python 2.x read-only closures
 		bunchedStrings = [[]]
 		def handleStrings():
