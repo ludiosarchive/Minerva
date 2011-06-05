@@ -71,7 +71,6 @@ cw.net.HelloProperty_ = {
 	httpFormat: 'format',
 	requestNewStream: 'new',
 	streamId: 'id',
-	credentialsData: 'cred',
 	streamingResponse: 'ming',
 	needPaddingBytes: 'pad',
 	maxReceiveBytes: 'maxb',
@@ -133,15 +132,6 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	var MISSING_ = {};
 
 	var obj = new cw.net.HelloFrame();
-
-	// credentialsData is always optional.
-	var credentialsData = helloData.get(HP.credentialsData, "");
-	if(!(goog.isString(credentialsData)) ||
-	credentialsData.length > 255 ||
-	!cw.net.isRestrictedString_(credentialsData)) {
-		throw new cw.net.InvalidHello("bad credentialsData");
-	}
-	obj.credentialsData = /** @type {string} */ (credentialsData);
 
 	// sack is always optional.
 	var sack = helloData.get(HP.sack, MISSING_);
@@ -299,8 +289,6 @@ cw.net.HelloFrame = function() {
 	this.requestNewStream;
 	/** @type {string} */
 	this.streamId;
-	/** @type {string} */
-	this.credentialsData;
 	/** @type {boolean} */
 	this.streamingResponse;
 	/** @type {number} */
@@ -392,7 +380,6 @@ cw.net.HelloFrame.makePropertyArray_ = function(helloFrame) {
 		helloFrame.httpFormat,
 		helloFrame.requestNewStream,
 		helloFrame.streamId,
-		helloFrame.credentialsData,
 		helloFrame.streamingResponse,
 		helloFrame.needPaddingBytes,
 		helloFrame.maxReceiveBytes,
@@ -420,7 +407,6 @@ cw.net.HelloFrame.prototype.encodeToPieces = function(sb) {
 	compact[HP.httpFormat] = this.httpFormat;
 	compact[HP.requestNewStream] = this.requestNewStream;
 	compact[HP.streamId] = this.streamId;
-	compact[HP.credentialsData] = this.credentialsData;
 	compact[HP.streamingResponse] = this.streamingResponse;
 	compact[HP.needPaddingBytes] = this.needPaddingBytes;
 	compact[HP.maxReceiveBytes] = this.maxReceiveBytes;

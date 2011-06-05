@@ -6,7 +6,6 @@
 goog.provide('cw.net.demo.loadFlashConnector');
 goog.provide('cw.net.demo.getEndpoint');
 goog.provide('cw.net.demo.getEndpointByQueryArgs');
-goog.provide('cw.net.demo.makeCredentialsData');
 
 goog.require('cw.net.breaker_FlashConnector_swf');
 goog.require('goog.ui.media.FlashObject');
@@ -35,15 +34,6 @@ goog.require('cw.net.XHRSlave');
 cw.net.demo.DemoStreamPolicy = function(httpName, httpsName) {
 	this.httpName_ = httpName;
 	this.httpsName_ = httpsName;
-};
-
-/**
- * @return {string}
- */
-cw.net.demo.DemoStreamPolicy.prototype.getCredentialsData = function() {
-	// Already base64-url-safe encoded
-	var uaId = cw.cookie.getHttpOrHttpsCookie(this.httpName_, this.httpsName_);
-	return uaId + '|' + goog.global['CSRF_TOKEN'];
 };
 
 /**

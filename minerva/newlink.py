@@ -929,11 +929,6 @@ def _sanitizeHelloFrame(helloFrame, isHttp):
 UNKNOWN, POLICYFILE, INT32, HTTP = range(4)
 
 # HTTP_RESPONSE_PREAMBLE is sent as the first frame over HTTP transports.
-# Note that we have protection against all CSRF attacks with
-# streamId and credentialsData.  We use script-inclusion
-# protection to reduce the chance of private information
-# being leaked over "GET" HTTP transports.
-# See http://code.google.com/p/doctype/wiki/ArticleScriptInclusion
 HTTP_RESPONSE_PREAMBLE = CommentFrame(";)]}")
 
 
@@ -957,7 +952,7 @@ class ServerTransport(object):
 		'ourSeqNum', '_lastStartParam', '_mode', '_peerSeqNum',
 		'_initialBuffer', '_toSend', 'writable', 'connected', 'receivedCounter',
 		'_terminating', '_paused', '_stream', '_producer', '_parser',
-		'streamId', 'credentialsData', 'transportNumber', 'factory', '_sackDirty',
+		'streamId', 'transportNumber', 'factory', '_sackDirty',
 		'transport', '_maxReceiveBytes', '_maxOpenTime', '_callingStream',
 		'_lastSackSeenByClient', '_streamingResponse', '_needPaddingBytes',
 		'_wantsStrings', '_waitingFrames', '_clock', '_maxOpenDc',
@@ -1235,7 +1230,6 @@ class ServerTransport(object):
 
 		# self._protocolVersion = protocolVersion # Not needed at the moment
 		self.streamId = hello.streamId
-		self.credentialsData = hello.credentialsData
 		self.transportNumber = hello.transportNumber
 		self._streamingResponse = hello.streamingResponse
 		self._maxInactivity = hello.maxInactivity

@@ -1731,13 +1731,6 @@ class _BaseServerTransportTests(_BaseHelpers):
 			self._resetStreamTracker()
 
 
-	def test_validHelloWithCredentials(self):
-		frame0 = _makeHelloFrame(dict(credentialsData='not_looked_at'))
-		transport = self._makeTransport()
-		transport.sendFrames([frame0])
-		self.assertEqual([StreamCreatedFrame()], transport.getNew())
-
-
 	def test_transportNumberDoesntMatter(self):
 		"""
 		transportNumber can be 0 <= transportNumber <= 2**53
@@ -3250,7 +3243,6 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 			frame0 = _makeHelloFrameHttp(dict(
 				succeedsTransport=None,
-				credentialsData=DeleteProperty,
 				requestNewStream=DeleteProperty,
 				streamingResponse=streaming))
 			frames = [frame0]

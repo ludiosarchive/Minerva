@@ -14,16 +14,6 @@ from minerva.website import ICsrfStopper, CsrfStopper, RejectToken, htmldumps
 
 
 
-def _makeCredentialsData(uaId, csrfTokenStr):
-	credentialsData = ""
-	if uaId is not None:
-		credentialsData += base64.b64encode(uaId)
-	if csrfTokenStr is not None:
-		credentialsData += "|" + csrfTokenStr
-	return credentialsData
-
-
-
 class CsrfStopperTests(unittest.TestCase):
 
 	def test_implements(self):

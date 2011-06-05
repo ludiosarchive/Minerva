@@ -228,7 +228,6 @@ class DummySocketLikeTransport(GetNewMixin):
 	_paused = False
 
 	def __init__(self, request=None):
-		self.credentialsData = ""
 		self.log = []
 		self.pretendGotHello()
 		if request:

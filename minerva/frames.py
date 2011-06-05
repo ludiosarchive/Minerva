@@ -42,7 +42,6 @@ class HelloFrameArguments(object):
 	httpFormat = 'format'
 	requestNewStream = 'new'
 	streamId = 'id'
-	credentialsData = 'cred'
 	streamingResponse = 'ming'
 	needPaddingBytes = 'pad'
 	maxReceiveBytes = 'maxb'
@@ -62,7 +61,6 @@ Hello_protocolVersion = _hfa.protocolVersion
 Hello_httpFormat = _hfa.httpFormat
 Hello_requestNewStream = _hfa.requestNewStream
 Hello_streamId = _hfa.streamId
-Hello_credentialsData = _hfa.credentialsData
 Hello_streamingResponse = _hfa.streamingResponse
 Hello_needPaddingBytes = _hfa.needPaddingBytes
 Hello_maxReceiveBytes = _hfa.maxReceiveBytes
@@ -111,14 +109,6 @@ def helloDataToHelloFrame(helloData):
 					"%r to ascii; was %r" % (k, v))
 
 	obj = attrdict()
-
-	# credentialsData is always optional.
-	obj.credentialsData = helloData[Hello_credentialsData] if \
-		Hello_credentialsData in helloData else ""
-	if not isinstance(obj.credentialsData, str) or \
-	len(obj.credentialsData) > 255 or \
-	not isRestrictedString(obj.credentialsData):
-		raise InvalidHello("bad credentialsData")
 
 	# sack is always optional.
 	if Hello_sack in helloData:
@@ -616,7 +606,7 @@ class TransportKillFrame(tuple):
 
 	reason = property(operator.itemgetter(1))
 
-	# Either because no such Stream, or bad credentialsData
+	# No such stream
 	stream_attach_failure = "stream_attach_failure"
 
 	# Peer acked strings that we never sent

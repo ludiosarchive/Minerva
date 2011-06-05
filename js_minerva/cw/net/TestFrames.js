@@ -268,7 +268,6 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 			'maxReceiveBytes': genericBad,
 			'maxOpenTime': genericBad,
 			'maxInactivity': [null, 0.5, 1.5, 601],
-			'credentialsData': concat([rep('x', 256), '\t', '\ucccc'], listWithout(genericBad, [""])),
 			// We can pass either a string or a cw.net.SACK
 			'sack': ['', '|', SK(-2, []), SK(-1, [-2])],
 			'lastSackSeenByClient': [DeleteProperty, '', '|', SK(-2, []), SK(-1, [-2])]
@@ -305,7 +304,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 		}
 
 		// sanity check; make sure we actually tested things
-		goog.asserts.assert(ran == 130, "Ran " + ran + " times; change this assert as needed");
+		goog.asserts.assert(ran == 116, "Ran " + ran + " times; change this assert as needed");
 	},
 
 	function test_encode(self) {
@@ -319,7 +318,6 @@ cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'HelloFrameTests').methods(
 		var hello = cw.net.TestFrames.makeHelloFrame_(
 			goog.reflect.object(cw.net.HelloFrame, {
 				'httpFormat': FORMAT_XHR,
-				'credentialsData': "",
 				// for equality in JS, need boolean instead of number
 				'requestNewStream': true,
 				'streamingResponse': true,

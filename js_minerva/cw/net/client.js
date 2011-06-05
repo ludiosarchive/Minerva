@@ -259,19 +259,11 @@ cw.net.HttpStreamingMode = {
 
 
 /**
- * An interface for an object that provides credentialsData, decides what kind
- * of transport to use, and gets feedback about whether a transport is working.
+ * An interface for an object that decides what kind of transport to use,
+ * and gets feedback about whether a transport is working.
  * @interface
  */
 cw.net.IStreamPolicy = function() {
-
-};
-
-/**
- * @return {string} The credentialsData string that Minerva client should send
- * 	as part of HelloFrame.
- */
-cw.net.IStreamPolicy.prototype.getCredentialsData = function() {
 
 };
 
@@ -500,7 +492,7 @@ cw.net.Stream.prototype.maxUndeliveredBytes = 1 * 1024 * 1024;
  * we get a {@link cw.net.StreamCreatedFrame}.  Never set back to `false`.
  *
  * If `false`, the transports that Stream makes must have HelloFrame with
- * `requestNewStream` and `credentialsData`.
+ * `requestNewStream`.
  * @type {boolean}
  * @private
  */
@@ -1831,9 +1823,6 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
 	hello.httpFormat = cw.net.HttpFormat.FORMAT_XHR;
 	if(!this.stream_.streamExistedAtServer_) {
 		hello.requestNewStream = true;
-		// TODO: maybe sometimes client needs to send credentialsData
-		// even when it's not a new Stream?
-		hello.credentialsData = this.stream_.streamPolicy_.getCredentialsData();
 	}
 	hello.streamId = this.stream_.streamId;
 	hello.streamingResponse = this.s2cStreaming;

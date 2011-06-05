@@ -106,7 +106,6 @@ class HelloFrameTests(unittest.TestCase, ReallyEqualMixin):
 				maxReceiveBytes=2**30,
 				maxOpenTime=2**30,
 				maxInactivity=0,
-				credentialsData="",
 				needPaddingBytes=0,
 				httpFormat=None,
 				sack=None,
@@ -193,7 +192,6 @@ class HelloFrameTests(unittest.TestCase, ReallyEqualMixin):
 			maxReceiveBytes=genericBad,
 			maxOpenTime=genericBad,
 			maxInactivity=[None, 0.5, 1.5, 601],
-			credentialsData=["x" * 256, '\t', u'\ucccc'] + listWithout(genericBad, [""]),
 			# We can pass either a string or a SACK
 			sack=['', '|', SACK(-2, ()), SACK(-1, (-2,))],
 			lastSackSeenByClient=[DeleteProperty, '', '|', SACK(-2, ()), SACK(-1, (-2,))],
@@ -221,7 +219,7 @@ class HelloFrameTests(unittest.TestCase, ReallyEqualMixin):
 				ran += 1
 
 		# sanity check; make sure we actually tested things
-		assert ran == 130, "Ran %d times; change this assert as needed" % (ran,)
+		assert ran == 116, "Ran %d times; change this assert as needed" % (ran,)
 
 
 	def test_encode(self):
@@ -233,7 +231,6 @@ class HelloFrameTests(unittest.TestCase, ReallyEqualMixin):
 		# Need to make some options explicit for equality to work
 		hello = _makeHelloFrame(dict(
 			httpFormat=FORMAT_XHR,
-			credentialsData="",
 			# for equality in JS, need boolean instead of number. Do the
 			# same here for consistency.
 			requestNewStream=True,

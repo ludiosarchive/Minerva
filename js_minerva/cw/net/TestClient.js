@@ -89,18 +89,6 @@ cw.net.TestClient.DumbStreamPolicy = function(httpStreamingMode, csrfToken) {
 };
 
 /**
- * @return {string}
- */
-cw.net.TestClient.DumbStreamPolicy.prototype.getCredentialsData = function() {
-	// Already base64-url-safe encoded
-	var uaId = cw.cookie.getHttpOrHttpsCookie(
-		'minerva_site_uaid', 'minerva_site_uaid_secure');
-	goog.asserts.assert(uaId !== undefined, "uaId is undefined");
-	goog.asserts.assert(this.csrfToken !== undefined, "this.csrfToken is undefined");
-	return uaId + '|' + this.csrfToken;
-};
-
-/**
  * @return {!cw.net.HttpStreamingMode}
  */
 cw.net.TestClient.DumbStreamPolicy.prototype.getHttpStreamingMode = function() {
