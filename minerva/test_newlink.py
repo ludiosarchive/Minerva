@@ -2088,8 +2088,8 @@ class _BaseServerTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		self.assertEqual([
+			StreamCreatedFrame(),
 			CommentFrame('beat'),
-			StreamCreatedFrame()
 		], transport.getNew())
 		self._clock.advance(1)
 		self.assertEqual([], transport.getNew())
@@ -2108,8 +2108,8 @@ class _BaseServerTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		self.assertEqual([
+			StreamCreatedFrame(),
 			CommentFrame('beat'),
-			StreamCreatedFrame()
 		], transport.getNew())
 		stream = self.streamTracker.getStream('x'*26)
 
@@ -2135,8 +2135,8 @@ class _BaseServerTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		self.assertEqual([
+			StreamCreatedFrame(),
 			CommentFrame('beat'), # first heartbeat is always sent
-			StreamCreatedFrame()
 		], transport.getNew())
 
 		self._clock.advance(1)

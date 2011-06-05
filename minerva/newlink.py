@@ -1185,8 +1185,12 @@ class ServerTransport(object):
 			self._heartbeatDc = None
 
 
-	def _writeHeartbeat(self):
+	def _appendHeartbeat(self):
 		self._toSend += self._encodeFrame(CommentFrame('beat'))
+
+
+	def _writeHeartbeat(self):
+		self._appendHeartbeat()
 		self._maybeWriteToPeer()
 		# Because _toSend non-empty, _maybeWriteToPeer calls _resetHeartbeat
 
@@ -1244,10 +1248,6 @@ class ServerTransport(object):
 				self._maxOpenDc = self._clock.callLater(
 					self._maxOpenTime, self._exceededMaxOpenTime)
 
-		if self._maxInactivity:
-			self._writeHeartbeat()
-		self._resetHeartbeat()
-
 		# Note that requestNewStream=True doesn't always imply that a
 		# new stream will actually be created.
 		if hello.requestNewStream:
@@ -1282,14 +1282,27 @@ class ServerTransport(object):
 		# Remember that a lot can happen underneath that
 		# transportOnline call, because it may construct a
 		# MinervaProtocol, which may even call reset.
-		if not self._terminating:
-			waitedFrames = self._waitingFrames
-			self._waitingFrames = None
-			self._framesReceived(waitedFrames)
-			# Remember that a lot can happen underneath that
-			# _framesReceived call, including a reset.
-			if not self._terminating and self._mode == HTTP and not self._wantsStrings:
-				self.closeGently()
+		if self._terminating:
+			return
+
+		waitedFrames = self._waitingFrames
+		self._waitingFrames = None
+		self._framesReceived(waitedFrames)
+		# Remember that a lot can happen underneath that
+		# _framesReceived call, including a reset.
+		if self._terminating:
+			return
+
+		if self._mode == HTTP and not self._wantsStrings:
+			self.closeGently()
+
+		if self._terminating:
+			return
+
+		if self._maxInactivity:
+			self._appendHeartbeat()
+		self._resetHeartbeat()
+
 		self._maybeWriteToPeer()
 
 
