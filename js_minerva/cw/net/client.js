@@ -226,16 +226,6 @@ cw.net.DEFAULT_DL_SPEED = 3 * 1024;
 cw.net.MAX_SERVER_JANK = 2000;
 
 /**
- * The maximum duration we expect transport authentication to take
- * on the Minerva server, in milliseconds.  The most common server behavior is
- * to synchronously look up an item in a dictionary, which shouldn't take long.
- * TODO: provide a way for application authors to modify this.
- * @type {number}
- * @const
- */
-cw.net.MAX_AUTH_TIME = 2;
-
-/**
  * The maximum frame length we expect to receive, in bytes.
  * @type {number}
  * @const
@@ -841,9 +831,8 @@ cw.net.Stream.prototype.createWastingTransport_ = function(delay, times) {
 /**
  * Called by a transport which has received indication that the Stream has
  * been successfully created. The server sends StreamCreatedFrame as the
- * first frame over *every* successfully-authenticated transport with
- * `requestNewStream`, so this method might be called more than once.
- * This method is idempotent.
+ * first frame over *every* transport with `requestNewStream`, so this
+ * method might be called more than once.  This method is idempotent.
  * @param {boolean} avoidCreatingTransports
  * @private
  */
@@ -1798,13 +1787,12 @@ cw.net.ClientTransport.prototype.makeHttpRequest_ = function(payload) {
 	// to not stall even a slow connection.
 	var duration;
 	if(this.s2cStreaming) {
-		// Server writes the first heartbeat before it even starts
-		// authenticating the transport.
+		// Server always writes a heartbeat early
 		duration = 0;
 	} else if(this.becomePrimary_) {
 		duration = cw.net.DEFAULT_HTTP_LONGPOLL_DURATION;
 	} else {
-		duration = cw.net.MAX_AUTH_TIME;
+		duration = 0;
 	}
 	this.setRecvTimeout_(
 		cw.net.DEFAULT_RTT_GUESS * (1.5 + connectRTTs) +
