@@ -955,8 +955,7 @@ class ServerTransport(object):
 		'streamId', 'transportNumber', 'factory', '_sackDirty',
 		'transport', '_maxReceiveBytes', '_maxOpenTime', '_callingStream',
 		'_lastSackSeenByClient', '_streamingResponse', '_needPaddingBytes',
-		'_wantsStrings', '_waitingFrames', '_clock', '_maxOpenDc',
-		'_maxInactivity', '_heartbeatDc')
+		'_wantsStrings', '_clock', '_maxOpenDc', '_maxInactivity', '_heartbeatDc')
 
 	maxLength = 1024*1024
 	noisy = True
@@ -988,8 +987,7 @@ class ServerTransport(object):
 		self._maxInactivity = \
 		self._stream = \
 		self._producer = \
-		self.writable = \
-		self._waitingFrames = None
+		self.writable = None
 
 
 	def __repr__(self):
@@ -1224,7 +1222,7 @@ class ServerTransport(object):
 				self._toSend += self._encodeFrame(SackFrame(currentSack))
 
 
-	def _handleHelloFrame(self, hello):
+	def _handleHelloFrame(self, hello, moreFrames):
 		"""
 		C{hello} is a L{HelloFrame}.  If a stream with the streamId in the
 		HelloFrame does not exist (and requestNewStream is falsy), raises
@@ -1285,9 +1283,7 @@ class ServerTransport(object):
 		if self._terminating:
 			return
 
-		waitedFrames = self._waitingFrames
-		self._waitingFrames = None
-		self._framesReceived(waitedFrames)
+		self._framesReceived(moreFrames)
 		# Remember that a lot can happen underneath that
 		# _framesReceived call, including a reset.
 		if self._terminating:
@@ -1366,12 +1362,11 @@ class ServerTransport(object):
 			if self.receivedCounter == 0:
 				if frameType == HelloFrame:
 					try:
-						self._waitingFrames = frames[1:]
-						self._handleHelloFrame(frame)
+						self._handleHelloFrame(frame, frames[1:])
 					except NoSuchStream:
 						self._closeWith(tk_stream_attach_failure)
 						break
-					# break because self._framesReceived(waitedFrames)
+					# break because self._framesReceived(frames[1:])
 					# processes the remaining frames.
 					break
 				else:
