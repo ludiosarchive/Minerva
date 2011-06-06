@@ -1,10 +1,10 @@
 """
 The core of Minerva server.
 
-Please read the files in Minerva/docs/ to begin understanding how this works.
-
 See minerva.minerva_site for an idea of how to use the classes below,
 especially `makeMinervaAndHttp` and `DemoProtocol`.
+
+See minerva.test_newlink for the tests.
 """
 
 import sys
