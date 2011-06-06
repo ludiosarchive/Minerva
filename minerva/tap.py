@@ -7,13 +7,12 @@ from twisted.python.filepath import FilePath
 from twisted.application import service, strports
 
 from webmagic.filecache import FileCache
-from webmagic import sharedopts
 
 from minerva import minerva_site
 
 
 
-class Options(sharedopts.WebOptions):
+class Options(usage.Options):
 	"""
 	Define the options accepted by the I{twistd minerva_site} plugin.
 	"""
@@ -48,6 +47,10 @@ class Options(sharedopts.WebOptions):
 			'Path to closure-library'],
 	]
 
+	optFlags = [
+		["no-tracebacks", "n", "Don't display tracebacks on the public interfaces."],
+	]
+
 	longdesc = """\
 This starts the Minerva test server (minerva_site), from which you can
 run the client-side unit tests in a browser, and try a few demo applications
@@ -59,7 +62,7 @@ descriptions.
 """
 
 	def __init__(self):
-		sharedopts.WebOptions.__init__(self)
+		usage.Options.__init__(self)
 		self['http'] = []
 		self['minerva'] = []
 	
@@ -73,7 +76,7 @@ descriptions.
 
 
 	def postOptions(self):
-		sharedopts.WebOptions.postOptions(self)
+		usage.Options.postOptions(self)
 		if not self['http'] and not self['minerva']:
 			raise usage.UsageError("You probably want to start at least 1 http server or 1 minerva server.")
 
@@ -84,7 +87,11 @@ def makeService(config):
 
 	multi = service.MultiService()
 
-	csrfSecret = config['secret']
+	# Nothing actually validates the CSRF token, and it should really
+	# be removed, so use a random string for the secret.  If we
+	# ever start validating the CSRF token, allow a static token to
+	# be specified.
+	csrfSecret = os.urandom(160/8)
 	domain = config['domain']
 
 	if not domain:
