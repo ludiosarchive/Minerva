@@ -5,7 +5,6 @@ and not necessary for the use of Minerva faces.
 
 import sys
 import base64
-import binascii
 import hashlib
 import hmac
 import re
@@ -17,7 +16,6 @@ import jinja2
 
 from zope.interface import implements, Interface
 from twisted.python.filepath import FilePath
-from twisted.internet import defer
 
 import minerva
 from minerva.objcheck import strToNonNegLimit
