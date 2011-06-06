@@ -8,7 +8,6 @@ code will be parsing the streams.
 import sys
 import struct
 import simplejson
-from minerva.objcheck import strToNonNeg
 from strfrag import StringFragment
 from securetypes import securedict
 
