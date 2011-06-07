@@ -17,7 +17,10 @@ from webmagic.untwist import (
 	CookieInstaller, BetterResource, BetterFile, ConnectionTrackingSite,
 	DisplayConnections)
 
-from brequire import requireFile
+try:
+	from brequire import requireFile, requireFiles
+except ImportError:
+	requireFile = requireFiles = lambda _: None
 
 
 

@@ -31,7 +31,10 @@ from minerva.frames import (
 	TransportKillFrame, InvalidFrame, decodeFrameFromClient,
 	isRestrictedString)
 
-from brequire import requireFile
+try:
+	from brequire import requireFile, requireFiles
+except ImportError:
+	requireFile = requireFiles = lambda _: None
 
 # Make globals that refbinder can optimize away
 tk_stream_attach_failure = TransportKillFrame.stream_attach_failure

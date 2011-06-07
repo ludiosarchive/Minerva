@@ -17,9 +17,13 @@ from zope.interface import implements, Interface
 from twisted.python.filepath import FilePath
 
 from minerva.objcheck import strToNonNegLimit
-from brequire import requireFile, requireFiles
 from webmagic.untwist import BetterResource
 from webmagic.pathmanip import getCacheBrokenHref
+
+try:
+	from brequire import requireFile, requireFiles
+except ImportError:
+	requireFile = requireFiles = lambda _: None
 
 _postImportVars = vars().keys()
 
