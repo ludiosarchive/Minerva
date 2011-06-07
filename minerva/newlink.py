@@ -24,7 +24,6 @@ from securetypes import securedict
 from webmagic.untwist import BetterResource, setNoCacheNoStoreHeaders
 
 from minerva import decoders
-from minerva.interfaces import ISimpleConsumer
 from minerva.window import SACK, Queue, Incoming
 from minerva.frames import (
 	HelloFrame, StringFrame, SeqNumFrame, SackFrame, StreamStatusFrame,
@@ -43,6 +42,47 @@ tk_rwin_overflow = TransportKillFrame.rwin_overflow
 
 
 _postImportVars = vars().keys()
+
+
+# A copy of twisted.internet.interfaces.IConsumer with the `write` method
+# removed.
+class IConsumerWithoutWrite(Interface):
+	"""
+	A consumer consumes data from a producer.
+	"""
+	def registerProducer(producer, streaming):
+		"""
+		Register to receive data from a producer.
+
+		This sets self to be a consumer for a producer.  When this object runs
+		out of data (as when a send(2) call on a socket succeeds in moving the
+		last data from a userspace buffer into a kernelspace buffer), it will
+		ask the producer to resumeProducing().
+
+		For L{IPullProducer} providers, C{resumeProducing} will be called once
+		each time data is required.
+
+		For L{IPushProducer} providers, C{pauseProducing} will be called
+		whenever the write buffer fills up and C{resumeProducing} will only be
+		called when it empties.
+
+		@type producer: L{IProducer} provider
+
+		@type streaming: C{bool}
+		@param streaming: C{True} if C{producer} provides L{IPushProducer},
+		C{False} if C{producer} provides L{IPullProducer}.
+
+		@raise RuntimeError: If a producer is already registered.
+
+		@return: C{None}
+		"""
+
+
+	def unregisterProducer():
+		"""
+		Stop consuming data from a producer, without disconnecting.
+		"""
+
 
 
 class IMinervaProtocol(Interface):
@@ -277,7 +317,7 @@ class Stream(object):
 	"""
 	# Don't implement IPushProducer or IPullProducer because we don't
 	# expect stopProducing.
-	implements(ISimpleConsumer)
+	implements(IConsumerWithoutWrite)
 
 	maxUndeliveredStrings = 50 # strings
 	maxUndeliveredBytes = 1 * 1024 * 1024 # bytes
@@ -796,7 +836,7 @@ class StreamTracker(object):
 # because Stream calls those methods, but it doesn't actually need to be
 # an IPushProducer/IPullProducer.  It could, in theory, buffer all the
 # information it gets without caring about TCP pressure at all.
-class IMinervaTransport(ISimpleConsumer):
+class IMinervaTransport(IConsumerWithoutWrite):
 
 	ourSeqNum = Attribute(
 		"Sequence number of the last string written to the socket/request, "

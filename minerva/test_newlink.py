@@ -39,7 +39,7 @@ from minerva.decoders import Int32StringDecoder, DelimitedStringDecoder
 
 from minerva.newlink import (
 	Stream, StreamTracker, NoSuchStream,
-	StreamAlreadyExists, ISimpleConsumer, IMinervaProtocol,
+	StreamAlreadyExists, IConsumerWithoutWrite, IMinervaProtocol,
 	IMinervaFactory, IMinervaTransport, ServerTransport, SocketFace, HttpFace,
 	HTTP_RESPONSE_PREAMBLE,
 )
@@ -158,7 +158,7 @@ class StreamTests(unittest.TestCase):
 
 	def test_implements(self):
 		s = Stream(self._clock, 'some fake id', None)
-		verify.verifyObject(ISimpleConsumer, s)
+		verify.verifyObject(IConsumerWithoutWrite, s)
 
 
 	def test_repr(self):
