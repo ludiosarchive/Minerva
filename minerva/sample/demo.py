@@ -81,7 +81,7 @@ def makeFace(clock=reactor):
 	policyString = '''\
 <cross-domain-policy><allow-access-from domain="*" to-ports="*"/></cross-domain-policy>'''.strip()
 
-	tracker = StreamTracker(reactor, clock, DemoFactory(clock))
+	tracker = StreamTracker(clock, DemoFactory(clock))
 
 	root = Root(clock, tracker)
 

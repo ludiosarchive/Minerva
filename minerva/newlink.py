@@ -774,13 +774,11 @@ class StreamTracker(object):
 
 	You do not want to subclass this.
 	"""
-	__slots__  = ('_reactor', '_clock', '_streamProtocolFactory', '_streams',
-		'_observers')
+	__slots__  = ('_clock', '_streamProtocolFactory', '_streams')
 
 	stream = Stream
 
-	def __init__(self, reactor, clock, streamProtocolFactory):
-		self._reactor = reactor
+	def __init__(self, clock, streamProtocolFactory):
 		self._clock = clock
 		self._streamProtocolFactory = streamProtocolFactory
 		# We have to keep a map of streamId->Stream, otherwise there is no

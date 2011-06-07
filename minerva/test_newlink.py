@@ -1000,8 +1000,7 @@ class StreamTrackerTests(unittest.TestCase):
 	def test_buildStream(self):
 		"""
 		buildStream returns an instance of L{Stream}"""
-		reactor = FakeReactor()
-		st = StreamTracker(reactor, task.Clock(), None)
+		st = StreamTracker(task.Clock(), None)
 		stream = st.buildStream('some fake id')
 		self.assertIdentical(Stream, type(stream))
 
@@ -1011,8 +1010,7 @@ class StreamTrackerTests(unittest.TestCase):
 		buildStream raises an error when trying to build a stream with an
 		already-existing id
 		"""
-		reactor = FakeReactor()
-		st = StreamTracker(reactor, task.Clock(), None)
+		st = StreamTracker(task.Clock(), None)
 		id = 'some fake id'
 		act = lambda: st.buildStream(id)
 		act()
@@ -1160,7 +1158,7 @@ class _BaseHelpers(object):
 		self.protocolFactory = protocolFactoryClass()
 		if realObjects:
 			self.streamTracker = StreamTracker(
-				self._reactor, self._clock, self.protocolFactory)
+				self._clock, self.protocolFactory)
 		else:
 			self.streamTracker = DummyStreamTracker(
 				self._clock, self.protocolFactory, {})
@@ -2004,7 +2002,7 @@ class TransportProducerTests(unittest.TestCase):
 		clock = task.Clock()
 
 		self.proto = MockMinervaStringsProtocol()
-		self.tracker = StreamTracker(reactor, clock, self.proto)
+		self.tracker = StreamTracker(clock, self.proto)
 
 		factory = SocketFace(clock, self.tracker, None)
 		self.transport = factory.buildProtocol(addr=None)

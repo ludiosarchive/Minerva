@@ -369,7 +369,7 @@ def makeMinervaAndHttp(reactor, fileCache, csrfSecret, domain, closureLibrary):
 <cross-domain-policy><allow-access-from domain="*" to-ports="*"/></cross-domain-policy>'''.strip()
 
 	csrfStopper = CsrfStopper(csrfSecret)
-	tracker = StreamTracker(reactor, clock, DemoFactory(clock))
+	tracker = StreamTracker(clock, DemoFactory(clock))
 
 	httpFace = HttpFace(clock, tracker)
 	socketFace = SocketFace(clock, tracker, policyString=policyString)
