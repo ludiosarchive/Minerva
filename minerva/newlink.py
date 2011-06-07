@@ -15,7 +15,7 @@ from twisted.python import log
 from twisted.python.filepath import FilePath
 from twisted.internet import protocol, defer
 from twisted.internet.interfaces import (
-	IPushProducer, IPullProducer, IProtocol, IProtocolFactory)
+	IPushProducer, IPullProducer, IProtocolFactory)
 from twisted.web.server import NOT_DONE_YET
 
 from strfrag import StringFragment
