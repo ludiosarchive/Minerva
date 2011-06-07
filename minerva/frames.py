@@ -1,7 +1,7 @@
 """
-This file includes frame encoders and decoders for each frame type, so that
-it is suitable for both both Minerva server, and a Python Minerva client (not
-yet written).
+Frame encoders and decoders for each frame type.  Note that we have encoders
+for frames that the server does not use; it's for testing, and in case someone
+wants to write a Python Minerva client.
 """
 
 import re
