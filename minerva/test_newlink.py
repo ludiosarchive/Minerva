@@ -20,7 +20,6 @@ Notes on understanding this test file:
 	that it was a victim of a search/replace spree.
 """
 
-from collections import defaultdict
 from cStringIO import StringIO
 from zope.interface import verify
 from twisted.trial import unittest

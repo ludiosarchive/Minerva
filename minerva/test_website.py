@@ -1,15 +1,8 @@
 import base64
 
-from zope.interface import implements, verify
+from zope.interface import verify
 from twisted.trial import unittest
 
-from twisted.internet.defer import Deferred
-from twisted.web.test.test_web import DummyChannel
-from twisted.web.server import Request
-
-from webmagic.fakes import DummyRequest
-
-from minerva.mocks import MockStream, DummySocketLikeTransport
 from minerva.website import ICsrfStopper, CsrfStopper, RejectToken, htmldumps
 
 
