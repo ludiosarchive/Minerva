@@ -284,37 +284,6 @@ class DummySocketLikeTransport(GetNewMixin):
 
 
 
-class MockObserver(GetNewMixin):
-
-	def __init__(self):
-		self.log = []
-
-
-	def streamUp(self, stream):
-		self.log.append(['streamUp', stream])
-
-
-	def streamDown(self, stream):
-		self.log.append(['streamDown', stream])
-
-
-
-class BrokenOnPurposeError(Exception):
-	pass
-
-
-
-class BrokenMockObserver(object):
-
-	def streamUp(self, stream):
-		raise BrokenOnPurposeError("raising inside streamUp in evil test")
-
-
-	def streamDown(self, stream):
-		raise BrokenOnPurposeError("raising inside streamDown in evil test")
-
-
-
 class DummyStreamTracker(object):
 
 	stream = MockStream

@@ -746,7 +746,6 @@ class StreamTracker(object):
 		# We have to keep a map of streamId->Stream, otherwise there is no
 		# way for a face to locate a Stream.
 		self._streams = securedict()
-		self._observers = set()
 
 
 	def getStream(self, streamId):
@@ -766,14 +765,6 @@ class StreamTracker(object):
 		# L{StreamTracker.getStream}.
 		self._streams[streamId] = s
 
-		try:
-			# copy() in case `unobserveStreams' changes it.
-			for o in self._observers.copy():
-				o.streamUp(s)
-		except:
-			# If an exception happened, at least we can clean up our part of the mess.
-			del self._streams[streamId]
-			raise
 		# If an exception happened in an observer, it is re-raised.
 		# If an exception happened, we don't call streamDown(s) because
 		# we don't know which observers really think the stream is "up"
@@ -785,14 +776,7 @@ class StreamTracker(object):
 
 
 	def _forgetStream(self, _ignoredNone, streamId):
-		stream = self._streams[streamId]
 		del self._streams[streamId]
-
-		# Do this after the `del' above in case some buggy observer raises an exception.
-		for o in self._observers.copy(): # copy() in case `unobserveStreams' changes it
-			o.streamDown(stream)
-
-		# Last reference to the stream should be gone soon.
 
 
 	def disconnectInactive(self):
@@ -805,37 +789,6 @@ class StreamTracker(object):
 			if not s._transports and (
 			s.lastReceived + s.maxIdleTime <= self._clock.seconds()):
 				s.timedOut()
-
-
-	def observeStreams(self, obj):
-		"""
-		Notify L{obj} when any stream goes up or down. L{obj} continues
-		receiving calls unless L{unobserveStreams} is called.
-
-		@param obj: any object that implements L{IStreamNotificationReceiver}.
-
-		@return: L{None}
-		"""
-		# poor man's zope.interface checker
-		assert obj.streamUp.__call__, "obj needs a streamUp method"
-		assert obj.streamDown.__call__, "obj needs a streamDown method"
-
-		self._observers.add(obj)
-
-
-	def unobserveStreams(self, obj):
-		"""
-		Stop notifying L{obj} when any stream goes up or down.
-
-		@param obj: any object previously registered with L{observeStreams}.
-
-		@raises: L{RuntimeError} if L{obj} was not registered.
-		@return: L{None}
-		"""
-		try:
-			self._observers.remove(obj)
-		except KeyError:
-			raise RuntimeError("%r was not observing" % (obj,))
 
 
 
