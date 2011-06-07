@@ -5,8 +5,6 @@ from twisted.web import resource, server
 from minerva.newlink import StreamTracker
 from minerva.newlink import HttpFace, SocketFace
 
-from minerva.sample import secrets
-
 
 
 class DemoProtocol(object):
@@ -53,8 +51,6 @@ class DemoFactory(object):
 
 
 
-# TODO: need to send users a '__' uaId cookie and generate the CSRF token for their pages
-
 class IndexPage(resource.Resource):
 	isLeaf = True
 	def render_GET(self, request):
@@ -76,8 +72,7 @@ class Root(resource.Resource):
 
 def makeFace(clock=reactor):
 
-	# In the real world, you might want this to be more restrictive. Minerva has its own
-	# CSRF protection, so it's not critical.
+	# In the real world, you might want this to be more restrictive.
 	policyString = '''\
 <cross-domain-policy><allow-access-from domain="*" to-ports="*"/></cross-domain-policy>'''.strip()
 
@@ -85,10 +80,7 @@ def makeFace(clock=reactor):
 
 	root = Root(clock, tracker)
 
-	try:
-		site = server.Site(root, clock=clock)
-	except TypeError:
-		site = server.Site(root)
+	site = server.Site(root)
 	so = SocketFace(clock, tracker, policyString=policyString)
 
 	return so
