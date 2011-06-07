@@ -16,7 +16,6 @@ import simplejson
 from zope.interface import implements, Interface
 from twisted.python.filepath import FilePath
 
-import minerva
 from minerva.objcheck import strToNonNegLimit
 from brequire import requireFile, requireFiles
 from webmagic.untwist import BetterResource
@@ -258,8 +257,10 @@ class MinervaBootstrap(BetterResource):
 	"""
 	isLeaf = True
 
+	import minerva
 	bootstrap_XDRSetup_filename = FilePath(minerva.__file__).\
 		sibling('compiled_client').child('bootstrap_XDRSetup.js').path
+	del minerva
 
 	def __init__(self, fileCache, csrfStopper, cookieInstaller, templateFile, dictionary):
 		"""
