@@ -60,6 +60,18 @@ def dumpToJson7Bit(data):
 
 
 class HelloFrameTests(unittest.TestCase, ReallyEqualMixin):
+	disableSpeedups = False
+
+	def setUp(self):
+		if self.disableSpeedups:
+			simplejson._toggle_speedups(False)
+			assert isinstance(simplejson.loads('"x"'), unicode)
+
+
+	def tearDown(self):
+		if self.disableSpeedups:
+			simplejson._toggle_speedups(True)
+
 
 	def test_eq(self):
 		for a, b in [
@@ -245,6 +257,11 @@ class HelloFrameTests(unittest.TestCase, ReallyEqualMixin):
 	def test_encodeFailed(self):
 		hello = HelloFrame(dict(aMadeUpKey=0))
 		self.assertRaises(CannotEncode, lambda: hello.encode())
+
+
+
+class HelloFrameTestsNoSpeedups(HelloFrameTests):
+	disableSpeedups = True
 
 
 

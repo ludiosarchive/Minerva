@@ -99,7 +99,8 @@ def helloDataToHelloFrame(helloData):
 	if not isinstance(helloData, dict):
 		raise InvalidHello("helloData not a dict")
 
-	# simplejson without speedups will give us unicode instead of str
+	# simplejson without speedups will always give us unicode instead of str
+	# objects.  (With speedups, it gives you a str when possible.)
 	for k, v in helloData.iteritems():
 		if isinstance(v, unicode):
 			try:
@@ -150,7 +151,6 @@ def helloDataToHelloFrame(helloData):
 		# Rules for streamId: must be 20-30 inclusive bytes, must not
 		# contain codepoints > 127
 		obj.streamId = helloData[Hello_streamId]
-		# ,str is appropriate only because simplejson returns str when possible
 		if not isinstance(obj.streamId, str) or not 20 <= len(obj.streamId) <= 30:
 			raise InvalidHello("bad streamId")
 	except (KeyError, TypeError, ValueError):

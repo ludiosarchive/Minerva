@@ -189,8 +189,6 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	// Rules for streamId: must be 20-30 inclusive bytes, must not
 	// contain codepoints > 127
 	var streamId = helloData.get(HP.streamId);
-	// In Python Minerva, instead of the \x00-\x7F check, we just
-	// check that simplejson gave us a `str` instead of a `unicode`.
 	if(!goog.isString(streamId) || !/^([\x00-\x7F]{20,30})$/.test(streamId)) {
 		throw new cw.net.InvalidHello("bad streamId");
 	}
