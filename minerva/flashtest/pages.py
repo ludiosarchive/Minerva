@@ -1,5 +1,3 @@
-import jinja2
-
 from twisted.python.filepath import FilePath
 from twisted.web import static
 
@@ -12,6 +10,8 @@ class Index(BetterResource):
 	isLeaf = True
 
 	def __init__(self, csrfStopper, cookieInstaller):
+		import jinja2
+
 		BetterResource.__init__(self)
 		self._csrfStopper = csrfStopper
 		self._cookieInstaller = cookieInstaller

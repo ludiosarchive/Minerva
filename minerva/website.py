@@ -1,6 +1,6 @@
 """
-Classes for things that are closer to website-specific behavior,
-and not necessary for the use of Minerva faces.  
+Minerva-related things that make it easy to use Minerva on your website,
+but are not absolutely necessary.
 """
 
 import sys
@@ -12,7 +12,6 @@ from random import randint
 from functools import partial
 
 import simplejson
-import jinja2
 
 from zope.interface import implements, Interface
 from twisted.python.filepath import FilePath
@@ -173,6 +172,7 @@ def htmldumps(*args, **kwargs):
 
 
 def _contentToTemplate(content):
+	import jinja2
 	return jinja2.Environment().from_string(content.decode('utf-8'))
 
 
@@ -273,6 +273,8 @@ class MinervaBootstrap(BetterResource):
 			If this is mutated, new requests will have the new dictionary
 			contents.
 		"""
+		import jinja2
+
 		BetterResource.__init__(self)
 		self._fileCache = fileCache
 		self._csrfStopper = csrfStopper
