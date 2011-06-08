@@ -11,8 +11,6 @@
  * unloading, goog.global.parent becomes null.  This is why several places
  * check if it is null.  We don't keep a reference to the parent because
  * that *might* cause garbage collection problems in some browsers.
- *
- * LICENSE note: includes a constant from Closure Library.
  */
 
 goog.provide('cw.net.XHRSlave');
@@ -32,7 +30,7 @@ goog.require('cw.net.MAX_FRAME_LENGTH');
 
 /**
  * Minimum version of Safari that receives a non-null responseText in ready
- * state interactive.  (From Closure Library channelrequest.js)
+ * state interactive.  (From Closure Library's channelrequest.js)
  * @type {string}
  * @private
  */

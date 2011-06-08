@@ -3,8 +3,8 @@
  *
  * If you make modifications, keep in mind that the unit tests are not
  * complete enough to prevent regressions. You may want to use
- * the /chatapp/ page to check the behavior, and BrowserNode's
- * /rtsgame/, as well as a tools like HttpFox, Firebug, and Wireshark.
+ * the /chatapp/ page to check the behavior, and DemosMinerva's
+ * demos, as well as a tools like HttpFox, Firebug, and Wireshark.
  *
  * There is a lot of behavior we're optimizing for in this file:
  * 	- sending as little redundant data as possible
