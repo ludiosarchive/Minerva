@@ -95,6 +95,8 @@ You'll need to install:
 
 *	Twisted: http://twistedmatrix.com/
 
+*	zope.interface: http://pypi.python.org/pypi/zope.interface (Twisted needs it too)
+
 *	Webmagic: https://github.com/ludios/Webmagic
 
 *	Coreweb: https://github.com/ludios/Coreweb
@@ -108,6 +110,7 @@ You'll need to install:
 *	simplejson: http://pypi.python.org/pypi/simplejson
 
 *	Closure Library: http://code.google.com/intl/en/closure/library/
+
 
 Optional modules:
 
