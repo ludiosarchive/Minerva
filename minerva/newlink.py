@@ -207,7 +207,7 @@ class UnknownSubprotocol(Exception):
 
 
 
-class SuperProtocol(object):
+class SubprotocolProtocol(object):
 	"""
 	An implementation of L{IMinervaProtocol} that creates and proxies
 	strings to a subprotocol after a "subprotocol:..." string is received.
@@ -271,7 +271,7 @@ class SuperProtocol(object):
 
 
 
-class SuperFactory(object):
+class SubprotocolFactory(object):
 	"""
 	An implementation of L{IMinervaFactory} that creates a protocol that
 	proxies strings to a subprotocol after a "subprotocol:..." string is received.
@@ -279,7 +279,7 @@ class SuperFactory(object):
 	implements(IMinervaFactory)
 	__slots__ = ('_clock', '_subfactories')
 
-	protocol = SuperProtocol
+	protocol = SubprotocolProtocol
 
 	def __init__(self, clock, subfactories):
 		"""
