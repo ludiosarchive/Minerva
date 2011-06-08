@@ -24,53 +24,6 @@ This isn't the only documentation. There's also:
 ..	_`data_flow.pptx`: data_flow.pptx
 
 
-Terminology
-=========
-
-application
-	the application that is using Minerva. An application has both a server-side
-	and client-side component.
-client
-	the peer that connects to a Minerva server. Typically a web browser.
-stream
-	the stateful object that protocols use to send and receive data. This is sort
-	of like a TCP connection, but better in most ways.
-peer
-	the thing on the other side of the Minerva stream. For a server, it is a client;
-	for a client, the server.
-frame
-	a framed bytestring sent over streams. This ecompasses both Minerva-level
-	and application-level data.
-string (in the context of Minerva)
-	an atomic piece of application-level data that can be fit into a frame and sent
-	to the peer. Strings have strict restrictions on which bytes/codepoints are
-	allowed, see `String restrictions`_.
-
-	On the server, a string is represented as a bytestring (never decoded
-	to unicode). On the browser side, a string is represented as JavaScript UTF-16
-	string, but with the same restrictions on bytes/codepoints.
-S2C
-	server-to-client (e.g. a S2C transport, or a S2C string)
-C2S
-	client-to-server. (e.g. a C2S transport, or a C2S string)
-transport
-	an HTTP request/response, or socket, or WebSocket, that Minerva uses to
-	send/receive frames.
-S2C transport
-	a transport that is being used or will be used to send S2C strings,
-	regardless of whether it it used for C2S as well.
-primary transport
-	In server context: the transport that is currently designated to send
-	strings to the client. This was formerly called "active S2C transport".
-crypted
-	refers to not-yet-implemented encryption for Flash Socket, likely to be based
-	on a variant of ChaCha12 where client downloads 448 bits of random
-	(512 - 64 bit block counter) from the server for each connection. Message
-	authenticity is ensured by embedding a SHA1 of each frame into the connection.
-	Basically, all of this, ChaCha12-ed:
-
-		``[32-bit length of frame][160-bit SHA1 of frame][frame]``
-
 
 
 Goals of Minerva
@@ -444,23 +397,6 @@ Advice on using JSON in your Minerva strings
 ..	_`algorithmic complexity attack`: http://www.cs.rice.edu/~scrosby/hash/
 
 
-String restrictions
-=============
-On the server, you may send only Python ``str`` objects with bytes in the
-inclusive range:
-
-	``0x20`` (``SPACE``) to ``0x7E`` (``~``).
-
-On the client, you may send only JavaScript primitive ``string`` s with codepoints
-in the inclusive range:
-
-	``U+0020`` (``SPACE``) to  ``U+007E`` (``~``).
-
-These restrictions exist because we use the lowest common denominator of
-supported codepoints to maximize support for various Minerva transports
-and broken proxies. **Future**: We plan to implement automatic per-Stream
-negotation to reduce the byte/codepoint restrictions.
-
 
 Real-world deployment strategy that supports HTTP, Flash Socket, WebSocket
 =======================================================
@@ -618,108 +554,6 @@ non-SSL connections.
 ..	[#] grep the nginx source for ``NGX_LISTEN_BACKLOG``
 
 ..	[#] http://amix.dk/blog/viewEntry/19456
-
-
-Manually debugging Minerva's ports
-=========================
-
-You can connect to Minerva's non-SSL listener with netcat; something like
-``nc localhost 8112`` should work. Keep in mind that Ctrl-C (or even ``kill -9
-pid_of_nc``) will probably result in ``ConnectionDone``, not ``ConnectionLost``.
-
-You can connect to Minerva's SSL listener with ``openssl s_client``; something like
-``openssl s_client -connect localhost:8113`` should work. Ctrl-C (or a SIGQUIT with
-Ctrl-\\) should result in a ``ConnectionLost``; Ctrl-D should result in a ``ConnectionDone``.
-
-``ConnectionDone`` and ``ConnectionLost`` are in ``twisted.internet.error``.
-``ConnectionLost`` refers to an unclean close, typically caused by a TCP RST.
-
-
-Producers/consumers
-================
-
-Like many things in Twisted, Minerva supports producers/consumers for efficient high-volume
-streaming. [#]_. In Twisted, pressure information from consumers controls the creation of
-bytes. In Minerva, it controls the creation of *frames*, not bytes.  
-
-In Minerva, a producer can be attached to the Stream. Usually, a MinervaProtocol
-will perform this attachment.
-
-In general, TCP pressure from the TCP connection of the primary
-transport directly affects the producer attached to Stream. Also, if the producer is a push
-producer, the producer is paused while there are no Minerva transports attached to the Stream.
-
-The implementation is complicated because Minerva transports may frequently attach and
-detach from the Stream. `Producers/consumers technical details`_ describes what really
-happens. However, it does "just work".
-
-..	[#] http://twistedmatrix.com/projects/core/documentation/howto/producers.html
-
-
-Producers/consumers technical details
----------------------
-
-Skip this section unless you are trying to understand the producer/consumer code in
-``minerva.newlink``.
-
-"Type of producer" is *pull*, or *push*. [#]_
-
-This is the object chain, "upstream" objects are at the top. Objects on adjacent lines
-usually know about each other (have references).
-
-*	MinervaProtocol
-*	Stream
-*	ServerTransport
-*	(Twisted) - refers to either the TCP transport or to a ``twisted.web.http.Request``.
-	Both have a ``registerProducer`` method.
-
-Producer attachment goes downstream, pressure information goes upstream.
-
-When a client connects, (Twisted) causes \*Transport creation,
-which causes Stream creation, which causes MinervaProtocol creation. This
-might not happen instantly, because \*Transport must be authenticated first.
-At this time, there are no producers in the system.
-
-At any time, a pull or push producer can be registered with Stream. The producer can be
-unregistered at any time. Usually, a MinervaProtocol will do the registration and unregistration.
-
-Stream's goal is to register the same type of producer with every primary transport that
-attaches to it, even if the primary transport isn't attached yet (or not yet primary). Stream
-must also unregister producers from transports that are no longer primary transports.
-
-If type of producer is push, Stream must also call ``pauseProducing`` on MinervaProtocol whenever
-there is no primary transport. It must also call ``resumeProducing`` when this situation ends.
-
-\*Transport's job is simple, it just registers itself as the correct type of producer with (Twisted).
-One edge case: it must remember if (Twisted) paused it, and if so, ``pauseProducing`` newly-attached push producers.
-
-During normal operation for a registered *pull* producer, these conditions result in
-``resumeProducing`` calls on MinervaProtocol:
-
-*	(Twisted) - [resume] when it wants more data to send
-
-During normal operation for a registered *push* producer, these conditions result in
-``pauseProducing`` or ``resumeProducing`` calls on MinervaProtocol:
-
-*	(Twisted) - [resume] when it wants more data to send
-*	(Twisted) - [pause] when it has enough data
-*	\*Transport - [pause] if it was paused earlier by (Twisted)
-*	Stream - [pause] when there are no primary transports
-*	Stream - If paused, [resume] when a primary transport appears
-
-
-..	[#] http://twistedmatrix.com/projects/core/documentation/howto/producers.html
-
-
-
-Special client-side producer
-----------------------------------
-Minerva client supports registering a special pull producer that will be pulled right
-before Minerva client makes any HTTP request. This is useful if Minerva client is using
-HTTP as primary transport, and client application wants to occasionally upload data
-without incurring the cost of a C2S HTTP request. If Minerva is using HTTP as primary
-transport, the pull producer will be pulled around every 55 seconds.
-
 
 
 
