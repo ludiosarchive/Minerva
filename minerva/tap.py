@@ -26,9 +26,6 @@ class Options(usage.Options):
 			"Example: 'tcp:80:interface=127.0.0.1'. "
 			"Repeat this option for multiple servers."],
 
-		# TODO: Combine "HTTP server" and "Minerva server". One server serves both. But SSL and non-SSL are different,
-		# so we'll still serve two.
-
 		["minerva", "m", None,
 			"strports description for Minerva server's socket listener. "
 			"Example: 'ssl:444:privateKey=privateAndPublic.pem:interface=0'. "
