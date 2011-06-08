@@ -20,6 +20,7 @@ setup(
 		'Framework :: Twisted',
 		'Topic :: Internet :: WWW/HTTP',
 		'Topic :: System :: Networking',
+		'License :: OSI Approved :: Apache Software License',
 	],
 	packages=['minerva', 'minerva.sample', 'minerva.flashtest',
 		'minerva.chatapp', 'twisted.plugins', 'js_minerva'],
