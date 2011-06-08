@@ -18,10 +18,9 @@ We could require client to upload last-SACK-seen only for long-polling,
 but that would reduce symmetry in the protocol.
 
 
-
 How does the SACK feature work?
 =====
-Minerva SACK allows us to keep strings in our receive window
+Minerva SACK (vs. just plain ACK) allows us to keep strings in our receive window
 that we cannot deliver yet. In our SackFrame, we send sackList
 to the peer so that they know which strings were queued in the window.
 For wire protocol simplicity, if the window is overflowing, the transport
@@ -38,8 +37,6 @@ is torn down (the Stream is kept alive).
 	2)	create a new transport, send SackFrame over it
 
 
-
-
 Why do we give up on a transport if the peer sent us frames that have caused our receive window to overflow?
 =====
 The alternative to giving up on the transport would be to complicate
@@ -52,10 +49,8 @@ peer connects a new transport, they hopefully send frames that we can
 immediately deliver.
 
 
-
-Open question: should server write out SACK on primary transport, or on the transport the client used to upload boxes?
+Open question: should server write out SACK on primary transport, or on the transport the client used to upload strings?
 =====
-
 Probably on the transport client used for upload, because:
 
 -	server has to respond on the "upload transport" anyway, it might as well write out 10 bytes for the SACK.
