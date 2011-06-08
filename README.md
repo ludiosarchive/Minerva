@@ -135,7 +135,7 @@ C:\Python27\python.exe C:\Python27\Scripts\twistd.py -n minerva_site -t tcp:8111
 Note that if `closure-library` is in the parent of the source directory,
 you can omit `--closure-library=`.
 
-Then, navigate to `http://127.0.0.1:9090/` in your browser.  Follow the
+Then, navigate to `http://127.0.0.1:8111/` in your browser.  Follow the
 `/chatapp/?mode=http` link for a simple demo.  Note that it's noisy; watch for
 messages from **chatapp.logger**.  You can load it in multiple browsers and
 chat amongst each other.
