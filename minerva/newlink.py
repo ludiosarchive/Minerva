@@ -15,7 +15,7 @@ from twisted.python import log
 from twisted.python.filepath import FilePath
 from twisted.internet import protocol, defer
 from twisted.internet.interfaces import (
-	IPushProducer, IPullProducer, IProtocolFactory)
+	IPushProducer, IPullProducer, IProtocol, IProtocolFactory)
 from twisted.web.server import NOT_DONE_YET
 
 from strfrag import StringFragment
@@ -938,9 +938,7 @@ class ServerTransport(object):
 	(for HTTP endpoints), or for every TCP connection we receive (for
 	Flash Socket endpoints).
 	"""
-	# Implements several interfaces.  Also almost an IProtocol, but this has
-	# no connectionMade (only makeConnection).
-	implements(IMinervaTransport, IPushProducer, IPullProducer)
+	implements(IMinervaTransport, IPushProducer, IPullProducer, IProtocol)
 
 	__slots__ = (
 		'ourSeqNum', '_lastStartParam', '_mode', '_peerSeqNum',
@@ -1611,14 +1609,17 @@ class ServerTransport(object):
 		self._maybeWriteToPeer()
 
 
+	def connectionMade(self):
+		# TODO: setTcpNoDelay on HTTP transports as well
+		self.writable.setTcpNoDelay(True)
+		if self.noisy:
+			log.msg('Connection made for %r' % (self,))
+
+
 	# Called by Twisted when a TCP connection is made
 	def makeConnection(self, transport):
 		self.writable = transport
-		# This is needed for non-HTTP connections. twisted.web sets NO_DELAY
-		# on HTTP connections for us.
-		transport.setTcpNoDelay(True)
-		if self.noisy:
-			log.msg('Connection made for %r' % (self,))
+		self.connectionMade()
 
 
 	def isHttp(self):

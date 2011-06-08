@@ -1188,7 +1188,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 
 	def test_implements(self):
 		transport = self._makeTransport()
-		##verify.verifyObject(IProtocol, transport) # lacks connectionMade
+		verify.verifyObject(IProtocol, transport)
 		verify.verifyObject(IPushProducer, transport)
 		verify.verifyObject(IPullProducer, transport)
 		verify.verifyObject(IMinervaTransport, transport)
