@@ -30,7 +30,7 @@ class Options(usage.Options):
 		# so we'll still serve two.
 
 		["minerva", "m", None,
-			"strports description for the Minerva server. "
+			"strports description for Minerva server's socket listener. "
 			"Example: 'ssl:444:privateKey=privateAndPublic.pem:interface=0'. "
 			"Repeat this option for multiple servers."],
 
