@@ -109,6 +109,15 @@ You'll need to install:
 
 *	Closure Library: http://code.google.com/intl/en/closure/library/
 
+Optional modules:
+
+*	Pyquitter: https://github.com/ludios/Pyquitter
+
+*	Refbinder: https://github.com/ludios/Refbinder
+
+*	Brequire: https://github.com/ludios/Brequire
+
+
 To start the server, run:
 
 `twistd -n minerva_site -t tcp:8111:interface=127.0.0.1 --closure-library=/abspath/closure-library`
