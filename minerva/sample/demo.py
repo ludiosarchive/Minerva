@@ -1,3 +1,8 @@
+"""
+NOT A WORKING DEMO! Don't use! Look at chatapp instead.
+"""
+
+
 from twisted.python import log
 from twisted.internet import reactor
 from twisted.web import resource, server
@@ -19,16 +24,11 @@ class DemoProtocol(object):
 		self.stream = stream
 
 
-	def stringsReceived(self, strings):
+	def stringReceived(self, s):
 		# Remember, we cannot raise an exception here.
 
-		send = []
-		for s in strings:
-			if s.startswith('echo:'):
-				send.append(s.replace('echo:', '', 1))
-
-		if send:
-			self.stream.sendStrings(send)
+		if s.startswith('echo:'):
+			self.stream.sendStrings([s.replace('echo:', '', 1)])
 
 
 	def streamReset(self, reasonString, applicationLevel):
