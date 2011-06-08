@@ -20,7 +20,7 @@ Highlights
 	Safari, and Opera.  Minerva disables the page-loading spinner in all browsers.
 
 *	Multiple transports: Minerva runs over HTTP long-polling, HTTP streaming, and
-	Flash sockets.  Its design easily supports new transports like WebSocket.
+	Flash sockets.  Its design easily supports new transports.
 
 *	Robust timeout logic: Stuck requests and sockets are detected and aborted.
 
@@ -145,17 +145,9 @@ chat amongst each other.
 Running the tests
 =================
 
-Minerva server tests
---------------------
+Server tests: `trial minerva`
 
-`trial minerva`
-
-
-Minerva client tests
---------------------
-
-Start the test server as described in "Initial setup", then browse to http://127.0.0.1:8111/js_minerva_tests.html
-
+Cient tests: Start the test server as described in "Initial setup", then browse to http://127.0.0.1:8111/js_minerva_tests.html
 
 
 
