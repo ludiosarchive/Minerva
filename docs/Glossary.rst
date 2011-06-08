@@ -28,22 +28,14 @@ S2C
 C2S
 	client-to-server. (e.g. a C2S transport, or a C2S string)
 transport
-	an HTTP request/response, or socket, or WebSocket, that Minerva uses to
-	send/receive frames.
+	an HTTP request/response, or socket, that Minerva uses to send/receive
+	frames.
 S2C transport
 	a transport that is being used or will be used to send S2C strings,
 	regardless of whether it it used for C2S as well.
 primary transport
 	In server context: the transport that is currently designated to send
-	strings to the client. This was formerly called "active S2C transport".
-crypted
-	refers to not-yet-implemented encryption for Flash Socket, likely to be based
-	on a variant of ChaCha12 where client downloads 448 bits of random
-	(512 - 64 bit block counter) from the server for each connection. Message
-	authenticity is ensured by embedding a SHA1 of each frame into the connection.
-	Basically, all of this, ChaCha12-ed:
-
-		``[32-bit length of frame][160-bit SHA1 of frame][frame]``
+	strings to the client.
 
 
 

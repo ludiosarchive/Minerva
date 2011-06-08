@@ -81,6 +81,4 @@ Minerva client supports registering a special pull producer that will be pulled 
 before Minerva client makes any HTTP request. This is useful if Minerva client is using
 HTTP as primary transport, and client application wants to occasionally upload data
 without incurring the cost of a C2S HTTP request. If Minerva is using HTTP as primary
-transport, the pull producer will be pulled around every 55 seconds.
-
-
+transport, the pull producer will be pulled around every NN seconds.
