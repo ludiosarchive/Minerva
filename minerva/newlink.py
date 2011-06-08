@@ -936,7 +936,7 @@ class ServerTransport(object):
 
 	One ServerTransport is instantiated for every HTTP request we receive
 	(for HTTP endpoints), or for every TCP connection we receive (for
-	Flash Socket/WebSocket endpoints).
+	Flash Socket endpoints).
 	"""
 	# Implements several interfaces.  Also almost an IProtocol, but this has
 	# no connectionMade (only makeConnection).
