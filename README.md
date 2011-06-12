@@ -2,7 +2,7 @@ Minerva overview
 ================
 
 Minerva is an robust open-source Comet server and client.  You can use it to
-build web applications that need a socket-like abstraction.  It server is built
+build web applications that need a socket-like abstraction.  Its server is built
 on top of Twisted and the JavaScript client uses Closure Library.
 
 
