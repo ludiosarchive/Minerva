@@ -1,2 +1,2 @@
 # Remember to update minerva/__init__.py, too
-__version__ = '11.6.8.1'
+__version__ = '11.6.14'
