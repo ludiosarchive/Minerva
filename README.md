@@ -165,3 +165,4 @@ Then run:
 ```
 ./build_compiled_js.sh
 ./build_swfs.sh
+```
