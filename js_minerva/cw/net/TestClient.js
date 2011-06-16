@@ -496,7 +496,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 	},
 
 	function makeProtocol_(self) {
-		var	 proto = new cw.net.TestClient.RecordingProtocol();
+		var proto = new cw.net.TestClient.RecordingProtocol();
 
 		/**
 		 * @this {cw.net.TestClient.RecordingProtocol}

@@ -83,7 +83,7 @@ class SocketBridge {
 			socket.addEventListener( ProgressEvent.SOCKET_DATA, 
 				function(e):Void { handle_data(instance_id, e); }
 			);
-		}		
+		}
 	}
 	public static function close(instance_id:String) {
 		var socket = sockets.get(instance_id);
@@ -107,13 +107,13 @@ class SocketBridge {
 		Security.loadPolicyFile(path);
 	}
 	public static function main() {
-		ExternalInterface.addCallback("loadPolicyFile", loadPolicyFile);	
-		
-		ExternalInterface.addCallback("connect", connect);	
-		ExternalInterface.addCallback("close", close);	
-		ExternalInterface.addCallback("write", write);	
+		ExternalInterface.addCallback("loadPolicyFile", loadPolicyFile);
+
+		ExternalInterface.addCallback("connect", connect);
+		ExternalInterface.addCallback("close", close);
+		ExternalInterface.addCallback("write", write);
 		ExternalInterface.addCallback("CAN_I_HAS_SOCKET", CAN_I_HAS_SOCKET);
-		
+
 		// Despite possibly-incorrect syntax highlighting below, it's really JavaScript code, not haXe code.
 		ExternalInterface.call("
 		(function() {

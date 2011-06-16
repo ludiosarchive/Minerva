@@ -274,7 +274,7 @@ cw.net.FlashSocket.prototype.disposeInternal = function() {
 	delete this.bridge_;
 
 	if(this.needToCallClose_) {
-		try 	{
+		try {
 			var ret = bridge.CallFunction(
 				cw.externalinterface.request('__FC_close', this.id_));
 			this.logger_.info("disposeInternal: __FC_close ret: " + ret);

@@ -528,7 +528,7 @@ cw.net.TestXHDR._BaseRealRequestTests.subclass(cw.net.TestXHDR, 'UsableXDRRealRe
 		});
 	},
 
-	// A	 lot more codepoints are banned for XDR. Banned codepoints are replaced with
+	// A lot more codepoints are banned for XDR. Banned codepoints are replaced with
 	// U+FFFD REPLACEMENT CHARACTER.
 
 	// Other than bad surrogates, the "forbidden" codepoint ranges are:
