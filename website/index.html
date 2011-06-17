@@ -1,0 +1,174 @@
+<!doctype html>
+<html>
+<head>
+<title>ludios.org</title>
+</head>
+<body>
+<style>
+a {
+	color: #00e;
+}
+a:visited {
+	color: #551a8b;
+}
+html, body {
+	margin: 0;
+	padding: 0;
+	background-color: #f7f7f7;
+	color: #000;
+}
+body, p {
+	font-family: Arial, Helvetica, sans-serif;
+}
+#content {
+	padding: 1em;
+	border-left: 1em solid rgb(183, 176, 164);
+}
+#logo {
+  margin-bottom: 0.8em;
+}
+ul li {
+  margin-bottom: 0.5em;
+}
+</style>
+<div id="content">
+<!--<img src="minerva.gif" id="logo"><br>-->
+
+<h1>Minerva</h1>
+
+<p>
+	Minerva is an robust Comet server and client.  You can use it to
+	build web applications that need a socket-like abstraction.  Its server is built
+	on top of Twisted.  The JavaScript client uses Closure Library.
+</p>
+
+
+<h2>Highlights</h2>
+
+<ul>
+
+<li>	Reliable and in-order message delivery: The Minerva client and server attach
+		 sequence numbers to messages and send/receive ACKs.  Messages never get lost or
+		re-ordered, no matter which transport is used.
+
+<li>	Serialization-agnostic: Your application isn't forced to use JSON, XML, or
+		anything else.
+
+<li>	Cross-browser: Minerva works in old and new versions of IE, Firefox, Chrome,
+		Safari, and Opera.  Minerva disables the page-loading spinner in all browsers.
+
+<li>	Multiple transports: Minerva runs over HTTP long-polling, HTTP streaming, and
+		Flash sockets.  Its design easily supports new transports.
+
+<li>	Robust timeout logic: Stuck requests and sockets are detected and aborted.
+
+<li>	Handles tab addicts: To work around browsers' per-domain active request
+		 limits (usually just 4-6 requests), Minerva can send HTTP requests to random
+		 subdomains.  Your web application will work as usual when you open it in a
+		dozen tabs.
+
+<li>	Licensed under Apache License, Version 2.0.
+
+</ul>
+
+
+
+<h2>Disclaimers</h2>
+
+Go ahead and try out Minerva because it should work well, but keep in mind that
+right now:
+
+<ul>
+
+<li>	The API isn't stable yet.  It will be soon.
+
+<li>	No cross-domain support yet.  Right now, website.com can
+		only connect to a Minerva server at *.website.com.  If you really want cross-domain
+		support, you can use Closure Library's cross-domain support combined with the
+		Minerva client in an iframe.
+
+<li>	If you don't want to use Twisted or Closure Library, you'll have to do some
+		legwork.  We'll soon have better support for non-Twisted and non-Closure
+		Library users.
+
+<li>	Despite HTTP streaming and Flash sockets working, there's no automatic
+		negotation between HTTP long-polling/HTTP streaming/Flash sockets yet.  For
+		Internet-facing applications, just use long-polling for now.
+
+<li>	For Internet-facing applications, you'll want to deploy Minerva's
+		twisted.web-based server behind nginx or similar.  Apache will also work, if
+		you don't expect too many users at once.</li>
+
+<li>	Minerva was built for correctness, not for maximizing connection count.  If
+		you want over ~10,000 connections/core, you may want something else.
+		There are two mitigating factors:
+
+		<ol>
+
+		<li>	Minerva works on PyPy, and it'll keep getting faster.
+
+		<li>	WebSocket will soon work for more users, and you can bypass
+				Minerva entirely for your WebSocket connections.
+
+		</ol>
+
+</ul>
+
+
+
+<h2>FAQ</h2>
+
+<h3>What about WebSocket?</h3>
+
+<p>
+Minerva's HTTP transport means that if a user can load your website, they
+can also connect to your Minerva server (as long as they have JavaScript enabled).
+This isn't the case with WebSocket, because (1) browser support is still poor
+(2) even in browsers that support it, many networks make WebSocket connections
+impossible.  Google <a href="http://www.ietf.org/mail-archive/web/tls/current/msg05593.html">reported success rates</a> of
+67% (port 80) to 95% (port 443).
+</p>
+
+<p>
+WebSocket is vastly superior to HTTP transports in this use case: sending small
+messages frequently from the client to the server.  If you use HTTP transports
+for this use case, the client wastes bandwidth by sending the same HTTP headers
+for every message.  But for most applications, Comet-style HTTP transports work fine.
+</p>
+
+<h3>Do I need to use Twisted?</h3>
+
+<p>
+For now, yes.  In the future, we might have an TCP gateway and a WebSocket gateway.
+These will allow you to use Minerva's reliable HTTP transports without writing
+any server code.
+</p>
+
+<h3>The client uses Closure Library.  Does this use Google's BrowserChannel?</h3>
+
+<p>
+No, but the Minerva protocol does solve the same problems as BrowserChannel.
+</p>
+
+<h3>Why are strings restricted to 95 codepoints (" " 0x20 to "~" 0x7E)?</h3>
+
+<p>
+This design decision simplifies Minerva and helps keep the API stable if new
+transports are added in the future.  The codepoint range doesn't seriously
+impact most applications: you can use JSON (encoded as ASCII-only), or Base64,
+or even higher Base* encodings.  This decision is left for you.
+</p>
+
+<p>
+Supporting more than this codepoint range would make Minerva more fragile to
+changes in the transports its uses.  For example, XMLHttpRequest can't receive
+0x00 in IE and Opera.  XMLHttpRequest's readyState 3 and Unicode often don't
+mix (especially in older Firefox versions).  XDomainRequest (IE8+) replaces a
+large number of non-Character Unicode codepoints.
+</p>
+
+
+</ul>
+</div>
+</body>
+</html>
