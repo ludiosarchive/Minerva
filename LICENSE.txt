@@ -1,6 +1,10 @@
 Minerva license
 ===============
 
+This license applies to everything except these files:
+
+docs/website/logo*
+
 Copyright (c) 2009-2011 The Minerva Authors (see AUTHORS.txt)
 
                                  Apache License
