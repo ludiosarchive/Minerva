@@ -25,6 +25,9 @@ body, p {
 	font-family: Arial, Helvetica, sans-serif;
 	line-height: 125%;
 }
+code, pre {
+	font-family: 'Bitstream Vera Sans Mono', Consolas, 'Courier New', Courier, monospace;
+}
 #content {
 	padding: 1em;
 	border-left: 1em solid rgb(183, 176, 164);
@@ -71,6 +74,11 @@ h2 {
 	client uses <a href="https://code.google.com/closure/library/">Closure Library</a>.
 </p>
 
+<p>
+	Some uses for Minerva: chat applications, games, real-time collaboration, dashboards, monitoring systems.
+</p>
+
+<!-- TODO: just link to all demos directly here -->
 <a class="button" href="demos">
 View demos
 </a>
@@ -79,6 +87,7 @@ View demos
 Tutorial
 </a>
 
+<!--
 <a class="button" href="code.html">
 Get the code
 </a>
@@ -86,6 +95,7 @@ Get the code
 <a class="button" href="list.html">
 Mailing list
 </a>
+-->
 
 <br style="clear:both">
 
@@ -93,8 +103,8 @@ Mailing list
 
 <ul>
 
-<li>	Reliable and in-order message delivery: The Minerva client and server attach
-		 sequence numbers to messages and send/receive ACKs.  Messages never get lost or
+<li>	Reliable and in-order message delivery: Both client and server attach
+		sequence numbers to messages and send/receive ACKs.  Messages never get lost or
 		re-ordered, no matter which transport is used.
 
 <li>	Serialization-agnostic: Your application isn't forced to use JSON, XML, or
@@ -103,7 +113,7 @@ Mailing list
 <li>	Cross-browser: Minerva works in old and new versions of IE, Firefox, Chrome,
 		Safari, and Opera.  Minerva disables the page-loading spinner in all browsers.
 
-<li>	Multiple transports: Minerva runs over HTTP long-polling, HTTP streaming, and
+<li>	Multiple transports: Minerva runs over HTTP <a href="https://secure.wikimedia.org/wikipedia/en/wiki/Push_technology#Long_polling">long-polling</a>, HTTP streaming, and
 		Flash sockets.  Its design easily supports new transports.
 
 <li>	Robust timeout logic: Stuck requests and sockets are detected and aborted.
@@ -113,16 +123,32 @@ Mailing list
 		 subdomains.  Your web application will work as usual when you open it in a
 		dozen tabs.
 
-<li>	Licensed under Apache License, Version 2.0.
+<li>	Licensed under <a href="http://www.apache.org/licenses/LICENSE-2.0.html">Apache License, Version 2.0</a>.
 
 </ul>
 
 
+<h2>Mailing list and IRC</h2>
+
+<p>
+	The mailing list is <strong><a href="https://groups.google.com/a/ludios.org/group/minerva-etc/topics">minerva-etc</a></strong>;
+	you can post and subscribe through Google's interface.  If you have trouble posting, let <a href="mailto:ivan@ludios.org?subject=Problems with minerva-etc">Ivan</a> know.
+</p>
+
+<p>
+	If you want to subscribe without a Google account, send an email to <a href="mailto:minerva-etc+subscribe@ludios.org">minerva-etc+subscribe@ludios.org</a>; you should receive a confirmation with ~10 minutes.  Then, send your message to <a href="mailto:minerva-etc@ludios.org">minerva-etc@ludios.org</a>.  To unsubscribe, email <a href="mailto:minerva-etc+unsubscribe@ludios.org">minerva-etc+unsubscribe@ludios.org</a>.
+</p>
+
+<p>
+The IRC channel is <code>##minerva</code> (two hashes) on <code>irc.freenode.net</code>.  Feel free to highlight <code>ivan</code>.  Office hours are usually 10am-noon Pacific, weekdays.  Given the low volume, you may want to stick around for a day or two (or just use the mailing list).  Logs will be available later.
+</p>
 
 <h2>Disclaimers</h2>
 
-Go ahead and try out Minerva because it should work well, but keep in mind that
-right now:
+<p>
+	Go ahead and try out Minerva because it should work well, but keep in mind that
+	right now:
+</p>
 
 <ul>
 
@@ -130,8 +156,8 @@ right now:
 
 <li>	No cross-domain support yet.  Right now, website.com can
 		only connect to a Minerva server at *.website.com.  If you really want cross-domain
-		support, you can use Closure Library's cross-domain support combined with the
-		Minerva client in an iframe.
+		support, you can use Closure Library's cross-domain support (goog.net.xpc)
+		combined with the Minerva client in an iframe.
 
 <li>	If you don't want to use Twisted or Closure Library, you'll have to do some
 		legwork.  We'll soon have better support for non-Twisted and non-Closure
@@ -153,7 +179,7 @@ right now:
 
 		<li>	You can run a Minerva server for every CPU you have.
 
-		<li>	Minerva works on PyPy, and it'll keep getting faster.
+		<li>	Minerva works on <a href="http://pypy.org/">PyPy</a>, and it'll keep getting faster.
 
 		<li>	WebSocket will soon work for more users, and you can bypass
 				Minerva entirely for your WebSocket connections.
@@ -166,10 +192,10 @@ right now:
 
 <h2>FAQ</h2>
 
-<h3>What about WebSocket?</h3>
+<h3>What about <a href="https://secure.wikimedia.org/wikipedia/en/wiki/WebSockets">WebSocket</a>?</h3>
 
 <p>
-Minerva's HTTP transport (using XHR on the client) means that if a user can load your website, they
+Minerva's HTTP transport (which uses XHR on the client) means that if a user can load your website, they
 can also connect to your Minerva server, as long as they have JavaScript enabled.
 This isn't the case with WebSocket, because (1) browser support is still poor
 (2) even in browsers that support it, many networks make WebSocket connections
@@ -178,7 +204,15 @@ impossible.  Google <a href="http://www.ietf.org/mail-archive/web/tls/current/ms
 </p>
 
 <p>
-WebSocket is vastly superior to HTTP transports in this use case: sending small
+As far as we can tell, there's no good reason for Minerva to support WebSocket.
+Your web application can use Minerva as a fallback for when a WebSocket
+connection fails.  Alternatively, it can use Minerva as the initial connection
+method, for potentially faster connection setup.  We'll soon document some
+ways to use both Minerva and WebSocket.
+</p>
+
+<p>
+Note that WebSocket is vastly superior to HTTP transports in this use case: sending small
 messages frequently from the client to the server.  If you use HTTP transports
 for this, the client wastes bandwidth by sending the same HTTP headers
 for every message.  But for most applications, Comet-style HTTP transports work fine.
