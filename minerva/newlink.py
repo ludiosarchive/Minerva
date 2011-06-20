@@ -1043,7 +1043,9 @@ class ServerTransport(object):
 				self._stream = None
 
 			if self._mode == HTTP:
-				if not self.writable._disconnected and not self.writable.finished:
+				# _disconnected is in Twisted >= 9.0
+				isDisconnected = getattr(self.writable, '_disconnected', False)
+				if not isDisconnected and not self.writable.finished:
 					self.writable.finish()
 
 			# TODO: for non-HTTP, set timer and close the connection ourselves

@@ -93,7 +93,8 @@ Minerva's test server running:
 
 You'll need to install:
 
-*	Twisted: http://twistedmatrix.com/
+*	Twisted: http://twistedmatrix.com/ (>= 8.2.0, but recent versions are
+	highly recommended for security and other bug fixes)
 
 *	zope.interface: http://pypi.python.org/pypi/zope.interface (Twisted needs it too)
 
