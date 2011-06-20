@@ -58,9 +58,9 @@ h2 {
 	width: 160px;
 	height: 30px;
 	border: 1px solid #777;
-	border-radius: 3px;
-	-moz-border-radius: 3px;
-	-webkit-border-radius: 3px;
+	border-radius: 5px;
+	-moz-border-radius: 5px;
+	-webkit-border-radius: 5px;
 	background-color: #e0dada;
 	margin-right: 16px;
 }
@@ -210,11 +210,11 @@ impossible.  Google <a href="http://www.ietf.org/mail-archive/web/tls/current/ms
 </p>
 
 <p>
-As far as we can tell, there's no good reason for Minerva to support WebSocket.
-Your web application can use Minerva as a fallback for when a WebSocket
-connection fails.  Alternatively, it can use Minerva as the initial connection
-method, for potentially faster connection setup.  We'll soon document some
-ways to use both Minerva and WebSocket.
+As far as we can tell, there's no good reason to implement a Minerva transport
+that uses WebSocket.  Your web application can just use Minerva as a fallback
+for when a WebSocket connection fails.  Alternatively, it can use Minerva as
+the initial connection method, for potentially faster connection setup.
+We'll soon document some ways to use both Minerva and WebSocket.
 </p>
 
 <p>
