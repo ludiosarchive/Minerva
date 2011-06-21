@@ -12,6 +12,7 @@ from random import randint
 from functools import partial
 
 import simplejson
+from simplejson import decoder as dec
 
 from zope.interface import implements, Interface
 from twisted.python.filepath import FilePath
@@ -19,6 +20,8 @@ from twisted.python.filepath import FilePath
 from minerva.objcheck import strToNonNegLimit
 from webmagic.untwist import BetterResource
 from webmagic.pathmanip import getCacheBrokenHref
+
+from securetypes import securedict
 
 try:
 	from brequire import requireFile, requireFiles
@@ -172,6 +175,57 @@ def htmldumps(*args, **kwargs):
 	an HTML closing tag from closing a script.
 	"""
 	return simplejson.dumps(*args, **kwargs).replace('/', r'\/')
+
+
+class StrictDecodeError(Exception):
+	pass
+
+
+
+def _raiseDecodeError(obj):
+	raise StrictDecodeError(
+		"NaN, Infinity, and -Infinity are forbidden")
+
+
+strictDecoder = simplejson.decoder.JSONDecoder(
+	parse_constant=_raiseDecodeError,
+	object_pairs_hook=securedict)
+
+def _isDecodeBuggy():
+	"""
+	Returns C{True} if simplejson has this bug:
+	http://code.google.com/p/simplejson/issues/detail?id=85
+
+	This returns True if the simplejson is buggy, even if speedups
+	are currently disabled.
+	"""
+	# The bug was fixed in r236 @ https://code.google.com/p/simplejson/source/list
+	# and 2.1.2 was released shortly after.
+	return simplejson.__version__.split('.') < (2, 1, 2)
+
+_decodeBuggy = _isDecodeBuggy()
+
+
+def strictSecureDecodeJson(s):
+	"""
+	Decode JSON-containing bytestring `s`, forbidding any whitespace or
+	trailing bytes.  JSON objects are decoded to L{securedict}s instead of
+	L{dict}s.  NaN, Infinity, and -Infinity are rejected because they are
+	not part of the JSON spec.
+
+	If any problems are found, L{JSONDecodeError} is raised.
+	"""
+	decoded, at = strictDecoder.raw_decode(s)
+	# The off-by-one bug affects only the pure Python decoder, not speedups.
+	# Note that applications may toggle speedups at runtime with
+	# simplejson._toggle_speedups()
+	if _decodeBuggy and dec.scanstring is dec.py_scanstring:
+		at += 1
+	if at != len(s):
+		raise StrictDecodeError(
+			"Expected to reach the end of the string but %d bytes "
+			"remained" % (len(s) - at,))
+	return decoded
 
 
 def _contentToTemplate(content):

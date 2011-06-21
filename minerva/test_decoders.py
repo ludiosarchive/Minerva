@@ -3,7 +3,6 @@ import struct
 from twisted.trial import unittest
 
 from strfrag import StringFragment
-from securetypes import securedict
 from minerva import decoders
 
 
@@ -56,17 +55,6 @@ def fstValueToStrs(tup):
 	fst, snd = tup
 	fst = fragmentsToStr(fst)
 	return (fst, snd)
-
-
-
-class StrictDecoders(unittest.TestCase):
-
-	def test_strictDecodeOne(self):
-		out = decoders.strictDecodeOne('{"a": {}}')
-		self.assertEqual(securedict({"a": securedict()}), out)
-		self.assertTrue(isinstance(out, securedict), type(out))
-		self.assertTrue(isinstance(out["a"], securedict), type(out))
-
 
 
 class CommonTests(object):

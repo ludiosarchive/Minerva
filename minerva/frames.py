@@ -13,7 +13,7 @@ from simplejson.decoder import JSONDecodeError
 from minerva.objcheck import (
 	ensureBool, ensureNonNegIntLimit, strToNonNegLimit, strToIntInRange)
 from strfrag import StringFragment
-from minerva.decoders import strictDecoder, ParseError
+from minerva.website import strictDecoder, StrictDecodeError
 from minerva.window import SACK
 
 _postImportVars = vars().keys()
@@ -251,7 +251,7 @@ class HelloFrame(object):
 			# Reach into the private attributes, we know what we're doing.
 			helloData, stoppedAt = strictDecoder.raw_decode(
 				frameString._string, frameString._pos)
-		except (JSONDecodeError, ParseError, RuntimeError):
+		except (JSONDecodeError, StrictDecodeError, RuntimeError):
 			# Note: RuntimeError raised if stack overflows
 			raise InvalidHello("corrupt JSON")
 		# `- 1` because we expect to stop before the trailing "H"
