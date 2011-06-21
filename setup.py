@@ -30,4 +30,14 @@ setup(
 			'compiled_client/*.swf'],
 		'js_minerva': ['*.js', '*/*.js', '*/*/*.js', '*/*/*/*.js'],
 	},
+	install_requires=[
+		 'Twisted >= 8.2.0'
+		,'zope.interface'
+		,'Jinja2 >= 2.1'
+		,'simplejson >= 2.1'
+		,'Coreweb >= 11.6.17'
+		,'Webmagic >= 11.6.20.1'
+		,'Securetypes >= 11.5.6'
+		,'Strfrag >= 11.5.9'
+	],
 )
