@@ -5,6 +5,7 @@ Protocols that convert a stream of bytes into Minerva frames.
 import sys
 import struct
 import simplejson
+from simplejson import decoder as dec
 from strfrag import StringFragment
 from securetypes import securedict
 
@@ -44,12 +45,15 @@ def _isDecodeBuggy():
 	"""
 	Returns C{True} if simplejson has this bug:
 	http://code.google.com/p/simplejson/issues/detail?id=85
-	"""
-	o, at = strictDecoder.raw_decode('{"a": {}}')
-	assert at in (8, 9), at
-	return at == 8
 
-_posOffBy1 = _isDecodeBuggy()
+	This returns True if the simplejson is buggy, even if speedups
+	are currently disabled.
+	"""
+	# The bug was fixed in r236 @ https://code.google.com/p/simplejson/source/list
+	# and 2.1.2 was released shortly after.
+	return simplejson.__version__.split('.') < (2, 1, 2)
+
+_decodeBuggy = _isDecodeBuggy()
 
 
 def strictDecodeOne(s):
@@ -60,7 +64,10 @@ def strictDecodeOne(s):
 	JSON objects are decoded to L{securedict}s instead of L{dict}s.
 	"""
 	decoded, at = strictDecoder.raw_decode(s)
-	if _posOffBy1:
+	# The off-by-one bug affects only the pure Python decoder, not speedups.
+	# Note that applications may toggle speedups at runtime with
+	# simplejson._toggle_speedups()
+	if _decodeBuggy and dec.scanstring is dec.py_scanstring:
 		at += 1
 	if at != len(s):
 		raise ParseError(

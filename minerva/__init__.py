@@ -1,2 +1,2 @@
-# Remember to update minerva/__init__.py, too
-__version__ = '11.6.20'
+# Remember to update js_minerva/__init__.py, too
+__version__ = '11.6.21'
