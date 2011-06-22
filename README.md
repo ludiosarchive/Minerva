@@ -1,5 +1,5 @@
-Minerva overview
-================
+Minerva
+=======
 
 Minerva is a robust open source Comet server and client.  You can use it to
 build web applications that need a socket-like abstraction.  Its server is built
