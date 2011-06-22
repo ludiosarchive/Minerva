@@ -267,7 +267,8 @@ maximizing connection count.  There are three mitigating factors:</p>
 No, but the Minerva protocol does solve the same problems as BrowserChannel.
 </p>
 
-<h3>Should I expose Minerva's twisted.web-based HTTP server to the Internet?</h3>
+<h3>Minerva's <code>HttpFace</code> uses twisted.web.  Should I expose
+twisted.web to the Internet?</h3>
 
 <p>
 twisted.web generally works well, but you probably don't want to expose it
