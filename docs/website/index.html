@@ -38,7 +38,7 @@ code, pre {
 ol {
 	margin-top: 0.5em;
 }
-ul li {
+ol li, ul li {
 	margin-bottom: 0.5em;
 }
 h1 {
@@ -63,6 +63,10 @@ h2 {
 	-webkit-border-radius: 5px;
 	background-color: #e0dada;
 	margin-right: 16px;
+}
+.spacer {
+	padding: 0 0.15em 0 0.15em;
+	color: rgb(153, 156, 144);
 }
 </style>
 <div id="content">
@@ -105,7 +109,16 @@ Mailing list
 
 <br style="clear:both">
 
-<h2>Highlights</h2>
+<p>
+Jump to:
+<a href="#h-highlights">Highlights</a> <span class="spacer">&bull;</span>
+<a href="#h-mailing-irc">Mailing list and IRC</a> <span class="spacer">&bull;</span>
+<a href="#h-disclaimers">Disclaimers</a> <span class="spacer">&bull;</span>
+<a href="#h-faq">FAQ</a> <span class="spacer">&bull;</span>
+<a href="#h-contact">Contact</a>
+</p>
+
+<h2 id="h-highlights">Highlights</h2>
 
 <ul>
 
@@ -135,7 +148,7 @@ Mailing list
 </ul>
 
 
-<h2>Mailing list and IRC</h2>
+<h2 id="h-mailing-irc">Mailing list and IRC</h2>
 
 <p>
 	The mailing list is <strong><a href="https://groups.google.com/a/ludios.org/group/minerva-etc/topics">minerva-etc</a></strong>;
@@ -158,7 +171,7 @@ Twisted-related question, try asking in <code>#twisted</code> or
 <code>#twisted.web</code>.
 </p>
 
-<h2>Disclaimers</h2>
+<h2 id="h-disclaimers">Disclaimers</h2>
 
 <p>
 	Go ahead and try out Minerva because it should work well, but keep in mind that
@@ -169,7 +182,7 @@ Twisted-related question, try asking in <code>#twisted</code> or
 
 <li>	The API isn't stable yet.  It will be soon, after some initial feedback.
 
-<li>	No cross-domain support yet.  Right now, website.com can
+<li>	There's no cross-domain support yet.  Right now, website.com can
 		only connect to a Minerva server at *.website.com.  If you really want cross-domain
 		support, you can use Closure Library's cross-domain support (goog.net.xpc)
 		combined with the Minerva client in an iframe.
@@ -182,30 +195,11 @@ Twisted-related question, try asking in <code>#twisted</code> or
 		negotation between HTTP long-polling/HTTP streaming/Flash sockets yet.  For
 		Internet-facing applications, use just long-polling for now.
 
-<li>	For Internet-facing applications, you'll want to deploy Minerva's
-		twisted.web-based server behind nginx or similar.  Apache will also work, if
-		you don't expect too many users at once.</li>
-
-<li>	Minerva was built for correctness, not for maximizing connection count.  If
-		you want over ~10,000 connections/core, you may want something else.
-		There are three mitigating factors:
-
-		<ol>
-
-		<li>	You can run a Minerva server for every CPU you have.
-
-		<li>	Minerva works on <a href="http://pypy.org/">PyPy</a>, and it'll keep getting faster.
-
-		<li>	WebSocket will soon work for more users, and you can bypass
-				Minerva entirely for your WebSocket connections.
-
-		</ol>
-
 </ul>
 
 
 
-<h2>FAQ</h2>
+<h2 id="h-faq">FAQ</h2>
 
 <h3>What about <a href="https://secure.wikimedia.org/wikipedia/en/wiki/WebSockets">WebSocket</a>?</h3>
 
@@ -242,10 +236,46 @@ any Python/Twisted server code; you will just specify a TCP/WebSocket server
 for Minerva to proxy to.
 </p>
 
+<h3>How many simultaneous connections can the server handle?</h3>
+
+<p>
+Somewhere around 10,000-20,000 per Minerva server.  If you run your own
+benchmarks, remember to: (1) select the best Twisted reactor for your OS
+(epoll on Linux) (2) think about TIME_WAIT sockets: they might clog up
+your benchmark (3) try PyPy.
+</p>
+
+<p>Why not 100,000 or more?  Minerva was built for correctness, not for
+maximizing connection count.  There are three mitigating factors:</p>
+
+<ol>
+<li>You can run a Minerva server for every CPU you have.
+
+<li>Minerva works on <a href="http://pypy.org/">PyPy</a>, and it'll keep getting faster.
+
+<li>WebSocket will soon work for more users, and you can bypass
+	Minerva entirely for your WebSocket connections.
+</ol>
+
 <h3>The client uses Closure Library.  Does this use Google's BrowserChannel?</h3>
 
 <p>
 No, but the Minerva protocol does solve the same problems as BrowserChannel.
+</p>
+
+<h3>Should I expose Minerva's twisted.web-based HTTP server to the Internet?</h3>
+
+<p>
+twisted.web generally works well, but you probably don't want to expose it
+to the Internet (though many do).  Consider putting it behind nginx (or similar)
+for three reasons:
+<ol>
+	<li>nginx has better support for unusual/old/broken HTTP clients.
+
+	<li>nginx has better HTTPS support: SSL sessions are cached, compatibility options are enabled.
+
+	<li>nginx is a lot harder to DoS than twisted.web.
+</ol>
 </p>
 
 <h3>Why are Minerva strings restricted to 95 codepoints (" " 0x20 to "~" 0x7E)?</h3>
@@ -254,12 +284,13 @@ No, but the Minerva protocol does solve the same problems as BrowserChannel.
 This design decision simplifies Minerva and helps keep the API stable if new
 transports are added in the future.  The codepoint range doesn't seriously
 impact most applications: you can use JSON (encoded as ASCII-only), or Base64,
-or even higher Base* encodings.  This decision is left for you.
+or even <a href="https://secure.wikimedia.org/wikipedia/en/wiki/Ascii85">higher Base*</a>
+encodings.  This decision is left to you.
 </p>
 
 <p>
 Supporting more than this codepoint range would make Minerva more fragile to
-changes in the transports its uses.  For example, XMLHttpRequest can't receive
+changes in the transports it uses.  For example, XMLHttpRequest can't receive
 0x00 in IE and Opera.  XMLHttpRequest's readyState 3 and Unicode often don't
 mix (especially in older Firefox versions).  XDomainRequest (IE8+) replaces a
 large number of non-Character Unicode codepoints.
@@ -303,10 +334,11 @@ Commercial:
 We don't endorse any of these, but many have interesting implementations and features.
 </p>
 
-<h2>Contact</h2>
+<h2 id="h-contact">Contact</h2>
 
 <p>
-Ivan Kozik: <a href="mailto:ivan@ludios.org">ivan@ludios.org</a>.  Consider mailing the mailing list, though.
+Ivan Kozik: <a href="mailto:ivan@ludios.org">ivan@ludios.org</a>.  Consider
+mailing the mailing list for most questions.
 </p>
 
 </ul>
