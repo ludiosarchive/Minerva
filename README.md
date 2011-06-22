@@ -1,9 +1,12 @@
 Minerva
 =======
 
-Minerva is a robust open source Comet server and client.  You can use it to
+Minerva is a robust Comet server and client.  You can use it to
 build web applications that need a socket-like abstraction.  Its server is built
 on top of Twisted.  The JavaScript client uses Closure Library.
+
+Some uses for Minerva: chat applications, games, real-time collaboration,
+dashboards, monitoring systems.
 
 Read more: http://ludios.org/minerva/
 
@@ -29,7 +32,7 @@ Highlights
 *	Handles tab addicts: To work around browsers' per-domain active request
  	limits (usually just 4-6 requests), Minerva can send HTTP requests to random
  	subdomains.  Your web application will work as usual when you open it in a
-	dozen tabs.
+	dozen tabs.  If you want to use this on your HTTPS site, a wildcard cert is required.
 
 
 
