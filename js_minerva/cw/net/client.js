@@ -83,7 +83,6 @@ cw.net.SocketEndpoint = function(host, port, tracker) {
 	this.tracker = tracker;
 };
 
-// TODO: WebSocketEndpoint
 
 
 /**
