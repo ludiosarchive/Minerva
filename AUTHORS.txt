@@ -1,6 +1,5 @@
 # This is a list of contributors to Minerva.
 
-
 # Names should be added to this file like so:
 # Name or Organization <email address>
 
