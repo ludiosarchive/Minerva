@@ -6,7 +6,7 @@ from twisted.python.filepath import FilePath
 
 from minerva.newlink import StreamTracker, HttpFace, SocketFace
 
-from minerva.website import CsrfStopper, XDRFrame, XDRFrameDev
+from minerva.website import CsrfStopper
 
 from minerva.flashtest.pages import FlashTestPage
 from minerva.chatapp.pages import ChatAppPage
@@ -345,8 +345,6 @@ class Root(BetterResource):
 		# Demos that use httpFace and/or socketFace
 		self.putChild('flashtest', FlashTestPage(csrfStopper, cookieInstaller))
 		self.putChild('chatapp', ChatAppPage(fileCache, csrfStopper, cookieInstaller, domain))
-		self.putChild('xdrframe', XDRFrame(fileCache, domain))
-		self.putChild('xdrframe_dev', XDRFrameDev(fileCache, domain))
 
 		# Used by chatapp
 		self.putChild('wait_resource', WaitResource(clock=reactor))
@@ -374,7 +372,11 @@ def makeMinervaAndHttp(reactor, fileCache, csrfSecret, domain, closureLibrary):
 	csrfStopper = CsrfStopper(csrfSecret)
 	tracker = StreamTracker(clock, DemoFactory(clock))
 
-	httpFace = HttpFace(clock, tracker)
+	allowedDomains = []
+	if domain:
+		allowedDomains.append(domain)
+
+	httpFace = HttpFace(clock, tracker, fileCache, allowedDomains)
 	socketFace = SocketFace(clock, tracker, policyString=policyString)
 
 	root = Root(reactor, httpFace, fileCache, csrfStopper, cookieInstaller, domain, closureLibrary)

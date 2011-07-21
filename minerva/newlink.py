@@ -8,6 +8,8 @@ See minerva.test_newlink for the tests.
 """
 
 import sys
+import re
+from functools import partial
 
 from zope.interface import Interface, Attribute, implements
 
@@ -22,9 +24,12 @@ from strfrag import StringFragment
 from securetypes import securedict
 
 from webmagic.untwist import BetterResource, setNoCacheNoStoreHeaders
+from webmagic.pathmanip import getCacheBrokenHref
 
 from minerva import decoders
+from minerva.objcheck import strToNonNegLimit
 from minerva.window import SACK, Queue, Incoming
+from minerva.website import htmldumps
 from minerva.frames import (
 	HelloFrame, StringFrame, SeqNumFrame, SackFrame, StreamStatusFrame,
 	StreamCreatedFrame, YouCloseItFrame, ResetFrame, CommentFrame,
@@ -1685,12 +1690,77 @@ class SocketFace(protocol.ServerFactory):
 
 
 
-class HttpFace(BetterResource):
-	__slots__ = ('_clock', 'streamTracker')
+def _contentToTemplate(content):
+	import jinja2
+	return jinja2.Environment().from_string(content.decode('utf-8'))
+
+
+requireFiles([
+	FilePath(__file__).sibling('xdrframe.html').path,
+	FilePath(__file__).sibling('compiled_client').child('bootstrap_XDRSetup.js').path,
+	FilePath(__file__).sibling('compiled_client').child('xdrframe.js').path])
+
+class XDRFrame(BetterResource):
+	"""
+	A page suitable for loading into an iframe.  It sets a document.domain
+	so that it can communicate with the parent page (which must also set
+	document.domain).  It is capable of making XHR requests.
+
+	TODO: in production code, this could be a static page with static JavaScript
+	(maybe even the same .js file as the main page.)  Client-side code can
+	extract ?id= instead of the server.
+	"""
+	isLeaf = True
+	dictionary = {'dev_mode': False}
+	templateFile = FilePath(__file__).sibling('xdrframe.html')
+
+	def __init__(self, fileCache, allowedDomains):
+		self._fileCache = fileCache
+		self._allowedDomains = allowedDomains
+
+
+	def render_GET(self, request):
+		frameNum = strToNonNegLimit(request.args['framenum'][0], 2**53)
+		frameIdStr = request.args['id'][0]
+		domain = request.args['domain'][0]
+		if not re.match('^([A-Za-z0-9]*)$', frameIdStr):
+			raise ValueError("frameIdStr contained bad characters: %r" % (frameIdStr,))
+		if len(frameIdStr) > 50:
+			raise ValueError("frameIdStr too long: %r" % (frameIdStr,))
+		if not domain in self._allowedDomains:
+			raise ValueError("Domain %r not in allowed domains %r" % (
+				domain, self._allowedDomains))
+
+		template, _ = self._fileCache.getContent(
+			self.templateFile.path, transform=_contentToTemplate)
+		rendered = template.render(dict(
+			htmldumps=htmldumps,
+			cacheBreakLink=partial(
+				getCacheBrokenHref, self._fileCache, request),
+			domain=domain,
+			frameNum=frameNum,
+			frameIdStr=frameIdStr,
+			**self.dictionary))
+		return rendered.encode('utf-8')
+
+
+
+class XDRFrameDev(XDRFrame):
+	"""
+	Like XDRFrame, except load the uncompiled JavaScript code, instead of
+	the compiled xdrframe.js.
+	"""
+	dictionary = {'dev_mode': True}
+
+
+
+class _HttpFace(BetterResource):
 	isLeaf = True
 	protocol = ServerTransport
 
 	def __init__(self, clock, streamTracker):
+		# TODO: maybe make fileCache optional; use some default fileCache
+		# that caches forever
 		BetterResource.__init__(self)
 		self._clock = clock
 		self.streamTracker = streamTracker
@@ -1708,6 +1778,15 @@ class HttpFace(BetterResource):
 		d.addErrback(t.requestAborted)
 		t.requestStarted(request)
 		return NOT_DONE_YET
+
+
+
+class HttpFace(BetterResource):
+	def __init__(self, clock, streamTracker, fileCache, allowedDomains):
+		BetterResource.__init__(self)
+		self.putChild('', _HttpFace(clock, streamTracker))
+		self.putChild('xdrframe', XDRFrame(fileCache, allowedDomains))
+		self.putChild('xdrframe_dev', XDRFrameDev(fileCache, allowedDomains))
 
 
 

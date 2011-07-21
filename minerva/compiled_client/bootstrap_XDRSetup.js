@@ -25,9 +25,9 @@
   a.host2 = d;
   a.baseurl1 = b.protocol + "//" + c + "/";
   a.baseurl2 = b.protocol + "//" + d + "/";
-  b = a.dev ? "xdrframe_dev/" : "xdrframe/";
-  a.xdrurl1 = a.baseurl1 + b + "?framenum=1&id=" + a.id1;
-  a.xdrurl2 = a.baseurl2 + b + "?framenum=2&id=" + a.id2;
+  b = a.dev ? "httpface/xdrframe_dev/" : "httpface/xdrframe/";
+  a.xdrurl1 = a.baseurl1 + b + "?framenum=1&id=" + a.id1 + "&domain=" + a.domain;
+  a.xdrurl2 = a.baseurl2 + b + "?framenum=2&id=" + a.id2 + "&domain=" + a.domain;
   a.redirectCountdown = 2;
   eval("/*@cc_on!@*/false") ? window.setTimeout(f, 0) : f()
 })();

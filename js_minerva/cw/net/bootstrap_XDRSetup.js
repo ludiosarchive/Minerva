@@ -80,13 +80,15 @@ goog.provide("cw.net.bootstrap_XDRSetup");
 	__XDRSetup['baseurl1'] = loc.protocol + '//' + host1 + '/';
 	__XDRSetup['baseurl2'] = loc.protocol + '//' + host2 + '/';
 
-	var resource = __XDRSetup['dev'] ? 'xdrframe_dev/' : 'xdrframe/';
+	var resource = __XDRSetup['dev'] ? 'httpface/xdrframe_dev/' : 'httpface/xdrframe/';
 	// Because our subdomains are random, we don't need to append
 	// ?cachebreakers to the URLs.
 	__XDRSetup['xdrurl1'] = __XDRSetup['baseurl1'] +
-		resource + '?framenum=1&id=' + __XDRSetup['id1'];
+		resource + '?framenum=1&id=' + __XDRSetup['id1'] +
+		'&domain=' + __XDRSetup['domain'];
 	__XDRSetup['xdrurl2'] = __XDRSetup['baseurl2'] +
-		resource + '?framenum=2&id=' + __XDRSetup['id2'];
+		resource + '?framenum=2&id=' + __XDRSetup['id2'] +
+		'&domain=' + __XDRSetup['domain'];
 
 	// Each frame should get 1 attempt to redirect itself to the correct URL.
 	// This counter needs to be in the parent page, not in the iframe (which

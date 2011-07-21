@@ -7,7 +7,6 @@ import sys
 import base64
 import hashlib
 import hmac
-import re
 from random import randint
 from functools import partial
 
@@ -17,7 +16,6 @@ from simplejson import decoder as dec
 from zope.interface import implements, Interface
 from twisted.python.filepath import FilePath
 
-from minerva.objcheck import strToNonNegLimit
 from webmagic.untwist import BetterResource
 from webmagic.pathmanip import getCacheBrokenHref
 
@@ -228,66 +226,6 @@ def strictSecureDecodeJson(s):
 	return decoded
 
 
-def _contentToTemplate(content):
-	import jinja2
-	return jinja2.Environment().from_string(content.decode('utf-8'))
-
-
-requireFiles([
-	FilePath(__file__).sibling('xdrframe.html').path,
-	FilePath(__file__).sibling('compiled_client').child('bootstrap_XDRSetup.js').path,
-	FilePath(__file__).sibling('compiled_client').child('xdrframe.js').path])
-
-class XDRFrame(BetterResource):
-	"""
-	A page suitable for loading into an iframe.  It sets a document.domain
-	so that it can communicate with the parent page (which must also set
-	document.domain).  It is capable of making XHR requests.
-
-	TODO: in production code, this could be a static page with static JavaScript
-	(maybe even the same .js file as the main page.)  Client-side code can
-	extract ?id= instead of the server.
-	"""
-	isLeaf = True
-	dictionary = {'dev_mode': False}
-	templateFile = FilePath(__file__).sibling('xdrframe.html')
-
-	def __init__(self, fileCache, domain):
-		self._fileCache = fileCache
-		self.domain = domain
-
-
-	def render_GET(self, request):
-		frameNum = strToNonNegLimit(request.args['framenum'][0], 2**53)
-		frameIdStr = request.args['id'][0]
-		if not re.match('^([A-Za-z0-9]*)$', frameIdStr):
-			raise ValueError("frameIdStr contained bad characters: %r" % (frameIdStr,))
-		if len(frameIdStr) > 50:
-			raise ValueError("frameIdStr too long: %r" % (frameIdStr,))
-
-		template, _ = self._fileCache.getContent(
-			self.templateFile.path, transform=_contentToTemplate)
-		rendered = template.render(dict(
-			htmldumps=htmldumps,
-			cacheBreakLink=partial(
-				getCacheBrokenHref, self._fileCache, request),
-			domain=self.domain,
-			frameNum=frameNum,
-			frameIdStr=frameIdStr,
-			**self.dictionary))
-		return rendered.encode('utf-8')
-
-
-
-class XDRFrameDev(XDRFrame):
-	"""
-	Like XDRFrame, except load the uncompiled JavaScript code, instead of
-	the compiled xdrframe.js.
-	"""
-	dictionary = {'dev_mode': True}
-
-
-
 def getRandomSubdomain(prefix, digits):
 	"""
 	Get a random subdomain name that starts with C{prefix}.
@@ -362,6 +300,8 @@ __XDRSetup = %s;
 
 
 	def render_GET(self, request):
+		from minerva.newlink import _contentToTemplate
+
 		cookie = self._cookieInstaller.getSet(request)
 		csrfToken = self._csrfStopper.makeToken(cookie)
 
