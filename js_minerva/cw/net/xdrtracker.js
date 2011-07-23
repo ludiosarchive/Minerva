@@ -13,6 +13,7 @@ goog.require('cw.string');
 goog.require('cw.repr');
 goog.require('goog.dom');
 goog.require('goog.math');
+goog.require('goog.array');
 goog.require('goog.asserts');
 goog.require('goog.string');
 goog.require('goog.debug.Logger');
@@ -77,16 +78,18 @@ cw.net.XDRFrame = function(contentWindow, expandedUrl, streams, frameId) {
 	this.contentWindow = contentWindow;
 
 	/**
-	 * The URL of the server-side HttpFace resource
+	 * The URL of the server-side HttpFace resource that this XDRFrame is
+	 * intended to send requests to.
 	 * @type {string}
 	 */
 	this.expandedUrl = expandedUrl;
 
 	/**
-	 * An Array of Streams that are using the iframe
+	 * An Array of Streams that are using the iframe.
 	 * @type {!Array.<!cw.net.Stream>}
+	 * @private
 	 */
-	this.streams = streams;
+	this.streams_ = streams;
 
 	/**
 	 * The frame's DOM id, or null if this XDRFrame represents the main window.
@@ -105,7 +108,7 @@ cw.net.XDRFrame.prototype.__reprPush__ = function(sb, stack) {
 	sb.push(', expandedUrl=');
 	cw.repr.reprPush(this.expandedUrl, sb, stack);
 	sb.push(', streams=');
-	cw.repr.reprPush(this.streams, sb, stack);
+	cw.repr.reprPush(this.streams_, sb, stack);
 	sb.push('>');
 };
 
@@ -172,7 +175,7 @@ cw.net.XDRTracker.prototype.getWindowForUrl = function(urlWithTokens, stream) {
 
 	for(var i=0; i < this.frames.length; i++) {
 		var frame = this.frames[i];
-		if(frame.streams.length == 0 && this.isUrlSuitable(
+		if(frame.streams_.length == 0 && this.isUrlSuitable(
 		urlWithTokens, frame.expandedUrl)) {
 			this.logger_.info("Giving " + cw.repr.repr(stream) +
 				" existing frame " + cw.repr.repr(frame));
@@ -240,13 +243,14 @@ cw.net.XDRTracker.prototype.makeWindowForUrl_ = function(urlWithTokens, stream) 
  * @param {string} frameId
  */
 cw.net.XDRTracker.prototype.xdrFrameLoaded = function(frameId) {
-	var _ = this.loading.get(frameId);
-	if(!_) {
+	var val = this.loading.get(frameId);
+	if(!val) {
 		throw Error("Unknown frameId " + cw.repr.repr(frameId));
 	}
-	var d = _[0];
-	var expandedUrl = _[1];
-	var stream = _[2];
+	this.loading.remove(val);
+	var d = val[0];
+	var expandedUrl = val[1];
+	var stream = val[2];
 
 	var contentWindow = goog.dom.getFrameContentWindow(
 		/** @type {!HTMLIFrameElement} */ (
@@ -263,8 +267,12 @@ cw.net.XDRTracker.prototype.xdrFrameLoaded = function(frameId) {
  * @param {!cw.net.Stream} stream The Stream that is no longer using {@code contentWindow}
  */
 cw.net.XDRTracker.prototype.stoppedUsingXDRFrame = function(xdrFrame, stream) {
-	1/0;
-	// Impl note: remember to special-case null frameId
+	// Note: xdrFrame will have null frameId if it represents the main window
+
+	goog.array.remove(xdrFrame.streams_, stream);
+
+	// TODO: maybe garbage-collect iframes after some period of no
+	// longer being needed
 };
 
 

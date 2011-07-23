@@ -57,7 +57,8 @@ If you want to see what's in the send queue, enter this into your URL bar:
 	<td>Reconnect:</td>
 	<td>
 		<input type="submit" value="Reset" onclick="chatapp.resetStream('because user clicked button');return false">
-		<input type="submit" value="Reset and connect new stream" onclick="chatapp.reconnectStream();return false">
+		<input type="submit" value="Reset and connect new stream" onclick="chatapp.reconnectStreamWithoutWait();return false">
+		<input type="submit" value="Reset, wait for DISCONNECTED, connect new" onclick="chatapp.reconnectStreamWithWait();return false">
 	</td>
 </tr>
 <tr>
@@ -269,11 +270,21 @@ chatapp.resetStream = function(reason) {
 };
 
 
-chatapp.reconnectStream = function() {
+chatapp.reconnectStreamWithoutWait = function() {
 	if(chatapp.lastProto) {
-		chatapp.lastProto.reset('because user clicked reconnect button');
+		chatapp.lastProto.reset('because user clicked reconnect-without-wait button');
 	}
 	chatapp.startStream();
+};
+
+
+chatapp.reconnectStreamWithWait = function() {
+	chatapp.lastProto.stream_.addEventListener(
+		cw.net.EventType.DISCONNECTED, chatapp.startStream, false);
+
+	if(chatapp.lastProto) {
+		chatapp.lastProto.reset('because user clicked reconnect-with-wait button');
+	}
 };
 
 

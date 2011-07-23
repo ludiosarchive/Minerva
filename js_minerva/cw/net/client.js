@@ -456,6 +456,13 @@ cw.net.Stream = function(callQueue, protocol, endpoint, streamPolicy) {
 	 */
 	this.windowLoadEvent_ = null;
 
+	/**
+	 * An Array of {@code XDRFrame}s that this Stream is using.
+	 * @type {!Array.<!cw.net.XDRFrame>}
+	 * @private
+	 */
+	this.xdrFramesInUse_ = [];
+
 	// For WebKit browsers, we need an ugly hack to prevent the loading
 	// spinner/throbber from spinning indefinitely if there is an open XHR
 	// request.  If window.onload fires, abort HTTP requests, wait ~100ms,
@@ -1219,10 +1226,15 @@ cw.net.Stream.prototype.expandEndpoint_ = function(xdrFrames) {
 
 	goog.asserts.assert(xdrFrames.length == 2,
 		"Wrong xdrFrames.length: " + xdrFrames.length);
+
 	var primaryWindow = xdrFrames[0].contentWindow;
 	var secondaryWindow = xdrFrames[1].contentWindow;
 	var primaryUrl = xdrFrames[0].expandedUrl;
 	var secondaryUrl = xdrFrames[1].expandedUrl;
+
+	this.xdrFramesInUse_.push(xdrFrames[0]);
+	this.xdrFramesInUse_.push(xdrFrames[1]);
+
 	// TODO: maybe don't replace this.endpoint_
 	this.endpoint_ = new cw.net.ExpandedHttpEndpoint_(
 		primaryUrl, primaryWindow, secondaryUrl, secondaryWindow);
@@ -1241,14 +1253,23 @@ cw.net.Stream.prototype.disposeInternal = function() {
 	this.logger_.info(cw.repr.repr(this) + " in disposeInternal.");
 	this.state_ = cw.net.StreamState_.DISCONNECTED;
 	this.disposeAllTransports_();
-	this.dispatchEvent({
-		type: cw.net.EventType.DISCONNECTED
-	});
+
+	for(var i=0; i < this.xdrFramesInUse_.length; i++) {
+		var frame = this.xdrFramesInUse_[i];
+		cw.net.theXDRTracker.stoppedUsingXDRFrame(frame, this);
+	}
 
 	if(goog.userAgent.WEBKIT && this.windowLoadEvent_) {
 		goog.events.unlistenByKey(this.windowLoadEvent_);
 		this.windowLoadEvent_ = null;
 	}
+
+	// Must be dispatched after stoppedUsingXDRFrame calls, so that if a new
+	// Stream is created immediately, it can reuse the existing iframes (if
+	// iframes were being used).
+	this.dispatchEvent({
+		type: cw.net.EventType.DISCONNECTED
+	});
 
 	// Clear any likely circular references
 	delete this.transports_;
