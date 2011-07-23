@@ -575,6 +575,7 @@ cw.net.Stream.prototype.__reprPush__ = function(sb, stack) {
 	cw.repr.reprPush(this.secondaryTransport_, sb, stack);
 	sb.push(', resetting=');
 	cw.repr.reprPush(this.resettingTransport_, sb, stack);
+	sb.push('>');
 };
 
 /**
