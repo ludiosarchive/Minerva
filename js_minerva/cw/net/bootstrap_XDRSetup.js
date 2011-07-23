@@ -53,7 +53,7 @@ goog.provide("cw.net.bootstrap_XDRSetup");
 	// cross-subdomain interaction from working in some browsers.
 	var portString = loc.port ? ':' + loc.port : "";
 
-	// Reload/F5 in Firefox 3+ has a long-standing bug with iframes: the new
+	// Reload/F5 in Firefox 3 has a bug with iframes: the new
 	// iframe src= in the DOM structure is ignored, and Firefox makes a
 	// request to an older iframe src=.  This also happens after session
 	// recovery.  Another bug claims that iframe targets are sometimes

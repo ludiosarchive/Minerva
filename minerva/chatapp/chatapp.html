@@ -11,6 +11,10 @@
 	</style>
 </head>
 <body>
+<script>
+// In minerva_site, user specifies this with the command-line --domain option
+__demo_shared_domain = {{ htmldumps(domain) }};
+</script>
 
 <div id="info">
 <p>
@@ -67,23 +71,6 @@ If you want to see what's in the send queue, enter this into your URL bar:
 </tr>
 </table>
 <div id="minerva-xdrframes"></div>
-
-<!--
-Think about this: if in the future we have cross-tab sharing
-working with named-window grabbing and SharedWorker, do we
-really want to dump two iframes and two DNS requests on the user
-for each page they load?  That seems kind of bad.  We should try
-to connect to other tabs first, then create an iframe.
-
-To combine the best of both worlds: leave a cookie that indicates
-whether there is probably an already-connected Stream in a tab.
-If no such cookie, write out the iframes immediately.
--->
-<script>
-CSRF_TOKEN = {{ htmldumps(bootstrap.csrf_token) }};
-{{ bootstrap.getXDRSetup(dev_mode, domain) }}
-</script>
-
 <div id="FlashConnectorSwf"></div>
 <div id="log"></div>
 
@@ -105,7 +92,7 @@ goog.require('cw.string');
 goog.require('cw.net.Stream');
 goog.require('cw.net.IMinervaProtocol');
 goog.require('cw.net.HttpStreamingMode');
-goog.require('cw.net.demo.getEndpoint');
+goog.require('cw.net.demo.getEndpointByQueryArgs');
 goog.require('cw.repr');
 goog.require('cw.string');
 </script>
@@ -116,13 +103,14 @@ goog.require('cw.string');
 // prevent an HTTP pipeline stall.  Note that this doesn't actually help
 // in any known browser.  Opera for some reason waits for this image
 // to load, but not because of pipelining.
-if(__XDRSetup['use_subdomains']) {
-	document.write('<img src="//wait-' + __XDRSetup['host1'] +
-		'/wait_resource/?wait=4&zx=' + Math.random() + '" width=16 height=16 border=2>');
-} else {
-	document.write('<img src="/wait_resource/?wait=4&zx=' + Math.random() +
-		'" width=16 height=16 border=2>');
-}
+
+//if(__XDRSetup['use_subdomains']) {
+//	document.write('<img src="//wait-' + __XDRSetup['host1'] +
+//		'/wait_resource/?wait=4&zx=' + Math.random() + '" width=16 height=16 border=2>');
+//} else {
+//	document.write('<img src="/wait_resource/?wait=4&zx=' + Math.random() +
+//		'" width=16 height=16 border=2>');
+//}
 </script>
 
 <script>
@@ -258,6 +246,9 @@ chatapp.startStream = function() {
 		'minerva_site_uaid', 'minerva_site_uaid_secure');
 	chatapp.lastProto = new chatapp.ChatProtocol();
 	chatapp.activityDetected();
+
+	// TODO: remove use of Deferred; getEndpointByQueryArgs should be
+	// synchronous after we make a "nice Flash endpoint"
 	var endpointD = cw.net.demo.getEndpointByQueryArgs(chatapp.callQueue);
 	endpointD.addCallback(function(endpoint) {
 		var stream = new cw.net.Stream(
@@ -266,6 +257,7 @@ chatapp.startStream = function() {
 		chatapp.lastProto.sendInitialStrings();
 		stream.start();
 	});
+	// endpointD.addErrback // TODO
 };
 
 

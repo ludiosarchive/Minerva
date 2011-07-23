@@ -16,7 +16,8 @@
 
 goog.provide('cw.net.MAX_FRAME_LENGTH');
 goog.provide('cw.net.SocketEndpoint');
-goog.provide('cw.net.HttpEndpoint');
+goog.provide('cw.net.ExpandedHttpEndpoint_');
+goog.provide('cw.net.NiceHttpEndpoint');
 goog.provide('cw.net.Endpoint');
 goog.provide('cw.net.IMinervaProtocol');
 goog.provide('cw.net.HttpStreamingMode');
@@ -28,6 +29,7 @@ goog.provide('cw.net.DoNothingTransport');
 goog.provide('cw.net.TransportType_');
 
 goog.require('goog.asserts');
+goog.require('goog.async.DeferredList');
 goog.require('goog.array');
 goog.require('goog.events');
 goog.require('goog.events.EventTarget');
@@ -48,6 +50,7 @@ goog.require('cw.net.Incoming');
 goog.require('cw.net.theXHRMasterTracker_');
 goog.require('cw.net.FlashSocketTracker');
 goog.require('cw.net.FlashSocketConduit');
+goog.require('cw.net.theXDRTracker');
 
 goog.require('cw.net.Frame');
 goog.require('cw.net.TransportKillReason');
@@ -63,6 +66,7 @@ goog.require('cw.net.TransportKillFrame');
 goog.require('cw.net.InvalidFrame');
 goog.require('cw.net.HttpFormat');
 goog.require('cw.net.decodeFrameFromServer');
+
 
 
 /**
@@ -89,6 +93,30 @@ cw.net.SocketEndpoint = function(host, port, tracker) {
  * Object to represent an HTTP endpoint.
  *
  * @param {string} primaryUrl Absolute URL for primary HTTP transports.
+ * 	If it contains token "%random%", the token will be replaced with a random
+ * 	subdomain.
+ * @param {string=} secondaryUrl Absolute URL for secondary HTTP transports.
+ * 	If it contains token "%random%", the token will be replaced with a random
+ * 	subdomain.
+ * @constructor
+ */
+cw.net.NiceHttpEndpoint = function(primaryUrl, secondaryUrl) {
+	goog.asserts.assertString(primaryUrl);
+	if(!secondaryUrl) {
+		secondaryUrl = primaryUrl;
+	}
+	/** @type {string} */
+	this.primaryUrl = primaryUrl;
+	/** @type {string} */
+	this.secondaryUrl = secondaryUrl;
+};
+
+
+
+/**
+ * Object to represent an HTTP endpoint.
+ *
+ * @param {string} primaryUrl Absolute URL for primary HTTP transports.
  * @param {!Window} primaryWindow The contentWindow of an iframe that may
  * 	help us make XHR requests to {@code primaryUrl}, or this page's window.
  * @param {string} secondaryUrl Absolute URL for secondary HTTP transports.
@@ -96,7 +124,7 @@ cw.net.SocketEndpoint = function(host, port, tracker) {
  * 	help us make XHR requests to {@code secondaryUrl}, or this page's window.
  * @constructor
  */
-cw.net.HttpEndpoint = function(primaryUrl, primaryWindow, secondaryUrl, secondaryWindow) {
+cw.net.ExpandedHttpEndpoint_ = function(primaryUrl, primaryWindow, secondaryUrl, secondaryWindow) {
 	goog.asserts.assertString(primaryUrl);
 	goog.asserts.assertString(secondaryUrl);
 	/** @type {string} */
@@ -120,7 +148,7 @@ cw.net.HttpEndpoint = function(primaryUrl, primaryWindow, secondaryUrl, secondar
 /**
  * @private
  */
-cw.net.HttpEndpoint.prototype.ensureAbsoluteURLs_ = function() {
+cw.net.ExpandedHttpEndpoint_.prototype.ensureAbsoluteURLs_ = function() {
 	if((this.primaryUrl.indexOf("http://") == 0 || this.primaryUrl.indexOf("https://") == 0) &&
 	(this.secondaryUrl.indexOf("http://") == 0 || this.secondaryUrl.indexOf("https://") == 0)) {
 		// OK
@@ -135,7 +163,7 @@ cw.net.HttpEndpoint.prototype.ensureAbsoluteURLs_ = function() {
  * Ensure that secondaryWindow has the same origin as secondaryUrl.
  * @private
  */
-cw.net.HttpEndpoint.prototype.ensureSameOrigin_ = function() {
+cw.net.ExpandedHttpEndpoint_.prototype.ensureSameOrigin_ = function() {
 	// Note: URLs for iframes can change, but we hold a reference to
 	// its window, not the iframe itself.  But, bad things might happen if
 	// we later make requests on a "dead" window.
@@ -152,7 +180,7 @@ cw.net.HttpEndpoint.prototype.ensureSameOrigin_ = function() {
 
 
 /**
- * @typedef {cw.net.SocketEndpoint|cw.net.HttpEndpoint}
+ * @typedef {cw.net.SocketEndpoint|cw.net.ExpandedHttpEndpoint_|cw.net.NiceHttpEndpoint}
  */
 cw.net.Endpoint;
 
@@ -339,9 +367,10 @@ cw.net.EventType = {
  */
 cw.net.StreamState_ = {
 	UNSTARTED: 1,
-	STARTED: 2,
-	RESETTING: 3,
-	DISCONNECTED: 4
+	WAITING_RESOURCES: 2,
+	STARTED: 3,
+	RESETTING: 4,
+	DISCONNECTED: 5
 };
 
 
@@ -768,7 +797,7 @@ cw.net.Stream.prototype.sendStrings = function(strings, validate) {
  */
 cw.net.Stream.prototype.getTransportType_ = function() {
 	var transportType;
-	if(this.endpoint_ instanceof cw.net.HttpEndpoint) {
+	if(this.endpoint_ instanceof cw.net.ExpandedHttpEndpoint_) {
 		var httpStreamingMode = this.streamPolicy_.getHttpStreamingMode();
 		if(httpStreamingMode == cw.net.HttpStreamingMode.NO_STREAMING) {
 			transportType = cw.net.TransportType_.XHR_LONGPOLL;
@@ -1162,10 +1191,46 @@ cw.net.Stream.prototype.getSACK_ = function() {
  * Called by application to start the Stream.
  */
 cw.net.Stream.prototype.start = function() {
-	goog.asserts.assert(
-		this.state_ == cw.net.StreamState_.UNSTARTED,
-		'start: bad Stream state_: ' + this.state_);
+	if(this.state_ != cw.net.StreamState_.UNSTARTED) {
+		throw new Error("Stream.start: " + cw.repr.repr(this) + " already started");
+	}
+	this.state_ = cw.net.StreamState_.WAITING_RESOURCES;
 
+	if(this.endpoint_ instanceof cw.net.NiceHttpEndpoint) {
+		var d1 = cw.net.theXDRTracker.getWindowForUrl(
+			this.endpoint_.primaryUrl, this);
+		var d2 = cw.net.theXDRTracker.getWindowForUrl(
+			this.endpoint_.secondaryUrl, this);
+
+		var d = goog.async.DeferredList.gatherResults([d1, d2]);
+		d.addCallback(goog.bind(this.expandEndpoint_, this));
+		//d.addErrback(); // TODO!!!
+	} else {
+		this.startFirstTransport_();
+	}
+};
+
+/**
+ * @param {!Array.<!cw.net.XDRFrame>} xdrFrames
+ */
+cw.net.Stream.prototype.expandEndpoint_ = function(xdrFrames) {
+	goog.asserts.assert(this.state_ == cw.net.StreamState_.WAITING_RESOURCES,
+		"Expected stream state WAITING_RESOURCES, was " + this.state_);
+
+	goog.asserts.assert(xdrFrames.length == 2,
+		"Wrong xdrFrames.length: " + xdrFrames.length);
+	var primaryWindow = xdrFrames[0].contentWindow;
+	var secondaryWindow = xdrFrames[1].contentWindow;
+	var primaryUrl = xdrFrames[0].expandedUrl;
+	var secondaryUrl = xdrFrames[1].expandedUrl;
+	// TODO: maybe don't replace this.endpoint_
+	this.endpoint_ = new cw.net.ExpandedHttpEndpoint_(
+		primaryUrl, primaryWindow, secondaryUrl, secondaryWindow);
+
+	this.startFirstTransport_();
+};
+
+cw.net.Stream.prototype.startFirstTransport_ = function() {
 	this.state_ = cw.net.StreamState_.STARTED;
 	this.primaryTransport_ = this.createNewTransport_(true);
 	this.primaryTransport_.writeStrings_(this.queue_, null);

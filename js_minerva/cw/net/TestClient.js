@@ -26,7 +26,7 @@ goog.require('cw.net.TransportType_');
 goog.require('cw.net.SACK');
 goog.require('cw.net.FlashSocketTracker');
 goog.require('cw.net.SocketEndpoint');
-goog.require('cw.net.HttpEndpoint');
+goog.require('cw.net.ExpandedHttpEndpoint_');
 goog.require('cw.net.Stream');
 goog.require('cw.net.EventType');
 goog.require('cw.net.ClientTransport');
@@ -72,7 +72,7 @@ var fakeWindow = {
 		cw.UnitTest.logger.info(
 			"TestClient.js: fakeWindow.__XHRSlave_makeRequest called");
 	}};
-var fakeHttpEndpoint = new cw.net.HttpEndpoint(
+var fakeHttpEndpoint = new cw.net.ExpandedHttpEndpoint_(
 	"http://127.0.0.1/TestClient-not-a-real-endpoint/", fakeWindow,
 	"http://127.0.0.1/TestClient-not-a-real-endpoint/", fakeWindow);
 
@@ -307,7 +307,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 		stream.start();
 		stream.reset("a reasonString");
 		self.assertThrows(Error, function() { stream.sendStrings(["a string"]); },
-			"sendStrings: Can't send strings in state 3");
+			"sendStrings: Can't send strings in state 4");
 	},
 
 	/**
@@ -323,7 +323,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 		stream.start();
 		stream.reset("a reasonString");
 		self.assertThrows(Error, function() { stream.reset("a reasonString"); },
-			"reset: Can't send reset in state 3");
+			"reset: Can't send reset in state 4");
 	}
 
 	// TODO: add test: if secondary is sending strings, and primary closes,
@@ -598,7 +598,7 @@ cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealHttpTests')
 	function getEndpoint_(self) {
 		var pageUrl = new goog.Uri(window.location.href);
 		var endpointUrl = pageUrl.resolve(new goog.Uri('/httpface/')).toString();
-		httpFaceEndpoint = new cw.net.HttpEndpoint(endpointUrl, goog.global, endpointUrl, goog.global);
+		var httpFaceEndpoint = new cw.net.ExpandedHttpEndpoint_(endpointUrl, goog.global, endpointUrl, goog.global);
 		return goog.async.Deferred.succeed(httpFaceEndpoint);
 	}
 );

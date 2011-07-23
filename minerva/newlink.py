@@ -1720,7 +1720,6 @@ class XDRFrame(BetterResource):
 
 
 	def render_GET(self, request):
-		frameNum = strToNonNegLimit(request.args['framenum'][0], 2**53)
 		frameIdStr = request.args['id'][0]
 		domain = request.args['domain'][0]
 		if not re.match('^([A-Za-z0-9]*)$', frameIdStr):
@@ -1738,7 +1737,6 @@ class XDRFrame(BetterResource):
 			cacheBreakLink=partial(
 				getCacheBrokenHref, self._fileCache, request),
 			domain=domain,
-			frameNum=frameNum,
 			frameIdStr=frameIdStr,
 			**self.dictionary))
 		return rendered.encode('utf-8')

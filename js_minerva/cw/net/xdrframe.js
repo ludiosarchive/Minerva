@@ -5,78 +5,44 @@
 goog.provide('cw.net.setupXDRFrame');
 goog.provide('cw.net.xdrframe_');
 
-goog.require('goog.userAgent');
-
-
-/**
- * Redirect this iframe if it is at the wrong location (determined
- * by looking at parent's variables).  It should only end up in the
- * wrong location in Firefox, or if intermediaries are rewriting pages.
- * See bootstrap_XDRSetup which describes the ridiculous Firefox bug that
- * necessitates this.
- * @param {number} frameNum
- * @param {string} frameId
- * @return {boolean} Whether this iframe is already at the correct location
- * 	(meaning a redirect is not necessary).
- * @private
- */
-cw.net.xdrframe_.redirectIfWrongLocation_ = function(frameNum, frameId) {
-	var parent = goog.global.parent;
-	var atCorrectLocation = false;
-	var correctId = parent['__XDRSetup']['id' + frameNum];
-	if(!correctId) {
-		throw Error("could not get correctId from parent");
-	} else if(frameId != correctId) {
-		if(parent['__XDRSetup']['redirectCountdown']) {
-			parent['__XDRSetup']['redirectCountdown']--;
-			window.location = parent['__XDRSetup']['xdrurl' + frameNum];
-		} else {
-			throw Error("still not at correct URL, but redirectCountdown is falsy");
-		}
-	} else {
-		atCorrectLocation = true;
-	}
-	return atCorrectLocation;
-};
-
 
 /**
  * Tell the parent that this iframe has loaded.
- * @param {number} frameNum
+ * @param {string} frameId
  * @private
  */
-cw.net.xdrframe_.notifyParent_ = function(frameNum) {
+cw.net.xdrframe_.notifyParent_ = function(frameId) {
 	var parent = goog.global.parent;
 	try {
-		parent['__XDRSetup']['loaded'](frameNum);
+		parent['__XHRTracker_xdrFrameLoaded'](frameId);
 	} catch(err) {
-		throw Error("could not call __XDRSetup.loaded on parent; err: " + err.message);
+		throw Error("could not call __XHRTracker_xdrFrameLoaded on parent; err: " + err.message);
 	}
 };
 
 
 /**
  * This function assumes that document.domain is already set, and that
- * parent page has already loaded and run bootstrap_XDRSetup.
- * @param {number} frameNum
+ * parent page has already loaded and run xdrtracker.js.
  * @param {string} frameId
  */
-cw.net.setupXDRFrame = function(frameNum, frameId) {
-	var atCorrectLocation = true;
-	if(goog.userAgent.GECKO) {
-		// Only try this in Gecko, because that's the only browser that
-		// definitely needs this workaround.  Before I made this Gecko-only,
-		// I sometimes saw "still not at correct URL" in IE8 when clicking
-		// the back button.
-		atCorrectLocation = cw.net.xdrframe_.redirectIfWrongLocation_(frameNum, frameId);
-	}
-	// Set window.onload last, to mitigate possible problems with onload
-	// firing too early.
-	if(atCorrectLocation) {
-		window.onload = function() {
-			cw.net.xdrframe_.notifyParent_(frameNum);
-		};
-	}
+cw.net.setupXDRFrame = function(frameId) {
+	// Note: in Firefox 3, the iframe we're in might be at the incorrect
+	// location, because reload/F5 in Firefox 3 has a bug with iframes: the new
+	// iframe src= in the DOM structure is ignored, and Firefox makes a
+	// request to an older iframe src=.  This also happens after session
+	// recovery.  Another bug claims that iframe targets are sometimes
+	// mixed up, which implies some broken internal cache.  See:
+	// https://bugzilla.mozilla.org/show_bug.cgi?id=342905
+	// https://bugzilla.mozilla.org/show_bug.cgi?id=279048
+
+	// We used to have code to try to handle the mix-up, but it couldn't
+	// handle all cases anyway, because there might be non-XDRFrame
+	// iframes on the page.
+
+	window.onload = function() {
+		cw.net.xdrframe_.notifyParent_(frameId);
+	};
 };
 
 

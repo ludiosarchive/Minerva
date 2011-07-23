@@ -18,9 +18,8 @@ goog.require('cw.eventual');
 goog.require('cw.net.IStreamPolicy');
 goog.require('cw.net.FlashSocketTracker');
 goog.require('cw.net.SocketEndpoint');
-goog.require('cw.net.HttpEndpoint');
+goog.require('cw.net.ExpandedHttpEndpoint_');
 goog.require('cw.net.HttpStreamingMode');
-goog.require('cw.net.waitForXDRFrames');
 // Needed when useSub=0
 goog.require('cw.net.XHRSlave');
 
@@ -81,44 +80,18 @@ cw.net.demo.getEndpoint = function(callQueue, useSubdomains, useFlash, httpFaceP
 	var url = new goog.Uri(document.location);
 	if(!useFlash) {
 		if(useSubdomains) {
-			var xdrSetupGlobal = '__XDRSetup';
-			var d = cw.net.waitForXDRFrames(xdrSetupGlobal, 2);
-			d.addCallback(function() {
-				var primaryWindow = goog.dom.getFrameContentWindow(
-					/** @type {!HTMLIFrameElement} */ (goog.dom.getElement('xdrframe-1')));
-				var secondaryWindow = goog.dom.getFrameContentWindow(
-					/** @type {!HTMLIFrameElement} */ (goog.dom.getElement('xdrframe-2')));
-				if(!primaryWindow) {
-					throw Error("could not get primaryWindow xdrframe");
-				}
-				if(!secondaryWindow) {
-					throw Error("could not get secondaryWindow xdrframe");
-				}
-
-				var primaryUrl = new goog.Uri(goog.global[xdrSetupGlobal]['baseurl1']);
-				primaryUrl.setPath(httpFacePath);
-
-				var secondaryUrl = new goog.Uri(goog.global[xdrSetupGlobal]['baseurl2']);
-				secondaryUrl.setPath(httpFacePath);
-
-				var endpoint = new cw.net.HttpEndpoint(
-					primaryUrl.toString(), primaryWindow, secondaryUrl.toString(), secondaryWindow);
-				return endpoint;
-			});
-			return d;
+			var domain = goog.global['__demo_shared_domain'];
+			var endpointUrl = url.clone();
+			// Can't set it to %random%; that gets escaped
+			endpointUrl.setDomain("_____random_____." + domain);
 		} else {
 			var endpointUrl = url.clone();
-			endpointUrl.setPath(httpFacePath);
-			endpointUrl.setQuery('');
-			var primaryUrl = endpointUrl;
-			var secondaryUrl = endpointUrl;
-			var primaryWindow = goog.global;
-			var secondaryWindow = goog.global;
-
-			var endpoint = new cw.net.HttpEndpoint(
-				primaryUrl.toString(), primaryWindow, secondaryUrl.toString(), secondaryWindow);
-			return goog.async.Deferred.succeed(endpoint);
 		}
+		endpointUrl.setPath(httpFacePath);
+		endpointUrl.setQuery('');
+		var endpoint = new cw.net.NiceHttpEndpoint(
+			endpointUrl.toString().replace("_____random_____", "%random%"));
+		return goog.async.Deferred.succeed(endpoint);
 	} else {
 		var host = url.getDomain();
 		var port = 843;
