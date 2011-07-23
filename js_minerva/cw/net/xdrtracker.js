@@ -209,15 +209,21 @@ cw.net.XDRTracker.prototype.makeWindowForUrl_ = function(urlWithTokens, stream) 
 		var frame = new cw.net.XDRFrame(goog.global, expandedUrl, [stream], null);
 		return goog.async.Deferred.succeed(frame);
 	}
+	// Compute the document.domain we need to have.
 	var documentDomain = cw.net.getDocumentDomain(frameDomain, myDomain);
 
 	this.logger_.info("Creating new XDRFrame " + cw.repr.repr(frameId) +
 		"for " + cw.repr.repr(stream));
 
-	// TODO: don't set document.domain multiple times?
-	this.logger_.warning("Setting document.domain to " + cw.repr.repr(documentDomain) +
-		'; was ' + cw.repr.repr(document.domain));
-	document.domain = documentDomain;
+	// Note that we can't change document.domain, because that will confuse
+	// IE and cause it to spew "Access is denied" errors.
+	if(document.domain != documentDomain) {
+		throw Error("document.domain needs to be " +
+			cw.repr.repr(documentDomain) + "; was " +
+			cw.repr.repr(document.domain) + ".  To avoid problems in " +
+			"IE, set document.domain very early, before loading any " +
+			"scripts or creating any JavaScript objects.");
+	}
 
 	// TODO: create minerva-xdrframes if necessary
 	var container = goog.dom.getElement('minerva-xdrframes');
@@ -228,7 +234,7 @@ cw.net.XDRTracker.prototype.makeWindowForUrl_ = function(urlWithTokens, stream) 
 	var rowDiv =
 		goog.dom.createDom('iframe', {
 			'id': "minerva-xdrframe-" + frameId, 'width': 16, 'height': 16,
-			'src': expandedUrl + 'xdrframe/?domain=' + documentDomain + '&id=' + frameId});
+			'src': expandedUrl + 'xdrframe/?domain=' + document.domain + '&id=' + frameId});
 	container.appendChild(rowDiv);
 
 	// TODO: timeout for iframe load
