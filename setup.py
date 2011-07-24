@@ -8,7 +8,7 @@ setup(
 	name='Minerva',
 	version=minerva.__version__,
 	description="Robust Comet server and client built on Twisted and Closure Library",
-	url="https://github.com/ludios/Minerva",
+	url="http://ludios.org/minerva/",
 	author="Ivan Kozik",
 	author_email="ivan@ludios.org",
 	classifiers=[
