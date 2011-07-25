@@ -76,6 +76,17 @@ If you want to see what's in the send queue, enter this into your URL bar:
 </td>
 </tr>
 </table>
+
+<script>
+// Insert an image that takes a while to load, to make sure our
+// WebKit spinner-killer works.
+
+if(__demo_shared_domain) {
+	document.write('<img src="/wait_resource/?wait=4&zx=' + Math.random() +
+		'" width=16 height=16 border=2>');
+}
+</script>
+
 <div id="minerva-xdrframes"></div>
 <div id="FlashConnectorSwf"></div>
 <div id="log"></div>
@@ -101,22 +112,6 @@ goog.require('cw.net.HttpStreamingMode');
 goog.require('cw.net.demo.getEndpointByQueryArgs');
 goog.require('cw.repr');
 goog.require('cw.string');
-</script>
-
-<script>
-// Insert an image that takes a while to load, to make sure our
-// WebKit spinner-killer works.  Load the image from another subdomain to
-// prevent an HTTP pipeline stall.  Note that this doesn't actually help
-// in any known browser.  Opera for some reason waits for this image
-// to load, but not because of pipelining.
-
-//if(__XDRSetup['use_subdomains']) {
-//	document.write('<img src="//wait-' + __XDRSetup['host1'] +
-//		'/wait_resource/?wait=4&zx=' + Math.random() + '" width=16 height=16 border=2>');
-//} else {
-//	document.write('<img src="/wait_resource/?wait=4&zx=' + Math.random() +
-//		'" width=16 height=16 border=2>');
-//}
 </script>
 
 <script>
