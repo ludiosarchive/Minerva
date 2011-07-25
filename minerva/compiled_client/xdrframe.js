@@ -1150,7 +1150,9 @@ function Wb(a) {
 T.prototype.log = function(a, b, c) {
   if(a.value >= Wb(this).value) {
     a = this.Ma(a, b, c);
-    o.console && o.console.markTimeline && o.console.markTimeline("log:" + a.Qa);
+    b = "log:" + a.Qa;
+    o.console && (o.console.timeStamp ? o.console.timeStamp(b) : o.console.markTimeline && o.console.markTimeline(b));
+    o.msWriteProfilerMark && o.msWriteProfilerMark(b);
     for(b = this;b;) {
       var c = b, d = a;
       if(c.na) {
