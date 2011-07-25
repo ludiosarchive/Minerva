@@ -228,10 +228,33 @@ cw.net.XDRTracker.prototype.makeWindowForUrl_ = function(urlWithTokens, stream) 
 			'src': expandedUrl + 'xdrframe/?domain=' + document.domain + '&id=' + frameId});
 	container.appendChild(rowDiv);
 
+	// Note that in Firefox 3, the iframe may load the wrong URL after
+	// reload/F5 due to a bug; in this case the new iframe src= in the DOM
+	// structure is ignored, and Firefox makes a request to an older iframe
+	// src=.  This also happens after session recovery.  Another bug claims
+	// that iframe targets are sometimes mixed up, which implies some
+	// broken internal cache.  See:
+	// https://bugzilla.mozilla.org/show_bug.cgi?id=342905
+	// https://bugzilla.mozilla.org/show_bug.cgi?id=279048
+	//
+	// FF2 and FF4+ don't have this problem.
+
 	// TODO: timeout for iframe load
-	// TODO: errback if iframe fails to load properly, for example, if twisted.web serves error page
-	// TODO: we might have to create iframe in a setTimeout(..., 0) in a IE to avoid
-	// a bug; see bootstrap_XDRSetup.js
+
+	// TODO: errback if iframe fails to load properly, for example, if
+	// twisted.web serves error page
+
+	// TODO: we might have to create iframe in a setTimeout(..., 0) in a IE
+	// to avoid a bug; the old comment from bootstrap_XDRSetup.js:
+	//
+	// Insert iframes after a timeout to work around in an IE8 issue
+	// (maybe other IEs too).  If the iframes are document.write'ed or
+	// innerHTML'ed at page load time, and you later reach the page again via
+	// the 'back' button, the first iframe URL will be loaded in both iframes.
+	// You can reproduce this bug:
+	// 1) visit /chatapp/?mode=http
+	// 2) add &useSub=0 to the URL and hit enter
+	// 3) click the back button.  You should see an error from ensureSameOrigin_.
 
 	return d;
 };

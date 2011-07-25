@@ -14,7 +14,6 @@ import simplejson
 from simplejson import decoder as dec
 
 from zope.interface import implements, Interface
-from twisted.python.filepath import FilePath
 
 from webmagic.untwist import BetterResource
 from webmagic.pathmanip import getCacheBrokenHref
@@ -253,11 +252,6 @@ class MinervaBootstrap(BetterResource):
 	"""
 	isLeaf = True
 
-	import minerva
-	bootstrap_XDRSetup_filename = FilePath(minerva.__file__).\
-		sibling('compiled_client').child('bootstrap_XDRSetup.js').path
-	del minerva
-
 	def __init__(self, fileCache, csrfStopper, cookieInstaller, templateFile, dictionary):
 		"""
 		C{fileCache} is a L{webmagic.filecache.FileCache}.
@@ -270,33 +264,12 @@ class MinervaBootstrap(BetterResource):
 			If this is mutated, new requests will have the new dictionary
 			contents.
 		"""
-		import jinja2
-
 		BetterResource.__init__(self)
 		self._fileCache = fileCache
 		self._csrfStopper = csrfStopper
 		self._cookieInstaller = cookieInstaller
 		self._templateFile = templateFile
 		self._dictionary = dictionary
-
-		self._jinja2Env = jinja2.Environment()
-
-
-	def _getXDRSetup(self, dev_mode, domain):
-		__XDRSetup = {
-			'dev': dev_mode,
-			'domain': domain,
-			'sub1': getRandomSubdomain('ml', 20),
-			'sub2': getRandomSubdomain('ml', 20),
-		}
-
-		bootstrap_XDRSetup_contents, _ = self._fileCache.getContent(
-			self.bootstrap_XDRSetup_filename)
-
-		return """\
-__XDRSetup = %s;
-%s
-""" % (htmldumps(__XDRSetup), bootstrap_XDRSetup_contents)
 
 
 	def render_GET(self, request):
@@ -312,7 +285,6 @@ __XDRSetup = %s;
 		bootstrapDict = {}
 		bootstrapDict['bootstrap'] = {
 			'csrf_token': csrfToken,
-			'getXDRSetup': self._getXDRSetup,
 		}
 		bootstrapDict['htmldumps'] = htmldumps
 		bootstrapDict['cacheBreakLink'] =  partial(

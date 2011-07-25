@@ -1697,7 +1697,6 @@ def _contentToTemplate(content):
 
 requireFiles([
 	FilePath(__file__).sibling('xdrframe.html').path,
-	FilePath(__file__).sibling('compiled_client').child('bootstrap_XDRSetup.js').path,
 	FilePath(__file__).sibling('compiled_client').child('xdrframe.js').path])
 
 class XDRFrame(BetterResource):
