@@ -19,3 +19,4 @@ goog.addDependency('../../../js_minerva/cw/net/xhdr.js', ['cw.net.IUsableSomethi
 goog.addDependency('../../../js_minerva/cw/net/xhrlike.js', ['cw.net.XHRLike'], []);
 goog.addDependency('../../../js_minerva/cw/net/xhrmaster.js', ['cw.net.XHRMaster', 'cw.net.XHRMasterTracker', 'cw.net.theXHRMasterTracker_'], ['cw.math', 'cw.repr', 'cw.string', 'goog.Disposable', 'goog.array', 'goog.async.Deferred', 'goog.debug.Logger', 'goog.debug.entryPointRegistry', 'goog.object']);
 goog.addDependency('../../../js_minerva/cw/net/xhrslave.js', ['cw.net.READ_DURING_INTERACTIVE', 'cw.net.XHRSlave'], ['cw.net.DecodeStatus', 'cw.net.MAX_FRAME_LENGTH', 'cw.net.ResponseTextNewlineDecoder', 'goog.Disposable', 'goog.events', 'goog.net.EventType', 'goog.net.XhrIo', 'goog.object', 'goog.structs.Map', 'goog.userAgent']);
+goog.addDependency('../../../js_minerva/minerva-client.js', ['Minerva.Client'], ['cw.net.Stream']);
