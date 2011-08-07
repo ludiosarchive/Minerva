@@ -504,9 +504,9 @@ cw.net.Stream.prototype.maxUndeliveredBytes = 1 * 1024 * 1024;
 
 /**
  * The function to call after the Stream is completely done.
- * @type {!Function}
+ * @type {Function}
  */
-cw.net.Stream.prototype.ondisconnect = goog.nullFunction;
+cw.net.Stream.prototype.ondisconnect = null;
 
 /**
  * Has the server ever known about the Stream?  Set to `true` after
@@ -1263,7 +1263,9 @@ cw.net.Stream.prototype.disposeInternal = function() {
 	// Must be called after stoppedUsingXDRFrame calls, so that if a new
 	// Stream is created immediately, it can reuse the existing iframes (if
 	// iframes were being used).
-	this.ondisconnect();
+	if(this.ondisconnect) {
+		this.ondisconnect();
+	}
 
 	// Clear any likely circular references
 	delete this.transports_;
