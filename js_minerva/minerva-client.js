@@ -13,6 +13,7 @@ goog.exportProperty(cw.net.Stream.prototype, 'sendStrings', cw.net.Stream.protot
 goog.exportProperty(cw.net.Stream.prototype, 'reset', cw.net.Stream.prototype.reset);
 goog.exportProperty(cw.net.Stream.prototype, 'maxUndeliveredStrings', cw.net.Stream.prototype.maxUndeliveredStrings);
 goog.exportProperty(cw.net.Stream.prototype, 'maxUndeliveredBytes', cw.net.Stream.prototype.maxUndeliveredBytes);
+goog.exportProperty(cw.net.Stream.prototype, 'ondisconnect', cw.net.Stream.prototype.ondisconnect);
 
 // To help users debug things, include cw.repr.repr as Minerva.repr
 goog.exportSymbol('Minerva.repr', cw.repr.repr);

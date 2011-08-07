@@ -23,7 +23,6 @@ goog.provide('cw.net.IMinervaProtocol');
 goog.provide('cw.net.HttpStreamingMode');
 goog.provide('cw.net.IStreamPolicy');
 goog.provide('cw.net.Stream');
-goog.provide('cw.net.EventType');
 goog.provide('cw.net.ClientTransport');
 goog.provide('cw.net.DoNothingTransport');
 goog.provide('cw.net.TransportType_');
@@ -32,11 +31,10 @@ goog.require('goog.asserts');
 goog.require('goog.async.DeferredList');
 goog.require('goog.array');
 goog.require('goog.events');
-goog.require('goog.events.EventTarget');
+goog.require('goog.events.EventType');
 goog.require('goog.structs.Set');
 goog.require('goog.debug.Logger');
 goog.require('goog.Disposable');
-goog.require('goog.net.XhrIo');
 goog.require('goog.uri.utils');
 goog.require('goog.userAgent');
 goog.require('cw.clock');
@@ -351,14 +349,6 @@ cw.net.makeStreamId_ = function() {
 };
 
 
-/**
- * Stream's event types
- * @enum {string}
- */
-cw.net.EventType = {
-	DISCONNECTED: goog.events.getUniqueId('disconnected')
-};
-
 
 /**
  * States that a Stream can be in.
@@ -386,10 +376,10 @@ cw.net.StreamState_ = {
  * @param {!cw.net.IStreamPolicy} streamPolicy
  *
  * @constructor
- * @extends {goog.events.EventTarget}
+ * @extends {goog.Disposable}
  */
 cw.net.Stream = function(callQueue, protocol, endpoint, streamPolicy) {
-	goog.events.EventTarget.call(this);
+	goog.Disposable.call(this);
 
 	/**
 	 * @type {!cw.eventual.CallQueue}
@@ -474,7 +464,7 @@ cw.net.Stream = function(callQueue, protocol, endpoint, streamPolicy) {
 			this.restartHttpRequests_, false, this);
 	}
 };
-goog.inherits(cw.net.Stream, goog.events.EventTarget);
+goog.inherits(cw.net.Stream, goog.Disposable);
 
 /**
  * @type {!goog.debug.Logger}
@@ -511,6 +501,12 @@ cw.net.Stream.prototype.maxUndeliveredStrings = 50;
  * @type {number}
  */
 cw.net.Stream.prototype.maxUndeliveredBytes = 1 * 1024 * 1024;
+
+/**
+ * The function to call after the Stream is completely done.
+ * @type {!Function}
+ */
+cw.net.Stream.prototype.ondisconnect = goog.nullFunction;
 
 /**
  * Has the server ever known about the Stream?  Set to `true` after
@@ -1264,12 +1260,10 @@ cw.net.Stream.prototype.disposeInternal = function() {
 		this.windowLoadEvent_ = null;
 	}
 
-	// Must be dispatched after stoppedUsingXDRFrame calls, so that if a new
+	// Must be called after stoppedUsingXDRFrame calls, so that if a new
 	// Stream is created immediately, it can reuse the existing iframes (if
 	// iframes were being used).
-	this.dispatchEvent({
-		type: cw.net.EventType.DISCONNECTED
-	});
+	this.ondisconnect();
 
 	// Clear any likely circular references
 	delete this.transports_;

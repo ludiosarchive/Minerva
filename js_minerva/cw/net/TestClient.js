@@ -28,7 +28,6 @@ goog.require('cw.net.FlashSocketTracker');
 goog.require('cw.net.SocketEndpoint');
 goog.require('cw.net.ExpandedHttpEndpoint_');
 goog.require('cw.net.Stream');
-goog.require('cw.net.EventType');
 goog.require('cw.net.ClientTransport');
 goog.require('cw.net.DoNothingTransport');
 
@@ -520,8 +519,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 		stream.sendStrings(['echo_twice:hello world']);
 
 		var d = new goog.async.Deferred();
-		stream.addEventListener(
-			cw.net.EventType.DISCONNECTED, goog.bind(d.callback, d), false);
+		stream.ondisconnect = goog.bind(d.callback, d);
 		d.addCallback(function() {
 			self.runAssertions_(stream, proto);
 			stream.dispose();
@@ -543,8 +541,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 		stream.start();
 
 		var d = new goog.async.Deferred();
-		stream.addEventListener(
-			cw.net.EventType.DISCONNECTED, goog.bind(d.callback, d), false);
+		stream.ondisconnect = goog.bind(d.callback, d);
 		d.addCallback(function() {
 			self.runAssertions_(stream, proto);
 			stream.dispose();
@@ -579,8 +576,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 		}
 
 		var d = new goog.async.Deferred();
-		stream.addEventListener(
-			cw.net.EventType.DISCONNECTED, goog.bind(d.callback, d), false);
+		stream.ondisconnect = goog.bind(d.callback, d);
 		d.addCallback(function() {
 			streamResetAssertions();
 			stream.dispose();
