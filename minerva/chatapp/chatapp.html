@@ -31,11 +31,10 @@ message.
 
 <p>
 This page supports options ?mode=http, ?mode=flash, ?useSub=0, ?useSub=1, ?httpStreaming=1
-(which can be combined).  Note: when using subdomains, you'll see fewer log
-messages because log messages in the iframes are not sent to this parent window.
-When testing with Opera, open the Error Console, because window.onerror does
-not work in Opera.  Do the same in Chrome, because not all errors are caught by
-window.onerror (such as when calling a nonexistent method on an HTMLEmbedElement).
+(which can be combined).  When testing with Opera, open the Error Console,
+because window.onerror does not work in Opera.  Do the same in Chrome,
+because not all errors are caught by window.onerror (such as when calling a
+nonexistent method on an HTMLEmbedElement).
 </p>
 
 Do all of these when testing:
@@ -116,6 +115,10 @@ goog.require('cw.string');
 
 <script>
 goog.debug.LogManager.getRoot().setLevel(goog.debug.Logger.Level.ALL);
+
+// Reduce noise from Closure Library's XHR code
+goog.debug.Logger.getLogger('goog.net.xhrMonitor').setLevel(goog.debug.Logger.Level.CONFIG);
+goog.debug.Logger.getLogger('goog.net.XhrIo').setLevel(goog.debug.Logger.Level.CONFIG);
 
 var logDiv = document.getElementById('log');
 var divConsole = new goog.debug.DivConsole(logDiv);
