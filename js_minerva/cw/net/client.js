@@ -22,6 +22,7 @@ goog.provide('cw.net.Endpoint');
 goog.provide('cw.net.IMinervaProtocol');
 goog.provide('cw.net.HttpStreamingMode');
 goog.provide('cw.net.IStreamPolicy');
+goog.provide('cw.net.DefaultStreamPolicy');
 goog.provide('cw.net.Stream');
 goog.provide('cw.net.ClientTransport');
 goog.provide('cw.net.DoNothingTransport');
@@ -292,6 +293,25 @@ cw.net.IStreamPolicy.prototype.getHttpStreamingMode = function() {
 
 
 /**
+ * A basic default stream policy.  Note: this doesn't do HTTP streaming yet,
+ * but it will once we have automatic negotation.
+ * @constructor
+ * @implements {cw.net.IStreamPolicy}
+ */
+cw.net.DefaultStreamPolicy = function() {
+
+};
+
+/**
+ * @return {!cw.net.HttpStreamingMode}
+ */
+cw.net.DefaultStreamPolicy.prototype.getHttpStreamingMode = function() {
+	return cw.net.HttpStreamingMode.NO_STREAMING;
+};
+
+
+
+/**
  * An interface for string-based communication that abstracts
  * away the Comet logic and transports.
  *
@@ -373,7 +393,7 @@ cw.net.StreamState_ = {
  * @param {!cw.eventual.CallQueue} callQueue
  * @param {!cw.net.IMinervaProtocol} protocol
  * @param {!cw.net.Endpoint} endpoint
- * @param {!cw.net.IStreamPolicy} streamPolicy
+ * @param {cw.net.IStreamPolicy=} streamPolicy
  *
  * @constructor
  * @extends {goog.Disposable}
@@ -407,7 +427,11 @@ cw.net.Stream = function(callQueue, protocol, endpoint, streamPolicy) {
 	 * @type {!cw.net.IStreamPolicy}
 	 * @private
 	 */
-	this.streamPolicy_ = streamPolicy;
+	if(streamPolicy) {
+		this.streamPolicy_ = streamPolicy;
+	} else {
+		this.streamPolicy_ = new cw.net.DefaultStreamPolicy();
+	}
 
 	/**
 	 * A set of all currently-online transports.

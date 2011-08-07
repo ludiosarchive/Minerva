@@ -25,15 +25,10 @@ goog.require('cw.net.XHRSlave');
 
 
 /**
- * @param {string} httpName HTTP uaid cookie name
- * @param {string} httpsName HTTPS uaid cookie name
  * @constructor
  * @implements {cw.net.IStreamPolicy}
  */
-cw.net.demo.DemoStreamPolicy = function(httpName, httpsName) {
-	this.httpName_ = httpName;
-	this.httpsName_ = httpsName;
-};
+cw.net.demo.DemoStreamPolicy = function() {};
 
 /**
  * @return {!cw.net.HttpStreamingMode}

@@ -246,8 +246,7 @@ chatapp.clickListen = goog.events.listen(
 
 
 chatapp.startStream = function() {
-	var streamPolicy = new cw.net.demo.DemoStreamPolicy(
-		'minerva_site_uaid', 'minerva_site_uaid_secure');
+	var streamPolicy = new cw.net.demo.DemoStreamPolicy();
 	chatapp.lastProto = new chatapp.ChatProtocol();
 	chatapp.activityDetected();
 
