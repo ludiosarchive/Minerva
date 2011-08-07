@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Standalone Minerva client, useful for people who don't want
+ * 	to use Closure Library.
+ */
 goog.provide('Minerva.Client');
 
 goog.require('cw.net.Stream');
