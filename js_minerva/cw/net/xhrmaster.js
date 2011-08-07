@@ -15,6 +15,7 @@ goog.require('goog.async.Deferred');
 goog.require('cw.string');
 goog.require('cw.math');
 goog.require('cw.repr');
+goog.require('cw.net.DecodeStatus');
 
 
 /**
