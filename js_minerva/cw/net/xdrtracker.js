@@ -86,7 +86,7 @@ cw.net.XDRFrame = function(contentWindow, expandedUrl, streams, frameId) {
 
 	/**
 	 * An Array of Streams that are using the iframe.
-	 * @type {!Array.<!cw.net.Stream>}
+	 * @type {!Array.<!cw.net.ClientStream>}
 	 * @private
 	 */
 	this.streams_ = streams;
@@ -163,7 +163,7 @@ cw.net.XDRTracker.prototype.isUrlSuitable = function(urlWithTokens, url) {
 
 /**
  * @param {string} urlWithTokens The URL to which XHR requests need to be made
- * @param {!cw.net.Stream} stream The Stream that will use the returned contentWindow
+ * @param {!cw.net.ClientStream} stream The Stream that will use the returned contentWindow
  * @return {!goog.async.Deferred} a Deferred that fires with a
  * 	{@link cw.net.XDRFrame} that has a window which can make XHR requests to
  * 	an expanded {@code urlWithTokens}.  A new iframe will be created if neccessary.
@@ -188,7 +188,7 @@ cw.net.XDRTracker.prototype.getWindowForUrl = function(urlWithTokens, stream) {
 
 /**
  * @param {string} urlWithTokens The URL to which XHR requests need to be made
- * @param {!cw.net.Stream} stream The Stream that will use the returned contentWindow
+ * @param {!cw.net.ClientStream} stream The Stream that will use the returned contentWindow
  * @return {!goog.async.Deferred} a Deferred that fires with a
  * 	{@link cw.net.XDRFrame} that has a new window which can make XHR
  * 	requests to an expanded {@code urlWithTokens}.
@@ -284,7 +284,7 @@ cw.net.XDRTracker.prototype.xdrFrameLoaded = function(frameId) {
 
 /**
  * @param {!cw.net.XDRFrame} xdrFrame
- * @param {!cw.net.Stream} stream The Stream that is no longer using {@code contentWindow}
+ * @param {!cw.net.ClientStream} stream The Stream that is no longer using {@code contentWindow}
  */
 cw.net.XDRTracker.prototype.stoppedUsingXDRFrame = function(xdrFrame, stream) {
 	// Note: xdrFrame will have null frameId if it represents the main window

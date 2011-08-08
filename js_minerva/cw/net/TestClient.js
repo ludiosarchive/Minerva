@@ -27,7 +27,7 @@ goog.require('cw.net.SACK');
 goog.require('cw.net.FlashSocketTracker');
 goog.require('cw.net.SocketEndpoint');
 goog.require('cw.net.ExpandedHttpEndpoint_');
-goog.require('cw.net.Stream');
+goog.require('cw.net.ClientStream');
 goog.require('cw.net.ClientTransport');
 goog.require('cw.net.DoNothingTransport');
 
@@ -226,8 +226,8 @@ function(callQueue, stream, transportNumber, transportType, endpoint, becomePrim
 
 
 
-cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
-	// TODO: test for what happens if you `reset` a Stream before you `start` it.
+cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
+	// TODO: test for what happens if you `reset` a ClientStream before you `start` it.
 
 	function setUp(self) {
 		self.streamPolicy_ = new cw.net.TestClient.DumbStreamPolicy(
@@ -241,7 +241,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 	function test_sendStringsNoStrings(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
-		var stream = new cw.net.Stream(
+		var stream = new cw.net.ClientStream(
 			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
 		stream.tryToSend_ = goog.testing.recordFunction(goog.bind(stream.tryToSend_, stream));
@@ -262,7 +262,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 	function test_sendStringsWithIllegalCharacters(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
-		var stream = new cw.net.Stream(
+		var stream = new cw.net.ClientStream(
 			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
 		proto.setStream(stream);
 		var badStrings = ["\x00", "\xff", "\n", "\x1f", "\x7f", "hello\tworld"];
@@ -285,7 +285,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 	function test_sendStringsIllegalButNoValidation(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
-		var stream = new cw.net.Stream(
+		var stream = new cw.net.ClientStream(
 			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
 		var badStrings = ["\x00", "\xff", "\n", "\x1f", "\x7f", "hello\tworld"];
 		proto.setStream(stream);
@@ -294,12 +294,13 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 	},
 
 	/**
-	 * If Stream is already reset, calling Stream.sendStrings throws an Error.
+	 * If ClientStream is already reset, calling ClientStream.sendStrings
+	 * throws an Error.
 	 */
 	function test_cannotSendStringsAfterAlreadyReset(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
-		var stream = new cw.net.Stream(
+		var stream = new cw.net.ClientStream(
 			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
 		proto.setStream(stream);
@@ -310,12 +311,12 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'StreamTests').methods(
 	},
 
 	/**
-	 * If Stream is already reset, calling Stream.reset throws an Error.
+	 * If ClientStream is already reset, calling ClientStream.reset throws an Error.
 	 */
 	function test_cannotResetAfterAlreadyReset(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
-		var stream = new cw.net.Stream(
+		var stream = new cw.net.ClientStream(
 			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
 		proto.setStream(stream);
@@ -413,9 +414,10 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 
 	// TODO: test if ClientTransport(becomePrimary=false), HelloFrame does not have an 'eeds' argument
 
-	// TODO: test if we receive a frame, give it to Stream, which gives it to the protocol,
-	// which synchronously calls a function that results in the ClientTransport closing,
-	// the ClientTransport stops processing frames.
+	// TODO: test if we receive a frame, give it to ClientStream, which gives
+	// it to the protocol, which synchronously calls a function that results
+	// in the ClientTransport closing, the ClientTransport stops processing
+	// frames.
 );
 
 
@@ -450,7 +452,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'DoNothingTransportTests').meth
 
 
 /**
- * Base class to test Stream and ClientTransport with real
+ * Base class to test ClientStream and ClientTransport with real
  * TCP connections/HTTP requests.
  */
 cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
@@ -512,7 +514,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 	function test_stream(self) {
 		var proto = self.makeProtocol_();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
-		var stream = new cw.net.Stream(
+		var stream = new cw.net.ClientStream(
 			callQueue, proto, self.endpoint_, self.streamPolicy_);
 		proto.setStream(stream);
 		stream.start();
@@ -534,7 +536,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 	function test_streamWithStringInFirstTransport(self) {
 		var proto = self.makeProtocol_();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
-		var stream = new cw.net.Stream(
+		var stream = new cw.net.ClientStream(
 			callQueue, proto, self.endpoint_, self.streamPolicy_);
 		proto.setStream(stream);
 		stream.sendStrings(['echo_twice:hello world']);
@@ -550,8 +552,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 	},
 
 	/**
-	 * Send a string that makes the server application reset the Stream;
-	 * verify that our Stream is reset. Note that we might not get a
+	 * Send a string that makes the server application reset the stream;
+	 * verify that our ClientStream is reset. Note that we might not get a
 	 * ResetFrame because our primary transport might not be connected.
 	 * (Though perhaps not in practice in this specific test case).
 	 */
@@ -564,7 +566,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 		};
 
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
-		var stream = new cw.net.Stream(
+		var stream = new cw.net.ClientStream(
 			callQueue, proto, self.endpoint_, self.streamPolicy_);
 		proto.setStream(stream);
 		stream.sendStrings(['reset_me:test_streamReset']);
@@ -587,7 +589,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 
 
 /**
- * Test Stream and ClientTransport with real HTTP requests.
+ * Test ClientStream and ClientTransport with real HTTP requests.
  */
 cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealHttpTests').methods(
 
@@ -601,7 +603,8 @@ cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealHttpTests')
 
 
 /**
- * Test Stream and ClientTransport with real HTTP requests and HTTP streaming enabled.
+ * Test ClientStream and ClientTransport with real HTTP requests and HTTP
+ * streaming enabled.
  */
 cw.net.TestClient.RealHttpTests.subclass(cw.net.TestClient, 'RealHttpStreamingTests').methods(
 
@@ -626,7 +629,7 @@ cw.net.TestClient.RealHttpTests.subclass(cw.net.TestClient, 'RealHttpStreamingTe
 
 
 /**
- * Test Stream and ClientTransport with real Flash socket connections.
+ * Test ClientStream and ClientTransport with real Flash socket connections.
  */
 cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealFlashSocketTests').methods(
 
@@ -684,8 +687,5 @@ cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealFlashSocket
 		return d;
 	}
 );
-
-
-
 
 })(); // end anti-clobbering for JScript

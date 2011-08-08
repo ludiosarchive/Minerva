@@ -23,7 +23,7 @@ goog.provide('cw.net.IMinervaProtocol');
 goog.provide('cw.net.HttpStreamingMode');
 goog.provide('cw.net.IStreamPolicy');
 goog.provide('cw.net.DefaultStreamPolicy');
-goog.provide('cw.net.Stream');
+goog.provide('cw.net.ClientStream');
 goog.provide('cw.net.ClientTransport');
 goog.provide('cw.net.DoNothingTransport');
 goog.provide('cw.net.TransportType_');
@@ -322,8 +322,8 @@ cw.net.DefaultStreamPolicy.prototype.getHttpStreamingMode = function() {
  * your own application-level strings to determine that it is safe to
  * close, then call reset.
  *
- * Note: the client-side Stream never ends due to inactivity (there are no
- * timeouts in the client-side Stream).  If you want to end the stream, call
+ * Note: ClientStream never ends due to inactivity (there are no timeouts yet on
+ * the client-side Stream).  If you want to end the stream, call
  * stream.reset("reason why").
  *
  * @interface
@@ -333,8 +333,8 @@ cw.net.IMinervaProtocol = function() {
 };
 
 /**
- * Called when this stream has reset, either internally by Minerva client's
- * Stream, or a call to Stream.reset, or by a ResetFrame from the peer.
+ * Called when this stream has reset, either internally by ClientStream,
+ * or a call to ClientStream.reset, or by a ResetFrame from the peer.
  *
  * You must *not* throw any error. Wrap your code in try/catch if necessary.
  *
@@ -371,7 +371,7 @@ cw.net.makeStreamId_ = function() {
 
 
 /**
- * States that a Stream can be in.
+ * States that a ClientStream can be in.
  * @enum {number}
  * @private
  */
@@ -387,8 +387,8 @@ cw.net.StreamState_ = {
 /**
  * The client-side representation of a Minerva Stream.
  *
- * Stream is sort-of analogous to {@code twisted.internet.tcp.Connection}.
- * Stream can span many TCP connections/HTTP requests.
+ * ClientStream is sort-of analogous to {@code twisted.internet.tcp.Connection}.
+ * ClientStream can span many TCP connections/HTTP requests.
  *
  * @param {!cw.eventual.CallQueue} callQueue
  * @param {!cw.net.IMinervaProtocol} protocol
@@ -398,7 +398,7 @@ cw.net.StreamState_ = {
  * @constructor
  * @extends {goog.Disposable}
  */
-cw.net.Stream = function(callQueue, protocol, endpoint, streamPolicy) {
+cw.net.ClientStream = function(callQueue, protocol, endpoint, streamPolicy) {
 	goog.Disposable.call(this);
 
 	/**
@@ -408,15 +408,15 @@ cw.net.Stream = function(callQueue, protocol, endpoint, streamPolicy) {
 	this.callQueue_ = callQueue;
 
 	/**
-	 * The protocol that this Stream is associated with.
+	 * The protocol that this ClientStream is associated with.
 	 * @type {!cw.net.IMinervaProtocol}
 	 * @private
 	 */
 	this.protocol_ = protocol;
 
 	/**
-	 * TODO: add a method to change the endpoint while the Stream is running.
-	 * This method may need to dispose existing transports.
+	 * TODO: add a method to change the endpoint while the ClientStream is
+	 * running.  This method may need to dispose existing transports.
 	 * @type {!cw.net.Endpoint}
 	 * @private
 	 */
@@ -441,7 +441,7 @@ cw.net.Stream = function(callQueue, protocol, endpoint, streamPolicy) {
 	this.transports_ = new goog.structs.Set();
 
 	/**
-	 * This Stream's unique ID.  Note that client may pick a bad ID that
+	 * This stream's unique ID.  Note that client may pick a bad ID that
 	 * collides with another bad ID, but this is entirely the client's fault.
 	 * @type {string}
 	 */
@@ -471,7 +471,7 @@ cw.net.Stream = function(callQueue, protocol, endpoint, streamPolicy) {
 	this.windowLoadEvent_ = null;
 
 	/**
-	 * An Array of {@code XDRFrame}s that this Stream is using.
+	 * An Array of {@code XDRFrame}s that this ClientStream is using.
 	 * @type {!Array.<!cw.net.XDRFrame>}
 	 * @private
 	 */
@@ -488,21 +488,21 @@ cw.net.Stream = function(callQueue, protocol, endpoint, streamPolicy) {
 			this.restartHttpRequests_, false, this);
 	}
 };
-goog.inherits(cw.net.Stream, goog.Disposable);
+goog.inherits(cw.net.ClientStream, goog.Disposable);
 
 /**
  * @type {!goog.debug.Logger}
  * @protected
  */
-cw.net.Stream.prototype.logger_ =
-	goog.debug.Logger.getLogger('cw.net.Stream');
+cw.net.ClientStream.prototype.logger_ =
+	goog.debug.Logger.getLogger('cw.net.ClientStream');
 
 /**
  * The last SACK we have received.
  * @type {!cw.net.SACK}
  * @private
  */
-cw.net.Stream.prototype.lastSackSeenByClient_ = new cw.net.SACK(-1, []);
+cw.net.ClientStream.prototype.lastSackSeenByClient_ = new cw.net.SACK(-1, []);
 
 /**
  * The last SACK the server has definitely received, as far as we know.  This
@@ -510,61 +510,61 @@ cw.net.Stream.prototype.lastSackSeenByClient_ = new cw.net.SACK(-1, []);
  * @type {!cw.net.SACK}
  * @private
  */
-cw.net.Stream.prototype.lastSackSeenByServer_ = new cw.net.SACK(-1, []);
+cw.net.ClientStream.prototype.lastSackSeenByServer_ = new cw.net.SACK(-1, []);
 
 /**
  * Maximum number of undelivered strings allowed in {@code this.incoming_},
  * before ignoring further strings over the offending transport (and closing it).
  * @type {number}
  */
-cw.net.Stream.prototype.maxUndeliveredStrings = 50;
+cw.net.ClientStream.prototype.maxUndeliveredStrings = 50;
 
 /**
  * Maximum number of undelivered bytes allowed in {@code this.incoming_},
  * before ignoring further strings over the offending transport (and closing it).
  * @type {number}
  */
-cw.net.Stream.prototype.maxUndeliveredBytes = 1 * 1024 * 1024;
+cw.net.ClientStream.prototype.maxUndeliveredBytes = 1 * 1024 * 1024;
 
 /**
- * The function to call after the Stream is completely done.
+ * The function to call after the ClientStream is completely done.
  * @type {Function}
  */
-cw.net.Stream.prototype.ondisconnect = null;
+cw.net.ClientStream.prototype.ondisconnect = null;
 
 /**
- * Has the server ever known about the Stream?  Set to `true` after
+ * Has the server ever known about the stream?  Set to `true` after
  * we get a {@link cw.net.StreamCreatedFrame}.  Never set back to `false`.
  *
- * If `false`, the transports that Stream makes must have HelloFrame with
+ * If `false`, the transports that ClientStream makes must have HelloFrame with
  * `requestNewStream`.
  * @type {boolean}
  * @private
  */
-cw.net.Stream.prototype.streamExistedAtServer_ = false;
+cw.net.ClientStream.prototype.streamExistedAtServer_ = false;
 
 /**
- * Is a secondary transport suppressed because Stream might not exist on
+ * Is a secondary transport suppressed because stream might not exist on
  * server yet?
  * @type {boolean}
  * @private
  */
-cw.net.Stream.prototype.secondaryIsWaitingForStreamToExist_ = false;
+cw.net.ClientStream.prototype.secondaryIsWaitingForStreamToExist_ = false;
 
 /**
  * State the stream is in.
  * @type {!cw.net.StreamState_}
  * @private
  */
-cw.net.Stream.prototype.state_ = cw.net.StreamState_.UNSTARTED;
+cw.net.ClientStream.prototype.state_ = cw.net.StreamState_.UNSTARTED;
 
 /**
  * Counter used to uniquely assign a transportNumber for the
- * ClientTransports in this Stream.
+ * transports in this stream.
  * @type {number}
  * @private
  */
-cw.net.Stream.prototype.transportCount_ = -1;
+cw.net.ClientStream.prototype.transportCount_ = -1;
 
 /**
  * The primary transport, for receiving S2C strings (and possibly sending C2S
@@ -572,7 +572,7 @@ cw.net.Stream.prototype.transportCount_ = -1;
  * @type {cw.net.ClientTransport|cw.net.DoNothingTransport}
  * @private
  */
-cw.net.Stream.prototype.primaryTransport_ = null;
+cw.net.ClientStream.prototype.primaryTransport_ = null;
 
 /**
  * The secondary transport.  It is created to send strings/sacks if the primary
@@ -581,25 +581,25 @@ cw.net.Stream.prototype.primaryTransport_ = null;
  * @type {cw.net.ClientTransport|cw.net.DoNothingTransport}
  * @private
  */
-cw.net.Stream.prototype.secondaryTransport_ = null;
+cw.net.ClientStream.prototype.secondaryTransport_ = null;
 
 /**
- * The transport dedicated to resetting the Stream.  If primary transport is
+ * The transport dedicated to resetting the stream.  If primary transport is
  * capable of sending after being created, this type of transport is not
  * created, and the ResetFrame is sent over the primary transport instead.
  * @type {cw.net.ClientTransport}
  * @private
  */
-cw.net.Stream.prototype.resettingTransport_ = null;
+cw.net.ClientStream.prototype.resettingTransport_ = null;
 
 /**
- * The current penalty for the Stream.  Increased when transports die with
- * errors that suggest that the Stream is permanently broken.  Reset back to
+ * The current penalty for the ClientStream.  Increased when transports die with
+ * errors that suggest that the stream is permanently broken.  Reset back to
  * 0 when a transport with no penalty goes offline.
  * @type {number}
  * @private
  */
-cw.net.Stream.prototype.streamPenalty_ = 0;
+cw.net.ClientStream.prototype.streamPenalty_ = 0;
 
 /**
  * How many times in a row the primary transport has been followed
@@ -607,7 +607,7 @@ cw.net.Stream.prototype.streamPenalty_ = 0;
  * @type {number}
  * @private
  */
-cw.net.Stream.prototype.primaryDelayCount_ = 0;
+cw.net.ClientStream.prototype.primaryDelayCount_ = 0;
 
 /**
  * How many times in a row the secondary transport has been followed
@@ -615,14 +615,14 @@ cw.net.Stream.prototype.primaryDelayCount_ = 0;
  * @type {number}
  * @private
  */
-cw.net.Stream.prototype.secondaryDelayCount_ = 0;
+cw.net.ClientStream.prototype.secondaryDelayCount_ = 0;
 
 /**
  * @param {!Array.<string>} sb
  * @param {!Array.<*>} stack
  */
-cw.net.Stream.prototype.__reprPush__ = function(sb, stack) {
-	sb.push('<Stream id=');
+cw.net.ClientStream.prototype.__reprPush__ = function(sb, stack) {
+	sb.push('<ClientStream id=');
 	cw.repr.reprPush(this.streamId, sb, stack);
 	sb.push(', state=', String(this.state_));
 	sb.push(', primary=');
@@ -639,7 +639,7 @@ cw.net.Stream.prototype.__reprPush__ = function(sb, stack) {
  * 	currently-open transport, or -1 if none.
  * @private
  */
-cw.net.Stream.prototype.getHighestSeqNumSent_ = function() {
+cw.net.ClientStream.prototype.getHighestSeqNumSent_ = function() {
 	var nums = [-1]; // have -1 in case no primary or secondary
 	if(this.primaryTransport_) {
 		nums.push(this.primaryTransport_.ourSeqNum_);
@@ -655,7 +655,7 @@ cw.net.Stream.prototype.getHighestSeqNumSent_ = function() {
  * @return {boolean} Have we already written sack `sack` over any
  * 	currently-open transport?
  */
-cw.net.Stream.prototype.hasAlreadyWrittenSack_ = function(sack) {
+cw.net.ClientStream.prototype.hasAlreadyWrittenSack_ = function(sack) {
 	if(this.primaryTransport_ &&
 	sack.equals(this.primaryTransport_.lastSackWritten_)) {
 		return true;
@@ -670,7 +670,7 @@ cw.net.Stream.prototype.hasAlreadyWrittenSack_ = function(sack) {
 /**
  * @private
  */
-cw.net.Stream.prototype.ensureQueueIntegrity_ = function() {
+cw.net.ClientStream.prototype.ensureQueueIntegrity_ = function() {
 	if(!this.streamExistedAtServer_) {
 		goog.asserts.assert(
 			this.queue_.getQueuedCount() == 0 ||
@@ -686,7 +686,7 @@ cw.net.Stream.prototype.ensureQueueIntegrity_ = function() {
  * @return {string} Some text to be used in a log message
  * @private
  */
-cw.net.Stream.prototype.getSendingWhatText_ = function(
+cw.net.ClientStream.prototype.getSendingWhatText_ = function(
 maybeNeedToSendStrings, maybeNeedToSendSack) {
 	if(maybeNeedToSendStrings && maybeNeedToSendSack) {
 		return "string(s)+SACK";
@@ -702,7 +702,7 @@ maybeNeedToSendStrings, maybeNeedToSendSack) {
 /**
  * @private
  */
-cw.net.Stream.prototype.tryToSend_ = function() {
+cw.net.ClientStream.prototype.tryToSend_ = function() {
 	this.ensureQueueIntegrity_();
 	if(this.state_ == cw.net.StreamState_.UNSTARTED) {
 		return;
@@ -744,12 +744,12 @@ cw.net.Stream.prototype.tryToSend_ = function() {
 					this.queue_, highestSeqNumSent + 1);
 			}
 			this.primaryTransport_.flush_();
-		// For robustness reasons, wait until we know that Stream
+		// For robustness reasons, wait until we know that the stream
 		// exists on server before creating secondary transports.
 		} else if(this.secondaryTransport_ == null) {
 			if(!this.streamExistedAtServer_) {
 				this.logger_.finest("tryToSend_: not creating a secondary " +
-					"because Stream might not exist on server");
+					"because stream might not exist on server");
 				this.secondaryIsWaitingForStreamToExist_ = true;
 			} else {
 				this.logger_.finest(
@@ -774,7 +774,7 @@ cw.net.Stream.prototype.tryToSend_ = function() {
  * See the JSDoc in the constructor near {@code this.windowLoadEvent_}.
  * @private
  */
-cw.net.Stream.prototype.restartHttpRequests_ = function() {
+cw.net.ClientStream.prototype.restartHttpRequests_ = function() {
 	this.windowLoadEvent_ = null;
 	if(this.primaryTransport_ && this.primaryTransport_.isHttpTransport_()) {
 		this.logger_.info("restartHttpRequests_: aborting primary");
@@ -789,12 +789,12 @@ cw.net.Stream.prototype.restartHttpRequests_ = function() {
 
 /**
  * Send strings `strings` to the peer. You may call this even before the
- * 	Stream is started with {@link #start}.
+ * 	ClientStream is started with {@link #start}.
  * @param {!Array.<string>} strings Strings to send.
  * @param {boolean=} validate Validate strings before sending them?
  * 	Default true.  Set this to `false` for a slight speedup.
  */
-cw.net.Stream.prototype.sendStrings = function(strings, validate) {
+cw.net.ClientStream.prototype.sendStrings = function(strings, validate) {
 	if(!goog.isDef(validate)) {
 		validate = true;
 	}
@@ -822,7 +822,7 @@ cw.net.Stream.prototype.sendStrings = function(strings, validate) {
  * @private
  * @return {!cw.net.TransportType_}
  */
-cw.net.Stream.prototype.getTransportType_ = function() {
+cw.net.ClientStream.prototype.getTransportType_ = function() {
 	var transportType;
 	if(this.endpoint_ instanceof cw.net.ExpandedHttpEndpoint_) {
 		var httpStreamingMode = this.streamPolicy_.getHttpStreamingMode();
@@ -845,7 +845,7 @@ cw.net.Stream.prototype.getTransportType_ = function() {
  * @return {!cw.net.ClientTransport} The newly-instantiated transport.
  * This method exists so that it can be overriden in tests.
  */
-cw.net.Stream.prototype.instantiateTransport_ =
+cw.net.ClientStream.prototype.instantiateTransport_ =
 function(callQueue, stream, transportNumber, transportType,
 endpoint, becomePrimary) {
 	return new cw.net.ClientTransport(
@@ -858,7 +858,7 @@ endpoint, becomePrimary) {
  * 	primary transport.
  * @return {!cw.net.ClientTransport} The newly-created transport.
  */
-cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
+cw.net.ClientStream.prototype.createNewTransport_ = function(becomePrimary) {
 	var transportType = this.getTransportType_();
 	this.transportCount_ += 1;
 	var transport = this.instantiateTransport_(
@@ -875,7 +875,7 @@ cw.net.Stream.prototype.createNewTransport_ = function(becomePrimary) {
  * @param {number} times
  * @return {!cw.net.DoNothingTransport} The newly-created transport.
  */
-cw.net.Stream.prototype.createWastingTransport_ = function(delay, times) {
+cw.net.ClientStream.prototype.createWastingTransport_ = function(delay, times) {
 	var transport = new cw.net.DoNothingTransport(
 		this.callQueue_, this, delay, times);
 	this.logger_.finest("Created: " + transport.getDescription_() +
@@ -885,17 +885,17 @@ cw.net.Stream.prototype.createWastingTransport_ = function(delay, times) {
 };
 
 /**
- * Called by a transport which has received indication that the Stream has
+ * Called by a transport which has received indication that the stream has
  * been successfully created. The server sends StreamCreatedFrame as the
  * first frame over *every* transport with `requestNewStream`, so this
  * method might be called more than once.  This method is idempotent.
  * @param {boolean} avoidCreatingTransports
  * @private
  */
-cw.net.Stream.prototype.streamSuccessfullyCreated_ = function(avoidCreatingTransports) {
+cw.net.ClientStream.prototype.streamSuccessfullyCreated_ = function(avoidCreatingTransports) {
 	this.logger_.finest('Stream is now confirmed to exist at server.');
 	this.streamExistedAtServer_ = true;
-	// See comment for cw.net.Stream.prototype.stringsReceived_
+	// See comment for cw.net.ClientStream.prototype.stringsReceived_
 	if(this.secondaryIsWaitingForStreamToExist_ && !avoidCreatingTransports) {
 		// This method is idempotent, so we should set this to false
 		// to avoid calling tryToSend_ more than necessary.
@@ -908,7 +908,7 @@ cw.net.Stream.prototype.streamSuccessfullyCreated_ = function(avoidCreatingTrans
  * @param {!cw.net.SACK} lastSackSeen The last SACK frame seen by the peer.
  * @private
  */
-cw.net.Stream.prototype.streamStatusReceived_ = function(lastSackSeen) {
+cw.net.ClientStream.prototype.streamStatusReceived_ = function(lastSackSeen) {
 	this.lastSackSeenByServer_ = lastSackSeen;
 };
 
@@ -923,7 +923,7 @@ cw.net.Stream.prototype.streamStatusReceived_ = function(lastSackSeen) {
  * @private
  * // TODO: types for tuples
  */
-cw.net.Stream.prototype.getDelayForNextTransport_ = function(transport) {
+cw.net.ClientStream.prototype.getDelayForNextTransport_ = function(transport) {
 	var delay;
 	var times;
 	var isWaster = transport instanceof cw.net.DoNothingTransport;
@@ -972,11 +972,11 @@ cw.net.Stream.prototype.getDelayForNextTransport_ = function(transport) {
 };
 
 /**
- * ClientTransport calls this to tell Stream that it has disconnected.
+ * ClientTransport calls this to tell ClientStream that it has disconnected.
  * @param {!cw.net.ClientTransport|cw.net.DoNothingTransport} transport
  * @private
  */
-cw.net.Stream.prototype.transportOffline_ = function(transport) {
+cw.net.ClientStream.prototype.transportOffline_ = function(transport) {
 	var removed = this.transports_.remove(transport);
 	if(!removed) {
 		throw Error("transportOffline_: Transport was not removed?");
@@ -1001,8 +1001,8 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
 			this.logger_.fine('Disposing because resettingTransport_ is done.');
 			this.dispose();
 		} else {
-			this.logger_.fine(
-				"Not creating a transport because Stream is in state " + this.state_);
+			this.logger_.fine("Not creating a transport because " +
+				"ClientStream is in state " + this.state_);
 		}
 	} else {
 		var _ = this.getDelayForNextTransport_(transport);
@@ -1043,7 +1043,7 @@ cw.net.Stream.prototype.transportOffline_ = function(transport) {
  * 	transport. The server might never receive a reset frame.
  * @param {string} reasonString Reason why resetting the stream
  */
-cw.net.Stream.prototype.reset = function(reasonString) {
+cw.net.ClientStream.prototype.reset = function(reasonString) {
 	goog.asserts.assertString(reasonString);
 
 	if(this.state_ > cw.net.StreamState_.STARTED) {
@@ -1085,7 +1085,7 @@ cw.net.Stream.prototype.reset = function(reasonString) {
 /**
  * @private
  */
-cw.net.Stream.prototype.disposeAllTransports_ = function() {
+cw.net.ClientStream.prototype.disposeAllTransports_ = function() {
 	var transports = this.transports_.getValues();
 	for(var i=0; i < transports.length; i++) {
 		transports[i].dispose();
@@ -1097,7 +1097,7 @@ cw.net.Stream.prototype.disposeAllTransports_ = function() {
  * @param {boolean} applicationLevel
  * @private
  */
-cw.net.Stream.prototype.doReset_ = function(reasonString, applicationLevel) {
+cw.net.ClientStream.prototype.doReset_ = function(reasonString, applicationLevel) {
 	this.protocol_.streamReset(reasonString, applicationLevel);
 	// Keep in mind both the "Minerva does reset" and "client app calls
 	// reset" cases, and keep the streamReset and DISCONNECTED firing
@@ -1112,29 +1112,29 @@ cw.net.Stream.prototype.doReset_ = function(reasonString, applicationLevel) {
  * @param {boolean} applicationLevel
  * @private
  */
-cw.net.Stream.prototype.resetFromPeer_ = function(reasonString, applicationLevel) {
+cw.net.ClientStream.prototype.resetFromPeer_ = function(reasonString, applicationLevel) {
 	this.doReset_(reasonString, applicationLevel);
 };
 
 /**
- * Called by Stream if it has given up on the Stream. This does *not* try to
- * send a ResetFrame to the server.
+ * Called by ClientStream if it has given up on the stream.  This does *not*
+ * try to send a ResetFrame to the server.
  * @param {string} reasonString
  * @private
  */
-cw.net.Stream.prototype.internalReset_ = function(reasonString) {
+cw.net.ClientStream.prototype.internalReset_ = function(reasonString) {
 	this.doReset_(reasonString, false/* applicationLevel */);
 };
 
 /**
  * @return {boolean}
  */
-cw.net.Stream.prototype.isResettingOrDisposed_ = function() {
+cw.net.ClientStream.prototype.isResettingOrDisposed_ = function() {
 	return this.state_ == cw.net.StreamState_.RESETTING || this.isDisposed();
 };
 
 /**
- * ClientTransport calls this to tell Stream about received strings.
+ * ClientTransport calls this to tell ClientStream about received strings.
  * @param {!cw.net.ClientTransport} transport The transport that received
  * 	these boxes.
  * @param {!cw.net.SeqNumStringPairs_} pairs Sorted Array of
@@ -1142,7 +1142,7 @@ cw.net.Stream.prototype.isResettingOrDisposed_ = function() {
  * @param {boolean} avoidCreatingTransports
  * @private
  */
-cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, avoidCreatingTransports) {
+cw.net.ClientStream.prototype.stringsReceived_ = function(transport, pairs, avoidCreatingTransports) {
 	goog.asserts.assert(
 		this.state_ == cw.net.StreamState_.STARTED,
 		"stringsReceived_: state is " + this.state_);
@@ -1159,7 +1159,7 @@ cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, avoidCreat
 			var s = items[i];
 			this.protocol_.stringReceived(s);
 			// Under stringReceived, the state may have changed completely!
-			// The Stream may be RESETTING or disposed.
+			// The ClientStream may be RESETTING or disposed.
 			if(this.isResettingOrDisposed_()) {
 				return;
 			}
@@ -1172,12 +1172,12 @@ cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, avoidCreat
 	// has already been called.
 	//
 	// Long-polling transports call with avoidCreatingTransports=true because
-	// Stream will create a new transport after that long-poll closes. We know
-	// it will close very soon because it just received strings. The new
-	// transport will have a SACK, so it is stupid to create a new secondary
-	// transport right now to send a SACK redundantly.
-	// For HTTP streaming, the transport might not close for a while, so
-	// we do call tryToSend_.
+	// ClientStream will create a new transport after that long-poll closes.
+	// We know it will close very soon because it just received strings.
+	// The new transport will have a SACK, so it is stupid to create a new
+	// secondary transport right now to send a SACK redundantly.  For HTTP
+	// streaming, the transport might not close for a while, so we do call
+	// tryToSend_.
 	if(!avoidCreatingTransports) { // TODO: maybe we want && !hitLimit?
 		this.tryToSend_();
 	}
@@ -1200,7 +1200,7 @@ cw.net.Stream.prototype.stringsReceived_ = function(transport, pairs, avoidCreat
  * @return {boolean} Whether the SACK was bad
  * @private
  */
-cw.net.Stream.prototype.sackReceived_ = function(sack) {
+cw.net.ClientStream.prototype.sackReceived_ = function(sack) {
 	this.lastSackSeenByClient_ = sack;
 	return this.queue_.handleSACK(sack);
 };
@@ -1210,16 +1210,17 @@ cw.net.Stream.prototype.sackReceived_ = function(sack) {
  * 	receive window.
  * @private
  */
-cw.net.Stream.prototype.getSACK_ = function() {
+cw.net.ClientStream.prototype.getSACK_ = function() {
 	return this.incoming_.getSACK();
 };
 
 /**
- * Called by application to start the Stream.
+ * Called by application to start the ClientStream.
  */
-cw.net.Stream.prototype.start = function() {
+cw.net.ClientStream.prototype.start = function() {
 	if(this.state_ != cw.net.StreamState_.UNSTARTED) {
-		throw new Error("Stream.start: " + cw.repr.repr(this) + " already started");
+		throw new Error("ClientStream.start: " + cw.repr.repr(this) +
+			" already started");
 	}
 	this.state_ = cw.net.StreamState_.WAITING_RESOURCES;
 
@@ -1240,7 +1241,7 @@ cw.net.Stream.prototype.start = function() {
 /**
  * @param {!Array.<!cw.net.XDRFrame>} xdrFrames
  */
-cw.net.Stream.prototype.expandEndpoint_ = function(xdrFrames) {
+cw.net.ClientStream.prototype.expandEndpoint_ = function(xdrFrames) {
 	goog.asserts.assert(this.state_ == cw.net.StreamState_.WAITING_RESOURCES,
 		"Expected stream state WAITING_RESOURCES, was " + this.state_);
 
@@ -1262,14 +1263,14 @@ cw.net.Stream.prototype.expandEndpoint_ = function(xdrFrames) {
 	this.startFirstTransport_();
 };
 
-cw.net.Stream.prototype.startFirstTransport_ = function() {
+cw.net.ClientStream.prototype.startFirstTransport_ = function() {
 	this.state_ = cw.net.StreamState_.STARTED;
 	this.primaryTransport_ = this.createNewTransport_(true);
 	this.primaryTransport_.writeStrings_(this.queue_, null);
 	this.primaryTransport_.flush_();
 };
 
-cw.net.Stream.prototype.disposeInternal = function() {
+cw.net.ClientStream.prototype.disposeInternal = function() {
 	this.logger_.info(cw.repr.repr(this) + " in disposeInternal.");
 	this.state_ = cw.net.StreamState_.DISCONNECTED;
 	this.disposeAllTransports_();
@@ -1285,8 +1286,8 @@ cw.net.Stream.prototype.disposeInternal = function() {
 	}
 
 	// Must be called after stoppedUsingXDRFrame calls, so that if a new
-	// Stream is created immediately, it can reuse the existing iframes (if
-	// iframes were being used).
+	// ClientStream is created immediately, it can reuse the existing iframes
+	// (if iframes were indeed used).
 	if(this.ondisconnect) {
 		this.ondisconnect();
 	}
@@ -1298,7 +1299,7 @@ cw.net.Stream.prototype.disposeInternal = function() {
 	delete this.resettingTransport_;
 	delete this.protocol_;
 
-	cw.net.Stream.superClass_.disposeInternal.call(this);
+	cw.net.ClientStream.superClass_.disposeInternal.call(this);
 };
 
 // notifyFinish?
@@ -1314,8 +1315,7 @@ cw.net.Stream.prototype.disposeInternal = function() {
 cw.net.TransportType_ = {
 	XHR_LONGPOLL: 1,
 	XHR_STREAM: 2,
-	FLASH_SOCKET: 3,
-	WEBSOCKET: 4
+	FLASH_SOCKET: 3
 };
 
 
@@ -1333,7 +1333,7 @@ cw.net.TransportType_ = {
  * 		StringFrames make it through? Really? TODO: describe)
  *
  * @param {!cw.eventual.CallQueue} callQueue
- * @param {!cw.net.Stream} stream
+ * @param {!cw.net.ClientStream} stream
  * @param {number} transportNumber
  * @param {!cw.net.TransportType_} transportType
  * @param {!cw.net.Endpoint} endpoint
@@ -1355,8 +1355,8 @@ transportType, endpoint, becomePrimary) {
 	this.callQueue_ = callQueue;
 
 	/**
-	 * The Stream we're associated with.
-	 * @type {cw.net.Stream}
+	 * The ClientStream we're associated with.
+	 * @type {cw.net.ClientStream}
 	 * @private
 	 */
 	this.stream_ = stream;
@@ -1395,8 +1395,8 @@ transportType, endpoint, becomePrimary) {
 	 * 	for HTTP transports: we'll make a request (possibly with some
 	 * 		C2S strings) and the server will close it because the transport
 	 * 		is not receiving strings.
-	 * 	for non-HTTP transports: we'll make a connection. Stream will
-	 * 		be able to continue to send strings over it. Stream can
+	 * 	for non-HTTP transports: we'll make a connection.  ClientStream will
+	 * 		be able to continue to send strings over it.  ClientStream can
 	 * 		call ClientTransport.dispose to close it at any time.
 	 * @type {boolean}
 	 * @private
@@ -1510,7 +1510,7 @@ cw.net.ClientTransport.prototype.peerSeqNum_ = -1;
 cw.net.ClientTransport.prototype.wroteResetFrame_ = false;
 
 /**
- * Was this transport aborted because Stream is trying to stop
+ * Was this transport aborted because ClientStream is trying to stop
  * the browser spinner from spinning?
  * @type {boolean}
  * @private
@@ -1518,7 +1518,7 @@ cw.net.ClientTransport.prototype.wroteResetFrame_ = false;
 cw.net.ClientTransport.prototype.abortedForSpinner_ = false;
 
 /**
- * The additional likelihood that Stream is dead on server or permanently
+ * The additional likelihood that stream is dead on server or permanently
  * unreachable.  This is a guess based on what this transport has received.
  * @type {number}
  * @private
@@ -1526,8 +1526,8 @@ cw.net.ClientTransport.prototype.abortedForSpinner_ = false;
 cw.net.ClientTransport.prototype.penalty_ = 0;
 
 /**
- * Did the transport receive data that suggests Stream should possibly delay
- * the next transport?
+ * Did the transport receive data that suggests ClientStream should possibly
+ * delay the next transport?
  * @type {boolean}
  * @private
  */
@@ -1555,7 +1555,7 @@ cw.net.ClientTransport.prototype.getDescription_ = function() {
 };
 
 /**
- * @return {boolean} Whether Stream should consider a
+ * @return {boolean} Whether ClientStream should consider a
  * 	{@link cw.net.DoNothingTransport} for the next transport.
  * @private
  */
@@ -1659,7 +1659,7 @@ cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedString
 			}
 			this.peerSeqNum_ += 1;
 			// Because we may have received multiple Minerva strings, collect
-			// them into a Array and then deliver them all at once to Stream.
+			// them into a Array and then deliver them all at once to ClientStream.
 			// This does *not* add any latency. It does reduce the number of funcalls.
 			bunchedStrings.push([this.peerSeqNum_, frame.string]);
 		} else if(frame instanceof cw.net.SackFrame) {
@@ -2002,7 +2002,7 @@ cw.net.ClientTransport.prototype.flushBufferAsEncodedFrames_ = function() {
 cw.net.ClientTransport.prototype.flashSocketTerminated_ = function(probablyCrashed) {
 	if(probablyCrashed) {
 		// Right now, we don't support switching endpoints, so increase the
-		// penalty, which will usually make Stream give up very soon.
+		// penalty, which will usually make ClientStream give up very soon.
 		// TODO: remove this after we can switch to another Endpoint.
 		this.penalty_ += 0.5;
 	}
@@ -2103,9 +2103,9 @@ cw.net.ClientTransport.prototype.flush_ = function() {
  * @private
  */
 cw.net.ClientTransport.prototype.writeSack_ = function(sack) {
-	// Stream doesn't keep track of which SACKs have been written to
-	// which transports. If this is the SACK we wrote last time, ignore
-	// Stream's request.
+	// ClientStream doesn't keep track of which SACKs have been written to
+	// which transports.  If this is the SACK we wrote last time, ignore
+	// ClientStream's request.
 	if(sack == this.lastSackWritten_) {
 		return;
 	}
@@ -2203,7 +2203,7 @@ cw.net.ClientTransport.prototype.causedRwinOverflow_ = function() {
 /**
  * Send a ResetFrame over this transport.  Remember to either `close` or
  * 	`start` the transport after you call this.
- * @param {string} reasonString Textual reason why Stream is resetting.
+ * @param {string} reasonString Textual reason why ClientStream is resetting.
  * @param {boolean} applicationLevel Whether this reset was made by the
  * 	application.
  * @private
@@ -2222,13 +2222,13 @@ cw.net.ClientTransport.prototype.writeReset_ = function(reasonString, applicatio
 /**
  * A transport that does not actually try to connect anywhere, but rather
  * waits for `delay` milliseconds `times` times and goes offline.
- * {@link cw.net.Stream} uses this when it wants to delay a connection
+ * {@link cw.net.ClientStream} uses this when it wants to delay a connection
  * attempt.  During a period of network problems, you will see this
  * interspersed between real {@link ClientTransport}s.  This is also
- * used when Stream kills the loading spinner in WebKit browsers.
+ * used when ClientStream kills the loading spinner in WebKit browsers.
  *
  * @param {!cw.eventual.CallQueue} callQueue
- * @param {!cw.net.Stream} stream
+ * @param {!cw.net.ClientStream} stream
  * @param {number} delay
  * @param {number} times
  *
@@ -2246,7 +2246,7 @@ cw.net.DoNothingTransport = function(callQueue, stream, delay, times) {
 	this.callQueue_ = callQueue;
 
 	/**
-	 * @type {cw.net.Stream}
+	 * @type {cw.net.ClientStream}
 	 * @private
 	 */
 	this.stream_ = stream;
@@ -2345,7 +2345,7 @@ cw.net.DoNothingTransport.prototype.__reprPush__ = function(sb, stack) {
 };
 
 /**
- * Note: {@link cw.net.Stream.restartHttpRequests_} needs this.
+ * Note: {@link cw.net.ClientStream.restartHttpRequests_} needs this.
  * @return {boolean}
  * @private
  */
@@ -2363,7 +2363,7 @@ cw.net.DoNothingTransport.prototype.getDescription_ = function() {
 };
 
 /**
- * @return {boolean} Whether Stream consider a
+ * @return {boolean} Whether ClientStream should consider using a
  * 	{@link cw.net.DoNothingTransport} for the next transport.
  * @private
  */

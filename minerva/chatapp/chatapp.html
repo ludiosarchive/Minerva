@@ -105,7 +105,7 @@ goog.require('goog.events.EventType');
 goog.require('goog.Uri');
 goog.require('cw.eventual');
 goog.require('cw.string');
-goog.require('cw.net.Stream');
+goog.require('cw.net.ClientStream');
 goog.require('cw.net.IMinervaProtocol');
 goog.require('cw.net.HttpStreamingMode');
 goog.require('cw.net.demo.getEndpointByQueryArgs');
@@ -254,7 +254,7 @@ chatapp.startStream = function() {
 	// synchronous after we make a "nice Flash endpoint"
 	var endpointD = cw.net.demo.getEndpointByQueryArgs(chatapp.callQueue);
 	endpointD.addCallback(function(endpoint) {
-		var stream = new cw.net.Stream(
+		var stream = new cw.net.ClientStream(
 			chatapp.callQueue, chatapp.lastProto, endpoint, streamPolicy);
 		chatapp.lastProto.setStream(stream);
 		chatapp.lastProto.sendInitialStrings();

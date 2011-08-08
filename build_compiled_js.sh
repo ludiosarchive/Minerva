@@ -30,6 +30,6 @@ $COMMON \
 2>&1 | tee minerva/compiled_client/xdrframe.js.log
 
 $COMMON \
---namespace="Minerva.Client" \
+--namespace="minerva_client" \
 --output_file=minerva/compiled_client/minerva-client.js \
 2>&1 | tee minerva/compiled_client/minerva-client.js.log

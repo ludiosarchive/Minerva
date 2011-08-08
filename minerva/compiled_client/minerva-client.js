@@ -1927,7 +1927,7 @@ function $(a, b, c, d) {
 }
 x($, F);
 m = $.prototype;
-m.a = N("cw.net.Stream");
+m.a = N("cw.net.ClientStream");
 m.nb = new D(-1, []);
 m.ob = new D(-1, []);
 m.ub = 50;
@@ -1944,7 +1944,7 @@ m.Va = 0;
 m.yb = 0;
 m.Db = 0;
 m.l = function(a, b) {
-  a.push("<Stream id=");
+  a.push("<ClientStream id=");
   A(this.ha, a, b);
   a.push(", state=", String(this.m));
   a.push(", primary=");
@@ -1974,7 +1974,7 @@ function ld(a) {
         b && nd(a.b, a.G, e + 1);
         a.b.A()
       }else {
-        a.h == l ? a.Ua ? (M(a.a, "tryToSend_: creating secondary to send " + f), a.h = od(a, !1), b && nd(a.h, a.G, e + 1), a.h.A()) : (M(a.a, "tryToSend_: not creating a secondary because Stream might not exist on server"), a.Sa = !0) : M(a.a, "tryToSend_: need to send " + f + ", but can't right now")
+        a.h == l ? a.Ua ? (M(a.a, "tryToSend_: creating secondary to send " + f), a.h = od(a, !1), b && nd(a.h, a.G, e + 1), a.h.A()) : (M(a.a, "tryToSend_: not creating a secondary because stream might not exist on server"), a.Sa = !0) : M(a.a, "tryToSend_: need to send " + f + ", but can't right now")
       }
     }
   }
@@ -2026,7 +2026,7 @@ function sd(a, b) {
   b.ua ? a.Va += b.ua : a.Va = 0;
   a.Va >= 1 && (a.a.info("transportOffline_: Doing an internal reset because streamPenalty_ reached limit."), a.d());
   if(a.m > 3) {
-    a.m == 4 && b.Kb ? (L(a.a, "Disposing because resettingTransport_ is done."), a.d()) : L(a.a, "Not creating a transport because Stream is in state " + a.m)
+    a.m == 4 && b.Kb ? (L(a.a, "Disposing because resettingTransport_ is done."), a.d()) : L(a.a, "Not creating a transport because ClientStream is in state " + a.m)
   }else {
     var c;
     var d;
@@ -2131,7 +2131,7 @@ function ud(a, b, c, d) {
   }
 }
 m.start = function() {
-  this.m != 1 && g(Error("Stream.start: " + B(this) + " already started"));
+  this.m != 1 && g(Error("ClientStream.start: " + B(this) + " already started"));
   this.m = 2;
   this.m = 3;
   this.b = od(this, !0);
@@ -2442,7 +2442,7 @@ m.k = function() {
   this.p = l;
   sd(a, this)
 };
-ba("Minerva.Client.Stream", $);
+ba("Minerva.ClientStream", $);
 $.prototype.start = $.prototype.start;
 $.prototype.sendStrings = $.prototype.ac;
 $.prototype.reset = $.prototype.reset;
