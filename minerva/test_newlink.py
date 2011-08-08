@@ -39,7 +39,7 @@ from minerva.decoders import Int32StringDecoder, DelimitedStringDecoder
 from minerva.newlink import (
 	Stream, StreamTracker, NoSuchStream,
 	StreamAlreadyExists, IConsumerWithoutWrite, IMinervaProtocol,
-	IMinervaFactory, IMinervaTransport, ServerTransport, SocketFace, HttpFace,
+	IMinervaFactory, IMinervaTransport, ServerTransport, SocketFace, _HttpFace,
 	HTTP_RESPONSE_PREAMBLE,
 )
 
@@ -2810,12 +2810,12 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 class HttpTests(_BaseHelpers, unittest.TestCase):
 	"""
-	Tests for L{HttpFace} and L{ServerTransport}'s HTTP support.
+	Tests for L{_HttpFace} and L{ServerTransport}'s HTTP support.
 	"""
 	# Inherit setUp, _resetStreamTracker
 
 	def _makeResource(self, rejectAll=False):
-		resource = HttpFace(self._clock, self.streamTracker)
+		resource = _HttpFace(self._clock, self.streamTracker)
 		return resource
 
 #		parser = self._makeParser()

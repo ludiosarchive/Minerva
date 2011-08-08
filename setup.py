@@ -22,8 +22,8 @@ setup(
 		'Topic :: System :: Networking',
 		'License :: OSI Approved :: Apache Software License',
 	],
-	packages=['minerva', 'minerva.sample', 'minerva.flashtest',
-		'minerva.chatapp', 'twisted.plugins', 'js_minerva'],
+	packages=['minerva', 'minerva.flashtest', 'minerva.chatapp',
+		'twisted.plugins', 'js_minerva'],
 	package_data={
 		'minerva': [
 			'*.html', '*/*.swf', '*/*.html', 'compiled_client/*.js',
