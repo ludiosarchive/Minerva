@@ -225,17 +225,6 @@ def strictSecureDecodeJson(s):
 	return decoded
 
 
-def getRandomSubdomain(prefix, digits):
-	"""
-	Get a random subdomain name that starts with C{prefix}.
-	and has C{digits} extra digits.   C{prefix} must start with a
-	lowercase letter a-z.
-	"""
-	# Always have C{digits} digits.  Use only random digits (not letters) to
-	# avoid forming words that may be blocked by proxies.
-	return prefix + str(randint(10**(digits - 1), 10**digits - 1))
-
-
 class ConflictingTemplateVars(Exception):
 	pass
 
