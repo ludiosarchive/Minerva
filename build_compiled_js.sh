@@ -21,7 +21,7 @@ COMMON="../closure-library/closure/bin/build/closurebuilder.py \
 --compiler_flags=--js=../closure-library/third_party/closure/goog/deps.js \
 --compiler_flags=--js=../Coreweb/js_coreweb/deps.js \
 --compiler_flags=--js=js_minerva/deps.js \
---compiler_flags=--externs=js_minerva/externs-minerva-client.js \
+--compiler_flags=--externs=js_minerva/externs/standalone-client.js \
 "
 
 $COMMON \
