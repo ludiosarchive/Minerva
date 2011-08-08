@@ -408,21 +408,15 @@ cw.net.UserContext.prototype.__reprPush__ = function(sb, stack) {
  * ClientStream is sort-of analogous to {@code twisted.internet.tcp.Connection}.
  * ClientStream can span many TCP connections/HTTP requests.
  *
- * @param {!cw.eventual.CallQueue} callQueue
  * @param {!cw.net.Endpoint} endpoint
- * @param {cw.net.IStreamPolicy=} streamPolicy
+ * @param {!cw.net.IStreamPolicy=} streamPolicy
+ * @param {!cw.eventual.CallQueue=} callQueue
  *
  * @constructor
  * @extends {goog.Disposable}
  */
-cw.net.ClientStream = function(callQueue, endpoint, streamPolicy) {
+cw.net.ClientStream = function(endpoint, streamPolicy, callQueue) {
 	goog.Disposable.call(this);
-
-	/**
-	 * @type {!cw.eventual.CallQueue}
-	 * @private
-	 */
-	this.callQueue_ = callQueue;
 
 	/**
 	 * TODO: add a method to change the endpoint while the ClientStream is
@@ -437,11 +431,13 @@ cw.net.ClientStream = function(callQueue, endpoint, streamPolicy) {
 	 * @type {!cw.net.IStreamPolicy}
 	 * @private
 	 */
-	if(streamPolicy) {
-		this.streamPolicy_ = streamPolicy;
-	} else {
-		this.streamPolicy_ = new cw.net.DefaultStreamPolicy();
-	}
+	this.streamPolicy_ = streamPolicy ? streamPolicy : new cw.net.DefaultStreamPolicy();
+
+	/**
+	 * @type {!cw.eventual.CallQueue}
+	 * @private
+	 */
+	this.callQueue_ = callQueue ? callQueue : cw.eventual.theCallQueue;
 
 	/**
 	 * A set of all currently-online transports.

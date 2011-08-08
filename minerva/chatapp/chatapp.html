@@ -251,7 +251,7 @@ chatapp.startStream = function() {
 	var endpointD = cw.net.demo.getEndpointByQueryArgs(chatapp.callQueue);
 	endpointD.addCallback(function(endpoint) {
 		var stream = new cw.net.ClientStream(
-			chatapp.callQueue, endpoint, streamPolicy);
+			endpoint, streamPolicy, chatapp.callQueue);
 		stream.bindToProtocol(chatapp.lastProto);
 		chatapp.lastProto.setStream(stream);
 		chatapp.lastProto.sendInitialStrings();

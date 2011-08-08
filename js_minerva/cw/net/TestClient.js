@@ -238,9 +238,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 	 */
 	function test_sendStringsNoStrings(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
-		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.ClientStream(
-			callQueue, fakeHttpEndpoint, self.streamPolicy_);
+			fakeHttpEndpoint, self.streamPolicy_);
 		stream.bindToProtocol(proto);
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
 		stream.tryToSend_ = goog.testing.recordFunction(goog.bind(stream.tryToSend_, stream));
@@ -260,9 +259,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 	 */
 	function test_sendStringsWithIllegalCharacters(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
-		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.ClientStream(
-			callQueue, fakeHttpEndpoint, self.streamPolicy_);
+			fakeHttpEndpoint, self.streamPolicy_);
 		stream.bindToProtocol(proto);
 		proto.setStream(stream);
 		var badStrings = ["\x00", "\xff", "\n", "\x1f", "\x7f", "hello\tworld"];
@@ -284,9 +282,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 	 */
 	function test_sendStringsIllegalButNoValidation(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
-		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.ClientStream(
-			callQueue, fakeHttpEndpoint, self.streamPolicy_);
+			fakeHttpEndpoint, self.streamPolicy_);
 		stream.bindToProtocol(proto);
 		var badStrings = ["\x00", "\xff", "\n", "\x1f", "\x7f", "hello\tworld"];
 		proto.setStream(stream);
@@ -300,9 +297,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 	 */
 	function test_cannotSendStringsAfterAlreadyReset(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
-		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.ClientStream(
-			callQueue, fakeHttpEndpoint, self.streamPolicy_);
+			fakeHttpEndpoint, self.streamPolicy_);
 		stream.bindToProtocol(proto);
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
 		proto.setStream(stream);
@@ -317,9 +313,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 	 */
 	function test_cannotResetAfterAlreadyReset(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
-		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.ClientStream(
-			callQueue, fakeHttpEndpoint, self.streamPolicy_);
+			fakeHttpEndpoint, self.streamPolicy_);
 		stream.bindToProtocol(proto);
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
 		proto.setStream(stream);
@@ -516,9 +511,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 
 	function test_stream(self) {
 		var proto = self.makeProtocol_();
-		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.ClientStream(
-			callQueue, self.endpoint_, self.streamPolicy_);
+			self.endpoint_, self.streamPolicy_);
 		stream.bindToProtocol(proto);
 		proto.setStream(stream);
 		stream.start();
@@ -539,9 +533,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 	 */
 	function test_streamWithStringInFirstTransport(self) {
 		var proto = self.makeProtocol_();
-		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.ClientStream(
-			callQueue, self.endpoint_, self.streamPolicy_);
+			self.endpoint_, self.streamPolicy_);
 		stream.bindToProtocol(proto);
 		proto.setStream(stream);
 		stream.sendStrings(['echo_twice:hello world']);
@@ -570,9 +563,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 			origStreamReset.call(this, reasonString, applicationLevel);
 		};
 
-		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.ClientStream(
-			callQueue, self.endpoint_, self.streamPolicy_);
+			self.endpoint_, self.streamPolicy_);
 		stream.bindToProtocol(proto);
 		proto.setStream(stream);
 		stream.sendStrings(['reset_me:test_streamReset']);
