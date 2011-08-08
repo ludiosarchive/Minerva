@@ -8,12 +8,18 @@ goog.require('cw.net.ClientStream');
 goog.require('cw.repr');
 
 goog.exportSymbol('Minerva.ClientStream', cw.net.ClientStream);
+goog.exportProperty(cw.net.ClientStream.prototype, 'getUserContext', cw.net.ClientStream.prototype.getUserContext);
 goog.exportProperty(cw.net.ClientStream.prototype, 'start', cw.net.ClientStream.prototype.start);
 goog.exportProperty(cw.net.ClientStream.prototype, 'sendStrings', cw.net.ClientStream.prototype.sendStrings);
 goog.exportProperty(cw.net.ClientStream.prototype, 'reset', cw.net.ClientStream.prototype.reset);
 goog.exportProperty(cw.net.ClientStream.prototype, 'maxUndeliveredStrings', cw.net.ClientStream.prototype.maxUndeliveredStrings);
 goog.exportProperty(cw.net.ClientStream.prototype, 'maxUndeliveredBytes', cw.net.ClientStream.prototype.maxUndeliveredBytes);
+goog.exportProperty(cw.net.ClientStream.prototype, 'onstring', cw.net.ClientStream.prototype.onstring);
+goog.exportProperty(cw.net.ClientStream.prototype, 'onreset', cw.net.ClientStream.prototype.onreset);
 goog.exportProperty(cw.net.ClientStream.prototype, 'ondisconnect', cw.net.ClientStream.prototype.ondisconnect);
+
+// goog.bind is very useful
+goog.exportSymbol('Minerva.bind', goog.bind);
 
 // To help users debug things, include cw.repr.repr as Minerva.repr
 goog.exportSymbol('Minerva.repr', cw.repr.repr);

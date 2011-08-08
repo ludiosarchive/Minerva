@@ -312,20 +312,23 @@ cw.net.DefaultStreamPolicy.prototype.getHttpStreamingMode = function() {
 
 
 /**
+ * @return {string} A random streamId, usually with 25 or 26 characters.
+ * @private
+ */
+cw.net.makeStreamId_ = function() {
+	return cw.string.getCleanRandomString() + cw.string.getCleanRandomString();
+};
+
+
+
+/**
  * An interface for string-based communication that abstracts
  * away the Comet logic and transports.
  *
- * This interface is analogous to {@code twisted.internet.interfaces.IProtocol}
- *
- * Note: if you call stream.reset, some (or all) of the strings you
- * have recently sent may be lost. If you need a proper close, use
- * your own application-level strings to determine that it is safe to
- * close, then call reset.
- *
- * Note: ClientStream never ends due to inactivity (there are no timeouts yet on
- * the client-side Stream).  If you want to end the stream, call
- * stream.reset("reason why").
- *
+ * You don't have to use this interface; you can just set stream.onstring and
+ * stream.onreset.  If you do use this interface, use stream.bindToProtocol to
+ * conveniently bind ClientStream's onstring and onreset to the corresponding
+ * methods in this interface.
  * @interface
  */
 cw.net.IMinervaProtocol = function() {
@@ -333,10 +336,7 @@ cw.net.IMinervaProtocol = function() {
 };
 
 /**
- * Called when this stream has reset, either internally by ClientStream,
- * or a call to ClientStream.reset, or by a ResetFrame from the peer.
- *
- * You must *not* throw any error. Wrap your code in try/catch if necessary.
+ * Called when this stream has reset for any reason.  See {@link #onreset} docs.
  *
  * @param {string} reasonString Textual reason why stream has reset.
  * 	String contains only characters in inclusive range 0x20 - 0x7E.
@@ -347,25 +347,13 @@ cw.net.IMinervaProtocol.prototype.streamReset = function(reasonString, applicati
 };
 
 /**
- * Called when a restricted string is received from the peer.
- *
- * You must *not* throw any error. Wrap your code in try/catch
- * if necessary.
+ * Called when a string has been received from the peer.  See {@link #onstring}
+ * docs.
  *
  * @param {string} s The restricted string
  */
 cw.net.IMinervaProtocol.prototype.stringReceived = function(s) {
 
-};
-
-
-
-/**
- * @return {string} A random streamId, usually with 25 or 26 characters.
- * @private
- */
-cw.net.makeStreamId_ = function() {
-	return cw.string.getCleanRandomString() + cw.string.getCleanRandomString();
 };
 
 
@@ -384,6 +372,36 @@ cw.net.StreamState_ = {
 };
 
 
+
+/**
+ * A context object used as the context in calls to
+ * ClientStream.(onstring|onreset|ondisconnect).  Stream uses this as the
+ * context rather than the Stream object itself to prevent users from messing
+ * up the Stream's state with their `this.x` mutations.
+ *
+ * @param {!cw.net.ClientStream} stream
+ *
+ * @constructor
+ */
+cw.net.UserContext = function(stream) {
+	/**
+	 * @type {!cw.net.ClientStream}
+	 */
+	this.stream = stream;
+};
+
+/**
+ * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
+ */
+cw.net.UserContext.prototype.__reprPush__ = function(sb, stack) {
+	sb.push("<UserContext for ");
+	cw.repr.reprPush(this.stream, sb, stack);
+	sb.push(">");
+};
+
+
+
 /**
  * The client-side representation of a Minerva Stream.
  *
@@ -391,14 +409,13 @@ cw.net.StreamState_ = {
  * ClientStream can span many TCP connections/HTTP requests.
  *
  * @param {!cw.eventual.CallQueue} callQueue
- * @param {!cw.net.IMinervaProtocol} protocol
  * @param {!cw.net.Endpoint} endpoint
  * @param {cw.net.IStreamPolicy=} streamPolicy
  *
  * @constructor
  * @extends {goog.Disposable}
  */
-cw.net.ClientStream = function(callQueue, protocol, endpoint, streamPolicy) {
+cw.net.ClientStream = function(callQueue, endpoint, streamPolicy) {
 	goog.Disposable.call(this);
 
 	/**
@@ -406,13 +423,6 @@ cw.net.ClientStream = function(callQueue, protocol, endpoint, streamPolicy) {
 	 * @private
 	 */
 	this.callQueue_ = callQueue;
-
-	/**
-	 * The protocol that this ClientStream is associated with.
-	 * @type {!cw.net.IMinervaProtocol}
-	 * @private
-	 */
-	this.protocol_ = protocol;
 
 	/**
 	 * TODO: add a method to change the endpoint while the ClientStream is
@@ -477,6 +487,12 @@ cw.net.ClientStream = function(callQueue, protocol, endpoint, streamPolicy) {
 	 */
 	this.xdrFramesInUse_ = [];
 
+	/**
+	 * @type {!cw.net.UserContext}
+	 * @private
+	 */
+	this.userContext_ = new cw.net.UserContext(this);
+
 	// For WebKit browsers, we need an ugly hack to prevent the loading
 	// spinner/throbber from spinning indefinitely if there is an open XHR
 	// request.  If window.onload fires, abort HTTP requests, wait ~100ms,
@@ -525,6 +541,33 @@ cw.net.ClientStream.prototype.maxUndeliveredStrings = 50;
  * @type {number}
  */
 cw.net.ClientStream.prototype.maxUndeliveredBytes = 1 * 1024 * 1024;
+
+/**
+ * The function to call when the ClientStream has received a string.
+ *
+ * You must *not* throw any error.  Wrap your code in try/catch
+ * if necessary.
+ *
+ * @type {?function(string):*}
+ */
+cw.net.ClientStream.prototype.onstring = null;
+
+/**
+ * The function to call when this stream has reset, either internally by
+ * ClientStream, or a call to ClientStream.reset, or by a ResetFrame from the
+ * peer.
+ *
+ * You must *not* throw any error.  Wrap your code in try/catch if necessary.
+ *
+ * The first parameter is a textual reason for why the stream has reset.  This
+ * string contains only characters in inclusive range 0x20 - 0x7E.
+ *
+ * The second parameter is whether the reset was an application-level reset
+ * (vs. stream internal reset).
+ *
+ * @type {?function(string, boolean):*}
+ */
+cw.net.ClientStream.prototype.onreset = null;
 
 /**
  * The function to call after the ClientStream is completely done.
@@ -632,6 +675,23 @@ cw.net.ClientStream.prototype.__reprPush__ = function(sb, stack) {
 	sb.push(', resetting=');
 	cw.repr.reprPush(this.resettingTransport_, sb, stack);
 	sb.push('>');
+};
+
+/**
+ * @return {!cw.net.UserContext} The user context object (the object that is
+ * 	`this` in calls to (onstring|onreset|ondisconnect)).
+ */
+cw.net.ClientStream.prototype.getUserContext = function() {
+	return this.userContext_;
+};
+
+/**
+ * @param {!cw.net.IMinervaProtocol} proto The protocol to bind this Stream's
+ * 	`onstring` and `onreset` to.
+ */
+cw.net.ClientStream.prototype.bindToProtocol = function(proto) {
+	this.onstring = goog.bind(proto.stringReceived, proto);
+	this.onreset = goog.bind(proto.streamReset, proto);
 };
 
 /**
@@ -1079,7 +1139,9 @@ cw.net.ClientStream.prototype.reset = function(reasonString) {
 		// Comment above about primaryTransport_.flush_() applies here too.
 	}
 
-	this.protocol_.streamReset(reasonString, true/* applicationLevel */);
+	if(this.onreset) {
+		this.onreset.call(this.userContext_, reasonString, true/* applicationLevel */);
+	}
 };
 
 /**
@@ -1098,9 +1160,11 @@ cw.net.ClientStream.prototype.disposeAllTransports_ = function() {
  * @private
  */
 cw.net.ClientStream.prototype.doReset_ = function(reasonString, applicationLevel) {
-	this.protocol_.streamReset(reasonString, applicationLevel);
+	if(this.onreset) {
+		this.onreset.call(this.userContext_, reasonString, applicationLevel);
+	}
 	// Keep in mind both the "Minerva does reset" and "client app calls
-	// reset" cases, and keep the streamReset and DISCONNECTED firing
+	// reset" cases, and keep the onreset and ondisconnect call
 	// order sane.
 	this.dispose();
 };
@@ -1157,8 +1221,10 @@ cw.net.ClientStream.prototype.stringsReceived_ = function(transport, pairs, avoi
 	if(items) {
 		for(var i=0; i < items.length; i++) {
 			var s = items[i];
-			this.protocol_.stringReceived(s);
-			// Under stringReceived, the state may have changed completely!
+			if(this.onstring) {
+				this.onstring.call(this.userContext_, s);
+			}
+			// Under onstring, the state may have changed completely!
 			// The ClientStream may be RESETTING or disposed.
 			if(this.isResettingOrDisposed_()) {
 				return;
@@ -1167,9 +1233,9 @@ cw.net.ClientStream.prototype.stringsReceived_ = function(transport, pairs, avoi
 	}
 
 	// Because we received strings, we may need to send a SACK.
-	// Do this after giving protocol_ the strings, because protocol may
-	// queue more strings for sending. Note that in that case, tryToSend_
-	// has already been called.
+	// Do this after calling onstring, because onstring may queue more
+	// strings for sending.  Note that in that case, tryToSend_ has already
+	// been called.
 	//
 	// Long-polling transports call with avoidCreatingTransports=true because
 	// ClientStream will create a new transport after that long-poll closes.
@@ -1218,6 +1284,10 @@ cw.net.ClientStream.prototype.getSACK_ = function() {
  * Called by application to start the ClientStream.
  */
 cw.net.ClientStream.prototype.start = function() {
+	if(this.onmessage) {
+		throw Error("ClientStream.start: Hey, you! It's `onstring`, not " +
+			"`onmessage`! Refusing to start.")
+	}
 	if(this.state_ != cw.net.StreamState_.UNSTARTED) {
 		throw new Error("ClientStream.start: " + cw.repr.repr(this) +
 			" already started");
@@ -1289,7 +1359,7 @@ cw.net.ClientStream.prototype.disposeInternal = function() {
 	// ClientStream is created immediately, it can reuse the existing iframes
 	// (if iframes were indeed used).
 	if(this.ondisconnect) {
-		this.ondisconnect();
+		this.ondisconnect.call(this.userContext_);
 	}
 
 	// Clear any likely circular references
@@ -1297,7 +1367,7 @@ cw.net.ClientStream.prototype.disposeInternal = function() {
 	delete this.primaryTransport_;
 	delete this.secondaryTransport_;
 	delete this.resettingTransport_;
-	delete this.protocol_;
+	delete this.userContext_;
 
 	cw.net.ClientStream.superClass_.disposeInternal.call(this);
 };

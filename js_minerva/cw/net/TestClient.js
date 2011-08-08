@@ -78,13 +78,11 @@ var fakeHttpEndpoint = new cw.net.ExpandedHttpEndpoint_(
 
 /**
  * @param {!cw.net.HttpStreamingMode} httpStreamingMode
- * @param {string} csrfToken
  * @constructor
  * @implements {cw.net.IStreamPolicy}
  */
-cw.net.TestClient.DumbStreamPolicy = function(httpStreamingMode, csrfToken) {
+cw.net.TestClient.DumbStreamPolicy = function(httpStreamingMode) {
 	this.httpStreamingMode = httpStreamingMode;
-	this.csrfToken = csrfToken;
 };
 
 /**
@@ -102,7 +100,7 @@ cw.net.TestClient.DumbStreamPolicy.prototype.getHttpStreamingMode = function() {
 cw.net.TestClient.MockStream = function() {
 	this.streamExistsAtServer_ = false;
 	this.streamPolicy_ = new cw.net.TestClient.DumbStreamPolicy(
-		cw.net.HttpStreamingMode.NO_STREAMING, "not-a-real-csrf-token");
+		cw.net.HttpStreamingMode.NO_STREAMING);
 	this.lastSackSeenByClient_ = new SACK(-1, []);
 	this.streamId = goog.string.repeat('x', 26);
 	this.log = [];
@@ -231,7 +229,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 
 	function setUp(self) {
 		self.streamPolicy_ = new cw.net.TestClient.DumbStreamPolicy(
-			cw.net.HttpStreamingMode.NO_STREAMING, "not-a-real-csrf-token");
+			cw.net.HttpStreamingMode.NO_STREAMING);
 	},
 
 	/**
@@ -242,7 +240,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.ClientStream(
-			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
+			callQueue, fakeHttpEndpoint, self.streamPolicy_);
+		stream.bindToProtocol(proto);
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
 		stream.tryToSend_ = goog.testing.recordFunction(goog.bind(stream.tryToSend_, stream));
 		proto.setStream(stream);
@@ -263,7 +262,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.ClientStream(
-			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
+			callQueue, fakeHttpEndpoint, self.streamPolicy_);
+		stream.bindToProtocol(proto);
 		proto.setStream(stream);
 		var badStrings = ["\x00", "\xff", "\n", "\x1f", "\x7f", "hello\tworld"];
 		goog.array.forEach(badStrings, function(string) {
@@ -286,7 +286,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.ClientStream(
-			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
+			callQueue, fakeHttpEndpoint, self.streamPolicy_);
+		stream.bindToProtocol(proto);
 		var badStrings = ["\x00", "\xff", "\n", "\x1f", "\x7f", "hello\tworld"];
 		proto.setStream(stream);
 		stream.sendStrings(badStrings, /*validate=*/false);
@@ -301,7 +302,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.ClientStream(
-			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
+			callQueue, fakeHttpEndpoint, self.streamPolicy_);
+		stream.bindToProtocol(proto);
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
 		proto.setStream(stream);
 		stream.start();
@@ -317,7 +319,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.ClientStream(
-			callQueue, proto, fakeHttpEndpoint, self.streamPolicy_);
+			callQueue, fakeHttpEndpoint, self.streamPolicy_);
+		stream.bindToProtocol(proto);
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
 		proto.setStream(stream);
 		stream.start();
@@ -415,7 +418,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 	// TODO: test if ClientTransport(becomePrimary=false), HelloFrame does not have an 'eeds' argument
 
 	// TODO: test if we receive a frame, give it to ClientStream, which gives
-	// it to the protocol, which synchronously calls a function that results
+	// it to the on* callable, which synchronously calls a function that results
 	// in the ClientTransport closing, the ClientTransport stops processing
 	// frames.
 );
@@ -515,7 +518,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 		var proto = self.makeProtocol_();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.ClientStream(
-			callQueue, proto, self.endpoint_, self.streamPolicy_);
+			callQueue, self.endpoint_, self.streamPolicy_);
+		stream.bindToProtocol(proto);
 		proto.setStream(stream);
 		stream.start();
 		stream.sendStrings(['echo_twice:hello world']);
@@ -537,7 +541,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 		var proto = self.makeProtocol_();
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.ClientStream(
-			callQueue, proto, self.endpoint_, self.streamPolicy_);
+			callQueue, self.endpoint_, self.streamPolicy_);
+		stream.bindToProtocol(proto);
 		proto.setStream(stream);
 		stream.sendStrings(['echo_twice:hello world']);
 		stream.start();
@@ -567,7 +572,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 
 		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 		var stream = new cw.net.ClientStream(
-			callQueue, proto, self.endpoint_, self.streamPolicy_);
+			callQueue, self.endpoint_, self.streamPolicy_);
+		stream.bindToProtocol(proto);
 		proto.setStream(stream);
 		stream.sendStrings(['reset_me:test_streamReset']);
 		stream.start();

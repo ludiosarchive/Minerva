@@ -161,7 +161,7 @@ chatapp.ChatProtocol.prototype.streamReset = function(reasonString, applicationL
 	chatapp.lastProto = null;
 };
 
-chatapp.ChatProtocol.prototype.handleString_ = function(s) {
+chatapp.ChatProtocol.prototype.stringReceived = function(s) {
 	function fail() {
 		chatapp.logger.severe('Could not handle string: ' + cw.repr.repr(s));
 	}
@@ -179,10 +179,6 @@ chatapp.ChatProtocol.prototype.handleString_ = function(s) {
 
 	// TODO: add timestamp
 	chatapp.logger.info(cw.string.format('<{0}> {1}', uaId, text));
-};
-
-chatapp.ChatProtocol.prototype.stringReceived = function(s) {
-	this.handleString_(s);
 };
 
 /**
@@ -255,7 +251,8 @@ chatapp.startStream = function() {
 	var endpointD = cw.net.demo.getEndpointByQueryArgs(chatapp.callQueue);
 	endpointD.addCallback(function(endpoint) {
 		var stream = new cw.net.ClientStream(
-			chatapp.callQueue, chatapp.lastProto, endpoint, streamPolicy);
+			chatapp.callQueue, endpoint, streamPolicy);
+		stream.bindToProtocol(chatapp.lastProto);
 		chatapp.lastProto.setStream(stream);
 		chatapp.lastProto.sendInitialStrings();
 		stream.start();
