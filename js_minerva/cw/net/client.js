@@ -17,7 +17,7 @@
 goog.provide('cw.net.MAX_FRAME_LENGTH');
 goog.provide('cw.net.SocketEndpoint');
 goog.provide('cw.net.ExpandedHttpEndpoint_');
-goog.provide('cw.net.NiceHttpEndpoint');
+goog.provide('cw.net.HttpEndpoint');
 goog.provide('cw.net.Endpoint');
 goog.provide('cw.net.IMinervaProtocol');
 goog.provide('cw.net.HttpStreamingMode');
@@ -99,7 +99,7 @@ cw.net.SocketEndpoint = function(host, port, tracker) {
  * 	subdomain.
  * @constructor
  */
-cw.net.NiceHttpEndpoint = function(primaryUrl, secondaryUrl) {
+cw.net.HttpEndpoint = function(primaryUrl, secondaryUrl) {
 	goog.asserts.assertString(primaryUrl);
 	if(!secondaryUrl) {
 		secondaryUrl = primaryUrl;
@@ -179,7 +179,7 @@ cw.net.ExpandedHttpEndpoint_.prototype.ensureSameOrigin_ = function() {
 
 
 /**
- * @typedef {cw.net.SocketEndpoint|cw.net.ExpandedHttpEndpoint_|cw.net.NiceHttpEndpoint}
+ * @typedef {cw.net.SocketEndpoint|cw.net.ExpandedHttpEndpoint_|cw.net.HttpEndpoint}
  */
 cw.net.Endpoint;
 
@@ -1224,7 +1224,7 @@ cw.net.ClientStream.prototype.start = function() {
 	}
 	this.state_ = cw.net.StreamState_.WAITING_RESOURCES;
 
-	if(this.endpoint_ instanceof cw.net.NiceHttpEndpoint) {
+	if(this.endpoint_ instanceof cw.net.HttpEndpoint) {
 		var d1 = cw.net.theXDRTracker.getWindowForUrl(
 			this.endpoint_.primaryUrl, this);
 		var d2 = cw.net.theXDRTracker.getWindowForUrl(

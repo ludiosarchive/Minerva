@@ -18,7 +18,7 @@ goog.require('cw.eventual');
 goog.require('cw.net.IStreamPolicy');
 goog.require('cw.net.FlashSocketTracker');
 goog.require('cw.net.SocketEndpoint');
-goog.require('cw.net.ExpandedHttpEndpoint_');
+goog.require('cw.net.HttpEndpoint');
 goog.require('cw.net.HttpStreamingMode');
 // Needed when useSub=0
 goog.require('cw.net.XHRSlave');
@@ -84,7 +84,7 @@ cw.net.demo.getEndpoint = function(callQueue, useSubdomains, useFlash, httpFaceP
 		}
 		endpointUrl.setPath(httpFacePath);
 		endpointUrl.setQuery('');
-		var endpoint = new cw.net.NiceHttpEndpoint(
+		var endpoint = new cw.net.HttpEndpoint(
 			endpointUrl.toString().replace("_____random_____", "%random%"));
 		return goog.async.Deferred.succeed(endpoint);
 	} else {
