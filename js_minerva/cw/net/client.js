@@ -413,6 +413,7 @@ cw.net.UserContext.prototype.__reprPush__ = function(sb, stack) {
  * @param {!cw.eventual.CallQueue=} callQueue
  *
  * @constructor
+ * @implements {RWPropertiesClientStream}
  * @extends {goog.Disposable}
  */
 cw.net.ClientStream = function(endpoint, streamPolicy, callQueue) {

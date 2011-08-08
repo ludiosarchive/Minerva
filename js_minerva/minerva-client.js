@@ -4,24 +4,67 @@
  */
 goog.provide('minerva_client');
 
+goog.require('goog.debug.Logger');
+goog.require('goog.debug.LogManager');
+goog.require('goog.debug.DivConsole');
 goog.require('cw.net.ClientStream');
 goog.require('cw.repr');
+goog.require('cw.eventual');
+goog.require('cw.net.demo.getEndpointByQueryArgs'); // TODO: remove this
+goog.require('goog.async.Deferred'); // TODO: remove this
+
+goog.exportSymbol('Minerva.HttpEndpoint', cw.net.HttpEndpoint);
+goog.exportSymbol('Minerva.SocketEndpoint', cw.net.SocketEndpoint);
+// Note: Minerva.SocketEndpoint not usable yet because FlashSocketTracker
+// needs non-CL support.
 
 goog.exportSymbol('Minerva.ClientStream', cw.net.ClientStream);
 goog.exportProperty(cw.net.ClientStream.prototype, 'getUserContext', cw.net.ClientStream.prototype.getUserContext);
+// Doesn't work yet: goog.exportProperty(cw.net.ClientStream.prototype, 'bindToProtocol', cw.net.ClientStream.prototype.bindToProtocol);
 goog.exportProperty(cw.net.ClientStream.prototype, 'start', cw.net.ClientStream.prototype.start);
 goog.exportProperty(cw.net.ClientStream.prototype, 'sendStrings', cw.net.ClientStream.prototype.sendStrings);
 goog.exportProperty(cw.net.ClientStream.prototype, 'reset', cw.net.ClientStream.prototype.reset);
-goog.exportProperty(cw.net.ClientStream.prototype, 'maxUndeliveredStrings', cw.net.ClientStream.prototype.maxUndeliveredStrings);
-goog.exportProperty(cw.net.ClientStream.prototype, 'maxUndeliveredBytes', cw.net.ClientStream.prototype.maxUndeliveredBytes);
-goog.exportProperty(cw.net.ClientStream.prototype, 'onstring', cw.net.ClientStream.prototype.onstring);
-goog.exportProperty(cw.net.ClientStream.prototype, 'onreset', cw.net.ClientStream.prototype.onreset);
-goog.exportProperty(cw.net.ClientStream.prototype, 'ondisconnect', cw.net.ClientStream.prototype.ondisconnect);
+// 5 more read-write properties are in RWPropertiesClientStream
 
-// goog.bind is very useful
+goog.exportSymbol('Minerva.Logger', goog.debug.Logger);
+goog.exportProperty(goog.debug.Logger, 'Level', goog.debug.Logger.Level);
+goog.exportProperty(goog.debug.Logger, 'getLogger', goog.debug.Logger.getLogger);
+
+goog.exportProperty(goog.debug.Logger.prototype, 'setLevel', goog.debug.Logger.prototype.setLevel);
+goog.exportProperty(goog.debug.Logger.prototype, 'shout', goog.debug.Logger.prototype.shout);
+goog.exportProperty(goog.debug.Logger.prototype, 'severe', goog.debug.Logger.prototype.severe);
+goog.exportProperty(goog.debug.Logger.prototype, 'warning', goog.debug.Logger.prototype.warning);
+goog.exportProperty(goog.debug.Logger.prototype, 'info', goog.debug.Logger.prototype.info);
+goog.exportProperty(goog.debug.Logger.prototype, 'config', goog.debug.Logger.prototype.config);
+goog.exportProperty(goog.debug.Logger.prototype, 'fine', goog.debug.Logger.prototype.fine);
+goog.exportProperty(goog.debug.Logger.prototype, 'finer', goog.debug.Logger.prototype.finer);
+goog.exportProperty(goog.debug.Logger.prototype, 'finest', goog.debug.Logger.prototype.finest);
+
+goog.exportProperty(goog.debug.Logger.Level, 'OFF', goog.debug.Logger.Level.OFF);
+goog.exportProperty(goog.debug.Logger.Level, 'SHOUT', goog.debug.Logger.Level.SHOUT);
+goog.exportProperty(goog.debug.Logger.Level, 'SEVERE', goog.debug.Logger.Level.SEVERE);
+goog.exportProperty(goog.debug.Logger.Level, 'WARNING', goog.debug.Logger.Level.WARNING);
+goog.exportProperty(goog.debug.Logger.Level, 'INFO', goog.debug.Logger.Level.INFO);
+goog.exportProperty(goog.debug.Logger.Level, 'CONFIG', goog.debug.Logger.Level.CONFIG);
+goog.exportProperty(goog.debug.Logger.Level, 'FINE', goog.debug.Logger.Level.FINE);
+goog.exportProperty(goog.debug.Logger.Level, 'FINER', goog.debug.Logger.Level.FINER);
+goog.exportProperty(goog.debug.Logger.Level, 'FINEST', goog.debug.Logger.Level.FINEST);
+goog.exportProperty(goog.debug.Logger.Level, 'ALL', goog.debug.Logger.Level.ALL);
+
+goog.exportSymbol('Minerva.LogManager', goog.debug.LogManager);
+goog.exportProperty(goog.debug.LogManager, 'getRoot', goog.debug.LogManager.getRoot);
+
+goog.exportSymbol('Minerva.DivConsole', goog.debug.DivConsole);
+goog.exportProperty(goog.debug.DivConsole.prototype, 'setCapturing', goog.debug.DivConsole.prototype.setCapturing);
+
 goog.exportSymbol('Minerva.bind', goog.bind);
-
-// To help users debug things, include cw.repr.repr as Minerva.repr
 goog.exportSymbol('Minerva.repr', cw.repr.repr);
+goog.exportSymbol('Minerva.theCallQueue', cw.eventual.theCallQueue);
 
-// TODO: also include LogManager, so that users can control logging
+// TODO: remove this
+goog.exportSymbol('Minerva.getEndpointByQueryArgs', cw.net.demo.getEndpointByQueryArgs);
+
+// TODO: remove this
+goog.exportProperty(goog.async.Deferred.prototype, 'addCallback', goog.async.Deferred.prototype.addCallback);
+goog.exportProperty(goog.async.Deferred.prototype, 'addErrback', goog.async.Deferred.prototype.addErrback);
+goog.exportProperty(goog.async.Deferred.prototype, 'addBoth', goog.async.Deferred.prototype.addBoth);

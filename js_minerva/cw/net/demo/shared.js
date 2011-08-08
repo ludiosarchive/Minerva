@@ -123,4 +123,4 @@ cw.net.demo.isLoggingEnabled = function() {
 	var url = new goog.Uri(document.location);
 	var queryData = url.getQueryData();
 	return (queryData.get('logging') == '1');
-}
+};

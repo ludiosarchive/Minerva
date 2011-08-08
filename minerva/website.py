@@ -232,12 +232,7 @@ class ConflictingTemplateVars(Exception):
 
 class MinervaBootstrap(BetterResource):
 	"""
-	HTML pages that use JS Minerva typically use bootstrapping code to speed
-	up the time to an established Minerva Stream.  This Resource helps you
-	do this, but you're not required to use it.  The Minerva demos in the
-	`Minerva` and `Browsernode` projects use this class.
-
-	Feel free to copy/paste this class if it doesn't suit your needs.
+	Deprecated resource used by chatapp and DemosMinerva.
 	"""
 	isLeaf = True
 
@@ -264,6 +259,12 @@ class MinervaBootstrap(BetterResource):
 	def render_GET(self, request):
 		from minerva.newlink import _contentToTemplate
 
+		# chatapp needs this
+		try:
+			standaloneClient = bool(int(request.args['standaloneClient'][0]))
+		except (KeyError, IndexError, ValueError):
+			standaloneClient = False
+
 		cookie = self._cookieInstaller.getSet(request)
 		csrfToken = self._csrfStopper.makeToken(cookie)
 
@@ -278,6 +279,7 @@ class MinervaBootstrap(BetterResource):
 		bootstrapDict['htmldumps'] = htmldumps
 		bootstrapDict['cacheBreakLink'] =  partial(
 			getCacheBrokenHref, self._fileCache, request)
+		bootstrapDict['standaloneClient'] = standaloneClient
 
 		dictionary = self._dictionary.copy()
 		for k, v in bootstrapDict.iteritems():
