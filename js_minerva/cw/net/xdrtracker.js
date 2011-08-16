@@ -211,7 +211,7 @@ cw.net.XDRTracker.prototype.makeWindowForUrl_ = function(urlWithTokens, stream) 
 	}
 
 	// TODO: create minerva-xdrframes if necessary
-	var container = goog.dom.getElement('minerva-xdrframes');
+	var container = goog.dom.getElement('minerva-elements');
 
 	var d = new goog.async.Deferred();
 	this.loading.set(frameId, [d, expandedUrl, stream]);
