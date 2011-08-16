@@ -210,7 +210,8 @@ cw.net.XDRTracker.prototype.makeWindowForUrl_ = function(urlWithTokens, stream) 
 		return goog.async.Deferred.succeed(frame);
 	}
 
-	// TODO: create minerva-xdrframes if necessary
+	// TODO: create minerva-elements if necessary (might be problematic if DOM
+	// hasn't finished loading).
 	var container = goog.dom.getElement('minerva-elements');
 
 	var d = new goog.async.Deferred();
@@ -224,7 +225,8 @@ cw.net.XDRTracker.prototype.makeWindowForUrl_ = function(urlWithTokens, stream) 
 
 	var rowDiv =
 		goog.dom.createDom('iframe', {
-			'id': "minerva-xdrframe-" + frameId, 'width': 16, 'height': 16,
+			'id': "minerva-xdrframe-" + frameId, 'width': 2, 'height': 2,
+			'style': 'visibility: hidden; position: absolute; top: -600px',
 			'src': expandedUrl + 'xdrframe/?domain=' + document.domain + '&id=' + frameId});
 	container.appendChild(rowDiv);
 

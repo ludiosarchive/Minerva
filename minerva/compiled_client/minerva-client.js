@@ -2545,7 +2545,7 @@ function ie(a, b) {
   e = he(a);
   g = String(window.location).match(de)[3] || k;
   h = e.match(de)[3] || k;
-  g == h ? (c.a.info("No need to make a real XDRFrame for " + O(b)), c = fc(new fe(q, e, [b], k))) : (g = P("minerva-elements"), h = new M, c.vc.set(d, [h, e, b]), c.a.info("Creating new XDRFrame " + O(d) + "for " + O(b)), c = Gc("iframe", {id:"minerva-xdrframe-" + d, width:16, height:16, src:e + "xdrframe/?domain=" + document.domain + "&id=" + d}), g.appendChild(c), c = h);
+  g == h ? (c.a.info("No need to make a real XDRFrame for " + O(b)), c = fc(new fe(q, e, [b], k))) : (g = P("minerva-elements"), h = new M, c.vc.set(d, [h, e, b]), c.a.info("Creating new XDRFrame " + O(d) + "for " + O(b)), c = Gc("iframe", {id:"minerva-xdrframe-" + d, width:2, height:2, style:"visibility: hidden; position: absolute; top: -600px", src:e + "xdrframe/?domain=" + document.domain + "&id=" + d}), g.appendChild(c), c = h);
   return c
 }
 ge.prototype.$e = function(a) {
