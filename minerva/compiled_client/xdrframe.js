@@ -300,7 +300,11 @@ J.prototype.e = function() {
 };
 J.prototype.s = !1;
 J.prototype.P = !0;
-var $a = new Function("a", "return a");
+function $a(a) {
+  $a[" "](a);
+  return a
+}
+$a[" "] = p;
 function K(a, b) {
   a && this.K(a, b)
 }

@@ -396,7 +396,11 @@ I.prototype.stopPropagation = function() {
 function qb(a) {
   a.stopPropagation()
 }
-;var rb = new Function("a", "return a");
+;function rb(a) {
+  rb[" "](a);
+  return a
+}
+rb[" "] = ea;
 function sb(a, b) {
   a && this.Hb(a, b)
 }
@@ -1672,17 +1676,17 @@ function $c(a, b) {
   return c.join("")
 }
 function ad(a) {
-  if(cd[a]) {
-    return cd[a]
+  if(bd[a]) {
+    return bd[a]
   }
   a = String(a);
-  if(!cd[a]) {
+  if(!bd[a]) {
     var b = /function ([^\(]+)/.exec(a);
-    cd[a] = b ? b[1] : "[Anonymous]"
+    bd[a] = b ? b[1] : "[Anonymous]"
   }
-  return cd[a]
+  return bd[a]
 }
-var cd = {};
+var bd = {};
 function dd(a, b, c, d, e) {
   this.reset(a, b, c, d, e)
 }
@@ -2667,11 +2671,11 @@ p.c = function() {
   this.dc.__XHRSlave_dispose(this.L);
   delete this.dc
 };
-function ve() {
+function ue() {
   this.Y = {}
 }
-A(ve, H);
-p = ve.prototype;
+A(ue, H);
+p = ue.prototype;
 p.a = T("cw.net.XHRMasterTracker");
 p.ec = function(a, b) {
   var c = "_" + Ad(), d = new re(c, a, b);
@@ -2694,13 +2698,13 @@ p.yc = function(a) {
   b ? (delete this.Y[b.L], b.yc()) : this.a.I("oncomplete_: no master for " + O(a))
 };
 p.c = function() {
-  ve.k.c.call(this);
+  ue.k.c.call(this);
   for(var a = Ya(this.Y);a.length;) {
     a.pop().b()
   }
   delete this.Y
 };
-var Y = new ve;
+var Y = new ue;
 q.__XHRMaster_onframes = x(Y.zc, Y);
 q.__XHRMaster_oncomplete = x(Y.yc, Y);
 q.__XHRMaster_ongotheaders = x(Y.Ac, Y);
@@ -3118,8 +3122,8 @@ function Qe(a, b, c) {
                     if(c.length) {
                       Pe(a, c);
                       if(!s(c)) {
-                        for(var bd = c.length - 1;bd >= 0;bd--) {
-                          delete c[bd]
+                        for(var cd = c.length - 1;cd >= 0;cd--) {
+                          delete c[cd]
                         }
                       }
                       c.length = 0
@@ -3140,8 +3144,8 @@ function Qe(a, b, c) {
         }
       }
     }
-  }catch(ue) {
-    return ue instanceof V || f(ue), a.a.D(a.p() + " is closing soon because got InvalidFrame: " + O(b)), a.$a = !0
+  }catch(ve) {
+    return ve instanceof V || f(ve), a.a.D(a.p() + " is closing soon because got InvalidFrame: " + O(b)), a.$a = !0
   }
   return!1
 }
