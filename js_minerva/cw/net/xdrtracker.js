@@ -225,8 +225,8 @@ cw.net.XDRTracker.prototype.makeWindowForUrl_ = function(urlWithTokens, stream) 
 
 	var rowDiv =
 		goog.dom.createDom('iframe', {
-			'id': "minerva-xdrframe-" + frameId, 'width': 0, 'height': 0,
-			'style': 'visibility: hidden; border: 0; margin: 0',
+			'id': "minerva-xdrframe-" + frameId,
+			'style': 'visibility: hidden; height: 0; width: 0; border: 0; margin: 0;',
 			'src': expandedUrl + 'xdrframe/?domain=' + document.domain + '&id=' + frameId});
 	container.appendChild(rowDiv);
 
