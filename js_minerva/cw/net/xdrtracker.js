@@ -18,6 +18,7 @@ goog.require('goog.asserts');
 goog.require('goog.string');
 goog.require('goog.debug.Logger');
 goog.require('goog.uri.utils');
+goog.require('goog.Uri');
 goog.require('goog.structs.Map');
 goog.require('goog.async.Deferred');
 
@@ -141,7 +142,7 @@ cw.net.XDRTracker.prototype.logger_ =
  * @param {string} urlWithTokens
  * @return {string} URL with tokens expanded
  */
-cw.net.XDRTracker.prototype.stringToUrl = function(urlWithTokens) {
+cw.net.XDRTracker.prototype.getExpandedUrl = function(urlWithTokens) {
 	return urlWithTokens.replace(/%random%/g, function() {
 		return cw.net.getRandomSubdomain('ml');
 	});
@@ -196,9 +197,12 @@ cw.net.XDRTracker.prototype.getWindowForUrl = function(urlWithTokens, stream) {
 cw.net.XDRTracker.prototype.makeWindowForUrl_ = function(urlWithTokens, stream) {
 	var frameId = cw.string.getCleanRandomString() + cw.string.getCleanRandomString();
 
-	var expandedUrl = this.stringToUrl(urlWithTokens);
+	// Must expand %random% before resolving URL, because % isn't a legal
+	// character in a hostname.
+	var expandedMaybeRelativeUrl = this.getExpandedUrl(urlWithTokens);
+	var expandedUrl = goog.Uri.resolve(goog.global.location, expandedMaybeRelativeUrl).toString();
 
-	var myDomain = goog.uri.utils.getDomainEncoded(String(window.location));
+	var myDomain = goog.uri.utils.getDomainEncoded(String(goog.global.location));
 	var frameDomain = goog.uri.utils.getDomainEncoded(expandedUrl);
 	if(myDomain == frameDomain) {
 		// No need to create an iframe, just return an XDRFrame that

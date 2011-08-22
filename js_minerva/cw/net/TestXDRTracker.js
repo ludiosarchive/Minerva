@@ -30,12 +30,12 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXDRTracker, 'XDRTrackerTests').methods(
 		self.assertEqual("", cw.net.getDocumentDomain("different.tld", "indeed.com"));
 	},
 
-	function test_stringToUrl(self) {
+	function test_getExpandedUrl(self) {
 		var t = new cw.net.XDRTracker();
-		self.assertEqual("http://zombo.com/", t.stringToUrl("http://zombo.com/"));
+		self.assertEqual("http://zombo.com/", t.getExpandedUrl("http://zombo.com/"));
 
 		var re = RegExp("http://ml" + goog.string.repeat("\\d", 20) + ".zombo.com/");
-		self.assertTrue(re.test(t.stringToUrl("http://%random%.zombo.com/")));
+		self.assertTrue(re.test(t.getExpandedUrl("http://%random%.zombo.com/")));
 	},
 
 	function test_isUrlSuitable(self) {

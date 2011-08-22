@@ -26,6 +26,7 @@ goog.require('cw.net.TransportType_');
 goog.require('cw.net.SACK');
 goog.require('cw.net.FlashSocketTracker');
 goog.require('cw.net.SocketEndpoint');
+goog.require('cw.net.HttpEndpoint');
 goog.require('cw.net.ExpandedHttpEndpoint_');
 goog.require('cw.net.ClientStream');
 goog.require('cw.net.ClientTransport');
@@ -322,7 +323,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 		stream.reset("a reasonString");
 		self.assertThrows(Error, function() { stream.reset("a reasonString"); },
 			"reset: Can't send reset in state 4");
-	}
+	},
 
 	// TODO: add test: if secondary is sending strings, and primary closes,
 	// new primary should not send strings that are being sent over
@@ -331,6 +332,26 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 	// TODO: add test: if primary is sending strings, and more strings are
 	// queued, new secondary should not send strings that are being sent
 	// over primary right now.
+
+	/**
+	 * An HttpEndpoint with a relative URL is resolved to an absolute URL
+	 */
+	function test_relativeUrlResolvedToFullUrl(self) {
+		var proto = new cw.net.TestClient.RecordingProtocol();
+		var stream = new cw.net.ClientStream(
+			new cw.net.HttpEndpoint('/TestClient-not-a-real-endpoint/'));
+		stream.bindToProtocol(proto);
+		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
+		proto.setStream(stream);
+		stream.start();
+
+		var thisUrl = goog.global.location;
+		var expectedResolution = goog.Uri.resolve(thisUrl, '/TestClient-not-a-real-endpoint/').toString();
+
+		self.assertTrue(stream.endpoint_ instanceof cw.net.ExpandedHttpEndpoint_);
+		self.assertEqual(stream.endpoint_.primaryUrl, stream.endpoint_.secondaryUrl);
+		self.assertEqual(expectedResolution, stream.endpoint_.primaryUrl);
+	}
 
 //	/**
 //	 * Calling stream.dispose() makes it call dispose() on all of its transports.

@@ -91,12 +91,12 @@ cw.net.SocketEndpoint = function(host, port, tracker) {
 /**
  * Object to represent an HTTP endpoint.
  *
- * @param {string} primaryUrl Absolute URL for primary HTTP transports.
- * 	If it contains token "%random%", the token will be replaced with a random
- * 	subdomain.
- * @param {string=} secondaryUrl Absolute URL for secondary HTTP transports.
- * 	If it contains token "%random%", the token will be replaced with a random
- * 	subdomain.
+ * @param {string} primaryUrl Absolute or relative URL for primary HTTP
+ * 	transports.  If it contains token "%random%", the token will be replaced
+ * 	with a random subdomain.
+ * @param {string=} secondaryUrl Absolute or relative URL for secondary HTTP
+ * 	transports.  If it contains token "%random%", the token will be replaced
+ * 	with a random subdomain.
  * @constructor
  */
 cw.net.HttpEndpoint = function(primaryUrl, secondaryUrl) {
@@ -108,6 +108,14 @@ cw.net.HttpEndpoint = function(primaryUrl, secondaryUrl) {
 	this.primaryUrl = primaryUrl;
 	/** @type {string} */
 	this.secondaryUrl = secondaryUrl;
+};
+
+cw.net.HttpEndpoint.prototype.__reprPush__ = function(sb, stack) {
+	sb.push("<HttpEndpoint primaryUrl=");
+	cw.repr.reprPush(this.primaryUrl, sb, stack);
+	sb.push(", secondaryUrl=");
+	cw.repr.reprPush(this.secondaryUrl, sb, stack);
+	sb.push(">");
 };
 
 
@@ -174,6 +182,14 @@ cw.net.ExpandedHttpEndpoint_.prototype.ensureSameOrigin_ = function() {
 	if(!goog.uri.utils.haveSameDomain(this.secondaryUrl, secondaryWindowHref)) {
 		throw Error("secondaryWindow not same origin as secondaryUrl: " + secondaryWindowHref);
 	}
+};
+
+cw.net.ExpandedHttpEndpoint_.prototype.__reprPush__ = function(sb, stack) {
+	sb.push("<ExpandedHttpEndpoint_ primaryUrl=");
+	cw.repr.reprPush(this.primaryUrl, sb, stack);
+	sb.push(", secondaryUrl=");
+	cw.repr.reprPush(this.secondaryUrl, sb, stack);
+	sb.push(">");
 };
 
 
@@ -1291,6 +1307,7 @@ cw.net.ClientStream.prototype.start = function() {
 	}
 	this.state_ = cw.net.StreamState_.WAITING_RESOURCES;
 
+	var thisUrl = goog.global.location;
 	if(this.endpoint_ instanceof cw.net.HttpEndpoint) {
 		var d1 = cw.net.theXDRTracker.getWindowForUrl(
 			this.endpoint_.primaryUrl, this);
