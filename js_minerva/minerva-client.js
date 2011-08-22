@@ -20,7 +20,7 @@ goog.exportSymbol('Minerva.SocketEndpoint', cw.net.SocketEndpoint);
 
 goog.exportSymbol('Minerva.ClientStream', cw.net.ClientStream);
 goog.exportProperty(cw.net.ClientStream.prototype, 'getUserContext', cw.net.ClientStream.prototype.getUserContext);
-// Doesn't work yet: goog.exportProperty(cw.net.ClientStream.prototype, 'bindToProtocol', cw.net.ClientStream.prototype.bindToProtocol);
+goog.exportProperty(cw.net.ClientStream.prototype, 'bindToProtocol', cw.net.ClientStream.prototype.bindToProtocol);
 goog.exportProperty(cw.net.ClientStream.prototype, 'start', cw.net.ClientStream.prototype.start);
 goog.exportProperty(cw.net.ClientStream.prototype, 'sendStrings', cw.net.ClientStream.prototype.sendStrings);
 goog.exportProperty(cw.net.ClientStream.prototype, 'reset', cw.net.ClientStream.prototype.reset);

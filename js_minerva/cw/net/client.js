@@ -67,6 +67,14 @@ goog.require('cw.net.HttpFormat');
 goog.require('cw.net.decodeFrameFromServer');
 
 
+/**
+ * Whether this is a standalone build of the Minerva client.
+ * @define {boolean}
+ * @private
+ */
+cw.net.STANDALONE_CLIENT_BUILD_ = false;
+
+
 
 /**
  * Object to represent a Socket endpoint.
@@ -703,8 +711,13 @@ cw.net.ClientStream.prototype.getUserContext = function() {
  * 	`onstring` and `onreset` to.
  */
 cw.net.ClientStream.prototype.bindToProtocol = function(proto) {
-	this.onstring = goog.bind(proto.stringReceived, proto);
-	this.onreset = goog.bind(proto.streamReset, proto);
+	if(cw.net.STANDALONE_CLIENT_BUILD_) {
+		this.onstring = goog.bind(proto['stringReceived'], proto);
+		this.onreset = goog.bind(proto['streamReset'], proto);
+	} else {
+		this.onstring = goog.bind(proto.stringReceived, proto);
+		this.onreset = goog.bind(proto.streamReset, proto);
+	}
 };
 
 /**

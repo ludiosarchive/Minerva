@@ -136,7 +136,6 @@ if(standaloneClient) {
 	var Logger = Minerva.Logger;
 	var DivConsole = Minerva.DivConsole;
 	var repr = Minerva.repr;
-	var bind = Minerva.bind;
 	var getEndpointByQueryArgs = Minerva.getEndpointByQueryArgs;
 	var theCallQueue = Minerva.theCallQueue;
 	var streamPolicy = undefined;
@@ -171,7 +170,6 @@ if(standaloneClient) {
 	var Logger = goog.debug.Logger;
 	var DivConsole = goog.debug.DivConsole;
 	var repr = cw.repr.repr;
-	var bind = goog.bind;
 	var getEndpointByQueryArgs = cw.net.demo.getEndpointByQueryArgs;
 	var theCallQueue = cw.eventual.theCallQueue;
 	var streamPolicy = new cw.net.demo.DemoStreamPolicy();
@@ -309,8 +307,7 @@ chatapp.startStream = function() {
 	var endpointD = getEndpointByQueryArgs(theCallQueue);
 	endpointD.addCallback(function(endpoint) {
 		var stream = new ClientStream(endpoint, streamPolicy);
-		stream.onstring = bind(chatapp.lastProto.stringReceived, chatapp.lastProto);
-		stream.onreset = bind(chatapp.lastProto.streamReset, chatapp.lastProto);
+		stream.bindToProtocol(chatapp.lastProto);
 		chatapp.lastProto.setStream(stream);
 		chatapp.lastProto.sendInitialStrings();
 		stream.start();

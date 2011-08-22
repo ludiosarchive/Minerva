@@ -31,6 +31,7 @@ $COMMON \
 2>&1 | tee minerva/compiled_client/xdrframe.js.log
 
 $COMMON \
+--compiler_flags=--define=cw.net.STANDALONE_CLIENT_BUILD_=true \
 --namespace="minerva_client" \
 --output_file=minerva/compiled_client/minerva-client.js \
 2>&1 | tee minerva/compiled_client/minerva-client.js.log
