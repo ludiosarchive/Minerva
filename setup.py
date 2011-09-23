@@ -76,3 +76,11 @@ setup(
 		,'Strfrag >= 11.5.9'
 	],
 )
+
+
+try:
+	from twisted.plugin import IPlugin, getPlugins
+except ImportError:
+	pass
+else:
+	list(getPlugins(IPlugin))
