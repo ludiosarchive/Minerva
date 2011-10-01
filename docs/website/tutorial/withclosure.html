@@ -7,9 +7,21 @@
 <body>
 <link rel="stylesheet" href="../shared.css" type="text/css">
 <style>
+h3 {
+	margin-top: 2em;
+}
 code {
-	background-color: #ddd;
+	background-color: #e8e7e7;
+}
+code.shell {
+	border: 1px solid #d6d5d5;
+	display: block;
+	background-color: #e8e7e7;
 	padding: 0.5em;
+}
+.substep {
+	margin-left: 2em;
+	margin-bottom: 1.5em;
 }
 .jsproblem {
 	color: darkred;
@@ -27,9 +39,9 @@ code {
 
 <h2>Tutorial: Making a chat application with Minerva and Closure Library</h2>
 
-<p>This tutorial will guide you through making a simple chat application that uses <a href="../">Minerva</a> to communicate between the browser and the server.  We'll download Minerva and Closure Library, then write a chat server and chat client.  If at any point you get stuck for any reason, please tell <a href="mailto:ivan@ludios.org?subject=Suggestion+for+Minerva+with+Closure+tutorial">Ivan</a> so he can improve the tutorial.</p>
+<p>This tutorial will guide you through making a simple chat application that uses <a href="../">Minerva</a> to communicate between the browser and the server.  We'll download Minerva and Closure Library, then write a chat server (in Python) and chat client (in JavaScript).  If at any point you get stuck for any reason, please tell <a href="mailto:ivan@ludios.org?subject=Suggestion+for+Minerva+with+Closure+tutorial">Ivan</a> so he can improve the tutorial.</p>
 
-<p>If you don't want to use <a href="https://code.google.com/closure/library/">Closure Library</a>, read the <a href="../standalone.html">standalone Minerva</a> tutorial.</p>
+<p>If you don't want to use <a href="https://code.google.com/closure/library/">Closure Library</a>, read the <a href="../standalone.html">standalone Minerva</a> tutorial instead.</p>
 
 <noscript><b class="jsproblem">Sorry, JavaScript is required to switch away from the Debian/Ubuntu instructions.</b><br></noscript>
 <b>Show instructions for:</b><br>
@@ -47,9 +59,11 @@ code {
 
 <h3 id="h-install-python-twisted">Installing Python and Twisted</h3>
 
+The Minerva server uses Python and <a href="http://twistedmatrix.com/">Twisted</a>, so you'll need them to write your server.
+
 <p class="debuntu">You already have Python.  You just need <a href="http://twistedmatrix.com/">Twisted</a>:<br><br>
 
-<code>
+<code class="shell">
 sudo apt-get install python-twisted
 </code>
 
@@ -69,12 +83,129 @@ Install the <a href="http://sourceforge.net/projects/pywin32/files/pywin32/">lat
 Install the <a href="http://pypi.python.org/pypi/pyOpenSSL">latest version of pyOpenSSL for your Python version</a>.  This is an optional Twisted dependency that allows you to write SSL clients and servers.
 </p>
 
+<h3 id="h-install-pip">Installing pip <span class="windows">and zope.interface</span></h3>
+
+<p>
+<a href="http://www.pip-installer.org/">pip</a> is the package manager we'll use to install <span class="windows">zope.interface, Minerva,</span><span class="debuntu">Minerva and</span> and all of Minerva's dependencies.  pip provides a way to uninstall and correctly upgrade a package, which Python's distutils-only <code>setup.py install</code> approach can't do.  Note that we will <strong>not</strong> not be using the related <a href="http://www.virtualenv.org/">virtualenv</a> in the instructions that follow.
+</p>
+
+<div class="windows">
+<p>
+pip requires setuptools or distribute (a fork of setuptools).  If you don't already have either, install distribute:
+</p>
+
+<div class="substep">
+	<p>
+	Save a copy of <a href="http://python-distribute.org/distribute_setup.py">http://python-distribute.org/distribute_setup.py</a>.  Open a <code><a href="http://physiology.med.unc.edu/wwwMHMF/how-to/work-with-cmd/default.html">cmd</a></code>, <code>cd</code> to the download directory, and run it with Python:
+	</p>
+
+	<code class="shell">
+	C:\Python27\python distribute_setup.py
+	</code>
+</div>
+
+<p>
+Now, install pip:
+</p>
+
+<div class="substep">
+	<p>
+	Save a copy of <a href="https://raw.github.com/pypa/pip/master/contrib/get-pip.py">https://raw.github.com/pypa/pip/master/contrib/get-pip.py</a>.  Run it with Python:
+	</p>
+
+	<code class="shell">
+	C:\Python27\python get-pip.py
+	</code>
+	</div>
+
+<p>
+Now, let's install zope.interface with pip:
+</p>
+
+<div class="substep">
+	<code class="shell">
+	C:\Python27\Scripts\pip install zope.interface
+	</code>
+
+	<p>
+	Ignore this warning:<br>
+	<code>An optional code optimization (C extension) could not be compiled.</code>.
+	</p>
+</div>
+
+<p>
+Of course, you can use pip to install almost any Python package.
+</p>
+
+<p>
+Side note: if you don't want to type out <code>C:\Python27</code> and <code>C:\Python27\Scripts</code> every time, you can add both directories to your User or System <code>Path</code> variable (<a href="http://www.computerhope.com/issues/ch000549.htm">instructions for XP</a> or <a href="http://msdn.microsoft.com/en-us/library/ee537574.aspx">Windows 7</a>).  Then you'll be able to type just <code>python</code> or <code>pip</code>.  (Note: reopen the <code>cmd</code> window for <code>Path</code> changes to take effect.)
+</p>
+</div>
+
+<div class="debuntu">
+<p>
+Run:
+</p>
+
+<code class="shell">
+sudo apt-get install python-pip
+</code>
+
+<p>
+or on an older distribution:
+</p>
+
+<code class="shell">
+sudo apt-get install pip
+</code>
+</div>
+
 <h3 id="h-install-minerva">Installing Minerva and its dependencies</h3>
 
-<h3 id="h-install-closure">Installing Closure Library and Closure Compiler</h3>
+<p>The simplest way to install Minerva and its dependencies is:</p>
 
-<span class="windows">C:\blah</span>
-<span class="debuntu">/root/blah</span>
+<code class="shell debuntu">
+pip install --user Minerva
+</code>
+
+<code class="shell windows">
+C:\Python27\Scripts\pip install Minerva
+</code>
+
+<p>
+The above will install <a href="https://github.com/ludios/Minerva">Minerva</a> and its dependencies <a href="https://github.com/ludios/Coreweb">Coreweb</a>, <a href="https://github.com/ludios/Webmagic">Webmagic</a>, <a href="https://github.com/ludios/Securetypes">Securetypes</a>, <a href="https://github.com/ludios/Strfrag">Strfrag</a>, <a href="http://pypi.python.org/pypi/Jinja2">jinja2</a>, and <a href="http://pypi.python.org/pypi/simplejson">simplejson</a>.
+</p>
+
+<p class="debuntu">
+<code>--user</code> installs everything to your <code>~/.local/lib/</code> rather than the system-wide Python root.
+</p>
+
+<p>
+If you prefer not to have pip download packages, or want the very latest code, you can use <code>git</code> and <code>pip install .</code>:
+</p>
+
+<code class="shell">
+git clone https://github.com/ludios/Minerva<br>
+git clone https://github.com/ludios/Coreweb<br>
+git clone https://github.com/ludios/Webmagic<br>
+git clone https://github.com/ludios/Securetypes<br>
+git clone https://github.com/ludios/Strfrag<br>
+<br>
+git clone https://github.com/mitsuhiko/jinja2<br>
+git clone https://github.com/simplejson/simplejson<br>
+</code>
+
+<p>
+Then, <code>cd</code> into each directory and run:
+</p>
+
+<code style="shell">
+pip install <span class="debuntu">--user</span> --no-deps --ignore-installed .
+</code>
+
+<p>(note the trailing <code>.</code>).</p>
+
+<h3 id="h-install-closure">Installing Closure Library and Closure Compiler</h3>
 
 </div>
 
