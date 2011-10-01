@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Tutorial: Making a chat application with Minerva and Closure Library | Minerva Comet server and client</title>
+</head>
+<body>
+<link rel="stylesheet" href="../shared.css" type="text/css">
+<style>
+code {
+	background-color: #ddd;
+	padding: 0.5em;
+}
+.jsproblem {
+	color: darkred;
+}
+/* hide all non-debuntu OS instructions by default, since the user might not have JS enabled */
+.windows {
+	display: none;
+}
+</style>
+<div id="content">
+<h1><a href="../"><img src="../logo-176x100.png" id="logo" alt="Minerva" height=100></a></h1>
+<p>
+<a href="../">« Minerva home</a> &bull; <a href="./">Tutorials</a>
+</p>
+
+<h2>Tutorial: Making a chat application with Minerva and Closure Library</h2>
+
+<p>This tutorial will guide you through making a simple chat application that uses <a href="../">Minerva</a> to communicate between the browser and the server.  We'll download Minerva and Closure Library, then write a chat server and chat client.  If at any point you get stuck for any reason, please tell <a href="mailto:ivan@ludios.org?subject=Suggestion+for+Minerva+with+Closure+tutorial">Ivan</a> so he can improve the tutorial.</p>
+
+<p>If you don't want to use <a href="https://code.google.com/closure/library/">Closure Library</a>, read the <a href="../standalone.html">standalone Minerva</a> tutorial.</p>
+
+<noscript><b class="jsproblem">Sorry, JavaScript is required to switch away from the Debian/Ubuntu instructions.</b><br></noscript>
+<b>Show instructions for:</b><br>
+<form>
+	<input type="radio" name="os" value="debuntu" id="os-debuntu" onclick="clickedSwitch();return true" checked>
+		<label for="os-debuntu">Debian/Ubuntu</label>
+	<input type="radio" name="os" value="windows" id="os-windows" onclick="clickedSwitch();return true">
+		<label for="os-windows">Windows</label>
+</form>
+
+<h3 id="h-contents">Contents</h3>
+
+<noscript><b class="jsproblem">Sorry, JavaScript is required to see this Table of Contents.</b><br></noscript>
+<div id="toc"></div>
+
+<h3 id="h-install-python-twisted">Installing Python and Twisted</h3>
+
+<p class="debuntu">You already have Python.  You just need <a href="http://twistedmatrix.com/">Twisted</a>:<br><br>
+
+<code>
+sudo apt-get install python-twisted
+</code>
+
+<p class="windows">
+Unless you already have a 32-bit Python 2.5+, install the latest 32-bit <a href="http://www.python.org/download/releases/">Python 2.x release</a> (<a href="http://www.python.org/ftp/python/2.7.2/python-2.7.2.msi">direct link to 32-bit Python 2.7.2 MSI installer</a>).  Avoid the 64-bit Python unless you know how to install Twisted on it and <a href="http://twistedmatrix.com/trac/ticket/4669">don't need iocpreactor</a>.
+</p>
+
+<p class="windows">
+Install the <a href="http://twistedmatrix.com/trac/wiki/Downloads">latest version of Twisted for your Python version</a>.  Try the MSI installer first.  Note that Twisted won't work until you install zope.interface (described below).
+</p>
+
+<p class="windows">
+Install the <a href="http://sourceforge.net/projects/pywin32/files/pywin32/">latest pywin32 for your Python version</a> (<a href="http://sourceforge.net/projects/pywin32/files/pywin32/Build216/pywin32-216.win32-py2.7.exe/download">direct link to pywin32 216 for 32-bit Python 2.7</a>).  This is required for some Twisted functionality including process-spawning, the IOCP reactor, and colored <a href="http://twistedmatrix.com/trac/wiki/TwistedTrial">trial</a> output.
+</p>
+
+<p class="windows">
+Install the <a href="http://pypi.python.org/pypi/pyOpenSSL">latest version of pyOpenSSL for your Python version</a>.  This is an optional Twisted dependency that allows you to write SSL clients and servers.
+</p>
+
+<h3 id="h-install-minerva">Installing Minerva and its dependencies</h3>
+
+<h3 id="h-install-closure">Installing Closure Library and Closure Compiler</h3>
+
+<span class="windows">C:\blah</span>
+<span class="debuntu">/root/blah</span>
+
+</div>
+
+<script src="../jquery-1.6.4.min.js"></script>
+<script src="../samaxesjs.toc-1.3.3.min.js"></script>
+<script>
+var allOS = ["debuntu", "windows"];
+
+function switchInstructions(os) {
+	$('.' + os).show();
+	$.each(allOS, function(i, otherOS) {
+		if(os != otherOS) {
+			$('.' + otherOS).hide();
+		}
+	});
+}
+
+function getOS() {
+	if($('#os-debuntu').prop('checked')) {
+		return "debuntu";
+	}
+	return "windows";
+}
+
+function clickedSwitch() {
+	switchInstructions(getOS());
+}
+
+$(document).ready(function() {
+	clickedSwitch();
+	samaxesJS.toc({exclude: 'h1, h2'});
+});
+
+</script>
+
+</body>
+</html>
