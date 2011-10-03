@@ -37,11 +37,11 @@ code.shell {
 <a href="../">« Minerva home</a> &bull; <a href="./">Tutorials</a>
 </p>
 
-<h2>Tutorial: Making a chat application with Minerva and Closure Library</h2>
+<h2>Tutorial: Make a chat application with Minerva and Closure Library</h2>
 
-<p>This tutorial will guide you through making a simple chat application that uses <a href="../">Minerva</a> to communicate between the browser and the server.  We'll download Minerva and Closure Library, then write a chat server (in Python) and chat client (in JavaScript).  If at any point you get stuck for any reason, please tell <a href="mailto:ivan@ludios.org?subject=Suggestion+for+Minerva+with+Closure+tutorial">Ivan</a> so he can improve the tutorial.</p>
+<p>This tutorial will guide you through making a simple chat application that uses <a href="../">Minerva</a> to communicate between the browser and the server.  We'll install Minerva and Closure Library, then write a chat server (in Python) and chat client (in JavaScript).  If at any point you get stuck for any reason, please tell <a href="mailto:ivan@ludios.org?subject=Suggestion+for+Minerva+with+Closure+tutorial">Ivan</a> so he can improve the tutorial.</p>
 
-<p>If you don't want to use <a href="https://code.google.com/closure/library/">Closure Library</a>, read the <a href="../standalone.html">standalone Minerva</a> tutorial instead.</p>
+<p>If you don't want to use <a href="https://code.google.com/closure/library/">Closure Library</a>, read the <a href="../standalone.html">standalone Minerva tutorial</a> instead.</p>
 
 <noscript><b class="jsproblem">Sorry, JavaScript is required to switch away from the Debian/Ubuntu instructions.</b><br></noscript>
 <b>Show instructions for:</b><br>
@@ -57,7 +57,7 @@ code.shell {
 <noscript><b class="jsproblem">Sorry, JavaScript is required to see this Table of Contents.</b><br></noscript>
 <div id="toc"></div>
 
-<h3 id="h-install-python-twisted">Installing Python and Twisted</h3>
+<h3 id="h-install-python-twisted">Install Python and Twisted</h3>
 
 The Minerva server uses Python and <a href="http://twistedmatrix.com/">Twisted</a>, so you'll need them to write your application server.
 
@@ -83,7 +83,7 @@ Install the <a href="http://sourceforge.net/projects/pywin32/files/pywin32/">lat
 Install the <a href="http://pypi.python.org/pypi/pyOpenSSL">latest version of pyOpenSSL for your Python version</a>.  This is an optional Twisted dependency that allows you to write SSL clients and servers.
 </p>
 
-<h3 id="h-install-pip">Installing pip <span class="windows">and zope.interface</span></h3>
+<h3 id="h-install-pip">Install pip <span class="windows">and zope.interface</span></h3>
 
 <p>
 <a href="http://www.pip-installer.org/">pip</a> is the package manager we'll use to install <span class="windows">zope.interface, Minerva,</span><span class="debuntu">Minerva and</span> and all of Minerva's dependencies.  pip provides a way to uninstall and correctly upgrade a package, which Python's distutils-only <code>setup.py install</code> approach can't do.  Note that we will <strong>not</strong> not be using the related <a href="http://www.virtualenv.org/">virtualenv</a> in the instructions that follow.
@@ -160,7 +160,7 @@ sudo apt-get install pip
 </code>
 </div>
 
-<h3 id="h-install-minerva">Installing Minerva and its dependencies</h3>
+<h3 id="h-install-minerva">Install Minerva and its dependencies</h3>
 
 <p>The simplest way to install Minerva and its dependencies is:</p>
 
@@ -207,7 +207,7 @@ Alternative route: if you prefer not to have pip download packages, or want the 
 	<p>(note the trailing <code>.</code>).</p>
 </div>
 
-<h3 id="h-install-closure">Installing Closure Library</h3>
+<h3 id="h-install-closure">Install Closure Library</h3>
 
 <p>
 The Minerva client uses <a href="https://code.google.com/closure/library/">Closure Library</a>, so you'll need a copy.  Google doesn't do regular releases of it, so you'll want to get a copy of <a href="https://code.google.com/p/closure-library/source/list">trunk</a> (it's kept stable).
