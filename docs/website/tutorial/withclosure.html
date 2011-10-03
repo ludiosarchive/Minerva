@@ -207,8 +207,63 @@ Alternative route: if you prefer not to have pip download packages, or want the 
 	<p>(note the trailing <code>.</code>).</p>
 </div>
 
-<h3 id="h-install-closure">Installing Closure Library and Closure Compiler</h3>
+<h3 id="h-install-closure">Installing Closure Library</h3>
 
+<p>
+The Minerva client uses <a href="https://code.google.com/closure/library/">Closure Library</a>, so you'll need a copy.  Google doesn't do regular releases of it, so you'll want to get a copy of <a href="https://code.google.com/p/closure-library/source/list">trunk</a> (it's kept stable).
+</p>
+
+<div class="debuntu">
+<p>If you don't already have Subversion, install it:</p>
+
+<code class="shell">
+sudo apt-get install subversion
+</code>
+</div>
+
+<div class="windows">
+<p>If you don't already have Subversion, download and install <a href="http://www.sliksvn.com/en/download">Slik SVN</a>.  The installer will put a command-line <code>svn</code> in your <code>Path</code>.</p>
+</div>
+
+<p>
+From now on, we'll be working in a <code>Projects</code> directory that you can put anywhere.  The rest of this documentation will assume it's in your home directory, so substitute paths if that's not the case.
+</p>
+
+<p>Make a <code>Projects</code> directory if you don't already have one:</p>
+
+<code class="shell debuntu">
+mkdir ~/Projects<br>
+cd ~/Projects
+</code>
+
+<div class="windows">
+<code class="shell">
+cd /d "%USERPROFILE%"<br>
+mkdir Projects<br>
+cd Projects
+</code>
+
+<p>
+(Tip: <code>/d</code> means switch drive letter if necessary.)
+</p>
+</div>
+
+<p>Now, inside <code>Projects</code>, check out Closure Library:</p>
+
+<code class="shell">
+svn checkout https://closure-library.googlecode.com/svn/trunk/ closure-library
+</code>
+
+<p>
+Alternative route: if you prefer to have the full version history of Closure Library, you can use <code>git svn</code> to do the checkout (this will take much longer):</p>
+</p>
+<div class="substep">
+	<code class="shell">
+	git svn clone --stdlayout https://closure-library.googlecode.com/svn closure-library
+	</code>
+	<p class="windows">
+	(This requires <a href="https://code.google.com/p/msysgit/">msysgit</a>.)
+	</p>
 </div>
 
 <script src="../jquery-1.6.4.min.js"></script>
