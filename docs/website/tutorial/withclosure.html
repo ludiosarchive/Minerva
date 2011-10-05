@@ -23,7 +23,7 @@ code.shell {
 	margin-left: 2em;
 	margin-bottom: 1.5em;
 }
-.jsproblem {
+.jsproblem, .important {
 	color: darkred;
 }
 /* hide all non-debuntu OS instructions by default, since the user might not have JS enabled */
@@ -44,13 +44,16 @@ code.shell {
 <p>If you don't want to use <a href="https://code.google.com/closure/library/">Closure Library</a>, read the <a href="../standalone.html">standalone Minerva tutorial</a> instead.</p>
 
 <noscript><b class="jsproblem">Sorry, JavaScript is required to switch away from the Debian/Ubuntu instructions.</b><br></noscript>
-<b>Show instructions for:</b><br>
+<b><span class="important">Important!</span> Show instructions for:</b><br>
 <form>
 	<input type="radio" name="os" value="debuntu" id="os-debuntu" onclick="clickedSwitch();return true" checked>
 		<label for="os-debuntu">Debian/Ubuntu</label>
 	<input type="radio" name="os" value="windows" id="os-windows" onclick="clickedSwitch();return true">
 		<label for="os-windows">Windows</label>
 </form>
+<p>
+(This setting changes the entire document.)
+</p>
 
 <h3 id="h-contents">Contents</h3>
 
@@ -59,7 +62,7 @@ code.shell {
 
 <h3 id="h-install-python-twisted">Install Python and Twisted</h3>
 
-The Minerva server uses Python and <a href="http://twistedmatrix.com/">Twisted</a>, so you'll need them to write your application server.
+The Minerva server uses Python and <a href="http://twistedmatrix.com/">Twisted</a>, so you'll need both to write your application server.
 
 <p class="debuntu">You already have Python.  You just need <a href="http://twistedmatrix.com/">Twisted</a>:<br><br>
 
@@ -80,13 +83,13 @@ Install the <a href="http://sourceforge.net/projects/pywin32/files/pywin32/">lat
 </p>
 
 <p class="windows">
-Install the <a href="http://pypi.python.org/pypi/pyOpenSSL">latest version of pyOpenSSL for your Python version</a>.  This is an optional Twisted dependency that allows you to write SSL clients and servers.
+Install the <a href="http://pypi.python.org/pypi/pyOpenSSL">latest version of pyOpenSSL for your Python version</a>.  Try the MSI installer first.  pyOpenSSL is an optional Twisted dependency that allows you to write SSL clients and servers.
 </p>
 
 <h3 id="h-install-pip">Install pip <span class="windows">and zope.interface</span></h3>
 
 <p>
-<a href="http://www.pip-installer.org/">pip</a> is the package manager we'll use to install <span class="windows">zope.interface, Minerva,</span><span class="debuntu">Minerva and</span> and all of Minerva's dependencies.  pip provides a way to uninstall and correctly upgrade a package, which Python's distutils-only <code>setup.py install</code> approach can't do.  Note that we will <strong>not</strong> not be using the related <a href="http://www.virtualenv.org/">virtualenv</a> in the instructions that follow.
+<a href="http://www.pip-installer.org/">pip</a> is the package manager you'll (probably) use to install <span class="windows">zope.interface, Minerva,</span><span class="debuntu">Minerva and</span> and all of Minerva's dependencies.  pip provides a way to uninstall and correctly upgrade a package, which Python's distutils-only <code>setup.py install</code> approach can't do.  Note that the instructions that follow assume that the related <a href="http://www.virtualenv.org/">virtualenv</a> is <strong>not</strong> used.
 </p>
 
 <div class="windows">
@@ -116,6 +119,10 @@ Now, install pip:
 	<code class="shell">
 	C:\Python27\python get-pip.py
 	</code>
+
+	<p>
+	(If you saved it in Chrome, that might be <code>get-pip.py.txt</code>)
+	</p>
 	</div>
 
 <p>
@@ -226,7 +233,7 @@ sudo apt-get install subversion
 </div>
 
 <p>
-From now on, we'll be working in a <code>Projects</code> directory that you can put anywhere.  The rest of this documentation will assume it's in your home directory, so substitute paths if that's not the case.
+From now on, you'll be working in some kind of <code>Projects</code> directory that you can put anywhere.  The rest of this documentation will assumes that it's called <code>Projects</code> and in your home directory, so substitute paths if that's not the case.
 </p>
 
 <p>Make a <code>Projects</code> directory if you don't already have one:</p>
@@ -262,9 +269,37 @@ Alternative route: if you prefer to have the full version history of Closure Lib
 	git svn clone --stdlayout https://closure-library.googlecode.com/svn closure-library
 	</code>
 	<p class="windows">
-	(This requires <a href="https://code.google.com/p/msysgit/">msysgit</a>.)
+	(This requires <a href="https://code.google.com/p/msysgit/">msysgit</a>.  When installing, select "Run Git from the Windows Command Prompt" and "Checkout as-is, commit as-is".)
 	</p>
 </div>
+
+<h3 id="h-run-server-tests">Running the server-side unit tests</h3>
+
+<p>
+By now, you have everything you need to start working with Minerva.  But before you do so, run the unit tests to make sure that Minerva works properly on your system.  To do this, we use Twisted's test runner, <a href="http://twistedmatrix.com/trac/wiki/TwistedTrial">trial</a>.  If you have Twisted installed, you already have trial.
+</p>
+
+<p>
+Run the unit tests for Minerva, Webmagic, Securetypes, and Strfrag:
+</p>
+
+<code class="shell">
+trial minerva webmagic test_securetypes test_strfrag
+</code>
+
+<p>
+The tests should take a few seconds to run.  Make sure the very last line of the output says <code style="color:darkgreen; font-weight: bold">PASSED</code>.  Note that it's okay to see tracebacks for tests marked <code>[TODO]</code>.
+</p>
+
+<p>
+If any of the tests failed, Minerva may still work, but please report a bug for <a href="https://github.com/ludios/Minerva/issues">Minerva</a>, <a href="https://github.com/ludios/Webmagic/issues">Webmagic</a>, <a href="https://github.com/ludios/Securetypes/issues">Securetypes</a>, or <a href="https://github.com/ludios/Strfrag/issues">Strfrag</a>.  Any test failure, hang, or crash is a bug.
+</p>
+
+<h3 id="h-run-client-tests">Running the client-side unit tests</h3>
+
+<p>
+
+</p>
 
 <script src="../jquery-1.6.4.min.js"></script>
 <script src="../samaxesjs.toc-1.3.3.min.js"></script>
