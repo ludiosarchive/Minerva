@@ -188,6 +188,14 @@ strictDecoder = simplejson.decoder.JSONDecoder(
 	parse_constant=_raiseDecodeError,
 	object_pairs_hook=securedict)
 
+
+def _intOrNone(v):
+	try:
+		return int(v)
+	except ValueError:
+		return None
+
+
 def _isDecodeBuggy():
 	"""
 	Returns C{True} if simplejson has this bug:
@@ -198,7 +206,7 @@ def _isDecodeBuggy():
 	"""
 	# The bug was fixed in r236 @ https://code.google.com/p/simplejson/source/list
 	# and 2.1.2 was released shortly after.
-	return simplejson.__version__.split('.') < (2, 1, 2)
+	return tuple(_intOrNone(x) for x in simplejson.__version__.split('.')) < (2, 1, 2)
 
 _decodeBuggy = _isDecodeBuggy()
 
