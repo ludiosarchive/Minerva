@@ -200,15 +200,19 @@ Alternative route: if you prefer not to have pip download packages, or want the 
 	git clone https://github.com/ludios/Strfrag<br>
 	<br>
 	git clone https://github.com/mitsuhiko/jinja2<br>
-	git clone https://github.com/simplejson/simplejson<br>
+	git clone https://github.com/simplejson/simplejson<br> <!-- TODO: make user install binary package with speedups!  Perhaps make Minerva use json instead of simplejson when available? -->
 	</code>
 
 	<p>
 	Then, <code>cd</code> into each directory and run:
 	</p>
 
-	<code class="shell">
-	pip install <span class="debuntu">--user</span> --no-deps --ignore-installed .
+	<code class="shell debuntu">
+	pip install --user --no-deps --ignore-installed .
+	</code>
+
+	<code class="shell windows">
+	C:\Python27\Scripts\pip install --no-deps --ignore-installed .
 	</code>
 
 	<p>(note the trailing <code>.</code>).</p>
@@ -283,9 +287,18 @@ By now, you have everything you need to start working with Minerva.  But before 
 Run the unit tests for Minerva, Webmagic, Securetypes, and Strfrag:
 </p>
 
-<code class="shell">
+<code class="shell debuntu">
 trial minerva webmagic test_securetypes test_strfrag
 </code>
+
+<div class="windows">
+<code class="shell windows">
+C:\Python27\python C:\Python27\Scripts\trial.py minerva webmagic test_securetypes test_strfrag
+</code>
+<p>
+(This is all one line.)
+</p>
+</div>
 
 <p>
 The tests should take a few seconds to run.  Make sure the very last line of the output says <code style="color:darkgreen; font-weight: bold">PASSED</code>.  Note that it's okay to see tracebacks for tests marked <code>[TODO]</code>.
