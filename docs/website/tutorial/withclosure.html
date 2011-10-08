@@ -310,8 +310,43 @@ If any of the tests failed, Minerva may still work, but please report a bug for 
 
 <h3 id="h-run-client-tests">Running the client-side unit tests</h3>
 
-<p>
+<p>Minerva also comes with client-side unit tests.  These tests are run in a browser, rather than in the command line.  To run these tests, you'll need to start the <code>minerva_site</code> server installed by Minerva.</p>
 
+<p>
+To start <code>minerva_site</code>'s HTTP server, run:
+</p>
+
+<code class="shell debuntu">
+cd /tmp<br>
+twistd -n minerva_site -t tcp:8111:interface=127.0.0.1 "--closure-library=$HOME/Projects/closure-library"
+</code>
+
+<code class="shell windows">
+cd /d "%TEMP%"<br>
+C:\Python27\python C:\Python27\Scripts\twistd.py -n minerva_site -t tcp:8111:interface=127.0.0.1 "--closure-library=%USERPROFILE%\Projects\closure-library"
+</code>
+
+<p>
+You should now be able to reach the server at <a href="http://127.0.0.1:8111/">http://127.0.0.1:8111/</a>
+</p>
+
+<p>
+The first <code>cd</code> step above is optional; do it to avoid creating some files (twistd.log, twistd.pid) in a directory that needs to stay unchanged.  (And what's <code>twistd</code>, you ask?  It's Twisted's tool for starting up daemons.  But in this case, we use <code>-n</code> to stay in the foreground rather than daemonize.)
+</p>
+
+<p>
+With the server running, you can run the client-side tests by navigating to:
+</p>
+
+<p>
+<a href="http://127.0.0.1:8111/js_minerva_tests.html">http://127.0.0.1:8111/js_minerva_tests.html</a></p>
+
+<p>After a few seconds, you'll see a box in the top-right corner indicating test suite success (green) or failure (red). If you see any failures, please report a bug on <a href="https://github.com/ludios/Minerva/issues">Minerva</a>.</p>
+
+<p>Is your test runner stuck or failing after a delay?  It's probably because some tests use a Flash object (when the Flash plugin is available, at least).  Chrome users who block plugins may have to allow plugins for this domain (click the plugin icon in the URL bar).  <a href="http://noscript.net/">NoScript</a> users may have to click on the Flash object at the bottom of the page.
+</p>
+
+<p>
 </p>
 
 <script src="../jquery-1.6.4.min.js"></script>
