@@ -239,26 +239,29 @@ function Ra(a, b) {
     }
   }
 }
-;function Sa(a) {
+;!G || Ma();
+var Sa = !G || Ma();
+G && Ka("8");
+function Ta(a) {
   this.stack = Error().stack || "";
   if(a) {
     this.message = String(a)
   }
 }
-A(Sa, Error);
-Sa.prototype.name = "CustomError";
-function Ta(a, b) {
+A(Ta, Error);
+Ta.prototype.name = "CustomError";
+function Ua(a, b) {
   b.unshift(a);
-  Sa.call(this, la.apply(j, b));
+  Ta.call(this, la.apply(j, b));
   b.shift();
   this.hb = a
 }
-A(Ta, Sa);
-Ta.prototype.name = "AssertionError";
-function Ua(a, b) {
-  throw new Ta("Failure" + (a ? ": " + a : ""), Array.prototype.slice.call(arguments, 1));
+A(Ua, Ta);
+Ua.prototype.name = "AssertionError";
+function Va(a, b) {
+  throw new Ua("Failure" + (a ? ": " + a : ""), Array.prototype.slice.call(arguments, 1));
 }
-;var K = Array.prototype, Va = K.indexOf ? function(a, b, c) {
+;var K = Array.prototype, Wa = K.indexOf ? function(a, b, c) {
   return K.indexOf.call(a, b, c)
 } : function(a, b, c) {
   c = c == j ? 0 : c < 0 ? Math.max(0, a.length + c) : c;
@@ -271,24 +274,21 @@ function Ua(a, b) {
     }
   }
   return-1
-}, Wa = K.forEach ? function(a, b, c) {
+}, Xa = K.forEach ? function(a, b, c) {
   K.forEach.call(a, b, c)
 } : function(a, b, c) {
   for(var d = a.length, f = t(a) ? a.split("") : a, e = 0;e < d;e++) {
     e in f && b.call(c, f[e], e, a)
   }
 };
-function Xa(a, b) {
-  var c = Va(a, b);
+function Ya(a, b) {
+  var c = Wa(a, b);
   c >= 0 && K.splice.call(a, c, 1)
 }
-function Ya(a) {
+function Za(a) {
   return K.concat.apply(K, arguments)
 }
-;var Za;
-!G || Ma();
-G && Ka("8");
-function L(a, b) {
+;function L(a, b) {
   this.type = a;
   this.currentTarget = this.target = b
 }
@@ -461,12 +461,14 @@ var ib, jb, kb, lb, mb, nb, ob, pb, qb, rb, sb;
     return[]
   }
   function c() {
-    function a(b) {
+    var a = Sa ? function(b) {
+      return g.call(a.src, a.key, b)
+    } : function(b) {
       b = g.call(a.src, a.key, b);
       if(!b) {
         return b
       }
-    }
+    };
     return a
   }
   function d() {
@@ -602,7 +604,7 @@ function vb(a) {
       f = O[d][e][c];
       if(J[c]) {
         var g = J[c];
-        Xa(g, b);
+        Ya(g, b);
         g.length == 0 && delete J[c]
       }
       b.t = i;
@@ -683,8 +685,7 @@ nb(function(a, b) {
     return i
   }
   var f = f[d], e, g;
-  Za === h && (Za = G && !q.addEventListener);
-  if(Za) {
+  if(!Sa) {
     e = b || ba("window.event");
     var m = i in f, n = k in f;
     if(m) {
@@ -767,7 +768,7 @@ function Cb(a, b, c) {
     a.forEach(b, c)
   }else {
     if(ca(a) || t(a)) {
-      Wa(a, b, c)
+      Xa(a, b, c)
     }else {
       var d;
       if(typeof a.Y == "function") {
@@ -878,7 +879,7 @@ function Ib(a, b) {
   }), '"')
 }
 ;function Jb(a, b, c) {
-  var d = Va(c, a);
+  var d = Wa(c, a);
   if(d != -1) {
     b.push("#CYCLETO:" + (c.length - d) + "#")
   }else {
@@ -1046,7 +1047,7 @@ function Pb(a) {
 }
 function Qb(a, b) {
   var c = [];
-  if(Va(b, a) >= 0) {
+  if(Wa(b, a) >= 0) {
     c.push("[...circular reference...]")
   }else {
     if(a && b.length < 50) {
@@ -1148,7 +1149,7 @@ function Zb(a) {
   if(a.N) {
     return Zb(a.N)
   }
-  Ua("Root logger has no level set.");
+  Va("Root logger has no level set.");
   return j
 }
 T.prototype.log = function(a, b, c) {
@@ -1301,7 +1302,7 @@ A(ic, E);
 l = ic.prototype;
 l.b = W("cw.net.XHRMasterTracker");
 l.xa = function(a, b, c) {
-  var b = Ya(b), d = this.q[a];
+  var b = Za(b), d = this.q[a];
   d ? d.xa(b, c) : $b(this.b, "onframes_: no master for " + Lb(a))
 };
 l.ya = function(a, b) {
@@ -1365,8 +1366,8 @@ function oc(a) {
 }
 function nc(a, b) {
   var c = a.T[b], d = a.m[b];
-  c && d && (a.b.log(Yb, "Updating dependent contexts", h), Wa(c, function(a) {
-    Wa(d, function(b) {
+  c && d && (a.b.log(Yb, "Updating dependent contexts", h), Xa(c, function(a) {
+    Xa(d, function(b) {
       pc(this.m, a, b);
       pc(this.T, b, a)
     }, this)
@@ -1374,7 +1375,7 @@ function nc(a, b) {
 }
 function pc(a, b, c) {
   a[b] || (a[b] = []);
-  Va(a[b], c) >= 0 || a[b].push(c)
+  Wa(a[b], c) >= 0 || a[b].push(c)
 }
 var lc = new jc;
 function qc() {
@@ -1602,7 +1603,7 @@ function zc(a, b) {
       V(f.b, "Closing XHR : " + e);
       delete f.T[e];
       for(var g in f.m) {
-        Xa(f.m[g], e), f.m[g].length == 0 && delete f.m[g]
+        Ya(f.m[g], e), f.m[g].length == 0 && delete f.m[g]
       }
     }
     try {
