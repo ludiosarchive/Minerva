@@ -154,7 +154,7 @@ class FlashConnection {
 			return;
 		}
 		var outBuffer = "["; // TODO: confirm lack of O(N^2) behavior
-		var available:UInt = socket.bytesAvailable;
+		var available:Int = socket.bytesAvailable;
 		var comma:String = "";
 		var hadError:Bool = false;
 
@@ -165,6 +165,8 @@ class FlashConnection {
 				}
 				available -= 4;
 				try {
+					// but remember that expecting is an Int,
+					// not a UInt, of course.
 					expecting = socket.readUnsignedInt();
 				} catch (e:Dynamic) { // Unknown if IOError is ever actually thrown here
 					hadError = true;
