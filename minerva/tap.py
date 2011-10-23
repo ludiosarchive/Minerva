@@ -24,13 +24,14 @@ class Options(usage.Options):
 	optParameters = [
 		["http", "t", None,
 			"strports description for the HTTP server. "
-			"Example: 'tcp:80:interface=127.0.0.1'. "
-			"Repeat this option for multiple servers."],
+			"Example: 'tcp:8111:interface=127.0.0.1'. "
+			"Repeat this option for multiple HTTP listeners."],
 
 		["minerva", "m", None,
-			"strports description for Minerva server's socket listener. "
-			"Example: 'ssl:444:privateKey=privateAndPublic.pem:interface=0'. "
-			"Repeat this option for multiple servers."],
+			"strports description for a Minerva socket listener. "
+			"Example: 'tcp:8430:interface=127.0.0.1'. "
+			"Repeat this option for multiple socket listeners. "
+			"The first listener specified is used by minerva_site for testing."],
 
 		# Automatically setting document.document based on a GET
 		# parameter or by looking at parent's URL is insecure (because
