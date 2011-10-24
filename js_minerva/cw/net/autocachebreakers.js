@@ -5,4 +5,4 @@
 
 goog.provide('cw.net.breaker_FlashConnector_swf');
 
-cw.net.breaker_FlashConnector_swf = '2ae8d8a79afe8f3a96bb49e8a9339914';
+cw.net.breaker_FlashConnector_swf = '4bdfc178fc0e508c0cd5efc3fdb09920';
