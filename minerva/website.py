@@ -244,11 +244,9 @@ class MinervaBootstrap(BetterResource):
 	"""
 	isLeaf = True
 
-	def __init__(self, fileCache, csrfStopper, cookieInstaller, templateFile, dictionary):
+	def __init__(self, fileCache, templateFile, dictionary):
 		"""
 		C{fileCache} is a L{webmagic.filecache.FileCache}.
-		C{csrfStopper} is a L{ICsrfStopper} provider.
-		C{cookieInstaller} is an L{untwist.CookieInstaller}.
 		C{templateFile} is a L{FilePath} representing the jinja2 template to
 			use.  The file contents are cached forever, even if you delete
 			your references to the L{MinervaBootstrap}.
@@ -258,8 +256,6 @@ class MinervaBootstrap(BetterResource):
 		"""
 		BetterResource.__init__(self)
 		self._fileCache = fileCache
-		self._csrfStopper = csrfStopper
-		self._cookieInstaller = cookieInstaller
 		self._templateFile = templateFile
 		self._dictionary = dictionary
 
@@ -273,17 +269,11 @@ class MinervaBootstrap(BetterResource):
 		except (KeyError, IndexError, ValueError):
 			standaloneClient = False
 
-		cookie = self._cookieInstaller.getSet(request)
-		csrfToken = self._csrfStopper.makeToken(cookie)
-
 		# This jinja2 stuff is for the html page, not the JavaScript
 		template, _ = self._fileCache.getContent(
 			self._templateFile.path, transform=_contentToTemplate)
 
 		bootstrapDict = {}
-		bootstrapDict['bootstrap'] = {
-			'csrf_token': csrfToken,
-		}
 		bootstrapDict['htmldumps'] = htmldumps
 		bootstrapDict['cacheBreakLink'] =  partial(
 			getCacheBrokenHref, self._fileCache, request)

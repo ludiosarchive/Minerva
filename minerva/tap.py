@@ -88,11 +88,6 @@ def makeService(config):
 
 	multi = service.MultiService()
 
-	# Nothing actually validates the CSRF token, and it should really
-	# be removed, so use a random string for the secret.  If we
-	# ever start validating the CSRF token, allow a static token to
-	# be specified.
-	csrfSecret = os.urandom(160/8)
 	domain = config['domain']
 
 	if not domain:
@@ -117,24 +112,24 @@ def makeService(config):
 				"path with --closure-library="
 				"..." % (closureLibrary,), 70)) + "\n")
 
+	socketPorts = []
+	for minervaStrport in config['minerva']:
+		_, _args, _ = strports.parse(minervaStrport, object())
+		socketPorts.append(_args[0])
+
 	doReloading = bool(int(os.environ.get('PYRELOADING', '0')))
 	fileCache = FileCache(lambda: reactor.seconds(), 0.1 if doReloading else -1)
 	socketFace, httpSite = minerva_site.makeMinervaAndHttp(
-		reactor, fileCache, csrfSecret, domain, closureLibrary)
+		reactor, fileCache, socketPorts, domain, closureLibrary)
 	httpSite.displayTracebacks = not config["no-tracebacks"]
 
 	for httpStrport in config['http']:
 		httpServer = strports.service(httpStrport, httpSite)
 		httpServer.setServiceParent(multi)
 
-	if not config['minerva']:
-		mainSocketPort = None
-	else:
-		_, _args, _ = strports.parse(config['minerva'][0], socketFace)
-		mainSocketPort = _args[0]
-		for minervaStrport in config['minerva']:
-			minervaServer = strports.service(minervaStrport, socketFace)
-			minervaServer.setServiceParent(multi)
+	for minervaStrport in config['minerva']:
+		minervaServer = strports.service(minervaStrport, socketFace)
+		minervaServer.setServiceParent(multi)
 
 	if doReloading:
 		print 'Enabling reloader.'

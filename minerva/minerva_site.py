@@ -6,8 +6,6 @@ from twisted.python.filepath import FilePath
 
 from minerva.newlink import StreamTracker, HttpFace, SocketFace
 
-from minerva.website import CsrfStopper
-
 from minerva.flashtest.pages import FlashTestPage
 from minerva.chatapp.pages import ChatAppPage
 
@@ -257,16 +255,32 @@ class DemoFactory(object):
 
 
 
-class ResourcesForTest(BetterResource):
-	def __init__(self, reactor, csrfStopper, cookieInstaller):
-		BetterResource.__init__(self)
-		self._reactor = reactor
+class GetEndpointInfo(BetterResource):
+	"""
+	Used by TestClient.js, because TestRunnerPage itself does not know
+	which socket port to use for Minerva's Flash socket endpoint.
+	"""
+	isLeaf = True
 
-		#self.putChild('', HelpfulNoResource())
+	def __init__(self, mainSocketPort):
+		BetterResource.__init__(self)
+		self._mainSocketPort = mainSocketPort
+
+
+	def render_GET(self, request):
+		return simplejson.dumps({'main-socket-port': self._mainSocketPort})
+
+
+
+class ResourcesForTest(BetterResource):
+	def __init__(self, mainSocketPort):
+		BetterResource.__init__(self)
+
 		self.putChild('DisplayConnections', DisplayConnections())
 		self.putChild('SimpleResponse', SimpleResponse())
 		self.putChild('UnicodeRainbow', UnicodeRainbow())
 		self.putChild('NoOriginHeader', NoOriginHeader())
+		self.putChild('GetEndpointInfo', GetEndpointInfo(mainSocketPort))
 
 
 
@@ -274,7 +288,7 @@ requireFile(FilePath(__file__).sibling('index.html').path)
 
 class Root(BetterResource):
 
-	def __init__(self, reactor, httpFace, fileCache, csrfStopper, cookieInstaller, domain, closureLibrary):
+	def __init__(self, reactor, httpFace, fileCache, mainSocketPort, domain, closureLibrary):
 		import coreweb
 		import minerva
 
@@ -297,7 +311,7 @@ class Root(BetterResource):
 		testres_Coreweb = FilePath(coreweb.__path__[0]).child('testres').path
 		self.putChild('@testres_Coreweb', BetterFile(testres_Coreweb))
 
-		testres_Minerva = ResourcesForTest(reactor, csrfStopper, cookieInstaller)
+		testres_Minerva = ResourcesForTest(mainSocketPort)
 		self.putChild('@testres_Minerva', testres_Minerva)
 
 		# Also used by tests
@@ -307,8 +321,8 @@ class Root(BetterResource):
 			minervaPath.child('js_minerva_tests.html').path))
 
 		# Demos that use httpFace and/or socketFace
-		self.putChild('flashtest', FlashTestPage(csrfStopper, cookieInstaller))
-		self.putChild('chatapp', ChatAppPage(fileCache, csrfStopper, cookieInstaller, domain))
+		self.putChild('flashtest', FlashTestPage())
+		self.putChild('chatapp', ChatAppPage(fileCache, domain))
 
 		# Used by chatapp
 		self.putChild('wait_resource', WaitResource(clock=reactor))
@@ -322,18 +336,18 @@ class Root(BetterResource):
 
 
 
-def makeMinervaAndHttp(reactor, fileCache, csrfSecret, domain, closureLibrary):
+def makeMinervaAndHttp(reactor, fileCache, socketPorts, domain, closureLibrary):
 	clock = reactor
 
-	cookieInstaller = CookieInstaller(
-		os.urandom, 'minerva_site_uaid', 'minerva_site_uaid_secure')
+	toPorts = ",".join(str(p) for p in socketPorts)
 
-	# In the real world, you might want this to be more restrictive.
-	# Minerva has its own CSRF protection, so it's not critical.
+	# You might want this to be more restrictive since it can help
+	# avoid a certain DoS attack.
 	policyString = '''\
-<cross-domain-policy><allow-access-from domain="*" to-ports="*"/></cross-domain-policy>'''.strip()
+<cross-domain-policy>
+<allow-access-from domain="*" to-ports="%s"/>
+</cross-domain-policy>'''.strip() % (toPorts,)
 
-	csrfStopper = CsrfStopper(csrfSecret)
 	tracker = StreamTracker(clock, DemoFactory(clock))
 
 	allowedDomains = []
@@ -343,7 +357,8 @@ def makeMinervaAndHttp(reactor, fileCache, csrfSecret, domain, closureLibrary):
 	httpFace = HttpFace(clock, tracker, fileCache, allowedDomains)
 	socketFace = SocketFace(clock, tracker, policyString=policyString)
 
-	root = Root(reactor, httpFace, fileCache, csrfStopper, cookieInstaller, domain, closureLibrary)
+	mainSocketPort = socketPorts[0]
+	root = Root(reactor, httpFace, fileCache, mainSocketPort, domain, closureLibrary)
 	httpSite = ConnectionTrackingSite(root, timeout=75)
 
 	return (socketFace, httpSite)

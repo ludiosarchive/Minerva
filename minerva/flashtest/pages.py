@@ -9,12 +9,10 @@ from webmagic.untwist import BetterResource
 class Index(BetterResource):
 	isLeaf = True
 
-	def __init__(self, csrfStopper, cookieInstaller):
+	def __init__(self):
 		import jinja2
 
 		BetterResource.__init__(self)
-		self._csrfStopper = csrfStopper
-		self._cookieInstaller = cookieInstaller
 
 		self._jinja2Env = jinja2.Environment()
 		self._basePath = FilePath(__file__).parent() # this is minerva/flashtest/
@@ -23,13 +21,10 @@ class Index(BetterResource):
 
 
 	def render_GET(self, request):
-		cookie = self._cookieInstaller.getSet(request)
-		token = self._csrfStopper.makeToken(cookie)
 
 		# This jinja2 stuff is for the html page, not the JavaScript
 		template = self._basePath.child(self._fileName).getContent().decode('utf-8')
 		dictionary = dict(
-			token=token,
 			htmldumps=htmldumps)
 		rendered = self._jinja2Env.from_string(template).render(dictionary)
 		return rendered.encode('utf-8')
@@ -38,8 +33,8 @@ class Index(BetterResource):
 
 class FlashTestPage(BetterResource):
 
-	def __init__(self, csrfStopper, cookieInstaller):
+	def __init__(self):
 		BetterResource.__init__(self)
 
-		self.putChild('', Index(csrfStopper, cookieInstaller))
+		self.putChild('', Index())
 		self.putChild('app.swf', static.File(FilePath(__file__).sibling('app.swf').path))
