@@ -1,5 +1,8 @@
 #!/bin/sh -e
 
+# Windows users: this script can be run with MSYS bash.
+# Make sure you also have dos2unix.exe.
+
 ./build_autocachebreakers.py
 ./build_depsjs.sh
 
@@ -35,3 +38,12 @@ $COMMON \
 --namespace="minerva_client" \
 --output_file=minerva/compiled_client/minerva-client.js \
 2>&1 | tee minerva/compiled_client/minerva-client.js.log
+
+UNAME_O=`uname -o`
+if [[ $UNAME_O == 'Msys' || $UNAME_O == 'Cygwin' ]]; then
+	echo "Fixing newlines..."
+	dos2unix minerva/compiled_client/xdrframe.js
+	dos2unix minerva/compiled_client/xdrframe.js.log
+	dos2unix minerva/compiled_client/minerva-client.js
+	dos2unix minerva/compiled_client/minerva-client.js.log
+fi
