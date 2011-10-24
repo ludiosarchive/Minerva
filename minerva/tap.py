@@ -127,9 +127,14 @@ def makeService(config):
 		httpServer = strports.service(httpStrport, httpSite)
 		httpServer.setServiceParent(multi)
 
-	for minervaStrport in config['minerva']:
-		minervaServer = strports.service(minervaStrport, socketFace)
-		minervaServer.setServiceParent(multi)
+	if not config['minerva']:
+		mainSocketPort = None
+	else:
+		_, _args, _ = strports.parse(config['minerva'][0], socketFace)
+		mainSocketPort = _args[0]
+		for minervaStrport in config['minerva']:
+			minervaServer = strports.service(minervaStrport, socketFace)
+			minervaServer.setServiceParent(multi)
 
 	if doReloading:
 		print 'Enabling reloader.'

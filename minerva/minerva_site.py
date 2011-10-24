@@ -257,41 +257,6 @@ class DemoFactory(object):
 
 
 
-class GetTokenPage(BetterResource):
-	"""
-	Used by TestClient.js, because TestRunnerPage itself does not set
-	uaId cookie, and it does not have a CSRF_TOKEN.
-	"""
-	isLeaf = True
-
-	def __init__(self, csrfStopper, cookieInstaller):
-		BetterResource.__init__(self)
-		self._csrfStopper = csrfStopper
-		self._cookieInstaller = cookieInstaller
-
-
-	def render_GET(self, request):
-		cookie = self._cookieInstaller.getSet(request)
-		token = self._csrfStopper.makeToken(cookie)
-
-		return """\
-<!doctype html>
-<html>
-<head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<title>GetTokenPage</title>
-</head>
-<body>
-<script>
-	window.CSRF_TOKEN = %s;
-	window.parent.__GetTokenPage_gotToken(window.CSRF_TOKEN);
-</script>
-</body>
-</html>
-""" % (simplejson.dumps(token),)
-
-
-
 class ResourcesForTest(BetterResource):
 	def __init__(self, reactor, csrfStopper, cookieInstaller):
 		BetterResource.__init__(self)
@@ -302,7 +267,6 @@ class ResourcesForTest(BetterResource):
 		self.putChild('SimpleResponse', SimpleResponse())
 		self.putChild('UnicodeRainbow', UnicodeRainbow())
 		self.putChild('NoOriginHeader', NoOriginHeader())
-		self.putChild('GetTokenPage', GetTokenPage(csrfStopper, cookieInstaller))
 
 
 

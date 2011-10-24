@@ -481,28 +481,15 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 	},
 
 	function setUp(self) {
-		var iframeD = new goog.async.Deferred();
-		goog.global['window'].__GetTokenPage_gotToken = function(token) {
-			self.streamPolicy_ = new cw.net.TestClient.DumbStreamPolicy(
-				self.getHttpStreamingMode_(), token);
-			// Note: In Firefox 4, this will sometimes raise an uncaught
-			// "CustomError: Already called" because it runs the JavaScript
-			// in the iframe multiple times.
-			iframeD.callback(null);
-		};
-
-		// the iframe calls __GetTokenPage_gotToken
-		var _iframe = goog.dom.createDom('iframe',
-			{"src": "/@testres_Minerva/GetTokenPage/", "width": "16", "height": "16"});
-		goog.dom.appendChild(document.body, _iframe);
+		self.streamPolicy_ = new cw.net.TestClient.DumbStreamPolicy(
+			self.getHttpStreamingMode_());
 
 		var endpointD = self.getEndpoint_();
 		endpointD.addCallback(function(endpoint) {
 			self.endpoint_ = endpoint;
 		});
 
-		return new goog.async.DeferredList(
-			[iframeD, endpointD], false, true/* opt_fireOnOneErrback */);
+		return endpointD;
 	},
 
 	function runAssertions_(self, stream, proto) {
