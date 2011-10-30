@@ -9,11 +9,13 @@ goog.require('goog.array');
 goog.require('goog.asserts');
 goog.require('goog.dom');
 goog.require('goog.string');
+goog.require('goog.json');
 goog.require('goog.userAgent');
 goog.require('goog.Uri');
 goog.require('goog.async.Deferred');
 goog.require('goog.async.DeferredList');
 goog.require('goog.testing.recordFunction');
+goog.require('goog.net.XhrLite');
 goog.require('cw.repr');
 goog.require('cw.clock');
 goog.require('cw.eventual');
@@ -678,18 +680,31 @@ cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealFlashSocket
 	},
 
 	function getEndpoint_(self) {
-		var callQueue = new cw.eventual.CallQueue(goog.global['window']);
-		var url = new goog.Uri(document.location);
-		var host = url.getDomain();
-		var port = 843;
+		// Grab the main socket port we need to use from the server
+		var d = new goog.async.Deferred();
+		goog.net.XhrLite.send('/@testres_Minerva/GetEndpointInfo/',
+			goog.bind(d.callback, d), "GET", "", {}, 8000);
+		d.addCallback(function(xhrEv) {
+			var endpointInfoJson = xhrEv.target.getResponseText();
+			var port = goog.json.parse(endpointInfoJson)['mainSocketPort'];
+			if(!goog.isNumber(port)) {
+				throw new cw.UnitTest.SkipTest("Port was " + cw.repr.repr(port) +
+					" which is not a number.  To run this test, start " +
+					"minerva_site with at least one socket listener.");
+			}
 
-		var d = self.loadFlashApplet_();
-		d.addCallback(function(bridge) {
-			var tracker = new cw.net.FlashSocketTracker(callQueue, bridge);
-			var endpoint = new cw.net.SocketEndpoint(host, port, tracker);
-			return endpoint;
+			var callQueue = new cw.eventual.CallQueue(goog.global['window']);
+			var url = new goog.Uri(document.location);
+			var host = url.getDomain();
+
+			var d2 = self.loadFlashApplet_();
+			d2.addCallback(function(bridge) {
+				var tracker = new cw.net.FlashSocketTracker(callQueue, bridge);
+				var endpoint = new cw.net.SocketEndpoint(host, port, tracker);
+				return endpoint;
+			});
+			return d2;
 		});
-
 		return d;
 	}
 );

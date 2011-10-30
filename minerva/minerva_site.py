@@ -268,7 +268,7 @@ class GetEndpointInfo(BetterResource):
 
 
 	def render_GET(self, request):
-		return simplejson.dumps({'main-socket-port': self._mainSocketPort})
+		return simplejson.dumps({'mainSocketPort': self._mainSocketPort})
 
 
 
