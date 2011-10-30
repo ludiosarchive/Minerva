@@ -215,7 +215,8 @@ cw.net.TestClient.decodeFramesFromHttpClient_ = function(payload) {
 
 
 /**
- * Use this function to do {@code stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_; }
+ * Use this function to do {@code stream.instantiateTransport_ =
+ * 	cw.net.TestClient.instantiateMockTransport_; }
  * @private
  * @return {!cw.net.TestClient.MockClientTransport} The newly-instantiated transport.
  */
@@ -348,7 +349,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 		stream.start();
 
 		var thisUrl = goog.global.location;
-		var expectedResolution = goog.Uri.resolve(thisUrl, '/TestClient-not-a-real-endpoint/').toString();
+		var expectedResolution = goog.Uri.resolve(
+			thisUrl, '/TestClient-not-a-real-endpoint/').toString();
 
 		self.assertTrue(stream.endpoint_ instanceof cw.net.ExpandedHttpEndpoint_);
 		self.assertEqual(stream.endpoint_.primaryUrl, stream.endpoint_.secondaryUrl);
@@ -433,7 +435,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 			"flush_: Can't flush more than once to this transport.");
 	}
 
-	// TODO: test if ClientTransport(becomePrimary=false), HelloFrame does not have an 'eeds' argument
+	// TODO: test if ClientTransport(becomePrimary=false), HelloFrame does
+	// not have an 'eeds' argument
 
 	// TODO: test if we receive a frame, give it to ClientStream, which gives
 	// it to the on* callable, which synchronously calls a function that results
@@ -604,7 +607,8 @@ cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealHttpTests')
 	function getEndpoint_(self) {
 		var pageUrl = new goog.Uri(window.location.href);
 		var endpointUrl = pageUrl.resolve(new goog.Uri('/httpface/')).toString();
-		var httpFaceEndpoint = new cw.net.ExpandedHttpEndpoint_(endpointUrl, goog.global, endpointUrl, goog.global);
+		var httpFaceEndpoint = new cw.net.ExpandedHttpEndpoint_(
+			endpointUrl, goog.global, endpointUrl, goog.global);
 		return goog.async.Deferred.succeed(httpFaceEndpoint);
 	}
 );
