@@ -11,6 +11,9 @@
 	</style>
 </head>
 <body>
+<script>
+__demo_mainSocketPort = {{ htmldumps(mainSocketPort) }};
+</script>
 
 <div id="doc">
 This page tests Minerva server's HTTP and socket interfaces, without using the Minerva client.  This test page was created before the client.
@@ -236,7 +239,7 @@ function connectWithFlash(bridge) {
 	proto.socket_ = fs;
 	var websiteHostPort = (''+document.location.host).split(':');
 	var host = websiteHostPort[0];
-	var port = 843;
+	var port = __demo_mainSocketPort;
 
 	fs.connect(host, port);
 	logger.warning('Connecting to ' + host + ':' + String(port));

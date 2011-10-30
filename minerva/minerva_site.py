@@ -321,8 +321,8 @@ class Root(BetterResource):
 			minervaPath.child('js_minerva_tests.html').path))
 
 		# Demos that use httpFace and/or socketFace
-		self.putChild('flashtest', FlashTestPage())
-		self.putChild('chatapp', ChatAppPage(fileCache, domain))
+		self.putChild('flashtest', FlashTestPage(mainSocketPort))
+		self.putChild('chatapp', ChatAppPage(fileCache, domain, mainSocketPort))
 
 		# Used by chatapp
 		self.putChild('wait_resource', WaitResource(clock=reactor))

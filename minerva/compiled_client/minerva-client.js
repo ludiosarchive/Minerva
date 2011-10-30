@@ -4268,10 +4268,10 @@ function hg(a) {
 function ig(a, b, c) {
   var d = new je(document.location);
   if(c) {
-    var e = d.M, d = hg(a);
+    var e = d.M, f = s.__demo_mainSocketPort, d = hg(a);
     d.vb(function(b) {
       b = new Pd(a, b);
-      return new Ve(e, 843, b)
+      return new Ve(e, f, b)
     });
     return d
   }else {

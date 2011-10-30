@@ -28,7 +28,9 @@ if(__demo_shared_domain) {
 	document.domain = __demo_shared_domain;
 }
 
-var standaloneClient = {{ htmldumps(standaloneClient) }};
+standaloneClient = {{ htmldumps(standaloneClient) }};
+
+__demo_mainSocketPort = {{ htmldumps(mainSocketPort) }};
 </script>
 
 <div id="info">

@@ -89,7 +89,7 @@ cw.net.demo.getEndpoint = function(callQueue, useSubdomains, useFlash, httpFaceP
 		return goog.async.Deferred.succeed(endpoint);
 	} else {
 		var host = url.getDomain();
-		var port = 843;
+		var port = goog.global['__demo_mainSocketPort'];
 		var d = cw.net.demo.loadFlashConnector(callQueue);
 		d.addCallback(function(bridge) {
 			var tracker = new cw.net.FlashSocketTracker(callQueue, bridge);
