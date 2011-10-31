@@ -18,6 +18,8 @@ code.shell {
 	display: block;
 	background-color: #e8e7e7;
 	padding: 0.5em;
+	white-space: nowrap;
+	overflow-x: auto;
 }
 .substep {
 	margin-left: 2em;
@@ -295,9 +297,6 @@ trial minerva webmagic test_securetypes test_strfrag
 <code class="shell windows">
 C:\Python27\python C:\Python27\Scripts\trial.py minerva webmagic test_securetypes test_strfrag
 </code>
-<p>
-(The above is all one line.)
-</p>
 </div>
 
 <p>
@@ -318,16 +317,16 @@ To start <code>minerva_site</code>'s HTTP server, run:
 
 <code class="shell debuntu">
 cd /tmp<br>
-twistd -n minerva_site -t tcp:8111:interface=127.0.0.1 "--closure-library=$HOME/Projects/closure-library"
+twistd -n minerva_site -t tcp:8111:interface=127.0.0.1 -m tcp:8430:interface=127.0.0.1 "--closure-library=$HOME/Projects/closure-library"
 </code>
 
 <code class="shell windows">
 cd /d "%TEMP%"<br>
-C:\Python27\python C:\Python27\Scripts\twistd.py -n minerva_site -t tcp:8111:interface=127.0.0.1 "--closure-library=%USERPROFILE%\Projects\closure-library"
+C:\Python27\python C:\Python27\Scripts\twistd.py -n minerva_site -t tcp:8111:interface=127.0.0.1 -m tcp:8430:interface=127.0.0.1 "--closure-library=%USERPROFILE%\Projects\closure-library"
 </code>
 
 <p>
-You should now be able to reach the server at <a href="http://127.0.0.1:8111/">http://127.0.0.1:8111/</a>
+You should now be able to reach the server at <a href="http://127.0.0.1:8111/">http://127.0.0.1:8111/</a>.  Note that the above command also starts a non-HTTP socket listener on port 8430.  This is used by Minerva's optional Flash socket transport.  You may use any port numbers you want.  Run <code><span class="windows">C:\Python27\python C:\Python27\Scripts\twistd.py</span><span class="debuntu">twistd</span> -n minerva_site --help</code> for more <code>minerva_site</code> help.
 </p>
 
 <p>
