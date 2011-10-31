@@ -10,6 +10,7 @@ goog.require('goog.debug.DivConsole');
 goog.require('cw.net.ClientStream');
 goog.require('cw.repr');
 goog.require('cw.eventual');
+goog.require('cw.net.demo.getEndpoint'); // TODO: remove this
 goog.require('cw.net.demo.getEndpointByQueryArgs'); // TODO: remove this
 goog.require('goog.async.Deferred'); // TODO: remove this
 
@@ -62,6 +63,7 @@ goog.exportSymbol('Minerva.repr', cw.repr.repr);
 goog.exportSymbol('Minerva.theCallQueue', cw.eventual.theCallQueue);
 
 // TODO: remove this
+goog.exportSymbol('Minerva.getEndpoint', cw.net.demo.getEndpoint);
 goog.exportSymbol('Minerva.getEndpointByQueryArgs', cw.net.demo.getEndpointByQueryArgs);
 
 // TODO: remove this
