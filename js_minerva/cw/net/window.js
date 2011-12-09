@@ -128,12 +128,10 @@ cw.net.Queue.prototype.__reprPush__ = function(sb, stack) {
  * 	item in the queue. Caller *must not* modify the returned Array.
  */
 cw.net.Queue.prototype.getQueuedKeys = function() {
-	this.items_.cleanupKeysArray_();
-	// goog.structs.Map (probably) doesn't mind having its keys_ reordered.
-	// TODO: file a .sortKeys() feature request upstream.
+	var keys = this.items_.getKeys();
 	// Don't use native .sort() because it does [1, 10, 11, 2].
-	goog.array.sort(this.items_.keys_);
-	return this.items_.keys_;
+	goog.array.sort(keys);
+	return keys;
 };
 
 
@@ -155,11 +153,9 @@ cw.net.Queue.prototype.getItems = function(start) {
 	var seqAndItemArray = [];
 	for(var i=0; i < keys.length; i++) {
 		var seqNum = keys[i];
-		// Dig into map_ for faster key access; avoid two funcalls.
-		// This is safe because we know map_ has the key.
 		// Note: [0] is to get just the item, [1] contains the size
 		if(start == null || seqNum >= start) {
-			seqAndItemArray.push([seqNum, this.items_.map_[seqNum][0]]);
+			seqAndItemArray.push([seqNum, this.items_.get(seqNum)[0]]);
 		}
 	}
 	return seqAndItemArray;
@@ -193,8 +189,7 @@ cw.net.Queue.prototype.handleSACK = function(sack) {
 		if(k > ackNum) {
 			break;
 		}
-		// Safe to dig into map_ because we know it exists
-		var size = this.items_.map_[k][1];
+		var size = this.items_.get(k)[1];
 		this.items_.remove(k);
 		this.size_ -= size;
 	}
@@ -205,8 +200,7 @@ cw.net.Queue.prototype.handleSACK = function(sack) {
 			badSACK = true;
 		}
 		if(this.items_.containsKey(sackNum)) {
-			// Safe to dig into map_ because we know it exists
-			var size = this.items_.map_[sackNum][1];
+			var size = this.items_.get(sackNum)[1];
 			this.items_.remove(sackNum);
 			this.size_ -= size;
 		}
