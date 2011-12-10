@@ -57,7 +57,7 @@ setup(
 		'Topic :: System :: Networking',
 		'License :: OSI Approved :: Apache Software License',
 	],
-	packages=['minerva', 'minerva.flashtest', 'minerva.chatapp',
+	packages=['minerva', 'minerva.dumbtest', 'minerva.chatapp',
 		'twisted.plugins', 'js_minerva'],
 	package_data={
 		'minerva': [

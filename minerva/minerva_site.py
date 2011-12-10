@@ -6,7 +6,7 @@ from twisted.python.filepath import FilePath
 
 from minerva.newlink import StreamTracker, HttpFace, SocketFace
 
-from minerva.flashtest.pages import FlashTestPage
+from minerva.dumbtest.pages import DumbTestPage
 from minerva.chatapp.pages import ChatAppPage
 
 from webmagic.special import WaitResource
@@ -321,7 +321,7 @@ class Root(BetterResource):
 			minervaPath.child('js_minerva_tests.html').path))
 
 		# Demos that use httpFace and/or socketFace
-		self.putChild('flashtest', FlashTestPage(mainSocketPort))
+		self.putChild('dumbtest', DumbTestPage(mainSocketPort))
 		self.putChild('chatapp', ChatAppPage(fileCache, domain, mainSocketPort))
 
 		# Used by chatapp

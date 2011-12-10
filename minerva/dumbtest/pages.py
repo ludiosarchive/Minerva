@@ -16,9 +16,9 @@ class Index(BetterResource):
 
 		self._mainSocketPort = mainSocketPort
 		self._jinja2Env = jinja2.Environment()
-		self._basePath = FilePath(__file__).parent() # this is minerva/flashtest/
+		self._basePath = FilePath(__file__).parent() # this is minerva/dumbtest/
 		
-		self._fileName = 'flashtest.html'
+		self._fileName = 'dumbtest.html'
 
 
 	def render_GET(self, request):
@@ -31,7 +31,7 @@ class Index(BetterResource):
 
 
 
-class FlashTestPage(BetterResource):
+class DumbTestPage(BetterResource):
 
 	def __init__(self, mainSocketPort):
 		BetterResource.__init__(self)
