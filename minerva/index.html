@@ -24,28 +24,47 @@ li {
 </h1>
 <ul>
 <li><a href="js_minerva_tests.html">js_minerva unit tests</a></li>
-<li><a href="docs/">docs/</a></li>
+<li>Documentation
+	<ul>
+	<!-- TODO: .rst -> .html and link .html here -->
+	<li><a href="docs/website/">Minerva website</a>, as you would find at <a href="http://ludios.org/minerva/">ludios.org/minerva</a>
+		<ul>
+		<li><a href="docs/website/tutorial/">Tutorial index</a>
+			<ul>
+			<li><a href="docs/website/tutorial/withclosure.html">Tutorial: Minerva with Closure Library</a></li>
+			</ul>
+		</li>
+		<li><a href="docs/website/data_flow.png">A sketch of how Minerva works</a></li>
+		<li><a href="docs/website/protocol.htm">The frame types used by the Minerva protocol</a></li>
+		</ul>
+	</li>
+	<li><a href="docs/Glossary.rst">Glossary</a></li>
+	<li><a href="docs/Rationales.rst">Rationales / Minerva design minutiae</a></li>
+	<li><a href="docs/Debugging.rst">Manually debugging Minerva's ports</a></li>
+	<li><a href="docs/Producers.rst">Minerva's (incomplete) server-side producers/consumers</a></li>
+	</ul>
+</li>
 <li>chatapp test page using Closure Library
-<ul>
+	<ul>
 	<li><a href="chatapp/?mode=http">using HTTP long-polling</a></li>
 	<li><a href="chatapp/?mode=http&useSub=0">using HTTP long-polling, without subdomains</a></li>
 	<li><a href="chatapp/?mode=http&httpStreaming=1">using HTTP streaming</a></li>
 	<li><a href="chatapp/?mode=http&httpStreaming=1&useSub=0">using HTTP streaming, without subdomains</a></li>
 	<li><a href="chatapp/?mode=flash">using Flash socket</a></li>
-</ul>
-<li>chatapp test page using standalone <code>minerva-client.js</code>
-<ul>
+	</ul>
+<li>chatapp test page using standalone <code><a href="compiled_client/minerva-client.js">minerva-client.js</a></code>
+	<ul>
 	<li><a href="chatapp/?mode=http&standaloneClient=1">using HTTP long-polling</a></li>
 	<li><a href="chatapp/?mode=http&useSub=0&standaloneClient=1">using HTTP long-polling, without subdomains</a></li>
 	<li><a href="chatapp/?mode=http&httpStreaming=1&standaloneClient=1">using HTTP streaming</a></li>
 	<li><a href="chatapp/?mode=http&httpStreaming=1&useSub=0&standaloneClient=1">using HTTP streaming, without subdomains</a></li>
 	<li><a href="chatapp/?mode=flash&standaloneClient=1">using Flash socket</a></li>
-</ul>
+	</ul>
 </li>
 <li>Not very useful pages
 	<ul>
-	<li><a href="flashtest/">flashtest/</a> - tests Flash socket endpoint without using Minerva client code</li>
-	<li><a href="flashtest/?mode=http">flashtest/?mode=http</a></li>
+	<li><a href="flashtest/?mode=flash">flashtest/?mode=flash</a> - tests Flash socket endpoint without using most Minerva client code</li>
+	<li><a href="flashtest/?mode=http">flashtest/?mode=http</a> - tests HTTP endpoint without using most Minerva client code</li>
 	<li><a href="@testres_Coreweb/">@testres_Coreweb/</a> - used by js_minerva_tests</li>
 	<li><a href="@testres_Minerva/">@testres_Minerva/</a>  - used by js_minerva_tests
 		<ul>
