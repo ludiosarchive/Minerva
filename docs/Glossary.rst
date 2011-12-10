@@ -1,5 +1,9 @@
-Terminology
-===========
+========
+Glossary
+========
+
+Terms
+=====
 
 application
 	the application that is using Minerva. An application has both a server-side
