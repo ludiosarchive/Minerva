@@ -1,5 +1,5 @@
 Manually debugging Minerva's ports
-=========================
+==================================
 
 You can connect to Minerva's non-SSL listener with netcat; something like
 ``nc localhost 8112`` should work. Keep in mind that Ctrl-C (or even ``kill -9

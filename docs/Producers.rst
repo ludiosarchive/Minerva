@@ -1,5 +1,5 @@
 Producers/consumers
-================
+===================
 
 Like many things in Twisted, Minerva supports producers/consumers for efficient high-volume
 streaming. [#]_. In Twisted, pressure information from consumers controls the creation of
@@ -20,7 +20,7 @@ happens. However, it does "just work".
 
 
 Producers/consumers technical details
----------------------
+-------------------------------------
 
 Skip this section unless you are trying to understand the producer/consumer code in
 ``minerva.newlink``.
@@ -76,7 +76,7 @@ During normal operation for a registered *push* producer, these conditions resul
 
 
 Special client-side producer (TO BE IMPLEMENTED)
-----------------------------------
+------------------------------------------------
 Minerva client supports registering a special pull producer that will be pulled right
 before Minerva client makes any HTTP request. This is useful if Minerva client is using
 HTTP as primary transport, and client application wants to occasionally upload data

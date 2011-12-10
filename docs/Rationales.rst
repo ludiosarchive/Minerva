@@ -1,12 +1,12 @@
-=====
+=======================
 Minerva design minutiae
-=====
+=======================
 
 .. contents:: Table of Contents
 
 
 Why does the client upload the last SACK they have seen?
-=====
+========================================================
 The server uses this information to decide whether to write out an
 updated SackFrame to the transport. It cannot write this at the
 start of every transport, because long-polling transports must
@@ -19,7 +19,7 @@ but that would reduce symmetry in the protocol.
 
 
 How does the SACK feature work?
-=====
+===============================
 Minerva SACK (vs. just plain ACK) allows us to keep strings in our receive window
 that we cannot deliver yet. In our SackFrame, we send sackList
 to the peer so that they know which strings were queued in the window.
@@ -38,7 +38,7 @@ is torn down (the Stream is kept alive).
 
 
 Why do we give up on a transport if the peer sent us frames that have caused our receive window to overflow?
-=====
+============================================================================================================
 The alternative to giving up on the transport would be to complicate
 the wire protocol with "StringDropped" frames and/or make the transport
 more complicated: it may now have to send a string multiple times
@@ -50,7 +50,7 @@ immediately deliver.
 
 
 Open question: should server write out SACK on primary transport, or on the transport the client used to upload strings?
-=====
+========================================================================================================================
 Probably on the transport client used for upload, because:
 
 -	server has to respond on the "upload transport" anyway, it might as well write out 10 bytes for the SACK.
@@ -59,7 +59,7 @@ Probably on the transport client used for upload, because:
 
 
 Why not send structured objects over the wire at the transport level?
-=====
+=====================================================================
 Minerva originally worked like this, but there were too many problems
 with using JSON at the transport level. We do not want to force our
 JSON security rules (depth limits, ACA prevention) on the application.

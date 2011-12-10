@@ -1,5 +1,5 @@
 Terminology
-=========
+===========
 
 application
 	the application that is using Minerva. An application has both a server-side
@@ -40,7 +40,7 @@ primary transport
 
 
 String restrictions
-=============
+===================
 On the server, you may send only Python ``str`` objects with bytes in the
 inclusive range:
 
