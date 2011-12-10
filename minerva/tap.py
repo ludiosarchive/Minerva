@@ -11,7 +11,7 @@ from webmagic.filecache import FileCache
 from minerva import minerva_site, website
 
 
-_defaultClosureLibrary = FilePath(__file__).parent().parent().parent().child("closure-library").path
+_defaultClosureLibrary = FilePath(__file__).parent().parent().sibling("closure-library").path
 assert isinstance(_defaultClosureLibrary, str), type(_defaultClosureLibrary)
 
 class Options(usage.Options):
