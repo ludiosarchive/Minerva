@@ -21,7 +21,7 @@ class Options(usage.Options):
 	synopsis = "[minerva_site options]"
 
 	optParameters = [
-		website.optParameterHttp("http", "t"),
+		website.optParameterHttpServer("http", "t"),
 		website.optParameterMinervaSocket("minerva", "m"),
 		website.optParameterDomain("domain", "d"),
 

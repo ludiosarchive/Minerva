@@ -295,7 +295,7 @@ class MinervaBootstrap(BetterResource):
 		return rendered.encode('utf-8')
 
 
-def optParameterHttp(longName, shortName):
+def optParameterHttpServer(longName, shortName):
 	"""
 	Returns a list that you can use in your L{usage.Options}'s
 	C{optParameters} list.
