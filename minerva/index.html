@@ -25,14 +25,29 @@ li {
 <ul>
 <li><a href="js_minerva_tests.html">js_minerva unit tests</a></li>
 <li><a href="docs/">docs/</a></li>
-<li><a href="chatapp/">chatapp/</a></li>
-<li><a href="chatapp/?mode=http">chatapp/?mode=http</a></li>
+<li>chatapp test page using Closure Library
+<ul>
+	<li><a href="chatapp/?mode=http">using HTTP long-polling</a></li>
+	<li><a href="chatapp/?mode=http&useSub=0">using HTTP long-polling, without subdomains</a></li>
+	<li><a href="chatapp/?mode=http&httpStreaming=1">using HTTP streaming</a></li>
+	<li><a href="chatapp/?mode=http&httpStreaming=1&useSub=0">using HTTP streaming, without subdomains</a></li>
+	<li><a href="chatapp/?mode=flash">using Flash socket</a></li>
+</ul>
+<li>chatapp test page using standalone <code>minerva-client.js</code>
+<ul>
+	<li><a href="chatapp/?mode=http&standaloneClient=1">using HTTP long-polling</a></li>
+	<li><a href="chatapp/?mode=http&useSub=0&standaloneClient=1">using HTTP long-polling, without subdomains</a></li>
+	<li><a href="chatapp/?mode=http&httpStreaming=1&standaloneClient=1">using HTTP streaming</a></li>
+	<li><a href="chatapp/?mode=http&httpStreaming=1&useSub=0&standaloneClient=1">using HTTP streaming, without subdomains</a></li>
+	<li><a href="chatapp/?mode=flash&standaloneClient=1">using Flash socket</a></li>
+</ul>
+</li>
 <li>Not very useful pages
 	<ul>
 	<li><a href="flashtest/">flashtest/</a> - tests Flash socket endpoint without using Minerva client code</li>
 	<li><a href="flashtest/?mode=http">flashtest/?mode=http</a></li>
-	<li><a href="@testres_Coreweb/">@testres_Coreweb/</a></li>
-	<li><a href="@testres_Minerva/">@testres_Minerva/</a>
+	<li><a href="@testres_Coreweb/">@testres_Coreweb/</a> - used by js_minerva_tests</li>
+	<li><a href="@testres_Minerva/">@testres_Minerva/</a>  - used by js_minerva_tests
 		<ul>
 		<li><a href="@testres_Minerva/DisplayConnections/">DisplayConnections/</a>
 		<li><a href="@testres_Minerva/SimpleResponse/">SimpleResponse/</a>
@@ -45,5 +60,10 @@ li {
 	</ul>
 </li>
 </ul>
+
+<p>
+If this server is not running on your machine, all of the source code is available at <a href="https://github.com/ludios/Minerva">ludios/Minerva</a>.
+</p>
+
 </body>
 </html>
