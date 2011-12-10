@@ -1,19 +1,22 @@
 """
-Minerva-related things that make it easy to use Minerva on your website,
-but are not absolutely necessary.
+Minerva-related things that make it easy to use Minerva on your website
+or in your twistd plugin, but are not absolutely necessary.
 """
 
 import sys
 import base64
 import hashlib
 import hmac
+import textwrap
 from random import randint
 from functools import partial
 
-import simplejson
-from simplejson import decoder as dec
+from twisted.python import log
 
 from zope.interface import implements, Interface
+
+import simplejson
+from simplejson import decoder as dec
 
 from webmagic.untwist import BetterResource
 from webmagic.pathmanip import getCacheBrokenHref
@@ -291,6 +294,60 @@ class MinervaBootstrap(BetterResource):
 		rendered = template.render(dictionary)
 		return rendered.encode('utf-8')
 
+
+
+def maybeWarnAboutDomain(reactor, domain):
+	"""
+	If C{domain} is falsy, log a warning.  This is useful in C{makeService}
+	functions in tap files.
+	"""
+	if not domain:
+		reactor.callWhenRunning(log.msg,
+			"Warning: \n" + "\n".join(textwrap.wrap(
+				"--domain not specified.  Browser clients will "
+				"connect only to the default hostname; they will not "
+				"use subdomains to bypass per-hostname connection "
+				"limits.  Minerva over HTTP might work simultaneously "
+				"in just one or two tabs.  Additional connections may "
+				"stall erratically.", 70)) + "\n")
+
+
+def maybeWarnAboutClosureLibrary(reactor, closureLibrary):
+	"""
+	If C{closureLibrary} does not contain closure-library.  This is useful in
+	C{makeService} functions in tap files.
+	"""
+	if not closureLibrary.isdir() or \
+	not closureLibrary.child('closure').child('goog').child('base.js').isfile():
+		reactor.callWhenRunning(log.msg,
+			"Warning: \n" + "\n".join(textwrap.wrap(
+				"Could not find Closure Library: %r is not a directory "
+				"or is missing closure/goog/base.js.  Many pages on "
+				"minerva_site will be broken.  Fix this by "
+				"downloading Closure Library and specifying a "
+				"path with --closure-library="
+				"..." % (closureLibrary,), 70)) + "\n")
+
+
+def enablePyquitter(reactor, interval=2.5):
+	"""
+	Hackish Pyquitter integration.  This is useful in C{makeService}
+	functions in tap files.
+
+	@return: (the ChangeDetector, the LoopingCall)
+	"""
+	print 'Enabling reloader.'
+	from twisted.internet import task
+	from pyquitter import detector
+
+	cd = detector.ChangeDetector(
+		lambda: reactor.callWhenRunning(reactor.stop),
+		logCallable=log.msg)
+
+	looping = task.LoopingCall(cd.poll)
+	looping.start(interval, now=True)
+
+	return cd, looping
 
 
 try: from refbinder.api import bindRecursive

@@ -1,7 +1,6 @@
 from __future__ import with_statement
 
 import os
-import textwrap
 
 from twisted.python import usage, log
 from twisted.python.filepath import FilePath
@@ -9,7 +8,7 @@ from twisted.application import service, strports
 
 from webmagic.filecache import FileCache
 
-from minerva import minerva_site
+from minerva import minerva_site, website
 
 
 _defaultClosureLibrary = FilePath(__file__).parent().parent().parent().child("closure-library").path
@@ -89,28 +88,10 @@ def makeService(config):
 	multi = service.MultiService()
 
 	domain = config['domain']
-
-	if not domain:
-		reactor.callWhenRunning(log.msg,
-			"Warning: \n" + "\n".join(textwrap.wrap(
-				"--domain not specified.  Browser clients will "
-				"connect only to the default hostname; they will not "
-				"use subdomains to bypass per-hostname connection "
-				"limits.  Minerva over HTTP might work simultaneously "
-				"in just one or two tabs.  Additional connections may "
-				"stall erratically.", 70)) + "\n")
+	website.maybeWarnAboutDomain(reactor, domain)
 
 	closureLibrary = FilePath(config['closure-library'])
-	if not closureLibrary.isdir() or \
-	not closureLibrary.child('closure').child('goog').child('base.js').isfile():
-		reactor.callWhenRunning(log.msg,
-			"Warning: \n" + "\n".join(textwrap.wrap(
-				"Could not find Closure Library: %r is not a directory "
-				"or is missing closure/goog/base.js.  Many pages on "
-				"minerva_site will be broken.  Fix this by "
-				"downloading Closure Library and specifying a "
-				"path with --closure-library="
-				"..." % (closureLibrary,), 70)) + "\n")
+	website.maybeWarnAboutClosureLibrary(reactor, closureLibrary)
 
 	socketPorts = []
 	for minervaStrport in config['minerva']:
@@ -132,14 +113,6 @@ def makeService(config):
 		minervaServer.setServiceParent(multi)
 
 	if doReloading:
-		print 'Enabling reloader.'
-		from pyquitter import detector
-
-		stopper = detector.ChangeDetector(
-			lambda: reactor.callWhenRunning(reactor.stop),
-			logCallable=log.msg)
-
-		looping = task.LoopingCall(stopper.poll)
-		looping.start(2.5, now=True)
+		website.enablePyquitter(reactor)
 
 	return multi
