@@ -1,0 +1,516 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.8.1: http://docutils.sourceforge.net/" />
+<title>Producers/consumers</title>
+<style type="text/css">
+
+body, li, p, td {
+	font-family: Calibri, Verdana, Arial, sans-serif;
+}
+
+pre, code, .literal {
+	font-family: Consolas, monospace;
+	font-size: 0.8em;
+	background-color: #eee;
+}
+
+html {
+	background-color: rgb(183, 176, 164);
+}
+
+html, body {
+
+}
+
+.document {
+	border-radius: 0.4em;
+	-moz-border-radius: 0.4em;
+	-webkit-border-radius: 0.4em;
+	padding: 2em;
+	background-color: #f7f7f7;
+	max-width: 42em;
+	margin: 0 auto 0 auto;
+}
+
+h1, h1 *, h2 *, h3 * {
+	font-family: Calibri, Arial, sans-serif;
+}
+
+h1 a, h2 a, h3 a, h4 a, h5 a {
+	color: black;
+}
+
+h1 {
+	font-size: 1.5em;
+}
+
+h2 {
+	font-size: 1.2em;
+}
+
+h3 {
+	font-size: 1em;
+}
+
+
+li {
+	margin: 0.25em 0 0.25em 0;
+}
+
+/* for debugging
+ul, ol {
+	border: 1px solid green !important;
+}
+*/
+
+
+/*
+:Author: David Goodger (goodger@python.org)
+:Id: $Id: html4css1.css 5951 2009-05-18 18:03:10Z milde $
+:Copyright: This stylesheet has been placed in the public domain.
+
+Default cascading style sheet for the HTML output of Docutils.
+
+See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+customize this style sheet.
+*/
+
+/* used to remove borders from tables and images */
+.borderless, table.borderless td, table.borderless th {
+	border: 0
+}
+
+table.borderless td, table.borderless th {
+	/* Override padding for "table.docutils td" with "! important".
+	   The right padding separates the table cells. */
+	padding: 0 0.5em 0 0 ! important
+}
+
+.first {
+	/* Override more specific margin styles with "! important". */
+	margin-top: 0 ! important
+}
+
+.last, .with-subtitle {
+	margin-bottom: 0 ! important
+}
+
+.hidden {
+	display: none
+}
+
+a.toc-backref {
+	text-decoration: none;
+
+}
+
+blockquote.epigraph {
+	margin: 2em 5em ;
+}
+
+dl.docutils dd {
+	margin-bottom: 0.5em
+}
+
+
+dl.docutils dt {
+	font-weight: bold
+}
+
+
+div.abstract {
+	margin: 2em 5em
+}
+
+div.abstract p.topic-title {
+	font-weight: bold;
+
+}
+
+div.admonition, div.attention, div.caution, div.danger, div.error,
+div.hint, div.important, div.note, div.tip, div.warning {
+	margin: 2em;
+
+	padding: 1em
+}
+
+div.admonition p.admonition-title, div.hint p.admonition-title,
+div.important p.admonition-title, div.note p.admonition-title,
+div.tip p.admonition-title {
+	font-weight: bold;
+	font-family: sans-serif
+}
+
+div.attention p.admonition-title, div.caution p.admonition-title,
+div.danger p.admonition-title, div.error p.admonition-title,
+div.warning p.admonition-title {
+	color: red;
+	font-weight: bold;
+	font-family: sans-serif
+}
+
+
+div.compound .compound-first, div.compound .compound-middle {
+	margin-bottom: 0.5em
+}
+
+div.compound .compound-last, div.compound .compound-middle {
+	margin-top: 0.5em
+}
+
+
+div.dedication {
+	margin: 2em 5em;
+	text-align: center;
+	font-style: italic
+}
+
+div.dedication p.topic-title {
+	font-weight: bold;
+	font-style: normal
+}
+
+div.figure {
+	margin-left: 2em;
+	margin-right: 2em
+}
+
+div.footer, div.header {
+	clear: both;
+	font-size: smaller
+}
+
+div.line-block {
+	display: block;
+	margin-top: 1em;
+	margin-bottom: 1em
+}
+
+div.line-block div.line-block {
+	margin-top: 0;
+	margin-bottom: 0;
+	margin-left: 1.5em
+}
+
+div.sidebar {
+	margin: 0 0 0.5em 1em;
+	border: medium outset;
+	padding: 1em;
+	background-color: #ffffee;
+	width: 40%;
+	float: right;
+	clear: right
+}
+
+div.sidebar p.rubric {
+	font-family: sans-serif;
+	font-size: medium
+}
+
+div.system-messages {
+	margin: 5em
+}
+
+div.system-messages h1 {
+	color: red
+}
+
+div.system-message {
+	border: medium outset;
+	padding: 1em
+}
+
+div.system-message p.system-message-title {
+	color: red;
+	font-weight: bold
+}
+
+div.topic {
+	margin: 2em
+}
+
+h1.section-subtitle, h2.section-subtitle, h3.section-subtitle,
+h4.section-subtitle, h5.section-subtitle, h6.section-subtitle {
+	margin-top: 0.4em
+}
+
+h1.title {
+	text-align: center
+}
+
+h2.subtitle {
+	text-align: center
+}
+
+hr.docutils {
+	width: 75%
+}
+
+img.align-left, .figure.align-left{
+	clear: left;
+	float: left;
+	margin-right: 1em
+}
+
+img.align-right, .figure.align-right {
+	clear: right;
+	float: right;
+	margin-left: 1em
+}
+
+.align-left {
+	text-align: left
+}
+
+.align-center {
+	clear: both;
+	text-align: center
+}
+
+.align-right {
+	text-align: right
+}
+
+/* reset inner alignment in figures */
+div.align-right {
+	text-align: left
+}
+
+div.align-center * {
+	text-align: left
+}
+
+ol.simple, ul.simple {
+	margin-bottom: 1em
+}
+
+ol.arabic {
+	list-style: decimal
+}
+
+ol.loweralpha {
+	list-style: lower-alpha
+}
+
+ol.upperalpha {
+	list-style: upper-alpha
+}
+
+ol.lowerroman {
+	list-style: lower-roman
+}
+
+ol.upperroman {
+	list-style: upper-roman
+}
+
+p.attribution {
+	text-align: right;
+	margin-left: 50%
+}
+
+p.caption {
+	font-style: italic
+}
+
+p.credits {
+	font-style: italic;
+	font-size: smaller
+}
+
+p.label {
+	white-space: nowrap
+}
+
+p.rubric {
+	font-weight: bold;
+	font-size: larger;
+	color: maroon;
+	text-align: center
+}
+
+p.sidebar-title {
+	font-family: sans-serif;
+	font-weight: bold;
+	font-size: larger
+}
+
+p.sidebar-subtitle {
+	font-family: sans-serif;
+	font-weight: bold
+}
+
+p.topic-title {
+	font-weight: bold
+}
+
+pre.address {
+	margin-bottom: 0;
+	margin-top: 0;
+	font: inherit
+}
+
+pre.literal-block, pre.doctest-block {
+	margin-left: 2em;
+	margin-right: 2em
+}
+
+span.classifier {
+	font-family: sans-serif;
+	font-style: oblique
+}
+
+span.classifier-delimiter {
+	font-family: sans-serif;
+	font-weight: bold
+}
+
+span.interpreted {
+	font-family: sans-serif
+}
+
+span.option {
+	white-space: nowrap
+}
+
+span.pre {
+	white-space: pre
+}
+
+span.problematic {
+	color: red
+}
+
+span.section-subtitle {
+	/* font-size relative to parent (h1..h6 element) */
+	font-size: 80%
+}
+
+table.citation {
+	border-left: solid 1px gray;
+	margin-left: 1px
+}
+
+table.docinfo {
+	margin: 2em 4em
+}
+
+table.docutils {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em
+}
+
+table.footnote {
+	border-left: solid 1px black;
+	margin-left: 1px
+}
+
+table.docutils td, table.docutils th,
+table.docinfo td, table.docinfo th {
+	padding-left: 0.5em;
+	padding-right: 0.5em;
+	vertical-align: top
+}
+
+table.docutils th.field-name, table.docinfo th.docinfo-name {
+	font-weight: bold;
+	text-align: left;
+	white-space: nowrap;
+	padding-left: 0
+}
+
+h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
+h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
+	font-size: 100%
+}
+
+ul.auto-toc {
+	list-style-type: none
+}
+
+</style>
+</head>
+<body>
+<div class="document" id="producers-consumers">
+<h1 class="title">Producers/consumers</h1>
+
+<p>Like many things in Twisted, Minerva supports producers/consumers for efficient high-volume
+streaming. <a class="footnote-reference" href="#id2" id="id1">[1]</a>. In Twisted, pressure information from consumers controls the creation of
+bytes. In Minerva, it controls the creation of <em>frames</em>, not bytes.</p>
+<p>In Minerva, a producer can be attached to the Stream. Usually, a MinervaProtocol
+will perform this attachment.</p>
+<p>In general, TCP pressure from the TCP connection of the primary
+transport directly affects the producer attached to Stream. Also, if the producer is a push
+producer, the producer is paused while there are no Minerva transports attached to the Stream.</p>
+<p>The implementation is complicated because Minerva transports may frequently attach and
+detach from the Stream. <a class="reference internal" href="#producers-consumers-technical-details">Producers/consumers technical details</a> describes what really
+happens. However, it does &quot;just work&quot;.</p>
+<table class="docutils footnote" frame="void" id="id2" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td><a class="reference external" href="http://twistedmatrix.com/projects/core/documentation/howto/producers.html">http://twistedmatrix.com/projects/core/documentation/howto/producers.html</a></td></tr>
+</tbody>
+</table>
+<div class="section" id="producers-consumers-technical-details">
+<h1>Producers/consumers technical details</h1>
+<p>Skip this section unless you are trying to understand the producer/consumer code in
+<tt class="docutils literal">minerva.newlink</tt>.</p>
+<p>&quot;Type of producer&quot; is <em>pull</em>, or <em>push</em>. <a class="footnote-reference" href="#id4" id="id3">[2]</a></p>
+<p>This is the object chain, &quot;upstream&quot; objects are at the top. Objects on adjacent lines
+usually know about each other (have references).</p>
+<ul class="simple">
+<li>MinervaProtocol</li>
+<li>Stream</li>
+<li>ServerTransport</li>
+<li>(Twisted) - refers to either the TCP transport or to a <tt class="docutils literal">twisted.web.http.Request</tt>.
+Both have a <tt class="docutils literal">registerProducer</tt> method.</li>
+</ul>
+<p>Producer attachment goes downstream, pressure information goes upstream.</p>
+<p>When a client connects, (Twisted) causes *Transport creation,
+which causes Stream creation, which causes MinervaProtocol creation. This
+might not happen instantly, because *Transport must be authenticated first.
+At this time, there are no producers in the system.</p>
+<p>At any time, a pull or push producer can be registered with Stream. The producer can be
+unregistered at any time. Usually, a MinervaProtocol will do the registration and unregistration.</p>
+<p>Stream's goal is to register the same type of producer with every primary transport that
+attaches to it, even if the primary transport isn't attached yet (or not yet primary). Stream
+must also unregister producers from transports that are no longer primary transports.</p>
+<p>If type of producer is push, Stream must also call <tt class="docutils literal">pauseProducing</tt> on MinervaProtocol whenever
+there is no primary transport. It must also call <tt class="docutils literal">resumeProducing</tt> when this situation ends.</p>
+<p>*Transport's job is simple, it just registers itself as the correct type of producer with (Twisted).
+One edge case: it must remember if (Twisted) paused it, and if so, <tt class="docutils literal">pauseProducing</tt> newly-attached push producers.</p>
+<p>During normal operation for a registered <em>pull</em> producer, these conditions result in
+<tt class="docutils literal">resumeProducing</tt> calls on MinervaProtocol:</p>
+<ul class="simple">
+<li>(Twisted) - [resume] when it wants more data to send</li>
+</ul>
+<p>During normal operation for a registered <em>push</em> producer, these conditions result in
+<tt class="docutils literal">pauseProducing</tt> or <tt class="docutils literal">resumeProducing</tt> calls on MinervaProtocol:</p>
+<ul class="simple">
+<li>(Twisted) - [resume] when it wants more data to send</li>
+<li>(Twisted) - [pause] when it has enough data</li>
+<li>*Transport - [pause] if it was paused earlier by (Twisted)</li>
+<li>Stream - [pause] when there are no primary transports</li>
+<li>Stream - If paused, [resume] when a primary transport appears</li>
+</ul>
+<table class="docutils footnote" frame="void" id="id4" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id3">[2]</a></td><td><a class="reference external" href="http://twistedmatrix.com/projects/core/documentation/howto/producers.html">http://twistedmatrix.com/projects/core/documentation/howto/producers.html</a></td></tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="special-client-side-producer-to-be-implemented">
+<h1>Special client-side producer (TO BE IMPLEMENTED)</h1>
+<p>Minerva client supports registering a special pull producer that will be pulled right
+before Minerva client makes any HTTP request. This is useful if Minerva client is using
+HTTP as primary transport, and client application wants to occasionally upload data
+without incurring the cost of a C2S HTTP request. If Minerva is using HTTP as primary
+transport, the pull producer will be pulled around every NN seconds.</p>
+</div>
+</div>
+</body>
+</html>

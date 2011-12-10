@@ -1,4 +1,4 @@
-#!/bin/zsh -e
+#!/bin/sh -e
 
 # This depends on docutils
 for i in docs/*.rst; do rst2html.py --tab-width=6 --stylesheet-path=docs/style.css --report=3 $i > docs/`basename $i .rst`.html; done
