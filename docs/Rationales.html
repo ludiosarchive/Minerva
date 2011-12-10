@@ -8,17 +8,11 @@
 <style type="text/css">
 
 body, li, p, td {
-	font-family: Calibri, Verdana, Arial, sans-serif;
+	font-family: Arial, sans-serif;
 }
 
 pre, code, .literal {
 	font-family: Consolas, monospace;
-	font-size: 0.8em;
-	background-color: #eee;
-}
-
-html {
-	background-color: rgb(183, 176, 164);
 }
 
 html, body {
@@ -26,33 +20,35 @@ html, body {
 }
 
 .document {
-	border-radius: 0.4em;
-	-moz-border-radius: 0.4em;
-	-webkit-border-radius: 0.4em;
-	padding: 2em;
-	background-color: #f7f7f7;
-	max-width: 42em;
-	margin: 0 auto 0 auto;
 }
 
-h1, h1 *, h2 *, h3 * {
-	font-family: Calibri, Arial, sans-serif;
-}
-
-h1 a, h2 a, h3 a, h4 a, h5 a {
-	color: black;
+p, li {
+	line-height: 150%;
 }
 
 h1 {
-	font-size: 1.5em;
+	margin-top: 1.5em;
+	font-size: 1.25em;
+}
+
+h1.title {
+	margin-top: 0;
 }
 
 h2 {
-	font-size: 1.2em;
+	font-size: 1.15em;
 }
 
 h3 {
 	font-size: 1em;
+}
+
+h1, h1 *, h2 *, h3 * {
+	font-family: Arial, sans-serif;
+}
+
+h1 a, h2 a, h3 a, h4 a, h5 a {
+	color: black;
 }
 
 
@@ -235,14 +231,6 @@ div.topic {
 h1.section-subtitle, h2.section-subtitle, h3.section-subtitle,
 h4.section-subtitle, h5.section-subtitle, h6.section-subtitle {
 	margin-top: 0.4em
-}
-
-h1.title {
-	text-align: center
-}
-
-h2.subtitle {
-	text-align: center
 }
 
 hr.docutils {
