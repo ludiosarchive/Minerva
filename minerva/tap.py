@@ -21,27 +21,9 @@ class Options(usage.Options):
 	synopsis = "[minerva_site options]"
 
 	optParameters = [
-		["http", "t", None,
-			"strports description for the HTTP server. "
-			"Example: 'tcp:8111:interface=127.0.0.1'. "
-			"Repeat this option for multiple HTTP listeners."],
-
-		["minerva", "m", None,
-			"strports description for a Minerva socket listener. "
-			"Example: 'tcp:8430:interface=127.0.0.1'. "
-			"Repeat this option for multiple socket listeners. "
-			"The first listener specified is used by minerva_site for testing."],
-
-		# Automatically setting document.document based on a GET
-		# parameter or by looking at parent's URL is insecure (because
-		# some browsers will allow setting document.domain to 'com',
-		# for example.)  We require that the document.domain be
-		# manually specified.
-		["domain", "d", None, "The domain to set document.domain values to. "
-			"Do not include the port number.  Example: \"domain.com\".  domain.com "
-			"and *.domain.com are expected to reach this server.  Due "
-			"to browser limitations, if this option is not specified, Minerva over "
-			"HTTP might work simultaneously in just one or two tabs."],
+		website.optParameterHttp("http", "t"),
+		website.optParameterMinervaSocket("minerva", "m"),
+		website.optParameterDomain("domain", "d"),
 
 		["closure-library", "c", _defaultClosureLibrary,
 			'Path to closure-library'],
@@ -53,13 +35,8 @@ class Options(usage.Options):
 
 	longdesc = """\
 This starts the Minerva test server (minerva_site), from which you can
-run the client-side unit tests in a browser, and try a few demo applications
-that use Minerva.
-
-See http://twistedmatrix.com/documents/9.0.0/api/twisted.application.strports.html
-or the source code for twisted.application.strports to see examples of strports
-descriptions.
-"""
+run the client-side unit tests in a browser, and use some Minerva testing
+tools.""" + website.strportsInfo()
 
 	def __init__(self):
 		usage.Options.__init__(self)

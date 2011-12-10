@@ -295,6 +295,53 @@ class MinervaBootstrap(BetterResource):
 		return rendered.encode('utf-8')
 
 
+def optParameterHttp(longName, shortName):
+	"""
+	Returns a list that you can use in your L{usage.Options}'s
+	C{optParameters} list.
+	"""
+	return [longName, shortName, None,
+		"strports description for the HTTP server. "
+		"Example: 'tcp:80:interface=127.0.0.1'. "
+		"Repeat this option for multiple servers."]
+
+
+def optParameterMinervaSocket(longName, shortName):
+	"""
+	Returns a list that you can use in your L{usage.Options}'s
+	C{optParameters} list.
+	"""
+	return [longName, shortName, None,
+		"strports description for Minerva server's socket listener. "
+		"Example: 'ssl:444:privateKey=privateAndPublic.pem:interface=0'. "
+		"Repeat this option for multiple servers."]
+
+
+def optParameterDomain(longName, shortName):
+	"""
+	Returns a list that you can use in your L{usage.Options}'s
+	C{optParameters} list.
+	"""
+	# Automatically setting document.document based on a GET
+	# parameter or by looking at parent's URL is insecure (because
+	# some browsers will allow setting document.domain to 'com',
+	# for example.)  We require that the document.domain be
+	# manually specified.
+	return [longName, shortName, None, "The domain to set document.domain " +
+		"values to. Do not include the port number.  If this option is " +
+		"not specified, Minerva over HTTP might work simultaneously " +
+		"in just one or two tabs."]
+
+
+def strportsInfo():
+	"""
+	Returns a string that you can use in your L{usage.Options}'s
+	C{longdesc}.
+	"""
+	return """\n\nFor strports examples, see
+http://twistedmatrix.com/documents/9.0.0/api/twisted.application.strports.html
+or the source code for twisted.application.strports."""
+
 
 def maybeWarnAboutDomain(reactor, domain):
 	"""
