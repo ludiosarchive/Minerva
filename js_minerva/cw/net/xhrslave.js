@@ -201,8 +201,6 @@ cw.net.XHRSlave.prototype.readyStateChangeFired_ = function() {
  * Make an HTTP request.  This makes Minerva-specific assumptions, including
  * the headers to send, and how to parse the response.
  *
- * TODO: support streaming, not just long-polling.
- *
  * @param {string} url
  * @param {string} method "POST" or "GET".
  * @param {string} payload The POST payload, or ""
