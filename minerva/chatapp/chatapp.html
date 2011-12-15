@@ -303,17 +303,12 @@ chatapp.startStream = function() {
 	chatapp.lastProto = new chatapp.ChatProtocol();
 	chatapp.activityDetected();
 
-	// TODO: remove use of Deferred; getEndpointByQueryArgs should be
-	// synchronous after we make a "nice Flash endpoint"
-	var endpointD = getEndpointByQueryArgs(theCallQueue);
-	endpointD.addCallback(function(endpoint) {
-		var stream = new ClientStream(endpoint, streamPolicy);
-		stream.bindToProtocol(chatapp.lastProto);
-		chatapp.lastProto.setStream(stream);
-		chatapp.lastProto.sendInitialStrings();
-		stream.start();
-	});
-	// endpointD.addErrback // TODO
+	var endpoint = getEndpointByQueryArgs(theCallQueue);
+	var stream = new ClientStream(endpoint, streamPolicy);
+	stream.bindToProtocol(chatapp.lastProto);
+	chatapp.lastProto.setStream(stream);
+	chatapp.lastProto.sendInitialStrings();
+	stream.start();
 };
 
 

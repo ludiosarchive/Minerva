@@ -12,12 +12,9 @@ goog.require('cw.repr');
 goog.require('cw.eventual');
 goog.require('cw.net.demo.getEndpoint'); // TODO: remove this
 goog.require('cw.net.demo.getEndpointByQueryArgs'); // TODO: remove this
-goog.require('goog.async.Deferred'); // TODO: remove this
 
 goog.exportSymbol('Minerva.HttpEndpoint', cw.net.HttpEndpoint);
 goog.exportSymbol('Minerva.SocketEndpoint', cw.net.SocketEndpoint);
-// Note: Minerva.SocketEndpoint not usable yet because FlashSocketTracker
-// needs non-CL support.
 
 goog.exportSymbol('Minerva.ClientStream', cw.net.ClientStream);
 goog.exportProperty(cw.net.ClientStream.prototype, 'getUserContext', cw.net.ClientStream.prototype.getUserContext);
@@ -65,8 +62,3 @@ goog.exportSymbol('Minerva.theCallQueue', cw.eventual.theCallQueue);
 // TODO: remove this
 goog.exportSymbol('Minerva.getEndpoint', cw.net.demo.getEndpoint);
 goog.exportSymbol('Minerva.getEndpointByQueryArgs', cw.net.demo.getEndpointByQueryArgs);
-
-// TODO: remove this
-goog.exportProperty(goog.async.Deferred.prototype, 'addCallback', goog.async.Deferred.prototype.addCallback);
-goog.exportProperty(goog.async.Deferred.prototype, 'addErrback', goog.async.Deferred.prototype.addErrback);
-goog.exportProperty(goog.async.Deferred.prototype, 'addBoth', goog.async.Deferred.prototype.addBoth);

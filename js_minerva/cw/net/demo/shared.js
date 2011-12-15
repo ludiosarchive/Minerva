@@ -6,7 +6,6 @@
 goog.provide('cw.net.demo.getEndpoint');
 goog.provide('cw.net.demo.getEndpointByQueryArgs');
 
-goog.require('goog.async.Deferred');
 goog.require('goog.Uri');
 goog.require('goog.dom');
 goog.require('cw.eventual');
@@ -42,7 +41,7 @@ cw.net.demo.DemoStreamPolicy.prototype.getHttpStreamingMode = function() {
  * @param {boolean} useSubdomains
  * @param {boolean} useFlash
  * @param {string} httpFacePath
- * @return {!goog.async.Deferred} Deferred that fires with a {!cw.net.Endpoint}
+ * @return {!cw.net.Endpoint}
  */
 cw.net.demo.getEndpoint = function(callQueue, useSubdomains, useFlash, httpFacePath) {
 	var url = new goog.Uri(document.location);
@@ -57,21 +56,19 @@ cw.net.demo.getEndpoint = function(callQueue, useSubdomains, useFlash, httpFaceP
 		}
 		endpointUrl.setPath(httpFacePath);
 		endpointUrl.setQuery('');
-		var endpoint = new cw.net.HttpEndpoint(
+		return new cw.net.HttpEndpoint(
 			endpointUrl.toString().replace("_____random_____", "%random%"));
-		return goog.async.Deferred.succeed(endpoint);
 	} else {
 		var host = url.getDomain();
 		var port = goog.global['__demo_mainSocketPort'];
-		var endpoint = new cw.net.SocketEndpoint(httpFacePath, host, port);
-		return goog.async.Deferred.succeed(endpoint);
+		return new cw.net.SocketEndpoint(httpFacePath, host, port);
 	}
 };
 
 
 /**
  * @param {!cw.eventual.CallQueue} callQueue
- * @return {!goog.async.Deferred} Deferred that fires with a {!cw.net.Endpoint}
+ * @return {!cw.net.Endpoint}
  */
 cw.net.demo.getEndpointByQueryArgs = function(callQueue) {
 	var url = new goog.Uri(document.location);
