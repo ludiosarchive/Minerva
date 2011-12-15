@@ -16,8 +16,9 @@
 
 goog.provide('cw.net.MAX_FRAME_LENGTH');
 goog.provide('cw.net.SocketEndpoint');
-goog.provide('cw.net.ExpandedHttpEndpoint_');
+goog.provide('cw.net.ExpandedSocketEndpoint_');
 goog.provide('cw.net.HttpEndpoint');
+goog.provide('cw.net.ExpandedHttpEndpoint_');
 goog.provide('cw.net.Endpoint');
 goog.provide('cw.net.IMinervaProtocol');
 goog.provide('cw.net.HttpStreamingMode');
@@ -31,6 +32,7 @@ goog.provide('cw.net.TransportType_');
 goog.require('goog.asserts');
 goog.require('goog.async.DeferredList');
 goog.require('goog.array');
+goog.require('goog.dom');
 goog.require('goog.events');
 goog.require('goog.events.EventType');
 goog.require('goog.structs.Set');
@@ -43,6 +45,7 @@ goog.require('cw.dethrobber');
 goog.require('cw.eventual');
 goog.require('cw.repr');
 goog.require('cw.string');
+goog.require('cw.loadflash');
 goog.require('cw.net.SACK');
 goog.require('cw.net.Queue');
 goog.require('cw.net.Incoming');
@@ -50,6 +53,8 @@ goog.require('cw.net.theXHRMasterTracker_');
 goog.require('cw.net.FlashSocketTracker');
 goog.require('cw.net.FlashSocketConduit');
 goog.require('cw.net.theXDRTracker');
+goog.require('cw.net.breaker_FlashConnector_swf');
+goog.require('goog.ui.media.FlashObject');
 
 goog.require('cw.net.Frame');
 goog.require('cw.net.TransportKillReason');
@@ -75,9 +80,41 @@ goog.require('cw.net.decodeFrameFromServer');
 cw.net.STANDALONE_CLIENT_BUILD_ = false;
 
 
+/**
+ * The `FlashSocketTracker` used by all `ClientTransport`s on this page.
+ *
+ * Only one .swf will be created on the page, using the .swf loaded from the
+ * first endpoint.
+ *
+ * @type {!cw.net.FlashSocketTracker}
+ * @private
+ */
+cw.net.ourFlashSocketTracker_;
+
 
 /**
  * Object to represent a Socket endpoint.
+ *
+ * @param {string} primaryUrl Absolute or relative URL to HttpFace
+ * 	resource (which hosts the .swf needed).
+ * @param {string} host Hostname for socket-like transports.
+ * @param {number} port Port for socket-like transports.
+ * @constructor
+ */
+cw.net.SocketEndpoint = function(primaryUrl, host, port) {
+	/** @type {string} */
+	this.primaryUrl = primaryUrl;
+	/** @type {string} */
+	this.host = host;
+	/** @type {number} */
+	this.port = port;
+};
+
+
+
+/**
+ * Object to represent a Socket endpoint with the `FlashSocketTracker` needed
+ * for making connections.
  *
  * @param {string} host Hostname for socket-like transports.
  * @param {number} port Port for socket-like transports.
@@ -85,7 +122,7 @@ cw.net.STANDALONE_CLIENT_BUILD_ = false;
  * 	will help us make a connection.
  * @constructor
  */
-cw.net.SocketEndpoint = function(host, port, tracker) {
+cw.net.ExpandedSocketEndpoint_ = function(host, port, tracker) {
 	/** @type {string} */
 	this.host = host;
 	/** @type {number} */
@@ -129,7 +166,8 @@ cw.net.HttpEndpoint.prototype.__reprPush__ = function(sb, stack) {
 
 
 /**
- * Object to represent an HTTP endpoint.
+ * Object to represent an HTTP endpoint with the window references (if needed)
+ * for making cross-subdomain HTTP requests.
  *
  * @param {string} primaryUrl Absolute URL for primary HTTP transports.
  * @param {!Window} primaryWindow The contentWindow of an iframe that may
@@ -203,7 +241,11 @@ cw.net.ExpandedHttpEndpoint_.prototype.__reprPush__ = function(sb, stack) {
 
 
 /**
- * @typedef {cw.net.SocketEndpoint|cw.net.ExpandedHttpEndpoint_|cw.net.HttpEndpoint}
+ * @typedef {
+ * 	cw.net.SocketEndpoint|
+ * 	cw.net.ExpandedSocketEndpoint_|
+ * 	cw.net.HttpEndpoint|
+ * 	cw.net.ExpandedHttpEndpoint_}
  */
 cw.net.Endpoint;
 
@@ -918,7 +960,7 @@ cw.net.ClientStream.prototype.getTransportType_ = function() {
 			transportType = cw.net.TransportType_.XHR_STREAM;
 		}
 		// TODO: lower maxInactivity for STREAMING_PARANOID.
-	} else if(this.endpoint_ instanceof cw.net.SocketEndpoint) {
+	} else if(this.endpoint_ instanceof cw.net.ExpandedSocketEndpoint_) {
 		transportType = cw.net.TransportType_.FLASH_SOCKET;
 	} else {
 		throw Error("Don't support endpoint " + cw.repr.repr(this.endpoint_));
@@ -1307,6 +1349,37 @@ cw.net.ClientStream.prototype.getSACK_ = function() {
 };
 
 /**
+ * @param {string} httpFacePath
+ * @return {!goog.async.Deferred} Deferred that fires with an object or embed
+ *	 element.
+ * @private
+ */
+cw.net.ClientStream.prototype.loadFlashConnector_ = function(httpFacePath) {
+	var flashObject = new goog.ui.media.FlashObject(
+		httpFacePath + 'FlashConnector.swf?cb=' + cw.net.breaker_FlashConnector_swf);
+	flashObject.setBackgroundColor("#777777");
+	flashObject.setSize(300, 30);
+
+	var container = goog.dom.getElement('minerva-elements');
+	if(!container) {
+		throw Error('loadFlashConnector_: Page is missing an empty div ' +
+			'with id "minerva-elements"; please add one.');
+	}
+
+	// getElement just in case it already exists
+	var renderInto = goog.dom.getElement('minerva-elements-FlashConnectorSwf');
+	if(!renderInto) {
+		renderInto = goog.dom.createDom('div',
+			{'id': 'minerva-elements-FlashConnectorSwf'});
+		container.appendChild(renderInto);
+	}
+
+	var d = cw.loadflash.loadFlashObjectWithTimeout(
+		this.callQueue_.clock, flashObject, '9', renderInto, 8000);
+	return d;
+};
+
+/**
  * Called by application to start the ClientStream.
  */
 cw.net.ClientStream.prototype.start = function() {
@@ -1328,17 +1401,56 @@ cw.net.ClientStream.prototype.start = function() {
 			this.endpoint_.secondaryUrl, this);
 
 		var d = goog.async.DeferredList.gatherResults([d1, d2]);
-		d.addCallback(goog.bind(this.expandEndpoint_, this));
+		d.addCallback(goog.bind(this.expandHttpEndpoint_, this));
 		//d.addErrback(); // TODO!!!
+	} else if(this.endpoint_ instanceof cw.net.SocketEndpoint) {
+		if(cw.net.ourFlashSocketTracker_) {
+			this.expandSocketEndpointWithExistingTracker_();
+		} else {
+			var d = this.loadFlashConnector_(this.endpoint_.primaryUrl);
+			d.addCallback(goog.bind(this.expandSocketEndpointWithBridge_, this));
+			//d.addErrback(); // TODO!!!
+		}
 	} else {
 		this.startFirstTransport_();
 	}
 };
 
+cw.net.ClientStream.prototype.expandSocketEndpointWithExistingTracker_ = function() {
+	this.logger_.fine(cw.repr.repr(this) + " is using existing FlashSocketTracker.");
+
+	var host = this.endpoint_.host;
+	var port = this.endpoint_.port;
+	var tracker = cw.net.ourFlashSocketTracker_;
+
+	goog.asserts.assert(tracker != null, "ourFlashSocketTracker_ is null");
+
+	// TODO: maybe do something other than replace this.endpoint_
+	this.endpoint_ = new cw.net.ExpandedSocketEndpoint_(
+		host, port, tracker);
+
+	this.startFirstTransport_();
+};
+
+cw.net.ClientStream.prototype.expandSocketEndpointWithBridge_ = function(bridge) {
+	this.logger_.fine(cw.repr.repr(this) + " is creating new FlashSocketTracker.");
+
+	var host = this.endpoint_.host;
+	var port = this.endpoint_.port;
+	var tracker = new cw.net.FlashSocketTracker(this.callQueue_, bridge);
+	cw.net.ourFlashSocketTracker_ = tracker;
+
+	// TODO: maybe do something other than replace this.endpoint_
+	this.endpoint_ = new cw.net.ExpandedSocketEndpoint_(
+		host, port, tracker);
+
+	this.startFirstTransport_();
+};
+
 /**
  * @param {!Array.<!cw.net.XDRFrame>} xdrFrames
  */
-cw.net.ClientStream.prototype.expandEndpoint_ = function(xdrFrames) {
+cw.net.ClientStream.prototype.expandHttpEndpoint_ = function(xdrFrames) {
 	goog.asserts.assert(this.state_ == cw.net.StreamState_.WAITING_RESOURCES,
 		"Expected stream state WAITING_RESOURCES, was " + this.state_);
 
@@ -1353,7 +1465,7 @@ cw.net.ClientStream.prototype.expandEndpoint_ = function(xdrFrames) {
 	this.xdrFramesInUse_.push(xdrFrames[0]);
 	this.xdrFramesInUse_.push(xdrFrames[1]);
 
-	// TODO: maybe don't replace this.endpoint_
+	// TODO: maybe do something other than replace this.endpoint_
 	this.endpoint_ = new cw.net.ExpandedHttpEndpoint_(
 		primaryUrl, primaryWindow, secondaryUrl, secondaryWindow);
 

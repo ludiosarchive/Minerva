@@ -3,20 +3,14 @@
  * what minerva_site serves.
  */
 
-goog.provide('cw.net.demo.loadFlashConnector');
 goog.provide('cw.net.demo.getEndpoint');
 goog.provide('cw.net.demo.getEndpointByQueryArgs');
 
-goog.require('cw.net.breaker_FlashConnector_swf');
-goog.require('goog.ui.media.FlashObject');
 goog.require('goog.async.Deferred');
 goog.require('goog.Uri');
 goog.require('goog.dom');
-goog.require('cw.loadflash');
-goog.require('cw.cookie');
 goog.require('cw.eventual');
 goog.require('cw.net.IStreamPolicy');
-goog.require('cw.net.FlashSocketTracker');
 goog.require('cw.net.SocketEndpoint');
 goog.require('cw.net.HttpEndpoint');
 goog.require('cw.net.HttpStreamingMode');
@@ -40,39 +34,6 @@ cw.net.demo.DemoStreamPolicy.prototype.getHttpStreamingMode = function() {
 	return httpStreaming ?
 		cw.net.HttpStreamingMode.STREAMING :
 		cw.net.HttpStreamingMode.NO_STREAMING;
-};
-
-
-
-/**
- * @param {!cw.eventual.CallQueue} callQueue
- * @param {string} httpFacePath
- * @return {!goog.async.Deferred} Deferred that fires with an object or embed
- *	 element.
- */
-cw.net.demo.loadFlashConnector = function(callQueue, httpFacePath) {
-	var flashObject = new goog.ui.media.FlashObject(
-		httpFacePath + 'FlashConnector.swf?cb=' + cw.net.breaker_FlashConnector_swf);
-	flashObject.setBackgroundColor("#777777");
-	flashObject.setSize(300, 30);
-
-	var container = goog.dom.getElement('minerva-elements');
-	if(!container) {
-		throw Error('loadFlashConnector: Page is missing an empty div ' +
-			'with id "minerva-elements"; please add one.');
-	}
-
-	// getElement just in case it already exists
-	var renderInto = goog.dom.getElement('minerva-elements-FlashConnectorSwf');
-	if(!renderInto) {
-		renderInto = goog.dom.createDom('div',
-			{'id': 'minerva-elements-FlashConnectorSwf'});
-		container.appendChild(renderInto);
-	}
-
-	var d = cw.loadflash.loadFlashObjectWithTimeout(
-		callQueue.clock, flashObject, '9', renderInto, 8000);
-	return d;
 };
 
 
@@ -102,13 +63,8 @@ cw.net.demo.getEndpoint = function(callQueue, useSubdomains, useFlash, httpFaceP
 	} else {
 		var host = url.getDomain();
 		var port = goog.global['__demo_mainSocketPort'];
-		var d = cw.net.demo.loadFlashConnector(callQueue, httpFacePath);
-		d.addCallback(function(bridge) {
-			var tracker = new cw.net.FlashSocketTracker(callQueue, bridge);
-			var endpoint = new cw.net.SocketEndpoint(host, port, tracker);
-			return endpoint;
-		});
-		return d;
+		var endpoint = new cw.net.SocketEndpoint(httpFacePath, host, port);
+		return goog.async.Deferred.succeed(endpoint);
 	}
 };
 
