@@ -158,9 +158,9 @@ function xa(a) {
 }
 function ya(a, b) {
   for(var c = 0, d = ("" + a).replace(/^[\s\xa0]+|[\s\xa0]+$/g, "").split("."), e = ("" + b).replace(/^[\s\xa0]+|[\s\xa0]+$/g, "").split("."), f = Math.max(d.length, e.length), h = 0;0 == c && h < f;h++) {
-    var l = d[h] || "", n = e[h] || "", q = RegExp("(\\d*)(\\D*)", "g"), F = RegExp("(\\d*)(\\D*)", "g");
+    var l = d[h] || "", n = e[h] || "", q = RegExp("(\\d*)(\\D*)", "g"), E = RegExp("(\\d*)(\\D*)", "g");
     do {
-      var p = q.exec(l) || ["", "", ""], t = F.exec(n) || ["", "", ""];
+      var p = q.exec(l) || ["", "", ""], t = E.exec(n) || ["", "", ""];
       if(0 == p[0].length && 0 == t[0].length) {
         break
       }
@@ -195,17 +195,17 @@ if(Ha = Ga()) {
   Ea = !Ca && -1 != Ha.indexOf("WebKit");
   Fa = !Ca && !Ea && "Gecko" == Ia.product
 }
-var Ja = Ca, E = Da, Ka = Fa, G = Ea, La;
+var Ja = Ca, F = Da, Ka = Fa, G = Ea, La;
 a: {
   var Ma = "", Na;
   if(Ja && s.opera) {
     var Oa = s.opera.version, Ma = "function" == typeof Oa ? Oa() : Oa
   }else {
-    if(Ka ? Na = /rv\:([^\);]+)(\)|;)/ : E ? Na = /MSIE\s+([^\);]+)(\)|;)/ : G && (Na = /WebKit\/(\S+)/), Na) {
+    if(Ka ? Na = /rv\:([^\);]+)(\)|;)/ : F ? Na = /MSIE\s+([^\);]+)(\)|;)/ : G && (Na = /WebKit\/(\S+)/), Na) {
       var Pa = Na.exec(Ga()), Ma = Pa ? Pa[1] : ""
     }
   }
-  if(E) {
+  if(F) {
     var Qa, Ra = s.document;
     Qa = Ra ? Ra.documentMode : i;
     if(Qa > parseFloat(Ma)) {
@@ -221,7 +221,7 @@ function H(a) {
 }
 var Ta = {};
 function Ua() {
-  return Ta[9] || (Ta[9] = E && document.documentMode && 9 <= document.documentMode)
+  return Ta[9] || (Ta[9] = F && document.documentMode && 9 <= document.documentMode)
 }
 ;function Va() {
 }
@@ -276,11 +276,11 @@ function ab(a, b) {
     }
   }
 }
-;!E || Ua();
-var bb = !E || Ua();
-E && H("8");
+;!F || Ua();
+var bb = !F || Ua();
+F && H("8");
 !G || H("528");
-Ka && H("1.9b") || E && H("8") || Ja && H("9.5") || G && H("528");
+Ka && H("1.9b") || F && H("8") || Ja && H("9.5") || G && H("528");
 !Ka || H("8");
 var I = Array.prototype, cb = I.indexOf ? function(a, b, c) {
   return I.indexOf.call(a, b, c)
@@ -368,7 +368,7 @@ function mb(a, b) {
 function nb(a, b) {
   return a > b ? 1 : a < b ? -1 : 0
 }
-;var ob = {Re:"click", We:"dblclick", qf:"mousedown", uf:"mouseup", tf:"mouseover", sf:"mouseout", rf:"mousemove", Ef:"selectstart", lf:"keypress", kf:"keydown", mf:"keyup", Pe:"blur", df:"focus", Xe:"deactivate", ef:E ? "focusin" : "DOMFocusIn", ff:E ? "focusout" : "DOMFocusOut", Qe:"change", Df:"select", Ff:"submit", jf:"input", zf:"propertychange", af:"dragstart", Ye:"dragenter", $e:"dragover", Ze:"dragleave", bf:"drop", Jf:"touchstart", If:"touchmove", Hf:"touchend", Gf:"touchcancel", Te:"contextmenu", 
+;var ob = {Re:"click", We:"dblclick", qf:"mousedown", uf:"mouseup", tf:"mouseover", sf:"mouseout", rf:"mousemove", Ef:"selectstart", lf:"keypress", kf:"keydown", mf:"keyup", Pe:"blur", df:"focus", Xe:"deactivate", ef:F ? "focusin" : "DOMFocusIn", ff:F ? "focusout" : "DOMFocusOut", Qe:"change", Df:"select", Ff:"submit", jf:"input", zf:"propertychange", af:"dragstart", Ye:"dragenter", $e:"dragover", Ze:"dragleave", bf:"drop", Jf:"touchstart", If:"touchmove", Hf:"touchend", Gf:"touchcancel", Te:"contextmenu", 
 cf:"error", hf:"help", nf:"load", of:"losecapture", Af:"readystatechange", Bf:"resize", Cf:"scroll", Lf:"unload", gf:"hashchange", vf:"pagehide", wf:"pageshow", yf:"popstate", Ue:"copy", xf:"paste", Ve:"cut", Me:"beforecopy", Ne:"beforecut", Oe:"beforepaste", pf:"message", Se:"connect", Kf:G ? "webkitTransitionEnd" : Ja ? "oTransitionEnd" : "transitionend"};
 function J() {
 }
@@ -669,7 +669,7 @@ function xb(a, b) {
           try {
             f.keyCode = -1;
             break a
-          }catch(F) {
+          }catch(E) {
             q = j
           }
         }
@@ -1103,9 +1103,9 @@ function mc(a, b) {
   a.className = c.join(" ");
   return e
 }
-;var nc = !E || Ua();
-!Ka && !E || E && Ua() || Ka && H("1.9.1");
-E && H("9");
+;var nc = !F || Ua();
+!Ka && !F || F && Ua() || Ka && H("1.9.1");
+F && H("9");
 function oc(a) {
   return a ? new pc(9 == a.nodeType ? a : a.ownerDocument || a.document) : lc || (lc = new pc)
 }
@@ -1208,7 +1208,7 @@ function zc(a) {
   return a
 }
 function Ac(a) {
-  E ? a.cssText = ".dbg-sev{color:#F00}.dbg-w{color:#C40}.dbg-sh{font-weight:bold;color:#000}.dbg-i{color:#444}.dbg-f{color:#999}.dbg-ev{color:#0A0}.dbg-m{color:#990}.logmsg{border-bottom:1px solid #CCC;padding:2px}.logsep{background-color: #8C8;}.logdiv{border:1px solid #CCC;background-color:#FCFCFC;font:medium monospace}" : a[G ? "innerText" : "innerHTML"] = ".dbg-sev{color:#F00}.dbg-w{color:#C40}.dbg-sh{font-weight:bold;color:#000}.dbg-i{color:#444}.dbg-f{color:#999}.dbg-ev{color:#0A0}.dbg-m{color:#990}.logmsg{border-bottom:1px solid #CCC;padding:2px}.logsep{background-color: #8C8;}.logdiv{border:1px solid #CCC;background-color:#FCFCFC;font:medium monospace}"
+  F ? a.cssText = ".dbg-sev{color:#F00}.dbg-w{color:#C40}.dbg-sh{font-weight:bold;color:#000}.dbg-i{color:#444}.dbg-f{color:#999}.dbg-ev{color:#0A0}.dbg-m{color:#990}.logmsg{border-bottom:1px solid #CCC;padding:2px}.logsep{background-color: #8C8;}.logdiv{border:1px solid #CCC;background-color:#FCFCFC;font:medium monospace}" : a[G ? "innerText" : "innerHTML"] = ".dbg-sev{color:#F00}.dbg-w{color:#C40}.dbg-sh{font-weight:bold;color:#000}.dbg-i{color:#444}.dbg-f{color:#999}.dbg-ev{color:#0A0}.dbg-m{color:#990}.logmsg{border-bottom:1px solid #CCC;padding:2px}.logsep{background-color: #8C8;}.logdiv{border:1px solid #CCC;background-color:#FCFCFC;font:medium monospace}"
 }
 ;function Bc(a) {
   if("function" == typeof a.G) {
@@ -1605,18 +1605,18 @@ r.ge = function(a, b, c) {
       if(x(c)) {
         h = {message:c, name:"Unknown error", lineNumber:"Not available", fileName:l, stack:"Not available"}
       }else {
-        var n, q, F = m;
+        var n, q, E = m;
         try {
           n = c.lineNumber || c.ne || "Not available"
         }catch(p) {
-          n = "Not available", F = j
+          n = "Not available", E = j
         }
         try {
           q = c.fileName || c.filename || c.sourceURL || l
         }catch(t) {
-          q = "Not available", F = j
+          q = "Not available", E = j
         }
-        h = F || !c.lineNumber || !c.fileName || !c.stack ? {message:c.message, name:c.name, lineNumber:n, fileName:q, stack:c.stack || "Not available"} : c
+        h = E || !c.lineNumber || !c.fileName || !c.stack ? {message:c.message, name:c.name, lineNumber:n, fileName:q, stack:c.stack || "Not available"} : c
       }
       e = "Message: " + D(h.message) + '\nUrl: <a href="view-source:' + h.fileName + '" target="_new">' + h.fileName + "</a>\nLine: " + h.lineNumber + "\n\nBrowser stack:\n" + D(h.stack + "-> ") + "[end]\n\nJS stack traversal:\n" + D(Nc(f) + "-> ")
     }catch(B) {
@@ -1684,7 +1684,7 @@ function ed(a) {
   this.i = a;
   this.ae = this.i.ownerDocument || this.i.document;
   var a = oc(this.i), b = k;
-  if(E) {
+  if(F) {
     b = a.ga.createStyleSheet(), Ac(b)
   }else {
     var c = rc(a.ga, "head")[0];
@@ -2128,25 +2128,247 @@ function Md(a, b) {
   c.push("</invoke>");
   return c.join("")
 }
-;function Nd() {
+;var Nd;
+(function() {
+  function a(a) {
+    a = a.match(/[\d]+/g);
+    a.length = 3;
+    return a.join(".")
+  }
+  var b = m, c = "";
+  if(navigator.plugins && navigator.plugins.length) {
+    var d = navigator.plugins["Shockwave Flash"];
+    d && (b = j, d.description && (c = a(d.description)));
+    navigator.plugins["Shockwave Flash 2.0"] && (b = j, c = "2.0.0.11")
+  }else {
+    if(navigator.mimeTypes && navigator.mimeTypes.length) {
+      (b = (d = navigator.mimeTypes["application/x-shockwave-flash"]) && d.enabledPlugin) && (c = a(d.enabledPlugin.description))
+    }else {
+      try {
+        d = new ActiveXObject("ShockwaveFlash.ShockwaveFlash.7"), b = j, c = a(d.GetVariable("$version"))
+      }catch(e) {
+        try {
+          d = new ActiveXObject("ShockwaveFlash.ShockwaveFlash.6"), b = j, c = "6.0.21"
+        }catch(f) {
+          try {
+            d = new ActiveXObject("ShockwaveFlash.ShockwaveFlash"), b = j, c = a(d.GetVariable("$version"))
+          }catch(h) {
+          }
+        }
+      }
+    }
+  }
+  Nd = c
+})();
+function Od(a) {
+  this.ie = a;
+  this.h = []
+}
+A(Od, J);
+var Pd = [];
+Od.prototype.wc = function() {
+  db(this.h, Ab);
+  this.h.length = 0
+};
+Od.prototype.d = function() {
+  Od.p.d.call(this);
+  this.wc()
+};
+Od.prototype.handleEvent = function() {
+  g(Error("EventHandler.handleEvent not implemented"))
+};
+function Qd() {
+}
+(function(a) {
+  a.Zc = function() {
+    return a.le || (a.le = new a)
+  }
+})(Qd);
+Qd.prototype.re = 0;
+Qd.Zc();
+function Rd(a) {
+  this.tb = a || oc()
+}
+A(Rd, Gb);
+r = Rd.prototype;
+r.ke = Qd.Zc();
+r.U = k;
+r.va = m;
+r.i = k;
+r.v = k;
+r.fa = k;
+r.Va = k;
+r.He = m;
+function Sd(a) {
+  return a.U || (a.U = ":" + (a.ke.re++).toString(36))
+}
+r.ta = o("i");
+r.getParent = o("v");
+r.zc = function(a) {
+  this.v && this.v != a && g(Error("Method not supported"));
+  Rd.p.zc.call(this, a)
+};
+r.Yc = o("tb");
+r.Wa = function() {
+  this.i = this.tb.createElement("div")
+};
+function Td(a, b) {
+  a.va && g(Error("Component already rendered"));
+  a.i || a.Wa();
+  b ? b.insertBefore(a.i, k) : a.tb.ga.body.appendChild(a.i);
+  (!a.v || a.v.va) && a.ub()
+}
+r.ub = function() {
+  this.va = j;
+  Ud(this, function(a) {
+    !a.va && a.ta() && a.ub()
+  })
+};
+function Vd(a) {
+  Ud(a, function(a) {
+    a.va && Vd(a)
+  });
+  a.Ab && a.Ab.wc();
+  a.va = m
+}
+r.d = function() {
+  Rd.p.d.call(this);
+  this.va && Vd(this);
+  this.Ab && (this.Ab.b(), delete this.Ab);
+  Ud(this, function(a) {
+    a.b()
+  });
+  !this.He && this.i && yc(this.i);
+  this.v = this.i = this.Va = this.fa = k
+};
+function Ud(a, b) {
+  a.fa && db(a.fa, b, i)
+}
+r.removeChild = function(a, b) {
+  if(a) {
+    var c = x(a) ? a : Sd(a), a = this.Va && c ? (c in this.Va ? this.Va[c] : i) || k : k;
+    if(c && a) {
+      var d = this.Va;
+      c in d && delete d[c];
+      hb(this.fa, a);
+      b && (Vd(a), a.i && yc(a.i));
+      c = a;
+      c == k && g(Error("Unable to set parent component"));
+      c.v = k;
+      Rd.p.zc.call(c, k)
+    }
+  }
+  a || g(Error("Child is not in parent component"));
+  return a
+};
+function Wd(a, b) {
+  this.tb = b || oc();
+  this.ee = a;
+  this.dc = new Od(this);
+  this.xb = new Q
+}
+A(Wd, Rd);
+r = Wd.prototype;
+r.a = T("goog.ui.media.FlashObject");
+r.Je = "window";
+r.Lc = "#000000";
+r.Pd = "sameDomain";
+function Xd(a, b, c) {
+  a.Kc = x(b) ? b : Math.round(b) + "px";
+  a.jc = x(c) ? c : Math.round(c) + "px";
+  a.ta() && (b = a.ta() ? a.ta().firstChild : k, c = a.jc, c == i && g(Error("missing height argument")), b.style.width = zc(a.Kc), b.style.height = zc(c))
+}
+r.ub = function() {
+  Wd.p.ub.call(this);
+  var a = this.ta(), b;
+  b = F ? '<object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" id="%s" name="%s" class="%s"><param name="movie" value="%s"/><param name="quality" value="high"/><param name="FlashVars" value="%s"/><param name="bgcolor" value="%s"/><param name="AllowScriptAccess" value="%s"/><param name="allowFullScreen" value="true"/><param name="SeamlessTabbing" value="false"/>%s</object>' : '<embed quality="high" id="%s" name="%s" class="%s" src="%s" FlashVars="%s" bgcolor="%s" AllowScriptAccess="%s" allowFullScreen="true" SeamlessTabbing="false" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer" %s></embed>';
+  for(var c = F ? '<param name="wmode" value="%s"/>' : "wmode=%s", c = oa(c, this.Je), d = this.xb.ba(), e = this.xb.H(), f = [], h = 0;h < d.length;h++) {
+    var l = qa(d[h]), n = qa(e[h]);
+    f.push(l + "=" + n)
+  }
+  b = oa(b, Sd(this), Sd(this), "goog-ui-media-flash-object", D(this.ee), D(f.join("&")), this.Lc, this.Pd, c);
+  a.innerHTML = b;
+  this.Kc && this.jc && Xd(this, this.Kc, this.jc);
+  a = this.dc;
+  b = this.ta();
+  c = Ya(ob);
+  v(c) || (Pd[0] = c, c = Pd);
+  for(d = 0;d < c.length;d++) {
+    a.h.push(vb(b, c[d], qb || a, m, a.ie || a))
+  }
+};
+r.Wa = function() {
+  this.Bd != k && !(0 <= ya(Nd, this.Bd)) && (this.a.D("Required flash version not found:" + this.Bd), g(Error("Method not supported")));
+  var a = this.Yc().createElement("div");
+  a.className = "goog-ui-media-flash";
+  this.i = a
+};
+r.d = function() {
+  Wd.p.d.call(this);
+  this.xb = k;
+  this.dc.b();
+  this.dc = k
+};
+function Yd() {
   return Math.floor(2147483648 * Math.random()).toString(36) + Math.abs(Math.floor(2147483648 * Math.random()) ^ na()).toString(36)
 }
-function Od(a) {
+function Zd(a) {
   return a.substr(0, a.length - 1)
 }
-var Pd = /^(0|[1-9]\d*)$/, Qd = /^(0|\-?[1-9]\d*)$/;
-function Rd(a) {
-  var b = Sd;
-  return Pd.test(a) && (a = parseInt(a, 10), a <= b) ? a : k
+var $d = /^(0|[1-9]\d*)$/, ae = /^(0|\-?[1-9]\d*)$/;
+function be(a) {
+  var b = ce;
+  return $d.test(a) && (a = parseInt(a, 10), a <= b) ? a : k
 }
-;function Td(a, b) {
-  this.U = "_" + Nd();
+;function de(a) {
+  C.call(this, a)
+}
+A(de, C);
+de.prototype.name = "cw.loadflash.FlashLoadFailed";
+s.__loadFlashObject_callbacks = {};
+function ee(a, b, c) {
+  function d() {
+    e && delete s.__loadFlashObject_callbacks[e]
+  }
+  var e;
+  if(Ka && !H("1.8.1.20")) {
+    return Tb(new de("Flash corrupts Error hierarchy in Firefox 2.0.0.0; disabled for all < 2.0.0.20"))
+  }
+  if(!(0 <= ya(Nd, "9"))) {
+    return b = Nd, Tb(new de("Need Flash Player 9+; had " + (b ? b : "none")))
+  }
+  var f;
+  e = "_" + Yd();
+  var h = new N(d);
+  s.__loadFlashObject_callbacks[e] = function() {
+    a.setTimeout(function() {
+      d();
+      Nb(h, qc(f))
+    }, 0)
+  };
+  b.xb.set("onloadcallback", '__loadFlashObject_callbacks["' + e + '"]()');
+  f = Sd(b);
+  Td(b, c);
+  return h
+}
+function fe(a, b, c) {
+  var d = ee(a, b, c), e = a.setTimeout(function() {
+    d.cancel()
+  }, 8E3);
+  Qb(d, function(b) {
+    a.clearTimeout(e);
+    return b
+  });
+  return d
+}
+;function ge(a, b) {
+  this.U = "_" + Yd();
   this.Pb = a;
   this.la = b;
   this.pa = a.pa
 }
-A(Td, J);
-r = Td.prototype;
+A(ge, J);
+r = ge.prototype;
 r.Ka = j;
 r.$b = m;
 r.a = T("cw.net.FlashSocket");
@@ -2155,11 +2377,11 @@ r.k = function(a) {
   a.push(this.U);
   a.push("'>")
 };
-function Ud(a, b, c) {
-  "frames" == b ? (a = a.la, Vd(a.w), Wd(a.w, c)) : "stillreceiving" == b ? (c = a.la, c.a.r("onstillreceiving"), Vd(c.w)) : "connect" == b ? (c = a.la, c.a.info("onconnect"), Vd(c.w), a = c.Ta, c.Ta = k, a.length && (c.a.r("onconnect: Writing " + a.length + " buffered frame(s)."), c.Mb.pb(a))) : "close" == b ? (a.Ka = m, a.b()) : "ioerror" == b ? (a.Ka = m, b = a.la, b.a.D("onioerror: " + P(c)), Xd(b.w, m), a.b()) : "securityerror" == b ? (a.Ka = m, b = a.la, b.a.D("onsecurityerror: " + P(c)), Xd(b.w, 
+function he(a, b, c) {
+  "frames" == b ? (a = a.la, ie(a.w), je(a.w, c)) : "stillreceiving" == b ? (c = a.la, c.a.r("onstillreceiving"), ie(c.w)) : "connect" == b ? (c = a.la, c.a.info("onconnect"), ie(c.w), a = c.Ta, c.Ta = k, a.length && (c.a.r("onconnect: Writing " + a.length + " buffered frame(s)."), c.Mb.pb(a))) : "close" == b ? (a.Ka = m, a.b()) : "ioerror" == b ? (a.Ka = m, b = a.la, b.a.D("onioerror: " + P(c)), ke(b.w, m), a.b()) : "securityerror" == b ? (a.Ka = m, b = a.la, b.a.D("onsecurityerror: " + P(c)), ke(b.w, 
   m), a.b()) : g(Error("bad event: " + b))
 }
-function Yd(a) {
+function le(a) {
   a.$b = j;
   a.Ka = m;
   a.b()
@@ -2168,7 +2390,7 @@ r.Xb = function(a, b) {
   try {
     var c = this.pa.CallFunction(Md("__FC_connect", this.U, a, b, "<int32/>\n"))
   }catch(d) {
-    return this.a.M("connect: could not call __FC_connect; Flash probably crashed. Disposing now. Error was: " + d.message), Yd(this)
+    return this.a.M("connect: could not call __FC_connect; Flash probably crashed. Disposing now. Error was: " + d.message), le(this)
   }
   '"OK"' != c && g(Error("__FC_connect failed? ret: " + c))
 };
@@ -2176,13 +2398,13 @@ r.pb = function(a) {
   try {
     var b = this.pa.CallFunction(Md("__FC_writeFrames", this.U, a))
   }catch(c) {
-    return this.a.M("writeFrames: could not call __FC_writeFrames; Flash probably crashed. Disposing now. Error was: " + c.message), Yd(this)
+    return this.a.M("writeFrames: could not call __FC_writeFrames; Flash probably crashed. Disposing now. Error was: " + c.message), le(this)
   }
   '"OK"' != b && ('"no such instance"' == b ? (this.a.D("Flash no longer knows of " + this.U + "; disposing."), this.b()) : g(Error("__FC_writeFrames failed? ret: " + b)))
 };
 r.d = function() {
   this.a.info("in disposeInternal, needToCallClose_=" + this.Ka);
-  Td.p.d.call(this);
+  ge.p.d.call(this);
   var a = this.pa;
   delete this.pa;
   if(this.Ka) {
@@ -2193,24 +2415,24 @@ r.d = function() {
     }
   }
   if(this.$b) {
-    a = this.la, a.a.D("oncrash"), Xd(a.w, j)
+    a = this.la, a.a.D("oncrash"), ke(a.w, j)
   }else {
     this.la.onclose()
   }
   delete this.la;
   delete this.Pb.Ga[this.U]
 };
-function Zd(a, b) {
+function me(a, b) {
   this.u = a;
   this.pa = b;
   this.Ga = {};
-  this.Wb = "__FST_" + Nd();
+  this.Wb = "__FST_" + Yd();
   s[this.Wb] = y(this.$d, this);
   var c = b.CallFunction(Md("__FC_setCallbackFunc", this.Wb));
   '"OK"' != c && g(Error("__FC_setCallbackFunc failed? ret: " + c))
 }
-A(Zd, J);
-r = Zd.prototype;
+A(me, J);
+r = me.prototype;
 r.a = T("cw.net.FlashSocketTracker");
 r.k = function(a, b) {
   a.push("<FlashSocketTracker instances=");
@@ -2218,12 +2440,12 @@ r.k = function(a, b) {
   a.push(">")
 };
 r.ac = function(a) {
-  a = new Td(this, a);
+  a = new ge(this, a);
   return this.Ga[a.U] = a
 };
 r.Yd = function(a, b, c, d) {
   var e = this.Ga[a];
-  e ? "frames" == b && d ? (Ud(e, "ioerror", "FlashConnector hadError while handling data."), e.b()) : Ud(e, b, c) : this.a.D("Cannot dispatch because we have no instance: " + P([a, b, c, d]))
+  e ? "frames" == b && d ? (he(e, "ioerror", "FlashConnector hadError while handling data."), e.b()) : he(e, b, c) : this.a.D("Cannot dispatch because we have no instance: " + P([a, b, c, d]))
 };
 r.$d = function(a, b, c, d) {
   try {
@@ -2235,7 +2457,7 @@ r.$d = function(a, b, c, d) {
   }
 };
 r.d = function() {
-  Zd.p.d.call(this);
+  me.p.d.call(this);
   for(var a = Ya(this.Ga);a.length;) {
     a.pop().b()
   }
@@ -2243,12 +2465,12 @@ r.d = function() {
   delete this.pa;
   s[this.Wb] = i
 };
-function $d(a) {
+function ne(a) {
   this.w = a;
   this.Ta = []
 }
-A($d, J);
-r = $d.prototype;
+A(ne, J);
+r = ne.prototype;
 r.a = T("cw.net.FlashSocketConduit");
 r.pb = function(a) {
   this.Ta ? (this.a.r("writeFrames: Not connected, can't write " + a.length + " frame(s) yet."), this.Ta.push.apply(this.Ta, a)) : (this.a.r("writeFrames: Writing " + a.length + " frame(s)."), this.Mb.pb(a))
@@ -2258,26 +2480,54 @@ r.Xb = function(a, b) {
 };
 r.onclose = function() {
   this.a.info("onclose");
-  Xd(this.w, m)
+  ke(this.w, m)
 };
 r.d = function() {
   this.a.info("in disposeInternal.");
-  $d.p.d.call(this);
+  ne.p.d.call(this);
   this.Mb.b();
   delete this.w
 };
-function ae() {
+var oe = [];
+function pe() {
+  var a = new N;
+  oe.push(a);
+  return a
+}
+function re(a) {
+  var b = oe;
+  oe = [];
+  db(b, function(b) {
+    Nb(b, a)
+  })
+}
+function se(a, b) {
+  if(oe.length) {
+    return pe()
+  }
+  var c = new Wd(b + "FlashConnector.swf?cb=" + te);
+  c.Lc = "#777777";
+  Xd(c, 300, 30);
+  var d = qc("minerva-elements");
+  d || g(Error('loadFlashConnector_: Page is missing an empty div with id "minerva-elements"; please add one.'));
+  var e = qc("minerva-elements-FlashConnectorSwf");
+  e || (e = uc("div", {id:"minerva-elements-FlashConnectorSwf"}), d.appendChild(e));
+  Dd = fe(a.B, c, e);
+  Ob(Dd, re);
+  return pe()
+}
+;function ue() {
   var a = Math.pow(10, 9);
   return a + Math.random() * (Math.pow(10, 10) - a)
 }
-;var Sd = Math.pow(2, 53);
-var be = {Nd:ba("<cw.eq.Wildcard>")};
-function ce(a) {
+;var ce = Math.pow(2, 53);
+var ve = {Nd:ba("<cw.eq.Wildcard>")};
+function we(a) {
   return"boolean" == a || "number" == a || "null" == a || "undefined" == a || "string" == a
 }
-function de(a, b, c) {
+function xe(a, b, c) {
   var d = u(a), e = u(b);
-  if(a == be || b == be) {
+  if(a == ve || b == ve) {
     return j
   }
   if(a != k && "function" == typeof a.l) {
@@ -2286,7 +2536,7 @@ function de(a, b, c) {
   if(b != k && "function" == typeof b.l) {
     return c && c.push("running custom equals function on right object"), b.l(a, c)
   }
-  if(ce(d) || ce(e)) {
+  if(we(d) || we(e)) {
     a = a === b
   }else {
     if(a instanceof RegExp && b instanceof RegExp) {
@@ -2302,7 +2552,7 @@ function de(a, b, c) {
             }else {
               d = 0;
               for(e = a.length;d < e;d++) {
-                if(!de(a[d], b[d], c)) {
+                if(!xe(a[d], b[d], c)) {
                   c && c.push("earlier comparisons indicate mismatch at array item #" + d);
                   a = m;
                   break a
@@ -2322,7 +2572,7 @@ function de(a, b, c) {
                   a = m;
                   break a
                 }
-                if(!de(a[f], b[f], c)) {
+                if(!xe(a[f], b[f], c)) {
                   c && c.push("earlier comparisons indicate mismatch at property " + f);
                   a = m;
                   break a
@@ -2357,21 +2607,21 @@ function X() {
   this.P(a);
   return a.join("")
 }
-function ee() {
+function ye() {
 }
-ee.prototype.l = function(a, b) {
-  return!(a instanceof ee) ? m : de(fe(this), fe(a), b)
+ye.prototype.l = function(a, b) {
+  return!(a instanceof ye) ? m : xe(ze(this), ze(a), b)
 };
-ee.prototype.k = function(a, b) {
+ye.prototype.k = function(a, b) {
   a.push("<HelloFrame properties=");
-  O(fe(this), a, b);
+  O(ze(this), a, b);
   a.push(">")
 };
-function fe(a) {
+function ze(a) {
   return[a.Qa, a.wd, a.dd, a.Ad, a.mb, a.Dc, a.qd, a.od, a.rc, a.md, a.Kd, a.Hd, a.R, a.Db]
 }
-ee.prototype.F = X;
-ee.prototype.P = function(a) {
+ye.prototype.F = X;
+ye.prototype.P = function(a) {
   var b = {};
   b.tnum = this.Qa;
   b.ver = this.wd;
@@ -2385,64 +2635,64 @@ ee.prototype.P = function(a) {
   b.maxia = this.md;
   b.tcpack = this.Kd;
   b.eeds = this.Hd;
-  b.sack = this.R instanceof Fd ? Od((new Y(this.R)).F()) : this.R;
-  b.seenack = this.Db instanceof Fd ? Od((new Y(this.Db)).F()) : this.Db;
+  b.sack = this.R instanceof Fd ? Zd((new Y(this.R)).F()) : this.R;
+  b.seenack = this.Db instanceof Fd ? Zd((new Y(this.Db)).F()) : this.Db;
   for(var c in b) {
     b[c] === i && delete b[c]
   }
   a.push($b(b), "H")
 };
-function ge(a) {
+function Ae(a) {
   this.Pa = a
 }
-ge.prototype.l = function(a) {
-  return a instanceof ge && this.Pa == a.Pa
+Ae.prototype.l = function(a) {
+  return a instanceof Ae && this.Pa == a.Pa
 };
-ge.prototype.k = function(a, b) {
+Ae.prototype.k = function(a, b) {
   a.push("new StringFrame(");
   O(this.Pa, a, b);
   a.push(")")
 };
-ge.prototype.F = X;
-ge.prototype.P = function(a) {
+Ae.prototype.F = X;
+Ae.prototype.P = function(a) {
   a.push(this.Pa, " ")
 };
-function he(a) {
+function Be(a) {
   this.sb = a
 }
-he.prototype.l = function(a) {
-  return a instanceof he && this.sb == a.sb
+Be.prototype.l = function(a) {
+  return a instanceof Be && this.sb == a.sb
 };
-he.prototype.k = function(a, b) {
+Be.prototype.k = function(a, b) {
   a.push("new CommentFrame(");
   O(this.sb, a, b);
   a.push(")")
 };
-he.prototype.F = X;
-he.prototype.P = function(a) {
+Be.prototype.F = X;
+Be.prototype.P = function(a) {
   a.push(this.sb, "^")
 };
-function ie(a) {
+function Ce(a) {
   this.kb = a
 }
-ie.prototype.l = function(a) {
-  return a instanceof ie && this.kb == a.kb
+Ce.prototype.l = function(a) {
+  return a instanceof Ce && this.kb == a.kb
 };
-ie.prototype.k = function(a) {
+Ce.prototype.k = function(a) {
   a.push("new SeqNumFrame(", "" + this.kb, ")")
 };
-ie.prototype.F = X;
-ie.prototype.P = function(a) {
+Ce.prototype.F = X;
+Ce.prototype.P = function(a) {
   a.push("" + this.kb, "N")
 };
-function je(a) {
+function De(a) {
   var b = a.split("|");
   if(2 != b.length) {
     return k
   }
   a: {
-    var c = b[1], a = Sd;
-    if(Qd.test(c) && (c = parseInt(c, 10), -1 <= c && c <= a)) {
+    var c = b[1], a = ce;
+    if(ae.test(c) && (c = parseInt(c, 10), -1 <= c && c <= a)) {
       a = c;
       break a
     }
@@ -2454,7 +2704,7 @@ function je(a) {
   c = [];
   if(b[0]) {
     for(var b = b[0].split(","), d = 0, e = b.length;d < e;d++) {
-      var f = Rd(b[d]);
+      var f = be(b[d]);
       if(f == k) {
         return k
       }
@@ -2480,118 +2730,118 @@ Y.prototype.P = function(a) {
   a.push(b.ya.join(","), "|", "" + b.Ca);
   a.push("A")
 };
-function ke(a) {
+function Ee(a) {
   this.cb = a
 }
-ke.prototype.l = function(a, b) {
-  return a instanceof ke && this.cb.l(a.cb, b)
+Ee.prototype.l = function(a, b) {
+  return a instanceof Ee && this.cb.l(a.cb, b)
 };
-ke.prototype.k = function(a, b) {
+Ee.prototype.k = function(a, b) {
   a.push("new StreamStatusFrame(");
   O(this.cb, a, b);
   a.push(")")
 };
-ke.prototype.F = X;
-ke.prototype.P = function(a) {
+Ee.prototype.F = X;
+Ee.prototype.P = function(a) {
   var b = this.cb;
   a.push(b.ya.join(","), "|", "" + b.Ca);
   a.push("T")
 };
-function le() {
+function Fe() {
 }
-le.prototype.k = function(a) {
+Fe.prototype.k = function(a) {
   a.push("new StreamCreatedFrame()")
 };
-le.prototype.l = function(a) {
-  return a instanceof le
+Fe.prototype.l = function(a) {
+  return a instanceof Fe
 };
-le.prototype.F = X;
-le.prototype.P = function(a) {
+Fe.prototype.F = X;
+Fe.prototype.P = function(a) {
   a.push("C")
 };
-function me() {
+function Ge() {
 }
-me.prototype.k = function(a) {
+Ge.prototype.k = function(a) {
   a.push("new YouCloseItFrame()")
 };
-me.prototype.l = function(a) {
-  return a instanceof me
+Ge.prototype.l = function(a) {
+  return a instanceof Ge
 };
-me.prototype.F = X;
-me.prototype.P = function(a) {
+Ge.prototype.F = X;
+Ge.prototype.P = function(a) {
   a.push("Y")
 };
-function ne(a, b) {
+function He(a, b) {
   this.gb = a;
   this.Sa = b
 }
-ne.prototype.l = function(a) {
-  return a instanceof ne && this.gb == a.gb && this.Sa == a.Sa
+He.prototype.l = function(a) {
+  return a instanceof He && this.gb == a.gb && this.Sa == a.Sa
 };
-ne.prototype.k = function(a, b) {
+He.prototype.k = function(a, b) {
   a.push("new ResetFrame(");
   O(this.gb, a, b);
   a.push(", ", "" + this.Sa, ")")
 };
-ne.prototype.F = X;
-ne.prototype.P = function(a) {
+He.prototype.F = X;
+He.prototype.P = function(a) {
   a.push(this.gb, "|", "" + Number(this.Sa), "!")
 };
-var oe = {stream_attach_failure:"stream_attach_failure", acked_unsent_strings:"acked_unsent_strings", invalid_frame_type_or_arguments:"invalid_frame_type_or_arguments", frame_corruption:"frame_corruption", rwin_overflow:"rwin_overflow"};
-function pe(a) {
+var Ie = {stream_attach_failure:"stream_attach_failure", acked_unsent_strings:"acked_unsent_strings", invalid_frame_type_or_arguments:"invalid_frame_type_or_arguments", frame_corruption:"frame_corruption", rwin_overflow:"rwin_overflow"};
+function Je(a) {
   this.reason = a
 }
-pe.prototype.l = function(a) {
-  return a instanceof pe && this.reason == a.reason
+Je.prototype.l = function(a) {
+  return a instanceof Je && this.reason == a.reason
 };
-pe.prototype.k = function(a, b) {
+Je.prototype.k = function(a, b) {
   a.push("new TransportKillFrame(");
   O(this.reason, a, b);
   a.push(")")
 };
-pe.prototype.F = X;
-pe.prototype.P = function(a) {
+Je.prototype.F = X;
+Je.prototype.P = function(a) {
   a.push(this.reason, "K")
 };
-function re(a) {
+function Ke(a) {
   a || g(new W("0-length frame"));
   var b = a.substr(a.length - 1, 1);
   if(" " == b) {
-    return new ge(a.substr(0, a.length - 1))
+    return new Ae(a.substr(0, a.length - 1))
   }
   if("A" == b) {
-    return a = je(Od(a)), a == k && g(new W("bad sack")), new Y(a)
+    return a = De(Zd(a)), a == k && g(new W("bad sack")), new Y(a)
   }
   if("N" == b) {
-    return a = Rd(Od(a)), a == k && g(new W("bad seqNum")), new ie(a)
+    return a = be(Zd(a)), a == k && g(new W("bad seqNum")), new Ce(a)
   }
   if("T" == b) {
-    return a = je(Od(a)), a == k && g(new W("bad lastSackSeen")), new ke(a)
+    return a = De(Zd(a)), a == k && g(new W("bad lastSackSeen")), new Ee(a)
   }
   if("Y" == b) {
-    return 1 != a.length && g(new W("leading garbage")), new me
+    return 1 != a.length && g(new W("leading garbage")), new Ge
   }
   if("^" == b) {
-    return new he(a.substr(0, a.length - 1))
+    return new Be(a.substr(0, a.length - 1))
   }
   if("C" == b) {
-    return 1 != a.length && g(new W("leading garbage")), new le
+    return 1 != a.length && g(new W("leading garbage")), new Fe
   }
   if("!" == b) {
-    return b = a.substr(0, a.length - 3), (255 < b.length || !/^([ -~]*)$/.test(b)) && g(new W("bad reasonString")), a = {"|0":m, "|1":j}[a.substr(a.length - 3, 2)], a == k && g(new W("bad applicationLevel")), new ne(b, a)
+    return b = a.substr(0, a.length - 3), (255 < b.length || !/^([ -~]*)$/.test(b)) && g(new W("bad reasonString")), a = {"|0":m, "|1":j}[a.substr(a.length - 3, 2)], a == k && g(new W("bad applicationLevel")), new He(b, a)
   }
   if("K" == b) {
-    return a = a.substr(0, a.length - 1), a = oe[a], a == k && g(new W("unknown kill reason: " + a)), new pe(a)
+    return a = a.substr(0, a.length - 1), a = Ie[a], a == k && g(new W("unknown kill reason: " + a)), new Je(a)
   }
   g(new W("Invalid frame type " + b))
 }
-;function se(a, b, c, d) {
+;function Le(a, b, c, d) {
   this.contentWindow = a;
   this.wb = b;
   this.Ec = c;
   this.fe = d
 }
-se.prototype.k = function(a, b) {
+Le.prototype.k = function(a, b) {
   a.push("<XDRFrame frameId=");
   O(this.fe, a, b);
   a.push(", expandedUrl=");
@@ -2600,18 +2850,18 @@ se.prototype.k = function(a, b) {
   O(this.Ec, a, b);
   a.push(">")
 };
-function te() {
+function Me() {
   this.frames = [];
   this.pc = new Q
 }
-te.prototype.a = T("cw.net.XDRTracker");
-function ue(a) {
+Me.prototype.a = T("cw.net.XDRTracker");
+function Ne(a) {
   return a.replace(/%random%/g, function() {
-    return"ml" + Math.floor(ae()) + ("" + Math.floor(ae()))
+    return"ml" + Math.floor(ue()) + ("" + Math.floor(ue()))
   })
 }
-function ve(a, b) {
-  for(var c = we, d = 0;d < c.frames.length;d++) {
+function Oe(a, b) {
+  for(var c = Pe, d = 0;d < c.frames.length;d++) {
     var e = c.frames[d], f;
     if(f = 0 == e.Ec.length) {
       f = e.wb;
@@ -2622,8 +2872,8 @@ function ve(a, b) {
       return c.a.info("Giving " + P(b) + " existing frame " + P(e)), Sb(e)
     }
   }
-  d = Nd() + Nd();
-  e = ue(a);
+  d = Yd() + Yd();
+  e = Ne(a);
   f = s.location;
   f instanceof hd || (f = xd(f));
   e instanceof hd || (e = xd(e));
@@ -2641,9 +2891,9 @@ function ve(a, b) {
         n = ""
       }else {
         if(!(-1 == n.indexOf("./") && -1 == n.indexOf("/."))) {
-          for(var l = 0 == n.lastIndexOf("/", 0), n = n.split("/"), q = [], F = 0;F < n.length;) {
-            var p = n[F++];
-            "." == p ? l && F == n.length && q.push("") : ".." == p ? ((1 < q.length || 1 == q.length && "" != q[0]) && q.pop(), l && F == n.length && q.push("")) : (q.push(p), l = j)
+          for(var l = 0 == n.lastIndexOf("/", 0), n = n.split("/"), q = [], E = 0;E < n.length;) {
+            var p = n[E++];
+            "." == p ? l && E == n.length && q.push("") : ".." == p ? ((1 < q.length || 1 == q.length && "" != q[0]) && q.pop(), l && E == n.length && q.push("")) : (q.push(p), l = j)
           }
           n = q.join("/")
         }
@@ -2656,253 +2906,32 @@ function ve(a, b) {
   e = f.toString();
   f = ("" + s.location).match(fd)[3] || k;
   h = e.match(fd)[3] || k;
-  f == h ? (c.a.info("No need to make a real XDRFrame for " + P(b)), c = Sb(new se(s, e, [b], k))) : ((f = qc("minerva-elements")) || g(Error('makeWindowForUrl_: Page is missing an empty div with id "minerva-elements"; please add one.')), h = new N, c.pc.set(d, [h, e, b]), c.a.info("Creating new XDRFrame " + P(d) + "for " + P(b)), c = uc("iframe", {id:"minerva-xdrframe-" + d, style:"visibility: hidden; height: 0; width: 0; border: 0; margin: 0;", src:e + "xdrframe/?domain=" + document.domain + "&id=" + 
+  f == h ? (c.a.info("No need to make a real XDRFrame for " + P(b)), c = Sb(new Le(s, e, [b], k))) : ((f = qc("minerva-elements")) || g(Error('makeWindowForUrl_: Page is missing an empty div with id "minerva-elements"; please add one.')), h = new N, c.pc.set(d, [h, e, b]), c.a.info("Creating new XDRFrame " + P(d) + "for " + P(b)), c = uc("iframe", {id:"minerva-xdrframe-" + d, style:"visibility: hidden; height: 0; width: 0; border: 0; margin: 0;", src:e + "xdrframe/?domain=" + document.domain + "&id=" + 
   d}), f.appendChild(c), c = h);
   return c
 }
-te.prototype.Le = function(a) {
+Me.prototype.Le = function(a) {
   var b = this.pc.get(a);
   b || g(Error("Unknown frameId " + P(a)));
   this.pc.remove(b);
-  var c = b[0], a = new se(qc("minerva-xdrframe-" + a).contentWindow || (qc("minerva-xdrframe-" + a).contentDocument || qc("minerva-xdrframe-" + a).contentWindow.document).parentWindow || (qc("minerva-xdrframe-" + a).contentDocument || qc("minerva-xdrframe-" + a).contentWindow.document).defaultView, b[1], [b[2]], a);
+  var c = b[0], a = new Le(qc("minerva-xdrframe-" + a).contentWindow || (qc("minerva-xdrframe-" + a).contentDocument || qc("minerva-xdrframe-" + a).contentWindow.document).parentWindow || (qc("minerva-xdrframe-" + a).contentDocument || qc("minerva-xdrframe-" + a).contentWindow.document).defaultView, b[1], [b[2]], a);
   this.frames.push(a);
   Nb(c, a)
 };
-var we = new te;
-s.__XHRTracker_xdrFrameLoaded = y(we.Le, we);
-var xe;
-xe = m;
-var ye = Ga();
-ye && (-1 != ye.indexOf("Firefox") || -1 != ye.indexOf("Camino") || -1 != ye.indexOf("iPhone") || -1 != ye.indexOf("iPod") || -1 != ye.indexOf("iPad") || -1 != ye.indexOf("Android") || -1 != ye.indexOf("Chrome") && (xe = j));
-var ze = xe;
-var Ae;
-(function() {
-  function a(a) {
-    a = a.match(/[\d]+/g);
-    a.length = 3;
-    return a.join(".")
-  }
-  var b = m, c = "";
-  if(navigator.plugins && navigator.plugins.length) {
-    var d = navigator.plugins["Shockwave Flash"];
-    d && (b = j, d.description && (c = a(d.description)));
-    navigator.plugins["Shockwave Flash 2.0"] && (b = j, c = "2.0.0.11")
-  }else {
-    if(navigator.mimeTypes && navigator.mimeTypes.length) {
-      (b = (d = navigator.mimeTypes["application/x-shockwave-flash"]) && d.enabledPlugin) && (c = a(d.enabledPlugin.description))
-    }else {
-      try {
-        d = new ActiveXObject("ShockwaveFlash.ShockwaveFlash.7"), b = j, c = a(d.GetVariable("$version"))
-      }catch(e) {
-        try {
-          d = new ActiveXObject("ShockwaveFlash.ShockwaveFlash.6"), b = j, c = "6.0.21"
-        }catch(f) {
-          try {
-            d = new ActiveXObject("ShockwaveFlash.ShockwaveFlash"), b = j, c = a(d.GetVariable("$version"))
-          }catch(h) {
-          }
-        }
-      }
-    }
-  }
-  Ae = c
-})();
-function Be(a) {
-  this.ie = a;
-  this.h = []
-}
-A(Be, J);
-var Ce = [];
-Be.prototype.wc = function() {
-  db(this.h, Ab);
-  this.h.length = 0
-};
-Be.prototype.d = function() {
-  Be.p.d.call(this);
-  this.wc()
-};
-Be.prototype.handleEvent = function() {
-  g(Error("EventHandler.handleEvent not implemented"))
-};
-function De() {
-}
-(function(a) {
-  a.Zc = function() {
-    return a.le || (a.le = new a)
-  }
-})(De);
-De.prototype.re = 0;
-De.Zc();
-function Ee(a) {
-  this.tb = a || oc()
-}
-A(Ee, Gb);
-r = Ee.prototype;
-r.ke = De.Zc();
-r.U = k;
-r.va = m;
-r.i = k;
-r.v = k;
-r.fa = k;
-r.Va = k;
-r.He = m;
-function Fe(a) {
-  return a.U || (a.U = ":" + (a.ke.re++).toString(36))
-}
-r.ta = o("i");
-r.getParent = o("v");
-r.zc = function(a) {
-  this.v && this.v != a && g(Error("Method not supported"));
-  Ee.p.zc.call(this, a)
-};
-r.Yc = o("tb");
-r.Wa = function() {
-  this.i = this.tb.createElement("div")
-};
-function Ge(a, b) {
-  a.va && g(Error("Component already rendered"));
-  a.i || a.Wa();
-  b ? b.insertBefore(a.i, k) : a.tb.ga.body.appendChild(a.i);
-  (!a.v || a.v.va) && a.ub()
-}
-r.ub = function() {
-  this.va = j;
-  He(this, function(a) {
-    !a.va && a.ta() && a.ub()
-  })
-};
-function Ie(a) {
-  He(a, function(a) {
-    a.va && Ie(a)
-  });
-  a.Ab && a.Ab.wc();
-  a.va = m
-}
-r.d = function() {
-  Ee.p.d.call(this);
-  this.va && Ie(this);
-  this.Ab && (this.Ab.b(), delete this.Ab);
-  He(this, function(a) {
-    a.b()
-  });
-  !this.He && this.i && yc(this.i);
-  this.v = this.i = this.Va = this.fa = k
-};
-function He(a, b) {
-  a.fa && db(a.fa, b, i)
-}
-r.removeChild = function(a, b) {
-  if(a) {
-    var c = x(a) ? a : Fe(a), a = this.Va && c ? (c in this.Va ? this.Va[c] : i) || k : k;
-    if(c && a) {
-      var d = this.Va;
-      c in d && delete d[c];
-      hb(this.fa, a);
-      b && (Ie(a), a.i && yc(a.i));
-      c = a;
-      c == k && g(Error("Unable to set parent component"));
-      c.v = k;
-      Ee.p.zc.call(c, k)
-    }
-  }
-  a || g(Error("Child is not in parent component"));
-  return a
-};
-function Je(a, b) {
-  this.tb = b || oc();
-  this.ee = a;
-  this.dc = new Be(this);
-  this.xb = new Q
-}
-A(Je, Ee);
-r = Je.prototype;
-r.a = T("goog.ui.media.FlashObject");
-r.Je = "window";
-r.Lc = "#000000";
-r.Pd = "sameDomain";
-function Ke(a, b, c) {
-  a.Kc = x(b) ? b : Math.round(b) + "px";
-  a.jc = x(c) ? c : Math.round(c) + "px";
-  a.ta() && (b = a.ta() ? a.ta().firstChild : k, c = a.jc, c == i && g(Error("missing height argument")), b.style.width = zc(a.Kc), b.style.height = zc(c))
-}
-r.ub = function() {
-  Je.p.ub.call(this);
-  var a = this.ta(), b;
-  b = E ? '<object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" id="%s" name="%s" class="%s"><param name="movie" value="%s"/><param name="quality" value="high"/><param name="FlashVars" value="%s"/><param name="bgcolor" value="%s"/><param name="AllowScriptAccess" value="%s"/><param name="allowFullScreen" value="true"/><param name="SeamlessTabbing" value="false"/>%s</object>' : '<embed quality="high" id="%s" name="%s" class="%s" src="%s" FlashVars="%s" bgcolor="%s" AllowScriptAccess="%s" allowFullScreen="true" SeamlessTabbing="false" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer" %s></embed>';
-  for(var c = E ? '<param name="wmode" value="%s"/>' : "wmode=%s", c = oa(c, this.Je), d = this.xb.ba(), e = this.xb.H(), f = [], h = 0;h < d.length;h++) {
-    var l = qa(d[h]), n = qa(e[h]);
-    f.push(l + "=" + n)
-  }
-  b = oa(b, Fe(this), Fe(this), "goog-ui-media-flash-object", D(this.ee), D(f.join("&")), this.Lc, this.Pd, c);
-  a.innerHTML = b;
-  this.Kc && this.jc && Ke(this, this.Kc, this.jc);
-  a = this.dc;
-  b = this.ta();
-  c = Ya(ob);
-  v(c) || (Ce[0] = c, c = Ce);
-  for(d = 0;d < c.length;d++) {
-    a.h.push(vb(b, c[d], qb || a, m, a.ie || a))
-  }
-};
-r.Wa = function() {
-  this.Bd != k && !(0 <= ya(Ae, this.Bd)) && (this.a.D("Required flash version not found:" + this.Bd), g(Error("Method not supported")));
-  var a = this.Yc().createElement("div");
-  a.className = "goog-ui-media-flash";
-  this.i = a
-};
-r.d = function() {
-  Je.p.d.call(this);
-  this.xb = k;
-  this.dc.b();
-  this.dc = k
-};
-function Le(a) {
-  C.call(this, a)
-}
-A(Le, C);
-Le.prototype.name = "cw.loadflash.FlashLoadFailed";
-s.__loadFlashObject_callbacks = {};
-function Me(a, b, c) {
-  function d() {
-    e && delete s.__loadFlashObject_callbacks[e]
-  }
-  var e;
-  if(Ka && !H("1.8.1.20")) {
-    return Tb(new Le("Flash corrupts Error hierarchy in Firefox 2.0.0.0; disabled for all < 2.0.0.20"))
-  }
-  if(!(0 <= ya(Ae, "9"))) {
-    return b = Ae, Tb(new Le("Need Flash Player 9+; had " + (b ? b : "none")))
-  }
-  var f;
-  e = "_" + Nd();
-  var h = new N(d);
-  s.__loadFlashObject_callbacks[e] = function() {
-    a.setTimeout(function() {
-      d();
-      Nb(h, qc(f))
-    }, 0)
-  };
-  b.xb.set("onloadcallback", '__loadFlashObject_callbacks["' + e + '"]()');
-  f = Fe(b);
-  Ge(b, c);
-  return h
-}
-function Ne(a, b, c) {
-  var d = Me(a, b, c), e = a.setTimeout(function() {
-    d.cancel()
-  }, 8E3);
-  Qb(d, function(b) {
-    a.clearTimeout(e);
-    return b
-  });
-  return d
-}
-;/*
+var Pe = new Me;
+s.__XHRTracker_xdrFrameLoaded = y(Pe.Le, Pe);
+var Qe;
+Qe = m;
+var Re = Ga();
+Re && (-1 != Re.indexOf("Firefox") || -1 != Re.indexOf("Camino") || -1 != Re.indexOf("iPhone") || -1 != Re.indexOf("iPod") || -1 != Re.indexOf("iPad") || -1 != Re.indexOf("Android") || -1 != Re.indexOf("Chrome") && (Qe = j));
+var Se = Qe;
+var te = "4bdfc178fc0e508c0cd5efc3fdb09920";
+/*
  Portions of this code are from MochiKit, received by The Closure
  Library Authors under the MIT license. All other code is Copyright
  2005-2009 The Closure Library Authors. All Rights Reserved.
 */
-function Oe(a, b, c, d, e, f) {
+function Te(a, b, c, d, e, f) {
   N.call(this, e, f);
   this.ld = a;
   this.bc = [];
@@ -2914,23 +2943,23 @@ function Oe(a, b, c, d, e, f) {
   }
   0 == a.length && !this.Wc && Nb(this, this.bc)
 }
-A(Oe, N);
-Oe.prototype.sd = 0;
-Oe.prototype.bd = function(a, b, c) {
+A(Te, N);
+Te.prototype.sd = 0;
+Te.prototype.bd = function(a, b, c) {
   this.sd++;
   this.bc[a] = [b, c];
   this.ha || (this.Wc && b ? Nb(this, [a, c]) : this.de && !b ? this.Xa(c) : this.sd == this.ld.length && Nb(this, this.bc));
   this.Vd && !b && (c = k);
   return c
 };
-Oe.prototype.Xa = function(a) {
-  Oe.p.Xa.call(this, a);
+Te.prototype.Xa = function(a) {
+  Te.p.Xa.call(this, a);
   db(this.ld, function(a) {
     a.cancel()
   })
 };
-function Pe(a) {
-  a = new Oe(a, m, j);
+function Ue(a) {
+  a = new Te(a, m, j);
   Ob(a, function(a) {
     return eb(a, function(a) {
       return a[1]
@@ -2938,14 +2967,14 @@ function Pe(a) {
   });
   return a
 }
-;function Qe(a, b) {
+;function Ve(a, b) {
   this.Ke = a;
   this.nd = b
 }
-Qe.prototype.nc = 0;
-Qe.prototype.Gb = 0;
-Qe.prototype.gc = m;
-function Re(a) {
+Ve.prototype.nc = 0;
+Ve.prototype.Gb = 0;
+Ve.prototype.gc = m;
+function We(a) {
   var b = [];
   if(a.gc) {
     return[b, 2]
@@ -2965,13 +2994,13 @@ function Re(a) {
   }
   return a.nc - a.Gb - 1 > a.nd ? (a.gc = j, [b, 2]) : [b, 1]
 }
-;function Se(a, b, c) {
+;function Xe(a, b, c) {
   this.w = b;
   this.Q = a;
   this.Zb = c
 }
-A(Se, J);
-r = Se.prototype;
+A(Xe, J);
+r = Xe.prototype;
 r.a = T("cw.net.XHRMaster");
 r.na = -1;
 r.qc = function(a, b, c) {
@@ -2980,39 +3009,39 @@ r.qc = function(a, b, c) {
 r.ia = o("na");
 r.tc = function(a, b) {
   1 != b && this.a.M(P(this.Q) + " got status != OK: " + b + "; XHRSlave should dispose soon.");
-  Vd(this.w);
-  Wd(this.w, a)
+  ie(this.w);
+  je(this.w, a)
 };
 r.uc = function(a) {
   this.a.m("ongotheaders_: " + P(a));
   var b = k;
-  "Content-Length" in a && (b = Rd(a["Content-Length"]));
+  "Content-Length" in a && (b = be(a["Content-Length"]));
   a = this.w;
   a.a.m(a.n() + " got Content-Length: " + b);
-  a.Y == Te && (b == k && (a.a.D("Expected to receive a valid Content-Length, but did not."), b = 5E5), Ue(a, 2E3 + 1E3 * (b / 3072)))
+  a.Y == Ye && (b == k && (a.a.D("Expected to receive a valid Content-Length, but did not."), b = 5E5), Ze(a, 2E3 + 1E3 * (b / 3072)))
 };
 r.vc = function(a) {
   1 != a && this.a.m(this.w.n() + "'s XHR's readyState is " + a);
   this.na = a;
-  2 <= this.na && Vd(this.w)
+  2 <= this.na && ie(this.w)
 };
 r.sc = function() {
   this.w.b()
 };
 r.d = function() {
-  Se.p.d.call(this);
+  Xe.p.d.call(this);
   delete Z.ca[this.Q];
   this.Zb.__XHRSlave_dispose(this.Q);
   delete this.Zb
 };
-function Ve() {
+function $e() {
   this.ca = {}
 }
-A(Ve, J);
-r = Ve.prototype;
+A($e, J);
+r = $e.prototype;
 r.a = T("cw.net.XHRMasterTracker");
 r.ac = function(a, b) {
-  var c = "_" + Nd(), d = new Se(c, a, b);
+  var c = "_" + Yd(), d = new Xe(c, a, b);
   return this.ca[c] = d
 };
 r.tc = function(a, b, c) {
@@ -3032,40 +3061,40 @@ r.sc = function(a) {
   b ? (delete this.ca[b.Q], b.sc()) : this.a.M("oncomplete_: no master for " + P(a))
 };
 r.d = function() {
-  Ve.p.d.call(this);
+  $e.p.d.call(this);
   for(var a = Ya(this.ca);a.length;) {
     a.pop().b()
   }
   delete this.ca
 };
-var Z = new Ve;
+var Z = new $e;
 s.__XHRMaster_onframes = y(Z.tc, Z);
 s.__XHRMaster_oncomplete = y(Z.sc, Z);
 s.__XHRMaster_ongotheaders = y(Z.uc, Z);
 s.__XHRMaster_onreadystatechange = y(Z.vc, Z);
-function We(a, b, c) {
+function af(a, b, c) {
   this.W = a;
   this.host = b;
   this.port = c
 }
-function Xe(a, b, c) {
+function bf(a, b, c) {
   this.host = a;
   this.port = b;
   this.Fe = c
 }
-function Ye(a, b) {
+function cf(a, b) {
   b || (b = a);
   this.W = a;
   this.oa = b
 }
-Ye.prototype.k = function(a, b) {
+cf.prototype.k = function(a, b) {
   a.push("<HttpEndpoint primaryUrl=");
   O(this.W, a, b);
   a.push(", secondaryUrl=");
   O(this.oa, a, b);
   a.push(">")
 };
-function Ze(a, b, c, d) {
+function df(a, b, c, d) {
   this.W = a;
   this.vd = b;
   this.oa = c;
@@ -3076,18 +3105,18 @@ function Ze(a, b, c, d) {
   a = this.Ed.location.href;
   gd(this.oa, a) || g(Error("secondaryWindow not same origin as secondaryUrl: " + a))
 }
-Ze.prototype.k = function(a, b) {
+df.prototype.k = function(a, b) {
   a.push("<ExpandedHttpEndpoint_ primaryUrl=");
   O(this.W, a, b);
   a.push(", secondaryUrl=");
   O(this.oa, a, b);
   a.push(">")
 };
-var $e = new he(";)]}");
-function af(a) {
+var ef = new Be(";)]}");
+function ff(a) {
   this.Ce = a
 }
-af.prototype.k = function(a, b) {
+ff.prototype.k = function(a, b) {
   a.push("<UserContext for ");
   O(this.Ce, a, b);
   a.push(">")
@@ -3096,12 +3125,12 @@ function $(a, b, c) {
   this.q = a;
   this.u = c ? c : Xb;
   this.nb = new Kc;
-  this.mb = Nd() + Nd();
+  this.mb = Yd() + Yd();
   this.ma = new Gd;
   this.mc = new Id;
   this.ob = k;
   this.Qb = [];
-  this.Aa = new af(this);
+  this.Aa = new ff(this);
   G && (this.ob = yb(s, "load", this.ve, m, this))
 }
 A($, J);
@@ -3141,18 +3170,18 @@ r.Qd = function(a) {
   this.onstring = y(a.stringReceived, a);
   this.onreset = y(a.streamReset, a)
 };
-function bf(a) {
+function gf(a) {
   var b = [-1];
   a.e && b.push(a.e.La);
   a.s && b.push(a.s.La);
   return Math.max.apply(Math.max, b)
 }
-function cf(a) {
+function hf(a) {
   if(!(3 > a.z)) {
-    var b = 0 != a.ma.I.G(), c = Jd(a.mc), d = !c.l(a.kd) && !(a.e && c.l(a.e.Ia) || a.s && c.l(a.s.Ia)), e = bf(a);
+    var b = 0 != a.ma.I.G(), c = Jd(a.mc), d = !c.l(a.kd) && !(a.e && c.l(a.e.Ia) || a.s && c.l(a.s.Ia)), e = gf(a);
     if((b = b && e < a.ma.ra) || d) {
       var f = b && d ? "string(s)+SACK" : b ? "string(s)" : d ? "SACK" : "nothing!?";
-      a.e.Ua ? (a.a.r("tryToSend_: writing " + f + " to primary"), d && (d = a.e, c != d.Ia && (!d.da && !d.t.length && df(d), d.t.push(new Y(c)), d.Ia = c)), b && ef(a.e, a.ma, e + 1), a.e.aa()) : a.s == k ? a.Bc ? (a.a.r("tryToSend_: creating secondary to send " + f), a.s = ff(a, m), b && ef(a.s, a.ma, e + 1), a.s.aa()) : (a.a.r("tryToSend_: not creating a secondary because stream might not exist on server"), a.xc = j) : a.a.r("tryToSend_: need to send " + f + ", but can't right now")
+      a.e.Ua ? (a.a.r("tryToSend_: writing " + f + " to primary"), d && (d = a.e, c != d.Ia && (!d.da && !d.t.length && jf(d), d.t.push(new Y(c)), d.Ia = c)), b && kf(a.e, a.ma, e + 1), a.e.aa()) : a.s == k ? a.Bc ? (a.a.r("tryToSend_: creating secondary to send " + f), a.s = lf(a, m), b && kf(a.s, a.ma, e + 1), a.s.aa()) : (a.a.r("tryToSend_: not creating a secondary because stream might not exist on server"), a.xc = j) : a.a.r("tryToSend_: need to send " + f + ", but can't right now")
     }
   }
 }
@@ -3177,25 +3206,25 @@ r.we = function(a, b) {
       }
     }
     this.ma.extend(a);
-    cf(this)
+    hf(this)
   }
 };
-function ff(a, b) {
+function lf(a, b) {
   var c;
-  a.q instanceof Ze ? c = Te : a.q instanceof Xe ? c = gf : g(Error("Don't support endpoint " + P(a.q)));
+  a.q instanceof df ? c = Ye : a.q instanceof bf ? c = mf : g(Error("Don't support endpoint " + P(a.q)));
   a.Gc += 1;
-  c = new hf(a.u, a, a.Gc, c, a.q, b);
+  c = new nf(a.u, a, a.Gc, c, a.q, b);
   a.a.r("Created: " + c.n());
   a.nb.add(c);
   return c
 }
-function jf(a, b, c) {
-  var d = new kf(a.u, a, b, c);
+function of(a, b, c) {
+  var d = new pf(a.u, a, b, c);
   a.a.r("Created: " + d.n() + ", delay=" + b + ", times=" + c);
   a.nb.add(d);
   return d
 }
-function lf(a, b) {
+function qf(a, b) {
   a.nb.remove(b) || g(Error("transportOffline_: Transport was not removed?"));
   a.a.m("Offline: " + b.n());
   a.Cc = b.ja ? a.Cc + b.ja : 0;
@@ -3205,9 +3234,9 @@ function lf(a, b) {
   }else {
     var c;
     var d;
-    c = b instanceof kf;
+    c = b instanceof pf;
     if(!c && b.Sb) {
-      var e = G ? ze ? [0, 1] : [9, 20] : [0, 0];
+      var e = G ? Se ? [0, 1] : [9, 20] : [0, 0];
       c = e[0];
       d = e[1];
       a.a.r("getDelayForNextTransport_: " + P({delay:c, times:d}))
@@ -3223,19 +3252,19 @@ function lf(a, b) {
     c = [c, d];
     e = c[0];
     c = c[1];
-    b == a.e ? (a.e = k, c ? a.e = jf(a, e, c) : (e = bf(a), a.e = ff(a, j), ef(a.e, a.ma, e + 1)), a.e.aa()) : b == a.s && (a.s = k, c ? (a.s = jf(a, e, c), a.s.aa()) : cf(a))
+    b == a.e ? (a.e = k, c ? a.e = of(a, e, c) : (e = gf(a), a.e = lf(a, j), kf(a.e, a.ma, e + 1)), a.e.aa()) : b == a.s && (a.s = k, c ? (a.s = of(a, e, c), a.s.aa()) : hf(a))
   }
 }
 r.reset = function(a) {
   3 < this.z && g(Error("reset: Can't send reset in state " + this.z));
   this.z = 4;
-  this.e && this.e.Ua ? (this.a.info("reset: Sending ResetFrame over existing primary."), mf(this.e, a), this.e.aa()) : (this.e && (this.a.m("reset: Disposing primary before sending ResetFrame."), this.e.b()), this.s && (this.a.m("reset: Disposing secondary before sending ResetFrame."), this.s.b()), this.a.info("reset: Creating resettingTransport_ for sending ResetFrame."), this.hb = ff(this, m), mf(this.hb, a), this.hb.aa());
+  this.e && this.e.Ua ? (this.a.info("reset: Sending ResetFrame over existing primary."), rf(this.e, a), this.e.aa()) : (this.e && (this.a.m("reset: Disposing primary before sending ResetFrame."), this.e.b()), this.s && (this.a.m("reset: Disposing secondary before sending ResetFrame."), this.s.b()), this.a.info("reset: Creating resettingTransport_ for sending ResetFrame."), this.hb = lf(this, m), rf(this.hb, a), this.hb.aa());
   this.onreset && this.onreset.call(this.Aa, a, j)
 };
-function nf(a, b, c, d) {
+function sf(a, b, c, d) {
   var e;
   e = a.mc;
-  for(var f = a.maxUndeliveredStrings, h = a.maxUndeliveredBytes, l = [], n = m, q = 0, F = c.length;q < F;q++) {
+  for(var f = a.maxUndeliveredStrings, h = a.maxUndeliveredBytes, l = [], n = m, q = 0, E = c.length;q < E;q++) {
     var p = c[q], t = p[0], p = p[1];
     if(t == e.wa + 1) {
       e.wa += 1;
@@ -3277,81 +3306,53 @@ function nf(a, b, c, d) {
       }
     }
   }
-  d || cf(a);
+  d || hf(a);
   if(!(4 == a.z || a.Z) && e) {
     b.a.M(b.n() + "'s peer caused rwin overflow."), b.b()
   }
 }
-var of = [];
-function pf() {
-  var a = new N;
-  of.push(a);
-  return a
-}
-function qf(a) {
-  var b = of;
-  of = [];
-  db(b, function(b) {
-    Nb(b, a)
-  })
-}
-function rf(a, b) {
-  if(of.length) {
-    return pf()
-  }
-  var c = new Je(b + "FlashConnector.swf?cb=4bdfc178fc0e508c0cd5efc3fdb09920");
-  c.Lc = "#777777";
-  Ke(c, 300, 30);
-  var d = qc("minerva-elements");
-  d || g(Error('loadFlashConnector_: Page is missing an empty div with id "minerva-elements"; please add one.'));
-  var e = qc("minerva-elements-FlashConnectorSwf");
-  e || (e = uc("div", {id:"minerva-elements-FlashConnectorSwf"}), d.appendChild(e));
-  Ed = Ne(a.B, c, e);
-  Ob(Ed, qf);
-  return pf()
-}
-$.prototype.start = function() {
+r.start = function() {
   this.onmessage && g(Error("ClientStream.start: Hey, you! It's `onstring`, not `onmessage`! Refusing to start."));
   1 != this.z && g(Error("ClientStream.start: " + P(this) + " already started"));
   this.z = 2;
-  if(this.q instanceof Ye) {
-    var a = ve(this.q.W, this), b = ve(this.q.oa, this), a = Pe([a, b]);
+  if(this.q instanceof cf) {
+    var a = Oe(this.q.W, this), b = Oe(this.q.oa, this), a = Ue([a, b]);
     Ob(a, y(this.be, this))
   }else {
-    if(this.q instanceof We) {
-      if(Dd) {
+    if(this.q instanceof af) {
+      if(Ed) {
         this.Vc()
       }else {
-        var a = rf(this.u, this.q.W), c = this;
+        var a = se(this.u, this.q.W), c = this;
         Ob(a, function(a) {
-          Dd = new Zd(c.u, a);
+          Ed = new me(c.u, a);
           return k
         });
         Ob(a, y(this.Vc, this))
       }
     }else {
-      sf(this)
+      tf(this)
     }
   }
 };
-$.prototype.be = function(a) {
+r.be = function(a) {
   var b = a[0].contentWindow, c = a[1].contentWindow, d = a[0].wb, e = a[1].wb;
   this.Qb.push(a[0]);
   this.Qb.push(a[1]);
-  this.q = new Ze(d, b, e, c);
-  sf(this)
+  this.q = new df(d, b, e, c);
+  tf(this)
 };
-$.prototype.Vc = function() {
-  this.q = new Xe(this.q.host, this.q.port, Dd);
-  sf(this)
+r.Vc = function() {
+  this.q = new bf(this.q.host, this.q.port, Ed);
+  tf(this)
 };
-function sf(a) {
+function tf(a) {
   a.z = 3;
-  a.e = ff(a, j);
-  ef(a.e, a.ma, k);
+  a.e = lf(a, j);
+  kf(a.e, a.ma, k);
   a.e.aa()
 }
-$.prototype.d = function() {
+r.d = function() {
   this.a.info(P(this) + " in disposeInternal.");
   this.z = 5;
   for(var a = this.nb.H(), b = 0;b < a.length;b++) {
@@ -3369,8 +3370,8 @@ $.prototype.d = function() {
   delete this.Aa;
   $.p.d.call(this)
 };
-var Te = 1, gf = 3;
-function hf(a, b, c, d, e, f) {
+var Ye = 1, mf = 3;
+function nf(a, b, c, d, e, f) {
   this.u = a;
   this.A = b;
   this.Qa = c;
@@ -3379,11 +3380,11 @@ function hf(a, b, c, d, e, f) {
   this.t = [];
   this.Da = f;
   this.Ua = !this.Ha();
-  this.Na = this.Y != Te;
+  this.Na = this.Y != Ye;
   this.Rd = y(this.De, this)
 }
-A(hf, J);
-r = hf.prototype;
+A(nf, J);
+r = nf.prototype;
 r.a = T("cw.net.ClientTransport");
 r.j = k;
 r.Hc = k;
@@ -3409,25 +3410,25 @@ r.Nc = function() {
   return!(!this.$a && this.yb)
 };
 r.Ha = function() {
-  return this.Y == Te || 2 == this.Y
+  return this.Y == Ye || 2 == this.Y
 };
-function tf(a, b) {
+function uf(a, b) {
   mb(b, function(a, b) {
     return a[0] > b[0] ? 1 : a[0] < b[0] ? -1 : 0
   });
-  nf(a.A, a, b, !a.Na)
+  sf(a.A, a, b, !a.Na)
 }
-function uf(a, b, c) {
+function vf(a, b, c) {
   try {
-    var d = re(b);
+    var d = Ke(b);
     a.yb += 1;
     a.a.m(a.n() + " RECV " + P(d));
     var e;
-    1 == a.yb && !d.l($e) && a.Ha() ? (a.a.D(a.n() + " is closing soon because got bad preamble: " + P(d)), e = j) : e = m;
+    1 == a.yb && !d.l(ef) && a.Ha() ? (a.a.D(a.n() + " is closing soon because got bad preamble: " + P(d)), e = j) : e = m;
     if(e) {
       return j
     }
-    if(d instanceof ge) {
+    if(d instanceof Ae) {
       if(!/^([ -~]*)$/.test(d.Pa)) {
         return a.$a = j
       }
@@ -3440,12 +3441,12 @@ function uf(a, b, c) {
         var l = f.ma, n = h.Ca, c = m;
         n > l.ra && (c = j);
         for(var q = Hd(l).concat(), d = 0;d < q.length;d++) {
-          var F = q[d];
-          if(F > n) {
+          var E = q[d];
+          if(E > n) {
             break
           }
-          var p = l.I.get(F)[1];
-          l.I.remove(F);
+          var p = l.I.get(E)[1];
+          l.I.remove(E);
           l.C -= p
         }
         for(d = 0;d < h.ya.length;d++) {
@@ -3458,27 +3459,27 @@ function uf(a, b, c) {
           return a.a.D(a.n() + " is closing soon because got bad SackFrame"), a.$a = j
         }
       }else {
-        if(d instanceof ie) {
+        if(d instanceof Ce) {
           a.Ib = d.kb - 1
         }else {
-          if(d instanceof ke) {
+          if(d instanceof Ee) {
             a.A.kd = d.cb
           }else {
-            if(d instanceof me) {
+            if(d instanceof Ge) {
               return a.a.r(a.n() + " is closing soon because got YouCloseItFrame"), j
             }
-            if(d instanceof pe) {
+            if(d instanceof Je) {
               return a.$a = j, "stream_attach_failure" == d.reason ? a.ja += 1 : "acked_unsent_strings" == d.reason && (a.ja += 0.5), a.a.r(a.n() + " is closing soon because got " + P(d)), j
             }
-            if(!(d instanceof he)) {
-              if(d instanceof le) {
-                var B = a.A, Pf = !a.Na;
+            if(!(d instanceof Be)) {
+              if(d instanceof Fe) {
+                var B = a.A, Qf = !a.Na;
                 B.a.r("Stream is now confirmed to exist at server.");
                 B.Bc = j;
-                B.xc && !Pf && (B.xc = m, cf(B))
+                B.xc && !Qf && (B.xc = m, hf(B))
               }else {
                 if(c.length) {
-                  tf(a, c);
+                  uf(a, c);
                   if(!v(c)) {
                     for(var Zc = c.length - 1;0 <= Zc;Zc--) {
                       delete c[Zc]
@@ -3486,7 +3487,7 @@ function uf(a, b, c) {
                   }
                   c.length = 0
                 }
-                if(d instanceof ne) {
+                if(d instanceof He) {
                   var Wb = a.A;
                   Wb.onreset && Wb.onreset.call(Wb.Aa, d.gb, d.Sa);
                   Wb.b();
@@ -3504,7 +3505,7 @@ function uf(a, b, c) {
   }
   return m
 }
-function Wd(a, b) {
+function je(a, b) {
   a.Nb = j;
   try {
     for(var c = m, d = [], e = 0, f = b.length;e < f;e++) {
@@ -3512,11 +3513,11 @@ function Wd(a, b) {
         a.a.info(a.n() + " returning from loop because we're disposed.");
         return
       }
-      if(c = uf(a, b[e], d)) {
+      if(c = vf(a, b[e], d)) {
         break
       }
     }
-    d.length && tf(a, d);
+    d.length && uf(a, d);
     a.Nb = m;
     a.t.length && a.aa();
     c && (a.a.r(a.n() + " closeSoon is true.  Frames were: " + P(b)), a.b())
@@ -3528,20 +3529,20 @@ r.De = function() {
   this.a.D(this.n() + " timed out due to lack of connection or no data being received.");
   this.b()
 };
-function vf(a) {
+function wf(a) {
   a.Jb != k && (a.u.B.clearTimeout(a.Jb), a.Jb = k)
 }
-function Ue(a, b) {
-  vf(a);
+function Ze(a, b) {
+  wf(a);
   b = Math.round(b);
   a.Jb = a.u.B.setTimeout(a.Rd, b);
   a.a.m(a.n() + "'s receive timeout set to " + b + " ms.")
 }
-function Vd(a) {
-  a.Y != Te && (a.Y == gf || 2 == a.Y ? Ue(a, 13500) : g(Error("peerStillAlive_: Don't know what to do for this transportType: " + a.Y)))
+function ie(a) {
+  a.Y != Ye && (a.Y == mf || 2 == a.Y ? Ze(a, 13500) : g(Error("peerStillAlive_: Don't know what to do for this transportType: " + a.Y)))
 }
-function df(a) {
-  var b = new ee;
+function jf(a) {
+  var b = new ye;
   b.Qa = a.Qa;
   b.wd = 2;
   b.dd = 2;
@@ -3558,7 +3559,7 @@ function df(a) {
   a.t.push(b);
   a.Ia = b.R
 }
-function Xd(a, b) {
+function ke(a, b) {
   b && (a.ja += 0.5);
   a.b()
 }
@@ -3569,7 +3570,7 @@ r.aa = function() {
   }else {
     var a = this.da;
     this.da = j;
-    !a && !this.t.length && df(this);
+    !a && !this.t.length && jf(this);
     for(a = 0;a < this.t.length;a++) {
       this.a.m(this.n() + " SEND " + P(this.t[a]))
     }
@@ -3583,73 +3584,73 @@ r.aa = function() {
       this.j = Z.ac(this, this.Da ? this.q.vd : this.q.Ed);
       this.Hc = this.u.B === Hb ? na() : this.u.B.getTime();
       this.j.qc(b, "POST", a);
-      Ue(this, 3E3 * (1.5 + (0 == b.indexOf("https://") ? 3 : 1)) + 4E3 + (this.Na ? 0 : this.Da ? 25E3 : 0))
+      Ze(this, 3E3 * (1.5 + (0 == b.indexOf("https://") ? 3 : 1)) + 4E3 + (this.Na ? 0 : this.Da ? 25E3 : 0))
     }else {
-      if(this.Y == gf) {
+      if(this.Y == mf) {
         a = [];
         b = 0;
         for(c = this.t.length;b < c;b++) {
           a.push(this.t[b].F())
         }
         this.t = [];
-        this.j ? this.j.pb(a) : (b = this.q, this.j = new $d(this), this.j.Mb = b.Fe.ac(this.j), this.Hc = this.u.B === Hb ? na() : this.u.B.getTime(), this.j.Xb(b.host, b.port), this.j.Z || (this.j.pb(a), this.j.Z || Ue(this, 8E3)))
+        this.j ? this.j.pb(a) : (b = this.q, this.j = new ne(this), this.j.Mb = b.Fe.ac(this.j), this.Hc = this.u.B === Hb ? na() : this.u.B.getTime(), this.j.Xb(b.host, b.port), this.j.Z || (this.j.pb(a), this.j.Z || Ze(this, 8E3)))
       }else {
         g(Error("flush_: Don't know what to do for this transportType: " + this.Y))
       }
     }
   }
 };
-function ef(a, b, c) {
-  !a.da && !a.t.length && df(a);
+function kf(a, b, c) {
+  !a.da && !a.t.length && jf(a);
   for(var d = Math.max(c, a.La + 1), e = Hd(b), c = [], f = 0;f < e.length;f++) {
     var h = e[f];
     (d == k || h >= d) && c.push([h, b.I.get(h)[0]])
   }
   b = 0;
   for(d = c.length;b < d;b++) {
-    f = c[b], e = f[0], f = f[1], (-1 == a.La || a.La + 1 != e) && a.t.push(new ie(e)), a.t.push(new ge(f)), a.La = e
+    f = c[b], e = f[0], f = f[1], (-1 == a.La || a.La + 1 != e) && a.t.push(new Ce(e)), a.t.push(new Ae(f)), a.La = e
   }
 }
 r.d = function() {
   this.a.info(this.n() + " in disposeInternal.");
-  hf.p.d.call(this);
+  nf.p.d.call(this);
   this.Jd = this.u.B === Hb ? na() : this.u.B.getTime();
   this.t = [];
-  vf(this);
+  wf(this);
   this.j && this.j.b();
   var a = this.A;
   this.A = k;
-  lf(a, this)
+  qf(a, this)
 };
-function mf(a, b) {
-  !a.da && !a.t.length && df(a);
-  a.t.push(new ne(b, j));
+function rf(a, b) {
+  !a.da && !a.t.length && jf(a);
+  a.t.push(new He(b, j));
   a.Ld = j
 }
-function kf(a, b, c, d) {
+function pf(a, b, c, d) {
   this.u = a;
   this.A = b;
   this.Tc = c;
   this.Pc = d
 }
-A(kf, J);
-r = kf.prototype;
+A(pf, J);
+r = pf.prototype;
 r.da = m;
 r.Ua = m;
 r.zb = k;
 r.Ia = k;
 r.a = T("cw.net.DoNothingTransport");
-function wf(a) {
+function xf(a) {
   a.zb = a.u.B.setTimeout(function() {
     a.zb = k;
     a.Pc--;
-    a.Pc ? wf(a) : a.b()
+    a.Pc ? xf(a) : a.b()
   }, a.Tc)
 }
 r.aa = function() {
   this.da && !this.Ua && g(Error("flush_: Can't flush more than once to DoNothingTransport."));
   this.da = j;
-  wf(this)
+  xf(this)
 };
 r.k = function(a) {
   a.push("<DoNothingTransport delay=", "" + this.Tc, ">")
@@ -3659,29 +3660,29 @@ r.n = ba("Wast. T");
 r.Nc = ba(m);
 r.d = function() {
   this.a.info(this.n() + " in disposeInternal.");
-  kf.p.d.call(this);
+  pf.p.d.call(this);
   this.zb != k && this.u.B.clearTimeout(this.zb);
   var a = this.A;
   this.A = k;
-  lf(a, this)
+  qf(a, this)
 };
-function xf() {
+function yf() {
 }
-xf.prototype.qb = k;
-var yf;
-function zf() {
+yf.prototype.qb = k;
+var zf;
+function Af() {
 }
-A(zf, xf);
-function Af(a) {
-  return(a = Bf(a)) ? new ActiveXObject(a) : new XMLHttpRequest
+A(Af, yf);
+function Bf(a) {
+  return(a = Cf(a)) ? new ActiveXObject(a) : new XMLHttpRequest
 }
-function Cf(a) {
+function Df(a) {
   var b = {};
-  Bf(a) && (b[0] = j, b[1] = j);
+  Cf(a) && (b[0] = j, b[1] = j);
   return b
 }
-zf.prototype.kc = k;
-function Bf(a) {
+Af.prototype.kc = k;
+function Cf(a) {
   if(!a.kc && "undefined" == typeof XMLHttpRequest && "undefined" != typeof ActiveXObject) {
     for(var b = ["MSXML2.XMLHTTP.6.0", "MSXML2.XMLHTTP.3.0", "MSXML2.XMLHTTP", "Microsoft.XMLHTTP"], c = 0;c < b.length;c++) {
       var d = b[c];
@@ -3694,15 +3695,15 @@ function Bf(a) {
   }
   return a.kc
 }
-yf = new zf;
-function Df(a) {
+zf = new Af;
+function Ef(a) {
   this.headers = new Q;
   this.Ra = a || k
 }
-A(Df, Gb);
-Df.prototype.a = T("goog.net.XhrIo");
-var Ef = /^https?$/i;
-r = Df.prototype;
+A(Ef, Gb);
+Ef.prototype.a = T("goog.net.XhrIo");
+var Ff = /^https?$/i;
+r = Ef.prototype;
 r.ea = m;
 r.f = k;
 r.Rb = k;
@@ -3725,14 +3726,14 @@ r.send = function(a, b, c, d) {
   this.hd = b;
   this.cc = m;
   this.ea = j;
-  this.f = this.Ra ? Af(this.Ra) : Af(yf);
-  this.Rb = this.Ra ? this.Ra.qb || (this.Ra.qb = Cf(this.Ra)) : yf.qb || (yf.qb = Cf(yf));
+  this.f = this.Ra ? Bf(this.Ra) : Bf(zf);
+  this.Rb = this.Ra ? this.Ra.qb || (this.Ra.qb = Df(this.Ra)) : zf.qb || (zf.qb = Df(zf));
   this.f.onreadystatechange = y(this.td, this);
   try {
-    this.a.m(Ff(this, "Opening Xhr")), this.lc = j, this.f.open(b, a, j), this.lc = m
+    this.a.m(Gf(this, "Opening Xhr")), this.lc = j, this.f.open(b, a, j), this.lc = m
   }catch(e) {
-    this.a.m(Ff(this, "Error opening Xhr: " + e.message));
-    Gf(this, e);
+    this.a.m(Gf(this, "Error opening Xhr: " + e.message));
+    Hf(this, e);
     return
   }
   var a = c || "", f = this.headers.N();
@@ -3746,49 +3747,49 @@ r.send = function(a, b, c, d) {
   this.Cd && (this.f.responseType = this.Cd);
   "withCredentials" in this.f && (this.f.withCredentials = this.Ie);
   try {
-    this.za && (Hb.clearTimeout(this.za), this.za = k), 0 < this.Ob && (this.a.m(Ff(this, "Will abort after " + this.Ob + "ms if incomplete")), this.za = Hb.setTimeout(y(this.Ee, this), this.Ob)), this.a.m(Ff(this, "Sending request")), this.Bb = j, this.f.send(a), this.Bb = m
+    this.za && (Hb.clearTimeout(this.za), this.za = k), 0 < this.Ob && (this.a.m(Gf(this, "Will abort after " + this.Ob + "ms if incomplete")), this.za = Hb.setTimeout(y(this.Ee, this), this.Ob)), this.a.m(Gf(this, "Sending request")), this.Bb = j, this.f.send(a), this.Bb = m
   }catch(h) {
-    this.a.m(Ff(this, "Send error: " + h.message)), Gf(this, h)
+    this.a.m(Gf(this, "Send error: " + h.message)), Hf(this, h)
   }
 };
 r.Ee = function() {
-  "undefined" != typeof ca && this.f && (this.bb = "Timed out after " + this.Ob + "ms, aborting", this.a.m(Ff(this, this.bb)), this.dispatchEvent("timeout"), this.abort(8))
+  "undefined" != typeof ca && this.f && (this.bb = "Timed out after " + this.Ob + "ms, aborting", this.a.m(Gf(this, this.bb)), this.dispatchEvent("timeout"), this.abort(8))
 };
-function Gf(a, b) {
+function Hf(a, b) {
   a.ea = m;
   a.f && (a.ua = j, a.f.abort(), a.ua = m);
   a.bb = b;
-  Hf(a);
-  If(a)
+  If(a);
+  Jf(a)
 }
-function Hf(a) {
+function If(a) {
   a.cc || (a.cc = j, a.dispatchEvent("complete"), a.dispatchEvent("error"))
 }
 r.abort = function() {
-  this.f && this.ea && (this.a.m(Ff(this, "Aborting")), this.ea = m, this.ua = j, this.f.abort(), this.ua = m, this.dispatchEvent("complete"), this.dispatchEvent("abort"), If(this))
+  this.f && this.ea && (this.a.m(Gf(this, "Aborting")), this.ea = m, this.ua = j, this.f.abort(), this.ua = m, this.dispatchEvent("complete"), this.dispatchEvent("abort"), Jf(this))
 };
 r.d = function() {
-  this.f && (this.ea && (this.ea = m, this.ua = j, this.f.abort(), this.ua = m), If(this, j));
-  Df.p.d.call(this)
+  this.f && (this.ea && (this.ea = m, this.ua = j, this.f.abort(), this.ua = m), Jf(this, j));
+  Ef.p.d.call(this)
 };
 r.td = function() {
-  !this.lc && !this.Bb && !this.ua ? this.se() : Jf(this)
+  !this.lc && !this.Bb && !this.ua ? this.se() : Kf(this)
 };
 r.se = function() {
-  Jf(this)
+  Kf(this)
 };
-function Jf(a) {
+function Kf(a) {
   if(a.ea && "undefined" != typeof ca) {
-    if(a.Rb[1] && 4 == a.ia() && 2 == Kf(a)) {
-      a.a.m(Ff(a, "Local request error detected and ignored"))
+    if(a.Rb[1] && 4 == a.ia() && 2 == Lf(a)) {
+      a.a.m(Gf(a, "Local request error detected and ignored"))
     }else {
       if(a.Bb && 4 == a.ia()) {
         Hb.setTimeout(y(a.td, a), 0)
       }else {
         if(a.dispatchEvent("readystatechange"), 4 == a.ia()) {
-          a.a.m(Ff(a, "Request complete"));
+          a.a.m(Gf(a, "Request complete"));
           a.ea = m;
-          var b = Kf(a), c;
+          var b = Lf(a), c;
           a: {
             switch(b) {
               case 200:
@@ -3810,7 +3811,7 @@ function Jf(a) {
           }
           if(!c) {
             if(b = 0 === b) {
-              b = ("" + a.oc).match(fd)[1] || k, !b && self.location && (b = self.location.protocol, b = b.substr(0, b.length - 1)), b = !Ef.test(b ? b.toLowerCase() : "")
+              b = ("" + a.oc).match(fd)[1] || k, !b && self.location && (b = self.location.protocol, b = b.substr(0, b.length - 1)), b = !Ff.test(b ? b.toLowerCase() : "")
             }
             c = b
           }
@@ -3823,16 +3824,16 @@ function Jf(a) {
             }catch(e) {
               a.a.m("Can not get status: " + e.message), d = ""
             }
-            a.bb = d + " [" + Kf(a) + "]";
-            Hf(a)
+            a.bb = d + " [" + Lf(a) + "]";
+            If(a)
           }
-          If(a)
+          Jf(a)
         }
       }
     }
   }
 }
-function If(a, b) {
+function Jf(a, b) {
   if(a.f) {
     var c = a.f, d = a.Rb[0] ? ea : k;
     a.f = k;
@@ -3849,7 +3850,7 @@ function If(a, b) {
 r.ia = function() {
   return this.f ? this.f.readyState : 0
 };
-function Kf(a) {
+function Lf(a) {
   try {
     return 2 < a.ia() ? a.f.status : -1
   }catch(b) {
@@ -3859,26 +3860,26 @@ function Kf(a) {
 r.getResponseHeader = function(a) {
   return this.f && 4 == this.ia() ? this.f.getResponseHeader(a) : i
 };
-function Ff(a, b) {
-  return b + " [" + a.hd + " " + a.oc + " " + Kf(a) + "]"
+function Gf(a, b) {
+  return b + " [" + a.hd + " " + a.oc + " " + Lf(a) + "]"
 }
-;var Lf = !(E || G && !H("420+"));
-function Mf(a, b) {
+;var Mf = !(F || G && !H("420+"));
+function Nf(a, b) {
   this.Pb = a;
   this.Q = b
 }
-A(Mf, J);
-r = Mf.prototype;
+A(Nf, J);
+r = Nf.prototype;
 r.j = k;
 r.na = -1;
 r.ad = m;
 r.cd = "Content-Length,Server,Date,Expires,Keep-Alive,Content-Type,Transfer-Encoding,Cache-Control".split(",");
-function Nf(a) {
-  var b = Re(a.Rc), c = b[0], b = b[1], d = s.parent;
+function Of(a) {
+  var b = We(a.Rc), c = b[0], b = b[1], d = s.parent;
   d ? (d.__XHRMaster_onframes(a.Q, c, b), 1 != b && a.b()) : a.b()
 }
 r.je = function() {
-  Nf(this);
+  Of(this);
   if(!this.Z) {
     var a = s.parent;
     a && a.__XHRMaster_oncomplete(this.Q);
@@ -3902,59 +3903,59 @@ r.ue = function() {
       }
     }
     a.__XHRMaster_onreadystatechange(this.Q, this.na);
-    Lf && 3 == this.na && Nf(this)
+    Mf && 3 == this.na && Of(this)
   }else {
     this.b()
   }
 };
 r.qc = function(a, b, c) {
-  this.j = new Df;
+  this.j = new Ef;
   vb(this.j, "readystatechange", y(this.ue, this));
   vb(this.j, "complete", y(this.je, this));
   this.j.send(a, b, c, {"Content-Type":"application/octet-stream"});
-  this.Rc = new Qe(this.j.f, 1048576)
+  this.Rc = new Ve(this.j.f, 1048576)
 };
 r.d = function() {
-  Mf.p.d.call(this);
+  Nf.p.d.call(this);
   delete this.Rc;
   this.j && this.j.b();
   delete this.Pb.lb[this.Q];
   delete this.Pb
 };
-function Of() {
+function Pf() {
   this.lb = {}
 }
-A(Of, J);
-Of.prototype.pe = function(a, b, c, d) {
-  var e = new Mf(this, a);
+A(Pf, J);
+Pf.prototype.pe = function(a, b, c, d) {
+  var e = new Nf(this, a);
   this.lb[a] = e;
   e.qc(b, c, d)
 };
-Of.prototype.Zd = function(a) {
+Pf.prototype.Zd = function(a) {
   (a = this.lb[a]) && a.b()
 };
-Of.prototype.d = function() {
-  Of.p.d.call(this);
+Pf.prototype.d = function() {
+  Pf.p.d.call(this);
   for(var a = Ya(this.lb);a.length;) {
     a.pop().b()
   }
   delete this.lb
 };
-var Qf = new Of;
-s.__XHRSlave_makeRequest = y(Qf.pe, Qf);
-s.__XHRSlave_dispose = y(Qf.Zd, Qf);
-function Rf(a, b, c, d) {
+var Rf = new Pf;
+s.__XHRSlave_makeRequest = y(Rf.pe, Rf);
+s.__XHRSlave_dispose = y(Rf.Zd, Rf);
+function Sf(a, b, c, d) {
   a = new hd(document.location);
   if(c) {
-    return new We(d, a.O, s.__demo_mainSocketPort)
+    return new af(d, a.O, s.__demo_mainSocketPort)
   }
   b ? (b = s.__demo_shared_domain, c = a.N(), kd(c, "_____random_____." + b)) : c = a.N();
   md(c, d);
   nd(c, "", i);
-  return new Ye(c.toString().replace("_____random_____", "%random%"))
+  return new cf(c.toString().replace("_____random_____", "%random%"))
 }
-;z("Minerva.HttpEndpoint", Ye);
-z("Minerva.SocketEndpoint", We);
+;z("Minerva.HttpEndpoint", cf);
+z("Minerva.SocketEndpoint", af);
 z("Minerva.ClientStream", $);
 $.prototype.getUserContext = $.prototype.he;
 $.prototype.bindToProtocol = $.prototype.Qd;
@@ -3990,12 +3991,12 @@ ed.prototype.setCapturing = ed.prototype.xe;
 z("Minerva.bind", y);
 z("Minerva.repr", P);
 z("Minerva.theCallQueue", Xb);
-z("Minerva.getEndpoint", Rf);
+z("Minerva.getEndpoint", Sf);
 z("Minerva.getEndpointByQueryArgs", function() {
   var a;
   a = (new hd(document.location)).K;
   var b = "http" != a.get("mode");
   a = Boolean(Number(a.get("useSub", "1")));
-  return Rf(0, a, b, "/httpface/")
+  return Sf(0, a, b, "/httpface/")
 });
 })();

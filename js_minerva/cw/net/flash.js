@@ -11,10 +11,14 @@
 
 goog.provide('cw.net.IFlashSocketProtocol');
 goog.provide('cw.net.FlashSocket');
+goog.provide('cw.net.loadFlashConnector');
 goog.provide('cw.net.FlashSocketTracker');
 goog.provide('cw.net.FlashSocketConduit');
 
+goog.require('goog.array');
 goog.require('goog.asserts');
+goog.require('goog.dom');
+goog.require('goog.async.Deferred');
 goog.require('goog.object');
 goog.require('goog.debug.Logger');
 goog.require('goog.Disposable');
@@ -22,6 +26,7 @@ goog.require('cw.eventual');
 goog.require('cw.externalinterface');
 goog.require('cw.repr');
 goog.require('cw.string');
+goog.require('cw.loadflash');
 
 
 /**
@@ -612,6 +617,87 @@ cw.net.FlashSocketConduit.prototype.disposeInternal = function() {
 	delete this.clientTransport_; // possible circular reference
 };
 
+
+
+/**
+ * @type {!goog.async.Deferred}
+ * @private
+ */
+cw.net.flashConnectorObjectDeferred_;
+
+/**
+ * @type {!Array.<!goog.async.Deferred>}
+ * @private
+ */
+cw.net.flashConnectorDeferreds_ = [];
+
+/**
+ * @return {boolean} Is FlashConnector.swf loading?
+ * @private
+ */
+cw.net.isFlashConnectorLoading_ = function() {
+	return !!cw.net.flashConnectorDeferreds_.length;
+};
+
+/**
+ * @return {!goog.async.Deferred}
+ * @private
+ */
+cw.net.newFlashConnectorDeferred_ = function() {
+	var d = new goog.async.Deferred();
+	cw.net.flashConnectorDeferreds_.push(d);
+	return d;
+};
+
+/**
+ * @private
+ */
+cw.net.fireFlashConnectorDeferreds_ = function(bridge) {
+	var deferreds = cw.net.flashConnectorDeferreds_;
+	cw.net.flashConnectorDeferreds_ = [];
+	goog.array.forEach(deferreds, function(d) {
+		d.callback(bridge);
+	});
+};
+
+/**
+ * @param {!cw.eventual.CallQueue} callQueue
+ * @param {string} httpFacePath
+ * @return {!goog.async.Deferred} Deferred that fires with an object or embed
+ *	 element.
+ */
+cw.net.loadFlashConnector = function(callQueue, httpFacePath) {
+	if(cw.net.isFlashConnectorLoading_()) {
+		return cw.net.newFlashConnectorDeferred_();
+	}
+
+	var flashObject = new goog.ui.media.FlashObject(
+		httpFacePath + 'FlashConnector.swf?cb=' + cw.net.breaker_FlashConnector_swf);
+	flashObject.setBackgroundColor("#777777");
+	flashObject.setSize(300, 30);
+
+	var container = goog.dom.getElement('minerva-elements');
+	if(!container) {
+		throw Error('loadFlashConnector_: Page is missing an empty div ' +
+			'with id "minerva-elements"; please add one.');
+	}
+
+	// getElement just in case it already exists
+	var renderInto = goog.dom.getElement('minerva-elements-FlashConnectorSwf');
+	if(!renderInto) {
+		renderInto = goog.dom.createDom('div',
+			{'id': 'minerva-elements-FlashConnectorSwf'});
+		container.appendChild(renderInto);
+	}
+
+	cw.net.flashConnectorObjectDeferred_ = cw.loadflash.loadFlashObjectWithTimeout(
+		callQueue.clock, flashObject, '9', renderInto, 8000);
+
+	cw.net.flashConnectorObjectDeferred_.addCallback(
+		cw.net.fireFlashConnectorDeferreds_);
+
+	return cw.net.newFlashConnectorDeferred_();
+};
 
 
 

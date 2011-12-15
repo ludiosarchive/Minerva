@@ -32,7 +32,6 @@ goog.provide('cw.net.TransportType_');
 goog.require('goog.asserts');
 goog.require('goog.async.DeferredList');
 goog.require('goog.array');
-goog.require('goog.dom');
 goog.require('goog.events');
 goog.require('goog.events.EventType');
 goog.require('goog.structs.Set');
@@ -45,11 +44,11 @@ goog.require('cw.dethrobber');
 goog.require('cw.eventual');
 goog.require('cw.repr');
 goog.require('cw.string');
-goog.require('cw.loadflash');
 goog.require('cw.net.SACK');
 goog.require('cw.net.Queue');
 goog.require('cw.net.Incoming');
 goog.require('cw.net.theXHRMasterTracker_');
+goog.require('cw.net.loadFlashConnector');
 goog.require('cw.net.FlashSocketTracker');
 goog.require('cw.net.FlashSocketConduit');
 goog.require('cw.net.theXDRTracker');
@@ -1349,82 +1348,6 @@ cw.net.ClientStream.prototype.getSACK_ = function() {
 };
 
 /**
- * @type {!goog.async.Deferred}
- * @private
- */
-cw.net.flashConnectorObjectDeferred_;
-
-/**
- * @type {!Array.<!goog.async.Deferred>}
- * @private
- */
-cw.net.flashConnectorDeferreds_ = [];
-
-/**
- * @return {boolean} Is FlashConnector.swf loading?
- */
-cw.net.isFlashConnectorLoading_ = function() {
-	return !!cw.net.flashConnectorDeferreds_.length;
-};
-
-/**
- * @return {!goog.async.Deferred}
- */
-cw.net.newFlashConnectorDeferred_ = function() {
-	var d = new goog.async.Deferred();
-	cw.net.flashConnectorDeferreds_.push(d);
-	return d;
-};
-
-cw.net.fireFlashConnectorDeferreds_ = function(bridge) {
-	var deferreds = cw.net.flashConnectorDeferreds_;
-	cw.net.flashConnectorDeferreds_ = [];
-	goog.array.forEach(deferreds, function(d) {
-		d.callback(bridge);
-	});
-};
-
-/**
- * @param {!cw.eventual.CallQueue} callQueue
- * @param {string} httpFacePath
- * @return {!goog.async.Deferred} Deferred that fires with an object or embed
- *	 element.
- * @private
- */
-cw.net.loadFlashConnector_ = function(callQueue, httpFacePath) {
-	if(cw.net.isFlashConnectorLoading_()) {
-		return cw.net.newFlashConnectorDeferred_();
-	}
-
-	var flashObject = new goog.ui.media.FlashObject(
-		httpFacePath + 'FlashConnector.swf?cb=' + cw.net.breaker_FlashConnector_swf);
-	flashObject.setBackgroundColor("#777777");
-	flashObject.setSize(300, 30);
-
-	var container = goog.dom.getElement('minerva-elements');
-	if(!container) {
-		throw Error('loadFlashConnector_: Page is missing an empty div ' +
-			'with id "minerva-elements"; please add one.');
-	}
-
-	// getElement just in case it already exists
-	var renderInto = goog.dom.getElement('minerva-elements-FlashConnectorSwf');
-	if(!renderInto) {
-		renderInto = goog.dom.createDom('div',
-			{'id': 'minerva-elements-FlashConnectorSwf'});
-		container.appendChild(renderInto);
-	}
-
-	cw.net.flashConnectorObjectDeferred_ = cw.loadflash.loadFlashObjectWithTimeout(
-		callQueue.clock, flashObject, '9', renderInto, 8000);
-
-	cw.net.flashConnectorObjectDeferred_.addCallback(
-		cw.net.fireFlashConnectorDeferreds_);
-
-	return cw.net.newFlashConnectorDeferred_();
-};
-
-/**
  * Called by application to start the ClientStream.
  */
 cw.net.ClientStream.prototype.start = function() {
@@ -1452,7 +1375,7 @@ cw.net.ClientStream.prototype.start = function() {
 		if(cw.net.ourFlashSocketTracker_) {
 			this.expandSocketEndpoint_();
 		} else {
-			var d = cw.net.loadFlashConnector_(this.callQueue_, this.endpoint_.primaryUrl);
+			var d = cw.net.loadFlashConnector(this.callQueue_, this.endpoint_.primaryUrl);
 			var that = this;
 			d.addCallback(function(bridge) {
 				cw.net.ourFlashSocketTracker_ =
