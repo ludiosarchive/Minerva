@@ -3316,15 +3316,15 @@ r.start = function() {
     }
   }
 };
-r.Vc = function() {
-  this.q = new We(this.q.host, this.q.port, Dd);
-  of(this)
-};
 r.be = function(a) {
   var b = a[0].contentWindow, c = a[1].contentWindow, d = a[0].wb, e = a[1].wb;
   this.Qb.push(a[0]);
   this.Qb.push(a[1]);
   this.q = new Ye(d, b, e, c);
+  of(this)
+};
+r.Vc = function() {
+  this.q = new We(this.q.host, this.q.port, Dd);
   of(this)
 };
 function of(a) {

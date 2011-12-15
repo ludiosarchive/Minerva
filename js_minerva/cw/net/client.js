@@ -1422,20 +1422,6 @@ cw.net.ClientStream.prototype.start = function() {
 	}
 };
 
-cw.net.ClientStream.prototype.expandSocketEndpoint_ = function() {
-	var host = this.endpoint_.host;
-	var port = this.endpoint_.port;
-	var tracker = cw.net.ourFlashSocketTracker_;
-
-	goog.asserts.assert(tracker != null, "ourFlashSocketTracker_ is null");
-
-	// TODO: maybe do something other than replace this.endpoint_
-	this.endpoint_ = new cw.net.ExpandedSocketEndpoint_(
-		host, port, tracker);
-
-	this.startFirstTransport_();
-};
-
 /**
  * @param {!Array.<!cw.net.XDRFrame>} xdrFrames
  */
@@ -1457,6 +1443,20 @@ cw.net.ClientStream.prototype.expandHttpEndpoint_ = function(xdrFrames) {
 	// TODO: maybe do something other than replace this.endpoint_
 	this.endpoint_ = new cw.net.ExpandedHttpEndpoint_(
 		primaryUrl, primaryWindow, secondaryUrl, secondaryWindow);
+
+	this.startFirstTransport_();
+};
+
+cw.net.ClientStream.prototype.expandSocketEndpoint_ = function() {
+	var host = this.endpoint_.host;
+	var port = this.endpoint_.port;
+	var tracker = cw.net.ourFlashSocketTracker_;
+
+	goog.asserts.assert(tracker != null, "ourFlashSocketTracker_ is null");
+
+	// TODO: maybe do something other than replace this.endpoint_
+	this.endpoint_ = new cw.net.ExpandedSocketEndpoint_(
+		host, port, tracker);
 
 	this.startFirstTransport_();
 };
