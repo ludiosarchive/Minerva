@@ -832,7 +832,7 @@ maybeNeedToSendStrings, maybeNeedToSendSack) {
  */
 cw.net.ClientStream.prototype.tryToSend_ = function() {
 	this.ensureQueueIntegrity_();
-	if(this.state_ == cw.net.StreamState_.UNSTARTED) {
+	if(this.state_ < cw.net.StreamState_.STARTED) {
 		return;
 	}
 	goog.asserts.assert(
@@ -1349,12 +1349,53 @@ cw.net.ClientStream.prototype.getSACK_ = function() {
 };
 
 /**
+ * @type {!goog.async.Deferred}
+ * @private
+ */
+cw.net.flashConnectorObjectDeferred_;
+
+/**
+ * @type {!Array.<!goog.async.Deferred>}
+ * @private
+ */
+cw.net.flashConnectorDeferreds_ = [];
+
+/**
+ * @return {boolean} Is FlashConnector.swf loading?
+ */
+cw.net.isFlashConnectorLoading_ = function() {
+	return !!cw.net.flashConnectorDeferreds_.length;
+};
+
+/**
+ * @return {!goog.async.Deferred}
+ */
+cw.net.newFlashConnectorDeferred_ = function() {
+	var d = new goog.async.Deferred();
+	cw.net.flashConnectorDeferreds_.push(d);
+	return d;
+};
+
+cw.net.fireFlashConnectorDeferreds_ = function(bridge) {
+	var deferreds = cw.net.flashConnectorDeferreds_;
+	cw.net.flashConnectorDeferreds_ = [];
+	goog.array.forEach(deferreds, function(d) {
+		d.callback(bridge);
+	});
+};
+
+/**
+ * @param {!cw.eventual.CallQueue} callQueue
  * @param {string} httpFacePath
  * @return {!goog.async.Deferred} Deferred that fires with an object or embed
  *	 element.
  * @private
  */
-cw.net.ClientStream.prototype.loadFlashConnector_ = function(httpFacePath) {
+cw.net.loadFlashConnector_ = function(callQueue, httpFacePath) {
+	if(cw.net.isFlashConnectorLoading_()) {
+		return cw.net.newFlashConnectorDeferred_();
+	}
+
 	var flashObject = new goog.ui.media.FlashObject(
 		httpFacePath + 'FlashConnector.swf?cb=' + cw.net.breaker_FlashConnector_swf);
 	flashObject.setBackgroundColor("#777777");
@@ -1374,9 +1415,13 @@ cw.net.ClientStream.prototype.loadFlashConnector_ = function(httpFacePath) {
 		container.appendChild(renderInto);
 	}
 
-	var d = cw.loadflash.loadFlashObjectWithTimeout(
-		this.callQueue_.clock, flashObject, '9', renderInto, 8000);
-	return d;
+	cw.net.flashConnectorObjectDeferred_ = cw.loadflash.loadFlashObjectWithTimeout(
+		callQueue.clock, flashObject, '9', renderInto, 8000);
+
+	cw.net.flashConnectorObjectDeferred_.addCallback(
+		cw.net.fireFlashConnectorDeferreds_);
+
+	return cw.net.newFlashConnectorDeferred_();
 };
 
 /**
@@ -1407,7 +1452,7 @@ cw.net.ClientStream.prototype.start = function() {
 		if(cw.net.ourFlashSocketTracker_) {
 			this.expandSocketEndpoint_();
 		} else {
-			var d = this.loadFlashConnector_(this.endpoint_.primaryUrl);
+			var d = cw.net.loadFlashConnector_(this.callQueue_, this.endpoint_.primaryUrl);
 			var that = this;
 			d.addCallback(function(bridge) {
 				cw.net.ourFlashSocketTracker_ =

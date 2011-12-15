@@ -645,44 +645,6 @@ cw.net.TestClient.RealHttpTests.subclass(cw.net.TestClient, 'RealHttpStreamingTe
  */
 cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealFlashSocketTests').methods(
 
-	function loadFlashApplet_(self) {
-		// Copied from cw.Test.TestExternalInterface.  TODO: generalize
-		// it somehow.
-
-		// The .swf applet persists between tests.
-		var existingApplet = cw.net.TestClient.__existingFlashApplet;
-		if(existingApplet) {
-			return goog.async.Deferred.succeed(existingApplet);
-		} else if(existingApplet === null) {
-			throw new cw.UnitTest.SkipTest("Previous attempt to load applet failed.");
-		} else { // === 'undefined'
-			var flashObject = new goog.ui.media.FlashObject(
-				'/compiled_client/FlashConnector.swf');
-			flashObject.setBackgroundColor("#777777");
-			// Make it wide so that you can read the text on the Chrome plugin
-			// shim that says "Plugin Missing".
-			flashObject.setSize(300, 30);
-
-			var d = cw.loadflash.loadFlashObjectWithTimeout(
-				goog.global['window'], flashObject, '9', document.body, 8000/* timeout */);
-			d.addCallbacks(
-				function(applet) {
-					cw.net.TestClient.__existingFlashApplet = applet;
-					return applet;
-				},
-				function(err) {
-					cw.net.TestClient.__existingFlashApplet = null;
-					if(err instanceof cw.loadflash.FlashLoadFailed) {
-						throw new cw.UnitTest.SkipTest(err.message);
-					} else {
-						// Timed out, or other Error
-						throw err;
-					}
-				});
-			return d;
-		}
-	},
-
 	function getEndpoint_(self) {
 		// Grab the main socket port we need to use from the server
 		var d = new goog.async.Deferred();
@@ -697,17 +659,10 @@ cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealFlashSocket
 					"minerva_site with at least one socket listener.");
 			}
 
-			var callQueue = new cw.eventual.CallQueue(goog.global['window']);
 			var url = new goog.Uri(document.location);
 			var host = url.getDomain();
 
-			var d2 = self.loadFlashApplet_();
-			d2.addCallback(function(bridge) {
-				var tracker = new cw.net.FlashSocketTracker(callQueue, bridge);
-				var endpoint = new cw.net.SocketEndpoint(host, port, tracker);
-				return endpoint;
-			});
-			return d2;
+			return new cw.net.SocketEndpoint('/httpface/', host, port);
 		});
 		return d;
 	}
