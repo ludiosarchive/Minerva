@@ -3895,18 +3895,18 @@ Gf.prototype.d = function() {
 var Hf = new Gf;
 s.__XHRSlave_makeRequest = y(Hf.re, Hf);
 s.__XHRSlave_dispose = y(Hf.ae, Hf);
-function If(a) {
-  var b = new jf("/compiled_client/FlashConnector.swf?cb=4bdfc178fc0e508c0cd5efc3fdb09920");
-  b.Nc = "#777777";
-  kf(b, 300, 30);
-  var c = oc("FlashConnectorSwf");
-  c || g(Error("no FlashConnectorSwf?"));
-  return nf(a.B, b, c)
+function If(a, b) {
+  var c = new jf(b + "FlashConnector.swf?cb=4bdfc178fc0e508c0cd5efc3fdb09920");
+  c.Nc = "#777777";
+  kf(c, 300, 30);
+  var d = oc("FlashConnectorSwf");
+  d || g(Error("no FlashConnectorSwf?"));
+  return nf(a.B, c, d)
 }
 function Jf(a, b, c, d) {
   var e = new fd(document.location);
   if(c) {
-    var f = e.O, h = s.__demo_mainSocketPort, d = If(a);
+    var f = e.O, h = s.__demo_mainSocketPort, d = If(a, d);
     d.qb(function(b) {
       b = new Vd(a, b);
       return new Ee(f, h, b)

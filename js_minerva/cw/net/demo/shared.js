@@ -46,12 +46,13 @@ cw.net.demo.DemoStreamPolicy.prototype.getHttpStreamingMode = function() {
 
 /**
  * @param {!cw.eventual.CallQueue} callQueue
+ * @param {string} httpFacePath
  * @return {!goog.async.Deferred} Deferred that fires with an object or embed
  *	 element.
  */
-cw.net.demo.loadFlashConnector = function(callQueue) {
+cw.net.demo.loadFlashConnector = function(callQueue, httpFacePath) {
 	var flashObject = new goog.ui.media.FlashObject(
-		'/compiled_client/FlashConnector.swf?cb=' + cw.net.breaker_FlashConnector_swf);
+		httpFacePath + 'FlashConnector.swf?cb=' + cw.net.breaker_FlashConnector_swf);
 	flashObject.setBackgroundColor("#777777");
 	flashObject.setSize(300, 30);
 	var renderInto = goog.dom.getElement("FlashConnectorSwf");
@@ -90,7 +91,7 @@ cw.net.demo.getEndpoint = function(callQueue, useSubdomains, useFlash, httpFaceP
 	} else {
 		var host = url.getDomain();
 		var port = goog.global['__demo_mainSocketPort'];
-		var d = cw.net.demo.loadFlashConnector(callQueue);
+		var d = cw.net.demo.loadFlashConnector(callQueue, httpFacePath);
 		d.addCallback(function(bridge) {
 			var tracker = new cw.net.FlashSocketTracker(callQueue, bridge);
 			var endpoint = new cw.net.SocketEndpoint(host, port, tracker);

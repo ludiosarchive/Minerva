@@ -23,7 +23,7 @@ from twisted.web.server import NOT_DONE_YET
 from strfrag import StringFragment
 from securetypes import securedict
 
-from webmagic.untwist import BetterResource, setNoCacheNoStoreHeaders
+from webmagic.untwist import BetterResource, BetterFile, setNoCacheNoStoreHeaders
 from webmagic.pathmanip import getCacheBrokenHref
 
 from minerva import decoders
@@ -1778,12 +1778,19 @@ class _HttpFace(BetterResource):
 
 
 
+requireFiles([
+	FilePath(__file__).sibling('compiled_client').child('FlashConnector.swf').path])
+
 class HttpFace(BetterResource):
 	def __init__(self, clock, streamTracker, fileCache, allowedDomains):
 		BetterResource.__init__(self)
 		self.putChild('', _HttpFace(clock, streamTracker))
 		self.putChild('xdrframe', XDRFrame(fileCache, allowedDomains))
 		self.putChild('xdrframe_dev', XDRFrameDev(fileCache, allowedDomains))
+
+		flashConnector = FilePath(__file__).\
+			sibling('compiled_client').child('FlashConnector.swf')
+		self.putChild('FlashConnector.swf', BetterFile(flashConnector.path))
 
 
 
