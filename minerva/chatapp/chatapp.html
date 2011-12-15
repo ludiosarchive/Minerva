@@ -329,7 +329,7 @@ chatapp.reconnectStreamWithoutWait = function() {
 
 
 chatapp.reconnectStreamWithWait = function() {
-	chatapp.ondisconnect = chatapp.startStream;
+	chatapp.lastProto.stream_.ondisconnect = chatapp.startStream;
 
 	if(chatapp.lastProto) {
 		chatapp.lastProto.reset('because user clicked reconnect-with-wait button');
