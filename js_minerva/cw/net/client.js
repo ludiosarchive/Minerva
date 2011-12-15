@@ -1405,10 +1405,16 @@ cw.net.ClientStream.prototype.start = function() {
 		//d.addErrback(); // TODO!!!
 	} else if(this.endpoint_ instanceof cw.net.SocketEndpoint) {
 		if(cw.net.ourFlashSocketTracker_) {
-			this.expandSocketEndpointWithExistingTracker_();
+			this.expandSocketEndpoint_();
 		} else {
 			var d = this.loadFlashConnector_(this.endpoint_.primaryUrl);
-			d.addCallback(goog.bind(this.expandSocketEndpointWithBridge_, this));
+			var that = this;
+			d.addCallback(function(bridge) {
+				cw.net.ourFlashSocketTracker_ =
+					new cw.net.FlashSocketTracker(that.callQueue_, bridge);
+				return null;
+			});
+			d.addCallback(goog.bind(this.expandSocketEndpoint_, this));
 			//d.addErrback(); // TODO!!!
 		}
 	} else {
@@ -1416,29 +1422,12 @@ cw.net.ClientStream.prototype.start = function() {
 	}
 };
 
-cw.net.ClientStream.prototype.expandSocketEndpointWithExistingTracker_ = function() {
-	this.logger_.fine(cw.repr.repr(this) + " is using existing FlashSocketTracker.");
-
+cw.net.ClientStream.prototype.expandSocketEndpoint_ = function() {
 	var host = this.endpoint_.host;
 	var port = this.endpoint_.port;
 	var tracker = cw.net.ourFlashSocketTracker_;
 
 	goog.asserts.assert(tracker != null, "ourFlashSocketTracker_ is null");
-
-	// TODO: maybe do something other than replace this.endpoint_
-	this.endpoint_ = new cw.net.ExpandedSocketEndpoint_(
-		host, port, tracker);
-
-	this.startFirstTransport_();
-};
-
-cw.net.ClientStream.prototype.expandSocketEndpointWithBridge_ = function(bridge) {
-	this.logger_.fine(cw.repr.repr(this) + " is creating new FlashSocketTracker.");
-
-	var host = this.endpoint_.host;
-	var port = this.endpoint_.port;
-	var tracker = new cw.net.FlashSocketTracker(this.callQueue_, bridge);
-	cw.net.ourFlashSocketTracker_ = tracker;
 
 	// TODO: maybe do something other than replace this.endpoint_
 	this.endpoint_ = new cw.net.ExpandedSocketEndpoint_(
