@@ -55,10 +55,21 @@ cw.net.demo.loadFlashConnector = function(callQueue, httpFacePath) {
 		httpFacePath + 'FlashConnector.swf?cb=' + cw.net.breaker_FlashConnector_swf);
 	flashObject.setBackgroundColor("#777777");
 	flashObject.setSize(300, 30);
-	var renderInto = goog.dom.getElement("FlashConnectorSwf");
-	if(!renderInto) {
-		throw Error("no FlashConnectorSwf?");
+
+	var container = goog.dom.getElement('minerva-elements');
+	if(!container) {
+		throw Error('loadFlashConnector: Page is missing an empty div ' +
+			'with id "minerva-elements"; please add one.');
 	}
+
+	// getElement just in case it already exists
+	var renderInto = goog.dom.getElement('minerva-elements-FlashConnectorSwf');
+	if(!renderInto) {
+		renderInto = goog.dom.createDom('div',
+			{'id': 'minerva-elements-FlashConnectorSwf'});
+		container.appendChild(renderInto);
+	}
+
 	var d = cw.loadflash.loadFlashObjectWithTimeout(
 		callQueue.clock, flashObject, '9', renderInto, 8000);
 	return d;

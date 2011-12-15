@@ -2500,16 +2500,16 @@ ge.prototype.P = function(a) {
   a.push(b.ya.join(","), "|", "" + b.Ca);
   a.push("T")
 };
-function ie() {
+function he() {
 }
-ie.prototype.k = function(a) {
+he.prototype.k = function(a) {
   a.push("new StreamCreatedFrame()")
 };
-ie.prototype.l = function(a) {
-  return a instanceof ie
+he.prototype.l = function(a) {
+  return a instanceof he
 };
-ie.prototype.F = X;
-ie.prototype.P = function(a) {
+he.prototype.F = X;
+he.prototype.P = function(a) {
   a.push("C")
 };
 function je() {
@@ -2578,7 +2578,7 @@ function ne(a) {
     return new de(a.substr(0, a.length - 1))
   }
   if("C" == b) {
-    return 1 != a.length && g(new W("leading garbage")), new ie
+    return 1 != a.length && g(new W("leading garbage")), new he
   }
   if("!" == b) {
     return b = a.substr(0, a.length - 3), (255 < b.length || !/^([ -~]*)$/.test(b)) && g(new W("bad reasonString")), a = {"|0":m, "|1":j}[a.substr(a.length - 3, 2)], a == k && g(new W("bad applicationLevel")), new ke(b, a)
@@ -2659,7 +2659,8 @@ function re(a, b) {
   e = f.toString();
   f = ("" + s.location).match(dd)[3] || k;
   h = e.match(dd)[3] || k;
-  f == h ? (c.a.info("No need to make a real XDRFrame for " + P(b)), c = Rb(new oe(s, e, [b], k))) : (f = oc("minerva-elements"), h = new N, c.qc.set(d, [h, e, b]), c.a.info("Creating new XDRFrame " + P(d) + "for " + P(b)), c = sc("iframe", {id:"minerva-xdrframe-" + d, style:"visibility: hidden; height: 0; width: 0; border: 0; margin: 0;", src:e + "xdrframe/?domain=" + document.domain + "&id=" + d}), f.appendChild(c), c = h);
+  f == h ? (c.a.info("No need to make a real XDRFrame for " + P(b)), c = Rb(new oe(s, e, [b], k))) : ((f = oc("minerva-elements")) || g(Error('makeWindowForUrl_: Page is missing an empty div with id "minerva-elements"; please add one.')), h = new N, c.qc.set(d, [h, e, b]), c.a.info("Creating new XDRFrame " + P(d) + "for " + P(b)), c = sc("iframe", {id:"minerva-xdrframe-" + d, style:"visibility: hidden; height: 0; width: 0; border: 0; margin: 0;", src:e + "xdrframe/?domain=" + document.domain + "&id=" + 
+  d}), f.appendChild(c), c = h);
   return c
 }
 pe.prototype.Ne = function(a) {
@@ -3201,7 +3202,7 @@ function Xe(a, b, c) {
               return a.$a = j, "stream_attach_failure" == d.reason ? a.ia += 1 : "acked_unsent_strings" == d.reason && (a.ia += 0.5), a.a.q(a.n() + " is closing soon because got " + P(d)), j
             }
             if(!(d instanceof de)) {
-              if(d instanceof ie) {
+              if(d instanceof he) {
                 var B = a.A, Df = !a.Na;
                 B.a.q("Stream is now confirmed to exist at server.");
                 B.Cc = j;
@@ -3229,8 +3230,8 @@ function Xe(a, b, c) {
         }
       }
     }
-  }catch(he) {
-    return he instanceof W || g(he), a.a.D(a.n() + " is closing soon because got InvalidFrame: " + P(b)), a.$a = j
+  }catch(ie) {
+    return ie instanceof W || g(ie), a.a.D(a.n() + " is closing soon because got InvalidFrame: " + P(b)), a.$a = j
   }
   return m
 }
@@ -3899,9 +3900,11 @@ function If(a, b) {
   var c = new jf(b + "FlashConnector.swf?cb=4bdfc178fc0e508c0cd5efc3fdb09920");
   c.Nc = "#777777";
   kf(c, 300, 30);
-  var d = oc("FlashConnectorSwf");
-  d || g(Error("no FlashConnectorSwf?"));
-  return nf(a.B, c, d)
+  var d = oc("minerva-elements");
+  d || g(Error('loadFlashConnector: Page is missing an empty div with id "minerva-elements"; please add one.'));
+  var e = oc("minerva-elements-FlashConnectorSwf");
+  e || (e = sc("div", {id:"minerva-elements-FlashConnectorSwf"}), d.appendChild(e));
+  return nf(a.B, c, e)
 }
 function Jf(a, b, c, d) {
   var e = new fd(document.location);

@@ -217,6 +217,10 @@ cw.net.XDRTracker.prototype.makeWindowForUrl_ = function(urlWithTokens, stream) 
 	// TODO: create minerva-elements if necessary (might be problematic if DOM
 	// hasn't finished loading).
 	var container = goog.dom.getElement('minerva-elements');
+	if(!container) {
+		throw Error('makeWindowForUrl_: Page is missing an empty div ' +
+			'with id "minerva-elements"; please add one.');
+	}
 
 	var d = new goog.async.Deferred();
 	this.loading.set(frameId, [d, expandedUrl, stream]);
