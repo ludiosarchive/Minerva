@@ -620,12 +620,15 @@ cw.net.FlashSocketConduit.prototype.disposeInternal = function() {
 
 
 /**
+ * The Deferred that fires when FlashConnector.swf finishes loading.
  * @type {!goog.async.Deferred}
  * @private
  */
 cw.net.flashConnectorObjectDeferred_;
 
 /**
+ * An Array of "child" Deferreds to fire when FlashConnector.swf finishes
+ * loading.
  * @type {!Array.<!goog.async.Deferred>}
  * @private
  */
