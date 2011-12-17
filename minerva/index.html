@@ -46,18 +46,18 @@ li {
 </li>
 <li>chatapp test page using Closure Library
 	<ul>
-	<li><a href="chatapp/?mode=http">using HTTP long-polling</a></li>
-	<li><a href="chatapp/?mode=http&useSub=0">using HTTP long-polling, without subdomains</a></li>
-	<li><a href="chatapp/?mode=http&httpStreaming=1">using HTTP streaming</a></li>
-	<li><a href="chatapp/?mode=http&httpStreaming=1&useSub=0">using HTTP streaming, without subdomains</a></li>
+	<li><a href="chatapp/?mode=http&useSubdomains=0">using HTTP long-polling</a></li>
+	<li><a href="chatapp/?mode=http&useSubdomains=1">using HTTP long-polling, with subdomains</a></li>
+	<li><a href="chatapp/?mode=http&httpStreaming=1&useSubdomains=0">using HTTP streaming</a></li>
+	<li><a href="chatapp/?mode=http&httpStreaming=1&useSubdomains=1">using HTTP streaming, with subdomains</a></li>
 	<li><a href="chatapp/?mode=flash">using Flash socket</a></li>
 	</ul>
 <li>chatapp test page using standalone <code><a href="compiled_client/minerva-client.js">minerva-client.js</a></code>
 	<ul>
-	<li><a href="chatapp/?mode=http&standaloneClient=1">using HTTP long-polling</a></li>
-	<li><a href="chatapp/?mode=http&useSub=0&standaloneClient=1">using HTTP long-polling, without subdomains</a></li>
-	<li><a href="chatapp/?mode=http&httpStreaming=1&standaloneClient=1">using HTTP streaming</a></li>
-	<li><a href="chatapp/?mode=http&httpStreaming=1&useSub=0&standaloneClient=1">using HTTP streaming, without subdomains</a></li>
+	<li><a href="chatapp/?mode=http&useSubdomains=0&standaloneClient=1">using HTTP long-polling</a></li>
+	<li><a href="chatapp/?mode=http&useSubdomains=1&standaloneClient=1">using HTTP long-polling, with subdomains</a></li>
+	<li><a href="chatapp/?mode=http&httpStreaming=1&useSubdomains=0&standaloneClient=1">using HTTP streaming</a></li>
+	<li><a href="chatapp/?mode=http&httpStreaming=1&useSubdomains=1&standaloneClient=1">using HTTP streaming, with subdomains</a></li>
 	<li><a href="chatapp/?mode=flash&standaloneClient=1">using Flash socket</a></li>
 	</ul>
 </li>

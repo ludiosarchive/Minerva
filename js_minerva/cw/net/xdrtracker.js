@@ -262,8 +262,8 @@ cw.net.XDRTracker.prototype.makeWindowForUrl_ = function(urlWithTokens, stream) 
 	// innerHTML'ed at page load time, and you later reach the page again via
 	// the 'back' button, the first iframe URL will be loaded in both iframes.
 	// You can reproduce this bug:
-	// 1) visit /chatapp/?mode=http
-	// 2) add &useSub=0 to the URL and hit enter
+	// 1) visit /chatapp/?mode=http&useSubdomains=1
+	// 2) add &useSubdomains=0 to the URL and hit enter
 	// 3) click the back button.  You should see an error from ensureSameOrigin_.
 
 	return d;

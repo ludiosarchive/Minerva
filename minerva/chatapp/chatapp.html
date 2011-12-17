@@ -42,7 +42,7 @@ message.
 </p>
 
 <p>
-This page supports options ?mode=http|flash, ?useSub=0|1, ?httpStreaming=0|1,
+This page supports options ?mode=http|flash, ?useSubdomains=0|1, ?httpStreaming=0|1,
 ?standaloneClient=0|1 (which can be combined).  When testing with Opera, open
 the Error Console, because window.onerror does not work in Opera.  Do the same
 in Chrome, because not all errors are caught by window.onerror (such as when
@@ -53,11 +53,11 @@ Do all of these when testing:
 <ul>
 <li>Test this page with ?standaloneClient=1.</li>
 <li>Test this page with ?mode=flash.</li>
-<li>Test this page with ?mode=http&useSub=0.</li>
-<li>Test this page with ?mode=http&useSub=1.</li>
+<li>Test this page with ?mode=http&useSubdomains=0.</li>
+<li>Test this page with ?mode=http&useSubdomains=1.</li>
 <li>This server listens on both HTTP and HTTPS. Repeat above tests with both HTTP and HTTPS.</li>
-<li>For mode=http&useSub=1 : Reload this page with F5.  Firefox 3+ has problems related to this.</li>
-<li>For mode=http&useSub=1 : Arrive to this page via Back button from another page.  IE has problems related to this.</li>
+<li>For mode=http&useSubdomains=1 : Reload this page with F5.  Firefox 3+ has problems related to this.</li>
+<li>For mode=http&useSubdomains=1 : Arrive to this page via Back button from another page.  IE has problems related to this.</li>
 <li>For mode=flash : Arrive to this page via Back button from another page.  Opera has problems related to this.</li>
 <li>Load the page in a WebKit browser, make sure the spinner stops spinning after 4 seconds.</li>
 <li>If the browser loads Flash out-of-process, kill the plugin container process

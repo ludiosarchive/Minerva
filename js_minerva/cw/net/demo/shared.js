@@ -15,7 +15,7 @@ goog.require('cw.net.IStreamPolicy');
 goog.require('cw.net.SocketEndpoint');
 goog.require('cw.net.HttpEndpoint');
 goog.require('cw.net.HttpStreamingMode');
-// Needed when useSub=0
+// Needed when useSubdomains=0
 goog.require('cw.net.XHRSlave');
 
 
@@ -97,8 +97,8 @@ cw.net.demo.getEndpointByQueryArgs = function(callQueue) {
 	var queryData = url.getQueryData();
 	var useFlash = (queryData.get('mode') != 'http');
 	// Use subdomains for HTTP communication?
-	var useSubdomains = Boolean(Number(queryData.get('useSub', '1')));
-	if(!cw.net.demo.canUseSubdomains()) {
+	var useSubdomains = Boolean(Number(queryData.get('useSubdomains', '0')));
+	if(useSubdomains && !cw.net.demo.canUseSubdomains()) {
 		cw.net.demo.logger_.warning("You requested subdomains, but I " +
 			"cannot use them because you did not specify a domain.  " +
 			"Proceeding without subdomains.")

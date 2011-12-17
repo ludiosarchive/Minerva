@@ -3997,8 +3997,9 @@ z("Minerva.getEndpointByQueryArgs", function() {
   var a;
   a = (new hd(document.location)).K;
   var b = "http" != a.get("mode");
-  a = Boolean(Number(a.get("useSub", "1")));
-  s.__demo_shared_domain || (Sf.B("You requested subdomains, but I cannot use them because you did not specify a domain.  Proceeding without subdomains."), a = m);
+  if((a = Boolean(Number(a.get("useSubdomains", "0")))) && !s.__demo_shared_domain) {
+    Sf.B("You requested subdomains, but I cannot use them because you did not specify a domain.  Proceeding without subdomains."), a = m
+  }
   return Tf(0, a, b, "/httpface/")
 });
 })();
