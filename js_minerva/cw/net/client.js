@@ -1348,6 +1348,16 @@ cw.net.ClientStream.prototype.getSACK_ = function() {
 };
 
 /**
+ * Called if .start() fails
+ * @private
+ */
+cw.net.ClientStream.prototype.earlyFailure_ = function(err) {
+	this.logger_.severe('Failed to start ' + cw.repr.repr(this) +
+		'; error was ' + cw.repr.repr(err.message));
+	this.dispose();
+};
+
+/**
  * Called by application to start the ClientStream.
  */
 cw.net.ClientStream.prototype.start = function() {
@@ -1370,7 +1380,7 @@ cw.net.ClientStream.prototype.start = function() {
 
 		var d = goog.async.DeferredList.gatherResults([d1, d2]);
 		d.addCallback(goog.bind(this.expandHttpEndpoint_, this));
-		//d.addErrback(); // TODO!!!
+		d.addErrback(goog.bind(this.earlyFailure_, this));
 	} else if(this.endpoint_ instanceof cw.net.SocketEndpoint) {
 		if(cw.net.ourFlashSocketTracker_) {
 			this.expandSocketEndpoint_();
@@ -1387,7 +1397,7 @@ cw.net.ClientStream.prototype.start = function() {
 				return null;
 			});
 			d.addCallback(goog.bind(this.expandSocketEndpoint_, this));
-			//d.addErrback(); // TODO!!!
+			d.addErrback(goog.bind(this.earlyFailure_, this));
 		}
 	} else {
 		this.startFirstTransport_();
@@ -2120,7 +2130,8 @@ cw.net.ClientTransport.prototype.makeHelloFrame_ = function() {
  */
 cw.net.ClientTransport.prototype.writeFrame_ = function(frame) {
 	this.toSendFrames_.push(frame);
-	//logger.severe('toSendFrames_: ' + cw.repr.repr(this.toSendFrames_));
+	// Potentially useful when debugging
+	//this.logger_.severe('toSendFrames_: ' + cw.repr.repr(this.toSendFrames_));
 };
 
 /**
