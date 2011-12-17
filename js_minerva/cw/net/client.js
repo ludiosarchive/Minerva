@@ -1378,8 +1378,12 @@ cw.net.ClientStream.prototype.start = function() {
 			var d = cw.net.loadFlashConnector(this.callQueue_, this.endpoint_.primaryUrl);
 			var that = this;
 			d.addCallback(function(bridge) {
-				cw.net.ourFlashSocketTracker_ =
-					new cw.net.FlashSocketTracker(that.callQueue_, bridge);
+				// If two streams were started at once, ourFlashSocketTracker_
+				// may have already been set.
+				if(!cw.net.ourFlashSocketTracker_) {
+					cw.net.ourFlashSocketTracker_ =
+						new cw.net.FlashSocketTracker(that.callQueue_, bridge);
+				}
 				return null;
 			});
 			d.addCallback(goog.bind(this.expandSocketEndpoint_, this));

@@ -920,7 +920,7 @@ Ub.prototype.Ge = function() {
     }
   }
 };
-var Xb = new Ub(s.window);
+var Wb = new Ub(s.window);
 function Yb(a) {
   return ha(a) || "object" == typeof a && ha(a.call) && ha(a.apply)
 }
@@ -3123,7 +3123,7 @@ ff.prototype.k = function(a, b) {
 };
 function $(a, b, c) {
   this.q = a;
-  this.u = c ? c : Xb;
+  this.u = c ? c : Wb;
   this.nb = new Kc;
   this.mb = Yd() + Yd();
   this.ma = new Gd;
@@ -3325,7 +3325,7 @@ r.start = function() {
       }else {
         var a = se(this.u, this.q.W), c = this;
         Ob(a, function(a) {
-          Ed = new me(c.u, a);
+          Ed || (Ed = new me(c.u, a));
           return k
         });
         Ob(a, y(this.Vc, this))
@@ -3488,9 +3488,9 @@ function vf(a, b, c) {
                   c.length = 0
                 }
                 if(d instanceof He) {
-                  var Wb = a.A;
-                  Wb.onreset && Wb.onreset.call(Wb.Aa, d.gb, d.Sa);
-                  Wb.b();
+                  var Xb = a.A;
+                  Xb.onreset && Xb.onreset.call(Xb.Aa, d.gb, d.Sa);
+                  Xb.b();
                   return j
                 }
                 g(Error(a.n() + " had unexpected state in framesReceived_."))
@@ -3990,7 +3990,7 @@ z("Minerva.DivConsole", ed);
 ed.prototype.setCapturing = ed.prototype.xe;
 z("Minerva.bind", y);
 z("Minerva.repr", P);
-z("Minerva.theCallQueue", Xb);
+z("Minerva.theCallQueue", Wb);
 z("Minerva.getEndpoint", Sf);
 z("Minerva.getEndpointByQueryArgs", function() {
   var a;
