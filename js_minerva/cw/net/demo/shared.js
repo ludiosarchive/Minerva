@@ -8,6 +8,8 @@ goog.provide('cw.net.demo.getEndpointByQueryArgs');
 
 goog.require('goog.Uri');
 goog.require('goog.dom');
+goog.require('goog.debug.Logger');
+goog.require('cw.repr');
 goog.require('cw.eventual');
 goog.require('cw.net.IStreamPolicy');
 goog.require('cw.net.SocketEndpoint');
@@ -15,6 +17,14 @@ goog.require('cw.net.HttpEndpoint');
 goog.require('cw.net.HttpStreamingMode');
 // Needed when useSub=0
 goog.require('cw.net.XHRSlave');
+
+
+/**
+ * @type {!goog.debug.Logger}
+ * @private
+ */
+cw.net.demo.logger_ =
+	goog.debug.Logger.getLogger('cw.net.demo');
 
 
 /**
@@ -37,6 +47,14 @@ cw.net.demo.DemoStreamPolicy.prototype.getHttpStreamingMode = function() {
 
 
 /**
+ * @return {boolean} Can we use subdomains?
+ */
+cw.net.demo.canUseSubdomains = function() {
+	return !!goog.global['__demo_shared_domain'];
+};
+
+
+/**
  * @param {!cw.eventual.CallQueue} callQueue
  * @param {boolean} useSubdomains
  * @param {boolean} useFlash
@@ -48,6 +66,10 @@ cw.net.demo.getEndpoint = function(callQueue, useSubdomains, useFlash, httpFaceP
 	if(!useFlash) {
 		if(useSubdomains) {
 			var domain = goog.global['__demo_shared_domain'];
+			if(!goog.isString(domain)) {
+				throw Error("domain was " + cw.repr.repr(domain) +
+					"; expected a string.");
+			}
 			var endpointUrl = url.clone();
 			// Can't set it to %random%; that gets escaped
 			endpointUrl.setDomain("_____random_____." + domain);
@@ -76,6 +98,12 @@ cw.net.demo.getEndpointByQueryArgs = function(callQueue) {
 	var useFlash = (queryData.get('mode') != 'http');
 	// Use subdomains for HTTP communication?
 	var useSubdomains = Boolean(Number(queryData.get('useSub', '1')));
+	if(!cw.net.demo.canUseSubdomains()) {
+		cw.net.demo.logger_.warning("You requested subdomains, but I " +
+			"cannot use them because you did not specify a domain.  " +
+			"Proceeding without subdomains.")
+		useSubdomains = false;
+	}
 	var httpFacePath = '/httpface/';
 	return cw.net.demo.getEndpoint(callQueue, useSubdomains, useFlash, httpFacePath);
 };
