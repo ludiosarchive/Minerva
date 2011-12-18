@@ -1617,8 +1617,8 @@ class ServerTransport(object):
 
 
 	def connectionMade(self):
-		# TODO: setTcpNoDelay on HTTP transports as well.
-		# https://github.com/ludios/Minerva/issues/24
+		# Note that for HTTP transports, webmagic.untwist.BetterSite
+		# calls setTcpNoDelay for us.
 		self.writable.setTcpNoDelay(True)
 		if self.noisy:
 			log.msg('Connection made for %r' % (self,))
