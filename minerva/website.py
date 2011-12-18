@@ -17,11 +17,6 @@ from webmagic.pathmanip import getCacheBrokenHref
 
 from securetypes import securedict
 
-try:
-	from brequire import requireFile, requireFiles
-except ImportError:
-	requireFile = requireFiles = lambda _: None
-
 _postImportVars = vars().keys()
 
 
