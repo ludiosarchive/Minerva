@@ -1168,12 +1168,11 @@ class ServerTransport(object):
 
 
 	def _framesReceived(self, frames):
-		# Mutable outside list to work around Python 2.x read-only closures
-		bunchedStrings = [[]]
+		nonlocal = dict(bunchedStrings=[])
 		def handleStrings():
 			# bunchedStrings is already sorted 99.99%+ of the time, so this
 			# sort is particularly fast with Timsort.
-			bunchedStrings[0].sort()
+			nonlocal['bunchedStrings'].sort()
 
 			# The _sackDirty behavior in this class reduces the number
 			# of SackFrames that are written out, while making sure that
@@ -1185,13 +1184,13 @@ class ServerTransport(object):
 			self._sackDirty = True
 			self._callingStream = True
 			try:
-				self._stream.stringsReceived(self, bunchedStrings[0])
+				self._stream.stringsReceived(self, nonlocal['bunchedStrings'])
 			finally:
 				self._callingStream = False
 			# Remember that a lot can happen underneath that stringsReceived call,
 			# including a call to our own `reset` or `closeGently` or `writeStrings`.
 
-			bunchedStrings[0] = []
+			nonlocal['bunchedStrings'] = []
 
 			if not self._terminating and self._sackDirty:
 				self._appendSack()
@@ -1242,7 +1241,7 @@ class ServerTransport(object):
 				# collect them into a list and then deliver them all at
 				# once to ServerStream.  This does not add any latency;
 				# it just reduces the number of funcalls.
-				bunchedStrings[0].append((self._peerSeqNum, frame.string))
+				nonlocal['bunchedStrings'].append((self._peerSeqNum, frame.string))
 
 			elif frameType == SackFrame:
 				self._callingStream = True
@@ -1259,7 +1258,7 @@ class ServerTransport(object):
 			else:
 				# Deliver the strings before processing client's reset frame. This
 				# is an implementation detail that may change.
-				if bunchedStrings[0]:
+				if nonlocal['bunchedStrings']:
 					handleStrings()
 
 				if frameType == ResetFrame:
@@ -1276,7 +1275,7 @@ class ServerTransport(object):
 		# TODO: add test to ensure that we successfully process bunchedStrings
 		# before transport-killing due to a bad frame.
 
-		if bunchedStrings[0]:
+		if nonlocal['bunchedStrings']:
 			handleStrings()
 		self._maybeWriteToPeer()
 
