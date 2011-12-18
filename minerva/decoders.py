@@ -1,5 +1,8 @@
 """
 Protocols that convert a stream of bytes into Minerva frames.
+
+This entire file is private; you should not need to import it.  If you do, file
+a bug.
 """
 
 import sys
@@ -7,12 +10,6 @@ import struct
 from strfrag import StringFragment
 
 _postImportVars = vars().keys()
-
-
-class ParseError(Exception):
-	"""
-	The incoming data is not in a valid format format.
-	"""
 
 
 
