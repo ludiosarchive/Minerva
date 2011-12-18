@@ -4,7 +4,7 @@ The core of Minerva server.
 See minerva.minerva_site for an idea of how to use the classes below,
 especially `makeMinervaAndHttp` and `DemoProtocol`.
 
-See minerva.test_newlink for the tests.
+See minerva.test_mserver for the tests.
 """
 
 import sys

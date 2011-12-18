@@ -11,7 +11,7 @@ import simplejson
 from twisted.python import log
 from twisted.python.filepath import FilePath
 
-from minerva.newlink import StreamTracker, HttpFace, SocketFace
+from minerva.mserver import StreamTracker, HttpFace, SocketFace
 
 from minerva.dumbtest.pages import DumbTestPage
 from minerva.chatapp.pages import ChatAppPage

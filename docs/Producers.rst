@@ -23,7 +23,7 @@ Producers/consumers technical details
 -------------------------------------
 
 Skip this section unless you are trying to understand the producer/consumer code in
-``minerva.newlink``.
+``minerva.mserver``.
 
 "Type of producer" is *pull*, or *push*. [#]_
 

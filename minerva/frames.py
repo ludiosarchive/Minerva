@@ -223,7 +223,7 @@ def helloDataToHelloFrame(helloData):
 
 
 # The other frame classes are a tuple; this one is not, and some users
-# like L{newlink.sanitizeHelloFrame} do mutate it.
+# like L{mserver.sanitizeHelloFrame} do mutate it.
 class HelloFrame(object):
 
 	def __init__(self, obj):

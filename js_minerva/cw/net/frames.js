@@ -61,7 +61,7 @@ cw.net.InvalidHello.prototype.name = 'cw.net.InvalidHello';
 
 
 /**
- * Hello frame properties. Keep in sync with minerva/newlink.py
+ * HelloFrame properties. Keep in sync with minerva.frames.HelloFrameArguments
  * @enum {string}
  * @private
  */
@@ -952,7 +952,7 @@ cw.net.ResetFrame.prototype.encodeToPieces = function(sb) {
 
 
 /**
- * Transport kill reasons. Keep in sync with minerva/newlink.py
+ * Transport kill reasons.  Keep in sync with minerva.frames.TransportKillFrame
  *
  * @enum {string}
  */

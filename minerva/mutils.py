@@ -115,7 +115,7 @@ class MinervaBootstrap(BetterResource):
 
 
 	def render_GET(self, request):
-		from minerva.newlink import _contentToTemplate
+		from minerva.mserver import _contentToTemplate
 
 		# chatapp needs this
 		try:

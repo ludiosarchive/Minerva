@@ -12,7 +12,7 @@ from twisted.internet import defer
 from strfrag import StringFragment
 
 from minerva.window import SACK, Queue, Incoming
-from minerva.newlink import (
+from minerva.mserver import (
 	NoSuchStream, IMinervaProtocol, IMinervaFactory, StreamAlreadyExists)
 from minerva.decoders import OK
 from minerva.frames import decodeFrameFromServer

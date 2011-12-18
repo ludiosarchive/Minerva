@@ -11,8 +11,8 @@ These tests has seven main sections:
 
 Notes on understanding this test file:
 
--	Minerva's newlink was originally designed to transfer "boxes"
-	of varying type (including objects and lists and strings), but it
+-	Minerva's mserver (then "newlink") was originally designed to transfer
+	"boxes" of varying type (including objects and lists and strings), but it
 	was then changed to only transfer restricted strings. In this file
 	you'll still see "box", but it really means "string".
 
@@ -36,7 +36,7 @@ from minerva.test_decoders import diceString
 
 from minerva.decoders import Int32StringDecoder, DelimitedStringDecoder
 
-from minerva.newlink import (
+from minerva.mserver import (
 	ServerStream, StreamTracker, NoSuchStream, StreamAlreadyExists,
 	IServerTransport, ServerTransport, SocketFace, _HttpFace,
 	HTTP_RESPONSE_PREAMBLE,
@@ -150,7 +150,7 @@ def _makeTransportWithDecoder(parser, faceFactory):
 
 class ServerStreamTests(unittest.TestCase):
 	"""
-	Tests for L{newlink.ServerStream}
+	Tests for L{mserver.ServerStream}
 	"""
 	def setUp(self):
 		self._clock = task.Clock()
@@ -995,7 +995,7 @@ class StreamTrackerWithMockServerStream(StreamTracker):
 
 class StreamTrackerTests(unittest.TestCase):
 	"""
-	Tests for L{newlink.StreamTracker}
+	Tests for L{mserver.StreamTracker}
 	"""
 	def test_buildStream(self):
 		"""
@@ -1998,7 +1998,7 @@ class ServerTransportTestsWithInt32(_BaseServerTransportTests, unittest.TestCase
 
 class TransportProducerTests(unittest.TestCase):
 	"""
-	Tests for L{newlink.ServerTransport}'s producer logic.
+	Tests for L{mserver.ServerTransport}'s producer logic.
 	"""
 	def setUp(self):
 		reactor = FakeReactor()
@@ -2114,7 +2114,7 @@ class TransportProducerTests(unittest.TestCase):
 
 class SocketFaceTests(unittest.TestCase):
 	"""
-	Tests for L{newlink.SocketFace}
+	Tests for L{mserver.SocketFace}
 	"""
 	def test_policyStringOkay(self):
 		face = SocketFace(clock=None, streamTracker=None)
@@ -3262,8 +3262,9 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 	def test_secondaryTransportTerminatedUnderFramesReceivedCall(self): # keywords: reentrant
 		"""
 		This is similar to L{IntegrationTests.test_serverResetsUnderneathStringsReceivedCall},
-		but tests a real (but short-lived) regression in newlink's (now-deleted) `cbAuthOkay`,
-		where `_terminating` was not checked before calling `closeGently`.
+		but tests a real (but short-lived) regression in mserver's (then
+		"newlink") now-deleted `cbAuthOkay`, where `_terminating` was not
+		checked before calling `closeGently`.
 		"""
 		class MyFactory(MockMinervaStringsProtocolFactory):
 			def buildProtocol(self):
