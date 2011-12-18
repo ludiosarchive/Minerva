@@ -1,0 +1,152 @@
+"""
+Interfaces for Minerva.
+
+All interfaces here are public.
+"""
+
+from zope.interface import Interface
+
+
+# A copy of twisted.internet.interfaces.IConsumer with the `write` method
+# removed.
+class IConsumerWithoutWrite(Interface):
+	"""
+	A consumer consumes data from a producer.
+	"""
+	def registerProducer(producer, streaming):
+		"""
+		Register to receive data from a producer.
+
+		This sets self to be a consumer for a producer.  When this object runs
+		out of data (as when a send(2) call on a socket succeeds in moving the
+		last data from a userspace buffer into a kernelspace buffer), it will
+		ask the producer to resumeProducing().
+
+		For L{IPullProducer} providers, C{resumeProducing} will be called once
+		each time data is required.
+
+		For L{IPushProducer} providers, C{pauseProducing} will be called
+		whenever the write buffer fills up and C{resumeProducing} will only be
+		called when it empties.
+
+		@type producer: L{IProducer} provider
+
+		@type streaming: C{bool}
+		@param streaming: C{True} if C{producer} provides L{IPushProducer},
+		C{False} if C{producer} provides L{IPullProducer}.
+
+		@raise RuntimeError: If a producer is already registered.
+
+		@return: C{None}
+		"""
+
+
+	def unregisterProducer():
+		"""
+		Stop consuming data from a producer, without disconnecting.
+		"""
+
+
+
+class IMinervaProtocol(Interface):
+	"""
+	An interface for string-based communication that abstracts
+	away the Comet logic and transports.
+
+	This interface is analogous to L{twisted.internet.interfaces.IProtocol}
+
+	Note: if you call stream.reset, some (or all) of the strings you
+	have recently sent may be lost. If you need a proper close, use
+	your own application-level strings to determine that it is safe to
+	close, then call reset.
+
+	The simplest way to end dead Streams is to use an application-level
+	ping message that your client application sends (say every 55 seconds),
+	and end the Stream if no such message has been received for 2 minutes.
+	"""
+
+	def streamStarted(stream):
+		"""
+		Called when this stream has just started.
+
+		You'll want to keep the stream around with C{self.stream = stream}.
+
+		You must *not* raise any exception. Wrap your code in try/except
+		if necessary.
+
+		@param stream: the L{Stream} that was started.
+		@type stream: L{Stream}
+		"""
+
+
+	def streamReset(reasonString, applicationLevel):
+		"""
+		Called when this stream has reset, either internally by Minerva
+		server's Stream, or a call to Stream.reset, or by a reset frame
+		from the peer.
+
+		You must *not* raise any exception. Wrap your code in try/except
+		if necessary.
+
+		@param reasonString: Textual reason why Stream has reset.
+			String contains only bytes in inclusive range 0x20 - 0x7E.
+		@type reasonString: str
+
+		@type applicationLevel: Was the reason caused by an application (not
+			Minerva internals?)
+		"""
+
+
+	def stringReceived(s):
+		"""
+		@type s: C{str}
+		@param s: A restricted string from the peer.
+		"""
+	del stringReceived # Because it's optional.  TODO: Interface subclass?
+
+
+	def stringsReceived(strings):
+		"""
+		NOTE: Implement `stringReceived` instead.  It's safer and simpler
+		to use.  If this method is implemented, `stringReceived` (singular)
+		will not be called.
+
+		Called whenever one or more strings are received.
+
+		You must *not* raise any exception. Wrap your code in try/except
+		if necessary. You may mutate the list and keep references to it.
+
+		This is `stringsReceived` instead of `stringReceived` only as an
+		optimization for CPython. The number of strings you will receive at
+		once is subject to variances in TCP activity. Do *not* rely on being
+		called with a certain number of strings.
+
+		@type strings: list
+		@param strings: a list of L{StringFragment} objects. You can convert
+			them to C{str}s by C{str()}ing them. Do *not* keep them around
+			in L{StringFragment} form because they may consume more
+			memory than you expect.
+		"""
+	del stringsReceived # Because it's optional.  TODO: Interface subclass?
+
+
+
+class IMinervaFactory(Interface):
+	"""
+	Interface for L{MinervaProtocol} factories.
+	"""
+	def buildProtocol():
+		"""
+		Called when a Stream has been established.
+
+		Unlike the analogous Twisted L{twisted.internet.interfaces.IFactory},
+		you cannot refuse a connection here.
+
+		An implementation should
+			construct an object providing I{MinervaProtocol},
+			do C{obj.factory = self},
+			and return C{obj},
+		with optionally more steps in between.
+
+		@return: an object providing L{IMinervaProtocol}.
+		"""

@@ -37,11 +37,12 @@ from minerva.test_decoders import diceString
 from minerva.decoders import Int32StringDecoder, DelimitedStringDecoder
 
 from minerva.newlink import (
-	Stream, StreamTracker, NoSuchStream,
-	StreamAlreadyExists, IConsumerWithoutWrite, IMinervaProtocol,
-	IMinervaFactory, IMinervaTransport, ServerTransport, SocketFace, _HttpFace,
+	Stream, StreamTracker, NoSuchStream, StreamAlreadyExists,
+	IMinervaTransport, ServerTransport, SocketFace, _HttpFace,
 	HTTP_RESPONSE_PREAMBLE,
 )
+
+from minerva.interfaces import IConsumerWithoutWrite, IMinervaProtocol, IMinervaFactory
 
 from minerva.frames import (
 	HelloFrame, StringFrame, SeqNumFrame, SackFrame, StreamStatusFrame,
