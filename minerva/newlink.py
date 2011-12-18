@@ -771,7 +771,8 @@ def _sanitizeHelloFrame(helloFrame, isHttp):
 
 # Acceptable protocol modes for ServerTransport to be in.
 # POLICYFILE and INT32 are for Flash Socket.
-UNKNOWN, POLICYFILE, INT32, HTTP = range(4)
+UNKNOWN, POLICYFILE, INT32, HTTP = \
+	("UNKNOWN",), ("POLICYFILE",), ("INT32",), ("HTTP",)
 
 # HTTP_RESPONSE_PREAMBLE is sent as the first frame over HTTP transports.
 HTTP_RESPONSE_PREAMBLE = CommentFrame(";)]}")
