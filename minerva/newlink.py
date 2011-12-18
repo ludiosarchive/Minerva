@@ -1753,8 +1753,6 @@ class _HttpFace(BetterResource):
 	protocol = ServerTransport
 
 	def __init__(self, clock, streamTracker):
-		# TODO: maybe make fileCache optional; use some default fileCache
-		# that caches forever
 		BetterResource.__init__(self)
 		self._clock = clock
 		self.streamTracker = streamTracker
