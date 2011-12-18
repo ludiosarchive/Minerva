@@ -38,7 +38,7 @@ but that would reduce symmetry in the protocol.</p>
 that we cannot deliver yet. In our SackFrame, we send sackList
 to the peer so that they know which strings were queued in the window.
 For wire protocol simplicity, if the window is overflowing, the transport
-is torn down (the Stream is kept alive).</p>
+is torn down.  (Note that the ClientStream or ServerStream is not).</p>
 <ul class="simple">
 <li>When Minerva server's receive window is overflowing, send:<ol class="arabic">
 <li>SackFrame</li>

@@ -440,9 +440,9 @@ cw.net.StreamState_ = {
 
 /**
  * A context object used as the context in calls to
- * ClientStream.(onstring|onreset|ondisconnect).  Stream uses this as the
- * context rather than the Stream object itself to prevent users from messing
- * up the Stream's state with their `this.x` mutations.
+ * ClientStream.(onstring|onreset|ondisconnect).  ClientStream uses this as the
+ * context rather than the ClientStream object itself to prevent users from
+ * messing up the ClientStream object's state with their `this.x` mutations.
  *
  * @param {!cw.net.ClientStream} stream
  *
@@ -468,7 +468,7 @@ cw.net.UserContext.prototype.__reprPush__ = function(sb, stack) {
 
 
 /**
- * The client-side representation of a Minerva Stream.
+ * The client-side representation of a Minerva stream.
  *
  * ClientStream is sort-of analogous to {@code twisted.internet.tcp.Connection}.
  * ClientStream can span many TCP connections/HTTP requests.
@@ -748,8 +748,8 @@ cw.net.ClientStream.prototype.getUserContext = function() {
 };
 
 /**
- * @param {!cw.net.IMinervaProtocol} proto The protocol to bind this Stream's
- * 	`onstring` and `onreset` to.
+ * @param {!cw.net.IMinervaProtocol} proto The protocol to bind this
+ * 	ClientStream's `onstring` and `onreset` to.
  */
 cw.net.ClientStream.prototype.bindToProtocol = function(proto) {
 	if(cw.net.STANDALONE_CLIENT_BUILD_) {
@@ -2465,7 +2465,7 @@ cw.net.DoNothingTransport.prototype.canFlushMoreThanOnce_ = false;
 cw.net.DoNothingTransport.prototype.goOfflineTicket_ = null;
 
 /**
- * The last SACK written to the peer.  Used by Stream.
+ * The last SACK written to the peer.  Used by ClientStream.
  * @type {null}
  * @private
  */

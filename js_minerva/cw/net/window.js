@@ -247,7 +247,7 @@ cw.net.Queue.prototype.getMaxConsumption = function() {
  * memory the undeliverable items are using, and can reject items if
  * they would push Incoming over an item or memory size limit.
  *
- * This is used to ensure that boxes are delivered to the local Stream
+ * This is used to ensure that boxes are delivered to the local *Stream
  * reliably and in-order. Caller is responsible for protecting against
  * resource exhaustion attacks by checking the `hitLimit` value, or calling
  * {@link #getUndeliverableCount} or {@link #getMaxConsumption}.

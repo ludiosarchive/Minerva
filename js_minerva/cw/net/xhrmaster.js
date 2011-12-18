@@ -30,7 +30,7 @@ goog.require('cw.net.DecodeStatus');
  * before the other side knows about it; the same for XHRMaster.
  *
  * After writing this, I found out that I don't actually need Worker; I only
- * need SharedWorker.  And that SharedWorker will run the entire Stream,
+ * need SharedWorker.  And that SharedWorker will run the entire ClientStream,
  * not just an XHR request.
  *
  * @param {string} reqId

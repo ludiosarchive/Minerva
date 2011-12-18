@@ -48,6 +48,8 @@ class IConsumerWithoutWrite(Interface):
 
 
 
+# Note: while we mention L{ServerStream} in this interface, this interface
+# is also applicable to a ClientStream written in Python.
 class IMinervaProtocol(Interface):
 	"""
 	An interface for string-based communication that abstracts
@@ -60,9 +62,10 @@ class IMinervaProtocol(Interface):
 	your own application-level strings to determine that it is safe to
 	close, then call reset.
 
-	The simplest way to end dead Streams is to use an application-level
+	The simplest way to end dead ServerStreams is to use an application-level
 	ping message that your client application sends (say every 55 seconds),
-	and end the Stream if no such message has been received for 2 minutes.
+	and end the ServerStream if no such message has been received for
+	2 minutes.
 	"""
 
 	def streamStarted(stream):
@@ -74,21 +77,21 @@ class IMinervaProtocol(Interface):
 		You must *not* raise any exception. Wrap your code in try/except
 		if necessary.
 
-		@param stream: the L{Stream} that was started.
-		@type stream: L{Stream}
+		@param stream: the L{ServerStream} that was started.
+		@type stream: L{ServerStream}
 		"""
 
 
 	def streamReset(reasonString, applicationLevel):
 		"""
-		Called when this stream has reset, either internally by Minerva
-		server's Stream, or a call to Stream.reset, or by a reset frame
-		from the peer.
+		Called when this stream has reset, either internally by
+		L{ServerStream}, or a call to ServerStream.reset, or by a reset
+		frame from the peer.
 
 		You must *not* raise any exception. Wrap your code in try/except
 		if necessary.
 
-		@param reasonString: Textual reason why Stream has reset.
+		@param reasonString: The reason the stream reset.
 			String contains only bytes in inclusive range 0x20 - 0x7E.
 		@type reasonString: str
 
@@ -137,7 +140,7 @@ class IMinervaFactory(Interface):
 	"""
 	def buildProtocol():
 		"""
-		Called when a Stream has been established.
+		Called when a L{ServerStream} has been established.
 
 		Unlike the analogous Twisted L{twisted.internet.interfaces.IFactory},
 		you cannot refuse a connection here.

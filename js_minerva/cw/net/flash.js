@@ -705,7 +705,7 @@ cw.net.loadFlashConnector = function(callQueue, httpFacePath) {
 
 
 // This is how Minerva actually reaches a real Flash Socket:
-// Stream
+// ClientStream
 //	ClientTransport
 //		[[an Endpoint]].[[a FlashSocketTracker]].createNew([[a FlashSocketConduit]])
 //			FlashSocket

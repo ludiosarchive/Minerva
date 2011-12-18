@@ -315,7 +315,7 @@ class StringFrame(tuple):
 
 		Restricted string validation is not performed here, to accomodate
 		a future extension that allows expanding the allowed byte/char
-		range mid-Stream.
+		range mid-stream.
 		"""
 		return cls(frameString[:-1])
 
@@ -558,7 +558,7 @@ def isRestrictedString(string):
 
 class ResetFrame(tuple):
 	"""
-	A reset frame indicates this side has given up on the Stream.
+	A reset frame indicates this side has given up on the stream.
 	A reset frame from the server implies a transport kill as well.
 	"""
 	__slots__ = ()
@@ -569,7 +569,7 @@ class ResetFrame(tuple):
 
 	def __new__(cls, reasonString, applicationLevel):
 		"""
-		@param reasonString: why the Stream reset.
+		@param reasonString: why the stream reset.
 			ASCII (0x20-0x7E)-only C{str}, max 255 bytes.
 		"""
 		return tuple.__new__(cls, (cls._MARKER, reasonString, applicationLevel))

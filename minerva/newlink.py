@@ -161,15 +161,15 @@ class SubprotocolFactory(object):
 
 
 
-# There is no factory for customizing the construction of L{Stream}s,
-# just like there is no factory for customizing the construction of
-# L{twisted.internet.tcp.Server}s in Twisted.
-class Stream(object):
+# Note: there is no factory for customizing the construction of
+# L{ServerStream}s, just like there is no factory for customizing the
+# construction of L{twisted.internet.tcp.Server}s in Twisted.
+class ServerStream(object):
 	"""
-	The server-side representation of a Minerva Stream.
+	The server-side representation of a Minerva stream.
 
-	Stream is sort-of analogous to L{twisted.internet.tcp.Connection}.
-	Stream can span many TCP connections/HTTP requests.
+	ServerStream is sort-of analogous to L{twisted.internet.tcp.Connection}.
+	ServerStream can span many TCP connections/HTTP requests.
 
 	The producer/consumer here is designed to deal with TCP bandwidth
 	pressure (and "lack of any S2C transport" pressure).  It does not help
@@ -217,7 +217,7 @@ class Stream(object):
 		self.lastSackSeenByServer = SACK(-1, ())
 		self.lastReceived = clock.seconds()
 		# If no transports and nothing received in this many seconds,
-		# reset the Stream.
+		# reset the stream.
 		# This value needs to be somewhat forgiving, to allow for bad
 		# connections.  You can change this; just make your protocol
 		# set this attribute to a higher number.  Consider being even more
@@ -279,7 +279,8 @@ class Stream(object):
 						"Consider using JSON or Base64 encoding." % (s,))
 
 		if self.disconnected:
-			raise RuntimeError("Cannot sendStrings on disconnected Stream %r" % (self,))
+			raise RuntimeError("Cannot sendStrings on disconnected "
+				"ServerStream %r" % (self,))
 
 		if not strings:
 			return
@@ -302,13 +303,14 @@ class Stream(object):
 		Reset (disconnect) with reason C{reasonString}. This writes a reset
 		frame once over all open transports, so the client may never
 		actually receive a reset frame. If this happens, the client may
-		soon try to connect to a nonexistent Stream, at which point Minerva
-		server will send a C{tk_stream_attach_failure}.
+		soon try to connect to a nonexistent ServerStream, at which point
+		Minerva server will send a C{tk_stream_attach_failure}.
 		"""
 		if self.disconnected:
-			raise RuntimeError("Cannot reset disconnected Stream %r" % (self,))
+			raise RuntimeError("Cannot reset disconnected ServerStream %r" % (self,))
 		self.disconnected = True
-		# .copy() because _transports shrinks as transports call Stream.transportOffline
+		# .copy() because _transports shrinks as transports call
+		# ServerStream.transportOffline
 		for t in self._transports.copy():
 			t.writeReset(reasonString, applicationLevel=True)
 		self._fireNotifications()
@@ -331,7 +333,8 @@ class Stream(object):
 		if self.disconnected:
 			return
 		self.disconnected = True
-		# .copy() because _transports shrinks as transports call Stream.transportOffline
+		# .copy() because _transports shrinks as transports call
+		# ServerStream.transportOffline
 		for t in self._transports.copy():
 			t.closeGently()
 		self._fireNotifications()
@@ -345,12 +348,13 @@ class Stream(object):
 	# This assumes _protocol has been instantiated.
 	def _internalReset(self, reasonString):
 		"""
-		Called by Stream if it has given up on the Stream. This sends
+		Called by ServerStream if it has given up on the stream.  This sends
 		ResetFrame to any open transports.
 		"""
 		assert not self.disconnected, self
 		self.disconnected = True
-		# .copy() because _transports shrinks as transports call Stream.transportOffline
+		# .copy() because _transports shrinks as transports call
+		# ServerStream.transportOffline
 		for t in self._transports.copy():
 			t.writeReset(reasonString, False)
 		self._fireNotifications()
@@ -384,7 +388,7 @@ class Stream(object):
 		# We deliver the deliverable strings even if the receive window is overflowing,
 		# just in case the peer sent something useful.
 		# Note: Underneath the stringsReceived call (above), someone may have
-		# reset the Stream! This is why we check for `not self.disconnected`.
+		# reset the ServerStream!  This is why we check for `not self.disconnected`.
 		if hitLimit and not self.disconnected:
 			# Minerva used to do an _internalReset here, but now it kills the transport.
 			transport.causedRwinOverflow()
@@ -471,7 +475,7 @@ class Stream(object):
 
 			# This line is not actually necessary, because even if
 			# _primaryPaused is left at True, producers attached to
-			# Stream would be paused anyway when there is no primary
+			# ServerStream would be paused anyway when there is no primary
 			# transport.  We leave it in anyway for ease of debugging,
 			# and in case the code changes.
 			self._primaryPaused = False
@@ -483,7 +487,7 @@ class Stream(object):
 	def _unregisterProducerOnPrimary(self):
 		"""
 		Keep in mind that this is called whenever you unregister a producer
-		on Stream, too. self._primaryPaused does not change.
+		on ServerStream, too. self._primaryPaused does not change.
 		"""
 		if self._primaryHasProducer:
 			self._primaryTransport.unregisterProducer()
@@ -491,7 +495,7 @@ class Stream(object):
 
 
 	# Called when we have a new primary transport, or when a
-	# MinervaProtocol registers a producer with us (Stream).
+	# MinervaProtocol registers a producer with us (ServerStream).
 	def _registerProducerOnPrimary(self):
 		if not self._primaryHasProducer:
 			self._primaryTransport.registerProducer(self, self._streamingProducer)
@@ -537,7 +541,7 @@ class Stream(object):
 		Notify when finishing the request.
 
 		@return: A deferred. The deferred's callback chain willl be fired when
-		this Stream is finished -- always with a C{None} value.
+		this ServerStream is finished -- always with a C{None} value.
 		"""
 		self._notifications.append(defer.Deferred())
 		return self._notifications[-1]
@@ -546,7 +550,7 @@ class Stream(object):
 	# This is a copy/paste from twisted.internet.interfaces.IConsumer with changes.
 
 	# Called by MinervaProtocol instances or anyone else interested in the
-	# Stream.
+	# ServerStream.
 
 	# The only reason we have this is because not all MinervaProtocols will
 	# be L{IProducer}s (some will be very simple).
@@ -558,8 +562,8 @@ class Stream(object):
 		When this stream runs out of data on a write() call, it will ask
 		C{producer} to resumeProducing().  When the (active S2C transport)'s
 		internal data buffer is filled, it will ask C{producer} to
-		pauseProducing().  If the stream is ended, Stream calls C{producer}'s
-		stopProducing() method.
+		pauseProducing().  If the stream is ended, ServerStream calls
+		C{producer}'s stopProducing() method.
 
 		If C{streaming} is C{True}, C{producer} should provide the
 		L{IPushProducer} interface.  Otherwise, it is assumed that producer
@@ -584,7 +588,8 @@ class Stream(object):
 			self._registerProducerOnPrimary()
 
 
-	# called by MinervaProtocol instances or anyone else interested in the Stream
+	# called by MinervaProtocol instances or anyone else interested in the
+	# ServerStream
 	def unregisterProducer(self):
 		"""
 		Stop consuming data from a producer, without disconnecting.
@@ -632,18 +637,18 @@ class StreamAlreadyExists(Exception):
 
 class StreamTracker(object):
 	"""
-	I'm responsible for constructing and keeping track of L{Stream}s.
+	I'm responsible for constructing and keeping track of L{ServerStream}s.
 
 	You do not want to subclass this.
 	"""
 	__slots__  = ('_clock', '_streamProtocolFactory', '_streams')
 
-	stream = Stream
+	stream = ServerStream
 
 	def __init__(self, clock, streamProtocolFactory):
 		self._clock = clock
 		self._streamProtocolFactory = streamProtocolFactory
-		# A dict mapping streamId->Stream
+		# A dict mapping streamId->ServerStream
 		self._streams = securedict()
 
 
@@ -673,7 +678,7 @@ class StreamTracker(object):
 
 	def disconnectInactive(self):
 		"""
-		Disconnect Streams for which the client appears to be MIA.
+		Disconnect ServerStreams for which the client appears to be MIA.
 		"""
 		# Make a "copy" with .values() because s.timedOut() below calls our
 		# self._forgetStream, which mutates self._streams.
@@ -685,7 +690,7 @@ class StreamTracker(object):
 
 
 # A ServerTransport must have registerProducer and unregisterProducer
-# because Stream calls those methods, but it doesn't actually need to be
+# because ServerStream calls those methods, but it doesn't actually need to be
 # an IPushProducer/IPullProducer.  It could, in theory, buffer all the
 # information it gets without caring about TCP pressure at all.
 class IServerTransport(IConsumerWithoutWrite):
@@ -730,7 +735,7 @@ class IServerTransport(IConsumerWithoutWrite):
 	def writeReset(reasonString, applicationLevel):
 		"""
 		Write out a reset frame on this transport, to indicate that server is
-		resetting the Stream.
+		resetting the stream.
 
 		@param reasonString: plain-English reason why the stream is resetting
 		@type reasonString: unicode
@@ -844,8 +849,8 @@ class ServerTransport(object):
 
 	def isAttached(self):
 		"""
-		Is this ServerTransport currently attached to a Stream?
-		This is always C{False} after L{Stream.transportOffline}.
+		Is this ServerTransport currently attached to a L{ServerStream}?
+		This is always C{False} after L{ServerStream.transportOffline}.
 		"""
 		return self._stream is not None
 
@@ -888,8 +893,8 @@ class ServerTransport(object):
 			self._cancelMaxOpenDc()
 			self._cancelHeartbeatDc()
 
-			# Tell Stream this transport is offline. Whether we still have a TCP
-			# connection open to the peer is irrelevant.
+			# Tell ServerStream this transport is offline. Whether we
+			# still have a TCP connection open to the peer is irrelevant.
 			if self._stream:
 				self._stream.transportOffline(self)
 				self._stream = None
@@ -985,7 +990,7 @@ class ServerTransport(object):
 		@see L{IServerTransport.writeStrings}
 		"""
 		# If the transport is terminating, it should have already called
-		# Stream.transportOffline(self)
+		# ServerStream.transportOffline(self)
 		assert not self._terminating, self
 
 		if self._sackDirty:
@@ -1109,17 +1114,19 @@ class ServerTransport(object):
 		self._writeInitialFrames(stream, hello.requestNewStream)
 		if hello.sack is not None:
 			# Call sackReceived before transportOnline:
-			# * If hello.sack is a bad SACK, we never tell Stream about the transport.
-			# * If this transport is succeeding another transport, the hello.sack
-			#    removes strings from server's Queue but keeps this new
-			#    transport in _pretendAcked mode.
+			# * If hello.sack is a bad SACK, we never tell ServerStream
+			# 	about the transport.
+			# * If this transport is succeeding another transport, the
+			# 	hello.sack removes strings from server's Queue but keeps
+			# 	this new transport in _pretendAcked mode.
 			if stream.sackReceived(hello.sack):
 				# It was a bad SACK, so close.
 				self._closeWith(tk_acked_unsent_strings)
 				return
 
 		# Note: self._stream being non-None implies that we are attached to
-		# the Stream (i.e. have called transportOnline, or are calling it right now).
+		# the ServerStream (i.e. have called transportOnline, or are
+		# calling it right now).
 		self._stream = stream
 		self._callingStream = True
 		succeedsTransport = hello.succeedsTransport if self._wantsStrings else None
@@ -1171,8 +1178,9 @@ class ServerTransport(object):
 			# The _sackDirty behavior in this class reduces the number
 			# of SackFrames that are written out, while making sure that
 			# SackFrames are not "held up" by StringFrames written out by
-			# the Stream.  If Stream writes strings during the Stream.stringsReceived
-			# call below, a SackFrame is sent before the StringFrames.
+			# ServerStream.  If ServerStream writes strings during the
+			# ServerStream.stringsReceived call below, a SackFrame is
+			# sent before the StringFrames.
 			assert not self._sackDirty, self
 			self._sackDirty = True
 			self._callingStream = True
@@ -1230,9 +1238,10 @@ class ServerTransport(object):
 					break
 
 				self._peerSeqNum += 1
-				# Because we may have received multiple Minerva strings, collect
-				# them into a list and then deliver them all at once to Stream.
-				# This does *not* add any latency. It does reduce the number of funcalls.
+				# Because we may have received multiple Minerva strings,
+				# collect them into a list and then deliver them all at
+				# once to ServerStream.  This does not add any latency;
+				# it just reduces the number of funcalls.
 				bunchedStrings[0].append((self._peerSeqNum, frame.string))
 
 			elif frameType == SackFrame:
@@ -1343,7 +1352,7 @@ class ServerTransport(object):
 		self._maybeWriteToPeer()
 
 
-	# called by Stream instances
+	# called by ServerStream
 	def registerProducer(self, producer, streaming):
 		if self._producer:
 			raise RuntimeError("Cannot register producer %s, "
@@ -1366,7 +1375,7 @@ class ServerTransport(object):
 		self._maybeWriteToPeer()
 
 
-	# called by Stream instances
+	# called by ServerStream
 	def unregisterProducer(self):
 		"""
 		Stop consuming data from a producer.
@@ -1404,7 +1413,7 @@ class ServerTransport(object):
 		if self._stream:
 			# We need to update lastReceived to give the client some time
 			# to connect a new transport (otherwise, disconnectInactive
-			# would reset Streams that just happened to have no
+			# would reset streams that just happened to have no
 			# transports at that instant).
 			self._stream.lastReceived = self._clock.seconds()
 
@@ -1496,8 +1505,8 @@ class SocketFace(protocol.ServerFactory):
 	def __init__(self, clock, streamTracker, policyString=None):
 		"""
 		@param clock: must provide L{IReactorTime}
-		@param streamTracker: The StreamTracker that will know about all
-			active Streams.
+		@param streamTracker: The L{StreamTracker} that will know about all
+			active L{ServerStream}s.
 		@type streamTracker: L{StreamTracker}
 		@param policyString: a Flash/Silverlight policy file as a string,
 			sent in response to <policy-file-request/>C{NULL}.
