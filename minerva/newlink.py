@@ -643,8 +643,7 @@ class StreamTracker(object):
 	def __init__(self, clock, streamProtocolFactory):
 		self._clock = clock
 		self._streamProtocolFactory = streamProtocolFactory
-		# We have to keep a map of streamId->Stream, otherwise there is no
-		# way for a face to locate a Stream.
+		# A dict mapping streamId->Stream
 		self._streams = securedict()
 
 
@@ -661,14 +660,7 @@ class StreamTracker(object):
 				"cannot make stream with id %r because it already exists" % (streamId,))
 
 		s = self.stream(self._clock, streamId, self._streamProtocolFactory)
-		# Do this first, in case an observer wants to use
-		# L{StreamTracker.getStream}.
 		self._streams[streamId] = s
-
-		# If an exception happened in an observer, it is re-raised.
-		# If an exception happened, we don't call streamDown(s) because
-		# we don't know which observers really think the stream is "up"
-		# (the exception might have occurred "early")
 
 		d = s.notifyFinish()
 		d.addBoth(self._forgetStream, streamId)
