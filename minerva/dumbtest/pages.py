@@ -1,7 +1,7 @@
 from twisted.python.filepath import FilePath
 from twisted.web import static
 
-from minerva.website import htmldumps
+from minerva.mutils import htmldumps
 
 from webmagic.untwist import BetterResource
 

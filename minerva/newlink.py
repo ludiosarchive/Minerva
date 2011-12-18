@@ -29,7 +29,7 @@ from webmagic.pathmanip import getCacheBrokenHref
 from minerva import decoders
 from minerva.objcheck import strToNonNegLimit
 from minerva.window import SACK, Queue, Incoming
-from minerva.website import htmldumps
+from minerva.mutils import htmldumps
 from minerva.frames import (
 	HelloFrame, StringFrame, SeqNumFrame, SackFrame, StreamStatusFrame,
 	StreamCreatedFrame, YouCloseItFrame, ResetFrame, CommentFrame,

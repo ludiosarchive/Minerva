@@ -1,7 +1,7 @@
 from twisted.python.filepath import FilePath
 
 from webmagic.untwist import BetterResource
-from minerva.website import MinervaBootstrap
+from minerva.mutils import MinervaBootstrap
 
 
 class ChatAppPage(BetterResource):

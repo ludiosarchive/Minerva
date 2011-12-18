@@ -1,7 +1,7 @@
 from twisted.trial import unittest
 from securetypes import securedict
 
-from minerva.website import htmldumps, strictSecureDecodeJson, StrictDecodeError
+from minerva.mutils import htmldumps, strictSecureDecodeJson, StrictDecodeError
 
 
 class TestHtmlDumps(unittest.TestCase):

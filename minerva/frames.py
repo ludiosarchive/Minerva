@@ -13,7 +13,7 @@ from simplejson.decoder import JSONDecodeError
 from minerva.objcheck import (
 	ensureBool, ensureNonNegIntLimit, strToNonNegLimit, strToIntInRange)
 from strfrag import StringFragment
-from minerva.website import strictDecoder, StrictDecodeError
+from minerva.mutils import strictDecoder, StrictDecodeError
 from minerva.window import SACK
 
 _postImportVars = vars().keys()
