@@ -692,11 +692,11 @@ class StreamTracker(object):
 
 
 
-# A MinervaTransport must have registerProducer and unregisterProducer
+# A ServerTransport must have registerProducer and unregisterProducer
 # because Stream calls those methods, but it doesn't actually need to be
 # an IPushProducer/IPullProducer.  It could, in theory, buffer all the
 # information it gets without caring about TCP pressure at all.
-class IMinervaTransport(IConsumerWithoutWrite):
+class IServerTransport(IConsumerWithoutWrite):
 
 	ourSeqNum = Attribute(
 		"Sequence number of the last string written to the socket/request, "
@@ -797,7 +797,7 @@ class ServerTransport(object):
 	(for HTTP endpoints), or for every TCP connection we receive (for
 	Flash Socket endpoints).
 	"""
-	implements(IMinervaTransport, IPushProducer, IPullProducer, IProtocol)
+	implements(IServerTransport, IPushProducer, IPullProducer, IProtocol)
 
 	__slots__ = (
 		'ourSeqNum', '_lastStartParam', '_mode', '_peerSeqNum',
@@ -951,7 +951,7 @@ class ServerTransport(object):
 
 	def closeGently(self):
 		"""
-		@see L{IMinervaTransport.closeGently}
+		@see L{IServerTransport.closeGently}
 		"""
 		assert not self._terminating, self
 
@@ -964,7 +964,7 @@ class ServerTransport(object):
 
 	def causedRwinOverflow(self):
 		"""
-		@see L{IMinervaTransport.causedRwinOverflow}
+		@see L{IServerTransport.causedRwinOverflow}
 		"""
 		self._closeWith(tk_rwin_overflow)
 		self._maybeWriteToPeer()
@@ -972,7 +972,7 @@ class ServerTransport(object):
 
 	def writeReset(self, reasonString, applicationLevel):
 		"""
-		@see L{IMinervaTransport.writeReset}
+		@see L{IServerTransport.writeReset}
 		"""
 		assert not self._terminating, self
 
@@ -989,7 +989,7 @@ class ServerTransport(object):
 
 	def writeStrings(self, queue, start):
 		"""
-		@see L{IMinervaTransport.writeStrings}
+		@see L{IServerTransport.writeStrings}
 		"""
 		# If the transport is terminating, it should have already called
 		# Stream.transportOffline(self)

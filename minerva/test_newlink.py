@@ -38,7 +38,7 @@ from minerva.decoders import Int32StringDecoder, DelimitedStringDecoder
 
 from minerva.newlink import (
 	Stream, StreamTracker, NoSuchStream, StreamAlreadyExists,
-	IMinervaTransport, ServerTransport, SocketFace, _HttpFace,
+	IServerTransport, ServerTransport, SocketFace, _HttpFace,
 	HTTP_RESPONSE_PREAMBLE,
 )
 
@@ -1192,7 +1192,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 		verify.verifyObject(IProtocol, transport)
 		verify.verifyObject(IPushProducer, transport)
 		verify.verifyObject(IPullProducer, transport)
-		verify.verifyObject(IMinervaTransport, transport)
+		verify.verifyObject(IServerTransport, transport)
 
 
 	def test_repr(self):
