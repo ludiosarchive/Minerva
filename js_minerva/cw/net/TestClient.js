@@ -100,7 +100,7 @@ cw.net.TestClient.DumbStreamPolicy.prototype.getHttpStreamingMode = function() {
 /**
  * @constructor
  */
-cw.net.TestClient.MockStream = function() {
+cw.net.TestClient.MockClientStream = function() {
 	this.streamExistsAtServer_ = false;
 	this.streamPolicy_ = new cw.net.TestClient.DumbStreamPolicy(
 		cw.net.HttpStreamingMode.NO_STREAMING);
@@ -112,14 +112,14 @@ cw.net.TestClient.MockStream = function() {
 /**
  * @return {!cw.net.SACK}
  */
-cw.net.TestClient.MockStream.prototype.getSACK_ = function() {
+cw.net.TestClient.MockClientStream.prototype.getSACK_ = function() {
 	return new SACK(-1, []);
 };
 
 /**
  * @return {!Object}
  */
-cw.net.TestClient.MockStream.prototype.transportOffline_ = function(transport) {
+cw.net.TestClient.MockClientStream.prototype.transportOffline_ = function(transport) {
 	this.log.push(['transportOffline_', transport]);
 };
 
@@ -390,7 +390,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 	function test_writeStringsThenStart(self) {
 		var clock = new cw.clock.Clock();
 		var callQueue = new cw.eventual.CallQueue(clock);
-		var stream = new cw.net.TestClient.MockStream();
+		var stream = new cw.net.TestClient.MockClientStream();
 		var queue = new cw.net.Queue();
 		queue.extend(['c2s_0', 'c2s_1']);
 		var payloads = [];
@@ -426,7 +426,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientTransportTests').methods
 	function test_flushHttpTransportTwiceThrowsError(self) {
 		var clock = new cw.clock.Clock();
 		var callQueue = new cw.eventual.CallQueue(clock);
-		var stream = new cw.net.TestClient.MockStream();
+		var stream = new cw.net.TestClient.MockClientStream();
 
 		var ct = new cw.net.ClientTransport(
 			callQueue, stream, 0, XHR_LONGPOLL, fakeHttpEndpoint, true);
@@ -454,7 +454,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'DoNothingTransportTests').meth
 	function test_disposeCancelsDelayedUnderlying(self) {
 		var clock = new cw.clock.Clock();
 		var callQueue = new cw.eventual.CallQueue(clock);
-		var stream = new cw.net.TestClient.MockStream();
+		var stream = new cw.net.TestClient.MockClientStream();
 
 		var delay = 1000;
 		var ct = new cw.net.DoNothingTransport(
