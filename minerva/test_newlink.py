@@ -62,7 +62,7 @@ from webmagic.fakes import (
 )
 
 from minerva.mocks import (
-	FrameDecodingTcpTransport, MockStream, MockMinervaStringsProtocol,
+	FrameDecodingTcpTransport, MockServerStream, MockMinervaStringsProtocol,
 	MockMinervaStringsProtocolFactory, MockMinervaStringProtocol,
 	MockMinervaStringProtocolFactory, DummyStreamTracker, DummyTCPTransport,
 	DummySocketLikeTransport, strictGetNewFrames,
@@ -988,8 +988,8 @@ class StreamTests(unittest.TestCase):
 
 
 # Need to use a subclass to avoid __slots__ problem
-class StreamTrackerWithMockStream(StreamTracker):
-	stream = MockStream
+class StreamTrackerWithMockServerStream(StreamTracker):
+	stream = MockServerStream
 
 
 
