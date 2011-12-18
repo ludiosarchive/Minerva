@@ -1,3 +1,10 @@
+"""
+This is used by the Minerva twistd plugin minerva_site.
+
+This entire file is private; you should not need to import it.  If you need
+a similar twistd plugin, copy the code.
+"""
+
 from __future__ import with_statement
 
 import os

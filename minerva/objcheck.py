@@ -1,3 +1,10 @@
+"""
+Validation for objects received over the wire.
+
+This entire file is private; you should not need to import it.  If you need
+similar validations, copy the code and unit tests.
+"""
+
 import sys
 import re
 from math import log10

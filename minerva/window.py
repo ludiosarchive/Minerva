@@ -1,3 +1,9 @@
+"""
+Incoming and outgoing frame windows used by Minerva, analogous to TCP windows.
+
+This entire file is private; you should not need to import it.
+"""
+
 import sys
 import operator
 

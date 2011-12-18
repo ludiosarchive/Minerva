@@ -1,3 +1,10 @@
+"""
+The web resources and Minerva protocol used by minerva_site.
+
+This entire file is private; you should not need to import it.  If you need
+similar things for your website, copy the code.
+"""
+
 import os
 import simplejson
 

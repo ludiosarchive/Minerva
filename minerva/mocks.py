@@ -1,3 +1,10 @@
+"""
+Mocks and dummies used by Minerva's unit tests.
+
+Everything but `MockStream` in this file is private.  If you need to import
+anything else, file a bug.
+"""
+
 from zope.interface import implements
 
 from twisted.internet import defer
