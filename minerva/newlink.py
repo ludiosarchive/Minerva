@@ -1705,10 +1705,6 @@ class XDRFrame(BetterResource):
 	A page suitable for loading into an iframe.  It sets a document.domain
 	so that it can communicate with the parent page (which must also set
 	document.domain).  It is capable of making XHR requests.
-
-	TODO: in production code, this could be a static page with static JavaScript
-	(maybe even the same .js file as the main page.)  Client-side code can
-	extract ?id= instead of the server.
 	"""
 	isLeaf = True
 	dictionary = {'dev_mode': False}
