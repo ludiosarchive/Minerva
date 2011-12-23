@@ -1617,11 +1617,6 @@ class _HttpIo(BetterResource):
 		self.streamTracker = streamTracker
 
 
-	def render_GET(self, request):
-		request.setResponseCode(500)
-		return "_HttpIo can respond only to POST requests"
-
-
 	def render_POST(self, request):
 		t = self.protocol(self._clock)
 		t.factory = self
