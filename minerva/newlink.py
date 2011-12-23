@@ -6,3 +6,5 @@ from minerva.interfaces import *
 from minerva.mserver import *
 
 Stream = ServerStream
+SocketFace = ServerTransportFactory
+HttpFace = WebPort

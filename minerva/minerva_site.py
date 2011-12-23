@@ -11,7 +11,7 @@ import simplejson
 from twisted.python import log
 from twisted.python.filepath import FilePath
 
-from minerva.mserver import StreamTracker, HttpFace, SocketFace
+from minerva.mserver import StreamTracker, WebPort, ServerTransportFactory
 
 from minerva.dumbtest.pages import DumbTestPage
 from minerva.chatapp.pages import ChatAppPage
@@ -295,7 +295,7 @@ requireFile(FilePath(__file__).sibling('index.html').path)
 
 class Root(BetterResource):
 
-	def __init__(self, reactor, httpFace, fileCache, mainSocketPort, domain, closureLibrary):
+	def __init__(self, reactor, webPort, fileCache, mainSocketPort, domain, closureLibrary):
 		import coreweb
 		import minerva
 
@@ -322,12 +322,11 @@ class Root(BetterResource):
 		self.putChild('@testres_Minerva', testres_Minerva)
 
 		# Also used by tests
-		self.putChild('httpface', httpFace)
+		self.putChild('_minerva', webPort)
 
 		self.putChild('js_minerva_tests.html', BetterFile(
 			minervaPath.child('js_minerva_tests.html').path))
 
-		# Demos that use httpFace and/or socketFace
 		self.putChild('dumbtest', DumbTestPage(mainSocketPort))
 		self.putChild('chatapp', ChatAppPage(fileCache, domain, mainSocketPort))
 
@@ -362,11 +361,11 @@ def makeMinervaAndHttp(reactor, fileCache, socketPorts, domain, closureLibrary):
 	if domain:
 		allowedDomains.append(domain)
 
-	httpFace = HttpFace(clock, tracker, fileCache, allowedDomains)
-	socketFace = SocketFace(clock, tracker, policyString=policyString)
+	webPort = WebPort(clock, tracker, fileCache, allowedDomains)
+	stf = ServerTransportFactory(clock, tracker, policyString=policyString)
 
 	mainSocketPort = socketPorts[0] if socketPorts else None
-	root = Root(reactor, httpFace, fileCache, mainSocketPort, domain, closureLibrary)
+	root = Root(reactor, webPort, fileCache, mainSocketPort, domain, closureLibrary)
 	httpSite = ConnectionTrackingSite(root, timeout=75)
 
-	return (socketFace, httpSite)
+	return (stf, httpSite)

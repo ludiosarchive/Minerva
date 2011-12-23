@@ -5,9 +5,9 @@ These tests has seven main sections:
 2.	Tests for StreamTracker
 3.	Tests for *just* ServerTransport, usually using a dummy ServerStream
 4.	Tests for ServerTransport's producer logic
-5.	Tests for SocketFace
-6.	Integration tests for SocketFace/ServerTransport/StreamTracker/ServerStream
-7.	Tests for HttpFace and ServerTransport's HTTP support
+5.	Tests for ServerTransportFactory
+6.	Integration tests for ServerTransportFactory/ServerTransport/StreamTracker/ServerStream
+7.	Tests for _HttpIo and ServerTransport's HTTP support
 
 Notes on understanding this test file:
 
@@ -38,7 +38,7 @@ from minerva.decoders import Int32StringDecoder, DelimitedStringDecoder
 
 from minerva.mserver import (
 	ServerStream, StreamTracker, NoSuchStream, StreamAlreadyExists,
-	IServerTransport, ServerTransport, SocketFace, _HttpFace,
+	IServerTransport, ServerTransport, ServerTransportFactory, _HttpIo,
 	HTTP_RESPONSE_PREAMBLE,
 )
 
@@ -75,7 +75,7 @@ class SlotlessServerTransport(ServerTransport):
 
 
 
-class SlotlessSocketFace(SocketFace):
+class SlotlessServerTransportFactory(ServerTransportFactory):
 	protocol = SlotlessServerTransport
 
 
@@ -1048,7 +1048,7 @@ class ServerTransportModeSelectionTests(unittest.TestCase):
 
 	def _resetConnection(self):
 		self.tcpTransport = DummyTCPTransport()
-		self.face = SocketFace(None, self.streamTracker,
+		self.face = ServerTransportFactory(None, self.streamTracker,
 			policyString='<nonsense-policy/>')
 		self.transport = self.face.buildProtocol(addr=None)
 		self.transport.makeConnection(self.tcpTransport)
@@ -1171,7 +1171,7 @@ class _BaseHelpers(object):
 
 
 	def _makeTransport(self, rejectAll=False):
-		faceFactory = SlotlessSocketFace(self._clock, self.streamTracker)
+		faceFactory = SlotlessServerTransportFactory(self._clock, self.streamTracker)
 
 		parser = self._makeParser()
 		transport = _makeTransportWithDecoder(parser, faceFactory)
@@ -2007,7 +2007,7 @@ class TransportProducerTests(unittest.TestCase):
 		self.proto = MockMinervaStringsProtocol()
 		self.tracker = StreamTracker(clock, self.proto)
 
-		factory = SocketFace(clock, self.tracker, None)
+		factory = ServerTransportFactory(clock, self.tracker, None)
 		self.transport = factory.buildProtocol(addr=None)
 
 		self.tcpTransport = DummyTCPTransport()
@@ -2112,22 +2112,22 @@ class TransportProducerTests(unittest.TestCase):
 
 
 
-class SocketFaceTests(unittest.TestCase):
+class ServerTransportFactoryTests(unittest.TestCase):
 	"""
-	Tests for L{mserver.SocketFace}
+	Tests for L{mserver.ServerTransportFactory}
 	"""
 	def test_policyStringOkay(self):
-		face = SocketFace(clock=None, streamTracker=None)
+		face = ServerTransportFactory(clock=None, streamTracker=None)
 		face.setPolicyString('okay')
 
 
 	def test_policyStringCannotBeUnicode(self):
-		face = SocketFace(clock=None, streamTracker=None)
+		face = ServerTransportFactory(clock=None, streamTracker=None)
 		self.assertRaises(TypeError, lambda: face.setPolicyString(u'hi'))
 
 
 	def test_policyStringCannotContainNull(self):
-		face = SocketFace(clock=None, streamTracker=None)
+		face = ServerTransportFactory(clock=None, streamTracker=None)
 		self.assertRaises(ValueError, lambda: face.setPolicyString("hello\x00"))
 		self.assertRaises(ValueError, lambda: face.setPolicyString("\x00"))
 
@@ -2135,12 +2135,12 @@ class SocketFaceTests(unittest.TestCase):
 
 class IntegrationTests(_BaseHelpers, unittest.TestCase):
 	"""
-	Test SocketFace/ServerTransport/StreamTracker/ServerStream integration.
+	Test ServerTransportFactory/ServerTransport/StreamTracker/ServerStream integration.
 	"""
 	def _makeTransport(self):
 		parser = Int32StringDecoder(maxLength=1024*1024)
 		# is it okay to make a new one every time?
-		faceFactory = SlotlessSocketFace(self._clock, self.streamTracker)
+		faceFactory = SlotlessServerTransportFactory(self._clock, self.streamTracker)
 		transport = _makeTransportWithDecoder(parser, faceFactory)
 		transport.dataReceived('<int32/>\n')
 		return transport
@@ -2816,12 +2816,12 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 class HttpTests(_BaseHelpers, unittest.TestCase):
 	"""
-	Tests for L{_HttpFace} and L{ServerTransport}'s HTTP support.
+	Tests for L{_HttpIo} and L{ServerTransport}'s HTTP support.
 	"""
 	# Inherit setUp, _resetStreamTracker
 
 	def _makeResource(self, rejectAll=False):
-		resource = _HttpFace(self._clock, self.streamTracker)
+		resource = _HttpIo(self._clock, self.streamTracker)
 		return resource
 
 #		parser = self._makeParser()

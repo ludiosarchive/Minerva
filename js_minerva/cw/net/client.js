@@ -94,7 +94,7 @@ cw.net.ourFlashSocketTracker_;
 /**
  * Object to represent a Socket endpoint.
  *
- * @param {string} primaryUrl Absolute or relative URL to HttpFace
+ * @param {string} primaryUrl Absolute or relative URL to the WebPort
  * 	resource (which hosts the .swf needed).
  * @param {string} host Hostname for socket-like transports.
  * @param {number} port Port for socket-like transports.
@@ -1772,7 +1772,7 @@ cw.net.ClientTransport.prototype.isHttpTransport_ = function() {
 cw.net.ClientTransport.prototype.ensurePreambleIfHttpAndFirstFrame_ = function(frame) {
 	// For HTTP transports, first frame must be the anti-script-inclusion
 	// preamble.  While intended to stop attackers who include script
-	// tags pointing to an HttpFace URL, it also provides good
+	// tags pointing to a WebPort URL, it also provides good
 	// protection against us parsing and reading frames from a page
 	// returned by an intermediary like a proxy or a WiFi access paywall.
 	if(this.framesDecoded_ == 1 &&

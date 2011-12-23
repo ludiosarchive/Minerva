@@ -788,8 +788,8 @@ DontWriteSack = ("DontWriteSack",)
 
 class ServerTransport(object):
 	"""
-	Private.  Use SocketFace or HttpFace, which will build this object
-	(it is a a Protocol, among other things).
+	Private.  Use ServerTransportFactory or WebPort, which will build this
+	object (it is a a Protocol, among other things).
 
 	One ServerTransport is instantiated for every HTTP request we receive
 	(for HTTP endpoints), or for every TCP connection we receive (for
@@ -1453,7 +1453,7 @@ class ServerTransport(object):
 		self.dataReceived(body)
 
 
-	# Called by HttpFace
+	# Called by _HttpIo
 	def requestStarted(self, request):
 		assert self._mode == UNKNOWN, self._mode
 		self._mode = HTTP
@@ -1495,7 +1495,11 @@ class ServerTransport(object):
 requireFile(FilePath(__file__).sibling('compiled_client').child('FlashConnector.swf').path)
 requireFile(FilePath(__file__).sibling('compiled_client').child('expressInstall.swf').path)
 
-class SocketFace(protocol.ServerFactory):
+class ServerTransportFactory(protocol.ServerFactory):
+	"""
+	You must listenTCP with this factory if you want Minerva clients to be
+	able to connect to your Minerva server using Flash sockets.
+	"""
 	implements(IProtocolFactory)
 	__slots__ = ('_clock', 'streamTracker', 'policyStringWithNull')
 
@@ -1603,7 +1607,7 @@ class XDRFrameDev(XDRFrame):
 
 
 
-class _HttpFace(BetterResource):
+class _HttpIo(BetterResource):
 	isLeaf = True
 	protocol = ServerTransport
 
@@ -1615,7 +1619,7 @@ class _HttpFace(BetterResource):
 
 	def render_GET(self, request):
 		request.setResponseCode(500)
-		return "HttpFace can respond only to POST requests"
+		return "_HttpIo can respond only to POST requests"
 
 
 	def render_POST(self, request):
@@ -1631,10 +1635,14 @@ class _HttpFace(BetterResource):
 requireFiles([
 	FilePath(__file__).sibling('compiled_client').child('FlashConnector.swf').path])
 
-class HttpFace(BetterResource):
+class WebPort(BetterResource):
+	"""
+	You must put this resource into your Site's resource tree so that Minerva
+	clients can connect to your Minerva server.
+	"""
 	def __init__(self, clock, streamTracker, fileCache, allowedDomains):
 		BetterResource.__init__(self)
-		self.putChild('', _HttpFace(clock, streamTracker))
+		self.putChild('', _HttpIo(clock, streamTracker))
 		self.putChild('xdrframe', XDRFrame(fileCache, allowedDomains))
 		self.putChild('xdrframe_dev', XDRFrameDev(fileCache, allowedDomains))
 

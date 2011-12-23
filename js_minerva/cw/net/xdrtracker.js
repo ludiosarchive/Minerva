@@ -79,7 +79,7 @@ cw.net.XDRFrame = function(contentWindow, expandedUrl, streams, frameId) {
 	this.contentWindow = contentWindow;
 
 	/**
-	 * The URL of the server-side HttpFace resource that this XDRFrame is
+	 * The URL of the server-side WebPort resource that this XDRFrame is
 	 * intended to send requests to.
 	 * @type {string}
 	 */

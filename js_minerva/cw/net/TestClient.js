@@ -606,10 +606,10 @@ cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealHttpTests')
 
 	function getEndpoint_(self) {
 		var pageUrl = new goog.Uri(window.location.href);
-		var endpointUrl = pageUrl.resolve(new goog.Uri('/httpface/')).toString();
-		var httpFaceEndpoint = new cw.net.ExpandedHttpEndpoint_(
+		var endpointUrl = pageUrl.resolve(new goog.Uri('/_minerva/')).toString();
+		var expandedEndpoint = new cw.net.ExpandedHttpEndpoint_(
 			endpointUrl, goog.global, endpointUrl, goog.global);
-		return goog.async.Deferred.succeed(httpFaceEndpoint);
+		return goog.async.Deferred.succeed(expandedEndpoint);
 	}
 );
 
@@ -662,7 +662,7 @@ cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealFlashSocket
 			var url = new goog.Uri(document.location);
 			var host = url.getDomain();
 
-			return new cw.net.SocketEndpoint('/httpface/', host, port);
+			return new cw.net.SocketEndpoint('/_minerva/', host, port);
 		});
 		return d;
 	}

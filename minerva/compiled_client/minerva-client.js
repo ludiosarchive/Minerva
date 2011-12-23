@@ -4009,6 +4009,6 @@ z("Minerva.getEndpointByQueryArgs", function() {
   if((a = Boolean(Number(a.get("useSubdomains", "0")))) && !s.__demo_shared_domain) {
     Tf.B("You requested subdomains, but I cannot use them because you did not specify a domain.  Proceeding without subdomains."), a = m
   }
-  return Uf(0, a, b, "/httpface/")
+  return Uf(0, a, b, "/_minerva/")
 });
 })();
