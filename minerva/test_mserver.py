@@ -427,27 +427,6 @@ class ServerStreamTests(unittest.TestCase):
 		self.assertEqual(SACK(0, (4, 5)), s.getSACK())
 
 
-	def test_noLongerVirgin(self):
-		"""
-		After the first transport is attached to a ServerStream, it is no longer a virgin.
-		"""
-		s = ServerStream(self._clock, 'some fake id', MockMinervaStringsProtocolFactory())
-
-		self.assertIdentical(True, s. virgin)
-
-		t = DummySocketLikeTransport()
-		s.transportOnline(t, False, None)
-		self.assertIdentical(False, s.virgin)
-
-		# no longer a virgin ever
-		s.transportOffline(t)
-		self.assertIdentical(False, s.virgin)
-
-		t2 = DummySocketLikeTransport()
-		s.transportOnline(t2, False, None)
-		self.assertIdentical(False, s.virgin)
-
-
 	def test_transportOnline(self):
 		clock = task.Clock()
 		s = ServerStream(clock, 'some fake id', MockMinervaStringsProtocolFactory())

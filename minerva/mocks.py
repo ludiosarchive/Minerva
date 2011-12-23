@@ -55,7 +55,6 @@ class MockServerStream(GetNewMixin):
 
 	def __init__(self, clock=None, streamId=None, streamProtocolFactory=None):
 		## if streamId is None: # make a random one?
-		self.virgin = True
 		self._notifications = []
 		self.streamId = streamId
 		self.streamProtocolFactory = streamProtocolFactory
@@ -97,7 +96,6 @@ class MockServerStream(GetNewMixin):
 
 	def transportOnline(self, transport, wantsStrings, succeedsTransport):
 		self.allSeenTransports.append(transport)
-		self.virgin = False
 		self.log.append(['transportOnline', transport, wantsStrings, succeedsTransport])
 		assert transport not in self._transports
 		self._transports.add(transport)

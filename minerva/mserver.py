@@ -186,7 +186,7 @@ class ServerStream(object):
 
 	__slots__ = (
 		'_clock', 'streamId', '_streamProtocolFactory', '_protocol',
-		'virgin', '_primaryTransport', '_notifications', '_transports',
+		'_primaryTransport', '_notifications', '_transports',
 		'disconnected', 'queue', '_incoming', '_pretendAcked', '_producer',
 		'_streamingProducer', '_primaryHasProducer', '_primaryPaused',
 		'lastSackSeenByServer', 'lastReceived', 'maxIdleTime')
@@ -208,7 +208,6 @@ class ServerStream(object):
 		# _primaryPaused: Does the primary transport think it is paused?
 		# Or if no primary transport, False.
 
-		self.virgin = True # no transports have ever attached to it
 		self._notifications = []
 		self._transports = set()
 
@@ -434,7 +433,6 @@ class ServerStream(object):
 		written to #<succeedsTransport> were SACKed.
 		"""
 		self._transports.add(transport)
-		self.virgin = False
 
 		# This is done here, and not in _newPrimary, because client should be able
 		# to upload strings without ever having set up a primary transport.
