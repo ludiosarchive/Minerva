@@ -1464,7 +1464,7 @@ l.Fa = function(a, b, c) {
   this.i = new Wb;
   Ya(this.i, "readystatechange", x(this.Ka, this));
   Ya(this.i, "complete", x(this.Da, this));
-  this.i.send(a, b, c, {"Content-Type":"application/octet-stream"});
+  this.i.send(a + "io/", b, c, {"Content-Type":"application/octet-stream"});
   this.$ = new Nb(this.i.a, 1048576)
 };
 l.e = function() {

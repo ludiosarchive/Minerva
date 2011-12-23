@@ -1642,7 +1642,7 @@ class WebPort(BetterResource):
 	"""
 	def __init__(self, clock, streamTracker, fileCache, allowedDomains):
 		BetterResource.__init__(self)
-		self.putChild('', _HttpIo(clock, streamTracker))
+		self.putChild('io', _HttpIo(clock, streamTracker))
 		self.putChild('xdrframe', XDRFrame(fileCache, allowedDomains))
 		self.putChild('xdrframe_dev', XDRFrameDev(fileCache, allowedDomains))
 

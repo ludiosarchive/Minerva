@@ -201,18 +201,18 @@ cw.net.XHRSlave.prototype.readyStateChangeFired_ = function() {
  * Make an HTTP request.  This makes Minerva-specific assumptions, including
  * the headers to send, and how to parse the response.
  *
- * @param {string} url
+ * @param {string} webPortPath URL to the server-side WebPort resource.
  * @param {string} method "POST" or "GET".
  * @param {string} payload The POST payload, or ""
  */
-cw.net.XHRSlave.prototype.makeRequest = function(url, method, payload) {
+cw.net.XHRSlave.prototype.makeRequest = function(webPortPath, method, payload) {
 	this.underlying_ = new goog.net.XhrIo();
 	goog.events.listen(this.underlying_, goog.net.EventType.READY_STATE_CHANGE,
 		goog.bind(this.readyStateChangeFired_, this));
 	goog.events.listen(this.underlying_, goog.net.EventType.COMPLETE,
 		goog.bind(this.httpResponseReceived_, this));
 
-	this.underlying_.send(url, method, payload, {
+	this.underlying_.send(webPortPath + 'io/', method, payload, {
 		'Content-Type': 'application/octet-stream'});
 	// We use "application/octet-stream" instead of
 	// "application/x-www-form-urlencoded;charset=utf-8" because we don't
@@ -259,15 +259,15 @@ goog.inherits(cw.net.XHRSlaveTracker, goog.Disposable);
 
 /**
  * @param {string} reqId A short random string to identify this request.
- * @param {string} url
+ * @param {string} webPortPath URL to the server-side WebPort resource.
  * @param {string} method "POST" or "GET".
  * @param {string} payload The POST payload, or ""
  * @private
  */
-cw.net.XHRSlaveTracker.prototype.makeRequest_ = function(reqId, url, method, payload) {
+cw.net.XHRSlaveTracker.prototype.makeRequest_ = function(reqId, webPortPath, method, payload) {
 	var slave = new cw.net.XHRSlave(this, reqId);
 	this.slaves_[reqId] = slave;
-	slave.makeRequest(url, method, payload);
+	slave.makeRequest(webPortPath, method, payload);
 };
 
 /**

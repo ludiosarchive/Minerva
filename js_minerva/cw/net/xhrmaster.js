@@ -74,12 +74,12 @@ cw.net.XHRMaster.prototype.logger_ =
 cw.net.XHRMaster.prototype.readyState_ = -1;
 
 /**
- * @param {string} url
+ * @param {string} webPortPath URL to the server-side WebPort resource.
  * @param {string} method "POST" or "GET".
  * @param {string} payload The POST payload, or ""
  */
-cw.net.XHRMaster.prototype.makeRequest = function(url, method, payload) {
-	this.contentWindow_['__XHRSlave_makeRequest'](this.reqId_, url, method, payload);
+cw.net.XHRMaster.prototype.makeRequest = function(webPortPath, method, payload) {
+	this.contentWindow_['__XHRSlave_makeRequest'](this.reqId_, webPortPath, method, payload);
 };
 
 /**

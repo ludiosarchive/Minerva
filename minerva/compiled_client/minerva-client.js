@@ -3921,7 +3921,7 @@ r.qc = function(a, b, c) {
   this.j = new Ff;
   vb(this.j, "readystatechange", y(this.ve, this));
   vb(this.j, "complete", y(this.ke, this));
-  this.j.send(a, b, c, {"Content-Type":"application/octet-stream"});
+  this.j.send(a + "io/", b, c, {"Content-Type":"application/octet-stream"});
   this.Rc = new We(this.j.f, 1048576)
 };
 r.d = function() {
