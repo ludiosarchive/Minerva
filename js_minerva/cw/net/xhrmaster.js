@@ -30,7 +30,7 @@ goog.require('cw.net.DecodeStatus');
  * before the other side knows about it; the same for XHRMaster.
  *
  * After writing this, I found out that I don't actually need Worker; I only
- * need SharedWorker.  And that SharedWorker will run the entire Stream,
+ * need SharedWorker.  And that SharedWorker will run the entire ClientStream,
  * not just an XHR request.
  *
  * @param {string} reqId
@@ -74,12 +74,12 @@ cw.net.XHRMaster.prototype.logger_ =
 cw.net.XHRMaster.prototype.readyState_ = -1;
 
 /**
- * @param {string} url
+ * @param {string} webPortPath URL to the server-side WebPort resource.
  * @param {string} method "POST" or "GET".
  * @param {string} payload The POST payload, or ""
  */
-cw.net.XHRMaster.prototype.makeRequest = function(url, method, payload) {
-	this.contentWindow_['__XHRSlave_makeRequest'](this.reqId_, url, method, payload);
+cw.net.XHRMaster.prototype.makeRequest = function(webPortPath, method, payload) {
+	this.contentWindow_['__XHRSlave_makeRequest'](this.reqId_, webPortPath, method, payload);
 };
 
 /**

@@ -58,10 +58,10 @@ cw.net.demo.canUseSubdomains = function() {
  * @param {!cw.eventual.CallQueue} callQueue
  * @param {boolean} useSubdomains
  * @param {boolean} useFlash
- * @param {string} httpFacePath
+ * @param {string} webPortPath
  * @return {!cw.net.Endpoint}
  */
-cw.net.demo.getEndpoint = function(callQueue, useSubdomains, useFlash, httpFacePath) {
+cw.net.demo.getEndpoint = function(callQueue, useSubdomains, useFlash, webPortPath) {
 	var url = new goog.Uri(document.location);
 	if(!useFlash) {
 		if(useSubdomains) {
@@ -76,14 +76,14 @@ cw.net.demo.getEndpoint = function(callQueue, useSubdomains, useFlash, httpFaceP
 		} else {
 			var endpointUrl = url.clone();
 		}
-		endpointUrl.setPath(httpFacePath);
+		endpointUrl.setPath(webPortPath);
 		endpointUrl.setQuery('');
 		return new cw.net.HttpEndpoint(
 			endpointUrl.toString().replace("_____random_____", "%random%"));
 	} else {
 		var host = url.getDomain();
 		var port = goog.global['__demo_mainSocketPort'];
-		return new cw.net.SocketEndpoint(httpFacePath, host, port);
+		return new cw.net.SocketEndpoint(webPortPath, host, port);
 	}
 };
 
@@ -104,8 +104,8 @@ cw.net.demo.getEndpointByQueryArgs = function(callQueue) {
 			"Proceeding without subdomains.")
 		useSubdomains = false;
 	}
-	var httpFacePath = '/httpface/';
-	return cw.net.demo.getEndpoint(callQueue, useSubdomains, useFlash, httpFacePath);
+	var webPortPath = '/_minerva/';
+	return cw.net.demo.getEndpoint(callQueue, useSubdomains, useFlash, webPortPath);
 };
 
 

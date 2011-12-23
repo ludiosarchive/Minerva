@@ -302,7 +302,7 @@ function makeHttpRequest() {
 	var x = new goog.net.XhrIo();
 	goog.events.listen(x, goog.net.EventType.COMPLETE, httpRequestDone);
 	goog.events.listen(x, goog.net.EventType.READY, goog.partial(goog.net.XhrIo.cleanupSend_, x));
-	x.send('/httpface/', 'POST', serializedFrames);
+	x.send('/_minerva/io/', 'POST', serializedFrames);
 	lastXhr = x;
 }
 

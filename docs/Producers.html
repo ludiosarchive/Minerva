@@ -14,13 +14,13 @@
 <p>Like many things in Twisted, Minerva supports producers/consumers for efficient high-volume
 streaming. <a class="footnote-reference" href="#id2" id="id1">[1]</a>. In Twisted, pressure information from consumers controls the creation of
 bytes. In Minerva, it controls the creation of <em>frames</em>, not bytes.</p>
-<p>In Minerva, a producer can be attached to the Stream. Usually, a MinervaProtocol
+<p>In Minerva, a producer can be attached to the ServerStream. Usually, a MinervaProtocol
 will perform this attachment.</p>
 <p>In general, TCP pressure from the TCP connection of the primary
-transport directly affects the producer attached to Stream. Also, if the producer is a push
-producer, the producer is paused while there are no Minerva transports attached to the Stream.</p>
+transport directly affects the producer attached to ServerStream. Also, if the producer is a push
+producer, the producer is paused while there are no Minerva transports attached to the ServerStream.</p>
 <p>The implementation is complicated because Minerva transports may frequently attach and
-detach from the Stream. <a class="reference internal" href="#producers-consumers-technical-details">Producers/consumers technical details</a> describes what really
+detach from the ServerStream. <a class="reference internal" href="#producers-consumers-technical-details">Producers/consumers technical details</a> describes what really
 happens. However, it does &quot;just work&quot;.</p>
 <table class="docutils footnote" frame="void" id="id2" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
@@ -31,28 +31,28 @@ happens. However, it does &quot;just work&quot;.</p>
 <div class="section" id="producers-consumers-technical-details">
 <h1>Producers/consumers technical details</h1>
 <p>Skip this section unless you are trying to understand the producer/consumer code in
-<tt class="docutils literal">minerva.newlink</tt>.</p>
+<tt class="docutils literal">minerva.mserver</tt>.</p>
 <p>&quot;Type of producer&quot; is <em>pull</em>, or <em>push</em>. <a class="footnote-reference" href="#id4" id="id3">[2]</a></p>
 <p>This is the object chain, &quot;upstream&quot; objects are at the top. Objects on adjacent lines
 usually know about each other (have references).</p>
 <ul class="simple">
 <li>MinervaProtocol</li>
-<li>Stream</li>
+<li>ServerStream</li>
 <li>ServerTransport</li>
 <li>(Twisted) - refers to either the TCP transport or to a <tt class="docutils literal">twisted.web.http.Request</tt>.
 Both have a <tt class="docutils literal">registerProducer</tt> method.</li>
 </ul>
 <p>Producer attachment goes downstream, pressure information goes upstream.</p>
 <p>When a client connects, (Twisted) causes *Transport creation,
-which causes Stream creation, which causes MinervaProtocol creation. This
+which causes ServerStream creation, which causes MinervaProtocol creation. This
 might not happen instantly, because *Transport must be authenticated first.
 At this time, there are no producers in the system.</p>
-<p>At any time, a pull or push producer can be registered with Stream. The producer can be
+<p>At any time, a pull or push producer can be registered with ServerStream. The producer can be
 unregistered at any time. Usually, a MinervaProtocol will do the registration and unregistration.</p>
-<p>Stream's goal is to register the same type of producer with every primary transport that
-attaches to it, even if the primary transport isn't attached yet (or not yet primary). Stream
+<p>ServerStream's goal is to register the same type of producer with every primary transport that
+attaches to it, even if the primary transport isn't attached yet (or not yet primary). ServerStream
 must also unregister producers from transports that are no longer primary transports.</p>
-<p>If type of producer is push, Stream must also call <tt class="docutils literal">pauseProducing</tt> on MinervaProtocol whenever
+<p>If type of producer is push, ServerStream must also call <tt class="docutils literal">pauseProducing</tt> on MinervaProtocol whenever
 there is no primary transport. It must also call <tt class="docutils literal">resumeProducing</tt> when this situation ends.</p>
 <p>*Transport's job is simple, it just registers itself as the correct type of producer with (Twisted).
 One edge case: it must remember if (Twisted) paused it, and if so, <tt class="docutils literal">pauseProducing</tt> newly-attached push producers.</p>
@@ -67,8 +67,8 @@ One edge case: it must remember if (Twisted) paused it, and if so, <tt class="do
 <li>(Twisted) - [resume] when it wants more data to send</li>
 <li>(Twisted) - [pause] when it has enough data</li>
 <li>*Transport - [pause] if it was paused earlier by (Twisted)</li>
-<li>Stream - [pause] when there are no primary transports</li>
-<li>Stream - If paused, [resume] when a primary transport appears</li>
+<li>ServerStream - [pause] when there are no primary transports</li>
+<li>ServerStream - If paused, [resume] when a primary transport appears</li>
 </ul>
 <table class="docutils footnote" frame="void" id="id4" rules="none">
 <colgroup><col class="label" /><col /></colgroup>

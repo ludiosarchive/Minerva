@@ -24,7 +24,7 @@ Minerva SACK (vs. just plain ACK) allows us to keep strings in our receive windo
 that we cannot deliver yet. In our SackFrame, we send sackList
 to the peer so that they know which strings were queued in the window.
 For wire protocol simplicity, if the window is overflowing, the transport
-is torn down (the Stream is kept alive).
+is torn down.  (Note that the ClientStream or ServerStream is not).
 
 -	When Minerva server's receive window is overflowing, send:
 

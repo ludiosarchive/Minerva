@@ -15,21 +15,29 @@
 <h1>Terms</h1>
 <dl class="docutils">
 <dt>application</dt>
-<dd>the application that is using Minerva. An application has both a server-side
+<dd>The application that is using Minerva. An application has both a server-side
 and client-side component.</dd>
 <dt>client</dt>
-<dd>the peer that connects to a Minerva server. Typically a web browser.</dd>
+<dd>The peer that connects to a Minerva server. Typically a web browser.</dd>
 <dt>stream</dt>
-<dd>the stateful object that protocols use to send and receive data. This is sort
-of like a TCP connection.</dd>
+<dd>The stateful object that applications use to send and receive strings.
+This is sort of like a TCP connection.  A &quot;stream&quot; is a bit nebulous
+because the client and server can disagree about the state of the stream,
+or whether it even exists.</dd>
+<dt>ClientStream</dt>
+<dd>The client-side implementation of a Minerva stream.</dd>
+<dt>ServerStream</dt>
+<dd>The server-side implementation of a Minerva stream.</dd>
+<dt>*Stream</dt>
+<dd>Either a ClientStream or a ServerStream.</dd>
 <dt>peer</dt>
-<dd>the thing on the other side of the Minerva stream. For a server, it is a client;
+<dd>The thing on the other side of the Minerva stream. For a server, it is a client;
 for a client, the server.</dd>
 <dt>frame</dt>
-<dd>a framed bytestring sent over streams. This ecompasses both Minerva-level
+<dd>A framed bytestring sent over streams. This ecompasses both Minerva-level
 and application-level data.</dd>
 <dt>string (in the context of Minerva)</dt>
-<dd><p class="first">an atomic piece of application-level data that can be fit into a frame and sent
+<dd><p class="first">An atomic piece of application-level data that can be fit into a frame and sent
 to the peer. Strings have strict restrictions on which bytes/codepoints are
 allowed, see <a class="reference internal" href="#string-restrictions">String restrictions</a>.</p>
 <p class="last">On the server, a string is represented as a bytestring (never decoded
@@ -37,14 +45,14 @@ to unicode). On the browser side, a string is represented as JavaScript UTF-16
 string, but with the same restrictions on bytes/codepoints.</p>
 </dd>
 <dt>S2C</dt>
-<dd>server-to-client (e.g. a S2C transport, or a S2C string)</dd>
+<dd>Server-to-client (e.g. a S2C transport, or a S2C string)</dd>
 <dt>C2S</dt>
-<dd>client-to-server. (e.g. a C2S transport, or a C2S string)</dd>
+<dd>Client-to-server. (e.g. a C2S transport, or a C2S string)</dd>
 <dt>transport</dt>
-<dd>an HTTP request/response, or socket, that Minerva uses to send/receive
+<dd>An HTTP request/response, or socket, that Minerva uses to send/receive
 frames.</dd>
 <dt>S2C transport</dt>
-<dd>a transport that is being used or will be used to send S2C strings,
+<dd>A transport that is being used or will be used to send S2C strings,
 regardless of whether it it used for C2S as well.</dd>
 <dt>primary transport</dt>
 <dd>In server context: the transport that is currently designated to send

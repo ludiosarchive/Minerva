@@ -84,7 +84,7 @@ def makeService(config):
 
 	doReloading = bool(int(os.environ.get('PYRELOADING', '0')))
 	fileCache = FileCache(lambda: reactor.seconds(), 0.1 if doReloading else -1)
-	socketFace, httpSite = minerva_site.makeMinervaAndHttp(
+	stf, httpSite = minerva_site.makeMinervaAndHttp(
 		reactor, fileCache, socketPorts, domain, closureLibrary)
 	httpSite.displayTracebacks = not config["no-tracebacks"]
 
@@ -93,7 +93,7 @@ def makeService(config):
 		httpServer.setServiceParent(multi)
 
 	for minervaStrport in config['minerva']:
-		minervaServer = strports.service(minervaStrport, socketFace)
+		minervaServer = strports.service(minervaStrport, stf)
 		minervaServer.setServiceParent(multi)
 
 	if doReloading:

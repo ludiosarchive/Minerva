@@ -3921,7 +3921,7 @@ r.qc = function(a, b, c) {
   this.j = new Ff;
   vb(this.j, "readystatechange", y(this.ve, this));
   vb(this.j, "complete", y(this.ke, this));
-  this.j.send(a, b, c, {"Content-Type":"application/octet-stream"});
+  this.j.send(a + "io/", b, c, {"Content-Type":"application/octet-stream"});
   this.Rc = new We(this.j.f, 1048576)
 };
 r.d = function() {
@@ -4009,6 +4009,6 @@ z("Minerva.getEndpointByQueryArgs", function() {
   if((a = Boolean(Number(a.get("useSubdomains", "0")))) && !s.__demo_shared_domain) {
     Tf.B("You requested subdomains, but I cannot use them because you did not specify a domain.  Proceeding without subdomains."), a = m
   }
-  return Uf(0, a, b, "/httpface/")
+  return Uf(0, a, b, "/_minerva/")
 });
 })();

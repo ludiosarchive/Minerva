@@ -1,7 +1,7 @@
 """
 Mocks and dummies used by Minerva's unit tests.
 
-Everything but `MockStream` in this file is private.  If you need to import
+Everything but `MockServerStream` in this file is private.  If you need to import
 anything else, file a bug.
 """
 
@@ -12,7 +12,7 @@ from twisted.internet import defer
 from strfrag import StringFragment
 
 from minerva.window import SACK, Queue, Incoming
-from minerva.newlink import (
+from minerva.mserver import (
 	NoSuchStream, IMinervaProtocol, IMinervaFactory, StreamAlreadyExists)
 from minerva.decoders import OK
 from minerva.frames import decodeFrameFromServer
@@ -50,7 +50,7 @@ class FrameDecodingTcpTransport(DummyTCPTransport, GetNewMixin):
 
 
 
-class MockStream(GetNewMixin):
+class MockServerStream(GetNewMixin):
 	streamId = "a stream id of unusual length"
 
 	def __init__(self, clock=None, streamId=None, streamProtocolFactory=None):
@@ -293,7 +293,7 @@ class DummySocketLikeTransport(GetNewMixin):
 
 class DummyStreamTracker(object):
 
-	stream = MockStream
+	stream = MockServerStream
 
 	def __init__(self, clock, streamProtocolFactory, _streams):
 		self._clock = clock

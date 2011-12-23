@@ -61,7 +61,7 @@ cw.net.InvalidHello.prototype.name = 'cw.net.InvalidHello';
 
 
 /**
- * Hello frame properties. Keep in sync with minerva/newlink.py
+ * HelloFrame properties. Keep in sync with minerva.frames.HelloFrameArguments
  * @enum {string}
  * @private
  */
@@ -487,7 +487,7 @@ cw.net.StringFrame.prototype.__reprPush__ = function(sb, stack) {
  * @param {string} frameString A string that ends with " ".
  * 	Restricted string validation is not performed here, to accomodate
  * 	a future extension that allows expanding the allowed byte/char
- * 	range mid-Stream.
+ * 	range mid-stream.
  * @return {!cw.net.StringFrame}
  */
 cw.net.StringFrame.decode = function(frameString) {
@@ -879,11 +879,11 @@ cw.net.isRestrictedString_ = function(string) {
 
 
 /**
- * A reset frame indicates this side has given up on the Stream.
+ * A reset frame indicates this side has given up on the stream.
  * A reset frame from the server implies a transport kill as well.
  *
- * @param {string} reasonString Why the Stream reset.
-*	ASCII (0x20-0x7E)-only C{str}, max 255 bytes.
+ * @param {string} reasonString Why the stream reset.
+ *	ASCII (0x20-0x7E)-only C{str}, max 255 bytes.
  * @param {boolean} applicationLevel Whether the reset was application-level
  * 	(not caused by Minerva internals).
  * @constructor
@@ -952,7 +952,7 @@ cw.net.ResetFrame.prototype.encodeToPieces = function(sb) {
 
 
 /**
- * Transport kill reasons. Keep in sync with minerva/newlink.py
+ * Transport kill reasons.  Keep in sync with minerva.frames.TransportKillFrame
  *
  * @enum {string}
  */

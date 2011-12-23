@@ -665,17 +665,17 @@ cw.net.fireFlashConnectorDeferreds_ = function(bridge) {
 
 /**
  * @param {!cw.eventual.CallQueue} callQueue
- * @param {string} httpFacePath
+ * @param {string} webPortPath
  * @return {!goog.async.Deferred} Deferred that fires with an object or embed
  *	 element.
  */
-cw.net.loadFlashConnector = function(callQueue, httpFacePath) {
+cw.net.loadFlashConnector = function(callQueue, webPortPath) {
 	if(cw.net.isFlashConnectorLoading_()) {
 		return cw.net.newFlashConnectorDeferred_();
 	}
 
 	var flashObject = new goog.ui.media.FlashObject(
-		httpFacePath + 'FlashConnector.swf?cb=' + cw.net.breaker_FlashConnector_swf);
+		webPortPath + 'FlashConnector.swf?cb=' + cw.net.breaker_FlashConnector_swf);
 	flashObject.setBackgroundColor("#777777");
 	flashObject.setSize(300, 30);
 
@@ -705,7 +705,7 @@ cw.net.loadFlashConnector = function(callQueue, httpFacePath) {
 
 
 // This is how Minerva actually reaches a real Flash Socket:
-// Stream
+// ClientStream
 //	ClientTransport
 //		[[an Endpoint]].[[a FlashSocketTracker]].createNew([[a FlashSocketConduit]])
 //			FlashSocket

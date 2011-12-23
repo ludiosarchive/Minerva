@@ -15,7 +15,7 @@ from minerva.frames import (
 )
 
 from minerva.window import SACK
-from minerva.test_newlink import _makeHelloFrame, sf
+from minerva.test_mserver import _makeHelloFrame, sf
 
 
 class ReallyEqualMixin(object):

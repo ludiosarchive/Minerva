@@ -1,18 +1,18 @@
 """
 These tests has seven main sections:
 
-1.	Tests that test *just* Stream, using dummy transports.
+1.	Tests that test *just* ServerStream, using dummy transports.
 2.	Tests for StreamTracker
-3.	Tests for *just* ServerTransport, usually using a dummy Stream
+3.	Tests for *just* ServerTransport, usually using a dummy ServerStream
 4.	Tests for ServerTransport's producer logic
-5.	Tests for SocketFace
-6.	Integration tests for SocketFace/ServerTransport/StreamTracker/Stream
-7.	Tests for HttpFace and ServerTransport's HTTP support
+5.	Tests for ServerTransportFactory
+6.	Integration tests for ServerTransportFactory/ServerTransport/StreamTracker/ServerStream
+7.	Tests for _HttpIo and ServerTransport's HTTP support
 
 Notes on understanding this test file:
 
--	Minerva's newlink was originally designed to transfer "boxes"
-	of varying type (including objects and lists and strings), but it
+-	Minerva's mserver (then "newlink") was originally designed to transfer
+	"boxes" of varying type (including objects and lists and strings), but it
 	was then changed to only transfer restricted strings. In this file
 	you'll still see "box", but it really means "string".
 
@@ -36,12 +36,13 @@ from minerva.test_decoders import diceString
 
 from minerva.decoders import Int32StringDecoder, DelimitedStringDecoder
 
-from minerva.newlink import (
-	Stream, StreamTracker, NoSuchStream,
-	StreamAlreadyExists, IConsumerWithoutWrite, IMinervaProtocol,
-	IMinervaFactory, IMinervaTransport, ServerTransport, SocketFace, _HttpFace,
+from minerva.mserver import (
+	ServerStream, StreamTracker, NoSuchStream, StreamAlreadyExists,
+	IServerTransport, ServerTransport, ServerTransportFactory, _HttpIo,
 	HTTP_RESPONSE_PREAMBLE,
 )
+
+from minerva.interfaces import IConsumerWithoutWrite, IMinervaProtocol, IMinervaFactory
 
 from minerva.frames import (
 	HelloFrame, StringFrame, SeqNumFrame, SackFrame, StreamStatusFrame,
@@ -61,7 +62,7 @@ from webmagic.fakes import (
 )
 
 from minerva.mocks import (
-	FrameDecodingTcpTransport, MockStream, MockMinervaStringsProtocol,
+	FrameDecodingTcpTransport, MockServerStream, MockMinervaStringsProtocol,
 	MockMinervaStringsProtocolFactory, MockMinervaStringProtocol,
 	MockMinervaStringProtocolFactory, DummyStreamTracker, DummyTCPTransport,
 	DummySocketLikeTransport, strictGetNewFrames,
@@ -74,7 +75,7 @@ class SlotlessServerTransport(ServerTransport):
 
 
 
-class SlotlessSocketFace(SocketFace):
+class SlotlessServerTransportFactory(ServerTransportFactory):
 	protocol = SlotlessServerTransport
 
 
@@ -147,38 +148,38 @@ def _makeTransportWithDecoder(parser, faceFactory):
 	return transport
 
 
-class StreamTests(unittest.TestCase):
+class ServerStreamTests(unittest.TestCase):
 	"""
-	Tests for L{newlink.Stream}
+	Tests for L{mserver.ServerStream}
 	"""
 	def setUp(self):
 		self._clock = task.Clock()
 
 
 	def test_implements(self):
-		s = Stream(self._clock, 'some fake id', None)
+		s = ServerStream(self._clock, 'some fake id', None)
 		verify.verifyObject(IConsumerWithoutWrite, s)
 
 
 	def test_repr(self):
-		s = Stream(self._clock, 'some fake id', None)
+		s = ServerStream(self._clock, 'some fake id', None)
 		r = repr(s)
-		self.assertIn('<Stream', r)
+		self.assertIn('<ServerStream', r)
 		self.assertIn('streamId=', r)
 		self.assertIn('disconnected=False', r)
 		self.assertIn('queue.getQueuedCount()=0', r)
 
 
 	def test_notifyFinishReturnsDeferred(self):
-		s = Stream(self._clock, 'some fake id', None)
+		s = ServerStream(self._clock, 'some fake id', None)
 		d = s.notifyFinish()
 		self.assertTrue(isinstance(d, defer.Deferred))
 
 
 	def test_notifyFinishActuallyCalled(self):
 		factory = MockMinervaStringsProtocolFactory()
-		s = Stream(self._clock, 'some fake id', factory)
-		# We need to attach a transport to the Stream, so that a
+		s = ServerStream(self._clock, 'some fake id', factory)
+		# We need to attach a transport to the ServerStream, so that a
 		# MinervaProtocol is instantiated.  This is necessary because
 		# s.reset below is only called by "application code."
 		t = DummySocketLikeTransport()
@@ -197,12 +198,12 @@ class StreamTests(unittest.TestCase):
 
 	def test_streamCallsStreamStarted(self):
 		"""
-		When the Stream is instantiated, it doesn't automatically
+		When the ServerStream is instantiated, it doesn't automatically
 		create a MinervaProtocol instance. When the first transport
-		attaches, Stream calls the `streamStarted` method on the MinervaProtocol.
+		attaches, ServerStream calls the `streamStarted` method on the MinervaProtocol.
 		"""
 		factory = MockMinervaStringsProtocolFactory()
-		s = Stream(self._clock, 'some fake id', factory)
+		s = ServerStream(self._clock, 'some fake id', factory)
 		self.assertEqual(0, len(factory.instances))
 
 		t = DummySocketLikeTransport()
@@ -214,11 +215,11 @@ class StreamTests(unittest.TestCase):
 
 	def test_stringsReceived(self):
 		"""
-		Test that when Stream.stringsReceived is called,
+		Test that when ServerStream.stringsReceived is called,
 		the StreamProtocol instance actually gets the strings.
 		"""
 		factory = MockMinervaStringsProtocolFactory()
-		s = Stream(self._clock, 'some fake id', factory)
+		s = ServerStream(self._clock, 'some fake id', factory)
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 
@@ -232,12 +233,12 @@ class StreamTests(unittest.TestCase):
 
 	def test_stringReceived(self):
 		"""
-		Test that when Stream.stringsReceived is called,
+		Test that when ServerStream.stringsReceived is called,
 		the StreamProtocol instance actually gets the strings
 		(when it has a stringReceived method but no stringsReceived).
 		"""
 		factory = MockMinervaStringProtocolFactory()
-		s = Stream(self._clock, 'some fake id', factory)
+		s = ServerStream(self._clock, 'some fake id', factory)
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 
@@ -255,11 +256,11 @@ class StreamTests(unittest.TestCase):
 	def test_exhaustedReceiveWindowTooManyStrings(self):
 		"""
 		If too many strings are stuck in Incoming, the transport that received
-		"the last straw" is killed with C{tk_rwin_overflow}. Stream._incoming
+		"the last straw" is killed with C{tk_rwin_overflow}. ServerStream._incoming
 		keeps only 50 of them.
 		"""
 		factory = MockMinervaStringsProtocolFactory()
-		s = Stream(self._clock, 'some fake id', factory)
+		s = ServerStream(self._clock, 'some fake id', factory)
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 
@@ -277,9 +278,9 @@ class StreamTests(unittest.TestCase):
 
 	def test_exhaustedReceiveWindowTooManyBytes(self):
 		"""
-		If too many (estimated) bytes are in Incoming, the transport that received
-		"the last straw" is killed with C{tk_rwin_overflow}. Stream._incoming
-		keeps only 1 MB.
+		If too many (estimated) bytes are in Incoming, the transport that
+		received "the last straw" is killed with C{tk_rwin_overflow}.
+		ServerStream._incoming keeps only 1 MB.
 		"""
 		cases = (
 			([(1, sf('x' * (1 * 1024 * 1024 + 1)))], 0),
@@ -288,7 +289,7 @@ class StreamTests(unittest.TestCase):
 		for notManyStrings, expectedKept in cases:
 			##print len(notManyStrings), expectedKept
 			factory = MockMinervaStringsProtocolFactory()
-			s = Stream(self._clock, 'some fake id', factory)
+			s = ServerStream(self._clock, 'some fake id', factory)
 			t = DummySocketLikeTransport()
 			s.transportOnline(t, False, None)
 
@@ -303,16 +304,16 @@ class StreamTests(unittest.TestCase):
 		"""
 		Test that S2C strings are sent to the correct transport.
 		Test that obsolete formerly-primary transports are "closed gently"
-		Test that Stream tries to send S2C strings down new primary transports.
+		Test that ServerStream tries to send S2C strings down new primary transports.
 		"""
-		# If a transport calls Stream.transportOnline with a `succeedsTransport`
+		# If a transport calls ServerStream.transportOnline with a `succeedsTransport`
 		# argument that doesn't match the primary transport's transport number,
 		# the `succeedsTransport` argument is ignored.
 		# Essentially, it doesn't matter whether the transport claims None or an invalid
 		# transport number; they're both treated as `None`.
 		for succeedsTransportArgFor2ndTransport in (None, 20):
 			mockFactory = MockMinervaStringsProtocolFactory()
-			s = Stream(self._clock, 'some fake id', mockFactory)
+			s = ServerStream(self._clock, 'some fake id', mockFactory)
 			t1 = DummySocketLikeTransport()
 			t1.transportNumber = 30
 			s.sendStrings(['box0', 'box1'])
@@ -352,9 +353,9 @@ class StreamTests(unittest.TestCase):
 		and no SACK has come from the client yet,
 		and new transport with transportNumber 31 (T#31) connects with succeedsTransport=30,
 		and two new boxes are supposed to be sent,
-		Stream calls transport's writeStrings but tells it to skip over boxes 0 through 4.
+		ServerStream calls transport's writeStrings but tells it to skip over boxes 0 through 4.
 		"""
-		s = Stream(self._clock, 'some fake id', MockMinervaStringsProtocolFactory())
+		s = ServerStream(self._clock, 'some fake id', MockMinervaStringsProtocolFactory())
 		t1 = DummySocketLikeTransport()
 		t1.transportNumber = 30
 		s.sendStrings(['box0', 'box1', 'box2', 'box3', 'box4'])
@@ -392,13 +393,12 @@ class StreamTests(unittest.TestCase):
 
 	def test_succeedsTransportButNoPrimaryTransport(self):
 		"""
-		If a transport calls Stream.transportOnline with a
+		If a transport calls ServerStream.transportOnline with a
 		C{succeedsTransport} argument even though there is no primary
 		transport, the C{succeedsTransport} argument is ignored.
 		"""
 		for connectIrrelevantTransport in (True, False):
-
-			s = Stream(self._clock, 'some fake id', MockMinervaStringsProtocolFactory())
+			s = ServerStream(self._clock, 'some fake id', MockMinervaStringsProtocolFactory())
 
 			if connectIrrelevantTransport:
 				tIrrelevant = DummySocketLikeTransport()
@@ -413,7 +413,7 @@ class StreamTests(unittest.TestCase):
 
 
 	def test_getSACK(self):
-		s = Stream(self._clock, 'some fake id', MockMinervaStringsProtocolFactory())
+		s = ServerStream(self._clock, 'some fake id', MockMinervaStringsProtocolFactory())
 
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
@@ -429,9 +429,9 @@ class StreamTests(unittest.TestCase):
 
 	def test_noLongerVirgin(self):
 		"""
-		After the first transport is attached to a Stream, it is no longer a virgin.
+		After the first transport is attached to a ServerStream, it is no longer a virgin.
 		"""
-		s = Stream(self._clock, 'some fake id', MockMinervaStringsProtocolFactory())
+		s = ServerStream(self._clock, 'some fake id', MockMinervaStringsProtocolFactory())
 
 		self.assertIdentical(True, s. virgin)
 
@@ -450,14 +450,14 @@ class StreamTests(unittest.TestCase):
 
 	def test_transportOnline(self):
 		clock = task.Clock()
-		s = Stream(clock, 'some fake id', MockMinervaStringsProtocolFactory())
+		s = ServerStream(clock, 'some fake id', MockMinervaStringsProtocolFactory())
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 
 
 	def test_transportOnlineOffline(self):
 		clock = task.Clock()
-		s = Stream(clock, 'some fake id', MockMinervaStringsProtocolFactory())
+		s = ServerStream(clock, 'some fake id', MockMinervaStringsProtocolFactory())
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 		s.transportOffline(t)
@@ -469,7 +469,7 @@ class StreamTests(unittest.TestCase):
 		L{RuntimeError}
 		"""
 		clock = task.Clock()
-		s = Stream(clock, 'some fake id', MockMinervaStringsProtocolFactory())
+		s = ServerStream(clock, 'some fake id', MockMinervaStringsProtocolFactory())
 		t = DummySocketLikeTransport()
 		self.assertRaises(RuntimeError, lambda: s.transportOffline(t))
 
@@ -478,7 +478,7 @@ class StreamTests(unittest.TestCase):
 
 	def _makeStuff(self):
 		factory = MockMinervaStringsProtocolFactory()
-		s = Stream(self._clock, 'some fake id', factory)
+		s = ServerStream(self._clock, 'some fake id', factory)
 		t1 = DummySocketLikeTransport()
 
 		return factory, s, t1
@@ -486,7 +486,7 @@ class StreamTests(unittest.TestCase):
 
 	def test_resetCallsAllTransports(self):
 		"""
-		When L{Stream.reset} is called, all connected transports are told
+		When L{ServerStream.reset} is called, all connected transports are told
 		to write a reset frame.
 		"""
 		factory, s, t1 = self._makeStuff()
@@ -503,8 +503,9 @@ class StreamTests(unittest.TestCase):
 
 	def test_internalResetCallsAllTransports(self):
 		"""
-		When L{Stream._internalReset} is called, a reset frame goes out
+		When L{ServerStream._internalReset} is called, a reset frame goes out
 		to all connected transports.
+
 		TODO: Perhaps test this in a more indirect way that doesn't involve
 		calling a "really private" method.
 		"""
@@ -522,7 +523,7 @@ class StreamTests(unittest.TestCase):
 
 	def test_cannotResetDisconnectedStream(self):
 		"""
-		Calling L{Stream.reset} on a disconnected Stream raises
+		Calling L{ServerStream.reset} on a disconnected ServerStream raises
 		L{RuntimeError}.
 		"""
 		# original reset caused by "application code"
@@ -542,7 +543,7 @@ class StreamTests(unittest.TestCase):
 
 	def test_cannotSendStringsDisconnectedStream(self):
 		"""
-		Calling L{Stream.sendStrings} on a disconnected Stream raises
+		Calling L{ServerStream.sendStrings} on a disconnected ServerStream raises
 		L{RuntimeError}.
 		"""
 		# original reset caused by "application code"
@@ -562,8 +563,8 @@ class StreamTests(unittest.TestCase):
 
 	def test_ignoreCallToSendStringsZeroStrings(self):
 		"""
-		When L{Stream.sendStrings} is called with a falsy value (such as an
-		empty list), it does not call any transports.
+		When L{ServerStream.sendStrings} is called with a falsy value
+		(such as an empty list), it does not call any transports.
 		"""
 		# original reset caused by "application code"
 		factory, s, t1 = self._makeStuff()
@@ -598,9 +599,9 @@ class StreamTests(unittest.TestCase):
 
 	def test_resetFromPeer(self):
 		"""
-		If L{Stream.resetFromPeer} is called (which is normally done by a
+		If L{ServerStream.resetFromPeer} is called (which is normally done by a
 		transport that receives a reset frame from a client), it calls
-		C{streamReset} on the protocol, and all of the L{Stream}'s
+		C{streamReset} on the protocol, and all of the L{ServerStream}'s
 		transports are closed gently.
 		"""
 		for applicationLevel in (True, False):
@@ -687,7 +688,7 @@ class StreamTests(unittest.TestCase):
 
 	def test_pausedStreamPausesNewPushProducer(self):
 		"""
-		If L{Stream} was already paused, new push producers are paused
+		If L{ServerStream} was already paused, new push producers are paused
 		when registered.
 		"""
 		factory, s, t1 = self._makeStuff()
@@ -708,7 +709,7 @@ class StreamTests(unittest.TestCase):
 		s.registerProducer(producer2, streaming=True)
 		self.assertEqual([['pauseProducing']], producer2.getNew())
 
-		# ... stops happening (for push producers) if the Stream is unpaused
+		# ... stops happening (for push producers) if the ServerStream is unpaused
 		s.resumeProducing()
 		s.unregisterProducer()
 		producer3 = MockProducer()
@@ -718,7 +719,7 @@ class StreamTests(unittest.TestCase):
 
 	def test_pausedStreamDoesNotPauseNewPullProducer(self):
 		"""
-		If L{Stream} was already paused, new pull producers are *not*
+		If L{ServerStream} was already paused, new pull producers are *not*
 		paused (because pull producers cannot be paused).
 		"""
 		factory, s, t1 = self._makeStuff()
@@ -733,9 +734,9 @@ class StreamTests(unittest.TestCase):
 
 	def test_lackOfPrimaryTransportPausesPushProducer(self):
 		"""
-		If L{Stream} has no primary transport attached, a newly-registered
+		If L{ServerStream} has no primary transport attached, a newly-registered
 		push producer is paused. After a primary transport attaches to
-		L{Stream}, the push producer is resumed. After it goes offline,
+		L{ServerStream}, the push producer is resumed. After it goes offline,
 		the push producer is paused again.
 		"""
 		factory, s, t1 = self._makeStuff()
@@ -757,7 +758,7 @@ class StreamTests(unittest.TestCase):
 
 	def test_lackOfPrimaryTransportPausesPushProducer2(self):
 		"""
-		If L{Stream} has no primary transport attached (but one was
+		If L{ServerStream} has no primary transport attached (but one was
 		attached before), a newly-registered push producer is paused.
 		A newly-registered pull producer is not paused (because pull
 		producers cannot be paused).
@@ -785,8 +786,8 @@ class StreamTests(unittest.TestCase):
 
 	def test_newPrimaryTransportDoesNotPauseProducer(self):
 		"""
-		If L{Stream} has a push producer registered, and a primary
-		transport replaces the previous primary transport, L{Stream}
+		If L{ServerStream} has a push producer registered, and a primary
+		transport replaces the previous primary transport, L{ServerStream}
 		does not call C{pauseProducing} on the Minerva protocol
 		during this replacement.
 		"""
@@ -805,7 +806,7 @@ class StreamTests(unittest.TestCase):
 
 	def test_newPrimaryTransportResumesIfNecessary(self):
 		"""
-		Stream's producer is resumed if the old primary transport called
+		ServerStream's producer is resumed if the old primary transport called
 		paused, and a new primary transport is attached.
 		"""
 		factory, s, t1 = self._makeStuff()
@@ -827,7 +828,7 @@ class StreamTests(unittest.TestCase):
 	def test_newPrimaryTransportResumesAndLeavesGoodState(self):
 		"""
 		Similar to L{test_newPrimaryTransportResumesIfNecessary}. Make
-		sure Stream doesn't do strange things (like resumeProducing twice
+		sure ServerStream doesn't do strange things (like resumeProducing twice
 		in a row when another transport connects.)
 		"""
 		factory, s, t1 = self._makeStuff()
@@ -916,8 +917,8 @@ class StreamTests(unittest.TestCase):
 
 			s.registerProducer(producer1, streaming=streaming)
 
-			# Stream already has a producer before transport attaches
-			# and becomes primary
+			# ServerStream already has a producer before transport
+			# attaches and becomes primary
 			s.transportOnline(t1, True, None)
 
 			self.assertEqual([['registerProducer', s, streaming]], t1.getNew())
@@ -940,8 +941,8 @@ class StreamTests(unittest.TestCase):
 
 			s.registerProducer(producer1, streaming=streaming)
 
-			# Stream already has a producer before transport attaches
-			# and becomes primary
+			# ServerStream already has a producer before transport
+			# attaches and becomes primary
 			s.transportOnline(t1, True, None)
 
 			self.assertEqual([
@@ -987,21 +988,22 @@ class StreamTests(unittest.TestCase):
 
 
 # Need to use a subclass to avoid __slots__ problem
-class StreamTrackerWithMockStream(StreamTracker):
-	stream = MockStream
+class StreamTrackerWithMockServerStream(StreamTracker):
+	stream = MockServerStream
 
 
 
 class StreamTrackerTests(unittest.TestCase):
 	"""
-	Tests for L{newlink.StreamTracker}
+	Tests for L{mserver.StreamTracker}
 	"""
 	def test_buildStream(self):
 		"""
-		buildStream returns an instance of L{Stream}"""
+		buildStream returns an instance of L{ServerStream}
+		"""
 		st = StreamTracker(task.Clock(), None)
 		stream = st.buildStream('some fake id')
-		self.assertIdentical(Stream, type(stream))
+		self.assertIdentical(ServerStream, type(stream))
 
 
 	def test_buildStreamCannotBuildWithSameId(self):
@@ -1046,7 +1048,7 @@ class ServerTransportModeSelectionTests(unittest.TestCase):
 
 	def _resetConnection(self):
 		self.tcpTransport = DummyTCPTransport()
-		self.face = SocketFace(None, self.streamTracker,
+		self.face = ServerTransportFactory(None, self.streamTracker,
 			policyString='<nonsense-policy/>')
 		self.transport = self.face.buildProtocol(addr=None)
 		self.transport.makeConnection(self.tcpTransport)
@@ -1169,7 +1171,7 @@ class _BaseHelpers(object):
 
 
 	def _makeTransport(self, rejectAll=False):
-		faceFactory = SlotlessSocketFace(self._clock, self.streamTracker)
+		faceFactory = SlotlessServerTransportFactory(self._clock, self.streamTracker)
 
 		parser = self._makeParser()
 		transport = _makeTransportWithDecoder(parser, faceFactory)
@@ -1191,7 +1193,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 		verify.verifyObject(IProtocol, transport)
 		verify.verifyObject(IPushProducer, transport)
 		verify.verifyObject(IPullProducer, transport)
-		verify.verifyObject(IMinervaTransport, transport)
+		verify.verifyObject(IServerTransport, transport)
 
 
 	def test_repr(self):
@@ -1294,12 +1296,13 @@ class _BaseServerTransportTests(_BaseHelpers):
 
 	def test_writeStringsConnectionInterleavingSupport(self):
 		"""
-		If this transport succeeded another transport, Stream will call writeStrings
-		with a start=<number>. If the client later sends a SACK that implies they
-		did not receive all the strings sent over the old transport, this transport
-		will have to jump back and send older boxes.
+		If this transport succeeded another transport, ServerStream will
+		call writeStrings with a start=<number>.  If the client later sends
+		a SACK that implies they did not receive all the strings sent over
+		the old transport, this transport will have to jump back and send
+		older boxes.
 
-		See also L{StreamTests.test_sendStringsConnectionInterleaving}
+		See also L{ServerStreamTests.test_sendStringsConnectionInterleaving}
 		"""
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
@@ -1682,7 +1685,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 	def test_connectionLostWithStream(self):
 		"""
 		If client closes connection on a Minerva transport that is
-		attached to a Stream, streamObj.transportOffline(transport) is called.
+		attached to a ServerStream, streamObj.transportOffline(transport) is called.
 		"""
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
@@ -1707,7 +1710,8 @@ class _BaseServerTransportTests(_BaseHelpers):
 	def test_gimmeStringsFlagCausesSubscription(self):
 		"""
 		If the hello frame contains a 'g', it means "gimme strings", so the
-		Minerva transport should call Stream.transportOnline with wantsStrings=True.
+		Minerva transport should call ServerStream.transportOnline with
+		wantsStrings=True.
 		"""
 		for succeedsTransport in [None, 0, 3]:
 			frame0 = _makeHelloFrame(
@@ -1728,7 +1732,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 	def test_stringsDeliveredToStreamAndAcked(self):
 		"""
 		If client writes strings to the transport, those strings are delivered
-		to the Stream, and a SACK is written out to the transport.
+		to the ServerStream, and a SACK is written out to the transport.
 		"""
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
@@ -1815,7 +1819,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 	def test_sackedUnsentStrings(self):
 		"""
 		If client sends a SackFrame that ACKs strings that were never
-		sent, Stream.transportOffline is called, and client receives
+		sent, ServerStream.transportOffline is called, and client receives
 		a `TransportKillFrame(tk_acked_unsent_strings)`.
 		"""
 		frame0 = _makeHelloFrame()
@@ -1841,7 +1845,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 
 	def test_sackValidInHelloFrame(self):
 		"""
-		Test that Stream gets the right calls if a sack is given in the
+		Test that ServerStream gets the right calls if a sack is given in the
 		HelloFrame.
 		"""
 		stream = self.streamTracker.buildStream('x'*26)
@@ -1863,7 +1867,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 	def test_sackedUnsentStringsInHelloFrame(self):
 		"""
 		If client sends a HelloFrame with a `sack` argument that SACKs
-		strings that were never sent, Stream.transportOnline is never
+		strings that were never sent, ServerStream.transportOnline is never
 		called, and client receives a `TransportKillFrame(tk_acked_unsent_strings)`.
 		"""
 		stream = self.streamTracker.buildStream('x'*26)
@@ -1887,7 +1891,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 	def test_resetValid(self):
 		"""
 		If client sends a valid reset frame, the transport calls
-		L{Stream.resetFromPeer}.
+		L{ServerStream.resetFromPeer}.
 		"""
 		for applicationLevel in (True, False):
 			for reason in ('the reason', ''):
@@ -1994,7 +1998,7 @@ class ServerTransportTestsWithInt32(_BaseServerTransportTests, unittest.TestCase
 
 class TransportProducerTests(unittest.TestCase):
 	"""
-	Tests for L{newlink.ServerTransport}'s producer logic.
+	Tests for L{mserver.ServerTransport}'s producer logic.
 	"""
 	def setUp(self):
 		reactor = FakeReactor()
@@ -2003,7 +2007,7 @@ class TransportProducerTests(unittest.TestCase):
 		self.proto = MockMinervaStringsProtocol()
 		self.tracker = StreamTracker(clock, self.proto)
 
-		factory = SocketFace(clock, self.tracker, None)
+		factory = ServerTransportFactory(clock, self.tracker, None)
 		self.transport = factory.buildProtocol(addr=None)
 
 		self.tcpTransport = DummyTCPTransport()
@@ -2108,22 +2112,22 @@ class TransportProducerTests(unittest.TestCase):
 
 
 
-class SocketFaceTests(unittest.TestCase):
+class ServerTransportFactoryTests(unittest.TestCase):
 	"""
-	Tests for L{newlink.SocketFace}
+	Tests for L{mserver.ServerTransportFactory}
 	"""
 	def test_policyStringOkay(self):
-		face = SocketFace(clock=None, streamTracker=None)
+		face = ServerTransportFactory(clock=None, streamTracker=None)
 		face.setPolicyString('okay')
 
 
 	def test_policyStringCannotBeUnicode(self):
-		face = SocketFace(clock=None, streamTracker=None)
+		face = ServerTransportFactory(clock=None, streamTracker=None)
 		self.assertRaises(TypeError, lambda: face.setPolicyString(u'hi'))
 
 
 	def test_policyStringCannotContainNull(self):
-		face = SocketFace(clock=None, streamTracker=None)
+		face = ServerTransportFactory(clock=None, streamTracker=None)
 		self.assertRaises(ValueError, lambda: face.setPolicyString("hello\x00"))
 		self.assertRaises(ValueError, lambda: face.setPolicyString("\x00"))
 
@@ -2131,12 +2135,12 @@ class SocketFaceTests(unittest.TestCase):
 
 class IntegrationTests(_BaseHelpers, unittest.TestCase):
 	"""
-	Test SocketFace/ServerTransport/StreamTracker/Stream integration.
+	Test ServerTransportFactory/ServerTransport/StreamTracker/ServerStream integration.
 	"""
 	def _makeTransport(self):
 		parser = Int32StringDecoder(maxLength=1024*1024)
 		# is it okay to make a new one every time?
-		faceFactory = SlotlessSocketFace(self._clock, self.streamTracker)
+		faceFactory = SlotlessServerTransportFactory(self._clock, self.streamTracker)
 		transport = _makeTransportWithDecoder(parser, faceFactory)
 		transport.dataReceived('<int32/>\n')
 		return transport
@@ -2371,7 +2375,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 	def test_clientSendsAlreadyReceivedBoxes(self):
 		"""
-		Stream ignores strings that were already received, and calls
+		ServerStream ignores strings that were already received, and calls
 		stringsReceived on the protocol correctly.
 		"""
 		transport0 = self._makeTransport()
@@ -2556,8 +2560,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 	def test_sendStringsAndResetUnderneathStreamStartedCall(self): # keywords: reentrant
 		"""
-		If Stream.sendStrings and Stream.reset are called underneath a call
-		to protocol's streamStarted, everything works as usual.
+		If ServerStream.sendStrings and ServerStream.reset are called
+		underneath a call to protocol's streamStarted, everything works as
+		usual.
 		"""
 		class MyFactory(MockMinervaStringsProtocolFactory):
 			def buildProtocol(self):
@@ -2598,10 +2603,10 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			], proto.getNew()[1:])
 
 
-	def test_sendStringsUnderneathStreamStartedCall(self):# keywords: reentrant
+	def test_sendStringsUnderneathStreamStartedCall(self): # keywords: reentrant
 		"""
-		If Stream.sendStrings is called underneath a call to protocol's
-		streamStarted, everything works as usual.
+		If ServerStream.sendStrings is called underneath a call to
+		protocol's streamStarted, everything works as usual.
 		"""
 		class MyFactory(MockMinervaStringsProtocolFactory):
 			def buildProtocol(self):
@@ -2650,8 +2655,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 	def test_sendStringsAndResetUnderneathStringsReceivedCall(self): # keywords: reentrant
 		"""
-		If Stream.sendStrings and Stream.reset are called underneath a call
-		to protocol's stringsReceived, everything works as usual.
+		If ServerStream.sendStrings and ServerStream.reset are called
+		underneath a call to protocol's stringsReceived, everything works
+		as usual.
 		"""
 		class MyFactory(MockMinervaStringsProtocolFactory):
 			def buildProtocol(self):
@@ -2698,7 +2704,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 	def test_sendStringsUnderneathStringsReceivedCall(self): # keywords: reentrant
 		"""
-		If Stream.sendStrings is called underneath a call to protocol's
+		If ServerStream.sendStrings is called underneath a call to protocol's
 		stringsReceived, everything works as usual.
 		"""
 		class MyFactory(MockMinervaStringsProtocolFactory):
@@ -2758,9 +2764,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 	def test_serverResetsUnderneathStringsReceivedCall(self): # keywords: reentrant
 		"""
-		If client sends strings that cause a MinervaProtocol to reset Stream,
-		and also sends a reset frame, the C2S boxes are sack'ed before
-		the transport is terminated.
+		If client sends strings that cause a MinervaProtocol to reset
+		ServerStream, and also sends a reset frame, the C2S boxes are
+		sack'ed before the transport is terminated.
 		"""
 		class MyFactory(MockMinervaStringsProtocolFactory):
 			def buildProtocol(self):
@@ -2810,12 +2816,12 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 class HttpTests(_BaseHelpers, unittest.TestCase):
 	"""
-	Tests for L{_HttpFace} and L{ServerTransport}'s HTTP support.
+	Tests for L{_HttpIo} and L{ServerTransport}'s HTTP support.
 	"""
 	# Inherit setUp, _resetStreamTracker
 
 	def _makeResource(self, rejectAll=False):
-		resource = _HttpFace(self._clock, self.streamTracker)
+		resource = _HttpIo(self._clock, self.streamTracker)
 		return resource
 
 #		parser = self._makeParser()
@@ -2838,8 +2844,8 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 	def test_httpBodyFramesPassedToProtocol(self):
 		r"""
 		Frames in the body of the HTTP POST request are passed to the
-		Stream. This happens even if the delimiter is \r\n instead of \n,
-		and even if the last delimiter is missing.
+		ServerStream.  This happens even if the delimiter is \r\n instead
+		of \n, and even if the last delimiter is missing.
 		"""
 		for separator in ('\n', '\r\n'):
 			for streaming in (False, True):
@@ -3007,7 +3013,8 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 	def _attachFirstHttpTransportWithFrames(self, resource, frames, streaming):
 		"""
 		Send a request to C{resource} that does nothing but create a new
-		Stream (and assert a few things we expect to see after doing this).
+		ServerStream (and assert a few things we expect to see after doing
+		this).
 		"""
 		request = DummyRequest(postpath=[])
 		request.method = 'POST'
@@ -3033,7 +3040,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				StreamStatusFrame(SACK(-1, ()))]
 
 		# The first request is now finished, because it was used to
-		# create a Stream, and server sent StreamCreatedFrame.
+		# create a ServerStream, and server sent StreamCreatedFrame.
 		self.assertEqual(0 if streaming else 1, request.finished)
 
 		self.assertEqual(
@@ -3053,7 +3060,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			self._resetStreamTracker(realObjects=True)
 			resource = self._makeResource()
 
-			# Make an initial request that only creates the Stream. This
+			# Make an initial request that only creates the ServerStream. This
 			# makes the rest of this test case simpler because we don't
 			# have to worry about first transport being closed (in the
 			# non-streaming case) due to StreamCreatedFrame being written.
@@ -3133,7 +3140,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 	def test_clientAbortsRequest(self):
 		"""
 		If client aborts the Request, nothing bad happens, and
-		Stream.transportOffline is called.
+		ServerStream.transportOffline is called.
 		"""
 		resource = self._makeResource()
 		request = DummyRequest(postpath=[])
@@ -3255,8 +3262,9 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 	def test_secondaryTransportTerminatedUnderFramesReceivedCall(self): # keywords: reentrant
 		"""
 		This is similar to L{IntegrationTests.test_serverResetsUnderneathStringsReceivedCall},
-		but tests a real (but short-lived) regression in newlink's (now-deleted) `cbAuthOkay`,
-		where `_terminating` was not checked before calling `closeGently`.
+		but tests a real (but short-lived) regression in mserver's (then
+		"newlink") now-deleted `cbAuthOkay`, where `_terminating` was not
+		checked before calling `closeGently`.
 		"""
 		class MyFactory(MockMinervaStringsProtocolFactory):
 			def buildProtocol(self):
