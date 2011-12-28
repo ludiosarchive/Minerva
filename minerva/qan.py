@@ -94,7 +94,7 @@ class Notify(_JustBody):
 
 qanTypeToCode = {
 	 Question: "Q"
-	,OkayAnswer: "O"
+	,OkayAnswer: "K"
 	,ErrorAnswer: "E"
 	,Cancel: "C"
 	,Notify: "N"
@@ -157,7 +157,7 @@ def stringToQanFrame(frameString):
 
 		if lastByte == "Q":
 			return Question(body, qid)
-		elif lastByte == "O":
+		elif lastByte == "K":
 			return OkayAnswer(body, qid)
 		elif lastByte == "E":
 			return ErrorAnswer(body, qid)

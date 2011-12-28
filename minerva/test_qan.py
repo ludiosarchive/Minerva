@@ -23,13 +23,13 @@ class QANTests(unittest.TestCase):
 		self.assertEqual("blah|0Q", qan.qanFrameToString(qan.Question("blah", 0)))
 		self.assertEqual("blah|100Q", qan.qanFrameToString(qan.Question("blah", 100)))
 
-		self.assertEqual("blah|100O", qan.qanFrameToString(qan.OkayAnswer("blah", 100)))
+		self.assertEqual("blah|100K", qan.qanFrameToString(qan.OkayAnswer("blah", 100)))
 		self.assertEqual("blah|100E", qan.qanFrameToString(qan.ErrorAnswer("blah", 100)))
 		self.assertEqual("100C", qan.qanFrameToString(qan.Cancel(100)))
 
 
 	def test_stringToQanFrame(self):
 		self.assertEqual(qan.Question("blah", 10), qan.stringToQanFrame("blah|10Q"))
-		self.assertEqual(qan.OkayAnswer("blah", 10), qan.stringToQanFrame("blah|10O"))
+		self.assertEqual(qan.OkayAnswer("blah", 10), qan.stringToQanFrame("blah|10K"))
 		self.assertEqual(qan.ErrorAnswer("blah", 10), qan.stringToQanFrame("blah|10E"))
 		self.assertEqual(qan.Cancel(10), qan.stringToQanFrame("10C"))
