@@ -2,8 +2,9 @@
 QAN is a protocol that allows asking the peer a question and receiving an
 answer or error-answer.  You can think of this as the "simplest wire-level
 implementation of Deferreds", which is what AMP calls itself, though QAN takes
-it even further: there is no command dispatching, and request/response data is
-completely unspecified.
+it even further: there is no command dispatching, and requests/responses
+are completely unspecified.  (Though some helper functions here assume
+that the requests/responses are bytestrings.)
 
 QAN does not require Minerval; you can use it over any bidirectional stream.
 """
@@ -74,7 +75,7 @@ class Notify(_WithoutId):
 
 
 
-_typeToCode = {
+qanTypeToCode = {
 	 Question: "Q"
 	,OkayAnswer: "O"
 	,ErrorAnswer: "E"
@@ -84,8 +85,16 @@ _typeToCode = {
 
 
 def qanFrameToString(qf):
+	"""
+	@param qf: The QAN frame to encode
+	@type qf: a L{Question} or L{OkayAnswer} or L{ErrorAnswer} or
+		L{Cancel} or L{Notify}, all of which must have a C{str} C{.body}.
+
+	@return: The encoded QAN frame
+	@rtype: str
+	"""
 	qanFrameType = type(qf)
-	code = _typeToCode[qanFrameType]
+	code = qanTypeToCode[qanFrameType]
 	if qanFrameType == Notify:
 		return qf.body + code
 	else:
