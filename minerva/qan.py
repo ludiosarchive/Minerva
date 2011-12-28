@@ -8,9 +8,14 @@ completely unspecified.
 QAN does not require Minerval; you can use it over any bidirectional stream.
 """
 
+import sys
+import operator
+
+_postImportVars = vars().keys()
+
 
 # Not a meaningful superclass, just something to avoid copy/pasting
-class _QANWithId(tuple):
+class _WithId(tuple):
 	__slots__ = ()
 
 	body = property(operator.itemgetter(1))
@@ -25,7 +30,7 @@ class _QANWithId(tuple):
 
 
 
-class _QANWithoutId(tuple):
+class _WithoutId(tuple):
 	__slots__ = ()
 
 	body = property(operator.itemgetter(1))
@@ -39,30 +44,54 @@ class _QANWithoutId(tuple):
 
 
 
-class QANQuestion(_QANWithId):
+class Question(_WithId):
 	__slots__ = ()
 	_MARKER = object()
 
 
 
-class QANAnswer(_QANWithId):
+class OkayAnswer(_WithId):
 	__slots__ = ()
 	_MARKER = object()
 
 
 
-class QANErrorAnswer(_QANWithId):
+class ErrorAnswer(_WithId):
 	__slots__ = ()
 	_MARKER = object()
 
 
 
-class QANCancel(_QANWithId):
+class Cancel(_WithId):
 	__slots__ = ()
 	_MARKER = object()
 
 
 
-class QANNotify(_QANWithoutId):
+class Notify(_WithoutId):
 	__slots__ = ()
 	_MARKER = object()
+
+
+
+_typeToCode = {
+	 Question: "Q"
+	,OkayAnswer: "O"
+	,ErrorAnswer: "E"
+	,Cancel: "C"
+	,Notify: "N"
+}
+
+
+def qanFrameToString(qf):
+	qanFrameType = type(qf)
+	code = _typeToCode[qanFrameType]
+	if qanFrameType == Notify:
+		return qf.body + code
+	else:
+		return qf.body + "|" + str(qf.qid) + code
+
+
+try: from refbinder.api import bindRecursive
+except ImportError: pass
+else: bindRecursive(sys.modules[__name__], _postImportVars)
