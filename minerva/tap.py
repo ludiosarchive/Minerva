@@ -15,7 +15,7 @@ from twisted.application import service, strports
 
 from webmagic.filecache import FileCache
 
-from minerva import minerva_site, website
+from minerva import minerva_site, mutils
 
 
 _defaultClosureLibrary = FilePath(__file__).parent().parent().sibling("closure-library").path
@@ -28,9 +28,9 @@ class Options(usage.Options):
 	synopsis = "[minerva_site options]"
 
 	optParameters = [
-		website.optParameterHttpServer("http", "t"),
-		website.optParameterMinervaSocket("minerva", "m"),
-		website.optParameterDomain("domain", "d"),
+		mutils.optParameterHttpServer("http", "t"),
+		mutils.optParameterMinervaSocket("minerva", "m"),
+		mutils.optParameterDomain("domain", "d"),
 
 		["closure-library", "c", _defaultClosureLibrary,
 			'Path to closure-library'],
@@ -43,7 +43,7 @@ class Options(usage.Options):
 	longdesc = """\
 This starts the Minerva test server (minerva_site), from which you can
 run the client-side unit tests in a browser, and use some Minerva testing
-tools.""" + website.strportsInfo()
+tools.""" + mutils.strportsInfo()
 
 	def __init__(self):
 		usage.Options.__init__(self)
@@ -72,10 +72,10 @@ def makeService(config):
 	multi = service.MultiService()
 
 	domain = config['domain']
-	website.maybeWarnAboutDomain(reactor, domain)
+	mutils.maybeWarnAboutDomain(reactor, domain)
 
 	closureLibrary = FilePath(config['closure-library'])
-	website.maybeWarnAboutClosureLibrary(reactor, closureLibrary)
+	mutils.maybeWarnAboutClosureLibrary(reactor, closureLibrary)
 
 	socketPorts = []
 	for minervaStrport in config['minerva']:
@@ -97,6 +97,6 @@ def makeService(config):
 		minervaServer.setServiceParent(multi)
 
 	if doReloading:
-		website.enablePyquitter(reactor)
+		mutils.enablePyquitter(reactor)
 
 	return multi
