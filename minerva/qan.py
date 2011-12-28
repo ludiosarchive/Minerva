@@ -12,11 +12,14 @@ QAN does not require Minerval; you can use it over any bidirectional stream.
 import sys
 import operator
 
+from minerva.objcheck import strToNonNegLimit
+
+
 _postImportVars = vars().keys()
 
 
 # Not a meaningful superclass, just something to avoid copy/pasting
-class _WithId(tuple):
+class _BodyAndId(tuple):
 	__slots__ = ()
 
 	body = property(operator.itemgetter(1))
@@ -31,7 +34,21 @@ class _WithId(tuple):
 
 
 
-class _WithoutId(tuple):
+class _JustQid(tuple):
+	__slots__ = ()
+
+	qid = property(operator.itemgetter(1))
+
+	def __new__(cls, body):
+		return tuple.__new__(cls, (cls._MARKER, body))
+
+
+	def __repr__(self):
+		return '%s(%r)' % (self.__class__.__name__, self[1])
+
+
+
+class _JustBody(tuple):
 	__slots__ = ()
 
 	body = property(operator.itemgetter(1))
@@ -45,31 +62,31 @@ class _WithoutId(tuple):
 
 
 
-class Question(_WithId):
+class Question(_BodyAndId):
 	__slots__ = ()
 	_MARKER = object()
 
 
 
-class OkayAnswer(_WithId):
+class OkayAnswer(_BodyAndId):
 	__slots__ = ()
 	_MARKER = object()
 
 
 
-class ErrorAnswer(_WithId):
+class ErrorAnswer(_BodyAndId):
 	__slots__ = ()
 	_MARKER = object()
 
 
 
-class Cancel(_WithId):
+class Cancel(_JustQid):
 	__slots__ = ()
 	_MARKER = object()
 
 
 
-class Notify(_WithoutId):
+class Notify(_JustBody):
 	__slots__ = ()
 	_MARKER = object()
 
@@ -97,8 +114,56 @@ def qanFrameToString(qf):
 	code = qanTypeToCode[qanFrameType]
 	if qanFrameType == Notify:
 		return qf.body + code
+	elif qanFrameType == Cancel:
+		return str(qf.qid) + code
 	else:
 		return qf.body + "|" + str(qf.qid) + code
+
+
+class InvalidQANFrame(Exception):
+	pass
+
+
+
+def _qidOrThrow(s):
+	try:
+		return strToNonNegLimit(s, 2**53)
+	except ValueError:
+		raise InvalidQANFrame("bad qid")
+
+
+def stringToQanFrame(frameString):
+	"""
+	@param frameString: The QAN frame, encoded as a string
+	@type frameString: C{str}
+
+	@return: The QAN frame
+	@rtype qf: a L{Question} or L{OkayAnswer} or L{ErrorAnswer} or
+		L{Cancel} or L{Notify}, with a C{str} C{.body}.
+	"""
+	try:
+		lastByte = frameString[-1]
+	except IndexError:
+		raise InvalidQANFrame("0-length frame")
+
+	if lastByte == "N":
+		return Notify(frameString[:-1])
+	elif lastByte == "C":
+		qid = _qidOrThrow(frameString[:-1])
+		return Cancel(qid)
+	else:
+		body, rest = frameString.rsplit('|', 1)
+		qid = _qidOrThrow(rest[:-1])
+
+		if lastByte == "Q":
+			return Question(body, qid)
+		elif lastByte == "O":
+			return OkayAnswer(body, qid)
+		elif lastByte == "E":
+			return ErrorAnswer(body, qid)
+		else:
+			raise InvalidQANFrame("Invalid QAN frame type %r" % lastByte)
+
 
 
 try: from refbinder.api import bindRecursive
