@@ -6,7 +6,7 @@ it even further: there is no command dispatching, and requests/responses
 are completely unspecified.  (Though some helper functions here assume
 that the requests/responses are bytestrings.)
 
-QAN does not require Minerval; you can use it over any bidirectional stream.
+QAN does not require Minerva; you can use it over any bidirectional stream.
 """
 
 import sys
