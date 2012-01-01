@@ -39,6 +39,14 @@ class QANFrameTests(unittest.TestCase):
 		self.assertEqual(Notification("blah"), stringToQANFrame("blahN"))
 
 
+	def test_repr(self):
+		self.assertEqual("Question('blah', 10)", repr(Question('blah', 10)))
+		self.assertEqual("OkayAnswer('blah', 10)", repr(OkayAnswer('blah', 10)))
+		self.assertEqual("ErrorAnswer('blah', 10)", repr(ErrorAnswer('blah', 10)))
+		self.assertEqual("Cancellation(10)", repr(Cancellation(10)))
+		self.assertEqual("Notification('blah')", repr(Notification('blah')))
+
+
 
 class QANHelperTests(unittest.TestCase):
 
