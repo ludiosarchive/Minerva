@@ -188,44 +188,34 @@ class InvalidQID(Exception):
 
 
 class QANHelper(object):
-	def __init__(self, bodyReceivedCallable, sendStringsCallable, resetStreamCallable):
+	def __init__(self, bodyReceivedCallable, sendQANFrame, resetStreamCallable):
 		"""
 		@param bodyReceivedCallable: The 2-arg function to call when
 			a Question or Notification is received (via a call to .handleString).
 
-		@param sendStringsCallable: A function that works like Stream.sendStrings
+		@param sendQANFrame: A function that sends a QAN frame to the peer.
 
 		@param resetStreamCallable: A function that works like Stream.resetStream
 		"""
-		# TODO: Allow specifying your own QAN frame encode/decode function
-		# TODO: Actually, remove all encoding/decoding from QANHelper; let user specify
-		# callables that do the encoding/decoding they want
-		# TODO: And take a "send QAN frame" callable that sends only one frame
 		self._bodyReceivedCallable = bodyReceivedCallable
-		self._sendStringsCallable = sendStringsCallable
+		self._sendQANFrame = sendQANFrame
 		self._resetStreamCallable = resetStreamCallable
 
-		self._qid = 1
+		self._qidCounter = 1
 		self._ourQuestions = {}
 
 
 	def _sendOkayAnswer(self, s, qid):
-		if not isinstance(s, str):
-			raise InvalidResponse("Your response must be a str, not %r" % (s,))
-
-		qanString = qanFrameToString(OkayAnswer(s, qid))
-		self._sendStringsCallable([qanString])
+		self._sendQANFrame(OkayAnswer(s, qid))
 
 
 	def _resetOrSendErrorAnswer(self, failure, qid):
 		failure.trap(ErrorResponse)
 
-		qanString = qanFrameToString(ErrorAnswer(failure.value[0], qid))
-		self._sendStringsCallable([qanString])
+		self._sendQANFrame(ErrorAnswer(failure.value[0], qid))
 
 
-	def handleString(self, s):
-		qanFrame = stringToQanFrame(s)
+	def handleQANFrame(self, qanFrame):
 		if isAnswerFrame(qanFrame):
 			try:
 				d = self._ourQuestions.pop(qanFrame.qid)
@@ -254,10 +244,9 @@ class QANHelper(object):
 
 
 	def ask(self, body):
-		qid = self._qid
-		self._qid += 1
-		question = Question(body, qid)
-		self._sendStringsCallable([qanFrameToString(question)])
+		qid = self._qidCounter
+		self._qidCounter += 1
+		self._sendQANFrame(Question(body, qid))
 
 		assert qid not in self._ourQuestions
 		d = defer.Deferred() # TODO: canceller?
@@ -266,7 +255,7 @@ class QANHelper(object):
 
 
 	def notify(self, body):
-		self._sendStringsCallable([qanFrameToString(Notification(body))])
+		self._sendQANFrame(Notification(body))
 
 
 

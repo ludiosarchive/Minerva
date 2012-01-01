@@ -44,9 +44,8 @@ class QANHelperTests(unittest.TestCase):
 
 	def test_ask(self):
 		sent = []
-		def sendStringsCallable(strings):
-			assert not isinstance(strings, basestring), type(strings)
-			sent.extend(strings)
+		def sendQANFrame(frame):
+			sent.append(frame)
 
 		answers = []
 		def gotOkayAnswer(answer):
@@ -56,24 +55,24 @@ class QANHelperTests(unittest.TestCase):
 			failure.trap(ErrorResponse)
 			answers.append((failure.value[0], 'error'))
 
-		h = QANHelper(None, sendStringsCallable, None)
+		h = QANHelper(None, sendQANFrame, None)
 		d1 = h.ask("what?")
 		d1.addCallbacks(gotOkayAnswer, gotErrorAnswer)
 
 		# Make sure QANHelper wrote something to the peer
 		self.assertEqual([
-			qanFrameToString(Question("what?", 1)),
+			Question("what?", 1),
 		], sent)
 
 		# We shouldn't have an answer yet
 		self.assertEqual([], answers)
 
 		# An answer with a wrong QID raises InvalidQID
-		self.assertRaises(InvalidQID, lambda: h.handleString(
-			qanFrameToString(OkayAnswer("answer with wrong qid", 100))))
+		self.assertRaises(InvalidQID, lambda: h.handleQANFrame(
+			OkayAnswer("answer with wrong qid", 100)))
 
 		# Feed this "OkayAnswer from the peer" into QANHelper
-		h.handleString(qanFrameToString(OkayAnswer("chicken butt", 1)))
+		h.handleQANFrame(OkayAnswer("chicken butt", 1))
 
 		self.assertEqual([('chicken butt', 'okay')], answers)
 
@@ -82,24 +81,23 @@ class QANHelperTests(unittest.TestCase):
 		d2.addCallbacks(gotOkayAnswer, gotErrorAnswer)
 
 		# Feed this "ErrorAnswer from the peer" into QANHelper
-		h.handleString(qanFrameToString(ErrorAnswer("as asked", 2)))
+		h.handleQANFrame(ErrorAnswer("as asked", 2))
 
 		self.assertEqual([('as asked', 'error')], answers[1:])
 
 
 	def test_notify(self):
 		sent = []
-		def sendStringsCallable(strings):
-			assert not isinstance(strings, basestring), type(strings)
-			sent.extend(strings)
+		def sendQANFrame(frame):
+			sent.append(frame)
 
-		h = QANHelper(None, sendStringsCallable, None)
+		h = QANHelper(None, sendQANFrame, None)
 		ret = h.notify("you've got mail")
 		self.assertIdentical(None, ret)
 
 		# Make sure QANHelper wrote something to the peer
 		self.assertEqual([
-			qanFrameToString(Notification("you've got mail")),
+			Notification("you've got mail"),
 		], sent)
 
 
@@ -109,8 +107,8 @@ class QANHelperTests(unittest.TestCase):
 			received.append((body, isQuestion))
 
 		h = QANHelper(bodyReceivedCallable, None, None)
-		h.handleString(qanFrameToString(Notification("poke")))
-		h.handleString(qanFrameToString(Notification("and again")))
+		h.handleQANFrame(Notification("poke"))
+		h.handleQANFrame(Notification("and again"))
 		self.assertEqual([
 			('poke', False),
 			('and again', False)
@@ -124,21 +122,20 @@ class QANHelperTests(unittest.TestCase):
 			return "chilly"
 
 		sent = []
-		def sendStringsCallable(strings):
-			assert not isinstance(strings, basestring), type(strings)
-			sent.extend(strings)
+		def sendQANFrame(frame):
+			sent.append(frame)
 
-		h = QANHelper(bodyReceivedCallable, sendStringsCallable, None)
-		h.handleString(qanFrameToString(Question("the weather?", 1)))
-		h.handleString(qanFrameToString(Question("how about now?", 2)))
+		h = QANHelper(bodyReceivedCallable, sendQANFrame, None)
+		h.handleQANFrame(Question("the weather?", 1))
+		h.handleQANFrame(Question("how about now?", 2))
 		self.assertEqual([
 			('the weather?', True),
 			('how about now?', True)
 		], received)
 
 		self.assertEqual([
-			qanFrameToString(OkayAnswer("chilly", 1)),
-			qanFrameToString(OkayAnswer("chilly", 2)),
+			OkayAnswer("chilly", 1),
+			OkayAnswer("chilly", 2),
 		], sent)
 
 
@@ -150,15 +147,14 @@ class QANHelperTests(unittest.TestCase):
 			return answerDs.pop(0)
 
 		sent = []
-		def sendStringsCallable(strings):
-			assert not isinstance(strings, basestring), type(strings)
-			sent.extend(strings)
+		def sendQANFrame(frame):
+			sent.append(frame)
 
-		h = QANHelper(bodyReceivedCallable, sendStringsCallable, None)
+		h = QANHelper(bodyReceivedCallable, sendQANFrame, None)
 		d1 = answerDs[0]
 		d2 = answerDs[1]
-		h.handleString(qanFrameToString(Question("the weather?", 1)))
-		h.handleString(qanFrameToString(Question("how about now?", 2)))
+		h.handleQANFrame(Question("the weather?", 1))
+		h.handleQANFrame(Question("how about now?", 2))
 		self.assertEqual([
 			('the weather?', True),
 			('how about now?', True)
@@ -170,6 +166,6 @@ class QANHelperTests(unittest.TestCase):
 		d1.callback("hurricane")
 
 		self.assertEqual([
-			qanFrameToString(OkayAnswer("rainy", 2)),
-			qanFrameToString(OkayAnswer("hurricane", 1)),
+			OkayAnswer("rainy", 2),
+			OkayAnswer("hurricane", 1),
 		], sent)
