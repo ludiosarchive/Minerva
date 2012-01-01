@@ -2,7 +2,7 @@ from twisted.trial import unittest
 
 from minerva.qan import (
 	OkayAnswer, ErrorAnswer, Question, Notify, Cancel, QANHelper,
-	qanFrameToString, stringToQanFrame, InvalidQID)
+	qanFrameToString, stringToQanFrame, InvalidQID, ErrorResponse)
 
 
 class QANFrameTests(unittest.TestCase):
@@ -50,22 +50,36 @@ class QANHelperTests(unittest.TestCase):
 		def gotOkayAnswer(answer):
 			answers.append((answer, 'okay'))
 
-		def gotErrorAnswer(answer):
-			answers.append((answer, 'error'))
+		def gotErrorAnswer(failure):
+			failure.trap(ErrorResponse)
+			answers.append((failure.getErrorMessage(), 'error'))
 
 		h = QANHelper(None, sendStringsCallable, None)
-		d = h.ask("what?")
-		d.addCallbacks(gotOkayAnswer, gotErrorAnswer)
+		d1 = h.ask("what?")
+		d1.addCallbacks(gotOkayAnswer, gotErrorAnswer)
 
+		# Make sure it wrote something to the peer
 		self.assertEqual([
 			qanFrameToString(Question("what?", 1)),
 		], sent)
 
+		# We shouldn't have an answer yet
 		self.assertEqual([], answers)
 
+		# An answer with a wrong QID raises InvalidQID
 		self.assertRaises(InvalidQID, lambda: h.handleString(
 			qanFrameToString(OkayAnswer("answer with wrong qid", 100))))
 
+		# Feed this "OkayAnswer from the peer" into QANHelper
 		h.handleString(qanFrameToString(OkayAnswer("chicken butt", 1)))
 
 		self.assertEqual([('chicken butt', 'okay')], answers)
+
+
+		d2 = h.ask("I want an error response to this one")
+		d2.addCallbacks(gotOkayAnswer, gotErrorAnswer)
+
+		# Feed this "ErrorAnswer from the peer" into QANHelper
+		h.handleString(qanFrameToString(ErrorAnswer("as asked", 2)))
+
+		self.assertEqual([('as asked', 'error')], answers[1:])

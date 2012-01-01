@@ -225,6 +225,7 @@ class QANHelper(object):
 		if isAnswerFrame(qanFrame):
 			try:
 				d = self._ourQuestions[qanFrame.qid]
+				del self._ourQuestions[qanFrame.qid]
 			except KeyError:
 				raise InvalidQID("Invalid qid: %r" % (qanFrame.qid,))
 
