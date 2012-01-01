@@ -150,7 +150,7 @@ def stringToQanFrame(frameString):
 		raise InvalidQANFrame("0-length frame")
 
 	if lastByte == "N":
-		return Notify(frameString[:-1])
+		return Notification(frameString[:-1])
 	elif lastByte == "C":
 		qid = _qidOrThrow(frameString[:-1])
 		return Cancellation(qid)
@@ -197,6 +197,7 @@ class QANHelper(object):
 
 		@param resetStreamCallable: A function that works like Stream.resetStream
 		"""
+		# TODO: allow specifying your own QAN frame encode/decode function
 		self._bodyReceivedCallable = bodyReceivedCallable
 		self._sendStringsCallable = sendStringsCallable
 		self._resetStreamCallable = resetStreamCallable

@@ -35,6 +35,7 @@ class QANFrameTests(unittest.TestCase):
 		self.assertEqual(OkayAnswer("blah", 10), stringToQanFrame("blah|10K"))
 		self.assertEqual(ErrorAnswer("blah", 10), stringToQanFrame("blah|10E"))
 		self.assertEqual(Cancellation(10), stringToQanFrame("10C"))
+		self.assertEqual(Notification("blah"), stringToQanFrame("blahN"))
 
 
 
@@ -99,3 +100,17 @@ class QANHelperTests(unittest.TestCase):
 		self.assertEqual([
 			qanFrameToString(Notification("you've got mail")),
 		], sent)
+
+
+	def test_notificationReceived(self):
+		received = []
+		def bodyReceivedCallable(body, isQuestion):
+			received.append((body, isQuestion))
+
+		h = QANHelper(bodyReceivedCallable, None, None)
+		h.handleString(qanFrameToString(Notification("poke")))
+		h.handleString(qanFrameToString(Notification("and again")))
+		self.assertEqual([
+			('poke', False),
+			('and again', False)
+		], received)
