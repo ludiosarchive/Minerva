@@ -1,3 +1,4 @@
+from twisted.internet import defer
 from twisted.trial import unittest
 
 from minerva.qan import (
@@ -138,4 +139,37 @@ class QANHelperTests(unittest.TestCase):
 		self.assertEqual([
 			qanFrameToString(OkayAnswer("chilly", 1)),
 			qanFrameToString(OkayAnswer("chilly", 2)),
+		], sent)
+
+
+	def test_questionReceivedAsync(self):
+		received = []
+		answerDs = [defer.Deferred(), defer.Deferred()]
+		def bodyReceivedCallable(body, isQuestion):
+			received.append((body, isQuestion))
+			return answerDs.pop(0)
+
+		sent = []
+		def sendStringsCallable(strings):
+			assert not isinstance(strings, basestring), type(strings)
+			sent.extend(strings)
+
+		h = QANHelper(bodyReceivedCallable, sendStringsCallable, None)
+		d1 = answerDs[0]
+		d2 = answerDs[1]
+		h.handleString(qanFrameToString(Question("the weather?", 1)))
+		h.handleString(qanFrameToString(Question("how about now?", 2)))
+		self.assertEqual([
+			('the weather?', True),
+			('how about now?', True)
+		], received)
+
+		self.assertEqual([], sent)
+
+		d2.callback("rainy")
+		d1.callback("hurricane")
+
+		self.assertEqual([
+			qanFrameToString(OkayAnswer("rainy", 2)),
+			qanFrameToString(OkayAnswer("hurricane", 1)),
 		], sent)
