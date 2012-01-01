@@ -52,7 +52,7 @@ class QANHelperTests(unittest.TestCase):
 
 		def gotErrorAnswer(failure):
 			failure.trap(ErrorResponse)
-			answers.append((failure.getErrorMessage(), 'error'))
+			answers.append((failure.value[0], 'error'))
 
 		h = QANHelper(None, sendStringsCallable, None)
 		d1 = h.ask("what?")

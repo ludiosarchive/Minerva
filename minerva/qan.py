@@ -216,7 +216,7 @@ class QANHelper(object):
 	def _resetOrSendErrorAnswer(self, failure, qid):
 		failure.trap(ErrorResponse)
 
-		qanString = qanFrameToString(ErrorAnswer(failure.getErrorMessage(), qid))
+		qanString = qanFrameToString(ErrorAnswer(failure.value[0], qid))
 		self._sendStringsCallable([qanString])
 
 
