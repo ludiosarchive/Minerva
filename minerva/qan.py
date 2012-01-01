@@ -224,8 +224,7 @@ class QANHelper(object):
 		qanFrame = stringToQanFrame(s)
 		if isAnswerFrame(qanFrame):
 			try:
-				d = self._ourQuestions[qanFrame.qid]
-				del self._ourQuestions[qanFrame.qid]
+				d = self._ourQuestions.pop(qanFrame.qid)
 			except KeyError:
 				raise InvalidQID("Invalid qid: %r" % (qanFrame.qid,))
 
