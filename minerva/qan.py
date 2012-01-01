@@ -188,18 +188,18 @@ class InvalidQID(Exception):
 
 
 class QANHelper(object):
-	def __init__(self, bodyReceivedCallable, sendQANFrame, resetStreamCallable):
+	def __init__(self, bodyReceived, sendQANFrame, resetStream):
 		"""
-		@param bodyReceivedCallable: The 2-arg function to call when
+		@param bodyReceived: The 2-arg function to call when
 			a Question or Notification is received (via a call to .handleString).
 
 		@param sendQANFrame: A function that sends a QAN frame to the peer.
 
-		@param resetStreamCallable: A function that works like Stream.resetStream
+		@param resetStream: A function that works like Stream.resetStream
 		"""
-		self._bodyReceivedCallable = bodyReceivedCallable
+		self._bodyReceived = bodyReceived
 		self._sendQANFrame = sendQANFrame
-		self._resetStreamCallable = resetStreamCallable
+		self._resetStream = resetStream
 
 		self._qidCounter = 1
 		self._ourQuestions = {}
@@ -228,12 +228,12 @@ class QANHelper(object):
 				d.errback(ErrorResponse(qanFrame.body))
 
 		elif isinstance(qanFrame, Notification):
-			self._bodyReceivedCallable(qanFrame.body, False)
+			self._bodyReceived(qanFrame.body, False)
 
 		elif isinstance(qanFrame, Question):
 			qid = qanFrame.qid
 			d = defer.maybeDeferred(
-				self._bodyReceivedCallable, qanFrame.body, True)
+				self._bodyReceived, qanFrame.body, True)
 			d.addCallbacks(
 				self._sendOkayAnswer, self._resetOrSendErrorAnswer,
 				callbackArgs=(qid,), errbackArgs=(qid,))

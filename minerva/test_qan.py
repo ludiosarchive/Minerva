@@ -103,10 +103,10 @@ class QANHelperTests(unittest.TestCase):
 
 	def test_notificationReceived(self):
 		received = []
-		def bodyReceivedCallable(body, isQuestion):
+		def bodyReceived(body, isQuestion):
 			received.append((body, isQuestion))
 
-		h = QANHelper(bodyReceivedCallable, None, None)
+		h = QANHelper(bodyReceived, None, None)
 		h.handleQANFrame(Notification("poke"))
 		h.handleQANFrame(Notification("and again"))
 		self.assertEqual([
@@ -117,7 +117,7 @@ class QANHelperTests(unittest.TestCase):
 
 	def test_questionReceived(self):
 		received = []
-		def bodyReceivedCallable(body, isQuestion):
+		def bodyReceived(body, isQuestion):
 			received.append((body, isQuestion))
 			return "chilly"
 
@@ -125,7 +125,7 @@ class QANHelperTests(unittest.TestCase):
 		def sendQANFrame(frame):
 			sent.append(frame)
 
-		h = QANHelper(bodyReceivedCallable, sendQANFrame, None)
+		h = QANHelper(bodyReceived, sendQANFrame, None)
 		h.handleQANFrame(Question("the weather?", 1))
 		h.handleQANFrame(Question("how about now?", 2))
 		self.assertEqual([
@@ -142,7 +142,7 @@ class QANHelperTests(unittest.TestCase):
 	def test_questionReceivedAsync(self):
 		received = []
 		answerDs = [defer.Deferred(), defer.Deferred()]
-		def bodyReceivedCallable(body, isQuestion):
+		def bodyReceived(body, isQuestion):
 			received.append((body, isQuestion))
 			return answerDs.pop(0)
 
@@ -150,7 +150,7 @@ class QANHelperTests(unittest.TestCase):
 		def sendQANFrame(frame):
 			sent.append(frame)
 
-		h = QANHelper(bodyReceivedCallable, sendQANFrame, None)
+		h = QANHelper(bodyReceived, sendQANFrame, None)
 		d1 = answerDs[0]
 		d2 = answerDs[1]
 		h.handleQANFrame(Question("the weather?", 1))
