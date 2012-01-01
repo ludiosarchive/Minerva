@@ -149,7 +149,7 @@ class QANHelperTests(unittest.TestCase):
 
 	def test_questionReceivedAsync(self):
 		received = []
-		answerDs = [defer.Deferred(), defer.Deferred()]
+		answerDs = [defer.Deferred(), defer.Deferred(), defer.Deferred()]
 		def bodyReceived(body, isQuestion):
 			received.append((body, isQuestion))
 			return answerDs.pop(0)
@@ -161,19 +161,26 @@ class QANHelperTests(unittest.TestCase):
 		h = QANHelper(bodyReceived, sendQANFrame, None)
 		d1 = answerDs[0]
 		d2 = answerDs[1]
+		d3 = answerDs[2]
 		h.handleQANFrame(Question("the weather?", 1))
 		h.handleQANFrame(Question("how about now?", 2))
+		h.handleQANFrame(Question("and now?", 3))
 		self.assertEqual([
 			('the weather?', True),
-			('how about now?', True)
+			('how about now?', True),
+			('and now?', True),
 		], received)
 
 		self.assertEqual([], sent)
 
-		d2.callback("rainy")
+		# Test some non-str responses, since we support those, at least
+		# inside QANHelper.
+		d2.callback(["rainy", 9000])
 		d1.callback("hurricane")
+		d3.errback(ErrorResponse(["weather station is broken", "yep"]))
 
 		self.assertEqual([
-			OkayAnswer("rainy", 2),
+			OkayAnswer(["rainy", 9000], 2),
 			OkayAnswer("hurricane", 1),
+			ErrorAnswer(["weather station is broken", "yep"], 3),
 		], sent)
