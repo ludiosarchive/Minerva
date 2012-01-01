@@ -210,14 +210,14 @@ class QANHelper(object):
 			raise InvalidResponse("Your response must be a str, not %r" % (s,))
 
 		qanString = qanFrameToString(OkayAnswer(s, qid))
-		self._sendStringsCallable(qanString)
+		self._sendStringsCallable([qanString])
 
 
 	def _resetOrSendErrorAnswer(self, failure, qid):
 		failure.trap(ErrorResponse)
 
 		qanString = qanFrameToString(ErrorAnswer(failure.getErrorMessage(), qid))
-		self._sendStringsCallable(qanString)
+		self._sendStringsCallable([qanString])
 
 
 	def handleString(self, s):
@@ -251,7 +251,7 @@ class QANHelper(object):
 		qid = self._qid
 		self._qid += 1
 		question = Question(body, qid)
-		self._sendStringsCallable(qanFrameToString(question))
+		self._sendStringsCallable([qanFrameToString(question)])
 
 		assert qid not in self._ourQuestions
 		d = defer.Deferred() # TODO: canceller?
@@ -260,7 +260,7 @@ class QANHelper(object):
 
 
 	def notify(self, body):
-		self._sendStringsCallable(qanFrameToString(Notify(body)))
+		self._sendStringsCallable([qanFrameToString(Notify(body))])
 
 
 
