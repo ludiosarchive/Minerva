@@ -12,6 +12,9 @@ QAN does not require Minerva; you can use it over any bidirectional stream.
 import sys
 import operator
 
+from twisted.internet import defer
+from twisted.python import log
+
 from minerva.objcheck import strToNonNegLimit
 
 
@@ -163,6 +166,101 @@ def stringToQanFrame(frameString):
 			return ErrorAnswer(body, qid)
 		else:
 			raise InvalidQANFrame("Invalid QAN frame type %r" % lastByte)
+
+
+def isAnswerFrame(qanFrame):
+	return isinstance(qanFrame, OkayAnswer) or isinstance(qanFrame, ErrorAnswer)
+
+
+class ErrorResponse(Exception):
+	pass
+
+
+
+class InvalidResponse(Exception):
+	pass
+
+
+
+class InvalidQID(Exception):
+	pass
+
+
+
+class QANHelper(object):
+	def __init__(self, bodyReceivedCallable, sendStringsCallable, resetStreamCallable):
+		"""
+		@param bodyReceivedCallable: The 2-arg function to call when
+			a Question or Notify is received (via a call to .handleString).
+
+		@param sendStringsCallable: A function that works like Stream.sendStrings
+
+		@param resetStreamCallable: A function that works like Stream.resetStream
+		"""
+		self._bodyReceivedCallable = bodyReceivedCallable
+		self._sendStringsCallable = sendStringsCallable
+		self._resetStreamCallable = resetStreamCallable
+
+		self._qid = 1
+		self._ourQuestions = {}
+
+
+	def _sendOkayAnswer(self, s, qid):
+		if not isinstance(s, str):
+			raise InvalidResponse("Your response must be a str, not %r" % (s,))
+
+		qanString = qanFrameToString(OkayAnswer(s, qid))
+		self._sendStringsCallable(qanString)
+
+
+	def _resetOrSendErrorAnswer(self, failure, qid):
+		failure.trap(ErrorResponse)
+
+		qanString = qanFrameToString(ErrorAnswer(failure.getErrorMessage(), qid))
+		self._sendStringsCallable(qanString)
+
+
+	def handleString(self, s):
+		qanFrame = stringToQanFrame(s)
+		if isAnswerFrame(qanFrame):
+			try:
+				d = self._ourQuestions[qanFrame.qid]
+			except KeyError:
+				raise InvalidQID("Invalid qid: %r" % (qanFrame.qid,))
+
+			if isinstance(qanFrame, OkayAnswer):
+				d.callback(qanFrame.body)
+			else:
+				d.errback(ErrorResponse(qanFrame.body))
+
+		elif isinstance(qanFrame, Notify):
+			self._bodyReceivedCallable(qanFrame.body, False)
+
+		elif isinstance(qanFrame, Question):
+			qid = qanFrame.qid
+			d = defer.maybeDeferred(
+				self._bodyReceivedCallable(qanFrame.body, True))
+			d.addCallbacks(self._sendOkayAnswer, self._resetOrSendErrorAnswer, qid, qid)
+			d.addErrback(log.err) # TODO: reset Stream?
+
+		elif isinstance(qanFrame, Cancel):
+			1/0
+
+
+	def ask(self, body):
+		qid = self._qid
+		self._qid += 1
+		question = Question(body, qid)
+		self._sendStringsCallable(qanFrameToString(question))
+
+		assert qid not in self._ourQuestions
+		d = defer.Deferred() # TODO: canceller?
+		self._ourQuestions[qid] = d
+		return d
+
+
+	def notify(self, body):
+		self._sendStringsCallable(qanFrameToString(Notify(body)))
 
 
 
