@@ -6,6 +6,35 @@
 ./build_autocachebreakers.py
 ./build_depsjs.sh
 
+UNAME_O=`uname -o`
+if [[ $UNAME_O == 'Msys' ]]; then
+	# Msys bash does not seem to import %PATH% correctly
+	PATH="$PATH:/c/Program Files (x86)/Git/bin"
+fi
+
+get_svn_rev() {
+	if [ -d ".git" ]; then
+		_RET=`git log --max-count=1 | grep "git-svn-id: " | cut -d " " -f 6 | cut -d "@" -f 2`
+	else
+		_RET=`svnversion`
+	fi
+}
+
+get_git_rev() {
+	_RET=`git log --max-count=1 --pretty=format:"%H | %ad | %s" --date=short`
+}
+
+write_dep_versions() {
+	echo "Used closure-compiler r$COMPILER_REV" >> $1
+	echo "Used closure-library r$LIBRARY_REV" >> $1
+	echo "Used Coreweb $COREWEB_REV" >> $1
+}
+
+HERE=`pwd`
+cd ../closure-compiler && get_svn_rev; COMPILER_REV=$_RET; cd "$HERE"
+cd ../closure-library && get_svn_rev; LIBRARY_REV=$_RET; cd "$HERE"
+cd ../Coreweb && get_git_rev; COREWEB_REV=$_RET; cd "$HERE"
+
 COMMON="nice -n 10 \
 ../closure-library/closure/bin/build/closurebuilder.py \
 --output_mode=compiled \
@@ -33,14 +62,15 @@ $COMMON \
 --namespace="cw.net.XHRSlave" \
 --output_file=minerva/compiled_client/xdrframe.js \
 2>&1 | tee minerva/compiled_client/xdrframe.js.log
+write_dep_versions minerva/compiled_client/xdrframe.js.log
 
 $COMMON \
 --compiler_flags=--define=cw.net.STANDALONE_CLIENT_BUILD_=true \
 --namespace="minerva_client" \
 --output_file=minerva/compiled_client/minerva-client.js \
 2>&1 | tee minerva/compiled_client/minerva-client.js.log
+write_dep_versions minerva/compiled_client/minerva-client.js.log
 
-UNAME_O=`uname -o`
 if [[ $UNAME_O == 'Msys' || $UNAME_O == 'Cygwin' ]]; then
 	echo "Fixing newlines..."
 	dos2unix minerva/compiled_client/xdrframe.js
