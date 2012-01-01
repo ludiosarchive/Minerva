@@ -3048,8 +3048,15 @@ r.ac = function(a, b) {
   return this.ca[c] = d
 };
 r.tc = function(a, b, c) {
-  var b = ib(b), d = this.ca[a];
-  d ? d.tc(b, c) : this.a.D("onframes_: no master for " + P(a))
+  if(Ka) {
+    for(var d = [], e = 0, f = b.length;e < f;e++) {
+      d[e] = b[e]
+    }
+    b = d
+  }else {
+    b = ib(b)
+  }
+  (d = this.ca[a]) ? d.tc(b, c) : this.a.D("onframes_: no master for " + P(a))
 };
 r.uc = function(a, b) {
   var c = this.ca[a];

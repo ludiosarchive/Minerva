@@ -1189,8 +1189,15 @@ y(Pb, C);
 l = Pb.prototype;
 l.c = Ib("cw.net.XHRMasterTracker");
 l.na = function(a, b, c) {
-  var b = Wa(b), d = this.m[a];
-  d ? d.na(b, c) : Fb(this.c, "onframes_: no master for " + T(a))
+  if(F) {
+    for(var d = [], f = 0, e = b.length;f < e;f++) {
+      d[f] = b[f]
+    }
+    b = d
+  }else {
+    b = Wa(b)
+  }
+  (d = this.m[a]) ? d.na(b, c) : Fb(this.c, "onframes_: no master for " + T(a))
 };
 l.oa = function(a, b) {
   var c = this.m[a];

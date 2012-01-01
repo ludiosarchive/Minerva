@@ -12,6 +12,7 @@ goog.require('goog.array');
 goog.require('goog.object');
 goog.require('goog.debug.entryPointRegistry');
 goog.require('goog.async.Deferred');
+goog.require('goog.userAgent');
 goog.require('cw.string');
 goog.require('cw.math');
 goog.require('cw.repr');
@@ -208,7 +209,18 @@ cw.net.XHRMasterTracker.prototype.onframes_ = function(reqId, frames, status) {
 	//		Array prototype will soon corrupt.
 	//		See Closure Library's goog.array.concat JSDoc.
 	//		See https://connect.microsoft.com/IE/feedback/details/559477/
-	frames = goog.array.concat(frames);
+	if(!goog.userAgent.GECKO) {
+		frames = goog.array.concat(frames);
+	} else {
+		// Can't use goog.array.concat because of this Firefox 10+ bug:
+		// https://bugzilla.mozilla.org/show_bug.cgi?id=714547
+		var rv = [];
+		for (var i = 0, len = frames.length; i < len; i++) {
+			rv[i] = frames[i];
+		}
+		frames = rv;
+	}
+
 	var master = this.masters_[reqId];
 	if(!master) {
 		this.logger_.severe(
