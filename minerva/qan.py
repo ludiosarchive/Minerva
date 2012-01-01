@@ -197,7 +197,10 @@ class QANHelper(object):
 
 		@param resetStreamCallable: A function that works like Stream.resetStream
 		"""
-		# TODO: allow specifying your own QAN frame encode/decode function
+		# TODO: Allow specifying your own QAN frame encode/decode function
+		# TODO: Actually, remove all encoding/decoding from QANHelper; let user specify
+		# callables that do the encoding/decoding they want
+		# TODO: And take a "send QAN frame" callable that sends only one frame
 		self._bodyReceivedCallable = bodyReceivedCallable
 		self._sendStringsCallable = sendStringsCallable
 		self._resetStreamCallable = resetStreamCallable
@@ -240,8 +243,10 @@ class QANHelper(object):
 		elif isinstance(qanFrame, Question):
 			qid = qanFrame.qid
 			d = defer.maybeDeferred(
-				self._bodyReceivedCallable(qanFrame.body, True))
-			d.addCallbacks(self._sendOkayAnswer, self._resetOrSendErrorAnswer, qid, qid)
+				self._bodyReceivedCallable, qanFrame.body, True)
+			d.addCallbacks(
+				self._sendOkayAnswer, self._resetOrSendErrorAnswer,
+				callbackArgs=(qid,), errbackArgs=(qid,))
 			d.addErrback(log.err) # TODO: reset Stream?
 
 		elif isinstance(qanFrame, Cancellation):

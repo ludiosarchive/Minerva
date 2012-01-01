@@ -114,3 +114,28 @@ class QANHelperTests(unittest.TestCase):
 			('poke', False),
 			('and again', False)
 		], received)
+
+
+	def test_questionReceived(self):
+		received = []
+		def bodyReceivedCallable(body, isQuestion):
+			received.append((body, isQuestion))
+			return "chilly"
+
+		sent = []
+		def sendStringsCallable(strings):
+			assert not isinstance(strings, basestring), type(strings)
+			sent.extend(strings)
+
+		h = QANHelper(bodyReceivedCallable, sendStringsCallable, None)
+		h.handleString(qanFrameToString(Question("the weather?", 1)))
+		h.handleString(qanFrameToString(Question("how about now?", 2)))
+		self.assertEqual([
+			('the weather?', True),
+			('how about now?', True)
+		], received)
+
+		self.assertEqual([
+			qanFrameToString(OkayAnswer("chilly", 1)),
+			qanFrameToString(OkayAnswer("chilly", 2)),
+		], sent)
