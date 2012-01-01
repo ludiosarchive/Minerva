@@ -83,13 +83,13 @@ class ErrorAnswer(_BodyAndId):
 
 
 
-class Cancel(_JustQid):
+class Cancellation(_JustQid):
 	__slots__ = ()
 	_MARKER = object()
 
 
 
-class Notify(_JustBody):
+class Notification(_JustBody):
 	__slots__ = ()
 	_MARKER = object()
 
@@ -99,8 +99,8 @@ qanTypeToCode = {
 	 Question: "Q"
 	,OkayAnswer: "K"
 	,ErrorAnswer: "E"
-	,Cancel: "C"
-	,Notify: "N"
+	,Cancellation: "C"
+	,Notification: "N"
 }
 
 
@@ -108,16 +108,16 @@ def qanFrameToString(qf):
 	"""
 	@param qf: The QAN frame to encode
 	@type qf: a L{Question} or L{OkayAnswer} or L{ErrorAnswer} or
-		L{Cancel} or L{Notify}, all of which must have a C{str} C{.body}.
+		L{Cancellation} or L{Notification}, all of which must have a C{str} C{.body}.
 
 	@return: The encoded QAN frame
 	@rtype: str
 	"""
 	qanFrameType = type(qf)
 	code = qanTypeToCode[qanFrameType]
-	if qanFrameType == Notify:
+	if qanFrameType == Notification:
 		return qf.body + code
-	elif qanFrameType == Cancel:
+	elif qanFrameType == Cancellation:
 		return str(qf.qid) + code
 	else:
 		return qf.body + "|" + str(qf.qid) + code
@@ -142,7 +142,7 @@ def stringToQanFrame(frameString):
 
 	@return: The QAN frame
 	@rtype qf: a L{Question} or L{OkayAnswer} or L{ErrorAnswer} or
-		L{Cancel} or L{Notify}, with a C{str} C{.body}.
+		L{Cancellation} or L{Notification}, with a C{str} C{.body}.
 	"""
 	try:
 		lastByte = frameString[-1]
@@ -153,7 +153,7 @@ def stringToQanFrame(frameString):
 		return Notify(frameString[:-1])
 	elif lastByte == "C":
 		qid = _qidOrThrow(frameString[:-1])
-		return Cancel(qid)
+		return Cancellation(qid)
 	else:
 		body, rest = frameString.rsplit('|', 1)
 		qid = _qidOrThrow(rest[:-1])
@@ -191,7 +191,7 @@ class QANHelper(object):
 	def __init__(self, bodyReceivedCallable, sendStringsCallable, resetStreamCallable):
 		"""
 		@param bodyReceivedCallable: The 2-arg function to call when
-			a Question or Notify is received (via a call to .handleString).
+			a Question or Notification is received (via a call to .handleString).
 
 		@param sendStringsCallable: A function that works like Stream.sendStrings
 
@@ -234,7 +234,7 @@ class QANHelper(object):
 			else:
 				d.errback(ErrorResponse(qanFrame.body))
 
-		elif isinstance(qanFrame, Notify):
+		elif isinstance(qanFrame, Notification):
 			self._bodyReceivedCallable(qanFrame.body, False)
 
 		elif isinstance(qanFrame, Question):
@@ -244,7 +244,7 @@ class QANHelper(object):
 			d.addCallbacks(self._sendOkayAnswer, self._resetOrSendErrorAnswer, qid, qid)
 			d.addErrback(log.err) # TODO: reset Stream?
 
-		elif isinstance(qanFrame, Cancel):
+		elif isinstance(qanFrame, Cancellation):
 			1/0
 
 
@@ -261,7 +261,7 @@ class QANHelper(object):
 
 
 	def notify(self, body):
-		self._sendStringsCallable([qanFrameToString(Notify(body))])
+		self._sendStringsCallable([qanFrameToString(Notification(body))])
 
 
 

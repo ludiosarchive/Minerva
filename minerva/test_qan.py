@@ -1,7 +1,7 @@
 from twisted.trial import unittest
 
 from minerva.qan import (
-	OkayAnswer, ErrorAnswer, Question, Notify, Cancel, QANHelper,
+	OkayAnswer, ErrorAnswer, Question, Notification, Cancellation, QANHelper,
 	qanFrameToString, stringToQanFrame, InvalidQID, ErrorResponse)
 
 
@@ -20,21 +20,21 @@ class QANFrameTests(unittest.TestCase):
 
 
 	def test_qanFrameToString(self):
-		self.assertEqual("blahN", qanFrameToString(Notify("blah")))
+		self.assertEqual("blahN", qanFrameToString(Notification("blah")))
 
 		self.assertEqual("blah|0Q", qanFrameToString(Question("blah", 0)))
 		self.assertEqual("blah|100Q", qanFrameToString(Question("blah", 100)))
 
 		self.assertEqual("blah|100K", qanFrameToString(OkayAnswer("blah", 100)))
 		self.assertEqual("blah|100E", qanFrameToString(ErrorAnswer("blah", 100)))
-		self.assertEqual("100C", qanFrameToString(Cancel(100)))
+		self.assertEqual("100C", qanFrameToString(Cancellation(100)))
 
 
 	def test_stringToQanFrame(self):
 		self.assertEqual(Question("blah", 10), stringToQanFrame("blah|10Q"))
 		self.assertEqual(OkayAnswer("blah", 10), stringToQanFrame("blah|10K"))
 		self.assertEqual(ErrorAnswer("blah", 10), stringToQanFrame("blah|10E"))
-		self.assertEqual(Cancel(10), stringToQanFrame("10C"))
+		self.assertEqual(Cancellation(10), stringToQanFrame("10C"))
 
 
 
@@ -58,7 +58,7 @@ class QANHelperTests(unittest.TestCase):
 		d1 = h.ask("what?")
 		d1.addCallbacks(gotOkayAnswer, gotErrorAnswer)
 
-		# Make sure it wrote something to the peer
+		# Make sure QANHelper wrote something to the peer
 		self.assertEqual([
 			qanFrameToString(Question("what?", 1)),
 		], sent)
@@ -83,3 +83,19 @@ class QANHelperTests(unittest.TestCase):
 		h.handleString(qanFrameToString(ErrorAnswer("as asked", 2)))
 
 		self.assertEqual([('as asked', 'error')], answers[1:])
+
+
+	def test_notify(self):
+		sent = []
+		def sendStringsCallable(strings):
+			assert not isinstance(strings, basestring), type(strings)
+			sent.extend(strings)
+
+		h = QANHelper(None, sendStringsCallable, None)
+		ret = h.notify("you've got mail")
+		self.assertIdentical(None, ret)
+
+		# Make sure QANHelper wrote something to the peer
+		self.assertEqual([
+			qanFrameToString(Notification("you've got mail")),
+		], sent)
