@@ -135,7 +135,7 @@ def _qidOrThrow(s):
 		raise InvalidQANFrame("bad qid")
 
 
-def stringToQanFrame(frameString):
+def stringToQANFrame(frameString):
 	"""
 	@param frameString: The QAN frame, encoded as a string
 	@type frameString: C{str}

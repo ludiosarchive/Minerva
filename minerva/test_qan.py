@@ -3,7 +3,7 @@ from twisted.trial import unittest
 
 from minerva.qan import (
 	OkayAnswer, ErrorAnswer, Question, Notification, Cancellation, QANHelper,
-	qanFrameToString, stringToQanFrame, InvalidQID, ErrorResponse)
+	qanFrameToString, stringToQANFrame, InvalidQID, ErrorResponse)
 
 
 class QANFrameTests(unittest.TestCase):
@@ -31,12 +31,12 @@ class QANFrameTests(unittest.TestCase):
 		self.assertEqual("100C", qanFrameToString(Cancellation(100)))
 
 
-	def test_stringToQanFrame(self):
-		self.assertEqual(Question("blah", 10), stringToQanFrame("blah|10Q"))
-		self.assertEqual(OkayAnswer("blah", 10), stringToQanFrame("blah|10K"))
-		self.assertEqual(ErrorAnswer("blah", 10), stringToQanFrame("blah|10E"))
-		self.assertEqual(Cancellation(10), stringToQanFrame("10C"))
-		self.assertEqual(Notification("blah"), stringToQanFrame("blahN"))
+	def test_stringToQANFrame(self):
+		self.assertEqual(Question("blah", 10), stringToQANFrame("blah|10Q"))
+		self.assertEqual(OkayAnswer("blah", 10), stringToQANFrame("blah|10K"))
+		self.assertEqual(ErrorAnswer("blah", 10), stringToQANFrame("blah|10E"))
+		self.assertEqual(Cancellation(10), stringToQANFrame("10C"))
+		self.assertEqual(Notification("blah"), stringToQANFrame("blahN"))
 
 
 
