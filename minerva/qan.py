@@ -203,13 +203,16 @@ class QANHelper(object):
 
 		self._qidCounter = 1
 		self._ourQuestions = {}
+		self._theirQuestions = {}
 
 
 	def _sendOkayAnswer(self, s, qid):
+		del self._theirQuestions[qid]
 		self._sendQANFrame(OkayAnswer(s, qid))
 
 
 	def _resetOrSendErrorAnswer(self, failure, qid):
+		del self._theirQuestions[qid]
 		failure.trap(ErrorResponse)
 
 		self._sendQANFrame(ErrorAnswer(failure.value[0], qid))
@@ -217,10 +220,11 @@ class QANHelper(object):
 
 	def handleQANFrame(self, qanFrame):
 		if isAnswerFrame(qanFrame):
+			qid = qanFrame.qid
 			try:
-				d = self._ourQuestions.pop(qanFrame.qid)
+				d = self._ourQuestions.pop(qid)
 			except KeyError:
-				raise InvalidQID("Invalid qid: %r" % (qanFrame.qid,))
+				raise InvalidQID("Invalid qid: %r" % (qid,))
 
 			if isinstance(qanFrame, OkayAnswer):
 				d.callback(qanFrame.body)
@@ -234,13 +238,24 @@ class QANHelper(object):
 			qid = qanFrame.qid
 			d = defer.maybeDeferred(
 				self._bodyReceived, qanFrame.body, True)
+			self._theirQuestions[qid] = d
 			d.addCallbacks(
 				self._sendOkayAnswer, self._resetOrSendErrorAnswer,
 				callbackArgs=(qid,), errbackArgs=(qid,))
 			d.addErrback(log.err) # TODO: reset Stream?
 
 		elif isinstance(qanFrame, Cancellation):
-			1/0
+			qid = qanFrame.qid
+			try:
+				# We don't .pop() it here because a cancelled Deferred
+				# still goes through the callback or errback chain, and
+				# our _sendOkayAnswer and _resetOrSendErrorAnswer
+				# deletes it from self._theirQuestions.
+				d = self._theirQuestions[qid]
+			except KeyError:
+				# TODO: reset Stream?
+				1/0
+			d.cancel()
 
 
 	def ask(self, body):
@@ -249,7 +264,7 @@ class QANHelper(object):
 		self._sendQANFrame(Question(body, qid))
 
 		assert qid not in self._ourQuestions
-		d = defer.Deferred() # TODO: canceller?
+		d = defer.Deferred() # TODO: a canceller that sends Cancel
 		self._ourQuestions[qid] = d
 		return d
 

@@ -149,7 +149,11 @@ class QANHelperTests(unittest.TestCase):
 
 	def test_questionReceivedAsync(self):
 		received = []
-		answerDs = [defer.Deferred(), defer.Deferred(), defer.Deferred()]
+		answerDs = [
+			defer.Deferred(),
+			defer.Deferred(),
+			defer.Deferred(),
+		]
 		def bodyReceived(body, isQuestion):
 			received.append((body, isQuestion))
 			return answerDs.pop(0)
@@ -184,3 +188,80 @@ class QANHelperTests(unittest.TestCase):
 			OkayAnswer("hurricane", 1),
 			ErrorAnswer(["weather station is broken", "yep"], 3),
 		], sent)
+
+
+	def test_cancellation(self):
+		nonlocal = dict(
+			cancellerDoesErrbackCalled=False,
+			cancellerDoesCallbackCalled=False,
+		)
+		def cancellerDoesErrback(d):
+			nonlocal['cancellerDoesErrbackCalled'] = True
+			d.errback(ErrorResponse("okay, you'll never know"))
+
+		def cancellerDoesCallback(d):
+			nonlocal['cancellerDoesCallbackCalled'] = True
+			d.callback("maybe a little warm")
+
+		received = []
+		answerDs = [
+			defer.Deferred(),
+			defer.Deferred(cancellerDoesErrback),
+			defer.Deferred(),
+			defer.Deferred(cancellerDoesCallback),
+		]
+		def bodyReceived(body, isQuestion):
+			received.append((body, isQuestion))
+			return answerDs.pop(0)
+
+		sent = []
+		def sendQANFrame(frame):
+			sent.append(frame)
+
+		h = QANHelper(bodyReceived, sendQANFrame, None)
+		d1 = answerDs[0]
+		d2 = answerDs[1]
+		d3 = answerDs[2]
+		d4 = answerDs[3]
+		h.handleQANFrame(Question("the weather?", 1))
+		h.handleQANFrame(Question("how about now?", 2))
+		h.handleQANFrame(Question("and now?", 3))
+		h.handleQANFrame(Question("this evening?", 4))
+		self.assertEqual([
+			('the weather?', True),
+			('how about now?', True),
+			('and now?', True),
+			('this evening?', True),
+		], received)
+
+		self.assertEqual([], sent)
+
+		self.assertEqual(False, nonlocal['cancellerDoesErrbackCalled'])
+		self.assertEqual(False, nonlocal['cancellerDoesCallbackCalled'])
+
+		# Cancel Question #2
+		h.handleQANFrame(Cancellation(2))
+		self.assertEqual(True, nonlocal['cancellerDoesErrbackCalled'])
+		self.assertEqual([
+			ErrorAnswer("okay, you'll never know", 2),
+		], sent[0:1])
+
+		# Cancel Question #4
+		h.handleQANFrame(Cancellation(4))
+		self.assertEqual(True, nonlocal['cancellerDoesCallbackCalled'])
+		self.assertEqual([
+			OkayAnswer("maybe a little warm", 4)
+		], sent[1:2])
+
+		d1.callback("hurricane")
+		d3.errback(ErrorResponse("weather station is broken"))
+
+		self.assertEqual([
+			OkayAnswer("hurricane", 1),
+			ErrorAnswer("weather station is broken", 3),
+		], sent[2:])
+
+	# TODO: test cancellation of something that has no canceller -> reset Stream
+	# (due to CancelledError)
+
+	# TODO: test cancellation with invalid QID -> reset Stream
