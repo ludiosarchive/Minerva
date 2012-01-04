@@ -17,7 +17,7 @@ from minerva.mserver import (
 from minerva.decoders import OK
 from minerva.frames import decodeFrameFromServer
 
-from webmagic.fakes import GetNewMixin, DummyTCPTransport
+from webmagic.fakes import ListLog, DummyTCPTransport
 
 
 
@@ -33,14 +33,18 @@ def strictGetNewFrames(parser, data):
 
 
 
-class FrameDecodingTcpTransport(DummyTCPTransport, GetNewMixin):
+class FrameDecodingTcpTransport(DummyTCPTransport):
 	"""
 	A TCP transport that first decodes bytes with a parser,
 	then decodes the Minerva frames with decodeFrameFromServer.
 	"""
 	def __init__(self, parser):
 		self.parser = parser
-		self.log = []
+		self.log = ListLog()
+
+
+	def getNew(self):
+		return self.log.getNew()
 
 
 	def write(self, data):
@@ -50,7 +54,7 @@ class FrameDecodingTcpTransport(DummyTCPTransport, GetNewMixin):
 
 
 
-class MockServerStream(GetNewMixin):
+class MockServerStream(object):
 	streamId = "a stream id of unusual length"
 
 	def __init__(self, clock=None, streamId=None, streamProtocolFactory=None):
@@ -58,12 +62,16 @@ class MockServerStream(GetNewMixin):
 		self._notifications = []
 		self.streamId = streamId
 		self.streamProtocolFactory = streamProtocolFactory
-		self.log = []
+		self.log = ListLog()
 		self._incoming = Incoming()
 		self.queue = Queue()
 		self._transports = set()
 		self.allSeenTransports = []
 		self.lastSackSeenByServer = SACK(-1, ())
+
+
+	def getNew(self):
+		return self.log.getNew()
 
 
 	def sendStrings(self, strings):
@@ -146,7 +154,7 @@ class MockServerStream(GetNewMixin):
 
 
 
-class _MockMinervaProtocol(GetNewMixin):
+class _MockMinervaProtocol(object):
 	implements(IMinervaProtocol)
 
 	def __init__(self, callFrom=(), callWhat=()):
@@ -164,11 +172,15 @@ class _MockMinervaProtocol(GetNewMixin):
 
 	def streamStarted(self, stream):
 		self.factory.instances.add(self)
-		self.log = []
+		self.log = ListLog()
 		self.log.append(['streamStarted', stream])
 		self.stream = stream
 		if 'streamStarted' in self._callFrom:
 			self._callStuff()
+
+
+	def getNew(self):
+		return self.log.getNew()
 
 
 	def streamReset(self, reasonString, applicationLevel):
@@ -226,20 +238,24 @@ class MockMinervaStringProtocolFactory(object):
 
 
 
-class DummySocketLikeTransport(GetNewMixin):
+class DummySocketLikeTransport(object):
 	request = None
 	globalCounter = [-1]
 	ourSeqNum = -1
 	_paused = False
 
 	def __init__(self, request=None):
-		self.log = []
+		self.log = ListLog()
 		self.pretendGotHello()
 		if request:
 			self.writable = request
 			self._isHttp = True
 		else:
 			self._isHttp = False
+
+
+	def getNew(self):
+		return self.log.getNew()
 
 
 	def isHttp(self):

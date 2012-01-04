@@ -1,24 +1,11 @@
 from twisted.internet import defer
 from twisted.trial import unittest
 
+from webmagic.fakes import ListLog
+
 from minerva.qan import (
 	OkayAnswer, ErrorAnswer, Question, Notification, Cancellation, QANHelper,
 	qanFrameToString, stringToQANFrame, InvalidQID, ErrorResponse)
-
-
-# TODO: move this to webmagic.fakes
-class ListWithGetNew(list):
-	__slots__ = ('_returnNext')
-
-	def getNew(self):
-		if not hasattr(self, '_returnNext'):
-			self._returnNext = 0
-
-		old = self._returnNext
-		self._returnNext = len(self)
-
-		return self[old:]
-
 
 
 class QANFrameTests(unittest.TestCase):
@@ -66,11 +53,11 @@ class QANFrameTests(unittest.TestCase):
 class QANHelperTests(unittest.TestCase):
 
 	def test_ask(self):
-		sent = ListWithGetNew()
+		sent = ListLog()
 		def sendQANFrame(frame):
 			sent.append(frame)
 
-		answers = ListWithGetNew()
+		answers = ListLog()
 		def gotOkayAnswer(answer):
 			answers.append((answer, 'okay'))
 
@@ -229,7 +216,7 @@ class QANHelperTests(unittest.TestCase):
 			received.append((body, isQuestion))
 			return answerDs.pop(0)
 
-		sent = ListWithGetNew()
+		sent = ListLog()
 		def sendQANFrame(frame):
 			sent.append(frame)
 
@@ -283,7 +270,7 @@ class QANHelperTests(unittest.TestCase):
 
 
 	def test_weCancel(self):
-		sent = ListWithGetNew()
+		sent = ListLog()
 		def sendQANFrame(frame):
 			sent.append(frame)
 
