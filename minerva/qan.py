@@ -253,9 +253,17 @@ class QANHelper(object):
 				# deletes it from self._theirQuestions.
 				d = self._theirQuestions[qid]
 			except KeyError:
-				# TODO: reset Stream?
+				# TODO: reset Stream?  or just ignore cancellation?
 				1/0
 			d.cancel()
+
+
+	def _sendCancel(self, qid):
+		# Note: when we cancel something, we still expect to get either
+		# (1) an OkayAnswer or ErrorAnswer from the peer, or
+		# (2) a Stream reset due to an uncaught exception, such as a
+		# a CancelledError (due to lacking a canceller), or another exception.
+		self._sendQANFrame(Cancellation(qid))
 
 
 	def ask(self, body):
@@ -264,7 +272,7 @@ class QANHelper(object):
 		self._sendQANFrame(Question(body, qid))
 
 		assert qid not in self._ourQuestions
-		d = defer.Deferred() # TODO: a canceller that sends Cancel
+		d = defer.Deferred(lambda _: self._sendCancel(qid))
 		self._ourQuestions[qid] = d
 		return d
 

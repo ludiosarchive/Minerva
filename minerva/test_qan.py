@@ -6,6 +6,21 @@ from minerva.qan import (
 	qanFrameToString, stringToQANFrame, InvalidQID, ErrorResponse)
 
 
+# TODO: move this to webmagic.fakes
+class ListWithGetNew(list):
+	__slots__ = ('_returnNext')
+
+	def getNew(self):
+		if not hasattr(self, '_returnNext'):
+			self._returnNext = 0
+
+		old = self._returnNext
+		self._returnNext = len(self)
+
+		return self[old:]
+
+
+
 class QANFrameTests(unittest.TestCase):
 
 	def test_sameTypeEquality(self):
@@ -51,11 +66,11 @@ class QANFrameTests(unittest.TestCase):
 class QANHelperTests(unittest.TestCase):
 
 	def test_ask(self):
-		sent = []
+		sent = ListWithGetNew()
 		def sendQANFrame(frame):
 			sent.append(frame)
 
-		answers = []
+		answers = ListWithGetNew()
 		def gotOkayAnswer(answer):
 			answers.append((answer, 'okay'))
 
@@ -70,10 +85,10 @@ class QANHelperTests(unittest.TestCase):
 		# Make sure QANHelper wrote something to the peer
 		self.assertEqual([
 			Question("what?", 1),
-		], sent)
+		], sent.getNew())
 
 		# We shouldn't have an answer yet
-		self.assertEqual([], answers)
+		self.assertEqual([], answers.getNew())
 
 		# An answer with a wrong QID raises InvalidQID
 		self.assertRaises(InvalidQID, lambda: h.handleQANFrame(
@@ -82,7 +97,7 @@ class QANHelperTests(unittest.TestCase):
 		# Feed this "OkayAnswer from the peer" into QANHelper
 		h.handleQANFrame(OkayAnswer("chicken butt", 1))
 
-		self.assertEqual([('chicken butt', 'okay')], answers)
+		self.assertEqual([('chicken butt', 'okay')], answers.getNew())
 
 
 		d2 = h.ask("I want an error response to this one")
@@ -91,7 +106,7 @@ class QANHelperTests(unittest.TestCase):
 		# Feed this "ErrorAnswer from the peer" into QANHelper
 		h.handleQANFrame(ErrorAnswer("as asked", 2))
 
-		self.assertEqual([('as asked', 'error')], answers[1:])
+		self.assertEqual([('as asked', 'error')], answers.getNew())
 
 
 	def test_notify(self):
@@ -190,7 +205,7 @@ class QANHelperTests(unittest.TestCase):
 		], sent)
 
 
-	def test_cancellation(self):
+	def test_theyCancel(self):
 		nonlocal = dict(
 			cancellerDoesErrbackCalled=False,
 			cancellerDoesCallbackCalled=False,
@@ -214,7 +229,7 @@ class QANHelperTests(unittest.TestCase):
 			received.append((body, isQuestion))
 			return answerDs.pop(0)
 
-		sent = []
+		sent = ListWithGetNew()
 		def sendQANFrame(frame):
 			sent.append(frame)
 
@@ -234,7 +249,7 @@ class QANHelperTests(unittest.TestCase):
 			('this evening?', True),
 		], received)
 
-		self.assertEqual([], sent)
+		self.assertEqual([], sent.getNew())
 
 		self.assertEqual(False, nonlocal['cancellerDoesErrbackCalled'])
 		self.assertEqual(False, nonlocal['cancellerDoesCallbackCalled'])
@@ -244,14 +259,14 @@ class QANHelperTests(unittest.TestCase):
 		self.assertEqual(True, nonlocal['cancellerDoesErrbackCalled'])
 		self.assertEqual([
 			ErrorAnswer("okay, you'll never know", 2),
-		], sent[0:1])
+		], sent.getNew())
 
 		# Cancel Question #4
 		h.handleQANFrame(Cancellation(4))
 		self.assertEqual(True, nonlocal['cancellerDoesCallbackCalled'])
 		self.assertEqual([
 			OkayAnswer("maybe a little warm", 4)
-		], sent[1:2])
+		], sent.getNew())
 
 		d1.callback("hurricane")
 		d3.errback(ErrorResponse("weather station is broken"))
@@ -259,9 +274,28 @@ class QANHelperTests(unittest.TestCase):
 		self.assertEqual([
 			OkayAnswer("hurricane", 1),
 			ErrorAnswer("weather station is broken", 3),
-		], sent[2:])
+		], sent.getNew())
 
 	# TODO: test cancellation of something that has no canceller -> reset Stream
 	# (due to CancelledError)
 
-	# TODO: test cancellation with invalid QID -> reset Stream
+	# TODO: test cancellation with invalid QID
+
+
+	def test_weCancel(self):
+		sent = ListWithGetNew()
+		def sendQANFrame(frame):
+			sent.append(frame)
+
+		h = QANHelper(None, sendQANFrame, None)
+		d = h.ask("going to the theater?")
+
+		self.assertEqual([
+			Question("going to the theater?", 1),
+		], sent.getNew())
+
+		d.cancel()
+
+		self.assertEqual([
+			Cancellation(1),
+		], sent.getNew())
