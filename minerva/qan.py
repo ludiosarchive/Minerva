@@ -182,16 +182,6 @@ class ApplicationError(Exception):
 
 
 
-class InvalidResponse(Exception):
-	pass
-
-
-
-class InvalidQID(Exception):
-	pass
-
-
-
 class QANHelper(object):
 	def __init__(self, bodyReceived, sendQANFrame, fatalError):
 		"""
@@ -233,8 +223,8 @@ class QANHelper(object):
 			try:
 				d = self._ourQuestions.pop(qid)
 			except KeyError:
-				# TODO: call _fatalError instead
-				raise InvalidQID("Invalid qid: %r" % (qid,))
+				self._fatalError("Received an answer with invalid qid: %d" % (qid,))
+				return
 
 			if d is None:
 				# Ignore the answer to a question we cancelled.

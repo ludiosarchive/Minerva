@@ -5,7 +5,7 @@ from webmagic.fakes import ListLog
 
 from minerva.qan import (
 	OkayAnswer, ErrorAnswer, Question, Notification, Cancellation, QANHelper,
-	qanFrameToString, stringToQANFrame, InvalidQID, ApplicationError)
+	qanFrameToString, stringToQANFrame, ApplicationError)
 
 
 class QANFrameTests(unittest.TestCase):
@@ -65,7 +65,11 @@ class QANHelperTests(unittest.TestCase):
 			failure.trap(ApplicationError)
 			answers.append((failure.value[0], 'error'))
 
-		h = QANHelper(None, sendQANFrame, None)
+		fatalErrors = ListLog()
+		def fatalError(msg):
+			fatalErrors.append(msg)
+
+		h = QANHelper(None, sendQANFrame, fatalError)
 		d1 = h.ask("what?")
 		d1.addCallbacks(gotOkayAnswer, gotErrorAnswer)
 
@@ -77,9 +81,10 @@ class QANHelperTests(unittest.TestCase):
 		# We shouldn't have an answer yet
 		self.assertEqual([], answers.getNew())
 
-		# An answer with a wrong QID raises InvalidQID
-		self.assertRaises(InvalidQID, lambda: h.handleQANFrame(
-			OkayAnswer("answer with wrong qid", 100)))
+		# An answer with a wrong QID calls fatalError
+		self.assertEqual([], fatalErrors.getNew())
+		h.handleQANFrame(OkayAnswer("answer with wrong qid", 100))
+		self.assertEqual(["Received an answer with invalid qid: 100"], fatalErrors.getNew())
 
 		# Feed this "OkayAnswer from the peer" into QANHelper
 		h.handleQANFrame(OkayAnswer("chicken butt", 1))
