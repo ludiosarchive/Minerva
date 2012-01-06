@@ -258,7 +258,7 @@ class QANHelper(object):
 			elif isinstance(qanFrame, UnknownErrorAnswer):
 				d.errback(UnknownError(qanFrame.body))
 			else:
-				raise RuntimeError("bug")
+				raise RuntimeError("handleQANFrame bug")
 
 		elif isinstance(qanFrame, Notification):
 			self._bodyReceived(qanFrame.body, False)
