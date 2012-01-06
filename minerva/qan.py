@@ -256,9 +256,10 @@ class QANHelper(object):
 				# deletes it from self._theirQuestions.
 				d = self._theirQuestions[qid]
 			except KeyError:
-				# TODO: reset Stream?  or just ignore cancellation?
-				1/0
-			d.cancel()
+				# Cancellations for nonexistent questions are ignored.
+				pass
+			else:
+				d.cancel()
 
 
 	def _sendCancel(self, qid):

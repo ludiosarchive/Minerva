@@ -266,7 +266,11 @@ class QANHelperTests(unittest.TestCase):
 	# TODO: test cancellation of something that has no canceller -> reset Stream
 	# (due to CancelledError)
 
-	# TODO: test cancellation with invalid QID
+	# TODO: test question sent with qid that already exists
+
+	def test_theyCancelNonexistentQuestion(self):
+		h = QANHelper(None, None, None)
+		h.handleQANFrame(Cancellation(1))
 
 
 	def test_weCancel(self):
