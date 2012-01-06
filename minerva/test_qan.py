@@ -52,6 +52,13 @@ class QANFrameTests(unittest.TestCase):
 
 class QANHelperTests(unittest.TestCase):
 
+	def test_repr(self):
+		h = QANHelper(None, lambda _: None, None)
+		self.assertEqual("<QANHelper asked 0 questions, waiting for 0 peer answers and 0 local answers>", repr(h))
+		h.ask("what?")
+		self.assertEqual("<QANHelper asked 1 questions, waiting for 1 peer answers and 0 local answers>", repr(h))
+
+
 	def test_ask(self):
 		sent = ListLog()
 		def sendQANFrame(frame):

@@ -210,9 +210,16 @@ class QANHelper(object):
 		self._sendQANFrame = sendQANFrame
 		self._fatalError = fatalError
 
-		self._qidCounter = 1
+		self._qidCounter = 0
 		self._ourQuestions = {}
 		self._theirQuestions = {}
+
+
+	def __repr__(self):
+		return ('<%s asked %d questions, waiting for %d peer answers '
+			'and %d local answers>') % (self.__class__.__name__,
+				self._qidCounter, len(self._ourQuestions),
+				len(self._theirQuestions))
 
 
 	def _sendOkayAnswer(self, s, qid):
@@ -274,7 +281,7 @@ class QANHelper(object):
 			try:
 				# We don't .pop() it here because a cancelled Deferred
 				# still goes through the callback or errback chain, and
-				# our _sendOkayAnswer and _resetOrSendErrorAnswer
+				# our _sendOkayAnswer and _sendErrorAnswer
 				# deletes it from self._theirQuestions.
 				d = self._theirQuestions[qid]
 			except KeyError:
@@ -297,8 +304,8 @@ class QANHelper(object):
 
 
 	def ask(self, body):
-		qid = self._qidCounter
 		self._qidCounter += 1
+		qid = self._qidCounter
 		self._sendQANFrame(Question(body, qid))
 
 		assert qid not in self._ourQuestions
