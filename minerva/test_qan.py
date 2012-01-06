@@ -278,10 +278,10 @@ class QANHelperTests(unittest.TestCase):
 			ErrorAnswer("weather station is broken", 3),
 		], sent.getNew())
 
-	# TODO: test cancellation of something that has no canceller -> reset Stream
+	# TODO: test cancellation of something that has no canceller -> fatalError
 	# (due to CancelledError)
-
-	# TODO: test question sent with qid that already exists
+	# or perhaps we want a RemoteCancelledError, so that .cancel() doesn't
+	# cause fatalError by default
 
 	def test_theyCancelNonexistentQuestion(self):
 		h = QANHelper(None, None, None)
