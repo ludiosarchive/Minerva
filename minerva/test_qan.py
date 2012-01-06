@@ -192,6 +192,21 @@ class QANHelperTests(unittest.TestCase):
 		], sent)
 
 
+	def test_questionReceivedDuplicateQid(self):
+		def bodyReceived(body, isQuestion):
+			return defer.Deferred()
+
+		nonlocal = dict(fatalReason=None)
+		def fatalError(reason):
+			nonlocal['fatalReason'] = reason
+
+		h = QANHelper(bodyReceived, None, fatalError)
+		h.handleQANFrame(Question("what?", 1))
+		h.handleQANFrame(Question("where?", 1))
+
+		self.assertEqual("Received Question with duplicate qid: 1", nonlocal['fatalReason'])
+
+
 	def test_theyCancel(self):
 		nonlocal = dict(
 			cancellerDoesErrbackCalled=False,

@@ -227,7 +227,7 @@ class QANHelper(object):
 				raise InvalidQID("Invalid qid: %r" % (qid,))
 
 			if d is None:
-				# Ignore the answer to a question we cancelled
+				# Ignore the answer to a question we cancelled.
 				pass
 			elif isinstance(qanFrame, OkayAnswer):
 				d.callback(qanFrame.body)
@@ -241,6 +241,9 @@ class QANHelper(object):
 			qid = qanFrame.qid
 			d = defer.maybeDeferred(
 				self._bodyReceived, qanFrame.body, True)
+			if qid in self._theirQuestions:
+				self._resetStream("Received Question with duplicate qid: %r" % (qid,))
+				return
 			self._theirQuestions[qid] = d
 			d.addCallbacks(
 				self._sendOkayAnswer, self._resetOrSendErrorAnswer,
@@ -288,6 +291,9 @@ class QANHelper(object):
 	def notify(self, body):
 		self._sendQANFrame(Notification(body))
 
+
+# class QANProtocol
+# TODO: Show a helpful exception message if return value from bodyReceived is None
 
 
 try: from refbinder.api import bindRecursive
