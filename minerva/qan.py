@@ -78,7 +78,13 @@ class OkayAnswer(_BodyAndId):
 
 
 
-class ErrorAnswer(_BodyAndId):
+class KnownErrorAnswer(_BodyAndId):
+	__slots__ = ()
+	_MARKER = object()
+
+
+
+class UnknownErrorAnswer(_BodyAndId):
 	__slots__ = ()
 	_MARKER = object()
 
@@ -99,7 +105,8 @@ class Notification(_JustBody):
 qanTypeToCode = {
 	 Question: "Q"
 	,OkayAnswer: "K"
-	,ErrorAnswer: "E"
+	,KnownErrorAnswer: "E"
+	,UnknownErrorAnswer: "U"
 	,Cancellation: "C"
 	,Notification: "N"
 }
@@ -164,20 +171,23 @@ def stringToQANFrame(frameString):
 		elif lastByte == "K":
 			return OkayAnswer(body, qid)
 		elif lastByte == "E":
-			return ErrorAnswer(body, qid)
+			return KnownErrorAnswer(body, qid)
+		elif lastByte == "U":
+			return UnknownErrorAnswer(body, qid)
 		else:
 			raise InvalidQANFrame("Invalid QAN frame type %r" % lastByte)
 
 
 def isAnswerFrame(qanFrame):
-	return isinstance(qanFrame, OkayAnswer) or isinstance(qanFrame, ErrorAnswer)
+	return isinstance(qanFrame, (OkayAnswer, KnownErrorAnswer, UnknownErrorAnswer))
 
 
-# TODO: split *Answer into OkayAnswer, ApplicationErrorAnswer, UnknownExceptionAnswer, DefaultCancelledAnswer
-# actually, no need for DefaultCancelledAnswer, that'll just be UnknownExceptionAnswer("CancelledError")
-# everything else is UnknownExceptionAnswer("Uncaught exception")
+class KnownError(Exception):
+	pass
 
-class ApplicationError(Exception):
+
+
+class UnknownError(Exception):
 	pass
 
 
@@ -210,11 +220,16 @@ class QANHelper(object):
 		self._sendQANFrame(OkayAnswer(s, qid))
 
 
-	def _maybeSendErrorAnswer(self, failure, qid):
+	def _sendErrorAnswer(self, failure, qid):
 		del self._theirQuestions[qid]
-		failure.trap(ApplicationError)
-
-		self._sendQANFrame(ErrorAnswer(failure.value[0], qid))
+		if failure.check(KnownError):
+			self._sendQANFrame(KnownErrorAnswer(failure.value[0], qid))
+		elif failure.check(defer.CancelledError):
+			self._sendQANFrame(UnknownErrorAnswer("CancelledError"))
+		else:
+			# We intentionally do not reveal information about the
+			# exception.
+			self._sendQANFrame(UnknownErrorAnswer("Uncaught exception"))
 
 
 	def handleQANFrame(self, qanFrame):
@@ -231,8 +246,12 @@ class QANHelper(object):
 				pass
 			elif isinstance(qanFrame, OkayAnswer):
 				d.callback(qanFrame.body)
+			elif isinstance(qanFrame, KnownErrorAnswer):
+				d.errback(KnownError(qanFrame.body))
+			elif isinstance(qanFrame, UnknownErrorAnswer):
+				d.errback(UnknownError(qanFrame.body))
 			else:
-				d.errback(ApplicationError(qanFrame.body))
+				raise RuntimeError("bug")
 
 		elif isinstance(qanFrame, Notification):
 			self._bodyReceived(qanFrame.body, False)
@@ -246,9 +265,9 @@ class QANHelper(object):
 				self._bodyReceived, qanFrame.body, True)
 			self._theirQuestions[qid] = d
 			d.addCallbacks(
-				self._sendOkayAnswer, self._maybeSendErrorAnswer,
+				self._sendOkayAnswer, self._sendErrorAnswer,
 				callbackArgs=(qid,), errbackArgs=(qid,))
-			d.addErrback(log.err) # TODO: call fatalError?
+			d.addErrback(log.err)
 
 		elif isinstance(qanFrame, Cancellation):
 			qid = qanFrame.qid

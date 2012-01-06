@@ -4,8 +4,8 @@ from twisted.trial import unittest
 from webmagic.fakes import ListLog
 
 from minerva.qan import (
-	OkayAnswer, ErrorAnswer, Question, Notification, Cancellation, QANHelper,
-	qanFrameToString, stringToQANFrame, ApplicationError)
+	OkayAnswer, KnownErrorAnswer, UnknownErrorAnswer, Question, Notification,
+	Cancellation, QANHelper, qanFrameToString, stringToQANFrame, KnownError, UnknownError)
 
 
 class QANFrameTests(unittest.TestCase):
@@ -18,8 +18,8 @@ class QANFrameTests(unittest.TestCase):
 
 	def test_differentTypeEquality(self):
 		self.assertNotEqual(OkayAnswer("blah", 10), Question("blah", 10))
-		self.assertNotEqual(OkayAnswer("blah", 10), ErrorAnswer("blah", 10))
-		self.assertNotEqual(Question("blah", 10), ErrorAnswer("blah", 10))
+		self.assertNotEqual(OkayAnswer("blah", 10), KnownErrorAnswer("blah", 10))
+		self.assertNotEqual(Question("blah", 10), KnownErrorAnswer("blah", 10))
 
 
 	def test_qanFrameToString(self):
@@ -29,14 +29,14 @@ class QANFrameTests(unittest.TestCase):
 		self.assertEqual("blah|100Q", qanFrameToString(Question("blah", 100)))
 
 		self.assertEqual("blah|100K", qanFrameToString(OkayAnswer("blah", 100)))
-		self.assertEqual("blah|100E", qanFrameToString(ErrorAnswer("blah", 100)))
+		self.assertEqual("blah|100E", qanFrameToString(KnownErrorAnswer("blah", 100)))
 		self.assertEqual("100C", qanFrameToString(Cancellation(100)))
 
 
 	def test_stringToQANFrame(self):
 		self.assertEqual(Question("blah", 10), stringToQANFrame("blah|10Q"))
 		self.assertEqual(OkayAnswer("blah", 10), stringToQANFrame("blah|10K"))
-		self.assertEqual(ErrorAnswer("blah", 10), stringToQANFrame("blah|10E"))
+		self.assertEqual(KnownErrorAnswer("blah", 10), stringToQANFrame("blah|10E"))
 		self.assertEqual(Cancellation(10), stringToQANFrame("10C"))
 		self.assertEqual(Notification("blah"), stringToQANFrame("blahN"))
 
@@ -44,7 +44,7 @@ class QANFrameTests(unittest.TestCase):
 	def test_repr(self):
 		self.assertEqual("Question('blah', 10)", repr(Question('blah', 10)))
 		self.assertEqual("OkayAnswer('blah', 10)", repr(OkayAnswer('blah', 10)))
-		self.assertEqual("ErrorAnswer('blah', 10)", repr(ErrorAnswer('blah', 10)))
+		self.assertEqual("KnownErrorAnswer('blah', 10)", repr(KnownErrorAnswer('blah', 10)))
 		self.assertEqual("Cancellation(10)", repr(Cancellation(10)))
 		self.assertEqual("Notification('blah')", repr(Notification('blah')))
 
@@ -62,7 +62,7 @@ class QANHelperTests(unittest.TestCase):
 			answers.append((answer, 'okay'))
 
 		def gotErrorAnswer(failure):
-			failure.trap(ApplicationError)
+			failure.trap(KnownError)
 			answers.append((failure.value[0], 'error'))
 
 		fatalErrors = ListLog()
@@ -95,8 +95,8 @@ class QANHelperTests(unittest.TestCase):
 		d2 = h.ask("I want an error response to this one")
 		d2.addCallbacks(gotOkayAnswer, gotErrorAnswer)
 
-		# Feed this "ErrorAnswer from the peer" into QANHelper
-		h.handleQANFrame(ErrorAnswer("as asked", 2))
+		# Feed this "KnownErrorAnswer from the peer" into QANHelper
+		h.handleQANFrame(KnownErrorAnswer("as asked", 2))
 
 		self.assertEqual([('as asked', 'error')], answers.getNew())
 
@@ -188,12 +188,12 @@ class QANHelperTests(unittest.TestCase):
 		# inside QANHelper.
 		d2.callback(["rainy", 9000])
 		d1.callback("hurricane")
-		d3.errback(ApplicationError(["weather station is broken", "yep"]))
+		d3.errback(KnownError(["weather station is broken", "yep"]))
 
 		self.assertEqual([
 			OkayAnswer(["rainy", 9000], 2),
 			OkayAnswer("hurricane", 1),
-			ErrorAnswer(["weather station is broken", "yep"], 3),
+			KnownErrorAnswer(["weather station is broken", "yep"], 3),
 		], sent)
 
 
@@ -223,7 +223,7 @@ class QANHelperTests(unittest.TestCase):
 		)
 		def cancellerDoesErrback(d):
 			nonlocal['cancellerDoesErrbackCalled'] = True
-			d.errback(ApplicationError("okay, you'll never know"))
+			d.errback(KnownError("okay, you'll never know"))
 
 		def cancellerDoesCallback(d):
 			nonlocal['cancellerDoesCallbackCalled'] = True
@@ -269,7 +269,7 @@ class QANHelperTests(unittest.TestCase):
 		h.handleQANFrame(Cancellation(2))
 		self.assertTrue(nonlocal['cancellerDoesErrbackCalled'])
 		self.assertEqual([
-			ErrorAnswer("okay, you'll never know", 2),
+			KnownErrorAnswer("okay, you'll never know", 2),
 		], sent.getNew())
 
 		# Cancel Question #4
@@ -280,11 +280,11 @@ class QANHelperTests(unittest.TestCase):
 		], sent.getNew())
 
 		d1.callback("hurricane")
-		d3.errback(ApplicationError("weather station is broken"))
+		d3.errback(KnownError("weather station is broken"))
 
 		self.assertEqual([
 			OkayAnswer("hurricane", 1),
-			ErrorAnswer("weather station is broken", 3),
+			KnownErrorAnswer("weather station is broken", 3),
 		], sent.getNew())
 
 	# TODO: test cancellation of something that has no canceller -> fatalError
