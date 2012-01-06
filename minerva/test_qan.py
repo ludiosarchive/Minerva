@@ -5,7 +5,7 @@ from webmagic.fakes import ListLog
 
 from minerva.qan import (
 	OkayAnswer, ErrorAnswer, Question, Notification, Cancellation, QANHelper,
-	qanFrameToString, stringToQANFrame, InvalidQID, ErrorResponse)
+	qanFrameToString, stringToQANFrame, InvalidQID, ApplicationError)
 
 
 class QANFrameTests(unittest.TestCase):
@@ -62,7 +62,7 @@ class QANHelperTests(unittest.TestCase):
 			answers.append((answer, 'okay'))
 
 		def gotErrorAnswer(failure):
-			failure.trap(ErrorResponse)
+			failure.trap(ApplicationError)
 			answers.append((failure.value[0], 'error'))
 
 		h = QANHelper(None, sendQANFrame, None)
@@ -183,7 +183,7 @@ class QANHelperTests(unittest.TestCase):
 		# inside QANHelper.
 		d2.callback(["rainy", 9000])
 		d1.callback("hurricane")
-		d3.errback(ErrorResponse(["weather station is broken", "yep"]))
+		d3.errback(ApplicationError(["weather station is broken", "yep"]))
 
 		self.assertEqual([
 			OkayAnswer(["rainy", 9000], 2),
@@ -214,7 +214,7 @@ class QANHelperTests(unittest.TestCase):
 		)
 		def cancellerDoesErrback(d):
 			nonlocal['cancellerDoesErrbackCalled'] = True
-			d.errback(ErrorResponse("okay, you'll never know"))
+			d.errback(ApplicationError("okay, you'll never know"))
 
 		def cancellerDoesCallback(d):
 			nonlocal['cancellerDoesCallbackCalled'] = True
@@ -271,7 +271,7 @@ class QANHelperTests(unittest.TestCase):
 		], sent.getNew())
 
 		d1.callback("hurricane")
-		d3.errback(ErrorResponse("weather station is broken"))
+		d3.errback(ApplicationError("weather station is broken"))
 
 		self.assertEqual([
 			OkayAnswer("hurricane", 1),

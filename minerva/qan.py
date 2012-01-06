@@ -173,7 +173,11 @@ def isAnswerFrame(qanFrame):
 	return isinstance(qanFrame, OkayAnswer) or isinstance(qanFrame, ErrorAnswer)
 
 
-class ErrorResponse(Exception):
+# TODO: split *Answer into OkayAnswer, ApplicationErrorAnswer, UnknownExceptionAnswer, DefaultCancelledAnswer
+# actually, no need for DefaultCancelledAnswer, that'll just be UnknownExceptionAnswer("CancelledError")
+# everything else is UnknownExceptionAnswer("Uncaught exception")
+
+class ApplicationError(Exception):
 	pass
 
 
@@ -218,7 +222,7 @@ class QANHelper(object):
 
 	def _maybeSendErrorAnswer(self, failure, qid):
 		del self._theirQuestions[qid]
-		failure.trap(ErrorResponse)
+		failure.trap(ApplicationError)
 
 		self._sendQANFrame(ErrorAnswer(failure.value[0], qid))
 
@@ -229,6 +233,7 @@ class QANHelper(object):
 			try:
 				d = self._ourQuestions.pop(qid)
 			except KeyError:
+				# TODO: call _fatalError instead
 				raise InvalidQID("Invalid qid: %r" % (qid,))
 
 			if d is None:
@@ -237,7 +242,7 @@ class QANHelper(object):
 			elif isinstance(qanFrame, OkayAnswer):
 				d.callback(qanFrame.body)
 			else:
-				d.errback(ErrorResponse(qanFrame.body))
+				d.errback(ApplicationError(qanFrame.body))
 
 		elif isinstance(qanFrame, Notification):
 			self._bodyReceived(qanFrame.body, False)
