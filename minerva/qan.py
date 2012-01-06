@@ -6,7 +6,8 @@ it even further: there is no command dispatching, and requests/responses
 are completely unspecified.  (Though some helper functions here assume
 that the requests/responses are bytestrings.)
 
-QAN does not require Minerva; you can use it over any bidirectional stream.
+QAN does not require Minerva; you can use it over any bidirectional framed
+stream.
 """
 
 import sys
@@ -188,18 +189,22 @@ class InvalidQID(Exception):
 
 
 class QANHelper(object):
-	def __init__(self, bodyReceived, sendQANFrame, resetStream):
+	def __init__(self, bodyReceived, sendQANFrame, fatalError):
 		"""
 		@param bodyReceived: The 2-arg function to call when
 			a Question or Notification is received (via a call to .handleString).
+			Called with arguments: body, isQuestion.
 
-		@param sendQANFrame: A function that sends a QAN frame to the peer.
+		@param sendQANFrame: A 1-arg function that sends a QAN frame to the
+			peer.  Called with argument: qanFrame.
 
-		@param resetStream: A function that works like Stream.resetStream
+		@param fatalError: A 1-arg function called when QANHelper can no longer
+			handle QAN frames.  Called with argument: reason (restricted
+			string).
 		"""
 		self._bodyReceived = bodyReceived
 		self._sendQANFrame = sendQANFrame
-		self._resetStream = resetStream
+		self._fatalError = fatalError
 
 		self._qidCounter = 1
 		self._ourQuestions = {}
@@ -211,7 +216,7 @@ class QANHelper(object):
 		self._sendQANFrame(OkayAnswer(s, qid))
 
 
-	def _resetOrSendErrorAnswer(self, failure, qid):
+	def _maybeSendErrorAnswer(self, failure, qid):
 		del self._theirQuestions[qid]
 		failure.trap(ErrorResponse)
 
@@ -242,13 +247,13 @@ class QANHelper(object):
 			d = defer.maybeDeferred(
 				self._bodyReceived, qanFrame.body, True)
 			if qid in self._theirQuestions:
-				self._resetStream("Received Question with duplicate qid: %r" % (qid,))
+				self._fatalError("Received Question with duplicate qid: %d" % (qid,))
 				return
 			self._theirQuestions[qid] = d
 			d.addCallbacks(
-				self._sendOkayAnswer, self._resetOrSendErrorAnswer,
+				self._sendOkayAnswer, self._maybeSendErrorAnswer,
 				callbackArgs=(qid,), errbackArgs=(qid,))
-			d.addErrback(log.err) # TODO: reset Stream?
+			d.addErrback(log.err) # TODO: call fatalError?
 
 		elif isinstance(qanFrame, Cancellation):
 			qid = qanFrame.qid
