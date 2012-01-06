@@ -249,11 +249,11 @@ class QANHelper(object):
 
 		elif isinstance(qanFrame, Question):
 			qid = qanFrame.qid
-			d = defer.maybeDeferred(
-				self._bodyReceived, qanFrame.body, True)
 			if qid in self._theirQuestions:
 				self._fatalError("Received Question with duplicate qid: %d" % (qid,))
 				return
+			d = defer.maybeDeferred(
+				self._bodyReceived, qanFrame.body, True)
 			self._theirQuestions[qid] = d
 			d.addCallbacks(
 				self._sendOkayAnswer, self._maybeSendErrorAnswer,

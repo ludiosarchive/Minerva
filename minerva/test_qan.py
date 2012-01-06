@@ -193,7 +193,9 @@ class QANHelperTests(unittest.TestCase):
 
 
 	def test_questionReceivedDuplicateQid(self):
+		received = ListLog()
 		def bodyReceived(body, isQuestion):
+			received.append((body, isQuestion))
 			return defer.Deferred()
 
 		nonlocal = dict(fatalReason=None)
@@ -203,6 +205,8 @@ class QANHelperTests(unittest.TestCase):
 		h = QANHelper(bodyReceived, None, fatalError)
 		h.handleQANFrame(Question("what?", 1))
 		h.handleQANFrame(Question("where?", 1))
+
+		self.assertEqual([("what?", True)], received.getNew())
 
 		self.assertEqual("Received Question with duplicate qid: 1", nonlocal['fatalReason'])
 
