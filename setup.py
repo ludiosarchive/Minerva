@@ -71,7 +71,7 @@ setup(
 		,'Jinja2 >= 2.1'
 		,'simplejson >= 2.1'
 		,'Coreweb >= 11.6.17'
-		,'Webmagic >= 11.12.18'
+		,'Webmagic >= 12.1.4'
 		,'Securetypes >= 11.5.6'
 		,'Strfrag >= 11.5.9'
 	],
