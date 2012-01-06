@@ -243,14 +243,14 @@ class QANHelperTests(unittest.TestCase):
 
 		# Cancel Question #2
 		h.handleQANFrame(Cancellation(2))
-		self.assertEqual(True, nonlocal['cancellerDoesErrbackCalled'])
+		self.assertTrue(nonlocal['cancellerDoesErrbackCalled'])
 		self.assertEqual([
 			ErrorAnswer("okay, you'll never know", 2),
 		], sent.getNew())
 
 		# Cancel Question #4
 		h.handleQANFrame(Cancellation(4))
-		self.assertEqual(True, nonlocal['cancellerDoesCallbackCalled'])
+		self.assertTrue(nonlocal['cancellerDoesCallbackCalled'])
 		self.assertEqual([
 			OkayAnswer("maybe a little warm", 4)
 		], sent.getNew())
@@ -286,3 +286,10 @@ class QANHelperTests(unittest.TestCase):
 		self.assertEqual([
 			Cancellation(1),
 		], sent.getNew())
+
+		self.assertTrue(d.called)
+		d2 = self.assertFailure(d, defer.CancelledError)
+		assert d2.called
+
+		# Peer always sends an answer, which QANHelper must ignore.
+		h.handleQANFrame(OkayAnswer("nope", 1))

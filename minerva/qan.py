@@ -226,7 +226,10 @@ class QANHelper(object):
 			except KeyError:
 				raise InvalidQID("Invalid qid: %r" % (qid,))
 
-			if isinstance(qanFrame, OkayAnswer):
+			if d is None:
+				# Ignore the answer to a question we cancelled
+				pass
+			elif isinstance(qanFrame, OkayAnswer):
 				d.callback(qanFrame.body)
 			else:
 				d.errback(ErrorResponse(qanFrame.body))
@@ -259,11 +262,15 @@ class QANHelper(object):
 
 
 	def _sendCancel(self, qid):
+		self._ourQuestions[qid] = None
+
 		# Note: when we cancel something, we still expect to get either
-		# (1) an OkayAnswer or ErrorAnswer from the peer, or
-		# (2) a Stream reset due to an uncaught exception, such as a
-		# a CancelledError (due to lacking a canceller), or another exception.
+		# an OkayAnswer or ErrorAnswer from the peer, at least in the
+		# typical case where the Stream does not reset.
 		self._sendQANFrame(Cancellation(qid))
+
+		# Because we don't call .callback or .errback in this canceller,
+		# Deferred calls .errback(CancelledError()) for us.
 
 
 	def ask(self, body):
