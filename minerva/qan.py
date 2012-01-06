@@ -108,7 +108,7 @@ qanTypeToCode = {
 	,KnownErrorAnswer: "E"
 	,UnknownErrorAnswer: "U"
 	,Cancellation: "C"
-	,Notification: "N"
+	,Notification: "#"
 }
 
 
@@ -157,7 +157,7 @@ def stringToQANFrame(frameString):
 	except IndexError:
 		raise InvalidQANFrame("0-length frame")
 
-	if lastByte == "N":
+	if lastByte == "#":
 		return Notification(frameString[:-1])
 	elif lastByte == "C":
 		qid = _qidOrThrow(frameString[:-1])

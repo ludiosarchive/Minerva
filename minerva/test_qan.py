@@ -23,7 +23,7 @@ class QANFrameTests(unittest.TestCase):
 
 
 	def test_qanFrameToString(self):
-		self.assertEqual("blahN", qanFrameToString(Notification("blah")))
+		self.assertEqual("blah#", qanFrameToString(Notification("blah")))
 
 		self.assertEqual("blah|0Q", qanFrameToString(Question("blah", 0)))
 		self.assertEqual("blah|100Q", qanFrameToString(Question("blah", 100)))
@@ -38,7 +38,7 @@ class QANFrameTests(unittest.TestCase):
 		self.assertEqual(OkayAnswer("blah", 10), stringToQANFrame("blah|10K"))
 		self.assertEqual(KnownErrorAnswer("blah", 10), stringToQANFrame("blah|10E"))
 		self.assertEqual(Cancellation(10), stringToQANFrame("10C"))
-		self.assertEqual(Notification("blah"), stringToQANFrame("blahN"))
+		self.assertEqual(Notification("blah"), stringToQANFrame("blah#"))
 
 
 	def test_repr(self):
@@ -287,10 +287,11 @@ class QANHelperTests(unittest.TestCase):
 			KnownErrorAnswer("weather station is broken", 3),
 		], sent.getNew())
 
-	# TODO: test cancellation of something that has no canceller -> fatalError
-	# (due to CancelledError)
-	# or perhaps we want a RemoteCancelledError, so that .cancel() doesn't
-	# cause fatalError by default
+	# TODO: test cancellation of something that has no canceller ->
+	# UnknownErrorResponse("CancelledError")
+
+	# TODO: test exception raised by bodyReceived ->
+	# UnknownErrorResponse("Uncaught exception")
 
 	def test_theyCancelNonexistentQuestion(self):
 		h = QANHelper(None, None, None)
