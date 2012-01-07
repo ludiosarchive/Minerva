@@ -94,9 +94,9 @@ class QANHelperTests(unittest.TestCase):
 		self.assertEqual(["Received an answer with invalid qid: 100"], fatalErrors.getNew())
 
 		# Feed this "OkayAnswer from the peer" into QANHelper
-		h.handleQANFrame(OkayAnswer("chicken butt", 1))
+		h.handleQANFrame(OkayAnswer("no.", 1))
 
-		self.assertEqual([('chicken butt', 'okay')], answers.getNew())
+		self.assertEqual([('no.', 'okay')], answers.getNew())
 
 
 		d2 = h.ask("I want an error response to this one")
