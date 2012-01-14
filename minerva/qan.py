@@ -3,8 +3,8 @@ QAN is a protocol that allows asking the peer a question and receiving an
 answer or error-answer.  You can think of this as the "simplest wire-level
 implementation of Deferreds", which is what AMP calls itself, though QAN takes
 it even further: there is no command dispatching, and requests/responses
-are completely unspecified.  (Though some helper functions here assume
-that the requests/responses are bytestrings.)
+are completely unspecified.  (Though there are some helper functions here
+that assume the requests/responses are bytestrings.)
 
 QAN does not require Minerva; you can use it over any bidirectional framed
 stream.
