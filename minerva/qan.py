@@ -304,6 +304,16 @@ class QANHelper(object):
 
 
 	def ask(self, body):
+		"""
+		Send a Question to the peer.
+
+		@param body: The question body
+		@type body: *
+
+		@return: a Deferred that will callback the response object, or errback
+			with L{KnownErrorAnswer} or L{UnknownErrorAnswer}.
+		@rtype: L{defer.Deferred}
+		"""
 		self._qidCounter += 1
 		qid = self._qidCounter
 		self._sendQANFrame(Question(body, qid))
@@ -315,6 +325,15 @@ class QANHelper(object):
 
 
 	def notify(self, body):
+		"""
+		Send a Notification to the peer.
+
+		@param body: The notification body
+		@type body: *
+
+		@return: None
+		@rtype: C{None}
+		"""
 		self._sendQANFrame(Notification(body))
 
 
