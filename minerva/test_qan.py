@@ -6,7 +6,8 @@ from webmagic.fakes import ListLog
 
 from minerva.qan import (
 	OkayAnswer, KnownErrorAnswer, UnknownErrorAnswer, Question, Notification,
-	Cancellation, QANHelper, qanFrameToString, stringToQANFrame, KnownError, UnknownError)
+	Cancellation, QANHelper, qanFrameToString, InvalidQANFrame,
+	stringToQANFrame, KnownError, UnknownError)
 
 
 class QANFrameTests(unittest.TestCase):
@@ -31,15 +32,27 @@ class QANFrameTests(unittest.TestCase):
 
 		self.assertEqual("blah|100K", qanFrameToString(OkayAnswer("blah", 100)))
 		self.assertEqual("blah|100E", qanFrameToString(KnownErrorAnswer("blah", 100)))
+		self.assertEqual("blah|100U", qanFrameToString(UnknownErrorAnswer("blah", 100)))
 		self.assertEqual("100C", qanFrameToString(Cancellation(100)))
 
 
-	def test_stringToQANFrame(self):
+	def test_stringToQANFrameValid(self):
 		self.assertEqual(Question("blah", 10), stringToQANFrame("blah|10Q"))
 		self.assertEqual(OkayAnswer("blah", 10), stringToQANFrame("blah|10K"))
 		self.assertEqual(KnownErrorAnswer("blah", 10), stringToQANFrame("blah|10E"))
+		self.assertEqual(UnknownErrorAnswer("blah", 10), stringToQANFrame("blah|10U"))
 		self.assertEqual(Cancellation(10), stringToQANFrame("10C"))
 		self.assertEqual(Notification("blah"), stringToQANFrame("blah#"))
+
+
+	def test_stringToQANFrameInvalid(self):
+		self.assertRaises(InvalidQANFrame, lambda: stringToQANFrame(""))
+		self.assertRaises(InvalidQANFrame, lambda: stringToQANFrame("whatX"))
+		self.assertRaises(InvalidQANFrame, lambda: stringToQANFrame("blah|10X"))
+		self.assertRaises(InvalidQANFrame, lambda: stringToQANFrame("1x0C"))
+		self.assertRaises(InvalidQANFrame, lambda: stringToQANFrame("C"))
+		self.assertRaises(InvalidQANFrame, lambda: stringToQANFrame("blah|1x0Q"))
+		self.assertRaises(InvalidQANFrame, lambda: stringToQANFrame("Q"))
 
 
 	def test_repr(self):

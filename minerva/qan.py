@@ -164,7 +164,10 @@ def stringToQANFrame(frameString):
 		qid = _qidOrThrow(frameString[:-1])
 		return Cancellation(qid)
 	else:
-		body, rest = frameString.rsplit('|', 1)
+		try:
+			body, rest = frameString.rsplit('|', 1)
+		except ValueError:
+			raise InvalidQANFrame("Expected pipe char in frame")
 		qid = _qidOrThrow(rest[:-1])
 
 		if lastByte == "Q":
