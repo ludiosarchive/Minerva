@@ -93,6 +93,9 @@ class QANHelperTests(unittest.TestCase):
 		h.handleQANFrame(OkayAnswer("answer with wrong qid", 100))
 		self.assertEqual(["Received an answer with invalid qid: 100"], fatalErrors.getNew())
 
+		### TODO: we might have to set up a new QANHelper after the fatalError;
+		### the current implementation is lenient.
+
 		# Feed this "OkayAnswer from the peer" into QANHelper
 		h.handleQANFrame(OkayAnswer("no.", 1))
 
