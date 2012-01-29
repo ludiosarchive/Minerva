@@ -1,4 +1,5 @@
 from twisted.internet import defer
+from twisted.python import failure
 from twisted.trial import unittest
 
 from webmagic.fakes import ListLog
@@ -53,10 +54,12 @@ class QANFrameTests(unittest.TestCase):
 class QANHelperTests(unittest.TestCase):
 
 	def test_repr(self):
-		h = QANHelper(None, lambda _: None, None)
-		self.assertEqual("<QANHelper asked 0 questions, waiting for 0 peer answers and 0 local answers>", repr(h))
+		h = QANHelper(None, None, lambda _: None, None)
+		self.assertEqual("<QANHelper asked 0 questions, waiting for 0 "
+			"peer answers and 0 local answers>", repr(h))
 		h.ask("what?")
-		self.assertEqual("<QANHelper asked 1 questions, waiting for 1 peer answers and 0 local answers>", repr(h))
+		self.assertEqual("<QANHelper asked 1 questions, waiting for 1 "
+			"peer answers and 0 local answers>", repr(h))
 
 
 	def test_ask(self):
@@ -76,7 +79,7 @@ class QANHelperTests(unittest.TestCase):
 		def fatalError(msg):
 			fatalErrors.append(msg)
 
-		h = QANHelper(None, sendQANFrame, fatalError)
+		h = QANHelper(None, None, sendQANFrame, fatalError)
 		d1 = h.ask("what?")
 		d1.addCallbacks(gotOkayAnswer, gotErrorAnswer)
 
@@ -116,7 +119,7 @@ class QANHelperTests(unittest.TestCase):
 		def sendQANFrame(frame):
 			sent.append(frame)
 
-		h = QANHelper(None, sendQANFrame, None)
+		h = QANHelper(None, None, sendQANFrame, None)
 		ret = h.notify("you've got mail")
 		self.assertIdentical(None, ret)
 
@@ -131,7 +134,7 @@ class QANHelperTests(unittest.TestCase):
 		def bodyReceived(body, isQuestion):
 			received.append((body, isQuestion))
 
-		h = QANHelper(bodyReceived, None, None)
+		h = QANHelper(bodyReceived, None, None, None)
 		h.handleQANFrame(Notification("poke"))
 		h.handleQANFrame(Notification("and again"))
 		self.assertEqual([
@@ -150,7 +153,7 @@ class QANHelperTests(unittest.TestCase):
 		def sendQANFrame(frame):
 			sent.append(frame)
 
-		h = QANHelper(bodyReceived, sendQANFrame, None)
+		h = QANHelper(bodyReceived, None, sendQANFrame, None)
 		h.handleQANFrame(Question("the weather?", 1))
 		h.handleQANFrame(Question("how about now?", 2))
 		self.assertEqual([
@@ -179,7 +182,7 @@ class QANHelperTests(unittest.TestCase):
 		def sendQANFrame(frame):
 			sent.append(frame)
 
-		h = QANHelper(bodyReceived, sendQANFrame, None)
+		h = QANHelper(bodyReceived, None, sendQANFrame, None)
 		d1 = answerDs[0]
 		d2 = answerDs[1]
 		d3 = answerDs[2]
@@ -217,7 +220,7 @@ class QANHelperTests(unittest.TestCase):
 		def fatalError(reason):
 			nonlocal['fatalReason'] = reason
 
-		h = QANHelper(bodyReceived, None, fatalError)
+		h = QANHelper(bodyReceived, None, None, fatalError)
 		h.handleQANFrame(Question("what?", 1))
 		h.handleQANFrame(Question("where?", 1))
 
@@ -254,7 +257,7 @@ class QANHelperTests(unittest.TestCase):
 		def sendQANFrame(frame):
 			sent.append(frame)
 
-		h = QANHelper(bodyReceived, sendQANFrame, None)
+		h = QANHelper(bodyReceived, None, sendQANFrame, None)
 		d1 = answerDs[0]
 		d2 = answerDs[1]
 		d3 = answerDs[2]
@@ -301,10 +304,37 @@ class QANHelperTests(unittest.TestCase):
 	# UnknownErrorResponse("CancelledError")
 
 	# TODO: test exception raised by bodyReceived ->
-	# UnknownErrorResponse("Uncaught exception")
+	# for Question: logError and UnknownErrorResponse("Uncaught exception")
+	# for Notification: logError
+
+	def test_questionCausesException(self):
+		"""
+		A Question that causes bodyReceived to raise an exception leads
+		to a call to logError, and an UnknownErrorResponse("Uncaught exception")
+		sent to the peer.
+		"""
+		loggedErrors = []
+		def logError(message, failure):
+			loggedErrors.append((message, failure))
+
+		def bodyReceived(body, isQuestion):
+			raise ValueError("bodyReceived did something wrong")
+
+		sent = ListLog()
+		def sendQANFrame(frame):
+			sent.append(frame)
+
+		h = QANHelper(bodyReceived, logError, sendQANFrame, None)
+		h.handleQANFrame(Question("How much wood would a wood chuck chuck?", 1))
+
+		self.assertEqual("Peer's Question #1 caused uncaught exception", loggedErrors[0][0])
+		self.assertIsInstance(loggedErrors[0][1], failure.Failure)
+
+		self.assertEqual([UnknownErrorAnswer("Uncaught exception", 1)], sent.getNew())
+
 
 	def test_theyCancelNonexistentQuestion(self):
-		h = QANHelper(None, None, None)
+		h = QANHelper(None, None, None, None)
 		# Cancellation a nonexistent Question does not raise an error
 		h.handleQANFrame(Cancellation(1))
 		h.handleQANFrame(Cancellation(1))
@@ -316,7 +346,7 @@ class QANHelperTests(unittest.TestCase):
 		def sendQANFrame(frame):
 			sent.append(frame)
 
-		h = QANHelper(None, sendQANFrame, None)
+		h = QANHelper(None, None, sendQANFrame, None)
 		d = h.ask("going to the theater?")
 
 		self.assertEqual([

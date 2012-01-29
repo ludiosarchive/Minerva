@@ -193,11 +193,14 @@ class UnknownError(Exception):
 
 
 class QANHelper(object):
-	def __init__(self, bodyReceived, sendQANFrame, fatalError):
+	def __init__(self, bodyReceived, logError, sendQANFrame, fatalError):
 		"""
 		@param bodyReceived: The 2-arg function to call when
 			a Question or Notification is received (via a call to .handleString).
 			Called with arguments: body, isQuestion.
+
+		@param logError: A 2-arg function called when bodyReceived raises
+			an exception.  Called with arguments: error message, L{Failure} object
 
 		@param sendQANFrame: A 1-arg function that sends a QAN frame to the
 			peer.  Called with argument: qanFrame.
@@ -207,6 +210,7 @@ class QANHelper(object):
 			string).
 		"""
 		self._bodyReceived = bodyReceived
+		self._logError = logError
 		self._sendQANFrame = sendQANFrame
 		self._fatalError = fatalError
 
@@ -232,11 +236,13 @@ class QANHelper(object):
 		if failure.check(KnownError):
 			self._sendQANFrame(KnownErrorAnswer(failure.value[0], qid))
 		elif failure.check(defer.CancelledError):
-			self._sendQANFrame(UnknownErrorAnswer("CancelledError"))
+			self._sendQANFrame(UnknownErrorAnswer("CancelledError", qid))
 		else:
+			self._logError("Peer's Question #%d caused uncaught "
+				"exception" % (qid,), failure)
 			# We intentionally do not reveal information about the
 			# exception.
-			self._sendQANFrame(UnknownErrorAnswer("Uncaught exception"))
+			self._sendQANFrame(UnknownErrorAnswer("Uncaught exception", qid))
 
 
 	def handleQANFrame(self, qanFrame):
