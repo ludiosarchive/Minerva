@@ -303,10 +303,6 @@ class QANHelperTests(unittest.TestCase):
 	# TODO: test cancellation of something that has no canceller ->
 	# UnknownErrorResponse("CancelledError")
 
-	# TODO: test exception raised by bodyReceived ->
-	# for Question: logError and UnknownErrorResponse("Uncaught exception")
-	# for Notification: logError
-
 	def test_questionCausesException(self):
 		"""
 		A Question that causes bodyReceived to raise an exception leads
@@ -331,6 +327,31 @@ class QANHelperTests(unittest.TestCase):
 		self.assertIsInstance(loggedErrors[0][1], failure.Failure)
 
 		self.assertEqual([UnknownErrorAnswer("Uncaught exception", 1)], sent.getNew())
+
+
+	def test_notificationCausesException(self):
+		"""
+		A Notification that causes bodyReceived to raise an exception leads
+		to a call to logError, and no response sent to the peer.
+		"""
+		loggedErrors = []
+		def logError(message, failure):
+			loggedErrors.append((message, failure))
+
+		def bodyReceived(body, isQuestion):
+			raise ValueError("bodyReceived did something wrong")
+
+		sent = ListLog()
+		def sendQANFrame(frame):
+			sent.append(frame)
+
+		h = QANHelper(bodyReceived, logError, sendQANFrame, None)
+		h.handleQANFrame(Notification("You've got more mail"))
+
+		self.assertEqual("Peer's Notification caused uncaught exception", loggedErrors[0][0])
+		self.assertIsInstance(loggedErrors[0][1], failure.Failure)
+
+		self.assertEqual([], sent.getNew())
 
 
 	def test_theyCancelNonexistentQuestion(self):

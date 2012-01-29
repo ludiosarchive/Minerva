@@ -13,6 +13,7 @@ stream.
 import sys
 import operator
 
+from twisted.python import failure
 from twisted.internet import defer
 from twisted.python import log
 
@@ -267,7 +268,11 @@ class QANHelper(object):
 				raise RuntimeError("handleQANFrame bug")
 
 		elif isinstance(qanFrame, Notification):
-			self._bodyReceived(qanFrame.body, False)
+			try:
+				self._bodyReceived(qanFrame.body, False)
+			except Exception:
+				self._logError("Peer's Notification caused uncaught "
+					"exception", failure.Failure())
 
 		elif isinstance(qanFrame, Question):
 			qid = qanFrame.qid
