@@ -84,9 +84,11 @@ class QANHelperTests(unittest.TestCase):
 		def gotOkayAnswer(answer):
 			answers.append((answer, 'okay'))
 
-		def gotErrorAnswer(failure):
-			failure.trap(KnownError)
-			answers.append((failure.value[0], 'error'))
+		def gotErrorAnswerExpect(expectedFailure):
+			def gotErrorAnswer(failure):
+				failure.trap(expectedFailure)
+				answers.append((failure.value[0], 'error'))
+			return gotErrorAnswer
 
 		fatalErrors = ListLog()
 		def fatalError(msg):
@@ -94,7 +96,7 @@ class QANHelperTests(unittest.TestCase):
 
 		h = QANHelper(None, None, sendQANFrame, fatalError)
 		d1 = h.ask("what?")
-		d1.addCallbacks(gotOkayAnswer, gotErrorAnswer)
+		d1.addCallbacks(gotOkayAnswer, gotErrorAnswerExpect(None))
 
 		# Make sure QANHelper wrote something to the peer
 		self.assertEqual([
@@ -118,13 +120,22 @@ class QANHelperTests(unittest.TestCase):
 		self.assertEqual([('no.', 'okay')], answers.getNew())
 
 
-		d2 = h.ask("I want an error response to this one")
-		d2.addCallbacks(gotOkayAnswer, gotErrorAnswer)
+		d2 = h.ask("I want a KnownError response to this one")
+		d2.addCallbacks(gotOkayAnswer, gotErrorAnswerExpect(KnownError))
 
 		# Feed this "KnownErrorAnswer from the peer" into QANHelper
-		h.handleQANFrame(KnownErrorAnswer("as asked", 2))
+		h.handleQANFrame(KnownErrorAnswer("KnownErrorAnswer as asked", 2))
 
-		self.assertEqual([('as asked', 'error')], answers.getNew())
+		self.assertEqual([('KnownErrorAnswer as asked', 'error')], answers.getNew())
+
+
+		d3 = h.ask("I want an UnknownError response to this one")
+		d3.addCallbacks(gotOkayAnswer, gotErrorAnswerExpect(UnknownError))
+
+		# Feed this "UnknownErrorAnswer from the peer" into QANHelper
+		h.handleQANFrame(UnknownErrorAnswer("UnknownErrorAnswer as asked", 3))
+
+		self.assertEqual([('UnknownErrorAnswer as asked', 'error')], answers.getNew())
 
 
 	def test_notify(self):
