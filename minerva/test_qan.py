@@ -305,7 +305,10 @@ class QANHelperTests(unittest.TestCase):
 
 	def test_theyCancelNonexistentQuestion(self):
 		h = QANHelper(None, None, None)
+		# Cancellation a nonexistent Question does not raise an error
 		h.handleQANFrame(Cancellation(1))
+		h.handleQANFrame(Cancellation(1))
+		h.handleQANFrame(Cancellation(2))
 
 
 	def test_weCancel(self):
