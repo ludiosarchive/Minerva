@@ -292,11 +292,14 @@ class QANHelperTests(unittest.TestCase):
 			OkayAnswer("maybe a little warm", 4)
 		], sent.getNew())
 
-		d1.callback("hurricane")
-		d3.errback(KnownError("weather station is broken"))
-
+		# Cancel Question #1, which has no canceller
+		h.handleQANFrame(Cancellation(1))
 		self.assertEqual([
-			OkayAnswer("hurricane", 1),
+			UnknownErrorAnswer("CancelledError", 1),
+		], sent.getNew())
+
+		d3.errback(KnownError("weather station is broken"))
+		self.assertEqual([
 			KnownErrorAnswer("weather station is broken", 3),
 		], sent.getNew())
 
