@@ -205,10 +205,10 @@ class IQANProtocol(Interface):
 		@param isQuestion: True if the QAN body arrived as a question that can
 			be answered, False if it arrived as a Notfication.  If it is a question,
 			this method's return value (or Deferred) will be used as the answer.
-			If L{qan.KnownError} is raised (or errbacked), the string value of
-			the L{qan.KnownError} will be sent as the error-answer.  If another
-			exception is raised, an uninformative unknown-error-answer will
-			be sent to the peer.
+			Answer *must* be a restricted string C{str}.  If L{qan.KnownError}
+			is raised (or errbacked), the string value of the L{qan.KnownError}
+			will be sent as the error-answer.  If another exception is raised,
+			an uninformative unknown-error-answer will be sent to the peer.
 		@type s: C{str}
 
 		@return: If C{isQuestion}, an answer to the question.
