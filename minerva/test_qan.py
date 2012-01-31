@@ -24,7 +24,7 @@ class QANFrameTests(unittest.TestCase):
 		self.assertNotEqual(Question("blah", 10), KnownErrorAnswer("blah", 10))
 
 
-	def test_qanFrameToString(self):
+	def test_qanFrameToStringValid(self):
 		self.assertEqual("blah#", qanFrameToString(Notification("blah")))
 
 		self.assertEqual("blah|0Q", qanFrameToString(Question("blah", 0)))
@@ -34,6 +34,11 @@ class QANFrameTests(unittest.TestCase):
 		self.assertEqual("blah|100E", qanFrameToString(KnownErrorAnswer("blah", 100)))
 		self.assertEqual("blah|100U", qanFrameToString(UnknownErrorAnswer("blah", 100)))
 		self.assertEqual("100C", qanFrameToString(Cancellation(100)))
+
+
+	def test_qanFrameToStringInvalid(self):
+		for bad in [None, True, False, u"blah", 3, 3.0, (), [], {}, object()]:
+			self.assertRaises(TypeError, lambda: qanFrameToString(Notification(bad)))
 
 
 	def test_stringToQANFrameValid(self):

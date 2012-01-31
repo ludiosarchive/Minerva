@@ -113,23 +113,30 @@ qanTypeToCode = {
 }
 
 
-def qanFrameToString(qf):
+def qanFrameToString(qanFrame):
 	"""
-	@param qf: The QAN frame to encode
-	@type qf: a L{Question} or L{OkayAnswer} or L{ErrorAnswer} or
-		L{Cancellation} or L{Notification}, all of which must have a C{str} C{.body}.
+	@param qanFrame: The QAN frame to encode
+	@type qanFrame: a L{Question} or L{OkayAnswer} or L{KnownErrorAnswer} or
+		L{UnknownErrorAnswer} or L{Cancellation} or L{Notification}, all of
+		which must have a restricted string C{str} C{.body}.  (Except for
+		L{Cancellation}, which has no C{.body}.)
 
 	@return: The encoded QAN frame
 	@rtype: str
 	"""
-	qanFrameType = type(qf)
+	qanFrameType = type(qanFrame)
 	code = qanTypeToCode[qanFrameType]
-	if qanFrameType == Notification:
-		return qf.body + code
-	elif qanFrameType == Cancellation:
-		return str(qf.qid) + code
+	if qanFrameType == Cancellation:
+		return str(qanFrame.qid) + code
 	else:
-		return qf.body + "|" + str(qf.qid) + code
+		if not isinstance(qanFrame.body, str):
+			raise TypeError("qanFrame.body must be a str, was %r" % (
+				qanFrame.body,))
+
+		if qanFrameType == Notification:
+			return qanFrame.body + code
+		else:
+			return qanFrame.body + "|" + str(qanFrame.qid) + code
 
 
 class InvalidQANFrame(Exception):
@@ -350,9 +357,6 @@ class QANHelper(object):
 		"""
 		self._sendQANFrame(Notification(body))
 
-
-# class QANProtocol
-# TODO: Show a helpful exception message if return value from bodyReceived is None
 
 
 try: from refbinder.api import bindRecursive
