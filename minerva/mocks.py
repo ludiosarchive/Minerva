@@ -13,7 +13,7 @@ from strfrag import StringFragment
 
 from minerva.window import SACK, Queue, Incoming
 from minerva.mserver import (
-	NoSuchStream, IMinervaProtocol, IMinervaFactory, StreamAlreadyExists)
+	NoSuchStream, IStringProtocol, IStringFactory, StreamAlreadyExists)
 from minerva.decoders import OK
 from minerva.frames import decodeFrameFromServer
 
@@ -154,8 +154,8 @@ class MockServerStream(object):
 
 
 
-class _MockMinervaProtocol(object):
-	implements(IMinervaProtocol)
+class _MockStringProtocol(object):
+	implements(IStringProtocol)
 
 	def __init__(self, callFrom=(), callWhat=()):
 		self._callFrom = callFrom
@@ -188,7 +188,7 @@ class _MockMinervaProtocol(object):
 
 
 
-class MockMinervaStringsProtocol(_MockMinervaProtocol):
+class MockStringsProtocol(_MockStringProtocol):
 
 	def stringsReceived(self, strings):
 		self.log.append(['stringsReceived', strings])
@@ -197,7 +197,7 @@ class MockMinervaStringsProtocol(_MockMinervaProtocol):
 
 
 
-class MockMinervaStringProtocol(_MockMinervaProtocol):
+class MockStringProtocol(_MockStringProtocol):
 
 	def stringReceived(self, s):
 		self.log.append(['stringReceived', s])
@@ -206,10 +206,10 @@ class MockMinervaStringProtocol(_MockMinervaProtocol):
 
 
 
-class MockMinervaStringsProtocolFactory(object):
-	implements(IMinervaFactory)
+class MockStringsFactory(object):
+	implements(IStringFactory)
 
-	protocol = MockMinervaStringsProtocol
+	protocol = MockStringsProtocol
 
 	def __init__(self):
 		self.instances = set()
@@ -222,10 +222,10 @@ class MockMinervaStringsProtocolFactory(object):
 
 
 
-class MockMinervaStringProtocolFactory(object):
-	implements(IMinervaFactory)
+class MockStringFactory(object):
+	implements(IStringFactory)
 
-	protocol = MockMinervaStringProtocol
+	protocol = MockStringProtocol
 
 	def __init__(self):
 		self.instances = set()

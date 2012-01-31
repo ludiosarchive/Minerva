@@ -30,7 +30,7 @@ from minerva import decoders
 from minerva.objcheck import strToNonNegLimit
 from minerva.window import SACK, Queue, Incoming
 from minerva.mutils import htmldumps
-from minerva.interfaces import IConsumerWithoutWrite, IMinervaProtocol, IMinervaFactory
+from minerva.interfaces import IConsumerWithoutWrite, IStringProtocol, IStringFactory
 from minerva.frames import (
 	HelloFrame, StringFrame, SeqNumFrame, SackFrame, StreamStatusFrame,
 	StreamCreatedFrame, YouCloseItFrame, ResetFrame, CommentFrame,
@@ -68,10 +68,10 @@ class UnknownSubprotocol(Exception):
 
 class SubprotocolProtocol(object):
 	"""
-	An implementation of L{IMinervaProtocol} that creates and proxies
+	An implementation of L{IStringProtocol} that creates and proxies
 	strings to a subprotocol after a "subprotocol:..." string is received.
 	"""
-	implements(IMinervaProtocol)
+	implements(IStringProtocol)
 	__slots__ = ('stream', 'factory', '_clock', '_reset', '_childProtocol',
 		'_stringsReceived')
 
@@ -132,10 +132,10 @@ class SubprotocolProtocol(object):
 
 class SubprotocolFactory(object):
 	"""
-	An implementation of L{IMinervaFactory} that creates a protocol that
+	An implementation of L{IStringFactory} that creates a protocol that
 	proxies strings to a subprotocol after a "subprotocol:..." string is received.
 	"""
-	implements(IMinervaFactory)
+	implements(IStringFactory)
 	__slots__ = ('_clock', '_subfactories')
 
 	protocol = SubprotocolProtocol
@@ -144,7 +144,7 @@ class SubprotocolFactory(object):
 		"""
 		C{clock} is an L{IReactorTime} provider.
 		C{subfactories} is a dict of subprotocol name (str) ->
-			an L{IMinervaFactory} provider.
+			an L{IStringFactory} provider.
 		"""
 		self._clock = clock
 		self._subfactories = subfactories
@@ -493,7 +493,7 @@ class ServerStream(object):
 
 
 	# Called when we have a new primary transport, or when a
-	# MinervaProtocol registers a producer with us (ServerStream).
+	# IStringProtocol registers a producer with us (ServerStream).
 	def _registerProducerOnPrimary(self):
 		if not self._primaryHasProducer:
 			self._primaryTransport.registerProducer(self, self._streamingProducer)
@@ -547,7 +547,7 @@ class ServerStream(object):
 
 	# This is a copy/paste from twisted.internet.interfaces.IConsumer with changes.
 
-	# Called by MinervaProtocol instances or anyone else interested in the
+	# Called by IStringProtocol instances or anyone else interested in the
 	# ServerStream.
 
 	# The only reason we have this is because not all MinervaProtocols will
@@ -586,7 +586,7 @@ class ServerStream(object):
 			self._registerProducerOnPrimary()
 
 
-	# called by MinervaProtocol instances or anyone else interested in the
+	# called by IStringProtocol instances or anyone else interested in the
 	# ServerStream
 	def unregisterProducer(self):
 		"""
@@ -1132,7 +1132,7 @@ class ServerTransport(object):
 		self._callingStream = False
 		# Remember that a lot can happen underneath that
 		# transportOnline call, because it may construct a
-		# MinervaProtocol, which may even call reset.
+		# IStringProtocol, which may even call reset.
 		if self._terminating:
 			return
 

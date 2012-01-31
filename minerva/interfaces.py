@@ -50,7 +50,7 @@ class IConsumerWithoutWrite(Interface):
 
 # Note: while we mention L{ServerStream} in this interface, this interface
 # is also applicable to a ClientStream written in Python.
-class IMinervaProtocol(Interface):
+class IStringProtocol(Interface):
 	"""
 	An interface for string-based communication that abstracts
 	away the Comet logic and transports.
@@ -134,9 +134,9 @@ class IMinervaProtocol(Interface):
 
 
 
-class IMinervaFactory(Interface):
+class IStringFactory(Interface):
 	"""
-	Interface for L{MinervaProtocol} factories.
+	Interface for L{IStringProtocol} factories.
 	"""
 	def buildProtocol():
 		"""
@@ -146,10 +146,10 @@ class IMinervaFactory(Interface):
 		you cannot refuse a connection here.
 
 		An implementation should
-			construct an object providing I{MinervaProtocol},
+			construct an object providing I{IStringProtocol},
 			do C{obj.factory = self},
 			and return C{obj},
 		with optionally more steps in between.
 
-		@return: an object providing L{IMinervaProtocol}.
+		@return: an object providing L{IStringProtocol}.
 		"""
