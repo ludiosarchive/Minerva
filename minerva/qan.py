@@ -325,7 +325,7 @@ class QANHelper(object):
 		@type body: *
 
 		@return: a Deferred that will callback the response object, or errback
-			with L{KnownErrorAnswer} or L{UnknownErrorAnswer}.
+			with L{KnownError} or L{UnknownError}.
 		@rtype: L{defer.Deferred}
 		"""
 		self._qidCounter += 1
