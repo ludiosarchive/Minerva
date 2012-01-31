@@ -29,6 +29,7 @@ from webmagic.pathmanip import getCacheBrokenHref
 from minerva import decoders
 from minerva.objcheck import strToNonNegLimit
 from minerva.window import SACK, Queue, Incoming
+from minerva.qan import QANHelper, qanFrameToString, stringToQANFrame
 from minerva.mutils import htmldumps
 from minerva.interfaces import IConsumerWithoutWrite, IStringProtocol, IStringFactory
 from minerva.frames import (
@@ -158,6 +159,58 @@ class SubprotocolFactory(object):
 		stream = self.protocol(self._clock)
 		stream.factory = self
 		return stream
+
+
+
+class QANProtocolWrapper(object):
+	"""
+	This is an L{IStringProtocol} that makes your L{IQANProtocol} work.
+	See L{IQANProtocol}.
+	"""
+	implements(IStringProtocol)
+
+	def __init__(self, qanProtocol):
+		"""
+		@param qanProtocol: An object that implements L{IQANProtocol}.
+		"""
+		self.qanProtocol = qanProtocol
+
+
+	def _logError(self, message, failure):
+		log.msg(message)
+		log.err(failure)
+
+
+	def _sendQANFrame(self, qanFrame):
+		self.stream.sendStrings([qanFrameToString(qanFrame)])
+
+
+	def _fatalError(self, reason):
+		self.stream.reset("QANHelper said: %s" % (reason,))
+
+
+	def streamStarted(stream):
+		self.stream = stream
+		self.qanHelper = QANHelper(
+			self.qanProtocol.bodyReceived,
+			self._logError,
+			self._sendQANFrame,
+			self._fatalError)
+		self.qanProtocol.streamStarted(self.stream, self.qanHelper)
+
+
+	def streamReset(reasonString, applicationLevel):
+		# TODO: tell QANHelper something, so that it aborts all the Questions
+		self.qanProtocol.streamReset(reasonString, applicationLevel)
+
+
+	def stringReceived(self, s):
+		try:
+			qanFrame = stringToQANFrame(s)
+		except InvalidQANFrame:
+			self.stream.reset("Bad QAN frame.  Did you send a non-QAN string?")
+		else:
+			self.qanHelper.handleQANFrame(qanFrame)
 
 
 

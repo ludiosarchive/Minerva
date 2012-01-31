@@ -58,7 +58,7 @@ class IStringProtocol(Interface):
 	This interface is analogous to L{twisted.internet.interfaces.IProtocol}
 
 	Note: if you call stream.reset, some (or all) of the strings you
-	have recently sent may be lost. If you need a proper close, use
+	have recently sent may be lost.  If you need a proper close, use
 	your own application-level strings to determine that it is safe to
 	close, then call reset.
 
@@ -74,7 +74,7 @@ class IStringProtocol(Interface):
 
 		You'll want to keep the stream around with C{self.stream = stream}.
 
-		You must *not* raise any exception. Wrap your code in try/except
+		You must *not* raise any exception.  Wrap your code in try/except
 		if necessary.
 
 		@param stream: the L{ServerStream} that was started.
@@ -88,7 +88,7 @@ class IStringProtocol(Interface):
 		L{ServerStream}, or a call to ServerStream.reset, or by a reset
 		frame from the peer.
 
-		You must *not* raise any exception. Wrap your code in try/except
+		You must *not* raise any exception.  Wrap your code in try/except
 		if necessary.
 
 		@param reasonString: The reason the stream reset.
@@ -102,8 +102,8 @@ class IStringProtocol(Interface):
 
 	def stringReceived(s):
 		"""
-		@type s: C{str}
 		@param s: A restricted string from the peer.
+		@type s: C{str}
 		"""
 	del stringReceived # Because it's optional.  TODO: Interface subclass?
 
@@ -116,17 +116,17 @@ class IStringProtocol(Interface):
 
 		Called whenever one or more strings are received.
 
-		You must *not* raise any exception. Wrap your code in try/except
+		You must *not* raise any exception.  Wrap your code in try/except
 		if necessary. You may mutate the list and keep references to it.
 
 		This is `stringsReceived` instead of `stringReceived` only as an
-		optimization for CPython. The number of strings you will receive at
-		once is subject to variances in TCP activity. Do *not* rely on being
+		optimization for CPython.  The number of strings you will receive at
+		once is subject to variances in TCP activity.  Do *not* rely on being
 		called with a certain number of strings.
 
 		@type strings: list
 		@param strings: a list of L{StringFragment} objects. You can convert
-			them to C{str}s by C{str()}ing them. Do *not* keep them around
+			them to C{str}s by C{str()}ing them.  Do *not* keep them around
 			in L{StringFragment} form because they may consume more
 			memory than you expect.
 		"""
@@ -152,4 +152,66 @@ class IStringFactory(Interface):
 		with optionally more steps in between.
 
 		@return: an object providing L{IStringProtocol}.
+		"""
+
+
+
+class IQANProtocol(Interface):
+
+	def streamStarted(stream, qanHelper):
+		"""
+		Called when this stream has just started.
+
+		You'll want to keep the stream around with C{self.stream = stream}.
+		You'll want to keep the QANHelper around with C{self.qanHelper = qanHelper}.
+
+		You must *not* raise any exception.  Wrap your code in try/except
+		if necessary.
+
+		You must not call C{stream.sendStrings}; use C{qanHelper.ask} or
+		C{qanHelper.notify} for all of your communication.
+
+		@param stream: the L{ServerStream} that was started.
+		@type stream: L{ServerStream}
+
+		@param qanHelper: the L{QANHelper} coupled with the L{ServerStream}.
+		@type qanHelper: L{QANHelper}
+		"""
+
+
+	def streamReset(reasonString, applicationLevel):
+		"""
+		Called when this stream has reset, either internally by
+		L{ServerStream}, or a call to ServerStream.reset, or by a reset
+		frame from the peer.
+
+		You must *not* raise any exception.  Wrap your code in try/except
+		if necessary.
+
+		@param reasonString: The reason the stream reset.
+			String contains only bytes in inclusive range 0x20 - 0x7E.
+		@type reasonString: str
+
+		@type applicationLevel: Was the reason caused by an application (not
+			Minerva internals?)
+		"""
+
+
+	def bodyReceived(body, isQuestion):
+		"""
+		@param body: The QAN body from the peer.  Always a restricted string.
+		@type body: C{str}
+
+		@param isQuestion: True if the QAN body arrived as a question that can
+			be answered, False if it arrived as a Notfication.  If it is a question,
+			this method's return value (or Deferred) will be used as the answer.
+			If L{qan.KnownError} is raised (or errbacked), the string value of
+			the L{qan.KnownError} will be sent as the error-answer.  If another
+			exception is raised, an uninformative unknown-error-answer will
+			be sent to the peer.
+		@type s: C{str}
+
+		@return: If C{isQuestion}, an answer to the question.
+		@rtype: C{str} or L{Deferred} or C{None}.
+		@raise KnownError: When an error-answer is desired.
 		"""
