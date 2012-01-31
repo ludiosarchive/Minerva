@@ -327,8 +327,6 @@ class QANHelperTests(unittest.TestCase):
 			KnownErrorAnswer("weather station is broken", 3),
 		], sent.getNew())
 
-	# TODO: test cancellation of something that has no canceller ->
-	# UnknownErrorResponse("CancelledError")
 
 	def test_questionCausesException(self):
 		"""
