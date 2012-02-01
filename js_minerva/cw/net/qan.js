@@ -18,89 +18,221 @@ goog.provide('cw.net.KnownError');
 goog.provide('cw.net.UnknownError');
 goog.provide('cw.net.QuestionFailed');
 
-
+goog.require('goog.structs.Map');
 goog.require('cw.math');
 goog.require('cw.string');
 
 
 
-// Not a meaningful superclass, just something to avoid copy/pasting
-// FIXME: class _BodyAndId: Add constructor function if missing
-	__slots__ = ()
+/**
+ * @param {*} body
+ * @param {number} id
+ * @constructor
+ */
+cw.net.Question = function(body, id) {
+	/** @type {*} */
+	this.body = body;
+	/** @type {number} */
+	this.id = id;
+};
 
-	body = property(operator.itemgetter(1))
-	qid = property(operator.itemgetter(2))
+/**
+ * Test two QAN frames for equality.
+ * @param {*} other
+ * @param {Array.<string>=} eqLog
+ * @return {boolean}
+ */
+cw.net.Question.prototype.equals = function(other, eqLog) {
+	return (
+		other instanceof cw.net.Question &&
+		this.id == other.id &&
+		cw.eq.equals(this.body, other.body, eqLog));
+};
 
-	_new___ = function(cls, body, qid) {
-		return tuple.__new__(cls, (cls._MARKER, body, qid))
-
-
-	_BodyAndId.prototype.__repr__ = function() {
-		return '%s(%r, %r)' % (this._class___.__name__, self[1], self[2])
-
-
-
-// FIXME: class _JustQid: Add constructor function if missing
-	__slots__ = ()
-
-	qid = property(operator.itemgetter(1))
-
-	_new___ = function(cls, body) {
-		return tuple.__new__(cls, (cls._MARKER, body))
-
-
-	_JustQid.prototype.__repr__ = function() {
-		return '%s(%r)' % (this._class___.__name__, self[1])
-	}
-
-
-// FIXME: class _JustBody: Add constructor function if missing
-	__slots__ = ()
-
-	body = property(operator.itemgetter(1))
-
-	_new___ = function(cls, body) {
-		return tuple.__new__(cls, (cls._MARKER, body))
-
-
-	_JustBody.prototype.__repr__ = function() {
-		return '%s(%r)' % (this._class___.__name__, self[1])
+/**
+ * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
+ */
+cw.net.Question.prototype.__reprPush__ = function(sb, stack) {
+	sb.push("new Question(");
+	cw.repr.reprPush(this.body, sb, stack);
+	sb.push(", ", String(this.id), ")");
+};
 
 
 
-// FIXME: class Question: Add constructor function if missing
-	__slots__ = ()
-	_MARKER = object()
+/**
+ * @param {*} body
+ * @param {number} id
+ * @constructor
+ */
+cw.net.OkayAnswer = function(body, id) {
+	/** @type {*} */
+	this.body = body;
+	/** @type {number} */
+	this.id = id;
+};
+
+/**
+ * Test two QAN frames for equality.
+ * @param {*} other
+ * @param {Array.<string>=} eqLog
+ * @return {boolean}
+ */
+cw.net.OkayAnswer.prototype.equals = function(other, eqLog) {
+	return (
+		other instanceof cw.net.OkayAnswer &&
+		this.id == other.id &&
+		cw.eq.equals(this.body, other.body, eqLog));
+};
+
+/**
+ * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
+ */
+cw.net.OkayAnswer.prototype.__reprPush__ = function(sb, stack) {
+	sb.push("new OkayAnswer(");
+	cw.repr.reprPush(this.body, sb, stack);
+	sb.push(", ", String(this.id), ")");
+};
 
 
 
-// FIXME: class OkayAnswer: Add constructor function if missing
-	__slots__ = ()
-	_MARKER = object()
+/**
+ * @param {*} body
+ * @param {number} id
+ * @constructor
+ */
+cw.net.KnownErrorAnswer = function(body, id) {
+	/** @type {*} */
+	this.body = body;
+	/** @type {number} */
+	this.id = id;
+};
+
+/**
+ * Test two QAN frames for equality.
+ * @param {*} other
+ * @param {Array.<string>=} eqLog
+ * @return {boolean}
+ */
+cw.net.KnownErrorAnswer.prototype.equals = function(other, eqLog) {
+	return (
+		other instanceof cw.net.KnownErrorAnswer &&
+		this.id == other.id &&
+		cw.eq.equals(this.body, other.body, eqLog));
+};
+
+/**
+ * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
+ */
+cw.net.KnownErrorAnswer.prototype.__reprPush__ = function(sb, stack) {
+	sb.push("new KnownErrorAnswer(");
+	cw.repr.reprPush(this.body, sb, stack);
+	sb.push(", ", String(this.id), ")");
+};
 
 
 
-// FIXME: class KnownErrorAnswer: Add constructor function if missing
-	__slots__ = ()
-	_MARKER = object()
+/**
+ * @param {*} body
+ * @param {number} id
+ * @constructor
+ */
+cw.net.UnknownErrorAnswer = function(body, id) {
+	/** @type {*} */
+	this.body = body;
+	/** @type {number} */
+	this.id = id;
+};
+
+/**
+ * Test two QAN frames for equality.
+ * @param {*} other
+ * @param {Array.<string>=} eqLog
+ * @return {boolean}
+ */
+cw.net.UnknownErrorAnswer.prototype.equals = function(other, eqLog) {
+	return (
+		other instanceof cw.net.UnknownErrorAnswer &&
+		this.id == other.id &&
+		cw.eq.equals(this.body, other.body, eqLog));
+};
+
+/**
+ * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
+ */
+cw.net.UnknownErrorAnswer.prototype.__reprPush__ = function(sb, stack) {
+	sb.push("new UnknownErrorAnswer(");
+	cw.repr.reprPush(this.body, sb, stack);
+	sb.push(", ", String(this.id), ")");
+};
 
 
 
-// FIXME: class UnknownErrorAnswer: Add constructor function if missing
-	__slots__ = ()
-	_MARKER = object()
+/**
+ * @param {number} id
+ * @constructor
+ */
+cw.net.Cancellation = function(id) {
+	/** @type {number} */
+	this.id = id;
+};
+
+/**
+ * Test two QAN frames for equality.
+ * @param {*} other
+ * @param {Array.<string>=} eqLog
+ * @return {boolean}
+ */
+cw.net.Cancellation.prototype.equals = function(other, eqLog) {
+	return (
+		other instanceof cw.net.Cancellation &&
+		this.id == other.id);
+};
+
+/**
+ * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
+ */
+cw.net.Cancellation.prototype.__reprPush__ = function(sb, stack) {
+	sb.push("new Cancellation(", String(this.id), ")");
+};
 
 
 
-// FIXME: class Cancellation: Add constructor function if missing
-	__slots__ = ()
-	_MARKER = object()
+/**
+ * @param {*} body
+ * @constructor
+ */
+cw.net.Notification = function(body) {
+	/** @type {*} */
+	this.body = body;
+};
 
+/**
+ * Test two QAN frames for equality.
+ * @param {*} other
+ * @param {Array.<string>=} eqLog
+ * @return {boolean}
+ */
+cw.net.Notification.prototype.equals = function(other, eqLog) {
+	return (
+		other instanceof cw.net.Notification &&
+		cw.eq.equals(this.body, other.body, eqLog));
+};
 
-
-// FIXME: class Notification: Add constructor function if missing
-	__slots__ = ()
-	_MARKER = object()
+/**
+ * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
+ */
+cw.net.Notification.prototype.__reprPush__ = function(sb, stack) {
+	sb.push("new Notification(");
+	cw.repr.reprPush(this.body, sb, stack);
+	sb.push(")");
+};
 
 
 

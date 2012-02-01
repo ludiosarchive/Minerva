@@ -414,7 +414,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		}
 
 		var bodyReceived = function(body, isQuestion) {
-			throw new ValueError("bodyReceived did something wrong")
+			throw Error("bodyReceived did something wrong")
 		}
 
 		var sent = attachGetNew([])
@@ -442,7 +442,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		}
 
 		var bodyReceived = function(body, isQuestion) {
-			throw new ValueError("bodyReceived did something wrong")
+			throw Error("bodyReceived did something wrong")
 		}
 
 		var sent = attachGetNew([])
@@ -512,12 +512,12 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		h.failAll("just because")
 		self.assertTrue(d1.called)
 		var d1_ = self.assertFailure(d1, QuestionFailed)
-		d1_.addCallback(function(e) { self.assertEqual("just because", String(e)) })
+		d1_.addCallback(function(e) { self.assertEqual("just because", String(e)) }) // FIXME
 		goog.asserts.assert(d1_.called)
 
 		self.assertTrue(d2.called)
 		var d2_ = self.assertFailure(d2, QuestionFailed)
-		d2_.addCallback(function(e) { self.assertEqual("just because", String(e)) })
+		d2_.addCallback(function(e) { self.assertEqual("just because", String(e)) }) // FIXME
 		goog.asserts.assert(d2_.called)
 
 		// Peer can still send an answer to the failed Questions
