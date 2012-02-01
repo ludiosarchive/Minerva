@@ -405,13 +405,22 @@ cw.net.KnownError = function(body) {
 };
 goog.inherits(cw.net.KnownError, goog.debug.Error);
 
-
 /**
  * Message text.
  * @type {string}
  * @override
  */
 cw.net.KnownError.prototype.message = 'KnownError with arbitrary body';
+
+/**
+ * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
+ */
+cw.net.KnownError.prototype.__reprPush__ = function(sb, stack) {
+	sb.push("new KnownError(");
+	cw.repr.reprPush(this.body, sb, stack);
+	sb.push(")");
+};
 
 
 
@@ -430,13 +439,22 @@ cw.net.UnknownError = function(body) {
 };
 goog.inherits(cw.net.UnknownError, goog.debug.Error);
 
-
 /**
  * Message text.
  * @type {string}
  * @override
  */
 cw.net.UnknownError.prototype.message = 'UnknownError with arbitrary body';
+
+/**
+ * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
+ */
+cw.net.UnknownError.prototype.__reprPush__ = function(sb, stack) {
+	sb.push("new UnknownError(");
+	cw.repr.reprPush(this.body, sb, stack);
+	sb.push(")");
+};
 
 
 

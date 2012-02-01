@@ -129,6 +129,26 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANFrameTests').methods(
 );
 
 
+
+cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'ErrorTests').methods(
+	function test_message(self) {
+		self.assertEqual("KnownError with arbitrary body", new KnownError(3).message);
+		self.assertEqual("UnknownError with arbitrary body", new UnknownError(3).message);
+	},
+
+	function test_repr(self) {
+		self.assertEqual(
+			'new KnownError(["what"])', cw.repr.repr(
+			new KnownError(["what"])));
+
+		self.assertEqual(
+			'new UnknownError(["what"])', cw.repr.repr(
+			new UnknownError(["what"])));
+	}
+);
+
+
+
 cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 
 	function test_repr(self) {
