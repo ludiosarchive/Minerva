@@ -244,15 +244,16 @@ class QANHelper(object):
 				len(self._theirQuestions))
 
 
-	def _sendOkayAnswer(self, s, qid):
+	def _sendOkayAnswer(self, body, qid):
 		del self._theirQuestions[qid]
-		self._sendQANFrame(OkayAnswer(s, qid))
+		self._sendQANFrame(OkayAnswer(body, qid))
 
 
 	def _sendErrorAnswer(self, failure, qid):
 		del self._theirQuestions[qid]
 		if failure.check(KnownError):
-			self._sendQANFrame(KnownErrorAnswer(failure.value[0], qid))
+			body = failure.value[0]
+			self._sendQANFrame(KnownErrorAnswer(body, qid))
 		elif failure.check(defer.CancelledError):
 			self._sendQANFrame(UnknownErrorAnswer("CancelledError", qid))
 		else:

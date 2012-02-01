@@ -18,6 +18,8 @@ goog.provide('cw.net.KnownError');
 goog.provide('cw.net.UnknownError');
 goog.provide('cw.net.QuestionFailed');
 
+goog.require('goog.asserts');
+goog.require('goog.debug.Error');
 goog.require('goog.structs.Map');
 goog.require('cw.math');
 goog.require('cw.repr');
@@ -237,30 +239,55 @@ cw.net.Notification.prototype.__reprPush__ = function(sb, stack) {
 
 
 
-cw.net.qanTypeToCode = {
-	 Question: "Q"
-	,OkayAnswer: "K"
-	,KnownErrorAnswer: "E"
-	,UnknownErrorAnswer: "U"
-	,Cancellation: "C"
-	,Notification: "#"
-}
+/**
+ * @typedef {(
+ * 	cw.net.Question|
+ * 	cw.net.OkayAnswer|
+ * 	cw.net.KnownErrorAnswer|
+ * 	cw.net.UnknownErrorAnswer|
+ * 	cw.net.Cancellation|
+ * 	cw.net.Notification|
+ * 	)}
+ */
+cw.net.QANFrame;
 
 
+
+/**
+ * @param {!cw.net.QANFrame} frame
+ * @return {string}
+ * @private
+ */
+cw.net.qanTypeToCode_ = function(frame) {
+	if(frame instanceof cw.net.Question) {
+		return "Q";
+	} else if(frame instanceof cw.net.OkayAnswer) {
+		return "K";
+	} else if(frame instanceof cw.net.KnownErrorAnswer) {
+		return "E";
+	} else if(frame instanceof cw.net.UnknownErrorAnswer) {
+		return "U";
+	} else if(frame instanceof cw.net.Cancellation) {
+		return "C";
+	} else if(frame instanceof cw.net.Notification) {
+		return "#";
+	} else {
+		throw Error("qanTypeToCode bug");
+	}
+};
+
+
+/**
+ * @param {!cw.net.QANFrame} qanFrame The QAN frame to encode:
+ * 	a L{Question} or L{OkayAnswer} or L{KnownErrorAnswer} or
+ * 	L{UnknownErrorAnswer} or L{Cancellation} or L{Notification}, all of
+ * 	which must have a C{str} C{.body}.  (Except for L{Cancellation},
+ * 	which has no C{.body}.)
+ * @return {string} Encoded QAN frame
+ */
 cw.net.qanFrameToString = function(qanFrame) {
-	/*
-	@param qanFrame: The QAN frame to encode
-	@type qanFrame: a L{Question} or L{OkayAnswer} or L{KnownErrorAnswer} or
-		L{UnknownErrorAnswer} or L{Cancellation} or L{Notification}, all of
-		which must have a C{str} C{.body}.  (Except for L{Cancellation},
-		which has no C{.body}.)
-
-	@return: The encoded QAN frame
-	@rtype: str
-	*/
-	var qanFrameType = type(qanFrame)
-	var code = qanTypeToCode[qanFrameType]
-	if(qanFrameType == Cancellation) {
+	var code = cw.net.qanTypeToCode_(qanFrame);
+	if(qanFrame instanceof cw.net.Cancellation) {
 		return String(qanFrame.qid) + code
 	} else {
 		if(!goog.isString(qanFrame.body)) {
@@ -268,7 +295,7 @@ cw.net.qanFrameToString = function(qanFrame) {
 				cw.repr.repr(qanFrame.body))
 		}
 
-		if(qanFrameType == Notification) {
+		if(qanFrame instanceof cw.net.Notification) {
 			return qanFrame.body + code
 		} else {
 			return qanFrame.body + "|" + String(qanFrame.qid) + code
@@ -276,8 +303,23 @@ cw.net.qanFrameToString = function(qanFrame) {
 	}
 }
 
-// FIXME: class InvalidQANFrame: Add constructor function if missing
-	pass
+
+
+/**
+ * @param {string} message
+ * @constructor
+ * @extends {goog.debug.Error}
+ */
+cw.net.InvalidQANFrame = function(message) {
+	goog.debug.Error.call(this);
+
+	/**
+	 * @type {string}
+	 */
+	this.message = message;
+};
+goog.inherits(cw.net.InvalidQANFrame, goog.debug.Error);
+
 
 
 /**
@@ -291,6 +333,7 @@ cw.net.qidOrThrow_ = function(s) {
 	return n;
 }
 
+
 cw.net.stringToQANFrame = function(frameString) {
 	/*
 	@param frameString: The QAN frame, encoded as a string
@@ -300,56 +343,119 @@ cw.net.stringToQANFrame = function(frameString) {
 	@rtype qf: a L{Question} or L{OkayAnswer} or L{ErrorAnswer} or
 		L{Cancellation} or L{Notification}, with a C{str} C{.body}.
 	*/
-	try {
-		var lastByte = frameString[-1]
-	} catch(e) { // FIXME: check for IndexError
-		throw new InvalidQANFrame("0-length frame")
+	if(!frameString) {
+		throw new cw.net.InvalidQANFrame("0-length frame");
 	}
+
+	var lastByte = frameString.substr(frameString.length - 1, 1);
 
 	if(lastByte == "#") {
-		return Notification(frameString[:-1])
+		return new cw.net.Notification(cw.string.withoutLast(frameString, 1))
 	} else if(lastByte == "C") {
-		var qid = _qidOrThrow(frameString[:-1])
-		return Cancellation(qid)
+		var qid = cw.net.qidOrThrow_(cw.string.withoutLast(frameString, 1))
+		return new cw.net.Cancellation(qid)
 	} else {
-		try {
-			body, rest = frameString.rsplit('|', 1)
-		} catch(e) { // FIXME: check for ValueError
-			throw new InvalidQANFrame("Expected pipe char in frame")
+		var _ = cw.string.rsplit(frameString, '|', 1);
+		var body = _[0];
+		var rest = _[1];
+		if(!goog.isDef(rest)) {
+			throw new cw.net.InvalidQANFrame("Expected pipe char in frame")
 		}
-		var qid = _qidOrThrow(rest[:-1])
+		var qid = cw.net.qidOrThrow_(cw.string.withoutLast(rest, 1))
 
 		if(lastByte == "Q") {
-			return Question(body, qid)
+			return new cw.net.Question(body, qid)
 		} else if(lastByte == "K") {
-			return OkayAnswer(body, qid)
+			return new cw.net.OkayAnswer(body, qid)
 		} else if(lastByte == "E") {
-			return KnownErrorAnswer(body, qid)
+			return new cw.net.KnownErrorAnswer(body, qid)
 		} else if(lastByte == "U") {
-			return UnknownErrorAnswer(body, qid)
+			return new cw.net.UnknownErrorAnswer(body, qid)
 		} else {
-			throw new InvalidQANFrame("Invalid QAN frame type %r" % lastByte)
+			throw new cw.net.InvalidQANFrame(
+				"Invalid QAN frame type " + cw.repr.repr(lastByte));
 		}
 	}
 }
 
+/**
+ * @param {!cw.net.QANFrame} qanFrame
+ * @return {boolean} Is qanFrame an OkayAnswer, KnownErrorAnswer, or
+ * 	UnknownErrorAnswer?
+ */
 cw.net.isAnswerFrame = function(qanFrame) {
-	return isinstance(qanFrame, (OkayAnswer, KnownErrorAnswer, UnknownErrorAnswer))
+	return (
+		qanFrame instanceof cw.net.OkayAnswer ||
+		qanFrame instanceof cw.net.KnownErrorAnswer ||
+		qanFrame instanceof cw.net.UnknownErrorAnswer);
 }
 
 
-// FIXME: class KnownError: Add constructor function if missing
-	pass
+/**
+ * @param {*} body
+ * @constructor
+ * @extends {goog.debug.Error}
+ */
+cw.net.KnownError = function(body) {
+	goog.debug.Error.call(this);
+
+	/**
+	 * @type {*}
+	 */
+	this.body = body;
+};
+goog.inherits(cw.net.KnownError, goog.debug.Error);
+
+
+/**
+ * Message text.
+ * @type {string}
+ * @override
+ */
+cw.net.KnownError.prototype.message = 'KnownError with arbitrary body';
 
 
 
-// FIXME: class UnknownError: Add constructor function if missing
-	pass
+/**
+ * @param {*} body
+ * @constructor
+ * @extends {goog.debug.Error}
+ */
+cw.net.UnknownError = function(body) {
+	goog.debug.Error.call(this);
+
+	/**
+	 * @type {*}
+	 */
+	this.body = body;
+};
+goog.inherits(cw.net.UnknownError, goog.debug.Error);
+
+
+/**
+ * Message text.
+ * @type {string}
+ * @override
+ */
+cw.net.UnknownError.prototype.message = 'UnknownError with arbitrary body';
 
 
 
-// FIXME: class QuestionFailed: Add constructor function if missing
-	pass
+/**
+ * @param {string} message
+ * @constructor
+ * @extends {goog.debug.Error}
+ */
+cw.net.QuestionFailed = function(message) {
+	goog.debug.Error.call(this);
+
+	/**
+	 * @type {string}
+	 */
+	this.message = message;
+};
+goog.inherits(cw.net.QuestionFailed, goog.debug.Error);
+
 
 
 /**
@@ -363,78 +469,79 @@ cw.net.QANHelper = function(bodyReceived, logError, sendQANFrame, fatalError) {
 
 	@param logError: A 2-arg function called when bodyReceived raises
 		an exception, or when QANHelper has a non-fatal internal error.
-		Called with arguments: error message, L{Failure} object
+		Called with arguments: error message, error object.
 
 	@param sendQANFrame: A 1-arg function that sends a QAN frame to the
 		peer.  Called with argument: qanFrame.
 
 	@param fatalError: A 1-arg function called when QANHelper can no longer
-		handle QAN frames.  Called with argument: reason (a C{str} with bytes
+		handle QAN frames.  Called with argument: reason (a string with chars
 		in inclusive range 0x20 (SPACE) to 0x7E (~)).  After fatalError is called,
 		you must stop calling C{handleQANFrame} to prevent fatalError from
 		possibly being called again.
 	*/
-	this.bodyReceived_ = bodyReceived
-	this.logError_ = logError
-	this.sendQANFrame_ = sendQANFrame
-	this.fatalError_ = fatalError
+	this.bodyReceived_ = bodyReceived;
+	this.logError_ = logError;
+	this.sendQANFrame_ = sendQANFrame;
+	this.fatalError_ = fatalError;
 
 	this.qidCounter_ = 0
-	this.ourQuestions_ = {}
-	this.theirQuestions_ = {}
+	this.ourQuestions_ = new goog.structs.Map();
+	this.theirQuestions_ = new goog.structs.Map();
 }
 
 cw.net.QANHelper.prototype.__repr__ = function() {
-	return ('<%s asked %d questions, waiting for %d peer answers '
-		'and %d local answers>') % (this._class___.__name__,
-			this.qidCounter_, len(this.ourQuestions_),
-			len(this.theirQuestions_))
+	return ('<QANHelper asked %d questions, waiting for %d peer answers '
+		'and %d local answers>') % (
+			this.qidCounter_, this.ourQuestions_.getCount(),
+			this.theirQuestions_.getCount())
 }
 
 /**
  * @private
  */
-cw.net.QANHelper.prototype.sendOkayAnswer_ = function(s, qid) {
-	del this.theirQuestions_[qid]
-	this.sendQANFrame_(cw.net.OkayAnswer(s, qid))
+cw.net.QANHelper.prototype.sendOkayAnswer_ = function(body, qid) {
+	this.theirQuestions_.remove(qid)
+	this.sendQANFrame_(new cw.net.OkayAnswer(body, qid))
+	return null;
 }
 
 /**
  * @private
  */
-cw.net.QANHelper.prototype.sendErrorAnswer_ = function(failure, qid) {
-	del this.theirQuestions_[qid]
-	if(failure.check(KnownError)) {
-		this.sendQANFrame_(cw.net.KnownErrorAnswer(failure.value[0], qid))
-	} else if(failure.check(defer.CancelledError)) {
-		this.sendQANFrame_(cw.net.UnknownErrorAnswer("CancelledError", qid))
+cw.net.QANHelper.prototype.sendErrorAnswer_ = function(error, qid) {
+	this.theirQuestions_.remove(qid)
+	if(error instanceof cw.net.KnownError) {
+		this.sendQANFrame_(new cw.net.KnownErrorAnswer(error.body, qid))
+	} else if(error instanceof goog.async.Deferred.CancelledError) {
+		this.sendQANFrame_(new cw.net.UnknownErrorAnswer("CancelledError", qid))
 	} else {
-		this.logError_("Peer's Question #%d caused uncaught "
-			"exception" % (qid,), failure)
+		this.logError_("Peer's Question #" + qid +" caused uncaught exception", error)
 		// We intentionally do not reveal information about the
 		// exception.
-		this.sendQANFrame_(cw.net.UnknownErrorAnswer("Uncaught exception", qid))
+		this.sendQANFrame_(new cw.net.UnknownErrorAnswer("Uncaught exception", qid))
 	}
+	return null;
 }
 
 cw.net.QANHelper.prototype.handleQANFrame = function(qanFrame) {
-	if(isAnswerFrame(qanFrame)) {
+	if(cw.net.isAnswerFrame(qanFrame)) {
 		var qid = qanFrame.qid
-		try {
-			var d = this.ourQuestions_.pop(qid)
-		} catch(e) { // FIXME: check for KeyError
-			this.fatalError_("Received an answer with invalid qid: %d" % (qid,))
+		var d = this.ourQuestions_.get(qid)
+		this.ourQuestions_.remove(qid);
+		if(!goog.isDef(d)) {
+			this.fatalError_("Received an answer with invalid qid: " + qid)
 			return
 		}
 
-		if(d is null) {
+		if(goog.isNull(d)) {
 			// Ignore the answer to a question we cancelled or failAll'ed.
 		} else if(qanFrame instanceof cw.net.OkayAnswer) {
 			d.callback(qanFrame.body)
 		} else if(qanFrame instanceof KnownErrorAnswer) {
-			d.errback(KnownError(qanFrame.body))
+			d.errback(new cw.net.KnownError(qanFrame.body))
 		} else if(qanFrame instanceof UnknownErrorAnswer) {
-			d.errback(UnknownError(qanFrame.body))
+			d.errback(new cw.net.UnknownError(qanFrame.body))
 		} else {
 			throw Error("handleQANFrame bug")
 		}
@@ -442,15 +549,15 @@ cw.net.QANHelper.prototype.handleQANFrame = function(qanFrame) {
 	} else if(qanFrame instanceof cw.net.Notification) {
 		try {
 			this.bodyReceived_(qanFrame.body, false)
-		} catch(e) { // FIXME: check for Exception
-			this.logError_("Peer's Notification caused uncaught "
-				"exception", failure.Failure())
+		} catch(e) {
+			this.logError_("Peer's Notification caused uncaught " +
+				"exception", e)
 		}
 
 	} else if(qanFrame instanceof cw.net.Question) {
 		var qid = qanFrame.qid
-		if(qid in this.theirQuestions_) {
-			this.fatalError_("Received Question with duplicate qid: %d" % (qid,))
+		if(this.theirQuestions_.containsKey(qid)) {
+			this.fatalError_("Received Question with duplicate qid: " + qid)
 			return
 		var d = cw.deferred.maybeDeferred(
 			this.bodyReceived_, qanFrame.body, true)
@@ -458,8 +565,10 @@ cw.net.QANHelper.prototype.handleQANFrame = function(qanFrame) {
 		d.addCallbacks(
 			this.sendOkayAnswer_, this.sendErrorAnswer_,
 			callbackArgs=(qid,), errbackArgs=(qid,))
-		d.addErrback(lambda failure: this.logError_(
-			"Bug in QANHelper._sendOkayAnswer or _sendErrorAnswer", failure))
+		d.addErrback(function(err) {
+			this.logError_("Bug in QANHelper.sendOkayAnswer_ or sendErrorAnswer_", err);
+			return null;
+		});
 
 	} else if(qanFrame instanceof cw.net.Cancellation) {
 		var qid = qanFrame.qid
@@ -468,7 +577,7 @@ cw.net.QANHelper.prototype.handleQANFrame = function(qanFrame) {
 			// still goes through the callback or errback chain, and
 			// our _sendOkayAnswer and _sendErrorAnswer
 			// deletes it from this.theirQuestions_.
-			d = this.theirQuestions_[qid]
+			var d = this.theirQuestions_[qid]
 		} catch(e) { // FIXME: check for KeyError
 			// Cancellations for nonexistent questions are ignored.
 		} else {
@@ -478,12 +587,12 @@ cw.net.QANHelper.prototype.handleQANFrame = function(qanFrame) {
 }
 
 cw.net.QANHelper.prototype.sendCancel_ = function(qid) {
-	this.ourQuestions_[qid] = null
+	this.ourQuestions_.set(qid, null)
 
 	// Note: when we cancel something, we still expect to get either
 	// an OkayAnswer or *ErrorAnswer from the peer, at least in the
 	// typical case where the Stream does not reset.
-	this.sendQANFrame_(cw.net.Cancellation(qid))
+	this.sendQANFrame_(new cw.net.Cancellation(qid))
 
 	// Because we don't call .callback or .errback in this canceller,
 	// Deferred calls .errback(CancelledError()) for us.
@@ -501,12 +610,12 @@ cw.net.QANHelper.prototype.ask = function(body) {
 	@rtype: L{defer.Deferred}
 	*/
 	this.qidCounter_ += 1
-	qid = this.qidCounter_
-	this.sendQANFrame_(cw.net.Question(body, qid))
+	var qid = this.qidCounter_
+	this.sendQANFrame_(new cw.net.Question(body, qid))
 
-	goog.asserts.assert(qid not in this.ourQuestions_)
-	d = new goog.async.Deferred(lambda _: this.sendCancel_(qid))
-	this.ourQuestions_[qid] = d
+	goog.asserts.assert(!this.ourQuestions_.containsKey(qid))
+	var d = new goog.async.Deferred(lambda _: this.sendCancel_(qid))
+	this.ourQuestions_.set(qid, d)
 	return d
 }
 
@@ -520,7 +629,7 @@ cw.net.QANHelper.prototype.notify = function(body) {
 	@return: null
 	@rtype: C{null}
 	*/
-	this.sendQANFrame_(cw.net.Notification(body))
+	this.sendQANFrame_(new cw.net.Notification(body))
 }
 
 cw.net.QANHelper.prototype.failAll = function(reason) {
@@ -533,6 +642,6 @@ cw.net.QANHelper.prototype.failAll = function(reason) {
 	*/
 	// .copy() because some buggy errback might .ask() a question
 	for qid, d in this.ourQuestions_.copy().iteritems():
-		this.ourQuestions_[qid] = null
-		d.errback(cw.net.QuestionFailed(reason))
+		this.ourQuestions_.set(qid, null)
+		d.errback(new cw.net.QuestionFailed(reason))
 }
