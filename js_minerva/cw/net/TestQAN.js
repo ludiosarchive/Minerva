@@ -492,7 +492,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		], sent.getNew())
 
 		self.assertTrue(d.hasFired())
-		var d2 = self.assertFailure(d, goog.async.Deferred.CancelledError)
+		var d2 = self.assertFailure(d, [goog.async.Deferred.CancelledError])
 		goog.asserts.assert(d2.hasFired())
 
 		// Peer always sends an answer, which QANHelper must ignore.
@@ -517,16 +517,16 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		h.failAll("just because")
 		self.assertTrue(d1.hasFired())
 		var d1_ = self.assertFailure(d1, [QuestionFailed])
-		d1_.addCallback(function(e) {
-			self.assertEqual("just because", e.message);
+		d1_.addCallback(function(eArr) {
+			self.assertEqual("just because", eArr[0].message);
 			return null;
 		});
 		goog.asserts.assert(d1_.hasFired())
 
 		self.assertTrue(d2.hasFired())
 		var d2_ = self.assertFailure(d2, [QuestionFailed])
-		d2_.addCallback(function(e) {
-			self.assertEqual("just because", e.message);
+		d2_.addCallback(function(eArr) {
+			self.assertEqual("just because", eArr[0].message);
 			return null;
 		});
 		goog.asserts.assert(d2_.hasFired())
