@@ -1,6 +1,7 @@
 goog.provide('cw.net.TestQAN');
 
 goog.require('cw.UnitTest');
+goog.require('cw.repr');
 goog.require('goog.array');
 goog.require('goog.async.Deferred');
 goog.require('goog.async.Deferred.CancelledError');
@@ -26,6 +27,7 @@ var OkayAnswer = cw.net.OkayAnswer;
 var KnownErrorAnswer = cw.net.KnownErrorAnswer;
 var UnknownErrorAnswer = cw.net.UnknownErrorAnswer;
 var Cancellation = cw.net.Cancellation;
+var Notification = cw.net.Notification;
 
 var KnownError = cw.net.KnownError;
 var UnknownError = cw.net.UnknownError;
@@ -57,7 +59,8 @@ var attachGetNew = function(arr) {
 
 		return this.slice(oldLen);
 	}
-}
+	return arr;
+};
 
 
 
@@ -89,7 +92,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANFrameTests').methods(
 
 	function test_qanFrameToStringInvalid(self) {
 		goog.array.forEach([null, true, false, 3, [], {}], function(bad) {
-			self.assertRaises(TypeError, function() { qanFrameToString(new Notification(bad)) })
+			self.assertThrows(TypeError, function() { qanFrameToString(new Notification(bad)) })
 		})
 	},
 
@@ -103,21 +106,21 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANFrameTests').methods(
 	},
 
 	function test_stringToQANFrameInvalid(self) {
-		self.assertRaises(InvalidQANFrame, function() { stringToQANFrame("") })
-		self.assertRaises(InvalidQANFrame, function() { stringToQANFrame("whatX") })
-		self.assertRaises(InvalidQANFrame, function() { stringToQANFrame("blah|10X") })
-		self.assertRaises(InvalidQANFrame, function() { stringToQANFrame("1x0C") })
-		self.assertRaises(InvalidQANFrame, function() { stringToQANFrame("C") })
-		self.assertRaises(InvalidQANFrame, function() { stringToQANFrame("blah|1x0Q") })
-		self.assertRaises(InvalidQANFrame, function() { stringToQANFrame("Q") })
+		self.assertThrows(InvalidQANFrame, function() { stringToQANFrame("") })
+		self.assertThrows(InvalidQANFrame, function() { stringToQANFrame("whatX") })
+		self.assertThrows(InvalidQANFrame, function() { stringToQANFrame("blah|10X") })
+		self.assertThrows(InvalidQANFrame, function() { stringToQANFrame("1x0C") })
+		self.assertThrows(InvalidQANFrame, function() { stringToQANFrame("C") })
+		self.assertThrows(InvalidQANFrame, function() { stringToQANFrame("blah|1x0Q") })
+		self.assertThrows(InvalidQANFrame, function() { stringToQANFrame("Q") })
 	},
 
 	function test_repr(self) {
-		self.assertEqual("new Question('blah', 10)", cw.repr.repr(new Question('blah', 10)))
-		self.assertEqual("new OkayAnswer('blah', 10)", cw.repr.repr(new OkayAnswer('blah', 10)))
-		self.assertEqual("new KnownErrorAnswer('blah', 10)", cw.repr.repr(new KnownErrorAnswer('blah', 10)))
-		self.assertEqual("new Cancellation(10)", cw.repr.repr(new Cancellation(10)))
-		self.assertEqual("new Notification('blah')", cw.repr.repr(new Notification('blah')))
+		self.assertEqual('new Question("blah", 10)', cw.repr.repr(new Question('blah', 10)))
+		self.assertEqual('new OkayAnswer("blah", 10)', cw.repr.repr(new OkayAnswer('blah', 10)))
+		self.assertEqual('new KnownErrorAnswer("blah", 10)', cw.repr.repr(new KnownErrorAnswer('blah', 10)))
+		self.assertEqual('new Cancellation(10)', cw.repr.repr(new Cancellation(10)))
+		self.assertEqual('new Notification("blah")', cw.repr.repr(new Notification('blah')))
 	}
 );
 
@@ -135,19 +138,21 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 
 	function test_ask(self) {
 		var sent = attachGetNew([])
-		sendQANFrame = function(frame) {
+		var sendQANFrame = function(frame) {
 			sent.push(frame)
 		}
 
 		var answers = attachGetNew([])
-		gotOkayAnswer = function(answer) {
+		var gotOkayAnswer = function(answer) {
 			answers.push([answer, 'okay'])
 		}
 
-		var gotErrorAnswerExpect = function(expectedFailure) {
-			var gotErrorAnswer = function(failure) {
-				failure.trap(expectedFailure)
-				answers.push([failure.value[0], 'error'])
+		var gotErrorAnswerExpect = function(expectedError) {
+			var gotErrorAnswer = function(error) {
+				if(!(error instanceof expectedError)) {
+					throw error;
+				}
+				answers.push([error.body, 'error'])
 			}
 			return gotErrorAnswer
 		}
@@ -409,8 +414,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		sent to the peer.
 		*/
 		var loggedErrors = []
-		var logError = function(message, failure) {
-			loggedErrors.push([message, failure])
+		var logError = function(message, error) {
+			loggedErrors.push([message, error])
 		}
 
 		var bodyReceived = function(body, isQuestion) {
@@ -425,8 +430,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		var h = new QANHelper(bodyReceived, logError, sendQANFrame, null)
 		h.handleQANFrame(new Question("How much wood would a wood chuck chuck?", 1))
 
-		self.assertEqual("Peer's new Question #1 caused uncaught exception", loggedErrors[0][0])
-		self.assertIsInstance(loggedErrors[0][1], failure.Failure)
+		self.assertEqual("Peer's Question #1 caused uncaught exception", loggedErrors[0][0])
+		//self.assertIsInstance(loggedErrors[0][1], failure.Failure) // FIXME
 
 		self.assertEqual([new UnknownErrorAnswer("Uncaught exception", 1)], sent.getNew())
 	},
@@ -437,8 +442,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		to a call to logError, and no response sent to the peer.
 		*/
 		var loggedErrors = []
-		var logError = function(message, failure) {
-			loggedErrors.push([message, failure])
+		var logError = function(message, error) {
+			loggedErrors.push([message, error])
 		}
 
 		var bodyReceived = function(body, isQuestion) {
@@ -453,8 +458,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		var h = new QANHelper(bodyReceived, logError, sendQANFrame, null)
 		h.handleQANFrame(new Notification("You've got more mail"))
 
-		self.assertEqual("Peer's new Notification caused uncaught exception", loggedErrors[0][0])
-		self.assertIsInstance(loggedErrors[0][1], failure.Failure)
+		self.assertEqual("Peer's Notification caused uncaught exception", loggedErrors[0][0])
+		//self.assertIsInstance(loggedErrors[0][1], failure.Failure) // FIXME
 
 		self.assertEqual([], sent.getNew())
 	},
@@ -486,9 +491,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 			new Cancellation(1)
 		], sent.getNew())
 
-		self.assertTrue(d.called)
+		self.assertTrue(d.hasFired())
 		var d2 = self.assertFailure(d, goog.async.Deferred.CancelledError)
-		goog.asserts.assert(d2.called)
+		goog.asserts.assert(d2.hasFired())
 
 		// Peer always sends an answer, which QANHelper must ignore.
 		h.handleQANFrame(new OkayAnswer("nope", 1))
@@ -510,15 +515,15 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		], sent.getNew())
 
 		h.failAll("just because")
-		self.assertTrue(d1.called)
+		self.assertTrue(d1.hasFired())
 		var d1_ = self.assertFailure(d1, QuestionFailed)
 		d1_.addCallback(function(e) { self.assertEqual("just because", String(e)) }) // FIXME
-		goog.asserts.assert(d1_.called)
+		goog.asserts.assert(d1_.hasFired())
 
-		self.assertTrue(d2.called)
+		self.assertTrue(d2.hasFired())
 		var d2_ = self.assertFailure(d2, QuestionFailed)
 		d2_.addCallback(function(e) { self.assertEqual("just because", String(e)) }) // FIXME
-		goog.asserts.assert(d2_.called)
+		goog.asserts.assert(d2_.hasFired())
 
 		// Peer can still send an answer to the failed Questions
 		h.handleQANFrame(new OkayAnswer("no", 1))

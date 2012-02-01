@@ -21,6 +21,7 @@ goog.provide('cw.net.QuestionFailed');
 goog.require('goog.asserts');
 goog.require('goog.debug.Error');
 goog.require('goog.structs.Map');
+goog.require('cw.deferred');
 goog.require('cw.math');
 goog.require('cw.repr');
 goog.require('cw.string');
@@ -29,14 +30,14 @@ goog.require('cw.string');
 
 /**
  * @param {*} body
- * @param {number} id
+ * @param {number} qid
  * @constructor
  */
-cw.net.Question = function(body, id) {
+cw.net.Question = function(body, qid) {
 	/** @type {*} */
 	this.body = body;
 	/** @type {number} */
-	this.id = id;
+	this.qid = qid;
 };
 
 /**
@@ -48,7 +49,7 @@ cw.net.Question = function(body, id) {
 cw.net.Question.prototype.equals = function(other, eqLog) {
 	return (
 		other instanceof cw.net.Question &&
-		this.id == other.id &&
+		this.qid == other.qid &&
 		cw.eq.equals(this.body, other.body, eqLog));
 };
 
@@ -59,21 +60,21 @@ cw.net.Question.prototype.equals = function(other, eqLog) {
 cw.net.Question.prototype.__reprPush__ = function(sb, stack) {
 	sb.push("new Question(");
 	cw.repr.reprPush(this.body, sb, stack);
-	sb.push(", ", String(this.id), ")");
+	sb.push(", ", String(this.qid), ")");
 };
 
 
 
 /**
  * @param {*} body
- * @param {number} id
+ * @param {number} qid
  * @constructor
  */
-cw.net.OkayAnswer = function(body, id) {
+cw.net.OkayAnswer = function(body, qid) {
 	/** @type {*} */
 	this.body = body;
 	/** @type {number} */
-	this.id = id;
+	this.qid = qid;
 };
 
 /**
@@ -85,7 +86,7 @@ cw.net.OkayAnswer = function(body, id) {
 cw.net.OkayAnswer.prototype.equals = function(other, eqLog) {
 	return (
 		other instanceof cw.net.OkayAnswer &&
-		this.id == other.id &&
+		this.qid == other.qid &&
 		cw.eq.equals(this.body, other.body, eqLog));
 };
 
@@ -96,21 +97,21 @@ cw.net.OkayAnswer.prototype.equals = function(other, eqLog) {
 cw.net.OkayAnswer.prototype.__reprPush__ = function(sb, stack) {
 	sb.push("new OkayAnswer(");
 	cw.repr.reprPush(this.body, sb, stack);
-	sb.push(", ", String(this.id), ")");
+	sb.push(", ", String(this.qid), ")");
 };
 
 
 
 /**
  * @param {*} body
- * @param {number} id
+ * @param {number} qid
  * @constructor
  */
-cw.net.KnownErrorAnswer = function(body, id) {
+cw.net.KnownErrorAnswer = function(body, qid) {
 	/** @type {*} */
 	this.body = body;
 	/** @type {number} */
-	this.id = id;
+	this.qid = qid;
 };
 
 /**
@@ -122,7 +123,7 @@ cw.net.KnownErrorAnswer = function(body, id) {
 cw.net.KnownErrorAnswer.prototype.equals = function(other, eqLog) {
 	return (
 		other instanceof cw.net.KnownErrorAnswer &&
-		this.id == other.id &&
+		this.qid == other.qid &&
 		cw.eq.equals(this.body, other.body, eqLog));
 };
 
@@ -133,21 +134,21 @@ cw.net.KnownErrorAnswer.prototype.equals = function(other, eqLog) {
 cw.net.KnownErrorAnswer.prototype.__reprPush__ = function(sb, stack) {
 	sb.push("new KnownErrorAnswer(");
 	cw.repr.reprPush(this.body, sb, stack);
-	sb.push(", ", String(this.id), ")");
+	sb.push(", ", String(this.qid), ")");
 };
 
 
 
 /**
  * @param {*} body
- * @param {number} id
+ * @param {number} qid
  * @constructor
  */
-cw.net.UnknownErrorAnswer = function(body, id) {
+cw.net.UnknownErrorAnswer = function(body, qid) {
 	/** @type {*} */
 	this.body = body;
 	/** @type {number} */
-	this.id = id;
+	this.qid = qid;
 };
 
 /**
@@ -159,7 +160,7 @@ cw.net.UnknownErrorAnswer = function(body, id) {
 cw.net.UnknownErrorAnswer.prototype.equals = function(other, eqLog) {
 	return (
 		other instanceof cw.net.UnknownErrorAnswer &&
-		this.id == other.id &&
+		this.qid == other.qid &&
 		cw.eq.equals(this.body, other.body, eqLog));
 };
 
@@ -170,18 +171,18 @@ cw.net.UnknownErrorAnswer.prototype.equals = function(other, eqLog) {
 cw.net.UnknownErrorAnswer.prototype.__reprPush__ = function(sb, stack) {
 	sb.push("new UnknownErrorAnswer(");
 	cw.repr.reprPush(this.body, sb, stack);
-	sb.push(", ", String(this.id), ")");
+	sb.push(", ", String(this.qid), ")");
 };
 
 
 
 /**
- * @param {number} id
+ * @param {number} qid
  * @constructor
  */
-cw.net.Cancellation = function(id) {
+cw.net.Cancellation = function(qid) {
 	/** @type {number} */
-	this.id = id;
+	this.qid = qid;
 };
 
 /**
@@ -193,7 +194,7 @@ cw.net.Cancellation = function(id) {
 cw.net.Cancellation.prototype.equals = function(other, eqLog) {
 	return (
 		other instanceof cw.net.Cancellation &&
-		this.id == other.id);
+		this.qid == other.qid);
 };
 
 /**
@@ -201,7 +202,7 @@ cw.net.Cancellation.prototype.equals = function(other, eqLog) {
  * @param {!Array.<*>} stack
  */
 cw.net.Cancellation.prototype.__reprPush__ = function(sb, stack) {
-	sb.push("new Cancellation(", String(this.id), ")");
+	sb.push("new Cancellation(", String(this.qid), ")");
 };
 
 
@@ -246,7 +247,7 @@ cw.net.Notification.prototype.__reprPush__ = function(sb, stack) {
  * 	cw.net.KnownErrorAnswer|
  * 	cw.net.UnknownErrorAnswer|
  * 	cw.net.Cancellation|
- * 	cw.net.Notification|
+ * 	cw.net.Notification
  * 	)}
  */
 cw.net.QANFrame;
@@ -328,7 +329,7 @@ goog.inherits(cw.net.InvalidQANFrame, goog.debug.Error);
 cw.net.qidOrThrow_ = function(s) {
 	var n = cw.string.strToNonNegLimit(s, cw.math.LARGEST_INTEGER);
 	if(n == null) {
-		throw new InvalidQANFrame("bad qid")
+		throw new cw.net.InvalidQANFrame("bad qid")
 	}
 	return n;
 }
@@ -485,24 +486,27 @@ cw.net.QANHelper = function(bodyReceived, logError, sendQANFrame, fatalError) {
 	this.sendQANFrame_ = sendQANFrame;
 	this.fatalError_ = fatalError;
 
-	this.qidCounter_ = 0
+	this.qidCounter_ = 0;
 	this.ourQuestions_ = new goog.structs.Map();
 	this.theirQuestions_ = new goog.structs.Map();
 }
 
-cw.net.QANHelper.prototype.__repr__ = function() {
-	return ('<QANHelper asked %d questions, waiting for %d peer answers '
-		'and %d local answers>') % (
-			this.qidCounter_, this.ourQuestions_.getCount(),
-			this.theirQuestions_.getCount())
-}
+/**
+ * @param {!Array.<string>} sb
+ * @param {!Array.<*>} stack
+ */
+cw.net.QANHelper.prototype.__reprPush__ = function(sb, stack) {
+	sb.push("<QANHelper asked ", String(this.qidCounter_), " questions, " +
+		"waiting for ", String(this.ourQuestions_.getCount()), " peer answers and ",
+		String(this.theirQuestions_.getCount()), " local answers>");
+};
 
 /**
  * @private
  */
 cw.net.QANHelper.prototype.sendOkayAnswer_ = function(body, qid) {
-	this.theirQuestions_.remove(qid)
-	this.sendQANFrame_(new cw.net.OkayAnswer(body, qid))
+	this.theirQuestions_.remove(qid);
+	this.sendQANFrame_(new cw.net.OkayAnswer(body, qid));
 	return null;
 }
 
@@ -538,9 +542,9 @@ cw.net.QANHelper.prototype.handleQANFrame = function(qanFrame) {
 			// Ignore the answer to a question we cancelled or failAll'ed.
 		} else if(qanFrame instanceof cw.net.OkayAnswer) {
 			d.callback(qanFrame.body)
-		} else if(qanFrame instanceof KnownErrorAnswer) {
+		} else if(qanFrame instanceof cw.net.KnownErrorAnswer) {
 			d.errback(new cw.net.KnownError(qanFrame.body))
-		} else if(qanFrame instanceof UnknownErrorAnswer) {
+		} else if(qanFrame instanceof cw.net.UnknownErrorAnswer) {
 			d.errback(new cw.net.UnknownError(qanFrame.body))
 		} else {
 			throw Error("handleQANFrame bug")
@@ -559,12 +563,21 @@ cw.net.QANHelper.prototype.handleQANFrame = function(qanFrame) {
 		if(this.theirQuestions_.containsKey(qid)) {
 			this.fatalError_("Received Question with duplicate qid: " + qid)
 			return
+		}
 		var d = cw.deferred.maybeDeferred(
-			this.bodyReceived_, qanFrame.body, true)
+			this.bodyReceived_, [qanFrame.body, true])
 		this.theirQuestions_[qid] = d
+		var that = this;
 		d.addCallbacks(
-			this.sendOkayAnswer_, this.sendErrorAnswer_,
-			callbackArgs=(qid,), errbackArgs=(qid,))
+			function(body) {
+				that.sendOkayAnswer_(body, qid);
+				return null;
+			},
+			function(error) {
+				that.sendErrorAnswer_(error, qid);
+				return null;
+			}
+		);
 		d.addErrback(function(err) {
 			this.logError_("Bug in QANHelper.sendOkayAnswer_ or sendErrorAnswer_", err);
 			return null;
@@ -572,17 +585,16 @@ cw.net.QANHelper.prototype.handleQANFrame = function(qanFrame) {
 
 	} else if(qanFrame instanceof cw.net.Cancellation) {
 		var qid = qanFrame.qid
-		try {
-			// We don't .pop() it here because a cancelled Deferred
-			// still goes through the callback or errback chain, and
-			// our _sendOkayAnswer and _sendErrorAnswer
-			// deletes it from this.theirQuestions_.
-			var d = this.theirQuestions_[qid]
-		} catch(e) { // FIXME: check for KeyError
-			// Cancellations for nonexistent questions are ignored.
-		} else {
-			d.cancel()
+
+		// We don't .remove(qid) here because a cancelled Deferred
+		// still goes through the callback or errback chain, and
+		// our sendOkayAnswer_ and sendErrorAnswer_
+		// deletes it from this.theirQuestions_.
+		var d = this.theirQuestions_.get(qid)
+		if(goog.isDef(d)) {
+			d.cancel();
 		}
+		// Cancellations for nonexistent questions are ignored.
 	}
 }
 
@@ -609,14 +621,17 @@ cw.net.QANHelper.prototype.ask = function(body) {
 		with L{KnownError} or L{UnknownError} or L{QuestionFailed}.
 	@rtype: L{defer.Deferred}
 	*/
-	this.qidCounter_ += 1
-	var qid = this.qidCounter_
-	this.sendQANFrame_(new cw.net.Question(body, qid))
+	this.qidCounter_ += 1;
+	var qid = this.qidCounter_;
+	this.sendQANFrame_(new cw.net.Question(body, qid));
 
-	goog.asserts.assert(!this.ourQuestions_.containsKey(qid))
-	var d = new goog.async.Deferred(lambda _: this.sendCancel_(qid))
-	this.ourQuestions_.set(qid, d)
-	return d
+	goog.asserts.assert(!this.ourQuestions_.containsKey(qid));
+	var that = this;
+	var d = new goog.async.Deferred(function() {
+		that.sendCancel_(qid);
+	});
+	this.ourQuestions_.set(qid, d);
+	return d;
 }
 
 cw.net.QANHelper.prototype.notify = function(body) {
@@ -640,8 +655,13 @@ cw.net.QANHelper.prototype.failAll = function(reason) {
 		exception message.
 	@type reason: C{str}
 	*/
-	// .copy() because some buggy errback might .ask() a question
-	for qid, d in this.ourQuestions_.copy().iteritems():
-		this.ourQuestions_.set(qid, null)
-		d.errback(new cw.net.QuestionFailed(reason))
+	var keys = this.ourQuestions_.getKeys();
+	for(var i=0; i < keys.length; i++) {
+		var d = this.ourQuestions_.get(keys[i])
+		// isDef just in case a very buggy errback mutated ourQuestions_
+		if(goog.isDef(d)) {
+			this.ourQuestions_.set(keys[i], null)
+			d.errback(new cw.net.QuestionFailed(reason))
+		}
+	}
 }
