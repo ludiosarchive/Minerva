@@ -272,7 +272,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		]
 		var bodyReceived = function(body, isQuestion) {
 			received.push([body, isQuestion])
-			return answerDs.splice(0, 1)
+			return answerDs.splice(0, 1)[0];
 		}
 
 		var sent = []
@@ -326,7 +326,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 
 		self.assertEqual([["what?", true]], received.getNew())
 
-		self.assertEqual("Received new Question with duplicate qid: 1", fatalReason)
+		self.assertEqual("Received Question with duplicate qid: 1", fatalReason)
 	},
 
 	function test_theyCancel(self) {
@@ -352,7 +352,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		]
 		var bodyReceived = function(body, isQuestion) {
 			received.push([body, isQuestion])
-			return answerDs.splice(0, 1)
+			return answerDs.splice(0, 1)[0]
 		}
 
 		var sent = attachGetNew([])

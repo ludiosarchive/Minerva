@@ -507,7 +507,6 @@ cw.net.QANHelper.prototype.__reprPush__ = function(sb, stack) {
 cw.net.QANHelper.prototype.sendOkayAnswer_ = function(body, qid) {
 	this.theirQuestions_.remove(qid);
 	this.sendQANFrame_(new cw.net.OkayAnswer(body, qid));
-	return null;
 }
 
 /**
@@ -525,7 +524,6 @@ cw.net.QANHelper.prototype.sendErrorAnswer_ = function(error, qid) {
 		// exception.
 		this.sendQANFrame_(new cw.net.UnknownErrorAnswer("Uncaught exception", qid))
 	}
-	return null;
 }
 
 cw.net.QANHelper.prototype.handleQANFrame = function(qanFrame) {
@@ -566,7 +564,7 @@ cw.net.QANHelper.prototype.handleQANFrame = function(qanFrame) {
 		}
 		var d = cw.deferred.maybeDeferred(
 			this.bodyReceived_, [qanFrame.body, true])
-		this.theirQuestions_[qid] = d
+		this.theirQuestions_.set(qid, d)
 		var that = this;
 		d.addCallbacks(
 			function(body) {
