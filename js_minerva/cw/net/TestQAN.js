@@ -192,7 +192,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		self.assertEqual([['no.', 'okay']], answers.getNew());
 
 
-		d2 = h.ask("I want a KnownError response to this one");
+		var d2 = h.ask("I want a KnownError response to this one");
 		d2.addCallbacks(gotOkayAnswer, gotErrorAnswerExpect(KnownError));
 
 		// Feed this "new KnownErrorAnswer from the peer" into QANHelper
@@ -201,7 +201,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		self.assertEqual([['KnownErrorAnswer as asked', 'error']], answers.getNew());
 
 
-		d3 = h.ask("I want an UnknownError response to this one");
+		var d3 = h.ask("I want an UnknownError response to this one");
 		d3.addCallbacks(gotOkayAnswer, gotErrorAnswerExpect(UnknownError));
 
 		// Feed this "new UnknownErrorAnswer from the peer" into QANHelper
