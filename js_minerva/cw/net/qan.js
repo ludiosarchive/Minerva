@@ -304,7 +304,6 @@ cw.net.qanFrameToString = function(qanFrame) {
 };
 
 
-
 /**
  * @param {string} message
  * @constructor
@@ -323,15 +322,19 @@ goog.inherits(cw.net.InvalidQANFrame, goog.debug.Error);
 
 
 /**
+ * @param {string} s A qid encoded as a string
+ * @return {number} qid
+ * @throws {cw.net.InvalidQANFrame} If {@code s} is not a valid qid
  * @private
  */
 cw.net.qidOrThrow_ = function(s) {
 	var n = cw.string.strToNonNegLimit(s, cw.math.LARGEST_INTEGER);
-	if(n == null) {
+	if(goog.isNull(n)) {
 		throw new cw.net.InvalidQANFrame("bad qid");
 	}
 	return n;
 };
+
 
 /**
  * @param {string} frameString The QAN frame, encoded as a string
