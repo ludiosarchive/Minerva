@@ -324,7 +324,7 @@ class QANHelper(object):
 		self._ourQuestions[qid] = None
 
 		# Note: when we cancel something, we still expect to get either
-		# an OkayAnswer or ErrorAnswer from the peer, at least in the
+		# an OkayAnswer or *ErrorAnswer from the peer, at least in the
 		# typical case where the Stream does not reset.
 		self._sendQANFrame(Cancellation(qid))
 
