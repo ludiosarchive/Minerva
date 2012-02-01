@@ -50,12 +50,12 @@ var QuestionFailed = cw.net.QuestionFailed;
  */
 var attachGetNew = function(arr) {
 	arr.getNew = function() {
-		if(!this.lenBeforeLastGetNew_) {
+		if(!goog.isDef(this.lenBeforeLastGetNew_)) {
 			this.lenBeforeLastGetNew_ = 0;
 		}
 
-		var oldLen = self._lenBeforeLastGetNew
-		self.lenBeforeLastGetNew_ = this.length;
+		var oldLen = this.lenBeforeLastGetNew_;
+		this.lenBeforeLastGetNew_ = this.length;
 
 		return this.slice(oldLen);
 	}
@@ -92,7 +92,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANFrameTests').methods(
 
 	function test_qanFrameToStringInvalid(self) {
 		goog.array.forEach([null, true, false, 3, [], {}], function(bad) {
-			self.assertThrows(TypeError, function() { qanFrameToString(new Notification(bad)) })
+			self.assertThrows(Error, function() { qanFrameToString(new Notification(bad)) })
 		})
 	},
 
