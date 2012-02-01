@@ -1,6 +1,7 @@
 goog.provide('cw.net.TestQAN');
 
 goog.require('cw.UnitTest');
+goog.require('goog.array');
 goog.require('goog.async.Deferred');
 goog.require('goog.async.Deferred.CancelledError');
 goog.require('cw.net.stringToQANFrame');
@@ -33,7 +34,7 @@ var UnknownError = cw.net.UnknownError;
 var QuestionFailed = cw.net.QuestionFailed;
 
 
-cw.UnitTest.TestCase.subclass(FIXME, 'QANFrameTests').methods(
+cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANFrameTests').methods(
 
 	function test_sameTypeEquality(self) {
 		self.assertEqual(new OkayAnswer("blah", 10), new OkayAnswer("blah", 10))
@@ -60,8 +61,9 @@ cw.UnitTest.TestCase.subclass(FIXME, 'QANFrameTests').methods(
 	},
 
 	function test_qanFrameToStringInvalid(self) {
-		for bad in [null, true, false, 3, 3.0, (), [], {}, object()]:
-			self.assertRaises(TypeError, lambda: qanFrameToString(new Notification(bad)))
+		goog.array.forEach([null, true, false, 3, [], {}], function(bad) {
+			self.assertRaises(TypeError, function() { qanFrameToString(new Notification(bad)) })
+		})
 	},
 
 	function test_stringToQANFrameValid(self) {
@@ -74,13 +76,13 @@ cw.UnitTest.TestCase.subclass(FIXME, 'QANFrameTests').methods(
 	},
 
 	function test_stringToQANFrameInvalid(self) {
-		self.assertRaises(InvalidQANFrame, lambda: stringToQANFrame(""))
-		self.assertRaises(InvalidQANFrame, lambda: stringToQANFrame("whatX"))
-		self.assertRaises(InvalidQANFrame, lambda: stringToQANFrame("blah|10X"))
-		self.assertRaises(InvalidQANFrame, lambda: stringToQANFrame("1x0C"))
-		self.assertRaises(InvalidQANFrame, lambda: stringToQANFrame("C"))
-		self.assertRaises(InvalidQANFrame, lambda: stringToQANFrame("blah|1x0Q"))
-		self.assertRaises(InvalidQANFrame, lambda: stringToQANFrame("Q"))
+		self.assertRaises(InvalidQANFrame, function() { stringToQANFrame("") })
+		self.assertRaises(InvalidQANFrame, function() { stringToQANFrame("whatX") })
+		self.assertRaises(InvalidQANFrame, function() { stringToQANFrame("blah|10X") })
+		self.assertRaises(InvalidQANFrame, function() { stringToQANFrame("1x0C") })
+		self.assertRaises(InvalidQANFrame, function() { stringToQANFrame("C") })
+		self.assertRaises(InvalidQANFrame, function() { stringToQANFrame("blah|1x0Q") })
+		self.assertRaises(InvalidQANFrame, function() { stringToQANFrame("Q") })
 	},
 
 	function test_repr(self) {
@@ -93,14 +95,14 @@ cw.UnitTest.TestCase.subclass(FIXME, 'QANFrameTests').methods(
 );
 
 
-cw.UnitTest.TestCase.subclass(FIXME, 'QANHelperTests').methods(
+cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 
 	function test_repr(self) {
-		h = QANHelper(null, null, lambda _: null, null)
-		self.assertEqual("<QANHelper asked 0 questions, waiting for 0 "
+		h = QANHelper(null, null, goog.nullFunction, null)
+		self.assertEqual("<QANHelper asked 0 questions, waiting for 0 " +
 			"peer answers and 0 local answers>", cw.repr.repr(h))
 		h.ask("what?")
-		self.assertEqual("<QANHelper asked 1 questions, waiting for 1 "
+		self.assertEqual("<QANHelper asked 1 questions, waiting for 1 " +
 			"peer answers and 0 local answers>", cw.repr.repr(h))
 	},
 
@@ -126,6 +128,7 @@ cw.UnitTest.TestCase.subclass(FIXME, 'QANHelperTests').methods(
 		fatalErrors = ListLog()
 		fatalError = function(msg) {
 			fatalErrors.push(msg)
+		}
 
 		h = QANHelper(null, null, sendQANFrame, fatalError)
 		d1 = h.ask("what?")
@@ -133,7 +136,7 @@ cw.UnitTest.TestCase.subclass(FIXME, 'QANHelperTests').methods(
 
 		// Make sure QANHelper wrote something to the peer
 		self.assertEqual([
-			new Question("what?", 1),
+			new Question("what?", 1)
 		], sent.getNew())
 
 		// We shouldn't have an answer yet
@@ -183,7 +186,7 @@ cw.UnitTest.TestCase.subclass(FIXME, 'QANHelperTests').methods(
 
 		// Make sure QANHelper wrote something to the peer
 		self.assertEqual([
-			new Notification("you've got mail"),
+			new Notification("you've got mail")
 		], sent)
 	},
 
@@ -238,10 +241,12 @@ cw.UnitTest.TestCase.subclass(FIXME, 'QANHelperTests').methods(
 		bodyReceived = function(body, isQuestion) {
 			received.push((body, isQuestion))
 			return answerDs.pop(0)
+		}
 
 		sent = []
 		sendQANFrame = function(frame) {
 			sent.push(frame)
+		}
 
 		h = QANHelper(bodyReceived, null, sendQANFrame, null)
 		d1 = answerDs[0]
@@ -253,7 +258,7 @@ cw.UnitTest.TestCase.subclass(FIXME, 'QANHelperTests').methods(
 		self.assertEqual([
 			('the weather?', true),
 			('how about now?', true),
-			('and now?', true),
+			('and now?', true)
 		], received)
 
 		self.assertEqual([], sent)
@@ -278,7 +283,7 @@ cw.UnitTest.TestCase.subclass(FIXME, 'QANHelperTests').methods(
 			return new goog.async.Deferred()
 		}
 
-		/* FIXME */ nonlocal = dict(fatalReason=null)
+		var fatalReason = null;
 		fatalError = function(reason) {
 			fatalReason = reason
 		}
@@ -289,14 +294,13 @@ cw.UnitTest.TestCase.subclass(FIXME, 'QANHelperTests').methods(
 
 		self.assertEqual([("what?", true)], received.getNew())
 
-		self.assertEqual("Received new Question with duplicate qid: 1", nonlocal['fatalReason'])
+		self.assertEqual("Received new Question with duplicate qid: 1", fatalReason)
 	},
 
 	function test_theyCancel(self) {
-		/* FIXME */ nonlocal = dict(
-			cancellerDoesErrbackCalled=false,
-			cancellerDoesCallbackCalled=false
-		)
+		var cancellerDoesErrbackCalled = false
+		var cancellerDoesCallbackCalled = false
+
 		cancellerDoesErrback = function(d) {
 			cancellerDoesErrbackCalled = true
 			d.errback(new KnownError("okay, you'll never know"))
@@ -337,24 +341,24 @@ cw.UnitTest.TestCase.subclass(FIXME, 'QANHelperTests').methods(
 			('the weather?', true),
 			('how about now?', true),
 			('and now?', true),
-			('this evening?', true),
+			('this evening?', true)
 		], received)
 
 		self.assertEqual([], sent.getNew())
 
-		self.assertEqual(false, nonlocal['cancellerDoesErrbackCalled'])
-		self.assertEqual(false, nonlocal['cancellerDoesCallbackCalled'])
+		self.assertEqual(false, cancellerDoesErrbackCalled)
+		self.assertEqual(false, cancellerDoesCallbackCalled)
 
 		// Cancel new Question #2
 		h.handleQANFrame(new Cancellation(2))
-		self.assertTrue(nonlocal['cancellerDoesErrbackCalled'])
+		self.assertTrue(cancellerDoesErrbackCalled)
 		self.assertEqual([
-			new KnownErrorAnswer("okay, you'll never know", 2),
+			new KnownErrorAnswer("okay, you'll never know", 2)
 		], sent.getNew())
 
 		// Cancel new Question #4
 		h.handleQANFrame(new Cancellation(4))
-		self.assertTrue(nonlocal['cancellerDoesCallbackCalled'])
+		self.assertTrue(cancellerDoesCallbackCalled)
 		self.assertEqual([
 			new OkayAnswer("maybe a little warm", 4)
 		], sent.getNew())
@@ -362,12 +366,12 @@ cw.UnitTest.TestCase.subclass(FIXME, 'QANHelperTests').methods(
 		// Cancel new Question #1, which has no canceller
 		h.handleQANFrame(new Cancellation(1))
 		self.assertEqual([
-			new UnknownErrorAnswer("CancelledError", 1),
+			new UnknownErrorAnswer("CancelledError", 1)
 		], sent.getNew())
 
 		d3.errback(new KnownError("weather station is broken"))
 		self.assertEqual([
-			new KnownErrorAnswer("weather station is broken", 3),
+			new KnownErrorAnswer("weather station is broken", 3)
 		], sent.getNew())
 	},
 
@@ -389,6 +393,7 @@ cw.UnitTest.TestCase.subclass(FIXME, 'QANHelperTests').methods(
 		sent = ListLog()
 		sendQANFrame = function(frame) {
 			sent.push(frame)
+		}
 
 		h = QANHelper(bodyReceived, logError, sendQANFrame, null)
 		h.handleQANFrame(new Question("How much wood would a wood chuck chuck?", 1))
@@ -445,13 +450,13 @@ cw.UnitTest.TestCase.subclass(FIXME, 'QANHelperTests').methods(
 		d = h.ask("going to the theater?")
 
 		self.assertEqual([
-			new Question("going to the theater?", 1),
+			new Question("going to the theater?", 1)
 		], sent.getNew())
 
 		d.cancel()
 
 		self.assertEqual([
-			new Cancellation(1),
+			new Cancellation(1)
 		], sent.getNew())
 
 		self.assertTrue(d.called)
@@ -474,18 +479,18 @@ cw.UnitTest.TestCase.subclass(FIXME, 'QANHelperTests').methods(
 
 		self.assertEqual([
 			new Question("going to the theater?", 1),
-			new Question("mu?", 2),
+			new Question("mu?", 2)
 		], sent.getNew())
 
 		h.failAll("just because")
 		self.assertTrue(d1.called)
 		d1_ = self.assertFailure(d1, QuestionFailed)
-		d1_.addCallback(lambda e: self.assertEqual("just because", String(e)))
+		d1_.addCallback(function(e) { self.assertEqual("just because", String(e)) })
 		goog.asserts.assert(d1_.called)
 
 		self.assertTrue(d2.called)
 		d2_ = self.assertFailure(d2, QuestionFailed)
-		d2_.addCallback(lambda e: self.assertEqual("just because", String(e)))
+		d2_.addCallback(function(e) { self.assertEqual("just because", String(e)) })
 		goog.asserts.assert(d2_.called)
 
 		// Peer can still send an answer to the failed Questions
