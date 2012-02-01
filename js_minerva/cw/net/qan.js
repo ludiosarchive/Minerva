@@ -10,9 +10,13 @@
  stream.
  */
 
-goog.provide('cw.net.QANHelper');
 goog.provide('cw.net.stringToQANFrame');
 goog.provide('cw.net.qanFrameToString');
+goog.provide('cw.net.InvalidQANFrame');
+goog.provide('cw.net.QANHelper');
+goog.provide('cw.net.KnownError');
+goog.provide('cw.net.UnknownError');
+goog.provide('cw.net.QuestionFailed');
 
 
 goog.require('cw.math');
@@ -254,23 +258,29 @@ cw.net.QANHelper.prototype.__repr__ = function() {
 			len(this.theirQuestions_))
 }
 
+/**
+ * @private
+ */
 cw.net.QANHelper.prototype.sendOkayAnswer_ = function(s, qid) {
 	del this.theirQuestions_[qid]
-	this.sendQANFrame_(OkayAnswer(s, qid))
+	this.sendQANFrame_(cw.net.OkayAnswer(s, qid))
 }
 
+/**
+ * @private
+ */
 cw.net.QANHelper.prototype.sendErrorAnswer_ = function(failure, qid) {
 	del this.theirQuestions_[qid]
 	if(failure.check(KnownError)) {
-		this.sendQANFrame_(KnownErrorAnswer(failure.value[0], qid))
+		this.sendQANFrame_(cw.net.KnownErrorAnswer(failure.value[0], qid))
 	} else if(failure.check(defer.CancelledError)) {
-		this.sendQANFrame_(UnknownErrorAnswer("CancelledError", qid))
+		this.sendQANFrame_(cw.net.UnknownErrorAnswer("CancelledError", qid))
 	} else {
 		this.logError_("Peer's Question #%d caused uncaught "
 			"exception" % (qid,), failure)
 		// We intentionally do not reveal information about the
 		// exception.
-		this.sendQANFrame_(UnknownErrorAnswer("Uncaught exception", qid))
+		this.sendQANFrame_(cw.net.UnknownErrorAnswer("Uncaught exception", qid))
 	}
 }
 
@@ -287,7 +297,7 @@ cw.net.QANHelper.prototype.handleQANFrame = function(qanFrame) {
 		if(d is null) {
 			// Ignore the answer to a question we cancelled or failAll'ed.
 			pass
-		} else if(qanFrame instanceof OkayAnswer) {
+		} else if(qanFrame instanceof cw.net.OkayAnswer) {
 			d.callback(qanFrame.body)
 		} else if(qanFrame instanceof KnownErrorAnswer) {
 			d.errback(KnownError(qanFrame.body))
@@ -297,7 +307,7 @@ cw.net.QANHelper.prototype.handleQANFrame = function(qanFrame) {
 			throw Error("handleQANFrame bug")
 		}
 
-	} else if(qanFrame instanceof Notification) {
+	} else if(qanFrame instanceof cw.net.Notification) {
 		try {
 			this.bodyReceived_(qanFrame.body, false)
 		} catch(e) { // FIXME: check for Exception
@@ -305,7 +315,7 @@ cw.net.QANHelper.prototype.handleQANFrame = function(qanFrame) {
 				"exception", failure.Failure())
 		}
 
-	} else if(qanFrame instanceof Question) {
+	} else if(qanFrame instanceof cw.net.Question) {
 		var qid = qanFrame.qid
 		if(qid in this.theirQuestions_) {
 			this.fatalError_("Received Question with duplicate qid: %d" % (qid,))
@@ -319,7 +329,7 @@ cw.net.QANHelper.prototype.handleQANFrame = function(qanFrame) {
 		d.addErrback(lambda failure: this.logError_(
 			"Bug in QANHelper._sendOkayAnswer or _sendErrorAnswer", failure))
 
-	} else if(qanFrame instanceof Cancellation) {
+	} else if(qanFrame instanceof cw.net.Cancellation) {
 		var qid = qanFrame.qid
 		try {
 			// We don't .pop() it here because a cancelled Deferred
@@ -342,7 +352,7 @@ cw.net.QANHelper.prototype.sendCancel_ = function(qid) {
 	// Note: when we cancel something, we still expect to get either
 	// an OkayAnswer or *ErrorAnswer from the peer, at least in the
 	// typical case where the Stream does not reset.
-	this.sendQANFrame_(Cancellation(qid))
+	this.sendQANFrame_(cw.net.Cancellation(qid))
 
 	// Because we don't call .callback or .errback in this canceller,
 	// Deferred calls .errback(CancelledError()) for us.
@@ -361,7 +371,7 @@ cw.net.QANHelper.prototype.ask = function(body) {
 	*/
 	this.qidCounter_ += 1
 	qid = this.qidCounter_
-	this.sendQANFrame_(Question(body, qid))
+	this.sendQANFrame_(cw.net.Question(body, qid))
 
 	goog.asserts.assert(qid not in this.ourQuestions_)
 	d = new goog.async.Deferred(lambda _: this.sendCancel_(qid))
@@ -379,7 +389,7 @@ cw.net.QANHelper.prototype.notify = function(body) {
 	@return: null
 	@rtype: C{null}
 	*/
-	this.sendQANFrame_(Notification(body))
+	this.sendQANFrame_(cw.net.Notification(body))
 }
 
 cw.net.QANHelper.prototype.failAll = function(reason) {
@@ -393,5 +403,5 @@ cw.net.QANHelper.prototype.failAll = function(reason) {
 	// .copy() because some buggy errback might .ask() a question
 	for qid, d in this.ourQuestions_.copy().iteritems():
 		this.ourQuestions_[qid] = null
-		d.errback(QuestionFailed(reason))
+		d.errback(cw.net.QuestionFailed(reason))
 }
