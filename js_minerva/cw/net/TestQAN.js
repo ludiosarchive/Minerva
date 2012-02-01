@@ -435,7 +435,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		h.handleQANFrame(new Question("How much wood would a wood chuck chuck?", 1))
 
 		self.assertEqual("Peer's Question #1 caused uncaught exception", loggedErrors[0][0])
-		//self.assertIsInstance(loggedErrors[0][1], failure.Failure) // FIXME
+		self.assertTrue(loggedErrors[0][1] instanceof Error)
 
 		self.assertEqual([new UnknownErrorAnswer("Uncaught exception", 1)], sent.getNew())
 	},
@@ -463,7 +463,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		h.handleQANFrame(new Notification("You've got more mail"))
 
 		self.assertEqual("Peer's Notification caused uncaught exception", loggedErrors[0][0])
-		//self.assertIsInstance(loggedErrors[0][1], failure.Failure) // FIXME
+		self.assertTrue(loggedErrors[0][1] instanceof Error)
 
 		self.assertEqual([], sent.getNew())
 	},
