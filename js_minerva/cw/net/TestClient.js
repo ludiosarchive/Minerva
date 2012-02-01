@@ -169,7 +169,7 @@ cw.net.TestClient.MockClientTransport.prototype.getDescription_ = function() {
 
 
 /**
- * @implements {cw.net.IMinervaProtocol}
+ * @implements {cw.net.IStringProtocol}
  * @constructor
  */
 cw.net.TestClient.RecordingProtocol = function() {

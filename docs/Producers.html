@@ -14,7 +14,7 @@
 <p>Like many things in Twisted, Minerva supports producers/consumers for efficient high-volume
 streaming. <a class="footnote-reference" href="#id2" id="id1">[1]</a>. In Twisted, pressure information from consumers controls the creation of
 bytes. In Minerva, it controls the creation of <em>frames</em>, not bytes.</p>
-<p>In Minerva, a producer can be attached to the ServerStream. Usually, a MinervaProtocol
+<p>In Minerva, a producer can be attached to the ServerStream. Usually, an IStringProtocol
 will perform this attachment.</p>
 <p>In general, TCP pressure from the TCP connection of the primary
 transport directly affects the producer attached to ServerStream. Also, if the producer is a push
@@ -36,7 +36,7 @@ happens. However, it does &quot;just work&quot;.</p>
 <p>This is the object chain, &quot;upstream&quot; objects are at the top. Objects on adjacent lines
 usually know about each other (have references).</p>
 <ul class="simple">
-<li>MinervaProtocol</li>
+<li>IStringProtocol</li>
 <li>ServerStream</li>
 <li>ServerTransport</li>
 <li>(Twisted) - refers to either the TCP transport or to a <tt class="docutils literal">twisted.web.http.Request</tt>.
@@ -44,25 +44,25 @@ Both have a <tt class="docutils literal">registerProducer</tt> method.</li>
 </ul>
 <p>Producer attachment goes downstream, pressure information goes upstream.</p>
 <p>When a client connects, (Twisted) causes *Transport creation,
-which causes ServerStream creation, which causes MinervaProtocol creation. This
+which causes ServerStream creation, which causes IStringProtocol creation. This
 might not happen instantly, because *Transport must be authenticated first.
 At this time, there are no producers in the system.</p>
 <p>At any time, a pull or push producer can be registered with ServerStream. The producer can be
-unregistered at any time. Usually, a MinervaProtocol will do the registration and unregistration.</p>
+unregistered at any time. Usually, an IStringProtocol will do the registration and unregistration.</p>
 <p>ServerStream's goal is to register the same type of producer with every primary transport that
 attaches to it, even if the primary transport isn't attached yet (or not yet primary). ServerStream
 must also unregister producers from transports that are no longer primary transports.</p>
-<p>If type of producer is push, ServerStream must also call <tt class="docutils literal">pauseProducing</tt> on MinervaProtocol whenever
+<p>If type of producer is push, ServerStream must also call <tt class="docutils literal">pauseProducing</tt> on IStringProtocol whenever
 there is no primary transport. It must also call <tt class="docutils literal">resumeProducing</tt> when this situation ends.</p>
 <p>*Transport's job is simple, it just registers itself as the correct type of producer with (Twisted).
 One edge case: it must remember if (Twisted) paused it, and if so, <tt class="docutils literal">pauseProducing</tt> newly-attached push producers.</p>
 <p>During normal operation for a registered <em>pull</em> producer, these conditions result in
-<tt class="docutils literal">resumeProducing</tt> calls on MinervaProtocol:</p>
+<tt class="docutils literal">resumeProducing</tt> calls on IStringProtocol:</p>
 <ul class="simple">
 <li>(Twisted) - [resume] when it wants more data to send</li>
 </ul>
 <p>During normal operation for a registered <em>push</em> producer, these conditions result in
-<tt class="docutils literal">pauseProducing</tt> or <tt class="docutils literal">resumeProducing</tt> calls on MinervaProtocol:</p>
+<tt class="docutils literal">pauseProducing</tt> or <tt class="docutils literal">resumeProducing</tt> calls on IStringProtocol:</p>
 <ul class="simple">
 <li>(Twisted) - [resume] when it wants more data to send</li>
 <li>(Twisted) - [pause] when it has enough data</li>

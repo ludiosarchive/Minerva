@@ -20,7 +20,7 @@ goog.provide('cw.net.ExpandedSocketEndpoint_');
 goog.provide('cw.net.HttpEndpoint');
 goog.provide('cw.net.ExpandedHttpEndpoint_');
 goog.provide('cw.net.Endpoint');
-goog.provide('cw.net.IMinervaProtocol');
+goog.provide('cw.net.IStringProtocol');
 goog.provide('cw.net.HttpStreamingMode');
 goog.provide('cw.net.IStreamPolicy');
 goog.provide('cw.net.DefaultStreamPolicy');
@@ -396,7 +396,7 @@ cw.net.makeStreamId_ = function() {
  * methods in this interface.
  * @interface
  */
-cw.net.IMinervaProtocol = function() {
+cw.net.IStringProtocol = function() {
 
 };
 
@@ -407,7 +407,7 @@ cw.net.IMinervaProtocol = function() {
  * 	String contains only characters in inclusive range 0x20 - 0x7E.
  * @param {boolean} applicationLevel
  */
-cw.net.IMinervaProtocol.prototype.streamReset = function(reasonString, applicationLevel) {
+cw.net.IStringProtocol.prototype.streamReset = function(reasonString, applicationLevel) {
 
 };
 
@@ -417,7 +417,7 @@ cw.net.IMinervaProtocol.prototype.streamReset = function(reasonString, applicati
  *
  * @param {string} s The restricted string
  */
-cw.net.IMinervaProtocol.prototype.stringReceived = function(s) {
+cw.net.IStringProtocol.prototype.stringReceived = function(s) {
 
 };
 
@@ -529,7 +529,7 @@ cw.net.ClientStream = function(endpoint, streamPolicy, callQueue) {
 
 	/**
 	 * The receive window.  Incoming strings land here before being sent to
-	 * a {@link cw.net.IMinervaProtocol}.
+	 * a {@link cw.net.IStringProtocol}.
 	 * @type {!cw.net.Incoming}
 	 * @private
 	 */
@@ -748,7 +748,7 @@ cw.net.ClientStream.prototype.getUserContext = function() {
 };
 
 /**
- * @param {!cw.net.IMinervaProtocol} proto The protocol to bind this
+ * @param {!cw.net.IStringProtocol} proto The protocol to bind this
  * 	ClientStream's `onstring` and `onreset` to.
  */
 cw.net.ClientStream.prototype.bindToProtocol = function(proto) {

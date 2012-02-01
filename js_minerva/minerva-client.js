@@ -10,6 +10,7 @@ goog.require('goog.debug.DivConsole');
 goog.require('cw.net.ClientStream');
 goog.require('cw.repr');
 goog.require('cw.eventual');
+goog.require('cw.net.QANHelper'); // TODO: remove this after something else require()s it
 goog.require('cw.net.demo.getEndpoint'); // TODO: remove this
 goog.require('cw.net.demo.getEndpointByQueryArgs'); // TODO: remove this
 
