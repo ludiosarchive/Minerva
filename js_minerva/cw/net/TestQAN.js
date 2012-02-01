@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Tests for cw/net/qan.js
+ */
+
 goog.provide('cw.net.TestQAN');
 
 goog.require('cw.UnitTest');
@@ -407,12 +411,12 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		], sent.getNew())
 	},
 
+	/**
+	 * A new Question that causes bodyReceived to throw new an exception leads
+	 * to a call to logError, and an UnknownErrorResponse("Uncaught exception")
+	 * sent to the peer.
+	 */
 	function test_questionCausesException(self) {
-		/*
-		A new Question that causes bodyReceived to throw new an exception leads
-		to a call to logError, and an UnknownErrorResponse("Uncaught exception")
-		sent to the peer.
-		*/
 		var loggedErrors = []
 		var logError = function(message, error) {
 			loggedErrors.push([message, error])

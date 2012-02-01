@@ -1,13 +1,14 @@
 /**
- * QAN is a protocol that allows asking the peer a question and receiving an
- answer or error-answer.  You can think of this as the "simplest wire-level
- implementation of Deferreds", which is what AMP calls itself, though QAN takes
- it even further: there is no command dispatching, and requests/responses
- are completely unspecified.  (Though there are some helper functions here
- that assume the requests/responses are bytestrings.)
-
- QAN does not require Minerva; you can use it over any bidirectional framed
- stream.
+ * @fileoverview QAN is a protocol that allows asking the peer a question and
+ * receiving an answer or error-answer.  You can think of this as the "simplest
+ * wire-level implementation of Deferreds", which is what AMP calls itself,
+ * though QAN takes it even further: there is no command dispatching,
+ * and requests/responses are completely unspecified.  (Though there are
+ * some helper functions here that assume the requests/responses are
+ * bytestrings.)
+ *
+ * QAN does not require Minerva; you can use it over any bidirectional framed
+ * stream.
  */
 
 goog.provide('cw.net.stringToQANFrame');
@@ -279,11 +280,9 @@ cw.net.qanTypeToCode_ = function(frame) {
 
 
 /**
- * @param {!cw.net.QANFrame} qanFrame The QAN frame to encode:
- * 	a L{Question} or L{OkayAnswer} or L{KnownErrorAnswer} or
- * 	L{UnknownErrorAnswer} or L{Cancellation} or L{Notification}, all of
- * 	which must have a C{str} C{.body}.  (Except for L{Cancellation},
- * 	which has no C{.body}.)
+ * @param {!cw.net.QANFrame} qanFrame The QAN frame to encode.
+ * 	Any QANFrame with a {@code .body} must have a {@code string}
+ * 	{@code .body}.
  * @return {string} Encoded QAN frame
  */
 cw.net.qanFrameToString = function(qanFrame) {
@@ -292,7 +291,7 @@ cw.net.qanFrameToString = function(qanFrame) {
 		return String(qanFrame.qid) + code
 	} else {
 		if(!goog.isString(qanFrame.body)) {
-			throw Error("qanFrame.body must be a str, was " +
+			throw Error("qanFrame.body must be a string, was " +
 				cw.repr.repr(qanFrame.body))
 		}
 
@@ -334,16 +333,12 @@ cw.net.qidOrThrow_ = function(s) {
 	return n;
 }
 
-
+/**
+ * @param {string} frameString The QAN frame, encoded as a string
+ * @return {!cw.net.QANFrame}
+ * @throws {cw.net.InvalidQANFrame} If frameString is not a valid QAN frame.
+ */
 cw.net.stringToQANFrame = function(frameString) {
-	/*
-	@param frameString: The QAN frame, encoded as a string
-	@type frameString: C{str}
-
-	@return: The QAN frame
-	@rtype qf: a L{Question} or L{OkayAnswer} or L{ErrorAnswer} or
-		L{Cancellation} or L{Notification}, with a C{str} C{.body}.
-	*/
 	if(!frameString) {
 		throw new cw.net.InvalidQANFrame("0-length frame");
 	}
@@ -460,34 +455,61 @@ goog.inherits(cw.net.QuestionFailed, goog.debug.Error);
 
 
 /**
+ * @param {function(*, boolean)} bodyReceived: The 2-arg function to call when
+ * 	a Question or Notification is received (via a call to .handleString).
+ * 	Called with arguments: body, isQuestion.
+ *
+ * @param {function(string, *)} logError: A 2-arg function called when
+ * 	bodyReceived throws an error, or when QANHelper has a non-fatal
+ * 	internal error.  Called with arguments: error message, error object.
+ *
+ * @param {function(!cw.net.QANFrame)} sendQANFrame: A 1-arg function that
+ * 	sends a QAN frame to the peer.  Called with argument: qanFrame.
+ *
+ * @param {function(string)} fatalError: A 1-arg function called when QANHelper
+ * 	can no longer handle QAN frames.  Called with argument: reason (a string
+ * 	with chars in inclusive range 0x20 (SPACE) to 0x7E (~)).  After fatalError
+ * 	is called, you must stop calling C{handleQANFrame} to prevent fatalError
+ * 	from possibly being called again.
+ *
  * @constructor
  */
 cw.net.QANHelper = function(bodyReceived, logError, sendQANFrame, fatalError) {
-	/*
-	@param bodyReceived: The 2-arg function to call when
-		a Question or Notification is received (via a call to .handleString).
-		Called with arguments: body, isQuestion.
-
-	@param logError: A 2-arg function called when bodyReceived raises
-		an exception, or when QANHelper has a non-fatal internal error.
-		Called with arguments: error message, error object.
-
-	@param sendQANFrame: A 1-arg function that sends a QAN frame to the
-		peer.  Called with argument: qanFrame.
-
-	@param fatalError: A 1-arg function called when QANHelper can no longer
-		handle QAN frames.  Called with argument: reason (a string with chars
-		in inclusive range 0x20 (SPACE) to 0x7E (~)).  After fatalError is called,
-		you must stop calling C{handleQANFrame} to prevent fatalError from
-		possibly being called again.
-	*/
+	/**
+	 * @type {function(*, boolean)}
+	 * @private
+	 */
 	this.bodyReceived_ = bodyReceived;
+	/**
+	 * @type {function(string, *)}
+	 * @private
+	 */
 	this.logError_ = logError;
+	/**
+	 * @type {function(!cw.net.QANFrame)}
+	 * @private
+	 */
 	this.sendQANFrame_ = sendQANFrame;
+	/**
+	 * @type {function(string)}
+	 * @private
+	 */
 	this.fatalError_ = fatalError;
 
+	/**
+	 * @type {number}
+	 * @private
+	 */
 	this.qidCounter_ = 0;
+	/**
+	 * @type {!goog.structs.Map}
+	 * @private
+	 */
 	this.ourQuestions_ = new goog.structs.Map();
+	/**
+	 * @type {!goog.structs.Map}
+	 * @private
+	 */
 	this.theirQuestions_ = new goog.structs.Map();
 }
 
@@ -502,6 +524,8 @@ cw.net.QANHelper.prototype.__reprPush__ = function(sb, stack) {
 };
 
 /**
+ * @param {*} body
+ * @param {number} qid
  * @private
  */
 cw.net.QANHelper.prototype.sendOkayAnswer_ = function(body, qid) {
@@ -510,6 +534,8 @@ cw.net.QANHelper.prototype.sendOkayAnswer_ = function(body, qid) {
 }
 
 /**
+ * @param {*} error
+ * @param {number} qid
  * @private
  */
 cw.net.QANHelper.prototype.sendErrorAnswer_ = function(error, qid) {
@@ -526,6 +552,9 @@ cw.net.QANHelper.prototype.sendErrorAnswer_ = function(error, qid) {
 	}
 }
 
+/**
+ * @param {!cw.net.QANFrame} qanFrame
+ */
 cw.net.QANHelper.prototype.handleQANFrame = function(qanFrame) {
 	if(cw.net.isAnswerFrame(qanFrame)) {
 		var qid = qanFrame.qid
@@ -596,6 +625,10 @@ cw.net.QANHelper.prototype.handleQANFrame = function(qanFrame) {
 	}
 }
 
+/**
+ * @param {number} qid
+ * @private
+ */
 cw.net.QANHelper.prototype.sendCancel_ = function(qid) {
 	this.ourQuestions_.set(qid, null)
 
@@ -608,17 +641,15 @@ cw.net.QANHelper.prototype.sendCancel_ = function(qid) {
 	// Deferred calls .errback(CancelledError()) for us.
 }
 
+/**
+ * Send a Question to the peer.
+ *
+ * @param {*} body The question body
+ * @return {!goog.async.Deferred} a Deferred that will callback the response
+ * 	object, or errback with {@code KnownError} or {@code UnknownError} or
+ * 	{@code QuestionFailed}.
+ */
 cw.net.QANHelper.prototype.ask = function(body) {
-	/*
-	Send a Question to the peer.
-
-	@param body: The question body
-	@type body: *
-
-	@return: a Deferred that will callback the response object, or errback
-		with L{KnownError} or L{UnknownError} or L{QuestionFailed}.
-	@rtype: L{defer.Deferred}
-	*/
 	this.qidCounter_ += 1;
 	var qid = this.qidCounter_;
 	this.sendQANFrame_(new cw.net.Question(body, qid));
@@ -632,27 +663,22 @@ cw.net.QANHelper.prototype.ask = function(body) {
 	return d;
 }
 
+/**
+ * Send a Notification to the peer.
+ *
+ * @param {*} body The notification body
+ */
 cw.net.QANHelper.prototype.notify = function(body) {
-	/*
-	Send a Notification to the peer.
-
-	@param body: The notification body
-	@type body: *
-
-	@return: null
-	@rtype: C{null}
-	*/
 	this.sendQANFrame_(new cw.net.Notification(body))
 }
 
+/**
+ * Errback all of our questions with {@code QuestionFailed}.
+ *
+ * @param {string} reason Reason for failing; used as the
+ * 	{@code QuestionFailed} error message.
+ */
 cw.net.QANHelper.prototype.failAll = function(reason) {
-	/*
-	Errback all of our questions with L{QuestionFailed}.
-
-	@param reason: Reason for failing; used as the L{QuestionFailed}
-		exception message.
-	@type reason: C{str}
-	*/
 	var keys = this.ourQuestions_.getKeys();
 	for(var i=0; i < keys.length; i++) {
 		var d = this.ourQuestions_.get(keys[i])
