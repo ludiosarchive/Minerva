@@ -203,6 +203,11 @@ class UnknownError(Exception):
 
 
 
+class QuestionFailed(Exception):
+	pass
+
+
+
 class QANHelper(object):
 	def __init__(self, bodyReceived, logError, sendQANFrame, fatalError):
 		"""
@@ -266,7 +271,7 @@ class QANHelper(object):
 				return
 
 			if d is None:
-				# Ignore the answer to a question we cancelled.
+				# Ignore the answer to a question we cancelled or failAll'ed.
 				pass
 			elif isinstance(qanFrame, OkayAnswer):
 				d.callback(qanFrame.body)
@@ -356,6 +361,20 @@ class QANHelper(object):
 		@rtype: C{None}
 		"""
 		self._sendQANFrame(Notification(body))
+
+
+	def failAll(self, reason):
+		"""
+		Errback all of our questions with L{QuestionFailed}.
+
+		@param reason: Reason for failing; used as the QuestionFailed
+			exception message.
+		@type reason: C{str}
+		"""
+		# .copy() because some buggy errback might .ask() a question
+		for qid, d in self._ourQuestions.copy().iteritems():
+			self._ourQuestions[qid] = None
+			d.errback(QuestionFailed(reason))
 
 
 

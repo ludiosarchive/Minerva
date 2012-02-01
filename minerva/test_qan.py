@@ -7,7 +7,7 @@ from webmagic.fakes import ListLog
 from minerva.qan import (
 	OkayAnswer, KnownErrorAnswer, UnknownErrorAnswer, Question, Notification,
 	Cancellation, QANHelper, qanFrameToString, InvalidQANFrame,
-	stringToQANFrame, KnownError, UnknownError)
+	stringToQANFrame, KnownError, UnknownError, QuestionFailed)
 
 
 class QANFrameTests(unittest.TestCase):
@@ -416,3 +416,33 @@ class QANHelperTests(unittest.TestCase):
 
 		# Peer always sends an answer, which QANHelper must ignore.
 		h.handleQANFrame(OkayAnswer("nope", 1))
+
+
+	def test_failAll(self):
+		sent = ListLog()
+		def sendQANFrame(frame):
+			sent.append(frame)
+
+		h = QANHelper(None, None, sendQANFrame, None)
+		d1 = h.ask("going to the theater?")
+		d2 = h.ask("mu?")
+
+		self.assertEqual([
+			Question("going to the theater?", 1),
+			Question("mu?", 2),
+		], sent.getNew())
+
+		h.failAll("just because")
+		self.assertTrue(d1.called)
+		d1_ = self.assertFailure(d1, QuestionFailed)
+		d1_.addCallback(lambda e: self.assertEqual("just because", str(e)))
+		assert d1_.called
+
+		self.assertTrue(d2.called)
+		d2_ = self.assertFailure(d2, QuestionFailed)
+		d2_.addCallback(lambda e: self.assertEqual("just because", str(e)))
+		assert d2_.called
+
+		# Peer can still send an answer to the failed Questions
+		h.handleQANFrame(OkayAnswer("no", 1))
+		h.handleQANFrame(KnownErrorAnswer("what?", 2))

@@ -200,7 +200,8 @@ class QANProtocolWrapper(object):
 
 
 	def streamReset(reasonString, applicationLevel):
-		# TODO: tell QANHelper something, so that it aborts all the Questions
+		self.qanHelper.failAll("Stream reset "
+			"applicationLevel=%r, reason: %s" % (applicationLevel, reasonString))
 		self.qanProtocol.streamReset(reasonString, applicationLevel)
 
 
