@@ -214,7 +214,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 
 		var h = new QANHelper(null, null, sendQANFrame, null)
 		var ret = h.notify("you've got mail")
-		self.assertIdentical(null, ret)
+		self.assertIdentical(undefined, ret)
 
 		// Make sure QANHelper wrote something to the peer
 		self.assertEqual([
@@ -272,7 +272,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		]
 		var bodyReceived = function(body, isQuestion) {
 			received.push([body, isQuestion])
-			return answerDs.pop(0)
+			return answerDs.splice(0, 1)
 		}
 
 		var sent = []
@@ -352,7 +352,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		]
 		var bodyReceived = function(body, isQuestion) {
 			received.push([body, isQuestion])
-			return answerDs.pop(0)
+			return answerDs.splice(0, 1)
 		}
 
 		var sent = attachGetNew([])
@@ -516,13 +516,19 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 
 		h.failAll("just because")
 		self.assertTrue(d1.hasFired())
-		var d1_ = self.assertFailure(d1, QuestionFailed)
-		d1_.addCallback(function(e) { self.assertEqual("just because", String(e)) }) // FIXME
+		var d1_ = self.assertFailure(d1, [QuestionFailed])
+		d1_.addCallback(function(e) {
+			self.assertEqual("just because", e.message);
+			return null;
+		});
 		goog.asserts.assert(d1_.hasFired())
 
 		self.assertTrue(d2.hasFired())
-		var d2_ = self.assertFailure(d2, QuestionFailed)
-		d2_.addCallback(function(e) { self.assertEqual("just because", String(e)) }) // FIXME
+		var d2_ = self.assertFailure(d2, [QuestionFailed])
+		d2_.addCallback(function(e) {
+			self.assertEqual("just because", e.message);
+			return null;
+		});
 		goog.asserts.assert(d2_.hasFired())
 
 		// Peer can still send an answer to the failed Questions
