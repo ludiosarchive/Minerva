@@ -118,8 +118,8 @@ def qanFrameToString(qanFrame):
 	@param qanFrame: The QAN frame to encode
 	@type qanFrame: a L{Question} or L{OkayAnswer} or L{KnownErrorAnswer} or
 		L{UnknownErrorAnswer} or L{Cancellation} or L{Notification}, all of
-		which must have a restricted string C{str} C{.body}.  (Except for
-		L{Cancellation}, which has no C{.body}.)
+		which must have a C{str} C{.body}.  (Except for L{Cancellation},
+		which has no C{.body}.)
 
 	@return: The encoded QAN frame
 	@rtype: str
@@ -217,8 +217,8 @@ class QANHelper(object):
 			peer.  Called with argument: qanFrame.
 
 		@param fatalError: A 1-arg function called when QANHelper can no longer
-			handle QAN frames.  Called with argument: reason (restricted
-			string).
+			handle QAN frames.  Called with argument: reason (a C{str} with bytes
+			in inclusive range 0x20 (SPACE) to 0x7E (~)).
 		"""
 		self._bodyReceived = bodyReceived
 		self._logError = logError
