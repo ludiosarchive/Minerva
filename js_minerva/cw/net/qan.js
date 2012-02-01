@@ -20,6 +20,7 @@ goog.provide('cw.net.QuestionFailed');
 
 goog.require('goog.structs.Map');
 goog.require('cw.math');
+goog.require('cw.repr');
 goog.require('cw.string');
 
 
@@ -257,14 +258,14 @@ cw.net.qanFrameToString = function(qanFrame) {
 	@return: The encoded QAN frame
 	@rtype: str
 	*/
-	qanFrameType = type(qanFrame)
-	code = qanTypeToCode[qanFrameType]
+	var qanFrameType = type(qanFrame)
+	var code = qanTypeToCode[qanFrameType]
 	if(qanFrameType == Cancellation) {
 		return String(qanFrame.qid) + code
 	} else {
-		if(not isinstance(qanFrame.body, str)) {
-			throw new TypeError("qanFrame.body must be a str, was %r" % (
-				qanFrame.body,))
+		if(!goog.isString(qanFrame.body)) {
+			throw Error("qanFrame.body must be a str, was " +
+				cw.repr.repr(qanFrame.body))
 		}
 
 		if(qanFrameType == Notification) {
@@ -300,7 +301,7 @@ cw.net.stringToQANFrame = function(frameString) {
 		L{Cancellation} or L{Notification}, with a C{str} C{.body}.
 	*/
 	try {
-		lastByte = frameString[-1]
+		var lastByte = frameString[-1]
 	} catch(e) { // FIXME: check for IndexError
 		throw new InvalidQANFrame("0-length frame")
 	}
@@ -308,7 +309,7 @@ cw.net.stringToQANFrame = function(frameString) {
 	if(lastByte == "#") {
 		return Notification(frameString[:-1])
 	} else if(lastByte == "C") {
-		qid = _qidOrThrow(frameString[:-1])
+		var qid = _qidOrThrow(frameString[:-1])
 		return Cancellation(qid)
 	} else {
 		try {
@@ -316,7 +317,7 @@ cw.net.stringToQANFrame = function(frameString) {
 		} catch(e) { // FIXME: check for ValueError
 			throw new InvalidQANFrame("Expected pipe char in frame")
 		}
-		qid = _qidOrThrow(rest[:-1])
+		var qid = _qidOrThrow(rest[:-1])
 
 		if(lastByte == "Q") {
 			return Question(body, qid)
@@ -428,7 +429,6 @@ cw.net.QANHelper.prototype.handleQANFrame = function(qanFrame) {
 
 		if(d is null) {
 			// Ignore the answer to a question we cancelled or failAll'ed.
-			pass
 		} else if(qanFrame instanceof cw.net.OkayAnswer) {
 			d.callback(qanFrame.body)
 		} else if(qanFrame instanceof KnownErrorAnswer) {
@@ -471,7 +471,6 @@ cw.net.QANHelper.prototype.handleQANFrame = function(qanFrame) {
 			d = this.theirQuestions_[qid]
 		} catch(e) { // FIXME: check for KeyError
 			// Cancellations for nonexistent questions are ignored.
-			pass
 		} else {
 			d.cancel()
 		}
