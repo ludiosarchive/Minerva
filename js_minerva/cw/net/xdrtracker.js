@@ -195,6 +195,7 @@ cw.net.XDRTracker.prototype.getWindowForUrl = function(urlWithTokens, stream) {
  * @return {!goog.async.Deferred} a Deferred that fires with a
  * 	{@link cw.net.XDRFrame} that has a new window which can make XHR
  * 	requests to an expanded {@code urlWithTokens}.
+ * @private
  */
 cw.net.XDRTracker.prototype.makeWindowForUrl_ = function(urlWithTokens, stream) {
 	var frameId = cw.string.getCleanRandomString() + cw.string.getCleanRandomString();
