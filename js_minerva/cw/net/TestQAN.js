@@ -98,7 +98,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANFrameTests').methods(
 cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 
 	function test_repr(self) {
-		h = QANHelper(null, null, goog.nullFunction, null)
+		var h = QANHelper(null, null, goog.nullFunction, null)
 		self.assertEqual("<QANHelper asked 0 questions, waiting for 0 " +
 			"peer answers and 0 local answers>", cw.repr.repr(h))
 		h.ask("what?")
@@ -107,31 +107,31 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 	},
 
 	function test_ask(self) {
-		sent = ListLog()
+		var sent = ListLog()
 		sendQANFrame = function(frame) {
 			sent.push(frame)
 		}
 
-		answers = ListLog()
+		var answers = ListLog()
 		gotOkayAnswer = function(answer) {
-			answers.push((answer, 'okay'))
+			answers.push([answer, 'okay'])
 		}
 
-		gotErrorAnswerExpect = function(expectedFailure) {
-			gotErrorAnswer = function(failure) {
+		var gotErrorAnswerExpect = function(expectedFailure) {
+			var gotErrorAnswer = function(failure) {
 				failure.trap(expectedFailure)
-				answers.push((failure.value[0], 'error'))
+				answers.push([failure.value[0], 'error'])
 			}
 			return gotErrorAnswer
 		}
 
-		fatalErrors = ListLog()
-		fatalError = function(msg) {
+		var fatalErrors = ListLog()
+		var fatalError = function(msg) {
 			fatalErrors.push(msg)
 		}
 
-		h = QANHelper(null, null, sendQANFrame, fatalError)
-		d1 = h.ask("what?")
+		var h = QANHelper(null, null, sendQANFrame, fatalError)
+		var d1 = h.ask("what?")
 		d1.addCallbacks(gotOkayAnswer, gotErrorAnswerExpect(null))
 
 		// Make sure QANHelper wrote something to the peer
@@ -175,13 +175,13 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 	},
 
 	function test_notify(self) {
-		sent = []
-		sendQANFrame = function(frame) {
+		var sent = []
+		var sendQANFrame = function(frame) {
 			sent.push(frame)
 		}
 
-		h = QANHelper(null, null, sendQANFrame, null)
-		ret = h.notify("you've got mail")
+		var h = QANHelper(null, null, sendQANFrame, null)
+		var ret = h.notify("you've got mail")
 		self.assertIdentical(null, ret)
 
 		// Make sure QANHelper wrote something to the peer
@@ -191,12 +191,12 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 	},
 
 	function test_notificationReceived(self) {
-		received = []
-		bodyReceived = function(body, isQuestion) {
-			received.push((body, isQuestion))
+		var received = []
+		var bodyReceived = function(body, isQuestion) {
+			received.push([body, isQuestion])
 		}
 
-		h = QANHelper(bodyReceived, null, null, null)
+		var h = QANHelper(bodyReceived, null, null, null)
 		h.handleQANFrame(new Notification("poke"))
 		h.handleQANFrame(new Notification("and again"))
 		self.assertEqual([
@@ -206,18 +206,18 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 	},
 
 	function test_questionReceived(self) {
-		received = []
-		bodyReceived = function(body, isQuestion) {
-			received.push((body, isQuestion))
+		var received = []
+		var bodyReceived = function(body, isQuestion) {
+			received.push([body, isQuestion])
 			return "chilly"
 		}
 
-		sent = []
-		sendQANFrame = function(frame) {
+		var sent = []
+		var sendQANFrame = function(frame) {
 			sent.push(frame)
 		}
 
-		h = QANHelper(bodyReceived, null, sendQANFrame, null)
+		var h = QANHelper(bodyReceived, null, sendQANFrame, null)
 		h.handleQANFrame(new Question("the weather?", 1))
 		h.handleQANFrame(new Question("how about now?", 2))
 		self.assertEqual([
@@ -232,26 +232,26 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 	},
 
 	function test_questionReceivedAsync(self) {
-		received = []
-		answerDs = [
+		var received = []
+		var answerDs = [
 			new goog.async.Deferred(),
 			new goog.async.Deferred(),
 			new goog.async.Deferred()
 		]
-		bodyReceived = function(body, isQuestion) {
-			received.push((body, isQuestion))
+		var bodyReceived = function(body, isQuestion) {
+			received.push([body, isQuestion])
 			return answerDs.pop(0)
 		}
 
-		sent = []
-		sendQANFrame = function(frame) {
+		var sent = []
+		var sendQANFrame = function(frame) {
 			sent.push(frame)
 		}
 
-		h = QANHelper(bodyReceived, null, sendQANFrame, null)
-		d1 = answerDs[0]
-		d2 = answerDs[1]
-		d3 = answerDs[2]
+		var h = QANHelper(bodyReceived, null, sendQANFrame, null)
+		var d1 = answerDs[0]
+		var d2 = answerDs[1]
+		var d3 = answerDs[2]
 		h.handleQANFrame(new Question("the weather?", 1))
 		h.handleQANFrame(new Question("how about now?", 2))
 		h.handleQANFrame(new Question("and now?", 3))
@@ -277,9 +277,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 	},
 
 	function test_questionReceivedDuplicateQid(self) {
-		received = ListLog()
-		bodyReceived = function(body, isQuestion) {
-			received.push((body, isQuestion))
+		var received = ListLog()
+		var bodyReceived = function(body, isQuestion) {
+			received.push([body, isQuestion])
 			return new goog.async.Deferred()
 		}
 
@@ -288,7 +288,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 			fatalReason = reason
 		}
 
-		h = QANHelper(bodyReceived, null, null, fatalError)
+		var h = QANHelper(bodyReceived, null, null, fatalError)
 		h.handleQANFrame(new Question("what?", 1))
 		h.handleQANFrame(new Question("where?", 1))
 
@@ -301,38 +301,38 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		var cancellerDoesErrbackCalled = false
 		var cancellerDoesCallbackCalled = false
 
-		cancellerDoesErrback = function(d) {
+		var cancellerDoesErrback = function(d) {
 			cancellerDoesErrbackCalled = true
 			d.errback(new KnownError("okay, you'll never know"))
 		}
 
-		cancellerDoesCallback = function(d) {
+		var cancellerDoesCallback = function(d) {
 			cancellerDoesCallbackCalled = true
 			d.callback("maybe a little warm")
 		}
 
-		received = []
-		answerDs = [
+		var received = []
+		var answerDs = [
 			new goog.async.Deferred(),
 			new goog.async.Deferred(cancellerDoesErrback),
 			new goog.async.Deferred(),
 			new goog.async.Deferred(cancellerDoesCallback)
 		]
-		bodyReceived = function(body, isQuestion) {
-			received.push((body, isQuestion))
+		var bodyReceived = function(body, isQuestion) {
+			received.push([body, isQuestion])
 			return answerDs.pop(0)
 		}
 
-		sent = ListLog()
-		sendQANFrame = function(frame) {
+		var sent = ListLog()
+		var sendQANFrame = function(frame) {
 			sent.push(frame)
 		}
 
-		h = QANHelper(bodyReceived, null, sendQANFrame, null)
-		d1 = answerDs[0]
-		d2 = answerDs[1]
-		d3 = answerDs[2]
-		d4 = answerDs[3]
+		var h = QANHelper(bodyReceived, null, sendQANFrame, null)
+		var d1 = answerDs[0]
+		var d2 = answerDs[1]
+		var d3 = answerDs[2]
+		var d4 = answerDs[3]
 		h.handleQANFrame(new Question("the weather?", 1))
 		h.handleQANFrame(new Question("how about now?", 2))
 		h.handleQANFrame(new Question("and now?", 3))
@@ -381,21 +381,21 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		to a call to logError, and an UnknownErrorResponse("Uncaught exception")
 		sent to the peer.
 		*/
-		loggedErrors = []
-		logError = function(message, failure) {
-			loggedErrors.push((message, failure))
+		var loggedErrors = []
+		var logError = function(message, failure) {
+			loggedErrors.push([message, failure])
 		}
 
-		bodyReceived = function(body, isQuestion) {
+		var bodyReceived = function(body, isQuestion) {
 			throw new ValueError("bodyReceived did something wrong")
 		}
 
-		sent = ListLog()
-		sendQANFrame = function(frame) {
+		var sent = ListLog()
+		var sendQANFrame = function(frame) {
 			sent.push(frame)
 		}
 
-		h = QANHelper(bodyReceived, logError, sendQANFrame, null)
+		var h = QANHelper(bodyReceived, logError, sendQANFrame, null)
 		h.handleQANFrame(new Question("How much wood would a wood chuck chuck?", 1))
 
 		self.assertEqual("Peer's new Question #1 caused uncaught exception", loggedErrors[0][0])
@@ -409,21 +409,21 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		A new Notification that causes bodyReceived to throw new an exception leads
 		to a call to logError, and no response sent to the peer.
 		*/
-		loggedErrors = []
-		logError = function(message, failure) {
-			loggedErrors.push((message, failure))
+		var loggedErrors = []
+		var logError = function(message, failure) {
+			loggedErrors.push([message, failure])
 		}
 
-		bodyReceived = function(body, isQuestion) {
+		var bodyReceived = function(body, isQuestion) {
 			throw new ValueError("bodyReceived did something wrong")
 		}
 
-		sent = ListLog()
-		sendQANFrame = function(frame) {
+		var sent = ListLog()
+		var sendQANFrame = function(frame) {
 			sent.push(frame)
 		}
 
-		h = QANHelper(bodyReceived, logError, sendQANFrame, null)
+		var h = QANHelper(bodyReceived, logError, sendQANFrame, null)
 		h.handleQANFrame(new Notification("You've got more mail"))
 
 		self.assertEqual("Peer's new Notification caused uncaught exception", loggedErrors[0][0])
@@ -433,7 +433,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 	},
 
 	function test_theyCancelNonexistentQuestion(self) {
-		h = QANHelper(null, null, null, null)
+		var h = QANHelper(null, null, null, null)
 		// new Cancellation a nonexistent new Question does not throw new an error
 		h.handleQANFrame(new Cancellation(1))
 		h.handleQANFrame(new Cancellation(1))
@@ -441,13 +441,13 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 	},
 
 	function test_weCancel(self) {
-		sent = ListLog()
-		sendQANFrame = function(frame) {
+		var sent = ListLog()
+		var sendQANFrame = function(frame) {
 			sent.push(frame)
 		}
 
-		h = QANHelper(null, null, sendQANFrame, null)
-		d = h.ask("going to the theater?")
+		var h = QANHelper(null, null, sendQANFrame, null)
+		var d = h.ask("going to the theater?")
 
 		self.assertEqual([
 			new Question("going to the theater?", 1)
@@ -460,7 +460,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		], sent.getNew())
 
 		self.assertTrue(d.called)
-		d2 = self.assertFailure(d, goog.async.Deferred.CancelledError)
+		var d2 = self.assertFailure(d, goog.async.Deferred.CancelledError)
 		goog.asserts.assert(d2.called)
 
 		// Peer always sends an answer, which QANHelper must ignore.
@@ -468,14 +468,14 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 	},
 
 	function test_failAll(self) {
-		sent = ListLog()
-		sendQANFrame = function(frame) {
+		var sent = ListLog()
+		var sendQANFrame = function(frame) {
 			sent.push(frame)
 		}
 
-		h = QANHelper(null, null, sendQANFrame, null)
-		d1 = h.ask("going to the theater?")
-		d2 = h.ask("mu?")
+		var h = QANHelper(null, null, sendQANFrame, null)
+		var d1 = h.ask("going to the theater?")
+		var d2 = h.ask("mu?")
 
 		self.assertEqual([
 			new Question("going to the theater?", 1),
@@ -484,12 +484,12 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 
 		h.failAll("just because")
 		self.assertTrue(d1.called)
-		d1_ = self.assertFailure(d1, QuestionFailed)
+		var d1_ = self.assertFailure(d1, QuestionFailed)
 		d1_.addCallback(function(e) { self.assertEqual("just because", String(e)) })
 		goog.asserts.assert(d1_.called)
 
 		self.assertTrue(d2.called)
-		d2_ = self.assertFailure(d2, QuestionFailed)
+		var d2_ = self.assertFailure(d2, QuestionFailed)
 		d2_.addCallback(function(e) { self.assertEqual("just because", String(e)) })
 		goog.asserts.assert(d2_.called)
 
