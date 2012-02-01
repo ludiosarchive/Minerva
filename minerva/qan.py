@@ -340,7 +340,7 @@ class QANHelper(object):
 		@type body: *
 
 		@return: a Deferred that will callback the response object, or errback
-			with L{KnownError} or L{UnknownError}.
+			with L{KnownError} or L{UnknownError} or L{QuestionFailed}.
 		@rtype: L{defer.Deferred}
 		"""
 		self._qidCounter += 1
@@ -370,7 +370,7 @@ class QANHelper(object):
 		"""
 		Errback all of our questions with L{QuestionFailed}.
 
-		@param reason: Reason for failing; used as the QuestionFailed
+		@param reason: Reason for failing; used as the L{QuestionFailed}
 			exception message.
 		@type reason: C{str}
 		"""
