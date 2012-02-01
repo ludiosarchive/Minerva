@@ -223,7 +223,9 @@ class QANHelper(object):
 
 		@param fatalError: A 1-arg function called when QANHelper can no longer
 			handle QAN frames.  Called with argument: reason (a C{str} with bytes
-			in inclusive range 0x20 (SPACE) to 0x7E (~)).
+			in inclusive range 0x20 (SPACE) to 0x7E (~)).  After fatalError is called,
+			you must stop calling C{handleQANFrame} to prevent fatalError from
+			possibly being called again.
 		"""
 		self._bodyReceived = bodyReceived
 		self._logError = logError
