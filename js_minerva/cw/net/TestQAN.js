@@ -180,16 +180,16 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		// Feed this "new OkayAnswer from the peer" into QANHelper
 		h.handleQANFrame(new OkayAnswer("no.", 1))
 
-		self.assertEqual([('no.', 'okay')], answers.getNew())
+		self.assertEqual([['no.', 'okay']], answers.getNew())
 
 
 		d2 = h.ask("I want a KnownError response to this one")
 		d2.addCallbacks(gotOkayAnswer, gotErrorAnswerExpect(KnownError))
 
 		// Feed this "new KnownErrorAnswer from the peer" into QANHelper
-		h.handleQANFrame(new KnownErrorAnswer("new KnownErrorAnswer as asked", 2))
+		h.handleQANFrame(new KnownErrorAnswer("KnownErrorAnswer as asked", 2))
 
-		self.assertEqual([('new KnownErrorAnswer as asked', 'error')], answers.getNew())
+		self.assertEqual([['KnownErrorAnswer as asked', 'error']], answers.getNew())
 
 
 		d3 = h.ask("I want an UnknownError response to this one")
@@ -198,7 +198,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		// Feed this "new UnknownErrorAnswer from the peer" into QANHelper
 		h.handleQANFrame(new UnknownErrorAnswer("UnknownErrorAnswer as asked", 3))
 
-		self.assertEqual([('new UnknownErrorAnswer as asked', 'error')], answers.getNew())
+		self.assertEqual([['UnknownErrorAnswer as asked', 'error']], answers.getNew())
 	},
 
 	function test_notify(self) {
@@ -227,8 +227,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		h.handleQANFrame(new Notification("poke"))
 		h.handleQANFrame(new Notification("and again"))
 		self.assertEqual([
-			('poke', false),
-			('and again', false)
+			['poke', false],
+			['and again', false]
 		], received)
 	},
 
@@ -248,8 +248,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		h.handleQANFrame(new Question("the weather?", 1))
 		h.handleQANFrame(new Question("how about now?", 2))
 		self.assertEqual([
-			('the weather?', true),
-			('how about now?', true)
+			['the weather?', true],
+			['how about now?', true]
 		], received)
 
 		self.assertEqual([
@@ -283,9 +283,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		h.handleQANFrame(new Question("how about now?", 2))
 		h.handleQANFrame(new Question("and now?", 3))
 		self.assertEqual([
-			('the weather?', true),
-			('how about now?', true),
-			('and now?', true)
+			['the weather?', true],
+			['how about now?', true],
+			['and now?', true]
 		], received)
 
 		self.assertEqual([], sent)
@@ -319,7 +319,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		h.handleQANFrame(new Question("what?", 1))
 		h.handleQANFrame(new Question("where?", 1))
 
-		self.assertEqual([("what?", true)], received.getNew())
+		self.assertEqual([["what?", true]], received.getNew())
 
 		self.assertEqual("Received new Question with duplicate qid: 1", fatalReason)
 	},
@@ -365,10 +365,10 @@ cw.UnitTest.TestCase.subclass(cw.net.TestQAN, 'QANHelperTests').methods(
 		h.handleQANFrame(new Question("and now?", 3))
 		h.handleQANFrame(new Question("this evening?", 4))
 		self.assertEqual([
-			('the weather?', true),
-			('how about now?', true),
-			('and now?', true),
-			('this evening?', true)
+			['the weather?', true],
+			['how about now?', true],
+			['and now?', true],
+			['this evening?', true]
 		], received)
 
 		self.assertEqual([], sent.getNew())
