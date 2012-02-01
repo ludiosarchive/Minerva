@@ -15,7 +15,6 @@ import operator
 
 from twisted.python import failure
 from twisted.internet import defer
-from twisted.python import log
 
 from minerva.objcheck import strToNonNegLimit
 
@@ -216,7 +215,8 @@ class QANHelper(object):
 			Called with arguments: body, isQuestion.
 
 		@param logError: A 2-arg function called when bodyReceived raises
-			an exception.  Called with arguments: error message, L{Failure} object
+			an exception, or when QANHelper has a non-fatal internal error.
+			Called with arguments: error message, L{Failure} object
 
 		@param sendQANFrame: A 1-arg function that sends a QAN frame to the
 			peer.  Called with argument: qanFrame.
@@ -302,7 +302,8 @@ class QANHelper(object):
 			d.addCallbacks(
 				self._sendOkayAnswer, self._sendErrorAnswer,
 				callbackArgs=(qid,), errbackArgs=(qid,))
-			d.addErrback(log.err)
+			d.addErrback(lambda failure: self._logError(
+				"Bug in QANHelper._sendOkayAnswer or _sendErrorAnswer", failure))
 
 		elif isinstance(qanFrame, Cancellation):
 			qid = qanFrame.qid
