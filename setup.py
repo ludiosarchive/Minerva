@@ -70,7 +70,7 @@ setup(
 		,'zope.interface'
 		,'Jinja2 >= 2.1'
 		,'simplejson >= 2.1'
-		,'Coreweb >= 11.6.17'
+		,'Coreweb >= 12.2.1'
 		,'Webmagic >= 12.1.4'
 		,'Securetypes >= 11.5.6'
 		,'Strfrag >= 11.5.9'
