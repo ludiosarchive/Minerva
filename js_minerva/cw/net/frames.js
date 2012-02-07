@@ -28,6 +28,7 @@ goog.require('goog.debug');
 goog.require('goog.array');
 goog.require('cw.checktype');
 goog.require('cw.string');
+goog.require('cw.record');
 goog.require('cw.repr');
 goog.require('cw.math');
 goog.require('cw.eq');
@@ -454,34 +455,15 @@ cw.net.HelloFrame.prototype.wantsStrings = function() {
 
 /**
  * @param {string} string
+ * @extends {cw.record.Record}
  * @constructor
  */
 cw.net.StringFrame = function(string) {
+	cw.record.Record.call(this, 'StringFrame', [string]);
 	/** @type {string} */
 	this.string = string;
 };
-
-/**
- * Test two frames for equality.
- * @param {*} other
- * @param {Array.<string>=} eqLog
- * @return {boolean}
- */
-cw.net.StringFrame.prototype.equals = function(other, eqLog) {
-	return (
-		other instanceof cw.net.StringFrame &&
-		this.string == other.string);
-};
-
-/**
- * @param {!Array.<string>} sb
- * @param {!Array.<*>} stack
- */
-cw.net.StringFrame.prototype.__reprPush__ = function(sb, stack) {
-	sb.push("new StringFrame(");
-	cw.repr.reprPush(this.string, sb, stack);
-	sb.push(")");
-};
+goog.inherits(cw.net.StringFrame, cw.record.Record);
 
 /**
  * @param {string} frameString A string that ends with " ".
@@ -507,34 +489,15 @@ cw.net.StringFrame.prototype.encodeToPieces = function(sb) {
 
 /**
  * @param {string} comment
+ * @extends {cw.record.Record}
  * @constructor
  */
 cw.net.CommentFrame = function(comment) {
+	cw.record.Record.call(this, 'CommentFrame', [comment]);
 	/** @type {string} */
 	this.comment = comment;
 };
-
-/**
- * Test two frames for equality.
- * @param {*} other
- * @param {Array.<string>=} eqLog
- * @return {boolean}
- */
-cw.net.CommentFrame.prototype.equals = function(other, eqLog) {
-	return (
-		other instanceof cw.net.CommentFrame &&
-		this.comment == other.comment);
-};
-
-/**
- * @param {!Array.<string>} sb
- * @param {!Array.<*>} stack
- */
-cw.net.CommentFrame.prototype.__reprPush__ = function(sb, stack) {
-	sb.push("new CommentFrame(");
-	cw.repr.reprPush(this.comment, sb, stack);
-	sb.push(")");
-};
+goog.inherits(cw.net.CommentFrame, cw.record.Record);
 
 /**
  * @param {string} frameString A string that ends with "^".
@@ -559,32 +522,15 @@ cw.net.CommentFrame.prototype.encodeToPieces = function(sb) {
 
 /**
  * @param {number} seqNum
+ * @extends {cw.record.Record}
  * @constructor
  */
 cw.net.SeqNumFrame = function(seqNum) {
+	cw.record.Record.call(this, 'SeqNumFrame', [seqNum]);
 	/** @type {number} */
 	this.seqNum = seqNum;
 };
-
-/**
- * Test two frames for equality.
- * @param {*} other
- * @param {Array.<string>=} eqLog
- * @return {boolean}
- */
-cw.net.SeqNumFrame.prototype.equals = function(other, eqLog) {
-	return (
-		other instanceof cw.net.SeqNumFrame &&
-		this.seqNum == other.seqNum);
-};
-
-/**
- * @param {!Array.<string>} sb
- * @param {!Array.<*>} stack
- */
-cw.net.SeqNumFrame.prototype.__reprPush__ = function(sb, stack) {
-	sb.push('new SeqNumFrame(', String(this.seqNum), ')');
-};
+goog.inherits(cw.net.SeqNumFrame, cw.record.Record);
 
 /**
  * @param {string} frameString A string that ends with "N".
@@ -660,34 +606,15 @@ cw.net.sackToSackStringPieces_ = function(sack, sb) {
 
 /**
  * @param {!cw.net.SACK} sack
+ * @extends {cw.record.Record}
  * @constructor
  */
 cw.net.SackFrame = function(sack) {
+	cw.record.Record.call(this, 'SackFrame', [sack]);
 	/** @type {!cw.net.SACK} */
 	this.sack = sack;
 };
-
-/**
- * Test two frames for equality.
- * @param {*} other
- * @param {Array.<string>=} eqLog
- * @return {boolean}
- */
-cw.net.SackFrame.prototype.equals = function(other, eqLog) {
-	return (
-		other instanceof cw.net.SackFrame &&
-		this.sack.equals(other.sack, eqLog));
-};
-
-/**
- * @param {!Array.<string>} sb
- * @param {!Array.<*>} stack
- */
-cw.net.SackFrame.prototype.__reprPush__ = function(sb, stack) {
-	sb.push('new SackFrame(');
-	cw.repr.reprPush(this.sack, sb, stack);
-	sb.push(')');
-};
+goog.inherits(cw.net.SackFrame, cw.record.Record);
 
 /**
  * @param {string} frameString A string that ends with "A".
@@ -714,37 +641,17 @@ cw.net.SackFrame.prototype.encodeToPieces = function(sb) {
 
 
 
-
 /**
  * @param {!cw.net.SACK} lastSackSeen
+ * @extends {cw.record.Record}
  * @constructor
  */
 cw.net.StreamStatusFrame = function(lastSackSeen) {
+	cw.record.Record.call(this, 'StreamStatusFrame', [lastSackSeen]);
 	/** @type {!cw.net.SACK} */
 	this.lastSackSeen = lastSackSeen;
 };
-
-/**
- * Test two frames for equality.
- * @param {*} other
- * @param {Array.<string>=} eqLog
- * @return {boolean}
- */
-cw.net.StreamStatusFrame.prototype.equals = function(other, eqLog) {
-	return (
-		other instanceof cw.net.StreamStatusFrame &&
-		this.lastSackSeen.equals(other.lastSackSeen, eqLog));
-};
-
-/**
- * @param {!Array.<string>} sb
- * @param {!Array.<*>} stack
- */
-cw.net.StreamStatusFrame.prototype.__reprPush__ = function(sb, stack) {
-	sb.push('new StreamStatusFrame(');
-	cw.repr.reprPush(this.lastSackSeen, sb, stack);
-	sb.push(')');
-};
+goog.inherits(cw.net.StreamStatusFrame, cw.record.Record);
 
 /**
  * @param {string} frameString A string that ends with "A".
@@ -771,31 +678,14 @@ cw.net.StreamStatusFrame.prototype.encodeToPieces = function(sb) {
 
 
 
-
 /**
+ * @extends {cw.record.Record}
  * @constructor
  */
 cw.net.StreamCreatedFrame = function() {
-
+	cw.record.Record.call(this, 'StreamCreatedFrame', []);
 };
-
-/**
- * @param {!Array.<string>} sb
- * @param {!Array.<*>} stack
- */
-cw.net.StreamCreatedFrame.prototype.__reprPush__ = function(sb, stack) {
-	sb.push('new StreamCreatedFrame()');
-};
-
-/**
- * Test two frames for equality.
- * @param {*} other
- * @param {Array.<string>=} eqLog
- * @return {boolean}
- */
-cw.net.StreamCreatedFrame.prototype.equals = function(other, eqLog) {
-	return (other instanceof cw.net.StreamCreatedFrame);
-};
+goog.inherits(cw.net.StreamCreatedFrame, cw.record.Record);
 
 /**
  * @param {string} frameString A string that ends with "C".
@@ -819,31 +709,14 @@ cw.net.StreamCreatedFrame.prototype.encodeToPieces = function(sb) {
 
 
 
-
 /**
+ * @extends {cw.record.Record}
  * @constructor
  */
 cw.net.YouCloseItFrame = function() {
-
+	cw.record.Record.call(this, 'YouCloseItFrame', []);
 };
-
-/**
- * @param {!Array.<string>} sb
- * @param {!Array.<*>} stack
- */
-cw.net.YouCloseItFrame.prototype.__reprPush__ = function(sb, stack) {
-	sb.push('new YouCloseItFrame()');
-};
-
-/**
- * Test two frames for equality.
- * @param {*} other
- * @param {Array.<string>=} eqLog
- * @return {boolean}
- */
-cw.net.YouCloseItFrame.prototype.equals = function(other, eqLog) {
-	return (other instanceof cw.net.YouCloseItFrame);
-};
+goog.inherits(cw.net.YouCloseItFrame, cw.record.Record);
 
 /**
  * @param {string} frameString A string that ends with "Y".
@@ -886,37 +759,17 @@ cw.net.isRestrictedString_ = function(string) {
  *	ASCII (0x20-0x7E)-only C{str}, max 255 bytes.
  * @param {boolean} applicationLevel Whether the reset was application-level
  * 	(not caused by Minerva internals).
+ * @extends {cw.record.Record}
  * @constructor
  */
 cw.net.ResetFrame = function(reasonString, applicationLevel) {
+	cw.record.Record.call(this, 'ResetFrame', [reasonString, applicationLevel]);
 	/** @type {string} */
 	this.reasonString = reasonString;
 	/** @type {boolean} */
 	this.applicationLevel = applicationLevel;
 };
-
-/**
- * Test two frames for equality.
- * @param {*} other
- * @param {Array.<string>=} eqLog
- * @return {boolean}
- */
-cw.net.ResetFrame.prototype.equals = function(other, eqLog) {
-	return (
-		other instanceof cw.net.ResetFrame &&
-		this.reasonString == other.reasonString &&
-		this.applicationLevel == other.applicationLevel);
-};
-
-/**
- * @param {!Array.<string>} sb
- * @param {!Array.<*>} stack
- */
-cw.net.ResetFrame.prototype.__reprPush__ = function(sb, stack) {
-	sb.push("new ResetFrame(");
-	cw.repr.reprPush(this.reasonString, sb, stack);
-	sb.push(", ", String(this.applicationLevel), ")");
-};
+goog.inherits(cw.net.ResetFrame, cw.record.Record);
 
 /**
  * @param {string} frameString A string that ends with "!".
@@ -980,35 +833,15 @@ cw.net.AllTransportKillReasons_ = {
 
 /**
  * @param {!cw.net.TransportKillReason} reason
- *
+ * @extends {cw.record.Record}
  * @constructor
  */
 cw.net.TransportKillFrame = function(reason) {
+	cw.record.Record.call(this, 'TransportKillFrame', [reason]);
 	/** @type {!cw.net.TransportKillReason} */
 	this.reason = reason;
 };
-
-/**
- * Test two frames for equality.
- * @param {*} other
- * @param {Array.<string>=} eqLog
- * @return {boolean}
- */
-cw.net.TransportKillFrame.prototype.equals = function(other, eqLog) {
-	return (
-		other instanceof cw.net.TransportKillFrame &&
-		this.reason == other.reason);
-};
-
-/**
- * @param {!Array.<string>} sb
- * @param {!Array.<*>} stack
- */
-cw.net.TransportKillFrame.prototype.__reprPush__ = function(sb, stack) {
-	sb.push('new TransportKillFrame(');
-	cw.repr.reprPush(this.reason, sb, stack);
-	sb.push(')');
-};
+goog.inherits(cw.net.TransportKillFrame, cw.record.Record);
 
 /**
  * @param {string} frameString A string that ends with "K".

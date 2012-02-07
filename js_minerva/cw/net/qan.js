@@ -24,6 +24,7 @@ goog.require('goog.debug.Error');
 goog.require('goog.structs.Map');
 goog.require('cw.deferred');
 goog.require('cw.math');
+goog.require('cw.record');
 goog.require('cw.repr');
 goog.require('cw.string');
 
@@ -32,212 +33,96 @@ goog.require('cw.string');
 /**
  * @param {*} body
  * @param {number} qid
+ * @extends {cw.record.Record}
  * @constructor
  */
 cw.net.Question = function(body, qid) {
+	cw.record.Record.call(this, 'Question', [body, qid]);
 	/** @type {*} */
 	this.body = body;
 	/** @type {number} */
 	this.qid = qid;
 };
-
-/**
- * Test two QAN frames for equality.
- * @param {*} other
- * @param {Array.<string>=} eqLog
- * @return {boolean}
- */
-cw.net.Question.prototype.equals = function(other, eqLog) {
-	return (
-		other instanceof cw.net.Question &&
-		this.qid == other.qid &&
-		cw.eq.equals(this.body, other.body, eqLog));
-};
-
-/**
- * @param {!Array.<string>} sb
- * @param {!Array.<*>} stack
- */
-cw.net.Question.prototype.__reprPush__ = function(sb, stack) {
-	sb.push("new Question(");
-	cw.repr.reprPush(this.body, sb, stack);
-	sb.push(", ", String(this.qid), ")");
-};
+goog.inherits(cw.net.Question, cw.record.Record);
 
 
 
 /**
  * @param {*} body
  * @param {number} qid
+ * @extends {cw.record.Record}
  * @constructor
  */
 cw.net.OkayAnswer = function(body, qid) {
+	cw.record.Record.call(this, 'OkayAnswer', [body, qid]);
 	/** @type {*} */
 	this.body = body;
 	/** @type {number} */
 	this.qid = qid;
 };
-
-/**
- * Test two QAN frames for equality.
- * @param {*} other
- * @param {Array.<string>=} eqLog
- * @return {boolean}
- */
-cw.net.OkayAnswer.prototype.equals = function(other, eqLog) {
-	return (
-		other instanceof cw.net.OkayAnswer &&
-		this.qid == other.qid &&
-		cw.eq.equals(this.body, other.body, eqLog));
-};
-
-/**
- * @param {!Array.<string>} sb
- * @param {!Array.<*>} stack
- */
-cw.net.OkayAnswer.prototype.__reprPush__ = function(sb, stack) {
-	sb.push("new OkayAnswer(");
-	cw.repr.reprPush(this.body, sb, stack);
-	sb.push(", ", String(this.qid), ")");
-};
+goog.inherits(cw.net.OkayAnswer, cw.record.Record);
 
 
 
 /**
  * @param {*} body
  * @param {number} qid
+ * @extends {cw.record.Record}
  * @constructor
  */
 cw.net.KnownErrorAnswer = function(body, qid) {
+	cw.record.Record.call(this, 'KnownErrorAnswer', [body, qid]);
 	/** @type {*} */
 	this.body = body;
 	/** @type {number} */
 	this.qid = qid;
 };
-
-/**
- * Test two QAN frames for equality.
- * @param {*} other
- * @param {Array.<string>=} eqLog
- * @return {boolean}
- */
-cw.net.KnownErrorAnswer.prototype.equals = function(other, eqLog) {
-	return (
-		other instanceof cw.net.KnownErrorAnswer &&
-		this.qid == other.qid &&
-		cw.eq.equals(this.body, other.body, eqLog));
-};
-
-/**
- * @param {!Array.<string>} sb
- * @param {!Array.<*>} stack
- */
-cw.net.KnownErrorAnswer.prototype.__reprPush__ = function(sb, stack) {
-	sb.push("new KnownErrorAnswer(");
-	cw.repr.reprPush(this.body, sb, stack);
-	sb.push(", ", String(this.qid), ")");
-};
+goog.inherits(cw.net.KnownErrorAnswer, cw.record.Record);
 
 
 
 /**
  * @param {*} body
  * @param {number} qid
+ * @extends {cw.record.Record}
  * @constructor
  */
 cw.net.UnknownErrorAnswer = function(body, qid) {
+	cw.record.Record.call(this, 'UnknownErrorAnswer', [body, qid]);
 	/** @type {*} */
 	this.body = body;
 	/** @type {number} */
 	this.qid = qid;
 };
-
-/**
- * Test two QAN frames for equality.
- * @param {*} other
- * @param {Array.<string>=} eqLog
- * @return {boolean}
- */
-cw.net.UnknownErrorAnswer.prototype.equals = function(other, eqLog) {
-	return (
-		other instanceof cw.net.UnknownErrorAnswer &&
-		this.qid == other.qid &&
-		cw.eq.equals(this.body, other.body, eqLog));
-};
-
-/**
- * @param {!Array.<string>} sb
- * @param {!Array.<*>} stack
- */
-cw.net.UnknownErrorAnswer.prototype.__reprPush__ = function(sb, stack) {
-	sb.push("new UnknownErrorAnswer(");
-	cw.repr.reprPush(this.body, sb, stack);
-	sb.push(", ", String(this.qid), ")");
-};
+goog.inherits(cw.net.UnknownErrorAnswer, cw.record.Record);
 
 
 
 /**
  * @param {number} qid
+ * @extends {cw.record.Record}
  * @constructor
  */
 cw.net.Cancellation = function(qid) {
+	cw.record.Record.call(this, 'Cancellation', [qid]);
 	/** @type {number} */
 	this.qid = qid;
 };
-
-/**
- * Test two QAN frames for equality.
- * @param {*} other
- * @param {Array.<string>=} eqLog
- * @return {boolean}
- */
-cw.net.Cancellation.prototype.equals = function(other, eqLog) {
-	return (
-		other instanceof cw.net.Cancellation &&
-		this.qid == other.qid);
-};
-
-/**
- * @param {!Array.<string>} sb
- * @param {!Array.<*>} stack
- */
-cw.net.Cancellation.prototype.__reprPush__ = function(sb, stack) {
-	sb.push("new Cancellation(", String(this.qid), ")");
-};
+goog.inherits(cw.net.Cancellation, cw.record.Record);
 
 
 
 /**
  * @param {*} body
+ * @extends {cw.record.Record}
  * @constructor
  */
 cw.net.Notification = function(body) {
+	cw.record.Record.call(this, 'Notification', [body]);
 	/** @type {*} */
 	this.body = body;
 };
-
-/**
- * Test two QAN frames for equality.
- * @param {*} other
- * @param {Array.<string>=} eqLog
- * @return {boolean}
- */
-cw.net.Notification.prototype.equals = function(other, eqLog) {
-	return (
-		other instanceof cw.net.Notification &&
-		cw.eq.equals(this.body, other.body, eqLog));
-};
-
-/**
- * @param {!Array.<string>} sb
- * @param {!Array.<*>} stack
- */
-cw.net.Notification.prototype.__reprPush__ = function(sb, stack) {
-	sb.push("new Notification(");
-	cw.repr.reprPush(this.body, sb, stack);
-	sb.push(")");
-};
+goog.inherits(cw.net.Notification, cw.record.Record);
 
 
 
