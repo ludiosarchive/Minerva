@@ -164,8 +164,8 @@ class _MockStringProtocol(object):
 
 	def _callStuff(self):
 		if 'sendStrings' in self._callWhat:
-			self.stream.sendStrings(["s2cbox0", "s2cbox1"])
-			self.stream.sendStrings(["s2cbox2"])
+			self.stream.sendStrings(["s2cstring0", "s2cstring1"])
+			self.stream.sendStrings(["s2cstring2"])
 		if 'reset' in self._callWhat:
 			self.stream.reset('reset forced by mock protocol')
 
@@ -282,14 +282,14 @@ class DummySocketLikeTransport(object):
 	def writeStrings(self, queue, start):
 		self.log.append(['writeStrings', queue, start])
 
-		lastBox = self.ourSeqNum
+		lastString = self.ourSeqNum
 		for seqNum, string in queue.iterItems(start=start):
-			if lastBox == -1 or lastBox + 1 != seqNum:
+			if lastString == -1 or lastString + 1 != seqNum:
 				pass
 				##toSend += self._encodeFrame(SeqNumFrame(seqNum))
 			##toSend += self._encodeFrame(StringFrame(string))
-			lastBox = seqNum
-		self.ourSeqNum = lastBox
+			lastString = seqNum
+		self.ourSeqNum = lastString
 
 
 	def registerProducer(self, producer, streaming):

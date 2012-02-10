@@ -172,8 +172,8 @@ class DemoProtocol(object):
 
 	def _sendDemo(self, iteration):
 		"""
-		Just a thing to send a lot of useless boxes S2C, for end-to-end testing.
-		With each iteration, it grows in box size, and # of boxes sent.
+		Just a thing to send a lot of useless strings S2C, for end-to-end testing.
+		With each iteration, it grows in string size, and # of strings sent.
 		"""
 		if self._reset:
 			return
@@ -182,12 +182,12 @@ class DemoProtocol(object):
 			return
 
 		numItems = iteration * 5
-		box = ' '.join(('#%d' % iteration,) * numItems)
+		string = ' '.join(('#%d' % iteration,) * numItems)
 
 		self._clock.callLater(0.2, self._sendDemo, iteration + 1)
 
-		numBoxes = iteration
-		self.stream.sendStrings([box] * numBoxes)
+		numStrings = iteration
+		self.stream.sendStrings([string] * numStrings)
 
 
 	def stringsReceived(self, strings):
@@ -234,7 +234,7 @@ class DemoProtocol(object):
 			else:
 				send.append('unknown_message_type')
 
-			# else ignore other boxes
+			# else ignore other strings
 
 		if send:
 			self.stream.sendStrings(send)

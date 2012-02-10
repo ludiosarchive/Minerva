@@ -9,12 +9,7 @@ These tests has seven main sections:
 6.	Integration tests for ServerTransportFactory/ServerTransport/StreamTracker/ServerStream
 7.	Tests for _HttpIo and ServerTransport's HTTP support
 
-Notes on understanding this test file:
-
--	Minerva's mserver (then "newlink") was originally designed to transfer
-	"boxes" of varying type (including objects and lists and strings), but it
-	was then changed to only transfer restricted strings. In this file
-	you'll still see "box", but it really means "string".
+Note on understanding this test file:
 
 -	If something in this file makes no sense, consider the possibility
 	that it was a victim of a search/replace spree.
@@ -224,12 +219,12 @@ class ServerStreamTests(unittest.TestCase):
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 
-		s.stringsReceived(t, [(1, sf('box1'))])
+		s.stringsReceived(t, [(1, sf('string1'))])
 		i = list(factory.instances)[0]
 		self.assertEqual([['streamStarted', s]], i.getNew())
 
-		s.stringsReceived(t, [(0, sf('box0'))])
-		self.assertEqual([['stringsReceived', [sf('box0'), sf('box1')]]], i.getNew())
+		s.stringsReceived(t, [(0, sf('string0'))])
+		self.assertEqual([['stringsReceived', [sf('string0'), sf('string1')]]], i.getNew())
 
 
 	def test_stringReceived(self):
@@ -243,14 +238,14 @@ class ServerStreamTests(unittest.TestCase):
 		t = DummySocketLikeTransport()
 		s.transportOnline(t, False, None)
 
-		s.stringsReceived(t, [(1, sf('box1'))])
+		s.stringsReceived(t, [(1, sf('string1'))])
 		i = list(factory.instances)[0]
 		self.assertEqual([['streamStarted', s]], i.getNew())
 
-		s.stringsReceived(t, [(0, sf('box0'))])
+		s.stringsReceived(t, [(0, sf('string0'))])
 		self.assertEqual([
-			['stringReceived', 'box0'],
-			['stringReceived', 'box1'],
+			['stringReceived', 'string0'],
+			['stringReceived', 'string1'],
 		], i.getNew())
 
 
@@ -267,10 +262,10 @@ class ServerStreamTests(unittest.TestCase):
 
 		manyStrings = []
 		for n in xrange(1, 200 + 1 + 1):
-			manyStrings.append((n, sf('box')))
+			manyStrings.append((n, sf('string')))
 		assert len(manyStrings) == 200 + 1
 
-		# box #0 is never given, so it cannot deliver any of them
+		# string #0 is never given, so it cannot deliver any of them
 
 		s.stringsReceived(t, manyStrings)
 		self.assertEqual([['causedRwinOverflow']], t.getNew())
@@ -294,7 +289,7 @@ class ServerStreamTests(unittest.TestCase):
 			t = DummySocketLikeTransport()
 			s.transportOnline(t, False, None)
 
-			# box #0 is never given, so it cannot deliver any of them
+			# string #0 is never given, so it cannot deliver any of them
 
 			s.stringsReceived(t, notManyStrings)
 			self.assertEqual([['causedRwinOverflow']], t.getNew())
@@ -317,17 +312,17 @@ class ServerStreamTests(unittest.TestCase):
 			s = ServerStream(self._clock, 'some fake id', mockFactory)
 			t1 = DummySocketLikeTransport()
 			t1.transportNumber = 30
-			s.sendStrings(['box0', 'box1'])
+			s.sendStrings(['string0', 'string1'])
 			s.transportOnline(t1, True, None)
 
 			self.assertEqual([['writeStrings', s.queue, None]], t1.getNew())
 
 			# Now connect a new transport
 			t2 = DummySocketLikeTransport()
-			s.sendStrings(['box2', 'box3'])
+			s.sendStrings(['string2', 'string3'])
 			s.transportOnline(t2, True, succeedsTransportArgFor2ndTransport)
 
-			# box2 and box3 also went to t1 because t2 wasn't yet connected/primary
+			# string2 and string3 also went to t1 because t2 wasn't yet connected/primary
 			self.assertEqual([
 				['writeStrings', s.queue, None],
 				['closeGently'],
@@ -343,23 +338,23 @@ class ServerStreamTests(unittest.TestCase):
 	def test_sendStringsConnectionInterleaving(self):
 		"""
 		A new primary transport can claim that it "succeeds" another transport,
-		and the new primary will not (at least at first) get boxes that were
+		and the new primary will not (at least at first) get strings that were
 		already sent to old primary.
 
 		In the implementation, Minerva temporarily "pretends" to have SACKed
-		the boxes send to old primary, until it gets an up-to-date real SACK.
+		the strings send to old primary, until it gets an up-to-date real SACK.
 
 		If primary transport with transportNumber 30 (T#30) is connected,
-		and boxes 0 through 4 were sent down T#30,
+		and strings 0 through 4 were sent down T#30,
 		and no SACK has come from the client yet,
 		and new transport with transportNumber 31 (T#31) connects with succeedsTransport=30,
-		and two new boxes are supposed to be sent,
-		ServerStream calls transport's writeStrings but tells it to skip over boxes 0 through 4.
+		and two new strings are supposed to be sent,
+		ServerStream calls transport's writeStrings but tells it to skip over strings 0 through 4.
 		"""
 		s = ServerStream(self._clock, 'some fake id', MockStringsFactory())
 		t1 = DummySocketLikeTransport()
 		t1.transportNumber = 30
-		s.sendStrings(['box0', 'box1', 'box2', 'box3', 'box4'])
+		s.sendStrings(['string0', 'string1', 'string2', 'string3', 'string4'])
 		s.transportOnline(t1, True, None)
 
 		self.assertEqual([['writeStrings', s.queue, None]], t1.getNew())
@@ -370,21 +365,21 @@ class ServerStreamTests(unittest.TestCase):
 		s.transportOnline(t2, True, 30)
 
 		self.assertEqual([['closeGently']], t1.getNew())
-		# Even though there are no boxes to write yet, writeStrings is
+		# Even though there are no strings to write yet, writeStrings is
 		# called anyway. (We used to have logic to prevent this; see
 		# Minerva git history before 2010-05-23)
 		self.assertEqual([['writeStrings', s.queue, 5]], t2.getNew())
 
-		s.sendStrings(['box5', 'box6'])
+		s.sendStrings(['string5', 'string6'])
 
 		self.assertEqual([['writeStrings', s.queue, 5]], t2.getNew())
 
 
-		# Oh no... client actually lost box3 and box4, and it sends a correct SACK.
-		# Now, t2 will be called without a start=None parameter and send all unsent boxes.
+		# Oh no... client actually lost string3 and string4, and it sends a correct SACK.
+		# Now, t2 will be called without a start=None parameter and send all unsent strings.
 
 		s.sackReceived(SACK(2, ()))
-		assert s.queue.getQueuedCount() == 4, s.queue # box3, box4, box5, box6
+		assert s.queue.getQueuedCount() == 4, s.queue # string3, string4, string5, string6
 		self.assertEqual([['writeStrings', s.queue, None]], t2.getNew())
 
 		# Just to exercise transportOffline
@@ -407,7 +402,7 @@ class ServerStreamTests(unittest.TestCase):
 				s.transportOnline(tIrrelevant, False, None)
 
 			t1 = DummySocketLikeTransport()
-			s.sendStrings(['box0', 'box1'])
+			s.sendStrings(['string0', 'string1'])
 			s.transportOnline(t1, True, 9999)
 
 			self.assertEqual([['writeStrings', s.queue, None]], t1.getNew())
@@ -420,11 +415,11 @@ class ServerStreamTests(unittest.TestCase):
 		s.transportOnline(t, False, None)
 
 		self.assertEqual(SACK(-1, ()), s.getSACK())
-		s.stringsReceived(t, [(0, sf('box'))])
+		s.stringsReceived(t, [(0, sf('string'))])
 		self.assertEqual(SACK(0, ()), s.getSACK())
-		s.stringsReceived(t, [(4, sf('box'))])
+		s.stringsReceived(t, [(4, sf('string'))])
 		self.assertEqual(SACK(0, (4,)), s.getSACK())
-		s.stringsReceived(t, [(5, sf('box'))])
+		s.stringsReceived(t, [(5, sf('string'))])
 		self.assertEqual(SACK(0, (4, 5)), s.getSACK())
 
 
@@ -530,15 +525,15 @@ class ServerStreamTests(unittest.TestCase):
 		factory, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
 		s.reset('reason')
-		self.assertRaises(RuntimeError, lambda: s.sendStrings(["somebox"]))
-		self.assertRaises(RuntimeError, lambda: s.sendStrings(["somebox"]))
+		self.assertRaises(RuntimeError, lambda: s.sendStrings(["somestring"]))
+		self.assertRaises(RuntimeError, lambda: s.sendStrings(["somestring"]))
 
 		# original reset caused by a transport
 		factory, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
 		s.resetFromPeer('reason', True)
-		self.assertRaises(RuntimeError, lambda: s.sendStrings(["somebox"]))
-		self.assertRaises(RuntimeError, lambda: s.sendStrings(["somebox"]))
+		self.assertRaises(RuntimeError, lambda: s.sendStrings(["somestring"]))
+		self.assertRaises(RuntimeError, lambda: s.sendStrings(["somestring"]))
 
 
 	def test_ignoreCallToSendStringsZeroStrings(self):
@@ -549,7 +544,7 @@ class ServerStreamTests(unittest.TestCase):
 		# original reset caused by "application code"
 		factory, s, t1 = self._makeStuff()
 		s.transportOnline(t1, True, None)
-		s.sendStrings(['box0'])
+		s.sendStrings(['string0'])
 		self.assertEqual([['writeStrings', s.queue, None]], t1.getNew())
 		s.sendStrings([])
 		self.assertEqual([], t1.getNew())
@@ -1194,13 +1189,13 @@ class _BaseServerTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		q = Queue()
-		q.extend(['box0', 'box1'])
+		q.extend(['string0', 'string1'])
 		transport.writeStrings(q, start=None)
 		self.assertEqual([
 			StreamCreatedFrame(),
 			SeqNumFrame(0),
-			StringFrame('box0'),
-			StringFrame('box1'),
+			StringFrame('string0'),
+			StringFrame('string1'),
 		], transport.getNew())
 
 
@@ -1213,13 +1208,13 @@ class _BaseServerTransportTests(_BaseHelpers):
 		frame0 = _makeHelloFrame()
 		transport.sendFrames([frame0])
 		q = Queue()
-		q.extend(['box0', 'box1', 'box2'])
+		q.extend(['string0', 'string1', 'string2'])
 		transport.writeStrings(q, start=1)
 		self.assertEqual([
 			StreamCreatedFrame(),
 			SeqNumFrame(1),
-			StringFrame('box1'),
-			StringFrame('box2'),
+			StringFrame('string1'),
+			StringFrame('string2'),
 		], transport.getNew())
 
 
@@ -1228,7 +1223,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 
 
 	# Disabled because it is slow (~100ms)
-#	def test_writeStringsHugeBoxes(self):
+#	def test_writeStringsHugeStrings(self):
 #		"""
 #		Like test_writeStringsStartNone, except there is a lot of data.
 #
@@ -1239,14 +1234,14 @@ class _BaseServerTransportTests(_BaseHelpers):
 #		transport = self._makeTransport()
 #		transport.sendFrames([frame0])
 #		q = Queue()
-#		box0 = 'b'*int(0.6*1024*1024)
-#		box1 = 'c'*int(0.6*1024*1024)
-#		q.extend([box0, box1])
+#		string0 = 'b'*int(0.6*1024*1024)
+#		string1 = 'c'*int(0.6*1024*1024)
+#		q.extend([string0, string1])
 #		transport.writeStrings(q, start=None)
 #		self.assertEqual([
 #			SeqNumFrame(0),
-#			StringFrame(box0),
-#			StringFrame(box1),
+#			StringFrame(string0),
+#			StringFrame(string1),
 #		], transport.getNew())
 
 
@@ -1259,19 +1254,19 @@ class _BaseServerTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		q = Queue()
-		q.extend(['box0', 'box1'])
+		q.extend(['string0', 'string1'])
 		transport.writeStrings(q, start=None)
 		transport.writeStrings(q, start=None)
 		self.assertEqual([
 			StreamCreatedFrame(),
 			SeqNumFrame(0),
-			StringFrame('box0'),
-			StringFrame('box1')
+			StringFrame('string0'),
+			StringFrame('string1')
 		], transport.getNew())
 
-		q.extend(['box2'])
+		q.extend(['string2'])
 		transport.writeStrings(q, start=None)
-		self.assertEqual([StringFrame('box2')], transport.getNew())
+		self.assertEqual([StringFrame('string2')], transport.getNew())
 
 
 	def test_writeStringsConnectionInterleavingSupport(self):
@@ -1280,7 +1275,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 		call writeStrings with a start=<number>.  If the client later sends
 		a SACK that implies they did not receive all the strings sent over
 		the old transport, this transport will have to jump back and send
-		older boxes.
+		older strings.
 
 		See also L{ServerStreamTests.test_sendStringsConnectionInterleaving}
 		"""
@@ -1288,7 +1283,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		q = Queue()
-		q.extend(['box0', 'box1', 'box2', 'box3', 'box4'])
+		q.extend(['string0', 'string1', 'string2', 'string3', 'string4'])
 
 		transport.writeStrings(q, start=3)
 		transport.writeStrings(q, start=3) # doing it again is pretty much a no-op
@@ -1297,14 +1292,14 @@ class _BaseServerTransportTests(_BaseHelpers):
 		self.assertEqual([
 			StreamCreatedFrame(),
 			SeqNumFrame(3),
-			StringFrame('box3'),
-			StringFrame('box4'),
+			StringFrame('string3'),
+			StringFrame('string4'),
 			SeqNumFrame(0),
-			StringFrame('box0'),
-			StringFrame('box1'),
-			StringFrame('box2'),
-			StringFrame('box3'),
-			StringFrame('box4'),
+			StringFrame('string0'),
+			StringFrame('string1'),
+			StringFrame('string2'),
+			StringFrame('string3'),
+			StringFrame('string4'),
 		], transport.getNew())
 
 
@@ -1317,7 +1312,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 		transport = self._makeTransport()
 		transport.sendFrames([frame0])
 		q = Queue()
-		q.extend(['box0', 'box1', 'box2', 'box3', 'box4'])
+		q.extend(['string0', 'string1', 'string2', 'string3', 'string4'])
 
 		transport.writeStrings(q, start=3)
 		transport.writeStrings(q, start=3) # doing it again is pretty much a no-op
@@ -1326,13 +1321,13 @@ class _BaseServerTransportTests(_BaseHelpers):
 		self.assertEqual([
 			StreamCreatedFrame(),
 			SeqNumFrame(3),
-			StringFrame('box3'),
-			StringFrame('box4'),
+			StringFrame('string3'),
+			StringFrame('string4'),
 			SeqNumFrame(1),
-			StringFrame('box1'),
-			StringFrame('box2'),
-			StringFrame('box3'),
-			StringFrame('box4'),
+			StringFrame('string1'),
+			StringFrame('string2'),
+			StringFrame('string3'),
+			StringFrame('string4'),
 		], transport.getNew())
 
 
@@ -1488,7 +1483,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 		"""
 		transport = self._makeTransport()
 		# a completely valid frame
-		transport.sendFrames([StringFrame("box0")])
+		transport.sendFrames([StringFrame("string0")])
 		self.assertEqual([
 			TransportKillFrame(tk_invalid_frame_type_or_arguments),
 			YouCloseItFrame()
@@ -1724,17 +1719,17 @@ class _BaseServerTransportTests(_BaseHelpers):
 		], withoutUnimportantStreamCalls(stream.getNew()))
 		self.assertEqual([StreamCreatedFrame()], transport.getNew())
 
-		transport.sendFrames([StringFrame("box0")])
+		transport.sendFrames([StringFrame("string0")])
 
 		self.assertEqual([
-			['stringsReceived', transport, [(0, sf("box0"))]],
+			['stringsReceived', transport, [(0, sf("string0"))]],
 		], withoutUnimportantStreamCalls(stream.getNew()))
 		self.assertEqual([SackFrame(SACK(0, ()))], transport.getNew())
 
-		transport.sendFrames([SeqNumFrame(2), StringFrame("box2")])
+		transport.sendFrames([SeqNumFrame(2), StringFrame("string2")])
 
 		self.assertEqual([
-			['stringsReceived', transport, [(2, sf("box2"))]],
+			['stringsReceived', transport, [(2, sf("string2"))]],
 		], withoutUnimportantStreamCalls(stream.getNew()))
 		self.assertEqual([SackFrame(SACK(0, (2,)))], transport.getNew())
 
@@ -1767,7 +1762,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 		transport.sendFrames([frame0])
 		self.assertEqual([StreamCreatedFrame()], transport.getNew())
 		stream = self.streamTracker.getStream('x'*26)
-		stream.queue.append("box0")
+		stream.queue.append("string0")
 
 		transport.sendFrames([SackFrame(SACK(0, ()))])
 		self.assertEqual([], transport.getNew())
@@ -1786,7 +1781,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 		transport.sendFrames([frame0])
 		self.assertEqual([StreamCreatedFrame()], transport.getNew())
 		stream = self.streamTracker.getStream('x'*26)
-		stream.queue.extend(["box0", "box1", "box2"])
+		stream.queue.extend(["string0", "string1", "string2"])
 
 		transport.sendFrames([SackFrame(SACK(0, (2,)))])
 		self.assertEqual([], transport.getNew())
@@ -1807,7 +1802,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 		transport.sendFrames([frame0])
 		self.assertEqual([StreamCreatedFrame()], transport.getNew())
 		stream = self.streamTracker.getStream('x'*26)
-		stream.queue.append("box0")
+		stream.queue.append("string0")
 
 		transport.sendFrames([SackFrame(SACK(1, ()))])
 		self.assertEqual([
@@ -1829,7 +1824,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 		HelloFrame.
 		"""
 		stream = self.streamTracker.buildStream('x'*26)
-		stream.queue.append("box0")
+		stream.queue.append("string0")
 
 		frame0 = _makeHelloFrame(dict(sack=SACK(0, ())))
 		transport = self._makeTransport()
@@ -1851,7 +1846,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 		called, and client receives a `TransportKillFrame(tk_acked_unsent_strings)`.
 		"""
 		stream = self.streamTracker.buildStream('x'*26)
-		stream.queue.append("box0")
+		stream.queue.append("string0")
 
 		frame0 = _makeHelloFrame(dict(sack=SACK(1, ())))
 		transport = self._makeTransport()
@@ -2145,45 +2140,45 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 
 		# Send two strings; make sure we got SACK; make sure the protocol
-		# gots box0
+		# gots string0
 
 		transport0.sendFrames([
-			StringFrame("box0"),
+			StringFrame("string0"),
 			SeqNumFrame(2),
-			StringFrame("box2"),
+			StringFrame("string2"),
 		])
 
 		self.assertEqual([SackFrame(SACK(0, (2,)))], transport0.getNew())
 		self.assertEqual([
 			["streamStarted", stream],
-			["stringsReceived", [sf("box0")]],
+			["stringsReceived", [sf("string0")]],
 		], proto.getNew())
 
 
-		# Send box1 and box3; make sure the protocol gets strings 1, 2, 3;
+		# Send string1 and string3; make sure the protocol gets strings 1, 2, 3;
 		# make sure we got SACK
 
 		transport0.sendFrames([
 			SeqNumFrame(1),
-			StringFrame("box1"),
+			StringFrame("string1"),
 			SeqNumFrame(3),
-			StringFrame("box3"),
+			StringFrame("string3"),
 		])
 
 		self.assertEqual([SackFrame(SACK(3, ()))], transport0.getNew())
 		self.assertEqual([
-			["stringsReceived", [sf("box1"), sf("box2"), sf("box3")]],
+			["stringsReceived", [sf("string1"), sf("string2"), sf("string3")]],
 		], proto.getNew())
 
 
 		# Send two strings S2C; make sure we get them.
 
-		stream.sendStrings(["s2cbox0", "s2cbox1"])
+		stream.sendStrings(["s2cstring0", "s2cstring1"])
 
 		self.assertEqual([
 			SeqNumFrame(0),
-			StringFrame("s2cbox0"),
-			StringFrame("s2cbox1"),
+			StringFrame("s2cstring0"),
+			StringFrame("s2cstring1"),
 		], transport0.getNew())
 
 
@@ -2200,8 +2195,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		self.assertEqual([
 			SeqNumFrame(0),
-			StringFrame("s2cbox0"),
-			StringFrame("s2cbox1"),
+			StringFrame("s2cstring0"),
+			StringFrame("s2cstring1"),
 		], transport1.getNew())
 
 		self.assertEqual([
@@ -2267,18 +2262,18 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		# Send two strings S2C; make sure we get them.
 
-		stream.sendStrings(["s2cbox0", "s2cbox1"])
+		stream.sendStrings(["s2cstring0", "s2cstring1"])
 
 		self.assertEqual([
 			SeqNumFrame(0),
-			StringFrame("s2cbox0"),
-			StringFrame("s2cbox1")
+			StringFrame("s2cstring0"),
+			StringFrame("s2cstring1")
 		], transport0.getNew())
 
 
 		# Connect a new transport that sends 'g' argument to subscribe to
 		# strings and succeed transport #0;
-		# Make sure s2cbox0 and s2cbox1 are not written to it (because
+		# Make sure s2cstring0 and s2cstring1 are not written to it (because
 		# pretendAcked is in action); make sure transport0 is terminating.
 
 		transport1 = self._makeTransport()
@@ -2300,11 +2295,11 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		# Send another string S2C and make sure it is written to transport1
 
-		stream.sendStrings(["s2cbox2"])
+		stream.sendStrings(["s2cstring2"])
 
 		self.assertEqual([
 			SeqNumFrame(2),
-			StringFrame("s2cbox2"),
+			StringFrame("s2cstring2"),
 		], transport1.getNew())
 
 
@@ -2353,7 +2348,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 	# by ServerTransport.
 
 
-	def test_clientSendsAlreadyReceivedBoxes(self):
+	def test_ignoresAlreadyReceivedStrings(self):
 		"""
 		ServerStream ignores strings that were already received, and calls
 		stringsReceived on the protocol correctly.
@@ -2369,32 +2364,32 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		transport0.sendFrames([
 			SeqNumFrame(0),
-			StringFrame("box0"),
+			StringFrame("string0"),
 		])
 		self.assertEqual([SackFrame(SACK(0, ()))], transport0.getNew())
 
 		# 0 was already received, 1 was not.
 		transport0.sendFrames([
 			SeqNumFrame(0),
-			StringFrame("box0"),
-			StringFrame("box1"),
+			StringFrame("string0"),
+			StringFrame("string1"),
 		])
 		self.assertEqual([SackFrame(SACK(1, ()))], transport0.getNew())
 
 		# 0 and 1 were already received, 2 was not.
 		transport0.sendFrames([
 			SeqNumFrame(0),
-			StringFrame("box0"),
-			StringFrame("box1"),
-			StringFrame("box2"),
+			StringFrame("string0"),
+			StringFrame("string1"),
+			StringFrame("string2"),
 		])
 		self.assertEqual([SackFrame(SACK(2, ()))], transport0.getNew())
 
 		self.assertEqual([
 			['streamStarted', stream],
-			['stringsReceived', [sf('box0')]],
-			['stringsReceived', [sf('box1')]],
-			['stringsReceived', [sf('box2')]],
+			['stringsReceived', [sf('string0')]],
+			['stringsReceived', [sf('string1')]],
+			['stringsReceived', [sf('string2')]],
 		], proto.getNew())
 
 
@@ -2411,7 +2406,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			transport0.sendFrames([frame0])
 			self.assertEqual([StreamCreatedFrame()], transport0.getNew())
 
-			transport0.sendFrames([StringFrame("box0")])
+			transport0.sendFrames([StringFrame("string0")])
 			self.assertEqual([
 				# For clientLosesSack == True, imagine that the client
 				# loses this frame due to a connection problem.
@@ -2479,8 +2474,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		frames = [
 			frame0,
-			StringFrame("box0"),
-			StringFrame("box1"),
+			StringFrame("string0"),
+			StringFrame("string1"),
 			ResetFrame('', True),
 		]
 		transport0.sendFrames(frames)
@@ -2495,7 +2490,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		proto = list(self.protocolFactory.instances)[0]
 		self.assertEqual([
-			["stringsReceived", [sf("box0"), sf("box1")]],
+			["stringsReceived", [sf("string0"), sf("string1")]],
 			["streamReset", '', True],
 		], proto.getNew()[1:])
 
@@ -2569,9 +2564,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			self.assertEqual([
 #				SeqNumFrame(0),
-#				StringFrame("s2cbox0"),
-#				StringFrame("s2cbox1"),
-#				StringFrame("s2cbox2"),
+#				StringFrame("s2cstring0"),
+#				StringFrame("s2cstring1"),
+#				StringFrame("s2cstring2"),
 				StreamCreatedFrame(),
 				ResetFrame('reset forced by mock protocol', True),
 				YouCloseItFrame()
@@ -2613,9 +2608,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			expected = [
 				StreamCreatedFrame(),
 				SeqNumFrame(0),
-				StringFrame("s2cbox0"),
-				StringFrame("s2cbox1"),
-				StringFrame("s2cbox2"),
+				StringFrame("s2cstring0"),
+				StringFrame("s2cstring1"),
+				StringFrame("s2cstring2"),
 			]
 
 			if clientResetsImmediately:
@@ -2656,8 +2651,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			frames = [
 				frame0,
-				StringFrame("box0"),
-				StringFrame("box1"),
+				StringFrame("string0"),
+				StringFrame("string1"),
 			]
 			if clientResetsImmediately:
 				# Surprise! Client wants to reset very immediately too.
@@ -2668,16 +2663,16 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				StreamCreatedFrame(),
 				SackFrame(SACK(1, ())),
 				SeqNumFrame(0),
-				StringFrame("s2cbox0"),
-				StringFrame("s2cbox1"),
-				StringFrame("s2cbox2"),
+				StringFrame("s2cstring0"),
+				StringFrame("s2cstring1"),
+				StringFrame("s2cstring2"),
 				ResetFrame('reset forced by mock protocol', True),
 				YouCloseItFrame(),
 			], transport0.getNew())
 
 			proto = list(self.protocolFactory.instances)[0]
 			self.assertEqual([
-				["stringsReceived", [sf("box0"), sf("box1")]],
+				["stringsReceived", [sf("string0"), sf("string1")]],
 				["streamReset", 'reset forced by mock protocol', True]
 			], proto.getNew()[1:])
 
@@ -2705,8 +2700,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			frames = [
 				frame0,
-				StringFrame("box0"),
-				StringFrame("box1"),
+				StringFrame("string0"),
+				StringFrame("string1"),
 			]
 			if clientResetsImmediately:
 				# Surprise! Client wants to reset very immediately too.
@@ -2717,9 +2712,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				StreamCreatedFrame(),
 				SackFrame(SACK(1, ())),
 				SeqNumFrame(0),
-				StringFrame("s2cbox0"),
-				StringFrame("s2cbox1"),
-				StringFrame("s2cbox2"),
+				StringFrame("s2cstring0"),
+				StringFrame("s2cstring1"),
+				StringFrame("s2cstring2"),
 			]
 
 			if clientResetsImmediately:
@@ -2733,19 +2728,19 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			proto = list(self.protocolFactory.instances)[0]
 			if clientResetsImmediately:
 				self.assertEqual([
-					["stringsReceived", [sf("box0"), sf("box1")]],
+					["stringsReceived", [sf("string0"), sf("string1")]],
 					["streamReset", '', True],
 				], proto.getNew()[1:])
 			else:
 				self.assertEqual([
-					["stringsReceived", [sf("box0"), sf("box1")]],
+					["stringsReceived", [sf("string0"), sf("string1")]],
 				], proto.getNew()[1:])
 
 
 	def test_serverResetsUnderneathStringsReceivedCall(self): # keywords: reentrant
 		"""
 		If client sends strings that cause an IStringProtocol to reset
-		ServerStream, and also sends a reset frame, the C2S boxes are
+		ServerStream, and also sends a reset frame, the C2S strings are
 		sack'ed before the transport is terminated.
 		"""
 		class MyFactory(MockStringsFactory):
@@ -2765,9 +2760,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			frames = [
 				frame0,
-				StringFrame("box0"),
-				StringFrame("box1"),
-				StringFrame("box2"),
+				StringFrame("string0"),
+				StringFrame("string1"),
+				StringFrame("string2"),
 			]
 			if clientResetsImmediately:
 				# Surprise! Client wants to reset very immediately too.
@@ -2788,7 +2783,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 			proto = list(self.protocolFactory.instances)[0]
 			self.assertEqual([
-				["stringsReceived", [sf("box0"), sf("box1"), sf("box2")]],
+				["stringsReceived", [sf("string0"), sf("string1"), sf("string2")]],
 				["streamReset", 'reset forced by mock protocol', True],
 			], proto.getNew()[1:])
 
@@ -2839,9 +2834,9 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 					streamingResponse=streaming))
 				frames = [
 					frame0,
-					StringFrame("box0"),
-					StringFrame("box1"),
-					StringFrame("box2"),
+					StringFrame("string0"),
+					StringFrame("string1"),
+					StringFrame("string2"),
 				]
 
 				request.content = StringIO(
@@ -2868,9 +2863,9 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				expected = [
 					["transportOnline", transport, True, None],
 					["stringsReceived", transport, [
-						(0, sf('box0')),
-						(1, sf('box1')),
-						(2, sf('box2')),
+						(0, sf('string0')),
+						(1, sf('string1')),
+						(2, sf('string2')),
 					]],
 				]
 
@@ -2897,8 +2892,8 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			streamingResponse=True))
 		frames = [
 			frame0,
-			StringFrame("box0"),
-			StringFrame("box1"),
+			StringFrame("string0"),
+			StringFrame("string1"),
 		]
 
 		request.content = StringIO(
@@ -2910,22 +2905,22 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 		expected = [
 			["transportOnline", transport, True, None],
-			["stringsReceived", transport, [(0, sf('box0'))]],
+			["stringsReceived", transport, [(0, sf('string0'))]],
 		]
 		self.assertEqual(expected,
 			withoutUnimportantStreamCalls(stream.getNew()))
 
 
 	def _sendAnotherString(self, stream, request, streaming, expectedFrames):
-		stream.sendStrings(['extraBox'])
+		stream.sendStrings(['extraString'])
 		if not streaming:
-			# For non-streaming requests, if another S2C box is sent right
+			# For non-streaming requests, if another S2C string is sent right
 			# now, it is not written to the request.
 			self.assertEqual(expectedFrames,
 				decodeResponseInMockRequest(request))
 			self.assertEqual(1, request.finished)
 		else:
-			self.assertEqual(expectedFrames + [StringFrame('extraBox')],
+			self.assertEqual(expectedFrames + [StringFrame('extraString')],
 				decodeResponseInMockRequest(request))
 			self.assertEqual(0, request.finished)
 
@@ -2952,14 +2947,14 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				streamingResponse=streaming))
 			frames = [
 				frame0,
-				StringFrame("box0"),
+				StringFrame("string0"),
 			]
 
 			request.content = StringIO(
 				'\n'.join(f.encode() for f in frames) + '\n')
 
 			stream = self.streamTracker.buildStream('x'*26)
-			stream.sendStrings(['box0', 'box1'])
+			stream.sendStrings(['string0', 'string1'])
 
 			out = resource.render(request)
 			self.assertEqual(server.NOT_DONE_YET, out)
@@ -2968,8 +2963,8 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				HTTP_RESPONSE_PREAMBLE,
 				StreamCreatedFrame(),
 				SeqNumFrame(0),
-				StringFrame('box0'),
-				StringFrame('box1'),
+				StringFrame('string0'),
+				StringFrame('string1'),
 				SackFrame(SACK(0, ())),
 			]
 			if not streaming:
@@ -3051,7 +3046,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 			stream = self.streamTracker.getStream('x'*26)
 
-			# Create a new request that will hang until some S2C boxes are sent.
+			# Create a new request that will hang until some S2C strings are sent.
 			request = DummyRequest(postpath=[])
 			request.method = 'POST'
 
@@ -3067,13 +3062,13 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 			self.assertEqual([], decodeResponseInMockRequest(request))
 
-			stream.sendStrings(['box0', 'box1'])
+			stream.sendStrings(['string0', 'string1'])
 
 			expectedFrames = [
 				HTTP_RESPONSE_PREAMBLE,
 				SeqNumFrame(0),
-				StringFrame('box0'),
-				StringFrame('box1'),
+				StringFrame('string0'),
+				StringFrame('string1'),
 			]
 			if not streaming:
 				expectedFrames += [
@@ -3269,9 +3264,9 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 			frames = [
 				frame0,
-				StringFrame("box0"),
-				StringFrame("box1"),
-				StringFrame("box2"),
+				StringFrame("string0"),
+				StringFrame("string1"),
+				StringFrame("string2"),
 			]
 			if clientResetsImmediately:
 				# Surprise! Client wants to reset very immediately too.
@@ -3298,7 +3293,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 			proto = list(self.protocolFactory.instances)[0]
 			self.assertEqual([
-				["stringsReceived", [sf("box0"), sf("box1"), sf("box2")]],
+				["stringsReceived", [sf("string0"), sf("string1"), sf("string2")]],
 				["streamReset", 'reset forced by mock protocol', True],
 			], proto.getNew()[1:])
 

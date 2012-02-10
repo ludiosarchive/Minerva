@@ -6,4 +6,4 @@
 ../closure-library/closure/bin/build/closurebuilder.py: JavaScript compilation succeeded.
 Used closure-compiler r1755
 Used closure-library r1555
-Used Coreweb 0d5d32443041263e096e700bc0a719d903c158a0 | 2012-02-07 | Use this.recordContents_ to be less prone to property collisions in subclasses
+Used Coreweb 9ac76e99b97634382ead1fd9fd0b99ea4d06e097 | 2012-02-07 | Mention that Record is for immutable records; add some missing goog.require()s

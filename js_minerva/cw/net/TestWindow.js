@@ -201,25 +201,25 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingTests').methods(
 
 	function test_threeItems(self) {
 		var i = new Incoming();
-		self.assertEqual([['box0', 'box1', 'box2'], false], i.give([[0, 'box0'], [1, 'box1'], [2, 'box2']]));
+		self.assertEqual([['string0', 'string1', 'string2'], false], i.give([[0, 'string0'], [1, 'string1'], [2, 'string2']]));
 		self.assertEqual(SK(2, []), i.getSACK());
 	},
 
 	function test_itemMissing(self) {
 		var i = new Incoming();
-		self.assertEqual([['box0', 'box1'], false], i.give([[0, 'box0'], [1, 'box1'], [3, 'box3']]));
+		self.assertEqual([['string0', 'string1'], false], i.give([[0, 'string0'], [1, 'string1'], [3, 'string3']]));
 		self.assertEqual(SK(1, [3]), i.getSACK());
 	},
 
 	function test_twoItemsMissing(self) {
 		var i = new Incoming();
-		self.assertEqual([['box0', 'box1'], false], i.give([[0, 'box0'], [1, 'box1'], [4, 'box4']]));
+		self.assertEqual([['string0', 'string1'], false], i.give([[0, 'string0'], [1, 'string1'], [4, 'string4']]));
 		self.assertEqual(SK(1, [4]), i.getSACK());
 	},
 
 	function test_twoRangesMissing(self) {
 		var i = new Incoming();
-		self.assertEqual([['box0', 'box1'], false], i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']]));
+		self.assertEqual([['string0', 'string1'], false], i.give([[0, 'string0'], [1, 'string1'], [4, 'string4'], [6, 'string6']]));
 		self.assertEqual(SK(1, [4, 6]), i.getSACK());
 	},
 
@@ -228,32 +228,32 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingTests').methods(
 	 */
 	function test_twoRangesMissingAbove9(self) {
 		var i = new Incoming();
-		self.assertEqual([['box0', 'box1'], false], i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [10, 'box10']]));
+		self.assertEqual([['string0', 'string1'], false], i.give([[0, 'string0'], [1, 'string1'], [4, 'string4'], [10, 'string10']]));
 		self.assertEqual(SK(1, [4, 10]), i.getSACK());
 	},
 
 	function test_twoRangesMissingThenFill(self) {
 		var i = new Incoming();
-		self.assertEqual([['box0', 'box1'], false], i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']]));
+		self.assertEqual([['string0', 'string1'], false], i.give([[0, 'string0'], [1, 'string1'], [4, 'string4'], [6, 'string6']]));
 		self.assertEqual(SK(1, [4, 6]), i.getSACK());
-		self.assertEqual([['box2', 'box3', 'box4', 'box5', 'box6'], false], i.give([[2, 'box2'], [3, 'box3'], [5, 'box5']]));
+		self.assertEqual([['string2', 'string3', 'string4', 'string5', 'string6'], false], i.give([[2, 'string2'], [3, 'string3'], [5, 'string5']]));
 		self.assertEqual(SK(6, []), i.getSACK());
 	},
 
 	function test_outOfOrder(self) {
 		var i = new Incoming();
-		// box0 missing
-		self.assertEqual([[], false], i.give([[1, 'box1'], [2, 'box2']]));
+		// string0 missing
+		self.assertEqual([[], false], i.give([[1, 'string1'], [2, 'string2']]));
 		self.assertEqual(SK(-1, [1, 2]), i.getSACK());
 		// finally deliver it
-		self.assertEqual([['box0', 'box1', 'box2'], false], i.give([[0, 'box0']]));
+		self.assertEqual([['string0', 'string1', 'string2'], false], i.give([[0, 'string0']]));
 		// make sure it still works
-		self.assertEqual([['box3'], false], i.give([[3, 'box3']]));
+		self.assertEqual([['string3'], false], i.give([[3, 'string3']]));
 		self.assertEqual(SK(3, []), i.getSACK());
 	},
 
 	/**
-	 * {@code Incoming} handles all the boxes even when they're given
+	 * {@code Incoming} handles all the strings even when they're given
 	 * out-of-order in one {@code Incoming.give} call.
 	 *
 	 * You should *not* pass .give unsorted sequences in production code,
@@ -262,7 +262,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingTests').methods(
 	 */
 	function test_outOfOrderJustOneCall(self) {
 		var i = new Incoming();
-		self.assertEqual([['box0', 'box1'], false], i.give([[1, 'box1'], [0, 'box0']]));
+		self.assertEqual([['string0', 'string1'], false], i.give([[1, 'string1'], [0, 'string0']]));
 		self.assertEqual(SK(1, []), i.getSACK());
 	},
 
@@ -272,18 +272,18 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingTests').methods(
 	 */
 	function test_negativeSequenceNum(self) {
 		var i = new Incoming();
-		self.assertThrows(Error, function() { i.give([[-1, 'box']]); });
-		self.assertThrows(Error, function() { i.give([[-2, 'box']]); });
+		self.assertThrows(Error, function() { i.give([[-1, 'string']]); });
+		self.assertThrows(Error, function() { i.give([[-2, 'string']]); });
 	},
 
 	function test_getUndeliverableCount(self) {
 		var i = new Incoming()
 		self.assertEqual(0, i.getUndeliverableCount());
-		i.give([[1, 'box1']]);
+		i.give([[1, 'string1']]);
 		self.assertEqual(1, i.getUndeliverableCount());
-		i.give([[2, 'box2']]);
+		i.give([[2, 'string2']]);
 		self.assertEqual(2, i.getUndeliverableCount());
-		i.give([[0, 'box0']]);
+		i.give([[0, 'string0']]);
 		self.assertEqual(0, i.getUndeliverableCount());
 	},
 
@@ -293,52 +293,52 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingTests').methods(
 	 */
 	function test_itemsGivenTwice(self) {
 		var i = new Incoming();
-		i.give([[0, 'box0'], [1, 'box1']]);
+		i.give([[0, 'string0'], [1, 'string1']]);
 		self.assertEqual(0, i.getUndeliverableCount());
 
-		i.give([[0, 'box0']]);
+		i.give([[0, 'string0']]);
 		self.assertEqual(0, i.getUndeliverableCount());
-		i.give([[1, 'box1']]);
+		i.give([[1, 'string1']]);
 		self.assertEqual(0, i.getUndeliverableCount());
-		i.give([[0, 'box0'], [1, 'box1']]);
+		i.give([[0, 'string0'], [1, 'string1']]);
 		self.assertEqual(0, i.getUndeliverableCount());
-		i.give([[0, 'box0'], [1, 'box1'], [2, 'box2']]);
+		i.give([[0, 'string0'], [1, 'string1'], [2, 'string2']]);
 		self.assertEqual(0, i.getUndeliverableCount());
 	},
 
 	function test_itemLimit(self) {
 		var i = new Incoming();
-		self.assertEqual([[], false], i.give([[1, 'box1']], 3));
-		self.assertEqual([[], false], i.give([[2, 'box2']], 3));
-		self.assertEqual([[], false], i.give([[3, 'box3']], 3));
-		self.assertEqual([[], true], i.give([[4, 'box4']], 3));
-		self.assertEqual([[], true], i.give([[5, 'box5']], 3));
+		self.assertEqual([[], false], i.give([[1, 'string1']], 3));
+		self.assertEqual([[], false], i.give([[2, 'string2']], 3));
+		self.assertEqual([[], false], i.give([[3, 'string3']], 3));
+		self.assertEqual([[], true], i.give([[4, 'string4']], 3));
+		self.assertEqual([[], true], i.give([[5, 'string5']], 3));
 
 		// The items we kept giving it past the limit are dropped to the floor
-		var _ = i.give([[0, 'box0']], 3);
+		var _ = i.give([[0, 'string0']], 3);
 		var deliverable = _[0];
 		var hitLimit = _[1];
 		self.assertEqual(false, hitLimit);
-		self.assertEqual(['box0', 'box1', 'box2', 'box3'], deliverable);
+		self.assertEqual(['string0', 'string1', 'string2', 'string3'], deliverable);
 
 		self.assertEqual(0, i.getUndeliverableCount());
 		self.assertEqual(0, i.getMaxConsumption());
 	},
 
 	function test_sizeLimit(self) {
-		var boxSize = totalSizeOf('box1');
+		var stringSize = totalSizeOf('string1');
 		var i = new Incoming();
-		self.assertEqual([[], false], i.give([[1, 'box1']], null, boxSize * 3));
-		self.assertEqual([[], false], i.give([[2, 'box2']], null, boxSize * 3));
-		self.assertEqual([[], false], i.give([[3, 'box3']], null, boxSize * 3));
-		self.assertEqual([[], true], i.give([[4, 'box4']], null, boxSize * 3));
-		self.assertEqual([[], true], i.give([[5, 'box5']], null, boxSize * 3));
+		self.assertEqual([[], false], i.give([[1, 'string1']], null, stringSize * 3));
+		self.assertEqual([[], false], i.give([[2, 'string2']], null, stringSize * 3));
+		self.assertEqual([[], false], i.give([[3, 'string3']], null, stringSize * 3));
+		self.assertEqual([[], true], i.give([[4, 'string4']], null, stringSize * 3));
+		self.assertEqual([[], true], i.give([[5, 'string5']], null, stringSize * 3));
 
 		// The items we kept giving it past the limit are dropped to the floor
-		var _ = i.give([[0, 'box0']], null, boxSize * 3);
+		var _ = i.give([[0, 'string0']], null, stringSize * 3);
 		var deliverable = _[0];
 		var hitLimit = _[1];
-		self.assertEqual(['box0', 'box1', 'box2', 'box3'], deliverable);
+		self.assertEqual(['string0', 'string1', 'string2', 'string3'], deliverable);
 		self.assertEqual(false, hitLimit);
 
 		self.assertEqual(0, i.getUndeliverableCount());
@@ -352,18 +352,18 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingTests').methods(
  */
 cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingConsumptionTests').methods(
 
-	function test_noBoxesEverGiven(self) {
+	function test_noStringsEverGiven(self) {
 		var i = new Incoming();
 		self.assertEqual(0, i.getMaxConsumption());
 	},
 
 	function test_simple(self) {
 		var i = new Incoming();
-		var _ = i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']]);
-		self.assertEqual(totalSizeOf('box1') * 3, i.getMaxConsumption());
+		var _ = i.give([[1, 'string1'], [2, 'string2'], [3, 'string3']]);
+		self.assertEqual(totalSizeOf('string1') * 3, i.getMaxConsumption());
 
-		var _ = i.give([[4, 'box4'], [5, 'box5'], [6, 'box6']]);
-		self.assertEqual(totalSizeOf('box1') * 6, i.getMaxConsumption());
+		var _ = i.give([[4, 'string4'], [5, 'string5'], [6, 'string6']]);
+		self.assertEqual(totalSizeOf('string1') * 6, i.getMaxConsumption());
 	},
 
 	// TODO: after we allow mutable objects for totalSizeOf, re-enable

@@ -1268,7 +1268,7 @@ cw.net.ClientStream.prototype.isResettingOrDisposed_ = function() {
 /**
  * ClientTransport calls this to tell ClientStream about received strings.
  * @param {!cw.net.ClientTransport} transport The transport that received
- * 	these boxes.
+ * 	these strings.
  * @param {!cw.net.SeqNumStringPairs_} pairs Sorted Array of
  * 	(seqNum, string) pairs that transport has received.
  * @param {boolean} avoidCreatingTransports

@@ -180,25 +180,25 @@ class IncomingTests(unittest.TestCase):
 
 	def test_threeItems(self):
 		i = Incoming()
-		self.assertEqual((['box0', 'box1', 'box2'], False), i.give([[0, 'box0'], [1, 'box1'], [2, 'box2']]))
+		self.assertEqual((['string0', 'string1', 'string2'], False), i.give([[0, 'string0'], [1, 'string1'], [2, 'string2']]))
 		self.assertEqual(SACK(2, ()), i.getSACK())
 
 
 	def test_itemMissing(self):
 		i = Incoming()
-		self.assertEqual((['box0', 'box1'], False), i.give([[0, 'box0'], [1, 'box1'], [3, 'box3']]))
+		self.assertEqual((['string0', 'string1'], False), i.give([[0, 'string0'], [1, 'string1'], [3, 'string3']]))
 		self.assertEqual(SACK(1, (3,)), i.getSACK())
 
 
 	def test_twoItemsMissing(self):
 		i = Incoming()
-		self.assertEqual((['box0', 'box1'], False), i.give([[0, 'box0'], [1, 'box1'], [4, 'box4']]))
+		self.assertEqual((['string0', 'string1'], False), i.give([[0, 'string0'], [1, 'string1'], [4, 'string4']]))
 		self.assertEqual(SACK(1, (4,)), i.getSACK())
 
 
 	def test_twoRangesMissing(self):
 		i = Incoming()
-		self.assertEqual((['box0', 'box1'], False), i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']]))
+		self.assertEqual((['string0', 'string1'], False), i.give([[0, 'string0'], [1, 'string1'], [4, 'string4'], [6, 'string6']]))
 		self.assertEqual(SACK(1, (4, 6)), i.getSACK())
 
 
@@ -209,33 +209,33 @@ class IncomingTests(unittest.TestCase):
 		necessary in Python.
 		"""
 		i = Incoming()
-		self.assertEqual((['box0', 'box1'], False), i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [10, 'box6']]))
+		self.assertEqual((['string0', 'string1'], False), i.give([[0, 'string0'], [1, 'string1'], [4, 'string4'], [10, 'string6']]))
 		self.assertEqual(SACK(1, (4, 10)), i.getSACK())
 
 
 	def test_twoRangesMissingThenFill(self):
 		i = Incoming()
-		self.assertEqual((['box0', 'box1'], False), i.give([[0, 'box0'], [1, 'box1'], [4, 'box4'], [6, 'box6']]))
+		self.assertEqual((['string0', 'string1'], False), i.give([[0, 'string0'], [1, 'string1'], [4, 'string4'], [6, 'string6']]))
 		self.assertEqual(SACK(1, (4, 6)), i.getSACK())
-		self.assertEqual((['box2', 'box3', 'box4', 'box5', 'box6'], False), i.give([[2, 'box2'], [3, 'box3'], [5, 'box5']]))
+		self.assertEqual((['string2', 'string3', 'string4', 'string5', 'string6'], False), i.give([[2, 'string2'], [3, 'string3'], [5, 'string5']]))
 		self.assertEqual(SACK(6, ()), i.getSACK())
 
 
 	def test_outOfOrder(self):
 		i = Incoming()
-		# box0 missing
-		self.assertEqual(([], False), i.give([[1, 'box1'], [2, 'box2']]))
+		# string0 missing
+		self.assertEqual(([], False), i.give([[1, 'string1'], [2, 'string2']]))
 		self.assertEqual(SACK(-1, (1, 2)), i.getSACK())
 		# finally deliver it
-		self.assertEqual((['box0', 'box1', 'box2'], False), i.give([[0, 'box0']]))
+		self.assertEqual((['string0', 'string1', 'string2'], False), i.give([[0, 'string0']]))
 		# make sure it still works
-		self.assertEqual((['box3'], False), i.give([[3, 'box3']]))
+		self.assertEqual((['string3'], False), i.give([[3, 'string3']]))
 		self.assertEqual(SACK(3, ()), i.getSACK())
 
 
 	def test_outOfOrderJustOneCall(self):
 		"""
-		L{Incoming} handles all the boxes even when they're given
+		L{Incoming} handles all the strings even when they're given
 		out-of-order in one L{Incoming.give} call.
 
 		You should *not* pass .give unsorted sequences in production code,
@@ -243,24 +243,24 @@ class IncomingTests(unittest.TestCase):
 		it must modify a dictionary more frequently.
 		"""
 		i = Incoming()
-		self.assertEqual((['box0', 'box1'], False), i.give([[1, 'box1'], [0, 'box0']]))
+		self.assertEqual((['string0', 'string1'], False), i.give([[1, 'string1'], [0, 'string0']]))
 		self.assertEqual(SACK(1, ()), i.getSACK())
 
 
 	def test_negativeSequenceNum(self):
 		i = Incoming()
-		self.assertRaises(ValueError, lambda: i.give([[-1, 'box']]))
-		self.assertRaises(ValueError, lambda: i.give([[-2, 'box']]))
+		self.assertRaises(ValueError, lambda: i.give([[-1, 'string']]))
+		self.assertRaises(ValueError, lambda: i.give([[-2, 'string']]))
 
 
 	def test_getUndeliverableCount(self):
 		i = Incoming()
 		self.assertEqual(0, i.getUndeliverableCount())
-		i.give([[1, 'box1']])
+		i.give([[1, 'string1']])
 		self.assertEqual(1, i.getUndeliverableCount())
-		i.give([[2, 'box2']])
+		i.give([[2, 'string2']])
 		self.assertEqual(2, i.getUndeliverableCount())
-		i.give([[0, 'box0']])
+		i.give([[0, 'string0']])
 		self.assertEqual(0, i.getUndeliverableCount())
 
 
@@ -270,16 +270,16 @@ class IncomingTests(unittest.TestCase):
 		and does not occupy space in the internal cache.
 		"""
 		i = Incoming()
-		i.give([[0, 'box0'], [1, 'box1']])
+		i.give([[0, 'string0'], [1, 'string1']])
 		self.assertEqual(0, i.getUndeliverableCount())
 
-		i.give([[0, 'box0']])
+		i.give([[0, 'string0']])
 		self.assertEqual(0, i.getUndeliverableCount())
-		i.give([[1, 'box1']])
+		i.give([[1, 'string1']])
 		self.assertEqual(0, i.getUndeliverableCount())
-		i.give([[0, 'box0'], [1, 'box1']])
+		i.give([[0, 'string0'], [1, 'string1']])
 		self.assertEqual(0, i.getUndeliverableCount())
-		i.give([[0, 'box0'], [1, 'box1'], [2, 'box2']])
+		i.give([[0, 'string0'], [1, 'string1'], [2, 'string2']])
 		self.assertEqual(0, i.getUndeliverableCount())
 
 
@@ -293,33 +293,33 @@ class IncomingTests(unittest.TestCase):
 
 	def test_itemLimit(self):
 		i = Incoming()
-		self.assertEqual(([], False), i.give([[1, 'box1']], itemLimit=3))
-		self.assertEqual(([], False), i.give([[2, 'box2']], itemLimit=3))
-		self.assertEqual(([], False), i.give([[3, 'box3']], itemLimit=3))
-		self.assertEqual(([], True), i.give([[4, 'box4']], itemLimit=3))
-		self.assertEqual(([], True), i.give([[5, 'box5']], itemLimit=3))
+		self.assertEqual(([], False), i.give([[1, 'string1']], itemLimit=3))
+		self.assertEqual(([], False), i.give([[2, 'string2']], itemLimit=3))
+		self.assertEqual(([], False), i.give([[3, 'string3']], itemLimit=3))
+		self.assertEqual(([], True), i.give([[4, 'string4']], itemLimit=3))
+		self.assertEqual(([], True), i.give([[5, 'string5']], itemLimit=3))
 
 		# The items we kept giving it past the limit are dropped to the floor
-		deliverable, hitLimit = i.give([[0, 'box0']], itemLimit=3)
+		deliverable, hitLimit = i.give([[0, 'string0']], itemLimit=3)
 		self.assertEqual(False, hitLimit)
-		self.assertEqual(['box0', 'box1', 'box2', 'box3'], deliverable)
+		self.assertEqual(['string0', 'string1', 'string2', 'string3'], deliverable)
 
 		self.assertEqual(0, i.getUndeliverableCount())
 		self.assertEqual(0, i.getMaxConsumption())
 
 
 	def test_sizeLimit(self):
-		boxSize = totalSizeOf('box1')
+		stringSize = totalSizeOf('string1')
 		i = Incoming()
-		self.assertEqual(([], False), i.give([[1, 'box1']], sizeLimit=boxSize * 3))
-		self.assertEqual(([], False), i.give([[2, 'box2']], sizeLimit=boxSize * 3))
-		self.assertEqual(([], False), i.give([[3, 'box3']], sizeLimit=boxSize * 3))
-		self.assertEqual(([], True), i.give([[4, 'box4']], sizeLimit=boxSize * 3))
-		self.assertEqual(([], True), i.give([[5, 'box5']], sizeLimit=boxSize * 3))
+		self.assertEqual(([], False), i.give([[1, 'string1']], sizeLimit=stringSize * 3))
+		self.assertEqual(([], False), i.give([[2, 'string2']], sizeLimit=stringSize * 3))
+		self.assertEqual(([], False), i.give([[3, 'string3']], sizeLimit=stringSize * 3))
+		self.assertEqual(([], True), i.give([[4, 'string4']], sizeLimit=stringSize * 3))
+		self.assertEqual(([], True), i.give([[5, 'string5']], sizeLimit=stringSize * 3))
 
 		# The items we kept giving it past the limit are dropped to the floor
-		deliverable, hitLimit = i.give([[0, 'box0']], sizeLimit=boxSize * 3)
-		self.assertEqual(['box0', 'box1', 'box2', 'box3'], deliverable)
+		deliverable, hitLimit = i.give([[0, 'string0']], sizeLimit=stringSize * 3)
+		self.assertEqual(['string0', 'string1', 'string2', 'string3'], deliverable)
 		self.assertEqual(False, hitLimit)
 
 		self.assertEqual(0, i.getUndeliverableCount())
@@ -331,18 +331,18 @@ class IncomingConsumptionTests(unittest.TestCase):
 	"""
 	Tests for L{window.Incoming}'s memory-exhaustion-prevention
 	"""
-	def test_noBoxesEverGiven(self):
+	def test_noStringsEverGiven(self):
 		i = Incoming()
 		self.assertEqual(0, i.getMaxConsumption())
 
 
 	def test_simple(self):
 		i = Incoming()
-		_ = i.give([[1, 'box1'], [2, 'box2'], [3, 'box3']])
-		self.assertEqual(totalSizeOf('box1') * 3, i.getMaxConsumption())
+		_ = i.give([[1, 'string1'], [2, 'string2'], [3, 'string3']])
+		self.assertEqual(totalSizeOf('string1') * 3, i.getMaxConsumption())
 
-		_ = i.give([[4, 'box4'], [5, 'box5'], [6, 'box6']])
-		self.assertEqual(totalSizeOf('box1') * 6, i.getMaxConsumption())
+		_ = i.give([[4, 'string4'], [5, 'string5'], [6, 'string6']])
+		self.assertEqual(totalSizeOf('string1') * 6, i.getMaxConsumption())
 
 
 	def test_StringFragmentConvertToStr(self):
