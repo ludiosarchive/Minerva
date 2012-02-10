@@ -915,8 +915,9 @@ cw.net.ClientStream.prototype.restartHttpRequests_ = function() {
 };
 
 /**
- * Send strings `strings` to the peer. You may call this even before the
- * 	ClientStream is started with {@link #start}.
+ * Send strings `strings` to the peer.  Strings MUST contain only
+ * 	characters in inclusive range U+0020 (SPACE) - U+007E (~).  You may call
+ * 	this method even before the ClientStream is started with {@link #start}.
  * @param {!Array.<string>} strings Strings to send.
  * @param {boolean=} validate Validate strings before sending them?
  * 	Default true.  Set this to `false` for a slight speedup.

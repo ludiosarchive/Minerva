@@ -307,9 +307,8 @@ class ServerStream(object):
 
 	def sendStrings(self, strings, validate=True):
 		"""
-		Send strings C{strings} to the peer. You are severely restricted
-		as to which bytes may be in the string; by default you are allowed
-		inclusive range 0x20 (SPACE) - 0x7E (~).
+		Send strings C{strings} to the peer.  Strings MUST contain only
+		bytes in inclusive range 0x20 (SPACE) - 0x7E (~).
 
 		@param strings: a list of C{str} objects
 		@type strings: C{list}
