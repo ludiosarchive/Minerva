@@ -302,14 +302,16 @@ cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
 		var num = numAndItem_[0];
 		var item = numAndItem_[1];
 
-		goog.asserts.assert(num >= 0, "Sequence num must be 0 or above, was " + String(num));
+		goog.asserts.assert(num >= 0,
+			"Sequence num must be 0 or above, was " + String(num));
 
 		if(num == this.lastAck_ + 1) {
 			this.lastAck_ += 1;
 			deliverable.push(item);
 			while(true) {
 				var lastAckP1 = this.lastAck_ + 1;
-				var cachedItemAndSize = this.cached_.get(lastAckP1, cw.net.Incoming.MISSING_);
+				var cachedItemAndSize = this.cached_.get(lastAckP1,
+					cw.net.Incoming.MISSING_);
 				if(cachedItemAndSize === cw.net.Incoming.MISSING_) {
 					break;
 				}

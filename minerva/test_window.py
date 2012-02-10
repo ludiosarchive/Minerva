@@ -11,14 +11,16 @@ class QueueTests(unittest.TestCase):
 	"""
 	def test_repr(self):
 		q = Queue()
-		self.assertEqual('<Queue at 0x%x with 0 item(s), counter=#-1, size=0>' % (
-			id(q),), repr(q))
+		self.assertEqual('<Queue at 0x%x with 0 item(s), counter=#-1, '
+			'size=0>' % (id(q),), repr(q))
+
 		q.extend(['a', 'b'])
-		self.assertEqual('<Queue at 0x%x with 2 item(s), counter=#1, size=%d>' % (
-			id(q), totalSizeOf('a') * 2), repr(q))
+		self.assertEqual('<Queue at 0x%x with 2 item(s), counter=#1, '
+			'size=%d>' % (id(q), totalSizeOf('a') * 2), repr(q))
+
 		q.handleSACK(SACK(0, ()))
-		self.assertEqual('<Queue at 0x%x with 1 item(s), counter=#1, size=%d>' % (
-			id(q), totalSizeOf('a')), repr(q))
+		self.assertEqual('<Queue at 0x%x with 1 item(s), counter=#1, '
+			'size=%d>' % (id(q), totalSizeOf('a')), repr(q))
 
 
 	def test_getMaxConsumption(self):
@@ -180,25 +182,33 @@ class IncomingTests(unittest.TestCase):
 
 	def test_threeItems(self):
 		i = Incoming()
-		self.assertEqual((['string0', 'string1', 'string2'], False), i.give([[0, 'string0'], [1, 'string1'], [2, 'string2']]))
+		self.assertEqual(
+			(['string0', 'string1', 'string2'], False),
+			i.give([[0, 'string0'], [1, 'string1'], [2, 'string2']]))
 		self.assertEqual(SACK(2, ()), i.getSACK())
 
 
 	def test_itemMissing(self):
 		i = Incoming()
-		self.assertEqual((['string0', 'string1'], False), i.give([[0, 'string0'], [1, 'string1'], [3, 'string3']]))
+		self.assertEqual(
+			(['string0', 'string1'], False),
+			i.give([[0, 'string0'], [1, 'string1'], [3, 'string3']]))
 		self.assertEqual(SACK(1, (3,)), i.getSACK())
 
 
 	def test_twoItemsMissing(self):
 		i = Incoming()
-		self.assertEqual((['string0', 'string1'], False), i.give([[0, 'string0'], [1, 'string1'], [4, 'string4']]))
+		self.assertEqual(
+			(['string0', 'string1'], False),
+			i.give([[0, 'string0'], [1, 'string1'], [4, 'string4']]))
 		self.assertEqual(SACK(1, (4,)), i.getSACK())
 
 
 	def test_twoRangesMissing(self):
 		i = Incoming()
-		self.assertEqual((['string0', 'string1'], False), i.give([[0, 'string0'], [1, 'string1'], [4, 'string4'], [6, 'string6']]))
+		self.assertEqual(
+			(['string0', 'string1'], False),
+			i.give([[0, 'string0'], [1, 'string1'], [4, 'string4'], [6, 'string6']]))
 		self.assertEqual(SACK(1, (4, 6)), i.getSACK())
 
 
@@ -209,15 +219,21 @@ class IncomingTests(unittest.TestCase):
 		necessary in Python.
 		"""
 		i = Incoming()
-		self.assertEqual((['string0', 'string1'], False), i.give([[0, 'string0'], [1, 'string1'], [4, 'string4'], [10, 'string6']]))
+		self.assertEqual(
+			(['string0', 'string1'], False),
+			i.give([[0, 'string0'], [1, 'string1'], [4, 'string4'], [10, 'string6']]))
 		self.assertEqual(SACK(1, (4, 10)), i.getSACK())
 
 
 	def test_twoRangesMissingThenFill(self):
 		i = Incoming()
-		self.assertEqual((['string0', 'string1'], False), i.give([[0, 'string0'], [1, 'string1'], [4, 'string4'], [6, 'string6']]))
+		self.assertEqual(
+			(['string0', 'string1'], False),
+			i.give([[0, 'string0'], [1, 'string1'], [4, 'string4'], [6, 'string6']]))
 		self.assertEqual(SACK(1, (4, 6)), i.getSACK())
-		self.assertEqual((['string2', 'string3', 'string4', 'string5', 'string6'], False), i.give([[2, 'string2'], [3, 'string3'], [5, 'string5']]))
+		self.assertEqual(
+			(['string2', 'string3', 'string4', 'string5', 'string6'], False),
+			i.give([[2, 'string2'], [3, 'string3'], [5, 'string5']]))
 		self.assertEqual(SACK(6, ()), i.getSACK())
 
 

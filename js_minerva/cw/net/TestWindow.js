@@ -34,11 +34,16 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 
 	function test_repr(self) {
 		var q = new Queue();
-		self.assertEqual('<Queue with 0 item(s), counter=#-1, size=0>', repr(q));
+		self.assertEqual('<Queue with 0 item(s), counter=#-1, ' +
+			'size=0>', repr(q));
+
 		q.extend(['a', 'b']);
-		self.assertEqual('<Queue with 2 item(s), counter=#1, size=' + totalSizeOf('a') * 2 + '>', repr(q));
+		self.assertEqual('<Queue with 2 item(s), counter=#1, ' +
+			'size=' + totalSizeOf('a') * 2 + '>', repr(q));
+
 		q.handleSACK(SK(0, []));
-		self.assertEqual('<Queue with 1 item(s), counter=#1, size=' + totalSizeOf('a') + '>', repr(q));
+		self.assertEqual('<Queue with 1 item(s), counter=#1, ' +
+			'size=' + totalSizeOf('a') + '>', repr(q));
 	},
 
 	/**
@@ -138,7 +143,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'QueueTests').methods(
 		self.assertEqual(false, q.handleSACK(SK(3, [])));
 
 		// There should be 5 items left in the queue
-		self.assertEqual([[4,4], [5,5], [6,6], [7,7], [8,8], [9,9], [10,10]], q.getItems(4));
+		self.assertEqual(
+			[[4,4], [5,5], [6,6], [7,7], [8,8], [9,9], [10,10]],
+			q.getItems(4));
 	},
 
 	/**
@@ -201,25 +208,33 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingTests').methods(
 
 	function test_threeItems(self) {
 		var i = new Incoming();
-		self.assertEqual([['string0', 'string1', 'string2'], false], i.give([[0, 'string0'], [1, 'string1'], [2, 'string2']]));
+		self.assertEqual(
+			[['string0', 'string1', 'string2'], false],
+			i.give([[0, 'string0'], [1, 'string1'], [2, 'string2']]));
 		self.assertEqual(SK(2, []), i.getSACK());
 	},
 
 	function test_itemMissing(self) {
 		var i = new Incoming();
-		self.assertEqual([['string0', 'string1'], false], i.give([[0, 'string0'], [1, 'string1'], [3, 'string3']]));
+		self.assertEqual(
+			[['string0', 'string1'], false],
+			i.give([[0, 'string0'], [1, 'string1'], [3, 'string3']]));
 		self.assertEqual(SK(1, [3]), i.getSACK());
 	},
 
 	function test_twoItemsMissing(self) {
 		var i = new Incoming();
-		self.assertEqual([['string0', 'string1'], false], i.give([[0, 'string0'], [1, 'string1'], [4, 'string4']]));
+		self.assertEqual(
+			[['string0', 'string1'], false],
+			i.give([[0, 'string0'], [1, 'string1'], [4, 'string4']]));
 		self.assertEqual(SK(1, [4]), i.getSACK());
 	},
 
 	function test_twoRangesMissing(self) {
 		var i = new Incoming();
-		self.assertEqual([['string0', 'string1'], false], i.give([[0, 'string0'], [1, 'string1'], [4, 'string4'], [6, 'string6']]));
+		self.assertEqual(
+			[['string0', 'string1'], false],
+			i.give([[0, 'string0'], [1, 'string1'], [4, 'string4'], [6, 'string6']]));
 		self.assertEqual(SK(1, [4, 6]), i.getSACK());
 	},
 
@@ -228,15 +243,21 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingTests').methods(
 	 */
 	function test_twoRangesMissingAbove9(self) {
 		var i = new Incoming();
-		self.assertEqual([['string0', 'string1'], false], i.give([[0, 'string0'], [1, 'string1'], [4, 'string4'], [10, 'string10']]));
+		self.assertEqual(
+			[['string0', 'string1'], false],
+			i.give([[0, 'string0'], [1, 'string1'], [4, 'string4'], [10, 'string10']]));
 		self.assertEqual(SK(1, [4, 10]), i.getSACK());
 	},
 
 	function test_twoRangesMissingThenFill(self) {
 		var i = new Incoming();
-		self.assertEqual([['string0', 'string1'], false], i.give([[0, 'string0'], [1, 'string1'], [4, 'string4'], [6, 'string6']]));
+		self.assertEqual(
+			[['string0', 'string1'], false],
+			i.give([[0, 'string0'], [1, 'string1'], [4, 'string4'], [6, 'string6']]));
 		self.assertEqual(SK(1, [4, 6]), i.getSACK());
-		self.assertEqual([['string2', 'string3', 'string4', 'string5', 'string6'], false], i.give([[2, 'string2'], [3, 'string3'], [5, 'string5']]));
+		self.assertEqual(
+			[['string2', 'string3', 'string4', 'string5', 'string6'], false],
+			i.give([[2, 'string2'], [3, 'string3'], [5, 'string5']]));
 		self.assertEqual(SK(6, []), i.getSACK());
 	},
 
