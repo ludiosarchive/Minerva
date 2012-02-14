@@ -1384,15 +1384,13 @@ Fc.prototype.Hd = j;
 var Gc;
 function Hc(a, b) {
   var c;
-  c = (c = a.className) && "function" == typeof c.split ? c.split(/\s+/) : [];
-  var d = lb(arguments, 1), e;
-  e = c;
-  for(var f = 0, h = 0;h < d.length;h++) {
-    0 <= cb(e, d[h]) || (e.push(d[h]), f++)
+  c = a.className;
+  c = x(c) && c.match(/\S+/g) || [];
+  for(var d = lb(arguments, 1), e = c.length + d.length, f = c, h = 0;h < d.length;h++) {
+    0 <= cb(f, d[h]) || f.push(d[h])
   }
-  e = f == d.length;
   a.className = c.join(" ");
-  return e
+  return c.length == e
 }
 ;var Ic = !F || Ua();
 !Ka && !F || F && Ua() || Ka && H("1.9.1");
