@@ -3086,6 +3086,8 @@ pf.prototype.w = function(a, b) {
   a.push(">")
 };
 var qf = new Me(";)]}");
+(function() {
+}).prototype.a = U("cw.net.QANProtocolWrapper");
 function rf(a) {
   this.Fe = a
 }
