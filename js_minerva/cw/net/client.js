@@ -21,6 +21,7 @@ goog.provide('cw.net.HttpEndpoint');
 goog.provide('cw.net.ExpandedHttpEndpoint_');
 goog.provide('cw.net.Endpoint');
 goog.provide('cw.net.IStringProtocol');
+goog.provide('cw.net.QANProtocolWrapper');
 goog.provide('cw.net.HttpStreamingMode');
 goog.provide('cw.net.IStreamPolicy');
 goog.provide('cw.net.DefaultStreamPolicy');
@@ -52,6 +53,9 @@ goog.require('cw.net.loadFlashConnector');
 goog.require('cw.net.FlashSocketTracker');
 goog.require('cw.net.FlashSocketConduit');
 goog.require('cw.net.theXDRTracker');
+goog.require('cw.net.stringToQANFrame');
+goog.require('cw.net.qanFrameToString');
+goog.require('cw.net.QANHelper');
 goog.require('cw.net.breaker_FlashConnector_swf');
 goog.require('goog.ui.media.FlashObject');
 
@@ -345,14 +349,12 @@ cw.net.HttpStreamingMode = {
  * @interface
  */
 cw.net.IStreamPolicy = function() {
-
 };
 
 /**
  * @return {!cw.net.HttpStreamingMode}
  */
 cw.net.IStreamPolicy.prototype.getHttpStreamingMode = function() {
-
 };
 
 
@@ -397,7 +399,22 @@ cw.net.makeStreamId_ = function() {
  * @interface
  */
 cw.net.IStringProtocol = function() {
+};
 
+/**
+ * Called when the local *Stream object associated with this protocol
+ * has started.  On the server, this is usually called after the client
+ * attaches their first transport.  On the client, this is called when
+ * you call {@code stream.start()}.
+ *
+ * You'll want to keep the stream around with {@code self.stream = stream}.
+ *
+ * You must *not* raise any exception.  Wrap your code in try/except
+ * if necessary.
+ *
+ * @param {!cw.net.ClientStream} stream The stream associated with this protocol
+ */
+cw.net.IStringProtocol.prototype.streamStarted = function(stream) {
 };
 
 /**
@@ -408,7 +425,6 @@ cw.net.IStringProtocol = function() {
  * @param {boolean} applicationLevel
  */
 cw.net.IStringProtocol.prototype.streamReset = function(reasonString, applicationLevel) {
-
 };
 
 /**
@@ -418,7 +434,181 @@ cw.net.IStringProtocol.prototype.streamReset = function(reasonString, applicatio
  * @param {string} s The restricted string
  */
 cw.net.IStringProtocol.prototype.stringReceived = function(s) {
+};
 
+
+
+/**
+ * An interface for string-based communication that allows for
+ * question-answer-notify.
+ * @interface
+ */
+cw.net.IQANProtocol = function() {
+};
+
+/**
+ * Called when the local *Stream object associated with this protocol
+ * has started.  On the server, this is usually called after the client
+ * attaches their first transport.  On the client, this is called when
+ * you call {@code stream.start()}.
+ *
+ * You'll want to keep the stream around with {@code this.stream = stream}.
+ * You'll want to keep the QANHelper around with {@code this.qanHelper = qanHelper}.
+ *
+ * You must *not* raise any exception.  Wrap your code in try/except
+ * if necessary.
+ *
+ * You must not call {@code stream.sendStrings}; use {@code qanHelper.ask} or
+ * {@code qanHelper.notify} for all of your communication.
+ *
+ * @param {!cw.net.ClientStream} stream The stream associated with this protocol
+ * @param {!cw.net.QANHelper} qanHelper The {@code QANHelper} coupled with
+ * 	the {@code ClientStream}.
+ */
+cw.net.IQANProtocol.prototype.streamStarted = function(stream, qanHelper) {
+};
+
+/**
+ * Called when this stream has reset for any reason.  See {@link #onreset} docs.
+ *
+ * @param {string} reasonString Textual reason why stream has reset.
+ * 	String contains only characters in inclusive range 0x20 - 0x7E.
+ * @param {boolean} applicationLevel
+ */
+cw.net.IQANProtocol.prototype.streamReset = function(reasonString, applicationLevel) {
+};
+
+/**
+ * Called when a Question or Notification has been received from the peer.
+ *
+ * @param {string} body The QAN body from the peer.  Always a restricted string.
+ *
+ * @param {boolean} isQuestion True if the QAN body arrived as a question that
+ * 	can be answered, False if it arrived as a Notification.  If it is a question,
+ * 	this method's return value (or Deferred) will be used as the answer.
+ * 	Answer *must* be a restricted string.  If {@code cw.net.KnownError}
+ * 	is raised (or errbacked), the string value of the {@code cw.net.KnownError}
+ * 	will be sent as the error-answer.  If another exception is raised,
+ * 	an uninformative unknown-error-answer will be sent to the peer.
+ *
+ * @return {(string|goog.async.Deferred)} If {@code isQuestion}, an answer to
+ * 	the question.
+ * @throws {cw.net.KnownError} When an error-answer is desired.
+ */
+cw.net.IQANProtocol.prototype.bodyReceived = function(body, isQuestion) {
+};
+
+
+
+/**
+ * This is an {@code IStringProtocol} that makes your {@code IQANProtocol} work.
+ * See {@code IQANProtocol}.
+ *
+ * @param {*} qanProtocol
+ * @param {boolean} dontThrowIntoWindow If true, QANProtocolWrapper
+ * 	will log errors as WARNINGs, without also throwing the errors into the
+ * 	window.
+ *
+ * @implements {cw.net.IStringProtocol}
+ * @constructor
+ */
+cw.net.QANProtocolWrapper = function(qanProtocol, dontThrowIntoWindow) {
+	/**
+	 * @type {!cw.net.IQANProtocol}
+	 */
+	this.qanProtocol = /** @type {!cw.net.IQANProtocol} */ (qanProtocol);
+
+	/**
+	 * @type {boolean}
+	 * @private
+	 */
+	this.dontThrowIntoWindow_ = dontThrowIntoWindow;
+};
+
+/**
+ * @type {!goog.debug.Logger}
+ * @protected
+ */
+cw.net.QANProtocolWrapper.prototype.logger_ =
+	goog.debug.Logger.getLogger('cw.net.QANProtocolWrapper');
+
+/**
+ * @param {string} message
+ * @param {!Error} error
+ */
+cw.net.QANProtocolWrapper.prototype.logError_ = function(message, error) {
+	this.logger_.warning(message, error);
+
+	if(!this.dontThrowIntoWindow_) {
+		// Since the user of Minerva might not have a logger set up, throw
+		// the error into the window as well.  goog.async.Deferred does this too.
+		goog.global.setTimeout(function() {
+			// The stack trace is clobbered when the error is rethrown.  Append
+			// the stack trace to the message if available.  Since no one is
+			// capturing this error, the stack trace will be printed to the
+			// debug console.
+			if (goog.DEBUG && goog.isDef(error.message) && error.stack) {
+				error.message += '\n' + error.stack;
+			}
+			throw error;
+		}, 0);
+	}
+};
+
+/**
+ * @param {!cw.net.QANFrame} qanFrame
+ */
+cw.net.QANProtocolWrapper.prototype.sendQANFrame_ = function(qanFrame) {
+	this.stream.sendStrings([cw.net.qanFrameToString(qanFrame)]);
+};
+
+/**
+ * @param {string} reason
+ */
+cw.net.QANProtocolWrapper.prototype.fatalError_ = function(reason) {
+	this.stream.reset("QANHelper said: "  + reason);
+};
+
+/**
+ * @param {!cw.net.ClientStream} stream
+ */
+cw.net.QANProtocolWrapper.prototype.streamStarted = function(stream) {
+	this.stream = stream;
+	this.qanHelper = new cw.net.QANHelper(
+		/* Coerce because QANHelper works with any type, but IQANProtocol
+		 * always get a string. */
+		/** @type {function(*, boolean)} */ (this.qanProtocol.bodyReceived),
+		this.logError_,
+		this.sendQANFrame_,
+		this.fatalError_);
+	this.qanProtocol.streamStarted(this.stream, this.qanHelper);
+};
+
+/**
+ * @param {string} reasonString
+ * @param {boolean} applicationLevel
+ */
+cw.net.QANProtocolWrapper.prototype.streamReset = function(reasonString, applicationLevel) {
+	this.qanHelper.failAll("Stream reset " +
+		"applicationLevel=" + cw.repr.repr(applicationLevel) +
+		", reason: " + reasonString);
+	this.qanProtocol.streamReset(reasonString, applicationLevel);
+};
+
+/**
+ * @param {string} s
+ */
+cw.net.QANProtocolWrapper.prototype.stringReceived = function(s) {
+	try {
+		var qanFrame = cw.net.stringToQANFrame(s);
+	} catch(e) {
+		if(!(e instanceof cw.net.InvalidQANFrame)) {
+			throw e;
+		}
+		this.stream.reset("Bad QAN frame.  Did peer send a non-QAN string?");
+		return;
+	}
+	this.qanHelper.handleQANFrame(qanFrame);
 };
 
 
@@ -615,6 +805,16 @@ cw.net.ClientStream.prototype.maxUndeliveredBytes = 1 * 1024 * 1024;
 cw.net.ClientStream.prototype.onstring = null;
 
 /**
+ * The function to call when you call {@code ClientStream.start}
+ *
+ * You must *not* raise any exception.  Wrap your code in try/except
+ * if necessary.
+ *
+ * @type {?function(!cw.net.ClientStream):*}
+ */
+cw.net.ClientStream.prototype.onstarted = null;
+
+/**
  * The function to call when this stream has reset, either internally by
  * ClientStream, or a call to ClientStream.reset, or by a ResetFrame from the
  * peer.
@@ -753,11 +953,13 @@ cw.net.ClientStream.prototype.getUserContext = function() {
  */
 cw.net.ClientStream.prototype.bindToProtocol = function(proto) {
 	if(cw.net.STANDALONE_CLIENT_BUILD_) {
-		this.onstring = goog.bind(proto['stringReceived'], proto);
+		this.onstarted = goog.bind(proto['streamStarted'], proto);
 		this.onreset = goog.bind(proto['streamReset'], proto);
+		this.onstring = goog.bind(proto['stringReceived'], proto);
 	} else {
-		this.onstring = goog.bind(proto.stringReceived, proto);
+		this.onstarted = goog.bind(proto.streamStarted, proto);
 		this.onreset = goog.bind(proto.streamReset, proto);
+		this.onstring = goog.bind(proto.stringReceived, proto);
 	}
 };
 
@@ -1370,9 +1572,11 @@ cw.net.ClientStream.prototype.start = function() {
 		throw new Error("ClientStream.start: " + cw.repr.repr(this) +
 			" already started");
 	}
+	if(this.onstarted) {
+		this.onstarted(this);
+	}
 	this.state_ = cw.net.StreamState_.WAITING_RESOURCES;
 
-	var thisUrl = goog.global.location;
 	if(this.endpoint_ instanceof cw.net.HttpEndpoint) {
 		var d1 = cw.net.theXDRTracker.getWindowForUrl(
 			this.endpoint_.primaryUrl, this);

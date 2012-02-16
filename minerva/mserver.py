@@ -209,7 +209,7 @@ class QANProtocolWrapper(object):
 		try:
 			qanFrame = stringToQANFrame(s)
 		except InvalidQANFrame:
-			self.stream.reset("Bad QAN frame.  Did you send a non-QAN string?")
+			self.stream.reset("Bad QAN frame.  Did peer send a non-QAN string?")
 		else:
 			self.qanHelper.handleQANFrame(qanFrame)
 

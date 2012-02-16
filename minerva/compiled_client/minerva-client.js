@@ -3086,6 +3086,8 @@ pf.prototype.w = function(a, b) {
   a.push(">")
 };
 var qf = new Me(";)]}");
+(function() {
+}).prototype.a = U("cw.net.QANProtocolWrapper");
 function rf(a) {
   this.Fe = a
 }
@@ -3114,6 +3116,7 @@ q.jd = new Pd(-1, []);
 q.maxUndeliveredStrings = 50;
 q.maxUndeliveredBytes = 1048576;
 q.onstring = k;
+q.onstarted = k;
 q.onreset = k;
 q.ondisconnect = k;
 q.wc = m;
@@ -3140,8 +3143,9 @@ q.w = function(a, b) {
 };
 q.je = o("Aa");
 q.Rd = function(a) {
-  this.onstring = y(a.stringReceived, a);
-  this.onreset = y(a.streamReset, a)
+  this.onstarted = y(a.streamStarted, a);
+  this.onreset = y(a.streamReset, a);
+  this.onstring = y(a.stringReceived, a)
 };
 function sf(a) {
   var b = [-1];
@@ -3291,6 +3295,9 @@ q.Rc = function(a) {
 q.start = function() {
   this.onmessage && g(Error("ClientStream.start: Hey, you! It's `onstring`, not `onmessage`! Refusing to start."));
   1 != this.v && g(Error("ClientStream.start: " + P(this) + " already started"));
+  if(this.onstarted) {
+    this.onstarted(this)
+  }
   this.v = 2;
   if(this.o instanceof of) {
     var a = Ze(this.o.V, this), b = Ze(this.o.oa, this), a = ef([a, b]);

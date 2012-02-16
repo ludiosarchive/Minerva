@@ -70,7 +70,10 @@ class IStringProtocol(Interface):
 
 	def streamStarted(stream):
 		"""
-		Called when this stream has just started.
+		Called when the local *Stream object associated with this protocol
+		has started.  On the server, this is usually called after the client
+		attaches their first transport.  On the client, this is called when
+		you call C{stream.start()}.
 
 		You'll want to keep the stream around with C{self.stream = stream}.
 
@@ -157,10 +160,16 @@ class IStringFactory(Interface):
 
 
 class IQANProtocol(Interface):
-
+	"""
+	An interface for string-based communication that allows for
+	question-answer-notify.
+	"""
 	def streamStarted(stream, qanHelper):
 		"""
-		Called when this stream has just started.
+		Called when the local *Stream object associated with this protocol
+		has started.  On the server, this is usually called after the client
+		attaches their first transport.  On the client, this is called when
+		you call C{stream.start()}.
 
 		You'll want to keep the stream around with C{self.stream = stream}.
 		You'll want to keep the QANHelper around with C{self.qanHelper = qanHelper}.
@@ -199,11 +208,13 @@ class IQANProtocol(Interface):
 
 	def bodyReceived(body, isQuestion):
 		"""
+		Called when a Question or Notification has been received from the peer.
+
 		@param body: The QAN body from the peer.  Always a restricted string.
 		@type body: C{str}
 
 		@param isQuestion: True if the QAN body arrived as a question that can
-			be answered, False if it arrived as a Notfication.  If it is a question,
+			be answered, False if it arrived as a Notification.  If it is a question,
 			this method's return value (or Deferred) will be used as the answer.
 			Answer *must* be a restricted string C{str}.  If L{qan.KnownError}
 			is raised (or errbacked), the string value of the L{qan.KnownError}

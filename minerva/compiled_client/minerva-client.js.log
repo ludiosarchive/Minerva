@@ -6,4 +6,4 @@
 ../closure-library/closure/bin/build/closurebuilder.py: JavaScript compilation succeeded.
 Used closure-compiler r1776
 Used closure-library r1581
-Used Coreweb 9ac76e99b97634382ead1fd9fd0b99ea4d06e097 | 2012-02-07 | Mention that Record is for immutable records; add some missing goog.require()s
+Used Coreweb 3172a36ca90870ceb8b73bc290a67d2f652dd20a | 2012-02-14 | Rebuild JS with newer Library/Compiler
