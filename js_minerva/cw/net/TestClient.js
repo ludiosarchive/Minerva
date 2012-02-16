@@ -182,6 +182,10 @@ cw.net.TestClient.RecordingProtocol.prototype.setStream = function(stream) {
 	this.stream_ = stream;
 };
 
+cw.net.TestClient.RecordingProtocol.prototype.streamStarted = function(stream) {
+	this.log.push(['streamStarted', stream]);
+};
+
 cw.net.TestClient.RecordingProtocol.prototype.streamReset = function(reasonString, applicationLevel) {
 	this.log.push(['streamReset', reasonString, applicationLevel]);
 };
@@ -499,6 +503,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 
 	function runAssertions_(self, stream, proto) {
 		self.assertEqual([
+			["streamStarted", stream],
 			["stringReceived", "hello world"],
 			["stringReceived", "hello world"],
 			["streamReset", "done testing things", true]
@@ -584,8 +589,9 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 		stream.start();
 
 		function streamResetAssertions() {
-			self.assertEqual(1, proto.log.length);
-			self.assertEqual("streamReset", proto.log[0][0]);
+			self.assertEqual(2, proto.log.length);
+			self.assertEqual("streamStarted", proto.log[0][0]);
+			self.assertEqual("streamReset", proto.log[1][0]);
 		}
 
 		var d = new goog.async.Deferred();

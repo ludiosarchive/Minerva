@@ -16,6 +16,7 @@ function RWPropertiesClientStream() {}
 
 RWPropertiesClientStream.prototype.maxUndeliveredStrings;
 RWPropertiesClientStream.prototype.maxUndeliveredBytes;
-RWPropertiesClientStream.prototype.onstring;
+RWPropertiesClientStream.prototype.onstarted;
 RWPropertiesClientStream.prototype.onreset;
+RWPropertiesClientStream.prototype.onstring;
 RWPropertiesClientStream.prototype.ondisconnect;

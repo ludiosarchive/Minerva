@@ -70,7 +70,10 @@ class IStringProtocol(Interface):
 
 	def streamStarted(stream):
 		"""
-		Called when this stream has just started.
+		Called when the local *Stream object associated with this protocol
+		has started.  On the server, this is usually called after the client
+		attaches their first transport.  On the client, this is called when
+		you call C{stream.start()}.
 
 		You'll want to keep the stream around with C{self.stream = stream}.
 
@@ -163,7 +166,10 @@ class IQANProtocol(Interface):
 	"""
 	def streamStarted(stream, qanHelper):
 		"""
-		Called when this stream has just started.
+		Called when the local *Stream object associated with this protocol
+		has started.  On the server, this is usually called after the client
+		attaches their first transport.  On the client, this is called when
+		you call C{stream.start()}.
 
 		You'll want to keep the stream around with C{self.stream = stream}.
 		You'll want to keep the QANHelper around with C{self.qanHelper = qanHelper}.

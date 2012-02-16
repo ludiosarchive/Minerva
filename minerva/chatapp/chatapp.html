@@ -210,7 +210,7 @@ chatapp.ChatProtocol.prototype.setStream = function(stream) {
 	this.stream_ = stream;
 };
 
-chatapp.ChatProtocol.prototype.sendInitialStrings = function() {
+chatapp.ChatProtocol.prototype.streamStarted = function(stream) {
 	this.stream_.sendStrings(['begin_chat']);
 };
 
@@ -307,7 +307,6 @@ chatapp.startStream = function() {
 	var stream = new ClientStream(endpoint, streamPolicy);
 	stream.bindToProtocol(chatapp.lastProto);
 	chatapp.lastProto.setStream(stream);
-	chatapp.lastProto.sendInitialStrings();
 	stream.start();
 };
 
