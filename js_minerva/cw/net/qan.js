@@ -365,7 +365,7 @@ goog.inherits(cw.net.QuestionFailed, goog.debug.Error);
  * 	a Question or Notification is received (via a call to .handleString).
  * 	Called with arguments: body, isQuestion.
  *
- * @param {function(string, *)} logError: A 2-arg function called when
+ * @param {function(string, !Error)} logError: A 2-arg function called when
  * 	bodyReceived throws an error, or when QANHelper has a non-fatal
  * 	internal error.  Called with arguments: error message, error object.
  *
@@ -387,7 +387,7 @@ cw.net.QANHelper = function(bodyReceived, logError, sendQANFrame, fatalError) {
 	 */
 	this.bodyReceived_ = bodyReceived;
 	/**
-	 * @type {function(string, *)}
+	 * @type {function(string, !Error)}
 	 * @private
 	 */
 	this.logError_ = logError;
@@ -440,7 +440,7 @@ cw.net.QANHelper.prototype.sendOkayAnswer_ = function(body, qid) {
 };
 
 /**
- * @param {*} error
+ * @param {!Error} error
  * @param {number} qid
  * @private
  */

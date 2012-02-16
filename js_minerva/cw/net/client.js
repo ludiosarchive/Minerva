@@ -504,7 +504,7 @@ cw.net.IQANProtocol.prototype.bodyReceived = function(body, isQuestion) {
  * This is an {@code IStringProtocol} that makes your {@code IQANProtocol} work.
  * See {@code IQANProtocol}.
  *
- * @param {!cw.net.IQANProtocol} qanProtocol
+ * @param {*} qanProtocol
  * @param {boolean} dontThrowIntoWindow If true, QANProtocolWrapper
  * 	will log errors as WARNINGs, without also throwing the errors into the
  * 	window.
@@ -516,7 +516,7 @@ cw.net.QANProtocolWrapper = function(qanProtocol, dontThrowIntoWindow) {
 	/**
 	 * @type {!cw.net.IQANProtocol}
 	 */
-	this.qanProtocol = qanProtocol;
+	this.qanProtocol = /** @type {!cw.net.IQANProtocol} */ (qanProtocol);
 
 	/**
 	 * @type {boolean}
@@ -534,7 +534,7 @@ cw.net.QANProtocolWrapper.prototype.logger_ =
 
 /**
  * @param {string} message
- * @param {Error} error
+ * @param {!Error} error
  */
 cw.net.QANProtocolWrapper.prototype.logError_ = function(message, error) {
 	this.logger_.warning(message, error);
@@ -575,7 +575,9 @@ cw.net.QANProtocolWrapper.prototype.fatalError_ = function(reason) {
 cw.net.QANProtocolWrapper.prototype.streamStarted = function(stream) {
 	this.stream = stream;
 	this.qanHelper = new cw.net.QANHelper(
-		this.qanProtocol.bodyReceived,
+		/* Coerce because QANHelper works with any type, but IQANProtocol
+		 * always get a string. */
+		/** @type {function(*, boolean)} */ (this.qanProtocol.bodyReceived),
 		this.logError_,
 		this.sendQANFrame_,
 		this.fatalError_);
