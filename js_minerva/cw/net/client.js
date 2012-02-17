@@ -573,7 +573,13 @@ cw.net.QANProtocolWrapper.prototype.fatalError_ = function(reason) {
  * @param {!cw.net.ClientStream} stream
  */
 cw.net.QANProtocolWrapper.prototype.streamStarted = function(stream) {
+	/**
+	 * @type {!cw.net.ClientStream}
+	 */
 	this.stream = stream;
+	/**
+	 * @type {!cw.net.QANHelper}
+	 */
 	this.qanHelper = new cw.net.QANHelper(
 		/* Coerce because QANHelper works with any type, but IQANProtocol
 		 * always get a string. */
