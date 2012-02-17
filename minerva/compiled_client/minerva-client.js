@@ -282,7 +282,7 @@ var bb = !F || Ua();
 F && H("8");
 !G || H("528");
 Ka && H("1.9b") || F && H("8") || Ja && H("9.5") || G && H("528");
-!Ka || H("8");
+Ka && !H("8") || F && H("9");
 var I = Array.prototype, cb = I.indexOf ? function(a, b, c) {
   return I.indexOf.call(a, b, c)
 } : function(a, b, c) {
