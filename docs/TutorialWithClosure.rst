@@ -1,22 +1,10 @@
-.. |debuntu| raw:: html
-
-	<!-- expect dupe --><p class="debuntu">
-
-.. |/debuntu| raw:: html
-
-	</p><!-- expect dupe -->
-
-.. |windows| raw:: html
-
-	<!-- expect dupe --><p class="windows">
-
-.. |/windows| raw:: html
-
-	</p><!-- expect dupe -->
+.. include:: _MultiOS.rst
 
 ========
 Tutorial: Making a chat application with Minerva and Closure Library | Minerva Comet server and client
 ========
+
+.. contents::
 
 This tutorial will guide you through making a simple chat application that uses Minerva_ to communicate between the browser and the server.  We'll install Minerva and Closure Library, then write a chat server (in Python) and chat client (in JavaScript).  If at any point you get stuck for any reason, please tell Ivan_ so he can improve the tutorial.
 
@@ -26,6 +14,8 @@ If you don't want to use `Closure Library`_, read the `standalone Minerva tutori
 .. _Ivan: mailto:ivan@ludios.org?subject=Suggestion+for+Minerva+with+Closure+tutorial
 .. _`Closure Library`: https://code.google.com/closure/library/
 .. _`standalone Minerva tutorial`: ../standalone.html
+
+|switcher-controls|
 
 
 Install Python and Twisted
@@ -77,3 +67,6 @@ Running the server-side unit tests
 Running the client-side unit tests
 =======================
 
+
+
+|switcher-js|

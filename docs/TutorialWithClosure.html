@@ -11,10 +11,32 @@
 <div class="document" id="tutorial-making-a-chat-application-with-minerva-and-closure-library-minerva-comet-server-and-client">
 <h1 class="title">Tutorial: Making a chat application with Minerva and Closure Library | Minerva Comet server and client</h1>
 
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="simple">
+<li><a class="reference internal" href="#install-python-and-twisted" id="id1">Install Python and Twisted</a></li>
+<li><a class="reference internal" href="#install-pip" id="id2">Install pip</a></li>
+<li><a class="reference internal" href="#install-minerva-and-its-dependencies" id="id3">Install Minerva and its dependencies</a></li>
+<li><a class="reference internal" href="#install-closure-library" id="id4">Install Closure Library</a></li>
+<li><a class="reference internal" href="#running-the-server-side-unit-tests" id="id5">Running the server-side unit tests</a></li>
+<li><a class="reference internal" href="#running-the-client-side-unit-tests" id="id6">Running the client-side unit tests</a></li>
+</ul>
+</div>
 <p>This tutorial will guide you through making a simple chat application that uses <a class="reference external" href="http://ludios.org/minerva/">Minerva</a> to communicate between the browser and the server.  We'll install Minerva and Closure Library, then write a chat server (in Python) and chat client (in JavaScript).  If at any point you get stuck for any reason, please tell <a class="reference external" href="mailto:ivan&#64;ludios.org?subject=Suggestion+for+Minerva+with+Closure+tutorial">Ivan</a> so he can improve the tutorial.</p>
 <p>If you don't want to use <a class="reference external" href="https://code.google.com/closure/library/">Closure Library</a>, read the <a class="reference external" href="../standalone.html">standalone Minerva tutorial</a> instead.</p>
+<p><noscript><b class="jsproblem">Sorry, JavaScript is required to switch away from the Debian/Ubuntu instructions.</b><br></noscript>
+<b><span class="important">Important!</span> Show instructions for:</b><br>
+<form>
+      <input type="radio" name="os" value="debuntu" id="os-debuntu" onclick="clickedSwitch();return true" checked>
+            <label for="os-debuntu">Debian/Ubuntu</label>
+      <input type="radio" name="os" value="windows" id="os-windows" onclick="clickedSwitch();return true">
+            <label for="os-windows">Windows</label>
+</form>
+<p>
+(This setting changes the entire document.)
+</p></p>
 <div class="section" id="install-python-and-twisted">
-<h1>Install Python and Twisted</h1>
+<h1><a class="toc-backref" href="#id1">Install Python and Twisted</a></h1>
 <p>The Minerva server uses Python and <a class="reference external" href="http://twistedmatrix.com/">Twisted</a>, so you'll need both to write your application server.</p>
 <p class="debuntu"> You already have Python.  You just need <a class="reference external" href="http://twistedmatrix.com/">Twisted</a>: </p>
 <p class="debuntu"> <tt class="docutils literal">sudo <span class="pre">apt-get</span> install <span class="pre">python-twisted</span></tt> </p>
@@ -24,19 +46,48 @@
 <p class="windows"> Install the <a class="reference external" href="http://pypi.python.org/pypi/pyOpenSSL">latest version of pyOpenSSL for your Python version</a>.  Try the MSI installer first.  pyOpenSSL is an optional Twisted dependency that allows you to write SSL clients and servers. </p>
 </div>
 <div class="section" id="install-pip">
-<h1>Install pip</h1>
+<h1><a class="toc-backref" href="#id2">Install pip</a></h1>
 </div>
 <div class="section" id="install-minerva-and-its-dependencies">
-<h1>Install Minerva and its dependencies</h1>
+<h1><a class="toc-backref" href="#id3">Install Minerva and its dependencies</a></h1>
 </div>
 <div class="section" id="install-closure-library">
-<h1>Install Closure Library</h1>
+<h1><a class="toc-backref" href="#id4">Install Closure Library</a></h1>
 </div>
 <div class="section" id="running-the-server-side-unit-tests">
-<h1>Running the server-side unit tests</h1>
+<h1><a class="toc-backref" href="#id5">Running the server-side unit tests</a></h1>
 </div>
 <div class="section" id="running-the-client-side-unit-tests">
-<h1>Running the client-side unit tests</h1>
+<h1><a class="toc-backref" href="#id6">Running the client-side unit tests</a></h1>
+<p><script src="jquery.min.js"></script>
+<script>
+var allOS = ["debuntu", "windows"];
+
+function switchInstructions(os) {
+      $('.' + os).show();
+      $.each(allOS, function(i, otherOS) {
+            if(os != otherOS) {
+                  $('.' + otherOS).hide();
+            }
+      });
+}
+
+function getOS() {
+      if($('#os-debuntu').prop('checked')) {
+            return "debuntu";
+      }
+      return "windows";
+}
+
+function clickedSwitch() {
+      switchInstructions(getOS());
+}
+
+$(document).ready(function() {
+      clickedSwitch();
+});
+
+</script></p>
 </div>
 </div>
 </body>
