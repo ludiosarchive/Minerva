@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.8.1: http://docutils.sourceforge.net/" />
+<title>Tutorial: Making a chat application with Minerva and Closure Library | Minerva Comet server and client</title>
+<link rel="stylesheet" href="style.css" type="text/css" />
+</head>
+<body>
+<div class="document" id="tutorial-making-a-chat-application-with-minerva-and-closure-library-minerva-comet-server-and-client">
+<h1 class="title">Tutorial: Making a chat application with Minerva and Closure Library | Minerva Comet server and client</h1>
+
+<p>This tutorial will guide you through making a simple chat application that uses <a class="reference external" href="http://ludios.org/minerva/">Minerva</a> to communicate between the browser and the server.  We'll install Minerva and Closure Library, then write a chat server (in Python) and chat client (in JavaScript).  If at any point you get stuck for any reason, please tell <a class="reference external" href="mailto:ivan&#64;ludios.org?subject=Suggestion+for+Minerva+with+Closure+tutorial">Ivan</a> so he can improve the tutorial.</p>
+<p>If you don't want to use <a class="reference external" href="https://code.google.com/closure/library/">Closure Library</a>, read the <a class="reference external" href="../standalone.html">standalone Minerva tutorial</a> instead.</p>
+<div class="section" id="install-python-and-twisted">
+<h1>Install Python and Twisted</h1>
+<p>The Minerva server uses Python and <a class="reference external" href="http://twistedmatrix.com/">Twisted</a>, so you'll need both to write your application server.</p>
+<p class="debuntu"> You already have Python.  You just need <a class="reference external" href="http://twistedmatrix.com/">Twisted</a>: </p>
+<p class="debuntu"> <tt class="docutils literal">sudo <span class="pre">apt-get</span> install <span class="pre">python-twisted</span></tt> </p>
+<p class="windows"> Unless you already have Python 2.5+ installed, install the latest 32-bit or 64-bit <a class="reference external" href="http://www.python.org/download/releases/">Python 2.x release</a> (<a class="reference external" href="http://www.python.org/ftp/python/2.7.2/python-2.7.2.msi">direct link to 32-bit Python 2.7.2 MSI installer</a>). </p>
+<p class="windows"> Install the <a class="reference external" href="http://twistedmatrix.com/trac/wiki/Downloads">latest version of Twisted for your Python version</a>.  Try the MSI installer first.  Note that Twisted won't work until you install zope.interface (described below). </p>
+<p class="windows"> Install the <a class="reference external" href="http://sourceforge.net/projects/pywin32/files/pywin32/">latest pywin32 for your Python version</a> (<a class="reference external" href="http://sourceforge.net/projects/pywin32/files/pywin32/Build216/pywin32-216.win32-py2.7.exe/download">direct link to pywin32 216 for 32-bit Python 2.7</a>).  This is required for some Twisted functionality including process-spawning, the IOCP reactor, and colored <a class="reference external" href="http://twistedmatrix.com/trac/wiki/TwistedTrial">trial</a> output. </p>
+<p class="windows"> Install the <a class="reference external" href="http://pypi.python.org/pypi/pyOpenSSL">latest version of pyOpenSSL for your Python version</a>.  Try the MSI installer first.  pyOpenSSL is an optional Twisted dependency that allows you to write SSL clients and servers. </p>
+</div>
+<div class="section" id="install-pip">
+<h1>Install pip</h1>
+</div>
+<div class="section" id="install-minerva-and-its-dependencies">
+<h1>Install Minerva and its dependencies</h1>
+</div>
+<div class="section" id="install-closure-library">
+<h1>Install Closure Library</h1>
+</div>
+<div class="section" id="running-the-server-side-unit-tests">
+<h1>Running the server-side unit tests</h1>
+</div>
+<div class="section" id="running-the-client-side-unit-tests">
+<h1>Running the client-side unit tests</h1>
+</div>
+</div>
+</body>
+</html>
