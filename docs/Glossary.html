@@ -15,15 +15,11 @@
 <h1>Terms</h1>
 <dl class="docutils">
 <dt>application</dt>
-<dd>The application that is using Minerva. An application has both a server-side
-and client-side component.</dd>
+<dd>The application that is using Minerva. An application has both a server-side and client-side component.</dd>
 <dt>client</dt>
 <dd>The peer that connects to a Minerva server. Typically a web browser.</dd>
 <dt>stream</dt>
-<dd>The stateful object that applications use to send and receive strings.
-This is sort of like a TCP connection.  A &quot;stream&quot; is a bit nebulous
-because the client and server can disagree about the state of the stream,
-or whether it even exists.</dd>
+<dd>The stateful object that applications use to send and receive strings.  This is sort of like a TCP connection.  A &quot;stream&quot; is a bit nebulous because the client and server can disagree about the state of the stream, or whether it even exists.</dd>
 <dt>ClientStream</dt>
 <dd>The client-side implementation of a Minerva stream.</dd>
 <dt>ServerStream</dt>
@@ -31,47 +27,34 @@ or whether it even exists.</dd>
 <dt>*Stream</dt>
 <dd>Either a ClientStream or a ServerStream.</dd>
 <dt>peer</dt>
-<dd>The thing on the other side of the Minerva stream. For a server, it is a client;
-for a client, the server.</dd>
+<dd>The thing on the other side of the Minerva stream. For a server, it is a client; for a client, the server.</dd>
 <dt>frame</dt>
-<dd>A framed bytestring sent over streams. This ecompasses both Minerva-level
-and application-level data.</dd>
+<dd>A framed bytestring sent over streams. This ecompasses both Minerva-level and application-level data.</dd>
 <dt>string (in the context of Minerva)</dt>
-<dd><p class="first">An atomic piece of application-level data that can be fit into a frame and sent
-to the peer. Strings have strict restrictions on which bytes/codepoints are
-allowed, see <a class="reference internal" href="#string-restrictions">String restrictions</a>.</p>
-<p class="last">On the server, a string is represented as a bytestring (never decoded
-to unicode). On the browser side, a string is represented as JavaScript UTF-16
-string, but with the same restrictions on bytes/codepoints.</p>
+<dd><p class="first">An atomic piece of application-level data that can be fit into a frame and sent to the peer. Strings have strict restrictions on which bytes/codepoints are allowed, see <a class="reference internal" href="#string-restrictions">String restrictions</a>.</p>
+<p class="last">On the server, a string is represented as a bytestring (never decoded to unicode). On the browser side, a string is represented as JavaScript UTF-16 string, but with the same restrictions on bytes/codepoints.</p>
 </dd>
 <dt>S2C</dt>
 <dd>Server-to-client (e.g. a S2C transport, or a S2C string)</dd>
 <dt>C2S</dt>
 <dd>Client-to-server. (e.g. a C2S transport, or a C2S string)</dd>
 <dt>transport</dt>
-<dd>An HTTP request/response, or socket, that Minerva uses to send/receive
-frames.</dd>
+<dd>An HTTP request/response, or socket, that Minerva uses to send/receive frames.</dd>
 <dt>S2C transport</dt>
-<dd>A transport that is being used or will be used to send S2C strings,
-regardless of whether it it used for C2S as well.</dd>
+<dd>A transport that is being used or will be used to send S2C strings, regardless of whether it it used for C2S as well.</dd>
 <dt>primary transport</dt>
-<dd>In server context: the transport that is currently designated to send
-strings to the client.</dd>
+<dd>In server context: the transport that is currently designated to send strings to the client.</dd>
 </dl>
 </div>
 <div class="section" id="string-restrictions">
 <h1>String restrictions</h1>
-<p>On the server, you may send only Python <tt class="docutils literal">str</tt> objects with bytes in the
-inclusive range:</p>
+<p>On the server, you may send only Python <tt class="docutils literal">str</tt> objects with bytes in the inclusive range:</p>
 <blockquote>
 <tt class="docutils literal">0x20</tt> (<tt class="docutils literal">SPACE</tt>) to <tt class="docutils literal">0x7E</tt> (<tt class="docutils literal">~</tt>).</blockquote>
-<p>On the client, you may send only JavaScript primitive <tt class="docutils literal">string</tt> s with codepoints
-in the inclusive range:</p>
+<p>On the client, you may send only JavaScript primitive <tt class="docutils literal">string</tt> s with codepoints in the inclusive range:</p>
 <blockquote>
 <tt class="docutils literal">U+0020</tt> (<tt class="docutils literal">SPACE</tt>) to  <tt class="docutils literal">U+007E</tt> (<tt class="docutils literal">~</tt>).</blockquote>
-<p>These restrictions exist because we use the lowest common denominator of
-supported codepoints to maximize support for various Minerva transports
-and broken proxies.</p>
+<p>These restrictions exist because we use the lowest common denominator of supported codepoints to maximize support for various Minerva transports and broken proxies.</p>
 </div>
 </div>
 </body>
