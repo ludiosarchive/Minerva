@@ -505,14 +505,18 @@ cw.net.IQANProtocol.prototype.bodyReceived = function(body, isQuestion) {
  * See {@code IQANProtocol}.
  *
  * @param {*} qanProtocol
- * @param {boolean} dontThrowIntoWindow If true, QANProtocolWrapper
+ * @param {boolean} throwIntoWindow If true, QANProtocolWrapper
  * 	will log errors as WARNINGs, without also throwing the errors into the
- * 	window.
+ * 	window.  Default is true.
  *
  * @implements {cw.net.IStringProtocol}
  * @constructor
  */
-cw.net.QANProtocolWrapper = function(qanProtocol, dontThrowIntoWindow) {
+cw.net.QANProtocolWrapper = function(qanProtocol, throwIntoWindow) {
+	if(!goog.isDef(throwIntoWindow)) {
+		throwIntoWindow = true;
+	}
+
 	/**
 	 * @type {!cw.net.IQANProtocol}
 	 */
@@ -522,7 +526,7 @@ cw.net.QANProtocolWrapper = function(qanProtocol, dontThrowIntoWindow) {
 	 * @type {boolean}
 	 * @private
 	 */
-	this.dontThrowIntoWindow_ = dontThrowIntoWindow;
+	this.throwIntoWindow_ = throwIntoWindow;
 };
 
 /**
@@ -539,7 +543,7 @@ cw.net.QANProtocolWrapper.prototype.logger_ =
 cw.net.QANProtocolWrapper.prototype.logError_ = function(message, error) {
 	this.logger_.warning(message, error);
 
-	if(!this.dontThrowIntoWindow_) {
+	if(this.throwIntoWindow_) {
 		// Since the user of Minerva might not have a logger set up, throw
 		// the error into the window as well.  goog.async.Deferred does this too.
 		goog.global.setTimeout(function() {
