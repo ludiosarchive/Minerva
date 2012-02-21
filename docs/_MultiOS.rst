@@ -1,18 +1,40 @@
-.. |debuntu| raw:: html
+.. role:: debuntu
+	:class: debuntu
+
+.. role:: windows
+	:class: windows
+
+.. |p-debuntu| raw:: html
 
 	<!-- expect dupe --><p class="debuntu">
 
-.. |/debuntu| raw:: html
+.. |/p-debuntu| raw:: html
 
 	</p><!-- expect dupe -->
 
-.. |windows| raw:: html
+.. |p-windows| raw:: html
 
 	<!-- expect dupe --><p class="windows">
 
-.. |/windows| raw:: html
+.. |/p-windows| raw:: html
 
 	</p><!-- expect dupe -->
+
+.. |div-debuntu| raw:: html
+
+	<div class="debuntu">
+
+.. |/div-debuntu| raw:: html
+
+	</div>
+
+.. |div-windows| raw:: html
+
+	<div class="windows">
+
+.. |/div-windows| raw:: html
+
+	</div>
 
 .. |switcher-controls| raw:: html
 
