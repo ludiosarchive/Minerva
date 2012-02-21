@@ -6,4 +6,4 @@
 ../closure-library/closure/bin/build/closurebuilder.py: JavaScript compilation succeeded.
 Used closure-compiler r1780
 Used closure-library r1589
-Used Coreweb 066f239a24c25c18f7699a54655cc250434c086b | 2012-02-17 | Rebuild JS with newer Library/Compiler
+Used Coreweb 6b942896a367868c66018cf12fb3eba110d35265 | 2012-02-21 | Clarify CallQueue docstring

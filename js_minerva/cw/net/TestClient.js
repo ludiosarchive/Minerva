@@ -238,6 +238,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 	function setUp(self) {
 		self.streamPolicy_ = new cw.net.TestClient.DumbStreamPolicy(
 			cw.net.HttpStreamingMode.NO_STREAMING);
+		var clock = new cw.clock.Clock();
+		self.callQueue_ = new cw.eventual.CallQueue(clock);
 	},
 
 	/**
@@ -247,7 +249,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 	function test_sendStringWithIllegalCharacters(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var stream = new cw.net.ClientStream(
-			fakeHttpEndpoint, self.streamPolicy_);
+			fakeHttpEndpoint, self.streamPolicy_, self.callQueue_);
 		stream.bindToProtocol(proto);
 		proto.setStream(stream);
 		var badStrings = ["\x00", "\xff", "\n", "\x1f", "\x7f", "hello\tworld"];
@@ -265,7 +267,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 	function test_sendStringIllegalButNoValidation(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var stream = new cw.net.ClientStream(
-			fakeHttpEndpoint, self.streamPolicy_);
+			fakeHttpEndpoint, self.streamPolicy_, self.callQueue_);
 		stream.bindToProtocol(proto);
 		var badStrings = ["\x00", "\xff", "\n", "\x1f", "\x7f", "hello\tworld"];
 		proto.setStream(stream);
@@ -282,7 +284,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 	function test_cannotSendStringAfterAlreadyReset(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var stream = new cw.net.ClientStream(
-			fakeHttpEndpoint, self.streamPolicy_);
+			fakeHttpEndpoint, self.streamPolicy_, self.callQueue_);
 		stream.bindToProtocol(proto);
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
 		proto.setStream(stream);
@@ -298,7 +300,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 	function test_cannotResetAfterAlreadyReset(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var stream = new cw.net.ClientStream(
-			fakeHttpEndpoint, self.streamPolicy_);
+			fakeHttpEndpoint, self.streamPolicy_, self.callQueue_);
 		stream.bindToProtocol(proto);
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
 		proto.setStream(stream);
@@ -322,7 +324,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 	function test_relativeUrlResolvedToFullUrl(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var stream = new cw.net.ClientStream(
-			new cw.net.HttpEndpoint('/TestClient-not-a-real-endpoint/'));
+			new cw.net.HttpEndpoint('/TestClient-not-a-real-endpoint/'),
+			self.streamPolicy, self.callQueue_);
 		stream.bindToProtocol(proto);
 		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
 		proto.setStream(stream);

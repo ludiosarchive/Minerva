@@ -755,6 +755,14 @@ cw.net.ClientStream = function(endpoint, streamPolicy, callQueue) {
 	 */
 	this.userContext_ = new cw.net.UserContext(this);
 
+	/**
+	 * Just for optimization: {@code this.tryToSendSoonCallback_} bound to
+	 * {@code this}.
+	 * @type {!Function}
+	 * @private
+	 */
+	this.boundTryToSendSoonCallback_ = goog.bind(this.tryToSendSoonCallback_, this);
+
 	// For WebKit browsers, we need an ugly hack to prevent the loading
 	// spinner/throbber from spinning indefinitely if there is an open XHR
 	// request.  If window.onload fires, abort HTTP requests, wait ~100ms,
@@ -846,6 +854,13 @@ cw.net.ClientStream.prototype.onreset = null;
  * @type {Function}
  */
 cw.net.ClientStream.prototype.ondisconnect = null;
+
+/**
+ * The setTimeout ticket for a delayed call to tryToSend_, or null.
+ * @type {?number}
+ * @private
+ */
+cw.net.ClientStream.prototype.sendTicket_ = null;
 
 /**
  * Has the server ever known about the stream?  Set to `true` after
@@ -1049,6 +1064,10 @@ cw.net.ClientStream.prototype.tryToSend_ = function() {
 	goog.asserts.assert(
 		this.state_ == cw.net.StreamState_.STARTED,
 		"tryToSend_: state is " + this.state_);
+
+	// No need to tryToSend_ soon, since we're doing it right now
+	this.cancelTryToSendSoon_();
+
 	var haveQueueItems = (this.queue_.getQueuedCount() != 0);
 	var currentSack = this.incoming_.getSACK();
 	var maybeNeedToSendSack =
@@ -1109,6 +1128,39 @@ cw.net.ClientStream.prototype.tryToSend_ = function() {
 };
 
 /**
+ * @private
+ */
+cw.net.ClientStream.prototype.cancelTryToSendSoon_ = function() {
+	if(this.sendTicket_ != null) {
+		this.callQueue_.clock.clearTimeout(this.sendTicket_);
+		this.sendTicket_ = null;
+	}
+};
+
+/**
+ * @private
+ */
+cw.net.ClientStream.prototype.tryToSendSoonCallback_ = function() {
+	this.sendTicket_ = null;
+	this.tryToSend_();
+};
+
+/**
+ * @private
+ */
+cw.net.ClientStream.prototype.tryToSendSoon_ = function() {
+	// Try to send in 6ms because most browsers clamp setTimeout
+	// to 4ms (as HTML5[1] demands), and our 6ms might give user's
+	// 0ms-5ms timeouts a chance to run first (and send more strings).
+	// [1] http://www.w3.org/TR/html5/timers.html#timers
+	// Test page: http://www.belshe.com/test/timers.html
+	if(this.sendTicket_ == null) {
+		this.sendTicket_ = this.callQueue_.clock.setTimeout(
+			this.boundTryToSendSoonCallback_, 6);
+	}
+};
+
+/**
  * WebKit spinner-killer hack.
  * See the JSDoc in the constructor near {@code this.windowLoadEvent_}.
  * @private
@@ -1130,6 +1182,8 @@ cw.net.ClientStream.prototype.restartHttpRequests_ = function() {
  * Send restricted string `string` to the peer.  String MUST contain only
  * 	characters in inclusive range U+0020 (SPACE) - U+007E (~).  You may call
  * 	this method even before the ClientStream is started with {@link #start}.
+ * 	String is always queued for sending "very soon", so multiple calls will
+ * 	not lead to redundant network activity.
  * @param {string} string Restricted string to send.
  * @param {boolean=} validate Throw Error if string is not a restricted string?
  * 	Default true.  Set this to `false` for a slight speedup.
@@ -1146,7 +1200,7 @@ cw.net.ClientStream.prototype.sendString = function(string, validate) {
 			"has illegal chars: " + cw.repr.repr(string));
 	}
 	this.queue_.append(string);
-	this.tryToSend_();
+	this.tryToSendSoon_();
 };
 
 /**
@@ -1218,7 +1272,7 @@ cw.net.ClientStream.prototype.createWastingTransport_ = function(delay, times) {
 
 /**
  * Called by a transport which has received indication that the stream has
- * been successfully created. The server sends StreamCreatedFrame as the
+ * been successfully created.  The server sends StreamCreatedFrame as the
  * first frame over *every* transport with `requestNewStream`, so this
  * method might be called more than once.  This method is idempotent.
  * @param {boolean} avoidCreatingTransports
@@ -1370,9 +1424,13 @@ cw.net.ClientStream.prototype.transportOffline_ = function(transport) {
 };
 
 /**
- * Reset with reason `reasonString`. This tries to send a reset frame once,
- * 	either over the existing primary transport, or over a new secondary
- * 	transport. The server might never receive a reset frame.
+ * Reset the stream with reason {@code reasonString}.  Any strings queued for
+ * sending will never be sent.
+ *
+ * Implementation details: This tries to send a ResetFrame once,
+ * either over the existing primary transport, or over a new secondary
+ * transport.  The server might never receive a ResetFrame.
+ *
  * @param {string} reasonString Reason why resetting the stream
  */
 cw.net.ClientStream.prototype.reset = function(reasonString) {
@@ -1381,6 +1439,14 @@ cw.net.ClientStream.prototype.reset = function(reasonString) {
 	if(this.state_ > cw.net.StreamState_.STARTED) {
 		throw Error("reset: Can't send reset in state " + this.state_);
 	}
+
+	this.cancelTryToSendSoon_();
+
+	if(this.queue_.getQueuedCount() != 0) {
+		this.logger_.warning("reset: strings in send queue will never be sent: " +
+			cw.repr.repr(this.queue_));
+	}
+
 	this.state_ = cw.net.StreamState_.RESETTING;
 	if(this.primaryTransport_ && this.primaryTransport_.canFlushMoreThanOnce_) {
 		this.logger_.info("reset: Sending ResetFrame over existing primary.");
@@ -1506,18 +1572,19 @@ cw.net.ClientStream.prototype.stringsReceived_ = function(transport, pairs, avoi
 
 	// Because we received strings, we may need to send a SACK.
 	// Do this after calling onstring, because onstring may queue more
-	// strings for sending.  Note that in that case, tryToSend_ has already
-	// been called.
+	// strings for sending.  Note that in that case, tryToSendSoon_
+	// has already been called.
 	//
 	// Long-polling transports call with avoidCreatingTransports=true because
 	// ClientStream will create a new transport after that long-poll closes.
 	// We know it will close very soon because it just received strings.
 	// The new transport will have a SACK, so it is stupid to create a new
-	// secondary transport right now to send a SACK redundantly.  For HTTP
+	// secondary transport right now to send a SACK redundantly.  (Note that
+	// the new tryToSend*Soon*_ alleviates the problem anyway.)  For HTTP
 	// streaming, the transport might not close for a while, so we do call
-	// tryToSend_.
+	// tryToSendSoon_.
 	if(!avoidCreatingTransports) { // TODO: maybe we want && !hitLimit?
-		this.tryToSend_();
+		this.tryToSendSoon_();
 	}
 
 	// Possibly unnecessary at this writing.
@@ -1659,6 +1726,7 @@ cw.net.ClientStream.prototype.startFirstTransport_ = function() {
 
 cw.net.ClientStream.prototype.disposeInternal = function() {
 	this.logger_.info(cw.repr.repr(this) + " in disposeInternal.");
+	this.cancelTryToSendSoon_();
 	this.state_ = cw.net.StreamState_.DISCONNECTED;
 	this.disposeAllTransports_();
 
