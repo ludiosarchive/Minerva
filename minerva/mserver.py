@@ -182,7 +182,7 @@ class QANProtocolWrapper(object):
 
 
 	def _sendQANFrame(self, qanFrame):
-		self.stream.sendStrings([qanFrameToString(qanFrame)])
+		self.stream.sendString(qanFrameToString(qanFrame))
 
 
 	def _fatalError(self, reason):
@@ -305,37 +305,29 @@ class ServerStream(object):
 		self._notifications = None
 
 
-	def sendStrings(self, strings, validate=True):
+	def sendString(self, string, validate=True):
 		"""
-		Send strings C{strings} to the peer.  Strings MUST contain only
+		Send string C{string} to the peer.  String MUST contain only
 		bytes in inclusive range 0x20 (SPACE) - 0x7E (~).
 
-		@param strings: a list of C{str} objects
-		@type strings: C{list}
+		@param string: a restricted string
+		@type string: C{str}
 
-		@param validate: validate the contents of every string?  Once
-			your application works correctly, set this to False for a
-			performance gain.
+		@param validate: Raise C{TypeError} or C{ValueError} if string is
+			not a str and restricted string?  Default true.  Set this to `false`
+			for a slight speedup.
 		@type validate: C{bool}
 		"""
-		if isinstance(strings, basestring):
-			raise TypeError("Need a sequence of str objects, not a %r" % (type(strings),))
-
 		if validate:
-			for s in strings:
-				if isinstance(s, unicode):
-					raise TypeError("String %r must be a str, not unicode" % (s,))
-				if not isRestrictedString(s):
-					raise ValueError("String %r contains illegal characters.  "
-						"Only 0x20 (SPACE) - 0x7E (~) is allowed.  "
-						"Consider using JSON or Base64 encoding." % (s,))
+			if isinstance(string, unicode):
+				raise TypeError("String %r must be a str, not unicode" % (string,))
+			if not isRestrictedString(string):
+				raise ValueError("String %r contains illegal characters.  "
+					"Only 0x20 (SPACE) - 0x7E (~) is allowed.  "
+					"Consider using JSON or Base64 encoding." % (string,))
 
 		if self.disconnected:
-			raise RuntimeError("Cannot sendStrings on disconnected "
-				"ServerStream %r" % (self,))
-
-		if not strings:
-			return
+			raise RuntimeError("Cannot sendString on disconnected %r" % (self,))
 
 		# We don't need to self._producer.pauseProducing() if queue is too
 		# big here, because:
@@ -344,7 +336,7 @@ class ServerStream(object):
 		# 2)	If there is no active S2C transport, we already paused it.
 		# TODO: actually implement flow control if Queue is too big, since
 		# clients can resource-exhaust by never sending Minerva ACKs.
-		self.queue.extend(strings)
+		self.queue.append(string)
 		self._tryToSend()
 
 
@@ -492,7 +484,7 @@ class ServerStream(object):
 		if not self._protocol:
 			self._protocol = self._streamProtocolFactory.buildProtocol()
 			self._protocol.streamStarted(self)
-		# Remember streamStarted can do anything to us, including reset or sendStrings.
+		# Remember streamStarted can do anything to us, including reset or sendString.
 
 		# TODO: do we really need _primaryTransport to still be connected?
 		# Can't we just remember what its transportNumber and ourSeqNum were?

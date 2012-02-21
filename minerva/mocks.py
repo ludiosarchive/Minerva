@@ -74,8 +74,8 @@ class MockServerStream(object):
 		return self.log.getNew()
 
 
-	def sendStrings(self, strings):
-		self.log.append(['sendStrings', strings])
+	def sendString(self, string):
+		self.log.append(['sendString', string])
 
 
 	def reset(self, reasonString):
@@ -163,9 +163,10 @@ class _MockStringProtocol(object):
 
 
 	def _callStuff(self):
-		if 'sendStrings' in self._callWhat:
-			self.stream.sendStrings(["s2cstring0", "s2cstring1"])
-			self.stream.sendStrings(["s2cstring2"])
+		if 'sendString' in self._callWhat:
+			self.stream.sendString("s2cstring0")
+			self.stream.sendString("s2cstring1")
+			self.stream.sendString("s2cstring2")
 		if 'reset' in self._callWhat:
 			self.stream.reset('reset forced by mock protocol')
 

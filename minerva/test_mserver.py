@@ -296,7 +296,7 @@ class ServerStreamTests(unittest.TestCase):
 			self.assertEqual(expectedKept, s._incoming.getUndeliverableCount())
 
 
-	def test_sendStringsAndActiveStreams(self):
+	def test_sendStringAndActiveStreams(self):
 		"""
 		Test that S2C strings are sent to the correct transport.
 		Test that obsolete formerly-primary transports are "closed gently"
@@ -312,14 +312,14 @@ class ServerStreamTests(unittest.TestCase):
 			s = ServerStream(self._clock, 'some fake id', mockFactory)
 			t1 = DummySocketLikeTransport()
 			t1.transportNumber = 30
-			s.sendStrings(['string0', 'string1'])
+			map(s.sendString, ['string0', 'string1'])
 			s.transportOnline(t1, True, None)
 
 			self.assertEqual([['writeStrings', s.queue, None]], t1.getNew())
 
 			# Now connect a new transport
 			t2 = DummySocketLikeTransport()
-			s.sendStrings(['string2', 'string3'])
+			map(s.sendString, ['string2', 'string3'])
 			s.transportOnline(t2, True, succeedsTransportArgFor2ndTransport)
 
 			# string2 and string3 also went to t1 because t2 wasn't yet connected/primary
@@ -335,7 +335,7 @@ class ServerStreamTests(unittest.TestCase):
 			s.transportOffline(t2)
 
 
-	def test_sendStringsConnectionInterleaving(self):
+	def test_sendStringConnectionInterleaving(self):
 		"""
 		A new primary transport can claim that it "succeeds" another transport,
 		and the new primary will not (at least at first) get strings that were
@@ -354,7 +354,7 @@ class ServerStreamTests(unittest.TestCase):
 		s = ServerStream(self._clock, 'some fake id', MockStringsFactory())
 		t1 = DummySocketLikeTransport()
 		t1.transportNumber = 30
-		s.sendStrings(['string0', 'string1', 'string2', 'string3', 'string4'])
+		map(s.sendString, ['string0', 'string1', 'string2', 'string3', 'string4'])
 		s.transportOnline(t1, True, None)
 
 		self.assertEqual([['writeStrings', s.queue, None]], t1.getNew())
@@ -370,7 +370,7 @@ class ServerStreamTests(unittest.TestCase):
 		# Minerva git history before 2010-05-23)
 		self.assertEqual([['writeStrings', s.queue, 5]], t2.getNew())
 
-		s.sendStrings(['string5', 'string6'])
+		map(s.sendString, ['string5', 'string6'])
 
 		self.assertEqual([['writeStrings', s.queue, 5]], t2.getNew())
 
@@ -402,7 +402,7 @@ class ServerStreamTests(unittest.TestCase):
 				s.transportOnline(tIrrelevant, False, None)
 
 			t1 = DummySocketLikeTransport()
-			s.sendStrings(['string0', 'string1'])
+			map(s.sendString, ['string0', 'string1'])
 			s.transportOnline(t1, True, 9999)
 
 			self.assertEqual([['writeStrings', s.queue, None]], t1.getNew())
@@ -516,60 +516,46 @@ class ServerStreamTests(unittest.TestCase):
 		self.assertRaises(RuntimeError, lambda: s.reset('reason'))
 
 
-	def test_cannotSendStringsDisconnectedStream(self):
+	def test_cannotSendStringDisconnectedStream(self):
 		"""
-		Calling L{ServerStream.sendStrings} on a disconnected ServerStream raises
+		Calling L{ServerStream.sendString} on a disconnected ServerStream raises
 		L{RuntimeError}.
 		"""
 		# original reset caused by "application code"
 		factory, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
 		s.reset('reason')
-		self.assertRaises(RuntimeError, lambda: s.sendStrings(["somestring"]))
-		self.assertRaises(RuntimeError, lambda: s.sendStrings(["somestring"]))
+		self.assertRaises(RuntimeError, lambda: s.sendString("somestring"))
+		self.assertRaises(RuntimeError, lambda: s.sendString("somestring"))
 
 		# original reset caused by a transport
 		factory, s, t1 = self._makeStuff()
 		s.transportOnline(t1, False, None)
 		s.resetFromPeer('reason', True)
-		self.assertRaises(RuntimeError, lambda: s.sendStrings(["somestring"]))
-		self.assertRaises(RuntimeError, lambda: s.sendStrings(["somestring"]))
+		self.assertRaises(RuntimeError, lambda: s.sendString("somestring"))
+		self.assertRaises(RuntimeError, lambda: s.sendString("somestring"))
 
 
-	def test_ignoreCallToSendStringsZeroStrings(self):
+	def test_sendStringValidate(self):
 		"""
-		When L{ServerStream.sendStrings} is called with a falsy value
-		(such as an empty list), it does not call any transports.
-		"""
-		# original reset caused by "application code"
-		factory, s, t1 = self._makeStuff()
-		s.transportOnline(t1, True, None)
-		s.sendStrings(['string0'])
-		self.assertEqual([['writeStrings', s.queue, None]], t1.getNew())
-		s.sendStrings([])
-		self.assertEqual([], t1.getNew())
-
-
-	def test_sendStringsValidate(self):
-		"""
-		sendStrings raises ValueError if you give it a string with illegal characters
+		sendString raises ValueError if you give it a string with illegal characters
 		(not in the restricted string range).
 		"""
 		factory, s, t1 = self._makeStuff()
 
-		s.sendStrings(['okay'])
-		# Empty strings are also okay
-		s.sendStrings([])
+		s.sendString('okay')
+		# Empty string is also okay
+		s.sendString('')
 		# Test the boundaries
-		s.sendStrings([' ~'])
+		s.sendString(' ~')
 
-		self.assertRaises(ValueError, lambda: s.sendStrings(['bad\t']))
-		self.assertRaises(ValueError, lambda: s.sendStrings(['bad\n']))
-		self.assertRaises(TypeError, lambda: s.sendStrings([u'bad\t']))
+		self.assertRaises(ValueError, lambda: s.sendString('bad\t'))
+		self.assertRaises(ValueError, lambda: s.sendString('bad\n'))
+		self.assertRaises(TypeError, lambda: s.sendString(u'bad\t'))
 
 		# Now with validation off
-		s.sendStrings(['okay\t'], validate=False)
-		s.sendStrings([u'okay\t'], validate=False)
+		s.sendString('okay\t', validate=False)
+		s.sendString(u'okay\t', validate=False)
 
 
 	def test_resetFromPeer(self):
@@ -1277,7 +1263,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 		the old transport, this transport will have to jump back and send
 		older strings.
 
-		See also L{ServerStreamTests.test_sendStringsConnectionInterleaving}
+		See also L{ServerStreamTests.test_sendStringConnectionInterleaving}
 		"""
 		frame0 = _makeHelloFrame()
 		transport = self._makeTransport()
@@ -1920,7 +1906,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 		stream = self.streamTracker.getStream('x'*26)
 
 		self._clock.advance(1)
-		stream.sendStrings(['s2c0'])
+		stream.sendString('s2c0')
 		self.assertEqual([SeqNumFrame(0), StringFrame('s2c0')], transport.getNew())
 		self._clock.advance(1)
 		self.assertEqual([], transport.getNew())
@@ -2173,7 +2159,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		# Send two strings S2C; make sure we get them.
 
-		stream.sendStrings(["s2cstring0", "s2cstring1"])
+		map(stream.sendString, ["s2cstring0", "s2cstring1"])
 
 		self.assertEqual([
 			SeqNumFrame(0),
@@ -2262,7 +2248,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		# Send two strings S2C; make sure we get them.
 
-		stream.sendStrings(["s2cstring0", "s2cstring1"])
+		map(stream.sendString, ["s2cstring0", "s2cstring1"])
 
 		self.assertEqual([
 			SeqNumFrame(0),
@@ -2295,7 +2281,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		# Send another string S2C and make sure it is written to transport1
 
-		stream.sendStrings(["s2cstring2"])
+		map(stream.sendString, ["s2cstring2"])
 
 		self.assertEqual([
 			SeqNumFrame(2),
@@ -2316,7 +2302,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		stream = self.streamTracker.getStream('x'*26)
 
 		proto = list(self.protocolFactory.instances)[0]
-		stream.sendStrings(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"])
+		map(stream.sendString, ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"])
 		self.assertEqual(12 + 1, len(transport0.getNew())) # seqNum and 12 frames
 		transport0.sendFrames([SackFrame(SACK(-1, (1, 3, 5, 9)))])
 
@@ -2533,9 +2519,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		], proto.getNew())
 
 
-	def test_sendStringsAndResetUnderneathStreamStartedCall(self): # keywords: reentrant
+	def test_sendStringAndResetUnderneathStreamStartedCall(self): # keywords: reentrant
 		"""
-		If ServerStream.sendStrings and ServerStream.reset are called
+		If ServerStream.sendString and ServerStream.reset are called
 		underneath a call to protocol's streamStarted, everything works as
 		usual.
 		"""
@@ -2543,7 +2529,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			def buildProtocol(self):
 				obj = self.protocol(
 					callFrom=('streamStarted',),
-					callWhat=('sendStrings', 'reset'))
+					callWhat=('sendString', 'reset'))
 				obj.factory = self
 				return obj
 
@@ -2578,16 +2564,16 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			], proto.getNew()[1:])
 
 
-	def test_sendStringsUnderneathStreamStartedCall(self): # keywords: reentrant
+	def test_sendStringUnderneathStreamStartedCall(self): # keywords: reentrant
 		"""
-		If ServerStream.sendStrings is called underneath a call to
+		If ServerStream.sendString is called underneath a call to
 		protocol's streamStarted, everything works as usual.
 		"""
 		class MyFactory(MockStringsFactory):
 			def buildProtocol(self):
 				obj = self.protocol(
 					callFrom=('streamStarted',),
-					callWhat=('sendStrings',))
+					callWhat=('sendString',))
 				obj.factory = self
 				return obj
 
@@ -2628,9 +2614,9 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				self.assertEqual([], proto.getNew()[1:])
 
 
-	def test_sendStringsAndResetUnderneathStringsReceivedCall(self): # keywords: reentrant
+	def test_sendStringAndResetUnderneathStringsReceivedCall(self): # keywords: reentrant
 		"""
-		If ServerStream.sendStrings and ServerStream.reset are called
+		If ServerStream.sendString and ServerStream.reset are called
 		underneath a call to protocol's stringsReceived, everything works
 		as usual.
 		"""
@@ -2638,7 +2624,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			def buildProtocol(self):
 				obj = self.protocol(
 					callFrom=('stringsReceived',),
-					callWhat=('sendStrings', 'reset'))
+					callWhat=('sendString', 'reset'))
 				obj.factory = self
 				return obj
 
@@ -2677,16 +2663,16 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			], proto.getNew()[1:])
 
 
-	def test_sendStringsUnderneathStringsReceivedCall(self): # keywords: reentrant
+	def test_sendStringUnderneathStringsReceivedCall(self): # keywords: reentrant
 		"""
-		If ServerStream.sendStrings is called underneath a call to protocol's
+		If ServerStream.sendString is called underneath a call to protocol's
 		stringsReceived, everything works as usual.
 		"""
 		class MyFactory(MockStringsFactory):
 			def buildProtocol(self):
 				obj = self.protocol(
 					callFrom=('stringsReceived',),
-					callWhat=('sendStrings',))
+					callWhat=('sendString',))
 				obj.factory = self
 				return obj
 
@@ -2912,7 +2898,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 
 	def _sendAnotherString(self, stream, request, streaming, expectedFrames):
-		stream.sendStrings(['extraString'])
+		stream.sendString('extraString')
 		if not streaming:
 			# For non-streaming requests, if another S2C string is sent right
 			# now, it is not written to the request.
@@ -2954,7 +2940,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 				'\n'.join(f.encode() for f in frames) + '\n')
 
 			stream = self.streamTracker.buildStream('x'*26)
-			stream.sendStrings(['string0', 'string1'])
+			map(stream.sendString, ['string0', 'string1'])
 
 			out = resource.render(request)
 			self.assertEqual(server.NOT_DONE_YET, out)
@@ -3062,7 +3048,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 			self.assertEqual([], decodeResponseInMockRequest(request))
 
-			stream.sendStrings(['string0', 'string1'])
+			map(stream.sendString, ['string0', 'string1'])
 
 			expectedFrames = [
 				HTTP_RESPONSE_PREAMBLE,

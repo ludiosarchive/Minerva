@@ -177,7 +177,7 @@ class IQANProtocol(Interface):
 		You must *not* raise any exception.  Wrap your code in try/except
 		if necessary.
 
-		You must not call C{stream.sendStrings}; use C{qanHelper.ask} or
+		You must not call C{stream.sendString}; use C{qanHelper.ask} or
 		C{qanHelper.notify} for all of your communication.
 
 		@param stream: the L{ServerStream} that was started.

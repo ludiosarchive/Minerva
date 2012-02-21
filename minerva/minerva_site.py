@@ -187,57 +187,49 @@ class DemoProtocol(object):
 		self._clock.callLater(0.2, self._sendDemo, iteration + 1)
 
 		numStrings = iteration
-		self.stream.sendStrings([string] * numStrings)
+		for i in xrange(numStrings):
+			self.stream.sendString(string)
 
 
-	def stringsReceived(self, strings):
+	def stringReceived(self, s):
 		# Remember, we cannot raise an exception here.
-		##print "stringsReceived", strings
 
-		send = []
-		for s in strings:
-			s = str(s) # StringFragment -> str
-			if s.startswith('echo:'):
-				send.append(s.replace('echo:', '', 1))
+		if s.startswith('echo:'):
+			self.stream.sendString(s.replace('echo:', '', 1))
 
-			elif s.startswith('echo_twice:'):
-				payload = s.split(':', 1)[1]
-				send.append(payload)
-				self._clock.callLater(0, lambda: self.stream.sendStrings([payload]))
+		elif s.startswith('echo_twice:'):
+			payload = s.split(':', 1)[1]
+			self.stream.sendString(payload)
+			self._clock.callLater(0, lambda: self.stream.sendString(payload))
 
-			elif s.startswith('reset_me:'):
-				reasonString = s.split(':', 1)[1]
-				self.stream.reset(reasonString)
+		elif s.startswith('reset_me:'):
+			reasonString = s.split(':', 1)[1]
+			self.stream.reset(reasonString)
 
-			elif s.startswith('string_then_reset_me:'):
-				reasonString = s.split(':', 1)[1]
-				# Send a string which will effectively close a long-polling
-				# primary transport. In this case, the client will usually
-				# not see a ResetFrame.
-				self.stream.sendStrings(["about to reset with reasonString " + reasonString])
-				self.stream.reset(reasonString)
+		elif s.startswith('string_then_reset_me:'):
+			reasonString = s.split(':', 1)[1]
+			# Send a string which will effectively close a long-polling
+			# primary transport. In this case, the client will usually
+			# not see a ResetFrame.
+			self.stream.sendString("about to reset with reasonString " + reasonString)
+			self.stream.reset(reasonString)
 
-			elif s == 'send_demo':
-				self.stream.sendStrings(['starting_send_demo', 'alphabet: ' + getRestrictedStringAlphabet()])
-				self._sendDemo(1)
+		elif s == 'send_demo':
+			self.stream.sendString('starting_send_demo', 'alphabet: ' + getRestrictedStringAlphabet())
+			self._sendDemo(1)
 
-			elif s == 'begin_chat':
-				self.chatting = True
-				self.factory.chatters.add(self)
+		elif s == 'begin_chat':
+			self.chatting = True
+			self.factory.chatters.add(self)
 
-			elif s.startswith('broadcast:'):
-				text = s.split(':', 1)[1]
-				for c in self.factory.chatters:
-					# We assume text contains only characters in the " " - "~" range.
-					c.stream.sendStrings(["TEXT|" + str(self._id) + '|' + text])
+		elif s.startswith('broadcast:'):
+			text = s.split(':', 1)[1]
+			for c in self.factory.chatters:
+				# We assume text contains only characters in the " " - "~" range.
+				c.stream.sendString("TEXT|" + str(self._id) + '|' + text)
 
-			else:
-				send.append('unknown_message_type')
-
-			# else ignore other strings
-
-		if send:
-			self.stream.sendStrings(send)
+		else:
+			self.stream.sendString('unknown_message_type')
 
 
 	def streamReset(self, reasonString, applicationLevel):
