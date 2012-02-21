@@ -1664,7 +1664,7 @@ function T(a, b) {
   this.value = b
 }
 T.prototype.toString = o("name");
-var ed = new T("OFF", Infinity), gd = new T("SHOUT", 1200), hd = new T("SEVERE", 1E3), id = new T("WARNING", 900), jd = new T("INFO", 800), kd = new T("CONFIG", 700), ld = new T("FINE", 500), md = new T("FINER", 400), nd = new T("FINEST", 300), od = new T("ALL", 0);
+var ed = new T("OFF", Infinity), fd = new T("SHOUT", 1200), hd = new T("SEVERE", 1E3), id = new T("WARNING", 900), jd = new T("INFO", 800), kd = new T("CONFIG", 700), ld = new T("FINE", 500), md = new T("FINER", 400), nd = new T("FINEST", 300), od = new T("ALL", 0);
 function U(a) {
   return V.Yc(a)
 }
@@ -1732,7 +1732,7 @@ q.ie = function(a, b, c) {
   return d
 };
 q.Be = function(a, b) {
-  this.log(gd, a, b)
+  this.log(fd, a, b)
 };
 q.C = function(a, b) {
   this.log(hd, a, b)
@@ -1818,7 +1818,7 @@ qd.prototype.Pd = function(a) {
   c.className = "logmsg";
   var d = this.Vc, e;
   switch(a.Ja.value) {
-    case gd.value:
+    case fd.value:
       e = "dbg-sh";
       break;
     case hd.value:
@@ -2115,13 +2115,6 @@ q.Oa = function(a) {
   }, this));
   this.U = a
 };
-q.extend = function(a) {
-  for(var b = 0;b < arguments.length;b++) {
-    pc(arguments[b], function(a, b) {
-      this.add(b, a)
-    }, this)
-  }
-};
 function Od(a) {
   var b = t(a);
   if("string" == b) {
@@ -2153,21 +2146,15 @@ Pd.prototype.w = function(a, b) {
 function Qd() {
   this.J = new Q
 }
-q = Qd.prototype;
-q.ra = -1;
-q.D = 0;
-q.append = function(a) {
+Qd.prototype.ra = -1;
+Qd.prototype.D = 0;
+Qd.prototype.append = function(a) {
   var b = Od(a);
   this.J.set(this.ra + 1, [a, b]);
   this.ra += 1;
   this.D += b
 };
-q.extend = function(a) {
-  for(var b = 0;b < a.length;b++) {
-    this.append(a[b])
-  }
-};
-q.w = function(a) {
+Qd.prototype.w = function(a) {
   a.push("<Queue with ", "" + this.J.H(), " item(s), counter=#", "" + this.ra, ", size=", "" + this.D, ">")
 };
 function Rd(a) {
@@ -3174,17 +3161,10 @@ q.ye = function() {
 };
 q.ze = function(a, b) {
   b !== i || (b = j);
-  3 < this.v && g(Error("sendStrings: Can't send strings in state " + this.v));
-  if(a.length) {
-    if(b) {
-      for(var c = 0;c < a.length;c++) {
-        var d = a[c];
-        /^([ -~]*)$/.test(d) || g(Error("sendStrings: string #" + c + " has illegal chars: " + P(d)))
-      }
-    }
-    this.la.extend(a);
-    tf(this)
-  }
+  3 < this.v && g(Error("sendString: Can't send in state " + this.v));
+  b && !/^([ -~]*)$/.test(a) && g(Error("sendString: string has illegal chars: " + P(a)));
+  this.la.append(a);
+  tf(this)
 };
 function wf(a, b) {
   var c;
@@ -3467,8 +3447,8 @@ function Gf(a, b, c) {
                 if(c.length) {
                   Ff(a, c);
                   if(!u(c)) {
-                    for(var fd = c.length - 1;0 <= fd;fd--) {
-                      delete c[fd]
+                    for(var gd = c.length - 1;0 <= gd;gd--) {
+                      delete c[gd]
                     }
                   }
                   c.length = 0
@@ -3947,7 +3927,7 @@ z("Minerva.ClientStream", $);
 $.prototype.getUserContext = $.prototype.je;
 $.prototype.bindToProtocol = $.prototype.Rd;
 $.prototype.start = $.prototype.start;
-$.prototype.sendStrings = $.prototype.ze;
+$.prototype.sendString = $.prototype.ze;
 $.prototype.reset = $.prototype.reset;
 z("Minerva.Logger", S);
 S.Level = T;
@@ -3962,7 +3942,7 @@ S.prototype.fine = S.prototype.k;
 S.prototype.finer = S.prototype.ee;
 S.prototype.finest = S.prototype.p;
 T.OFF = ed;
-T.SHOUT = gd;
+T.SHOUT = fd;
 T.SEVERE = hd;
 T.WARNING = id;
 T.INFO = jd;

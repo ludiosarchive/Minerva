@@ -241,31 +241,10 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 	},
 
 	/**
-	 * If sendStrings is called with an empty Array, it does not
-	 * try to send.
+	 * If sendString is called with a string that has characters outside
+	 * of the restricted string range, it throws an Error.
 	 */
-	function test_sendStringsNoStrings(self) {
-		var proto = new cw.net.TestClient.RecordingProtocol();
-		var stream = new cw.net.ClientStream(
-			fakeHttpEndpoint, self.streamPolicy_);
-		stream.bindToProtocol(proto);
-		stream.instantiateTransport_ = cw.net.TestClient.instantiateMockTransport_;
-		stream.tryToSend_ = goog.testing.recordFunction(goog.bind(stream.tryToSend_, stream));
-		proto.setStream(stream);
-		stream.start();
-		self.assertEqual(0, stream.tryToSend_.getCallCount());
-		stream.sendStrings(['hello']); // Non-empty Array causes a tryToSend_ call
-		self.assertEqual(1, stream.tryToSend_.getCallCount());
-		stream.sendStrings([]); // empty Array does not cause tryToSend_ call
-		self.assertEqual(1, stream.tryToSend_.getCallCount());
-	},
-
-	/**
-	 * If sendStrings is called with a string that has characters outside
-	 * of the restricted string range, it throws an Error.  If any of strings
-	 * are illegal, nothing is appended to the send queue.
-	 */
-	function test_sendStringsWithIllegalCharacters(self) {
+	function test_sendStringWithIllegalCharacters(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var stream = new cw.net.ClientStream(
 			fakeHttpEndpoint, self.streamPolicy_);
@@ -273,37 +252,34 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 		proto.setStream(stream);
 		var badStrings = ["\x00", "\xff", "\n", "\x1f", "\x7f", "hello\tworld"];
 		goog.array.forEach(badStrings, function(string) {
-			self.assertThrows(Error, function() { stream.sendStrings([string]); });
+			self.assertThrows(Error, function() { stream.sendString(string); });
 		});
-		// Test with a legal first string:
-		goog.array.forEach(badStrings, function(string) {
-			self.assertThrows(Error, function() { stream.sendStrings(['good string', string]); });
-		});
-		self.assertEqual(0, stream.queue_.getQueuedCount());
 	},
 
 	/**
-	 * If sendStrings is called with a string that has characters outside
+	 * If sendString is called with a string that has characters outside
 	 * of the restricted string range, but outgoing string validation is
 	 * disabled, it does not throw an Error, and the illegal strings are
 	 * appended to the send queue.
 	 */
-	function test_sendStringsIllegalButNoValidation(self) {
+	function test_sendStringIllegalButNoValidation(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var stream = new cw.net.ClientStream(
 			fakeHttpEndpoint, self.streamPolicy_);
 		stream.bindToProtocol(proto);
 		var badStrings = ["\x00", "\xff", "\n", "\x1f", "\x7f", "hello\tworld"];
 		proto.setStream(stream);
-		stream.sendStrings(badStrings, /*validate=*/false);
+		goog.array.forEach(badStrings, function(string) {
+			stream.sendString(string, /*validate=*/false);
+		});
 		self.assertEqual(badStrings.length, stream.queue_.getQueuedCount());
 	},
 
 	/**
-	 * If ClientStream is already reset, calling ClientStream.sendStrings
+	 * If ClientStream is already reset, calling ClientStream.sendString
 	 * throws an Error.
 	 */
-	function test_cannotSendStringsAfterAlreadyReset(self) {
+	function test_cannotSendStringAfterAlreadyReset(self) {
 		var proto = new cw.net.TestClient.RecordingProtocol();
 		var stream = new cw.net.ClientStream(
 			fakeHttpEndpoint, self.streamPolicy_);
@@ -312,8 +288,8 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 		proto.setStream(stream);
 		stream.start();
 		stream.reset("a reasonString");
-		self.assertThrows(Error, function() { stream.sendStrings(["a string"]); },
-			"sendStrings: Can't send strings in state 4");
+		self.assertThrows(Error, function() { stream.sendString("a string"); },
+			"sendString: Can't send in state 4");
 	},
 
 	/**
@@ -368,11 +344,11 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 //
 //	},
 //
-//	function test_sendStringsOverSecondaryTransport(self) {
+//	function test_sendStringOverSecondaryTransport(self) {
 //
 //	},
 //
-//	function test_sendStringsOverPrimaryTransport(self) {
+//	function test_sendStringOverPrimaryTransport(self) {
 //
 //	},
 //
@@ -534,7 +510,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 		stream.bindToProtocol(proto);
 		proto.setStream(stream);
 		stream.start();
-		stream.sendStrings(['echo_twice:hello world']);
+		stream.sendString('echo_twice:hello world');
 
 		var d = new goog.async.Deferred();
 		stream.ondisconnect = goog.bind(d.callback, d);
@@ -546,7 +522,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 	},
 
 	/**
-	 * Like test_stream, but we sendStrings(...) before we start(), which
+	 * Like test_stream, but we sendString(...) before we start(), which
 	 * makes it send the `echo_twice:...` string in the first transport.
 	 */
 	function test_streamWithStringInFirstTransport(self) {
@@ -555,7 +531,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 			self.endpoint_, self.streamPolicy_);
 		stream.bindToProtocol(proto);
 		proto.setStream(stream);
-		stream.sendStrings(['echo_twice:hello world']);
+		stream.sendString('echo_twice:hello world');
 		stream.start();
 
 		var d = new goog.async.Deferred();
@@ -585,7 +561,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 			self.endpoint_, self.streamPolicy_);
 		stream.bindToProtocol(proto);
 		proto.setStream(stream);
-		stream.sendStrings(['reset_me:test_streamReset']);
+		stream.sendString('reset_me:test_streamReset');
 		stream.start();
 
 		function streamResetAssertions() {

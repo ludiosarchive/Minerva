@@ -458,7 +458,7 @@ cw.net.IQANProtocol = function() {
  * You must *not* raise any exception.  Wrap your code in try/except
  * if necessary.
  *
- * You must not call {@code stream.sendStrings}; use {@code qanHelper.ask} or
+ * You must not call {@code stream.sendString}; use {@code qanHelper.ask} or
  * {@code qanHelper.notify} for all of your communication.
  *
  * @param {!cw.net.ClientStream} stream The stream associated with this protocol
@@ -563,7 +563,7 @@ cw.net.QANProtocolWrapper.prototype.logError_ = function(message, error) {
  * @param {!cw.net.QANFrame} qanFrame
  */
 cw.net.QANProtocolWrapper.prototype.sendQANFrame_ = function(qanFrame) {
-	this.stream.sendStrings([cw.net.qanFrameToString(qanFrame)]);
+	this.stream.sendString(cw.net.qanFrameToString(qanFrame));
 };
 
 /**
@@ -1127,33 +1127,25 @@ cw.net.ClientStream.prototype.restartHttpRequests_ = function() {
 };
 
 /**
- * Send strings `strings` to the peer.  Strings MUST contain only
+ * Send restricted string `string` to the peer.  String MUST contain only
  * 	characters in inclusive range U+0020 (SPACE) - U+007E (~).  You may call
  * 	this method even before the ClientStream is started with {@link #start}.
- * @param {!Array.<string>} strings Strings to send.
- * @param {boolean=} validate Validate strings before sending them?
+ * @param {string} string Restricted string to send.
+ * @param {boolean=} validate Throw Error if string is not a restricted string?
  * 	Default true.  Set this to `false` for a slight speedup.
  */
-cw.net.ClientStream.prototype.sendStrings = function(strings, validate) {
+cw.net.ClientStream.prototype.sendString = function(string, validate) {
 	if(!goog.isDef(validate)) {
 		validate = true;
 	}
 	if(this.state_ > cw.net.StreamState_.STARTED) {
-		throw Error("sendStrings: Can't send strings in state " + this.state_);
+		throw Error("sendString: Can't send in state " + this.state_);
 	}
-	if(!strings.length) {
-		return;
+	if(validate && !cw.net.isRestrictedString_(string)) {
+		throw Error("sendString: string " +
+			"has illegal chars: " + cw.repr.repr(string));
 	}
-	if(validate) {
-		for(var i=0; i < strings.length; i++) {
-			var s = strings[i];
-			if(!cw.net.isRestrictedString_(s)) {
-				throw Error("sendStrings: string #" + i +
-					" has illegal chars: " + cw.repr.repr(s));
-			}
-		}
-	}
-	this.queue_.extend(strings);
+	this.queue_.append(string);
 	this.tryToSend_();
 };
 

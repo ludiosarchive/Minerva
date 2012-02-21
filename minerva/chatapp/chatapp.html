@@ -208,7 +208,7 @@ chatapp.ChatProtocol = function() {};
 
 chatapp.ChatProtocol.prototype.streamStarted = function(stream) {
 	this.stream_ = stream;
-	this.stream_.sendStrings(['begin_chat']);
+	this.stream_.sendString('begin_chat');
 };
 
 chatapp.ChatProtocol.prototype.streamReset = function(reasonString, applicationLevel) {
@@ -248,7 +248,7 @@ chatapp.ChatProtocol.prototype.reset = function(reason) {
 
 chatapp.ChatProtocol.prototype.sendText = function(text) {
 	chatapp.logger.info('sendText: ' + text);
-	this.stream_.sendStrings(["broadcast:" + text]);
+	this.stream_.sendString("broadcast:" + text);
 };
 
 
