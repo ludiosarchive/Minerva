@@ -4,6 +4,8 @@
 Tutorial: Making a chat application with Minerva and Closure Library | Minerva Comet server and client
 ========
 
+!!!: this is an incomplete port of docs/website/tutorial/; read that instead.
+
 .. contents::
 
 This tutorial will guide you through making a simple chat application that uses Minerva_ to communicate between the browser and the server.  We'll install Minerva and Closure Library, then write a chat server (in Python) and chat client (in JavaScript).  If at any point you get stuck for any reason, please tell Ivan_ so he can improve the tutorial.
