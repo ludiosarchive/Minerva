@@ -1424,8 +1424,8 @@ cw.net.ClientStream.prototype.transportOffline_ = function(transport) {
 };
 
 /**
- * Reset the stream with reason {@code reasonString}.  Any strings queued for
- * sending will never be sent.
+ * Reset (disconnect) the stream with reason {@code reasonString}.
+ * Any strings queued for sending will never be sent.
  *
  * Implementation details: This tries to send a ResetFrame once,
  * either over the existing primary transport, or over a new secondary

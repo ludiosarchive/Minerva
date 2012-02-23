@@ -248,7 +248,7 @@ class ServerStream(object):
 
 	__slots__ = (
 		'_clock', 'streamId', '_streamProtocolFactory', '_protocol',
-		'_primaryTransport', '_notifications', '_transports',
+		'_primaryTransport', '_notifications', '_transports', '_sendSoonDc',
 		'disconnected', 'queue', '_incoming', '_pretendAcked', '_producer',
 		'_streamingProducer', '_primaryHasProducer', '_primaryPaused',
 		'lastSackSeenByServer', 'lastReceived', 'maxIdleTime')
@@ -277,6 +277,7 @@ class ServerStream(object):
 		self._incoming = Incoming()
 		self.lastSackSeenByServer = SACK(-1, ())
 		self.lastReceived = clock.seconds()
+		self._sendSoonDc = None
 		# If no transports and nothing received in this many seconds,
 		# reset the stream.
 		# This value needs to be somewhat forgiving, to allow for bad
@@ -294,6 +295,8 @@ class ServerStream(object):
 
 
 	def _tryToSend(self):
+		_cancelDc(self, '_sendSoonDc')
+
 		##print '_tryToSend', self, self._primaryTransport, self.queue
 		if self.queue.getQueuedCount() == 0:
 			return
@@ -307,6 +310,12 @@ class ServerStream(object):
 			self._primaryTransport.writeStrings(self.queue, start)
 
 
+	def _tryToSendSoon(self):
+		if self._sendSoonDc is None:
+			self._sendSoonDc = self._clock.callLater(
+				0.001, self._tryToSend)
+
+
 	def _fireNotifications(self):
 		for d in self._notifications:
 			d.callback(None)
@@ -316,7 +325,10 @@ class ServerStream(object):
 	def sendString(self, string, validate=True):
 		"""
 		Send string C{string} to the peer.  String MUST contain only
-		bytes in inclusive range 0x20 (SPACE) - 0x7E (~).
+		bytes in inclusive range 0x20 (SPACE) - 0x7E (~).  String is always
+		queued for sending "very soon", so multiple calls will not lead to
+		redundant network activity.  (This is especially important for
+		long-polling transports, which close right after sending.)
 
 		@param string: a restricted string
 		@type string: C{str}
@@ -345,21 +357,25 @@ class ServerStream(object):
 		# TODO: actually implement flow control if Queue is too big, since
 		# clients can resource-exhaust by never sending Minerva ACKs.
 		self.queue.append(string)
-		self._tryToSend()
+		self._tryToSendSoon()
 
 
 	# Called by the application only. Internal Minerva code uses _internalReset.
 	# This assumes _protocol has been instantiated.
 	def reset(self, reasonString):
 		"""
-		Reset (disconnect) with reason C{reasonString}. This writes a reset
-		frame once over all open transports, so the client may never
-		actually receive a reset frame. If this happens, the client may
+		Reset (disconnect) the stream with reason C{reasonString}.
+		Any strings queued for sending will never be sent.
+
+		Implementation details: This writes a reset frame once over all open
+		transports, and because there might be no transport, the client may
+		never actually receive a ResetFrame.  If this happens, the client may
 		soon try to connect to a nonexistent ServerStream, at which point
 		Minerva server will send a C{tk_stream_attach_failure}.
 		"""
 		if self.disconnected:
 			raise RuntimeError("Cannot reset disconnected ServerStream %r" % (self,))
+		_cancelDc(self, '_sendSoonDc')
 		self.disconnected = True
 		# .copy() because _transports shrinks as transports call
 		# ServerStream.transportOffline
@@ -384,6 +400,7 @@ class ServerStream(object):
 		"""
 		if self.disconnected:
 			return
+		_cancelDc(self, '_sendSoonDc')
 		self.disconnected = True
 		# .copy() because _transports shrinks as transports call
 		# ServerStream.transportOffline
@@ -404,6 +421,7 @@ class ServerStream(object):
 		ResetFrame to any open transports.
 		"""
 		assert not self.disconnected, self
+		_cancelDc(self, '_sendSoonDc')
 		self.disconnected = True
 		# .copy() because _transports shrinks as transports call
 		# ServerStream.transportOffline

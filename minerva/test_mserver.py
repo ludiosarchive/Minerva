@@ -320,6 +320,7 @@ class ServerStreamTests(unittest.TestCase):
 			# Now connect a new transport
 			t2 = DummySocketLikeTransport()
 			map(s.sendString, ['string2', 'string3'])
+			self._clock.advance(0.001)
 			s.transportOnline(t2, True, succeedsTransportArgFor2ndTransport)
 
 			# string2 and string3 also went to t1 because t2 wasn't yet connected/primary
@@ -371,6 +372,7 @@ class ServerStreamTests(unittest.TestCase):
 		self.assertEqual([['writeStrings', s.queue, 5]], t2.getNew())
 
 		map(s.sendString, ['string5', 'string6'])
+		self._clock.advance(0.001)
 
 		self.assertEqual([['writeStrings', s.queue, 5]], t2.getNew())
 
@@ -1907,6 +1909,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 
 		self._clock.advance(1)
 		stream.sendString('s2c0')
+		self._clock.advance(0.001)
 		self.assertEqual([SeqNumFrame(0), StringFrame('s2c0')], transport.getNew())
 		self._clock.advance(1)
 		self.assertEqual([], transport.getNew())
@@ -2160,6 +2163,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		# Send two strings S2C; make sure we get them.
 
 		map(stream.sendString, ["s2cstring0", "s2cstring1"])
+		self._clock.advance(0.001)
 
 		self.assertEqual([
 			SeqNumFrame(0),
@@ -2249,6 +2253,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		# Send two strings S2C; make sure we get them.
 
 		map(stream.sendString, ["s2cstring0", "s2cstring1"])
+		self._clock.advance(0.001)
 
 		self.assertEqual([
 			SeqNumFrame(0),
@@ -2282,6 +2287,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		# Send another string S2C and make sure it is written to transport1
 
 		map(stream.sendString, ["s2cstring2"])
+		self._clock.advance(0.001)
 
 		self.assertEqual([
 			SeqNumFrame(2),
@@ -2303,6 +2309,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 
 		proto = list(self.protocolFactory.instances)[0]
 		map(stream.sendString, ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"])
+		self._clock.advance(0.001)
 		self.assertEqual(12 + 1, len(transport0.getNew())) # seqNum and 12 frames
 		transport0.sendFrames([SackFrame(SACK(-1, (1, 3, 5, 9)))])
 
@@ -2618,7 +2625,8 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 		"""
 		If ServerStream.sendString and ServerStream.reset are called
 		underneath a call to protocol's stringsReceived, everything works
-		as usual.
+		as usual (though the strings are lost because sendString only
+		writes after a small delay.)
 		"""
 		class MyFactory(MockStringsFactory):
 			def buildProtocol(self):
@@ -2648,10 +2656,6 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 			self.assertEqual([
 				StreamCreatedFrame(),
 				SackFrame(SACK(1, ())),
-				SeqNumFrame(0),
-				StringFrame("s2cstring0"),
-				StringFrame("s2cstring1"),
-				StringFrame("s2cstring2"),
 				ResetFrame('reset forced by mock protocol', True),
 				YouCloseItFrame(),
 			], transport0.getNew())
@@ -2677,7 +2681,6 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				return obj
 
 		for clientResetsImmediately in (True, False):
-
 			self._resetStreamTracker(
 				protocolFactoryClass=MyFactory, realObjects=True)
 
@@ -2693,21 +2696,26 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 				# Surprise! Client wants to reset very immediately too.
 				frames.append(ResetFrame('', True))
 			transport0.sendFrames(frames)
+			self._clock.advance(0.001)
 
 			expected = [
 				StreamCreatedFrame(),
 				SackFrame(SACK(1, ())),
-				SeqNumFrame(0),
-				StringFrame("s2cstring0"),
-				StringFrame("s2cstring1"),
-				StringFrame("s2cstring2"),
 			]
 
 			if clientResetsImmediately:
 				expected.extend([
 					SackFrame(SACK(1, ())),
 					StreamStatusFrame(SACK(-1, ())),
-					YouCloseItFrame()])
+					YouCloseItFrame(),
+				])
+			else:
+				expected.extend([
+					SeqNumFrame(0),
+					StringFrame("s2cstring0"),
+					StringFrame("s2cstring1"),
+					StringFrame("s2cstring2"),
+				])
 
 			self.assertEqual(expected, transport0.getNew())
 
@@ -2899,6 +2907,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 
 	def _sendAnotherString(self, stream, request, streaming, expectedFrames):
 		stream.sendString('extraString')
+		self._clock.advance(0.001)
 		if not streaming:
 			# For non-streaming requests, if another S2C string is sent right
 			# now, it is not written to the request.
@@ -3049,6 +3058,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			self.assertEqual([], decodeResponseInMockRequest(request))
 
 			map(stream.sendString, ['string0', 'string1'])
+			self._clock.advance(0.001)
 
 			expectedFrames = [
 				HTTP_RESPONSE_PREAMBLE,
