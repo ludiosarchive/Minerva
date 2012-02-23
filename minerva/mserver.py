@@ -62,6 +62,14 @@ def _callStringsOrStringReceived(proto, strings):
 			proto.stringReceived(str(s))
 
 
+def _cancelDc(obj, attr):
+	dc = getattr(obj, attr)
+	if dc is not None:
+		if dc.active():
+			dc.cancel()
+		setattr(obj, attr, None)
+
+
 class UnknownSubprotocol(Exception):
 	pass
 
@@ -933,8 +941,8 @@ class ServerTransport(object):
 			self.writable.write(toSend)
 
 		if self._terminating:
-			self._cancelMaxOpenDc()
-			self._cancelHeartbeatDc()
+			_cancelDc(self, '_maxOpenDc')
+			_cancelDc(self, '_heartbeatDc')
 
 			# Tell ServerStream this transport is offline. Whether we
 			# still have a TCP connection open to the peer is irrelevant.
@@ -1065,20 +1073,6 @@ class ServerTransport(object):
 			self.closeGently()
 
 
-	def _cancelMaxOpenDc(self):
-		if self._maxOpenDc is not None:
-			if self._maxOpenDc.active():
-				self._maxOpenDc.cancel()
-			self._maxOpenDc = None
-
-
-	def _cancelHeartbeatDc(self):
-		if self._heartbeatDc is not None:
-			if self._heartbeatDc.active():
-				self._heartbeatDc.cancel()
-			self._heartbeatDc = None
-
-
 	def _appendHeartbeat(self):
 		self._toSend += self._encodeFrame(CommentFrame('beat'))
 
@@ -1090,7 +1084,7 @@ class ServerTransport(object):
 
 
 	def _resetHeartbeat(self):
-		self._cancelHeartbeatDc()
+		_cancelDc(self, '_heartbeatDc')
 
 		# Could be None if no HelloFrame, or 0 if HelloFrame received.
 		if self._maxInactivity:
