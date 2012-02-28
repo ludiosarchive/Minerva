@@ -21,12 +21,30 @@ body, p {
 	font-family: Arial, Helvetica, sans-serif;
 	line-height: 125%;
 }
-code, pre {
-	font-family: 'Bitstream Vera Sans Mono', Consolas, 'Courier New', Courier, monospace;
-}
 div.document {
 	padding: 0.5em 1em 1em 1em;
 	border-left: 1em solid rgb(183, 176, 164);
+}
+code, pre, tt.literal {
+	font-family: 'Bitstream Vera Sans Mono', Consolas, 'Courier New', Courier, monospace;
+	background-color: #e8e7e7;
+}
+pre.literal-block {
+	border: 1px solid #d6d5d5;
+	display: block;
+	background-color: #e8e7e7;
+	padding: 0.5em;
+	overflow-x: auto;
+}
+.substep {
+	margin-left: 2em;
+	margin-bottom: 1.5em;
+}
+.jsproblem, .important {
+	color: darkred;
+}
+.small {
+	font-size: 85%;
 }
 #logo {
 	margin-bottom: 0em;

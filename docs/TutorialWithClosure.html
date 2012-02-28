@@ -15,7 +15,7 @@
 <p class="topic-title first">Contents</p>
 <ul class="simple">
 <li><a class="reference internal" href="#install-python-and-twisted" id="id2">Install Python and Twisted</a></li>
-<li><a class="reference internal" href="#install-pip" id="id3">Install pip</a></li>
+<li><a class="reference internal" href="#install-pip-and-zope-interface" id="id3">Install pip and zope.interface</a></li>
 <li><a class="reference internal" href="#install-minerva-and-its-dependencies" id="id4">Install Minerva and its dependencies</a></li>
 <li><a class="reference internal" href="#install-closure-library" id="id5">Install Closure Library</a></li>
 <li><a class="reference internal" href="#running-the-server-side-unit-tests" id="id6">Running the server-side unit tests</a></li>
@@ -51,35 +51,48 @@ Unless you already have Python 2.5+ installed, install the latest 32-bit or 64-b
 <p>Install the <a class="reference external" href="http://pypi.python.org/pypi/pyOpenSSL">latest version of pyOpenSSL for your Python version</a>.  Try the MSI installer first.  pyOpenSSL is an optional Twisted dependency that allows you to write SSL clients and servers.
 </div></p>
 </div>
-<div class="section" id="install-pip">
-<h1><a class="toc-backref" href="#id3">Install pip</a></h1>
+<div class="section" id="install-pip-and-zope-interface">
+<h1><a class="toc-backref" href="#id3">Install pip and zope.interface</a></h1>
+<p><div class="debuntu">
+<span class="small">(Ignore the &quot;and zope.interface&quot; part; your package manager already installed zope.interface.)</span>
+</div></p>
 <p><a class="reference external" href="http://www.pip-installer.org/">pip</a> is the package manager you'll (probably) use to install <span class="windows">zope.interface, Minerva,</span> <span class="debuntu">Minerva and</span> and all of Minerva's dependencies.  pip provides a way to uninstall and correctly upgrade a package, which Python's distutils-only <tt class="docutils literal">setup.py install</tt> approach can't do.  Note that the following instructions assume that the related <a class="reference external" href="http://www.virtualenv.org/">virtualenv</a> is <strong>not</strong> used.</p>
 <p><div class="windows"></p>
 <p>pip requires setuptools or distribute (a fork of setuptools).  If you don't already have either, install distribute:</p>
-<blockquote>
-<p>Save a copy of <a class="reference external" href="http://python-distribute.org/distribute_setup.py">distribute_setup.py</a>.  Open a <a class="reference external" href="http://physiology.med.unc.edu/wwwMHMF/how-to/work-with-cmd/default.html">cmd</a> prompt, <tt class="docutils literal">cd</tt> to the download directory, and run it with Python:</p>
-<p><tt class="docutils literal"><span class="pre">C:\Python27\python</span> distribute_setup.py</tt></p>
-</blockquote>
+<p><div class="substep">
+Save a copy of <a class="reference external" href="http://python-distribute.org/distribute_setup.py">distribute_setup.py</a>.  Open a <a class="reference external" href="http://physiology.med.unc.edu/wwwMHMF/how-to/work-with-cmd/default.html">cmd</a> prompt, <tt class="docutils literal">cd</tt> to the download directory, and run it with Python:</p>
+<pre class="literal-block">
+C:\Python27\python distribute_setup.py
+</pre>
+<p></div><!-- class="substep" --></p>
 <p>Now, install pip:</p>
-<blockquote>
-<p>Save a copy of <a class="reference external" href="https://raw.github.com/pypa/pip/master/contrib/get-pip.py">get-pip.py</a>.  Run it with Python:</p>
-<p><tt class="docutils literal"><span class="pre">C:\Python27\python</span> <span class="pre">get-pip.py</span></tt></p>
-<p>(If you saved it in Chrome, that might be <tt class="docutils literal"><span class="pre">get-pip.py.txt</span></tt>)</p>
-</blockquote>
-<p>Now, install zope.interface with pip:</p>
-<blockquote>
-<p><tt class="docutils literal"><span class="pre">C:\Python27\Scripts\pip</span> install zope.interface</tt></p>
+<p><div class="substep">
+Save a copy of <a class="reference external" href="https://raw.github.com/pypa/pip/master/contrib/get-pip.py">get-pip.py</a>.  Run it with Python:</p>
+<pre class="literal-block">
+C:\Python27\python get-pip.py
+</pre>
+<p>(If you saved it in Chrome, that might be <tt class="docutils literal"><span class="pre">get-pip.py.txt</span></tt>)
+</div><!-- class="substep" --></p>
+<p>Now, install zope.interface with pip:
+<div class="substep"></p>
+<pre class="literal-block">
+C:\Python27\Scripts\pip install zope.interface
+</pre>
 <p>Ignore this warning:</p>
-<p><tt class="docutils literal">An optional code optimization (C extension) could not be compiled.</tt>.</p>
-</blockquote>
+<p><tt class="docutils literal">An optional code optimization (C extension) could not be compiled.</tt>
+</div><!-- class="substep" --></p>
 <p>Of course, you can use pip to install almost any Python package.</p>
 <p>Side note: if you don't want to type out <tt class="docutils literal"><span class="pre">C:\Python27</span></tt> and <tt class="docutils literal"><span class="pre">C:\Python27\Scripts</span></tt> every time, you can add both directories to your User or System <tt class="docutils literal">Path</tt> variable (<a class="reference external" href="http://www.computerhope.com/issues/ch000549.htm">instructions for XP</a> or <a class="reference external" href="http://msdn.microsoft.com/en-us/library/ee537574.aspx">Windows 7</a>).  Then you'll be able to type just <tt class="docutils literal">python</tt> or <tt class="docutils literal">pip</tt>.  (Note: reopen the <tt class="docutils literal">cmd</tt> window for <tt class="docutils literal">Path</tt> changes to take effect.)</p>
 <p></div></p>
 <p><div class="debuntu"></p>
 <p>Run:</p>
-<p><tt class="docutils literal">sudo <span class="pre">apt-get</span> install <span class="pre">python-pip</span></tt></p>
+<pre class="literal-block">
+sudo apt-get install python-pip
+</pre>
 <p>or on an older distribution:</p>
-<p><tt class="docutils literal">sudo <span class="pre">apt-get</span> install pip</tt></p>
+<pre class="literal-block">
+sudo apt-get install pip
+</pre>
 <p></div></p>
 </div>
 <div class="section" id="install-minerva-and-its-dependencies">
@@ -100,6 +113,7 @@ C:\Python27\Scripts\pip install Minerva
 <tt class="docutils literal"><span class="pre">--user</span></tt> installs everything to your <tt class="docutils literal"><span class="pre">~/.local/lib/</span></tt> rather than the system-wide Python root.
 </p>
 <p>Alternative route: if you prefer not to have pip download packages, or want the very latest code, you can use <tt class="docutils literal">git</tt> and <tt class="docutils literal">pip install .</tt>:</p>
+<p><div class="substep"></p>
 <pre class="literal-block">
 git clone https://github.com/ludios/Minerva
 git clone https://github.com/ludios/Coreweb
@@ -122,7 +136,8 @@ pip install --user --no-deps --ignore-installed .
 C:\Python27\Scripts\pip install --no-deps --ignore-installed .
 </pre>
 <p></div></p>
-<p>(note the trailing <tt class="docutils literal">.</tt>).</p>
+<p>(note the trailing <tt class="docutils literal">.</tt>).
+</div><!-- class="substep" --></p>
 </div>
 <div class="section" id="install-closure-library">
 <h1><a class="toc-backref" href="#id5">Install Closure Library</a></h1>
@@ -156,13 +171,15 @@ cd Projects
 <pre class="literal-block">
 svn checkout https://closure-library.googlecode.com/svn/trunk/ closure-library
 </pre>
-<p>Alternative route: if you prefer to have the full version history of Closure Library, you can use <tt class="docutils literal">git svn</tt> to do the checkout (this will take much longer):</p>
+<p>Alternative route: if you prefer to have the full version history of Closure Library, you can use <tt class="docutils literal">git svn</tt> to do the checkout (this will take much longer):
+<div class="substep"></p>
 <pre class="literal-block">
 git svn clone --stdlayout https://closure-library.googlecode.com/svn closure-library
 </pre>
 <p class="windows">
 (This requires <a class="reference external" href="https://code.google.com/p/msysgit/">msysgit</a>.  When installing, select &quot;Run Git from the Windows Command Prompt&quot; and &quot;Checkout as-is, commit as-is&quot;.)
-</p>
+</p><!-- expect dupe -->
+</div><!-- class="substep" --></p>
 </div>
 <div class="section" id="running-the-server-side-unit-tests">
 <h1><a class="toc-backref" href="#id6">Running the server-side unit tests</a></h1>

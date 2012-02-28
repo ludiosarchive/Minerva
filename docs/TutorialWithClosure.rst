@@ -51,8 +51,12 @@ Install the `latest version of pyOpenSSL for your Python version`_.  Try the MSI
 
 
 
-Install pip
-=======
+Install pip and zope.interface
+====================
+
+|div-debuntu|
+:small:`(Ignore the "and zope.interface" part; your package manager already installed zope.interface.)`
+|/div-debuntu|
 
 pip_ is the package manager you'll (probably) use to install :windows:`zope.interface, Minerva,` :debuntu:`Minerva and` and all of Minerva's dependencies.  pip provides a way to uninstall and correctly upgrade a package, which Python's distutils-only ``setup.py install`` approach can't do.  Note that the following instructions assume that the related virtualenv_ is **not** used.
 
@@ -60,25 +64,33 @@ pip_ is the package manager you'll (probably) use to install :windows:`zope.inte
 
 pip requires setuptools or distribute (a fork of setuptools).  If you don't already have either, install distribute:
 
-	Save a copy of `distribute_setup.py`_.  Open a `cmd`_ prompt, ``cd`` to the download directory, and run it with Python:
+|substep|
+Save a copy of `distribute_setup.py`_.  Open a `cmd`_ prompt, ``cd`` to the download directory, and run it with Python::
 
-	``C:\Python27\python distribute_setup.py``
+	C:\Python27\python distribute_setup.py
+
+|/substep|
 
 Now, install pip:
 
-	Save a copy of `get-pip.py`_.  Run it with Python:
+|substep|
+Save a copy of `get-pip.py`_.  Run it with Python::
 
-	``C:\Python27\python get-pip.py``
+	C:\Python27\python get-pip.py
 
-	(If you saved it in Chrome, that might be ``get-pip.py.txt``)
+(If you saved it in Chrome, that might be ``get-pip.py.txt``)
+|/substep|
 
 Now, install zope.interface with pip:
+|substep|
+::
 
-	``C:\Python27\Scripts\pip install zope.interface``
+	C:\Python27\Scripts\pip install zope.interface
 
-	Ignore this warning:
+Ignore this warning:
 
-	``An optional code optimization (C extension) could not be compiled.``.
+``An optional code optimization (C extension) could not be compiled.``
+|/substep|
 
 Of course, you can use pip to install almost any Python package.
 
@@ -88,13 +100,13 @@ Side note: if you don't want to type out ``C:\Python27`` and ``C:\Python27\Scrip
 
 |div-debuntu|
 
-Run:
+Run::
 
-``sudo apt-get install python-pip``
+	sudo apt-get install python-pip
 
-or on an older distribution:
+or on an older distribution::
 
-``sudo apt-get install pip``
+	sudo apt-get install pip
 
 |/div-debuntu|
 
@@ -133,7 +145,10 @@ The above will install Minerva and its dependencies Coreweb_, Webmagic_, Securet
 ``--user`` installs everything to your ``~/.local/lib/`` rather than the system-wide Python root.
 |/p-debuntu|
 
-Alternative route: if you prefer not to have pip download packages, or want the very latest code, you can use ``git`` and ``pip install .``::
+Alternative route: if you prefer not to have pip download packages, or want the very latest code, you can use ``git`` and ``pip install .``:
+
+|substep|
+::
 
 	git clone https://github.com/ludios/Minerva
 	git clone https://github.com/ludios/Coreweb
@@ -163,6 +178,7 @@ Then, ``cd`` into each directory and run:
 |/div-windows|
 
 (note the trailing ``.``).
+|/substep|
 
 .. _Coreweb: https://github.com/ludios/Coreweb
 .. _Webmagic: https://github.com/ludios/Webmagic
@@ -214,13 +230,16 @@ Now, inside ``Projects``, check out Closure Library::
 
 	svn checkout https://closure-library.googlecode.com/svn/trunk/ closure-library
 
-Alternative route: if you prefer to have the full version history of Closure Library, you can use ``git svn`` to do the checkout (this will take much longer)::
+Alternative route: if you prefer to have the full version history of Closure Library, you can use ``git svn`` to do the checkout (this will take much longer):
+|substep|
+::
 
 	git svn clone --stdlayout https://closure-library.googlecode.com/svn closure-library
 
 |p-windows|
 (This requires msysgit_.  When installing, select "Run Git from the Windows Command Prompt" and "Checkout as-is, commit as-is".)
 |/p-windows|
+|/substep|
 
 .. _trunk: https://code.google.com/p/closure-library/source/list
 .. _`Slik SVN`: http://www.sliksvn.com/en/download

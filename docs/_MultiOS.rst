@@ -1,8 +1,19 @@
+.. role:: small
+	:class: small
+
 .. role:: debuntu
 	:class: debuntu
 
 .. role:: windows
 	:class: windows
+
+.. |substep| raw:: html
+
+	<div class="substep">
+
+.. |/substep| raw:: html
+
+	</div><!-- class="substep" -->
 
 .. |p-debuntu| raw:: html
 
