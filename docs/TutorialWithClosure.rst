@@ -1,10 +1,8 @@
 .. include:: _MultiOS.rst
 
 ========
-Tutorial: Making a chat application with Minerva and Closure Library | Minerva Comet server and client
+Tutorial: Making a chat application with Minerva and Closure Library
 ========
-
-!!!: this is an incomplete port of docs/website/tutorial/; read that instead.
 
 .. contents::
 
@@ -25,17 +23,22 @@ Install Python and Twisted
 
 The Minerva server uses Python and Twisted_, so you'll need both to write your application server.
 
-|p-debuntu| You already have Python.  You just need Twisted_: |/p-debuntu|
+|div-debuntu|
+You already have Python.  You just need Twisted_::
 
-|p-debuntu| ``sudo apt-get install python-twisted`` |/p-debuntu|
+	sudo apt-get install python-twisted
 
-|p-windows| Unless you already have Python 2.5+ installed, install the latest 32-bit or 64-bit `Python 2.x release`_ (`direct link to 32-bit Python 2.7.2 MSI installer`_). |/p-windows|
+|/div-debuntu|
 
-|p-windows| Install the `latest version of Twisted for your Python version`_.  Try the MSI installer first.  Note that Twisted won't work until you install zope.interface (described below). |/p-windows|
+|div-windows|
+Unless you already have Python 2.5+ installed, install the latest 32-bit or 64-bit `Python 2.x release`_ (`direct link to 32-bit Python 2.7.2 MSI installer`_).
 
-|p-windows| Install the `latest pywin32 for your Python version`_ (`direct link to pywin32 216 for 32-bit Python 2.7`_).  This is required for some Twisted functionality including process-spawning, the IOCP reactor, and colored trial_ output. |/p-windows|
+Install the `latest version of Twisted for your Python version`_.  Try the MSI installer first.  Note that Twisted won't work until you install zope.interface (described below).
 
-|p-windows| Install the `latest version of pyOpenSSL for your Python version`_.  Try the MSI installer first.  pyOpenSSL is an optional Twisted dependency that allows you to write SSL clients and servers. |/p-windows|
+Install the `latest pywin32 for your Python version`_ (`direct link to pywin32 216 for 32-bit Python 2.7`_).  This is required for some Twisted functionality including process-spawning, the IOCP reactor, and colored trial_ output.
+
+Install the `latest version of pyOpenSSL for your Python version`_.  Try the MSI installer first.  pyOpenSSL is an optional Twisted dependency that allows you to write SSL clients and servers.
+|/div-windows|
 
 .. _Twisted: http://twistedmatrix.com/
 .. _`Python 2.x release`: http://www.python.org/download/releases/
@@ -130,7 +133,7 @@ The above will install Minerva and its dependencies Coreweb_, Webmagic_, Securet
 ``--user`` installs everything to your ``~/.local/lib/`` rather than the system-wide Python root.
 |/p-debuntu|
 
-Alternative route: if you prefer not to have pip download packages, or want the very latest code, you can use ``git`` and ``pip install .``:::
+Alternative route: if you prefer not to have pip download packages, or want the very latest code, you can use ``git`` and ``pip install .``::
 
 	git clone https://github.com/ludios/Minerva
 	git clone https://github.com/ludios/Coreweb

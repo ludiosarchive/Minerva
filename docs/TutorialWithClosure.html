@@ -4,14 +4,13 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="Docutils 0.8.1: http://docutils.sourceforge.net/" />
-<title>Tutorial: Making a chat application with Minerva and Closure Library | Minerva Comet server and client</title>
+<title>Tutorial: Making a chat application with Minerva and Closure Library</title>
 <link rel="stylesheet" href="style.css" type="text/css" />
 </head>
 <body>
-<div class="document" id="tutorial-making-a-chat-application-with-minerva-and-closure-library-minerva-comet-server-and-client">
-<h1 class="title">Tutorial: Making a chat application with Minerva and Closure Library | Minerva Comet server and client</h1>
+<div class="document" id="tutorial-making-a-chat-application-with-minerva-and-closure-library">
+<h1 class="title">Tutorial: Making a chat application with Minerva and Closure Library</h1>
 
-<p>!!!: this is an incomplete port of docs/website/tutorial/; read that instead.</p>
 <div class="contents topic" id="contents">
 <p class="topic-title first">Contents</p>
 <ul class="simple">
@@ -39,12 +38,18 @@
 <div class="section" id="install-python-and-twisted">
 <h1><a class="toc-backref" href="#id2">Install Python and Twisted</a></h1>
 <p>The Minerva server uses Python and <a class="reference external" href="http://twistedmatrix.com/">Twisted</a>, so you'll need both to write your application server.</p>
-<p class="debuntu"> You already have Python.  You just need <a class="reference external" href="http://twistedmatrix.com/">Twisted</a>: </p>
-<p class="debuntu"> <tt class="docutils literal">sudo <span class="pre">apt-get</span> install <span class="pre">python-twisted</span></tt> </p>
-<p class="windows"> Unless you already have Python 2.5+ installed, install the latest 32-bit or 64-bit <a class="reference external" href="http://www.python.org/download/releases/">Python 2.x release</a> (<a class="reference external" href="http://www.python.org/ftp/python/2.7.2/python-2.7.2.msi">direct link to 32-bit Python 2.7.2 MSI installer</a>). </p>
-<p class="windows"> Install the <a class="reference external" href="http://twistedmatrix.com/trac/wiki/Downloads">latest version of Twisted for your Python version</a>.  Try the MSI installer first.  Note that Twisted won't work until you install zope.interface (described below). </p>
-<p class="windows"> Install the <a class="reference external" href="http://sourceforge.net/projects/pywin32/files/pywin32/">latest pywin32 for your Python version</a> (<a class="reference external" href="http://sourceforge.net/projects/pywin32/files/pywin32/Build216/pywin32-216.win32-py2.7.exe/download">direct link to pywin32 216 for 32-bit Python 2.7</a>).  This is required for some Twisted functionality including process-spawning, the IOCP reactor, and colored <a class="reference external" href="http://twistedmatrix.com/trac/wiki/TwistedTrial">trial</a> output. </p>
-<p class="windows"> Install the <a class="reference external" href="http://pypi.python.org/pypi/pyOpenSSL">latest version of pyOpenSSL for your Python version</a>.  Try the MSI installer first.  pyOpenSSL is an optional Twisted dependency that allows you to write SSL clients and servers. </p>
+<p><div class="debuntu">
+You already have Python.  You just need <a class="reference external" href="http://twistedmatrix.com/">Twisted</a>:</p>
+<pre class="literal-block">
+sudo apt-get install python-twisted
+</pre>
+<p></div></p>
+<p><div class="windows">
+Unless you already have Python 2.5+ installed, install the latest 32-bit or 64-bit <a class="reference external" href="http://www.python.org/download/releases/">Python 2.x release</a> (<a class="reference external" href="http://www.python.org/ftp/python/2.7.2/python-2.7.2.msi">direct link to 32-bit Python 2.7.2 MSI installer</a>).</p>
+<p>Install the <a class="reference external" href="http://twistedmatrix.com/trac/wiki/Downloads">latest version of Twisted for your Python version</a>.  Try the MSI installer first.  Note that Twisted won't work until you install zope.interface (described below).</p>
+<p>Install the <a class="reference external" href="http://sourceforge.net/projects/pywin32/files/pywin32/">latest pywin32 for your Python version</a> (<a class="reference external" href="http://sourceforge.net/projects/pywin32/files/pywin32/Build216/pywin32-216.win32-py2.7.exe/download">direct link to pywin32 216 for 32-bit Python 2.7</a>).  This is required for some Twisted functionality including process-spawning, the IOCP reactor, and colored <a class="reference external" href="http://twistedmatrix.com/trac/wiki/TwistedTrial">trial</a> output.</p>
+<p>Install the <a class="reference external" href="http://pypi.python.org/pypi/pyOpenSSL">latest version of pyOpenSSL for your Python version</a>.  Try the MSI installer first.  pyOpenSSL is an optional Twisted dependency that allows you to write SSL clients and servers.
+</div></p>
 </div>
 <div class="section" id="install-pip">
 <h1><a class="toc-backref" href="#id3">Install pip</a></h1>
@@ -94,7 +99,7 @@ C:\Python27\Scripts\pip install Minerva
 <p class="debuntu">
 <tt class="docutils literal"><span class="pre">--user</span></tt> installs everything to your <tt class="docutils literal"><span class="pre">~/.local/lib/</span></tt> rather than the system-wide Python root.
 </p>
-<p>Alternative route: if you prefer not to have pip download packages, or want the very latest code, you can use <tt class="docutils literal">git</tt> and <tt class="docutils literal">pip install .</tt>::</p>
+<p>Alternative route: if you prefer not to have pip download packages, or want the very latest code, you can use <tt class="docutils literal">git</tt> and <tt class="docutils literal">pip install .</tt>:</p>
 <pre class="literal-block">
 git clone https://github.com/ludios/Minerva
 git clone https://github.com/ludios/Coreweb
