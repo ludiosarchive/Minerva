@@ -109,17 +109,156 @@ or on an older distribution:
 Install Minerva and its dependencies
 ==========================
 
+|div-debuntu|
+The simplest way to install Minerva and its dependencies is:::
+
+	pip install --user Minerva
+
+|/div-debuntu|
+
+|div-windows|
+The simplest way to install Minerva and its dependencies is:::
+
+	C:\Python27\Scripts\pip install Minerva
+
+|/div-windows|
+
+The above will install <a href="https://github.com/ludios/Minerva">Minerva</a> and its dependencies <a href="https://github.com/ludios/Coreweb">Coreweb</a>, <a href="https://github.com/ludios/Webmagic">Webmagic</a>, <a href="https://github.com/ludios/Securetypes">Securetypes</a>, <a href="https://github.com/ludios/Strfrag">Strfrag</a>, <a href="http://pypi.python.org/pypi/Jinja2">jinja2</a>, and <a href="http://pypi.python.org/pypi/simplejson">simplejson</a>.
+
+|p-debuntu|
+``--user`` installs everything to your ``~/.local/lib/`` rather than the system-wide Python root.
+|/p-debuntu|
+
+Alternative route: if you prefer not to have pip download packages, or want the very latest code, you can use ``git`` and ``pip install .``:
+
+	git clone https://github.com/ludios/Minerva
+	git clone https://github.com/ludios/Coreweb
+	git clone https://github.com/ludios/Webmagic
+	git clone https://github.com/ludios/Securetypes
+	git clone https://github.com/ludios/Strfrag
+
+	git clone https://github.com/mitsuhiko/jinja2
+	git clone https://github.com/simplejson/simplejson <!-- TODO: make user install binary package with speedups!  Perhaps make Minerva use json instead of simplejson when available? -->
+
+	Then, ``cd`` into each directory and run:
+
+	|div-debuntu|
+	``pip install --user --no-deps --ignore-installed .``
+	|/div-debuntu|
+
+	|div-windows|
+	``C:\Python27\Scripts\pip install --no-deps --ignore-installed .``
+	|/div-windows|
+
+	(note the trailing ``.``).
+
 
 Install Closure Library
 ===============
+
+The Minerva client uses <a href="https://code.google.com/closure/library/">Closure Library</a>, so you'll need a copy.  Google doesn't do regular releases of it, so you'll want to get a copy of <a href="https://code.google.com/p/closure-library/source/list">trunk</a> (it's kept stable).
+
+|div-debuntu|
+If you don't already have Subversion, install it:::
+
+	sudo apt-get install subversion
+
+|/div-debuntu|
+
+|div-windows|
+If you don't already have Subversion, download and install <a href="http://www.sliksvn.com/en/download">Slik SVN</a>.  The installer will put a command-line ``svn`` in your ``Path``.
+|/div-windows|
+
+From now on, you'll be working in some kind of ``Projects`` directory that you can put anywhere.  The rest of this documentation will assumes that it's called ``Projects`` and in your home directory, so substitute paths if that's not the case.
+
+|div-debuntu|
+Make a ``Projects`` directory if you don't already have one:::
+
+	mkdir ~/Projects
+	cd ~/Projects
+
+|/div-debuntu|
+
+|div-windows|
+Make a ``Projects`` directory if you don't already have one:::
+
+	cd /d "%USERPROFILE%"
+	mkdir Projects
+	cd Projects
+
+(Tip: ``/d`` means switch drive letter if necessary.)
+|/div-windows|
+
+Now, inside ``Projects``, check out Closure Library:::
+
+	svn checkout https://closure-library.googlecode.com/svn/trunk/ closure-library
+
+Alternative route: if you prefer to have the full version history of Closure Library, you can use ``git svn`` to do the checkout (this will take much longer):
+
+	``git svn clone --stdlayout https://closure-library.googlecode.com/svn closure-library``
+
+	|p-windows|
+	(This requires <a href="https://code.google.com/p/msysgit/">msysgit</a>.  When installing, select "Run Git from the Windows Command Prompt" and "Checkout as-is, commit as-is".)
+	|/p-windows|
 
 
 Running the server-side unit tests
 ========================
 
+By now, you have everything you need to start working with Minerva.  But before you do so, run the unit tests to make sure that Minerva works properly on your system.  To do this, we use Twisted's test runner, <a href="http://twistedmatrix.com/trac/wiki/TwistedTrial">trial</a>.  If you have Twisted installed, you already have trial.
+
+|div-debuntu|
+Run the unit tests for Minerva, Webmagic, Securetypes, and Strfrag:::
+
+	trial minerva webmagic test_securetypes test_strfrag
+
+|/div-debuntu|
+
+|div-windows|
+Run the unit tests for Minerva, Webmagic, Securetypes, and Strfrag:::
+
+	C:\Python27\python C:\Python27\Scripts\trial.py minerva webmagic test_securetypes test_strfrag
+
+|/div-windows|
+
+The tests should take a few seconds to run.  Make sure the very last line of the output says <code style="color:darkgreen; font-weight: bold">PASSED``.  Note that it's okay to see tracebacks for tests marked ``[TODO]``.
+
+If any of the tests failed, Minerva may still work, but please report a bug for <a href="https://github.com/ludios/Minerva/issues">Minerva</a>, <a href="https://github.com/ludios/Webmagic/issues">Webmagic</a>, <a href="https://github.com/ludios/Securetypes/issues">Securetypes</a>, or <a href="https://github.com/ludios/Strfrag/issues">Strfrag</a>.  Any test failure, hang, or crash is a bug.
+
 
 Running the client-side unit tests
 =======================
+
+
+Minerva also comes with client-side unit tests.  These tests run in a browser, rather than in the command line.  To run these tests, you'll first need to start the ``minerva_site`` server installed by Minerva.
+
+|div-debuntu|
+To start ``minerva_site``'s HTTP server, run:::
+
+	cd /tmp
+	twistd -n minerva_site -t tcp:8111:interface=127.0.0.1 -m tcp:8430:interface=127.0.0.1 "--closure-library=$HOME/Projects/closure-library"
+
+|/div-debuntu|
+
+|div-windows|
+To start ``minerva_site``'s HTTP server, run:::
+
+	cd /d "%TEMP%"
+	C:\Python27\python C:\Python27\Scripts\twistd.py -n minerva_site -t tcp:8111:interface=127.0.0.1 -m tcp:8430:interface=127.0.0.1 "--closure-library=%USERPROFILE%\Projects\closure-library"
+
+|/div-windows|
+
+You should now be able to reach the server at http://127.0.0.1:8111/ .  Note that the above command also starts a non-HTTP socket listener on port 8430.  This is used by Minerva's optional Flash socket transport.  You may use any port numbers you want.  Run ``<span class="windows">C:\Python27\python C:\Python27\Scripts\twistd.py</span><span class="debuntu">twistd</span> -n minerva_site --help`` for more ``minerva_site`` help.
+
+The first ``cd`` step above is optional; do it to avoid creating some files (twistd.log, twistd.pid) in a directory that needs to stay unchanged.  (And what's ``twistd``, you ask?  It's Twisted's tool for starting up daemons.  But in this case, we use ``-n`` to stay in the foreground rather than daemonize.)
+
+With the server running, you can run the client-side tests by navigating to:
+
+http://127.0.0.1:8111/js_minerva_tests.html
+
+After a few seconds, you'll see a box in the top-right corner indicating test suite success (green) or failure (red). If you see any failures, please report a bug on <a href="https://github.com/ludios/Minerva/issues">Minerva</a>.
+
+Is your test runner stuck or failing after a delay?  It's probably because some tests use a Flash object (when the Flash plugin is available, at least).  Chrome users who block plugins may have to allow plugins for this domain (click the plugin icon in the URL bar).  <a href="http://noscript.net/">NoScript</a> users may have to click on the Flash object at the top of the page.  The same for Opera users who block plugins until clicked.
 
 
 

@@ -20,6 +20,22 @@
 
 	</p><!-- expect dupe -->
 
+.. |span-debuntu| raw:: html
+
+	<span class="debuntu">
+
+.. |/span-debuntu| raw:: html
+
+	</span>
+
+.. |span-windows| raw:: html
+
+	<span class="windows">
+
+.. |/span-windows| raw:: html
+
+	</span>
+
 .. |div-debuntu| raw:: html
 
 	<div class="debuntu">

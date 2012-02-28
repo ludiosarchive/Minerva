@@ -79,15 +79,123 @@
 </div>
 <div class="section" id="install-minerva-and-its-dependencies">
 <h1><a class="toc-backref" href="#id3">Install Minerva and its dependencies</a></h1>
+<p><div class="debuntu">
+The simplest way to install Minerva and its dependencies is::</p>
+<pre class="literal-block">
+pip install --user Minerva
+</pre>
+<p></div></p>
+<p><div class="windows">
+The simplest way to install Minerva and its dependencies is::</p>
+<pre class="literal-block">
+C:\Python27\Scripts\pip install Minerva
+</pre>
+<p></div></p>
+<p>The above will install &lt;a href=&quot;<a class="reference external" href="https://github.com/ludios/Minerva">https://github.com/ludios/Minerva</a>&quot;&gt;Minerva&lt;/a&gt; and its dependencies &lt;a href=&quot;<a class="reference external" href="https://github.com/ludios/Coreweb">https://github.com/ludios/Coreweb</a>&quot;&gt;Coreweb&lt;/a&gt;, &lt;a href=&quot;<a class="reference external" href="https://github.com/ludios/Webmagic">https://github.com/ludios/Webmagic</a>&quot;&gt;Webmagic&lt;/a&gt;, &lt;a href=&quot;<a class="reference external" href="https://github.com/ludios/Securetypes">https://github.com/ludios/Securetypes</a>&quot;&gt;Securetypes&lt;/a&gt;, &lt;a href=&quot;<a class="reference external" href="https://github.com/ludios/Strfrag">https://github.com/ludios/Strfrag</a>&quot;&gt;Strfrag&lt;/a&gt;, &lt;a href=&quot;<a class="reference external" href="http://pypi.python.org/pypi/Jinja2">http://pypi.python.org/pypi/Jinja2</a>&quot;&gt;jinja2&lt;/a&gt;, and &lt;a href=&quot;<a class="reference external" href="http://pypi.python.org/pypi/simplejson">http://pypi.python.org/pypi/simplejson</a>&quot;&gt;simplejson&lt;/a&gt;.</p>
+<p class="debuntu">
+<tt class="docutils literal"><span class="pre">--user</span></tt> installs everything to your <tt class="docutils literal"><span class="pre">~/.local/lib/</span></tt> rather than the system-wide Python root.
+</p>
+<p>Alternative route: if you prefer not to have pip download packages, or want the very latest code, you can use <tt class="docutils literal">git</tt> and <tt class="docutils literal">pip install .</tt>:</p>
+<blockquote>
+<p>git clone <a class="reference external" href="https://github.com/ludios/Minerva">https://github.com/ludios/Minerva</a>
+git clone <a class="reference external" href="https://github.com/ludios/Coreweb">https://github.com/ludios/Coreweb</a>
+git clone <a class="reference external" href="https://github.com/ludios/Webmagic">https://github.com/ludios/Webmagic</a>
+git clone <a class="reference external" href="https://github.com/ludios/Securetypes">https://github.com/ludios/Securetypes</a>
+git clone <a class="reference external" href="https://github.com/ludios/Strfrag">https://github.com/ludios/Strfrag</a></p>
+<p>git clone <a class="reference external" href="https://github.com/mitsuhiko/jinja2">https://github.com/mitsuhiko/jinja2</a>
+git clone <a class="reference external" href="https://github.com/simplejson/simplejson">https://github.com/simplejson/simplejson</a> &lt;!-- TODO: make user install binary package with speedups!  Perhaps make Minerva use json instead of simplejson when available? --&gt;</p>
+<p>Then, <tt class="docutils literal">cd</tt> into each directory and run:</p>
+<p><div class="debuntu">
+<tt class="docutils literal">pip install <span class="pre">--user</span> <span class="pre">--no-deps</span> <span class="pre">--ignore-installed</span> .</tt>
+</div></p>
+<p><div class="windows">
+<tt class="docutils literal"><span class="pre">C:\Python27\Scripts\pip</span> install <span class="pre">--no-deps</span> <span class="pre">--ignore-installed</span> .</tt>
+</div></p>
+<p>(note the trailing <tt class="docutils literal">.</tt>).</p>
+</blockquote>
 </div>
 <div class="section" id="install-closure-library">
 <h1><a class="toc-backref" href="#id4">Install Closure Library</a></h1>
+<p>The Minerva client uses &lt;a href=&quot;<a class="reference external" href="https://code.google.com/closure/library/">https://code.google.com/closure/library/</a>&quot;&gt;Closure Library&lt;/a&gt;, so you'll need a copy.  Google doesn't do regular releases of it, so you'll want to get a copy of &lt;a href=&quot;<a class="reference external" href="https://code.google.com/p/closure-library/source/list">https://code.google.com/p/closure-library/source/list</a>&quot;&gt;trunk&lt;/a&gt; (it's kept stable).</p>
+<p><div class="debuntu">
+If you don't already have Subversion, install it::</p>
+<pre class="literal-block">
+sudo apt-get install subversion
+</pre>
+<p></div></p>
+<p><div class="windows">
+If you don't already have Subversion, download and install &lt;a href=&quot;<a class="reference external" href="http://www.sliksvn.com/en/download">http://www.sliksvn.com/en/download</a>&quot;&gt;Slik SVN&lt;/a&gt;.  The installer will put a command-line <tt class="docutils literal">svn</tt> in your <tt class="docutils literal">Path</tt>.
+</div></p>
+<p>From now on, you'll be working in some kind of <tt class="docutils literal">Projects</tt> directory that you can put anywhere.  The rest of this documentation will assumes that it's called <tt class="docutils literal">Projects</tt> and in your home directory, so substitute paths if that's not the case.</p>
+<p><div class="debuntu">
+Make a <tt class="docutils literal">Projects</tt> directory if you don't already have one::</p>
+<pre class="literal-block">
+mkdir ~/Projects
+cd ~/Projects
+</pre>
+<p></div></p>
+<p><div class="windows">
+Make a <tt class="docutils literal">Projects</tt> directory if you don't already have one::</p>
+<pre class="literal-block">
+cd /d &quot;%USERPROFILE%&quot;
+mkdir Projects
+cd Projects
+</pre>
+<p>(Tip: <tt class="docutils literal">/d</tt> means switch drive letter if necessary.)
+</div></p>
+<p>Now, inside <tt class="docutils literal">Projects</tt>, check out Closure Library::</p>
+<pre class="literal-block">
+svn checkout https://closure-library.googlecode.com/svn/trunk/ closure-library
+</pre>
+<p>Alternative route: if you prefer to have the full version history of Closure Library, you can use <tt class="docutils literal">git svn</tt> to do the checkout (this will take much longer):</p>
+<blockquote>
+<p><tt class="docutils literal">git svn clone <span class="pre">--stdlayout</span> <span class="pre">https://closure-library.googlecode.com/svn</span> <span class="pre">closure-library</span></tt></p>
+<p class="windows">
+(This requires &lt;a href=&quot;<a class="reference external" href="https://code.google.com/p/msysgit/">https://code.google.com/p/msysgit/</a>&quot;&gt;msysgit&lt;/a&gt;.  When installing, select &quot;Run Git from the Windows Command Prompt&quot; and &quot;Checkout as-is, commit as-is&quot;.)
+</p>
+</blockquote>
 </div>
 <div class="section" id="running-the-server-side-unit-tests">
 <h1><a class="toc-backref" href="#id5">Running the server-side unit tests</a></h1>
+<p>By now, you have everything you need to start working with Minerva.  But before you do so, run the unit tests to make sure that Minerva works properly on your system.  To do this, we use Twisted's test runner, &lt;a href=&quot;<a class="reference external" href="http://twistedmatrix.com/trac/wiki/TwistedTrial">http://twistedmatrix.com/trac/wiki/TwistedTrial</a>&quot;&gt;trial&lt;/a&gt;.  If you have Twisted installed, you already have trial.</p>
+<p><div class="debuntu">
+Run the unit tests for Minerva, Webmagic, Securetypes, and Strfrag::</p>
+<pre class="literal-block">
+trial minerva webmagic test_securetypes test_strfrag
+</pre>
+<p></div></p>
+<p><div class="windows">
+Run the unit tests for Minerva, Webmagic, Securetypes, and Strfrag::</p>
+<pre class="literal-block">
+C:\Python27\python C:\Python27\Scripts\trial.py minerva webmagic test_securetypes test_strfrag
+</pre>
+<p></div></p>
+<p>The tests should take a few seconds to run.  Make sure the very last line of the output says &lt;code style=&quot;color:darkgreen; font-weight: bold&quot;&gt;PASSED``.  Note that it's okay to see tracebacks for tests marked <tt class="docutils literal">[TODO]</tt>.</p>
+<p>If any of the tests failed, Minerva may still work, but please report a bug for &lt;a href=&quot;<a class="reference external" href="https://github.com/ludios/Minerva/issues">https://github.com/ludios/Minerva/issues</a>&quot;&gt;Minerva&lt;/a&gt;, &lt;a href=&quot;<a class="reference external" href="https://github.com/ludios/Webmagic/issues">https://github.com/ludios/Webmagic/issues</a>&quot;&gt;Webmagic&lt;/a&gt;, &lt;a href=&quot;<a class="reference external" href="https://github.com/ludios/Securetypes/issues">https://github.com/ludios/Securetypes/issues</a>&quot;&gt;Securetypes&lt;/a&gt;, or &lt;a href=&quot;<a class="reference external" href="https://github.com/ludios/Strfrag/issues">https://github.com/ludios/Strfrag/issues</a>&quot;&gt;Strfrag&lt;/a&gt;.  Any test failure, hang, or crash is a bug.</p>
 </div>
 <div class="section" id="running-the-client-side-unit-tests">
 <h1><a class="toc-backref" href="#id6">Running the client-side unit tests</a></h1>
+<p>Minerva also comes with client-side unit tests.  These tests run in a browser, rather than in the command line.  To run these tests, you'll first need to start the <tt class="docutils literal">minerva_site</tt> server installed by Minerva.</p>
+<p><div class="debuntu">
+To start <tt class="docutils literal">minerva_site</tt>'s HTTP server, run::</p>
+<pre class="literal-block">
+cd /tmp
+twistd -n minerva_site -t tcp:8111:interface=127.0.0.1 -m tcp:8430:interface=127.0.0.1 &quot;--closure-library=$HOME/Projects/closure-library&quot;
+</pre>
+<p></div></p>
+<p><div class="windows">
+To start <tt class="docutils literal">minerva_site</tt>'s HTTP server, run::</p>
+<pre class="literal-block">
+cd /d &quot;%TEMP%&quot;
+C:\Python27\python C:\Python27\Scripts\twistd.py -n minerva_site -t tcp:8111:interface=127.0.0.1 -m tcp:8430:interface=127.0.0.1 &quot;--closure-library=%USERPROFILE%\Projects\closure-library&quot;
+</pre>
+<p></div></p>
+<p>You should now be able to reach the server at &lt;a href=&quot;<a class="reference external" href="http://127.0.0.1:8111/">http://127.0.0.1:8111/</a>&quot;&gt;http://127.0.0.1:8111/&lt;/a&gt;.  Note that the above command also starts a non-HTTP socket listener on port 8430.  This is used by Minerva's optional Flash socket transport.  You may use any port numbers you want.  Run <tt class="docutils literal">&lt;span <span class="pre">class=&quot;windows&quot;&gt;C:\Python27\python</span> <span class="pre">C:\Python27\Scripts\twistd.py&lt;/span&gt;&lt;span</span> <span class="pre">class=&quot;debuntu&quot;&gt;twistd&lt;/span&gt;</span> <span class="pre">-n</span> minerva_site <span class="pre">--help</span></tt> for more <tt class="docutils literal">minerva_site</tt> help.</p>
+<p>The first <tt class="docutils literal">cd</tt> step above is optional; do it to avoid creating some files (twistd.log, twistd.pid) in a directory that needs to stay unchanged.  (And what's <tt class="docutils literal">twistd</tt>, you ask?  It's Twisted's tool for starting up daemons.  But in this case, we use <tt class="docutils literal"><span class="pre">-n</span></tt> to stay in the foreground rather than daemonize.)</p>
+<p>With the server running, you can run the client-side tests by navigating to:</p>
+<p><a class="reference external" href="http://127.0.0.1:8111/js_minerva_tests.html">http://127.0.0.1:8111/js_minerva_tests.html</a></p>
+<p>After a few seconds, you'll see a box in the top-right corner indicating test suite success (green) or failure (red). If you see any failures, please report a bug on &lt;a href=&quot;<a class="reference external" href="https://github.com/ludios/Minerva/issues">https://github.com/ludios/Minerva/issues</a>&quot;&gt;Minerva&lt;/a&gt;.</p>
+<p>Is your test runner stuck or failing after a delay?  It's probably because some tests use a Flash object (when the Flash plugin is available, at least).  Chrome users who block plugins may have to allow plugins for this domain (click the plugin icon in the URL bar).  &lt;a href=&quot;<a class="reference external" href="http://noscript.net/">http://noscript.net/</a>&quot;&gt;NoScript&lt;/a&gt; users may have to click on the Flash object at the top of the page.  The same for Opera users who block plugins until clicked.</p>
 <p><script src="jquery.min.js"></script>
 <script>
 var allOS = ["debuntu", "windows"];
