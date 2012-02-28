@@ -14,12 +14,12 @@
 <div class="contents topic" id="contents">
 <p class="topic-title first">Contents</p>
 <ul class="simple">
-<li><a class="reference internal" href="#install-python-and-twisted" id="id2">Install Python and Twisted</a></li>
-<li><a class="reference internal" href="#install-pip-and-zope-interface" id="id3">Install pip and zope.interface</a></li>
-<li><a class="reference internal" href="#install-minerva-and-its-dependencies" id="id4">Install Minerva and its dependencies</a></li>
-<li><a class="reference internal" href="#install-closure-library" id="id5">Install Closure Library</a></li>
-<li><a class="reference internal" href="#running-the-server-side-unit-tests" id="id6">Running the server-side unit tests</a></li>
-<li><a class="reference internal" href="#running-the-client-side-unit-tests" id="id7">Running the client-side unit tests</a></li>
+<li><a class="reference internal" href="#install-python-and-twisted" id="id2">1. Install Python and Twisted</a></li>
+<li><a class="reference internal" href="#install-pip-and-zope-interface" id="id3">2. Install pip and zope.interface</a></li>
+<li><a class="reference internal" href="#install-minerva-and-its-dependencies" id="id4">3. Install Minerva and its dependencies</a></li>
+<li><a class="reference internal" href="#install-closure-library" id="id5">4. Install Closure Library</a></li>
+<li><a class="reference internal" href="#run-the-server-side-unit-tests" id="id6">5. Run the server-side unit tests</a></li>
+<li><a class="reference internal" href="#run-the-client-side-unit-tests" id="id7">6. Run the client-side unit tests</a></li>
 </ul>
 </div>
 <p>This tutorial will guide you through making a simple chat application that uses <a class="reference external" href="http://ludios.org/minerva/">Minerva</a> to communicate between the browser and the server.  We'll install Minerva and Closure Library, then write a chat server (in Python) and chat client (in JavaScript).  If at any point you get stuck for any reason, please tell <a class="reference external" href="mailto:ivan&#64;ludios.org?subject=Suggestion+for+Minerva+with+Closure+tutorial">Ivan</a> so he can improve the tutorial.</p>
@@ -36,7 +36,7 @@
 (This setting changes the entire document.)
 </p></p>
 <div class="section" id="install-python-and-twisted">
-<h1><a class="toc-backref" href="#id2">Install Python and Twisted</a></h1>
+<h1><a class="toc-backref" href="#id2">1. Install Python and Twisted</a></h1>
 <p>The Minerva server uses Python and <a class="reference external" href="http://twistedmatrix.com/">Twisted</a>, so you'll need both to write your application server.</p>
 <p><div class="debuntu">
 You already have Python.  You just need <a class="reference external" href="http://twistedmatrix.com/">Twisted</a>:</p>
@@ -52,7 +52,7 @@ Unless you already have Python 2.5+ installed, install the latest 32-bit or 64-b
 </div></p>
 </div>
 <div class="section" id="install-pip-and-zope-interface">
-<h1><a class="toc-backref" href="#id3">Install pip and zope.interface</a></h1>
+<h1><a class="toc-backref" href="#id3">2. Install pip and zope.interface</a></h1>
 <p><div class="debuntu">
 <span class="small">(Ignore the &quot;and zope.interface&quot; part; your package manager already installed zope.interface.)</span>
 </div></p>
@@ -96,7 +96,7 @@ sudo apt-get install pip
 <p></div></p>
 </div>
 <div class="section" id="install-minerva-and-its-dependencies">
-<h1><a class="toc-backref" href="#id4">Install Minerva and its dependencies</a></h1>
+<h1><a class="toc-backref" href="#id4">3. Install Minerva and its dependencies</a></h1>
 <p>The simplest way to install Minerva and its dependencies is:</p>
 <p><div class="debuntu"></p>
 <pre class="literal-block">
@@ -140,7 +140,7 @@ C:\Python27\Scripts\pip install --no-deps --ignore-installed .
 </div><!-- class="substep" --></p>
 </div>
 <div class="section" id="install-closure-library">
-<h1><a class="toc-backref" href="#id5">Install Closure Library</a></h1>
+<h1><a class="toc-backref" href="#id5">4. Install Closure Library</a></h1>
 <p>The Minerva client uses <a class="reference external" href="https://code.google.com/closure/library/">Closure Library</a>, so you'll need a copy.  Google doesn't do regular releases of it, so you'll want to get a copy of <a class="reference external" href="https://code.google.com/p/closure-library/source/list">trunk</a> (it's kept stable).</p>
 <p><div class="debuntu">
 If you don't already have Subversion, install it:</p>
@@ -181,8 +181,8 @@ git svn clone --stdlayout https://closure-library.googlecode.com/svn closure-lib
 </p><!-- expect dupe -->
 </div><!-- class="substep" --></p>
 </div>
-<div class="section" id="running-the-server-side-unit-tests">
-<h1><a class="toc-backref" href="#id6">Running the server-side unit tests</a></h1>
+<div class="section" id="run-the-server-side-unit-tests">
+<h1><a class="toc-backref" href="#id6">5. Run the server-side unit tests</a></h1>
 <p>By now, you have everything you need to start working with Minerva.  But before you do so, run the unit tests to make sure that Minerva works properly on your system.  To do this, we use Twisted's test runner, <a class="reference external" href="http://twistedmatrix.com/trac/wiki/TwistedTrial">trial</a>.  If you have Twisted installed, you already have trial.</p>
 <p>Run the unit tests for Minerva, Webmagic, Securetypes, and Strfrag:</p>
 <p><div class="debuntu"></p>
@@ -203,8 +203,8 @@ C:\Python27\python C:\Python27\Scripts\trial.py minerva webmagic test_securetype
 <a class="reference external" href="https://github.com/ludios/Strfrag/issues">Strfrag</a>.
 Any test failure, hang, or crash is a bug.</p>
 </div>
-<div class="section" id="running-the-client-side-unit-tests">
-<h1><a class="toc-backref" href="#id7">Running the client-side unit tests</a></h1>
+<div class="section" id="run-the-client-side-unit-tests">
+<h1><a class="toc-backref" href="#id7">6. Run the client-side unit tests</a></h1>
 <p>Minerva also comes with client-side unit tests.  These tests run in a browser, rather than in the command line.  To run these tests, you'll first need to start the <tt class="docutils literal">minerva_site</tt> server installed by Minerva.</p>
 <p>To start <tt class="docutils literal">minerva_site</tt>'s HTTP server, run:</p>
 <p><div class="debuntu"></p>

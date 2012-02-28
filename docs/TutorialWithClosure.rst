@@ -18,8 +18,8 @@ If you don't want to use `Closure Library`_, read the `standalone Minerva tutori
 |switcher-controls|
 
 
-Install Python and Twisted
-===================
+1. Install Python and Twisted
+=====================
 
 The Minerva server uses Python and Twisted_, so you'll need both to write your application server.
 
@@ -51,8 +51,8 @@ Install the `latest version of pyOpenSSL for your Python version`_.  Try the MSI
 
 
 
-Install pip and zope.interface
-====================
+2. Install pip and zope.interface
+======================
 
 |div-debuntu|
 :small:`(Ignore the "and zope.interface" part; your package manager already installed zope.interface.)`
@@ -120,8 +120,8 @@ or on an older distribution::
 
 
 
-Install Minerva and its dependencies
-==========================
+3. Install Minerva and its dependencies
+============================
 
 The simplest way to install Minerva and its dependencies is:
 
@@ -188,8 +188,8 @@ Then, ``cd`` into each directory and run:
 .. _simplejson: http://pypi.python.org/pypi/simplejson
 
 
-Install Closure Library
-===============
+4. Install Closure Library
+=================
 
 The Minerva client uses `Closure Library`_, so you'll need a copy.  Google doesn't do regular releases of it, so you'll want to get a copy of trunk_ (it's kept stable).
 
@@ -246,8 +246,8 @@ Alternative route: if you prefer to have the full version history of Closure Lib
 .. _msysgit: https://code.google.com/p/msysgit/
 
 
-Running the server-side unit tests
-========================
+5. Run the server-side unit tests
+=======================
 
 By now, you have everything you need to start working with Minerva.  But before you do so, run the unit tests to make sure that Minerva works properly on your system.  To do this, we use Twisted's test runner, trial_.  If you have Twisted installed, you already have trial.
 
@@ -279,8 +279,8 @@ Any test failure, hang, or crash is a bug.
 .. _trial: http://twistedmatrix.com/trac/wiki/TwistedTrial
 
 
-Running the client-side unit tests
-=======================
+6. Run the client-side unit tests
+======================
 
 Minerva also comes with client-side unit tests.  These tests run in a browser, rather than in the command line.  To run these tests, you'll first need to start the ``minerva_site`` server installed by Minerva.
 

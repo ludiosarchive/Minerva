@@ -76,7 +76,7 @@ h3.first {
 	margin-top: 0.5em;
 }
 h1 a, h2 a, h3 a, h4 a, h5 a {
-	color: black;
+	color: black !important;
 }
 .button {
 	display: block;
@@ -388,8 +388,6 @@ pre.address {
 }
 
 pre.literal-block, pre.doctest-block {
-	margin-left: 2em;
-	margin-right: 2em
 }
 
 span.classifier {
