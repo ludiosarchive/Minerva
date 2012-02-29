@@ -6,4 +6,4 @@
 *.pyo
 /twistd.pid
 /twisted/plugins/dropin.cache
-/docs/_MultiOS.html
+/docs/_Shared.html
