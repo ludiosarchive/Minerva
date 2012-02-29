@@ -61,7 +61,6 @@ Install the `latest version of pyOpenSSL for your Python version`_.  Try the MSI
 pip_ is the package manager you'll (probably) use to install :windows:`zope.interface, Minerva,` :debuntu:`Minerva and` and all of Minerva's dependencies.  pip provides a way to uninstall and correctly upgrade a package, which Python's distutils-only ``setup.py install`` approach can't do.  Note that the following instructions assume that the related virtualenv_ is **not** used.
 
 |div-windows|
-
 pip requires setuptools or distribute (a fork of setuptools).  If you don't already have either, install distribute:
 
 |substep|
@@ -99,7 +98,6 @@ Side note: if you don't want to type out ``C:\Python27`` and ``C:\Python27\Scrip
 |/div-windows|
 
 |div-debuntu|
-
 Run::
 
 	sudo apt-get install python-pip
