@@ -57,8 +57,8 @@ Unless you already have Python 2.5+ installed, install the latest 32-bit or 64-b
 <span class="small">(Ignore the &quot;and zope.interface&quot; part; your package manager already installed zope.interface.)</span>
 </div></p>
 <p><a class="reference external" href="http://www.pip-installer.org/">pip</a> is the package manager you'll (probably) use to install <span class="windows">zope.interface, Minerva,</span> <span class="debuntu">Minerva and</span> and all of Minerva's dependencies.  pip provides a way to uninstall and correctly upgrade a package, which Python's distutils-only <tt class="docutils literal">setup.py install</tt> approach can't do.  Note that the following instructions assume that the related <a class="reference external" href="http://www.virtualenv.org/">virtualenv</a> is <strong>not</strong> used.</p>
-<p><div class="windows"></p>
-<p>pip requires setuptools or distribute (a fork of setuptools).  If you don't already have either, install distribute:</p>
+<p><div class="windows">
+pip requires setuptools or distribute (a fork of setuptools).  If you don't already have either, install distribute:</p>
 <p><div class="substep">
 Save a copy of <a class="reference external" href="http://python-distribute.org/distribute_setup.py">distribute_setup.py</a>.  Open a <a class="reference external" href="http://physiology.med.unc.edu/wwwMHMF/how-to/work-with-cmd/default.html">cmd</a> prompt, <tt class="docutils literal">cd</tt> to the download directory, and run it with Python:</p>
 <pre class="literal-block">
@@ -84,8 +84,8 @@ C:\Python27\Scripts\pip install zope.interface
 <p>Of course, you can use pip to install almost any Python package.</p>
 <p>Side note: if you don't want to type out <tt class="docutils literal"><span class="pre">C:\Python27</span></tt> and <tt class="docutils literal"><span class="pre">C:\Python27\Scripts</span></tt> every time, you can add both directories to your User or System <tt class="docutils literal">Path</tt> variable (<a class="reference external" href="http://www.computerhope.com/issues/ch000549.htm">instructions for XP</a> or <a class="reference external" href="http://msdn.microsoft.com/en-us/library/ee537574.aspx">Windows 7</a>).  Then you'll be able to type just <tt class="docutils literal">python</tt> or <tt class="docutils literal">pip</tt>.  (Note: reopen the <tt class="docutils literal">cmd</tt> window for <tt class="docutils literal">Path</tt> changes to take effect.)</p>
 <p></div></p>
-<p><div class="debuntu"></p>
-<p>Run:</p>
+<p><div class="debuntu">
+Run:</p>
 <pre class="literal-block">
 sudo apt-get install python-pip
 </pre>
@@ -195,7 +195,7 @@ trial minerva webmagic test_securetypes test_strfrag
 C:\Python27\python C:\Python27\Scripts\trial.py minerva webmagic test_securetypes test_strfrag
 </pre>
 <p></div></p>
-<p>The tests should take a few seconds to run.  Make sure the very last line of the output says &lt;code style=&quot;color:darkgreen; font-weight: bold&quot;&gt;PASSED``.  Note that it's okay to see tracebacks for tests marked <tt class="docutils literal">[TODO]</tt>.</p>
+<p>The tests should take a few seconds to run.  Make sure the very last line of the output says <span class="trial-passed">PASSED</span>.  Note that it's okay to see tracebacks for tests marked <tt class="docutils literal">[TODO]</tt>.</p>
 <p>If any of the tests failed, Minerva may still work, but please report a bug for
 <a class="reference external" href="https://github.com/ludios/Minerva/issues">Minerva</a>,
 <a class="reference external" href="https://github.com/ludios/Webmagic/issues">Webmagic</a>,

@@ -29,6 +29,12 @@ code, pre, tt.literal {
 	font-family: 'Bitstream Vera Sans Mono', Consolas, 'Courier New', Courier, monospace;
 	background-color: #e8e7e7;
 }
+.trial-passed {
+	font-family: 'Bitstream Vera Sans Mono', Consolas, 'Courier New', Courier, monospace;
+	background-color: #e8e7e7;
+	color: darkgreen;
+	font-weight: bold;
+}
 pre.literal-block {
 	border: 1px solid #d6d5d5;
 	display: block;

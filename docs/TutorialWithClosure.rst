@@ -1,4 +1,4 @@
-.. include:: _MultiOS.rst
+.. include:: _Shared.rst
 
 ========
 Tutorial: Making a chat application with Minerva and Closure Library
@@ -265,7 +265,7 @@ Run the unit tests for Minerva, Webmagic, Securetypes, and Strfrag:
 
 |/div-windows|
 
-The tests should take a few seconds to run.  Make sure the very last line of the output says <code style="color:darkgreen; font-weight: bold">PASSED``.  Note that it's okay to see tracebacks for tests marked ``[TODO]``.
+The tests should take a few seconds to run.  Make sure the very last line of the output says :trial-passed:`PASSED`.  Note that it's okay to see tracebacks for tests marked ``[TODO]``.
 
 If any of the tests failed, Minerva may still work, but please report a bug for
 `Minerva <https://github.com/ludios/Minerva/issues>`__,

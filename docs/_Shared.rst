@@ -7,6 +7,9 @@
 .. role:: windows
 	:class: windows
 
+.. role:: trial-passed
+	:class: trial-passed
+
 .. |substep| raw:: html
 
 	<div class="substep">
