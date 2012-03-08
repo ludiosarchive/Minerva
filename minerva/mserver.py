@@ -18,6 +18,7 @@ from twisted.python.filepath import FilePath
 from twisted.internet import protocol, defer
 from twisted.internet.interfaces import (
 	IPushProducer, IPullProducer, IProtocol, IProtocolFactory)
+from twisted.internet.task import LoopingCall
 from twisted.web.server import NOT_DONE_YET
 
 from strfrag import StringFragment
@@ -710,15 +711,31 @@ class StreamTracker(object):
 
 	You do not want to subclass this.
 	"""
-	__slots__  = ('_clock', '_streamProtocolFactory', '_streams')
+	__slots__  = (
+		'_clock', '_streamProtocolFactory', '_inactiveCheckInterval',
+		'_streams', '_idleKiller')
 
 	stream = ServerStream
 
-	def __init__(self, clock, streamProtocolFactory):
+	def __init__(self, clock, streamProtocolFactory, inactiveCheckInterval=60):
+		"""
+		C{clock} is an L{IReactorTime} provider.
+		C{streamProtocolFactory} is an L{IStringFactory} provider.
+		C{inactiveCheckInterval} is how many seconds between a check that
+			disconnect inactive Streams, or None, or no check is desired.  (With
+			no check, you'll need to call C{.disconnectInactive()} yourself.)
+		"""
 		self._clock = clock
 		self._streamProtocolFactory = streamProtocolFactory
+		self._inactiveCheckInterval = inactiveCheckInterval
 		# A dict mapping streamId->ServerStream
 		self._streams = securedict()
+
+		if self._inactiveCheckInterval is not None:
+			self._idleKiller = LoopingCall(self.disconnectInactive)
+			self._idleKiller.clock = self._clock
+			# `now=True` to exercise the code early.
+			self._idleKiller.start(self._inactiveCheckInterval, now=True)
 
 
 	def getStream(self, streamId):
@@ -747,7 +764,9 @@ class StreamTracker(object):
 
 	def disconnectInactive(self):
 		"""
-		Disconnect ServerStreams for which the client appears to be MIA.
+		Disconnect L{ServerStream}s that the client appears to have abandoned.
+		By default, this is called automatically every 60 seconds, so you do
+		not need to call it.
 		"""
 		# Make a "copy" with .values() because s.timedOut() below calls our
 		# self._forgetStream, which mutates self._streams.
