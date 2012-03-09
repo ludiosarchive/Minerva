@@ -9,6 +9,7 @@ from twisted.internet import reactor
 from minerva.mserver import WebPort, StreamTracker
 
 
+# This is the server-side protocol where you'll receive the client's strings.
 class DemoProtocol(object):
 	def __init__(self, clock):
 		self._clock = clock
@@ -17,14 +18,16 @@ class DemoProtocol(object):
 		self.stream = stream
 
 	def streamReset(self, reasonString, applicationLevel):
+		log.msg("Stream reset: %r" % (reasonString,))
 		del self.stream
 
 	def stringReceived(self, s):
-		print "Got string " + repr(s)
-		self.stream.sendString("You sent me a string with %d bytes" % (len(s),))
+		print "Received from client: " + repr(s)
+		self.stream.sendString("Hey client, you sent me a string with "
+			"%d bytes" % (len(s),))
 
 
-# Factory can be used to store data and instantiate objects
+# The factory can be used to store data and instantiate objects
 # shared by the connected protocols.
 class DemoFactory(object):
 	def __init__(self, clock):
@@ -43,16 +46,22 @@ class MyDemo(resource.Resource):
 <script src="/_minerva/minerva-client.js"></script>
 <script>
 var byId = function(id) { return document.getElementById(id); };
+var logMessage = function(msg) {
+	byId('output').appendChild(document.createTextNode(msg));
+	if(window.console && console.log) { console.log(msg); }
+};
 
 var DemoProtocol = function() {};
 DemoProtocol.prototype.streamStarted = function(stream) {
 	this.stream = stream;
 };
-DemoProtocol.prototype.streamReset = function(stream) {};
-DemoProtocol.prototype.stringReceived = function(s) {
-	var msg = "Received from server: " + s + "\n";
-	byId('output').appendChild(document.createTextNode(msg));
+DemoProtocol.prototype.streamReset = function(reasonString, applicationLevel) {
+	logMessage("Stream reset: " + reasonString);
 };
+DemoProtocol.prototype.stringReceived = function(s) {
+	logMessage("Received from server: " + s + "\n");
+};
+
 var protocol = new DemoProtocol();
 var stream = new Minerva.ClientStream(new Minerva.HttpEndpoint("/_minerva/"));
 stream.bindToProtocol(protocol);
