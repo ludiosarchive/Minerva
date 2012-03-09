@@ -66,6 +66,9 @@ Send restricted string to server:
 <input type="text" id="textinput">
 <input type="button" value="Send" onclick="stream.sendString(byId('textinput').value)">
 
+<p>If it's not working, look at your browser's Console
+(Chrome: <kbd>F12</kbd> -> Console tab; Firefox: <kbd>ctrl-shift-k</kbd>)</p>
+
 <pre id="output"></pre>
 """
 
