@@ -11,9 +11,6 @@ from minerva.mserver import WebPort, StreamTracker
 
 # This is the server-side protocol where you'll receive the client's strings.
 class DemoProtocol(object):
-	def __init__(self, clock):
-		self._clock = clock
-
 	def streamStarted(self, stream):
 		self.stream = stream
 
@@ -30,11 +27,8 @@ class DemoProtocol(object):
 # The factory can be used to store data and instantiate objects
 # shared by the connected protocols.
 class DemoFactory(object):
-	def __init__(self, clock):
-		self._clock = clock
-
 	def buildProtocol(self):
-		stream = DemoProtocol(self._clock)
+		stream = DemoProtocol()
 		stream.factory = self
 		return stream
 
@@ -85,7 +79,7 @@ class Root(resource.Resource):
 
 def makeSite():
 	clock = reactor
-	factory = DemoFactory(clock)
+	factory = DemoFactory()
 	tracker = StreamTracker(clock, factory)
 	webPort = WebPort(clock, tracker)
 	root = Root(webPort)
