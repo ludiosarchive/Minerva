@@ -85,8 +85,8 @@ def makeSite():
 	tracker = StreamTracker(clock, factory)
 	webPort = WebPort(clock, tracker)
 	root = Root(webPort)
-	# timeout= is the HTTP keep-alive timeout that determines how long
-	# HTTP connections with no active requests stay connected.
+	# timeout= is twisted.web's keep-alive timeout that determines how long
+	# before the server disconnects HTTP connections with no active requests.
 	return server.Site(root, timeout=75)
 
 
