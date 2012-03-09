@@ -94,7 +94,7 @@ class ConflictingTemplateVars(Exception):
 
 class MinervaBootstrap(BetterResource):
 	"""
-	Deprecated resource used by chatapp and DemosMinerva.
+	Deprecated resource used by chatapp and DemosMinerva.  Don't use.
 	"""
 	isLeaf = True
 
