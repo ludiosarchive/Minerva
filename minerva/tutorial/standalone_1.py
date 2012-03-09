@@ -16,7 +16,6 @@ class DemoProtocol(object):
 
 	def streamReset(self, reasonString, applicationLevel):
 		log.msg("Stream reset: %r" % (reasonString,))
-		del self.stream
 
 	def stringReceived(self, s):
 		print "Received from client: " + repr(s)
