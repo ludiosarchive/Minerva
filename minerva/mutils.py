@@ -102,8 +102,8 @@ class MinervaBootstrap(BetterResource):
 		"""
 		C{fileCache} is a L{webmagic.filecache.FileCache}.
 		C{templateFile} is a L{FilePath} representing the jinja2 template to
-			use.  The file contents are cached forever, even if you delete
-			your references to the L{MinervaBootstrap}.
+			use.  The latest file contents are cached forever, even if you
+			delete your references to the L{MinervaBootstrap}.
 		C{dictionary} is a C{dict} whose keys are passed to the template.
 			If this is mutated, new requests will have the new dictionary
 			contents.
