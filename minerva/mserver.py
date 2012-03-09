@@ -9,6 +9,7 @@ See minerva.test_mserver for the tests.
 
 import sys
 import re
+import time
 from functools import partial
 
 from zope.interface import Attribute, implements
@@ -26,6 +27,7 @@ from securetypes import securedict
 
 from webmagic.untwist import BetterResource, BetterFile, setNoCacheNoStoreHeaders
 from webmagic.pathmanip import getCacheBrokenHref
+from webmagic.filecache import FileCache
 
 from minerva import decoders
 from minerva.objcheck import strToNonNegLimit
@@ -1643,9 +1645,9 @@ class XDRFrame(BetterResource):
 	dictionary = {'dev_mode': False}
 	templateFile = FilePath(__file__).sibling('xdrframe.html')
 
-	def __init__(self, fileCache, allowedDomains):
-		self._fileCache = fileCache
+	def __init__(self, allowedDomains, fileCache):
 		self._allowedDomains = allowedDomains
+		self._fileCache = fileCache
 
 
 	def render_GET(self, request):
@@ -1704,20 +1706,34 @@ class _HttpIo(BetterResource):
 requireFiles([
 	FilePath(__file__).sibling('compiled_client').child('FlashConnector.swf').path])
 
+_defaultFileCache = FileCache(time.time, 0.1)
+
 class WebPort(BetterResource):
 	"""
 	You must put this resource into your Site's resource tree so that Minerva
 	clients can connect to your Minerva server.
 	"""
-	def __init__(self, clock, streamTracker, fileCache, allowedDomains):
+	def __init__(self, clock, streamTracker, allowedDomains=None, fileCache=_defaultFileCache):
 		BetterResource.__init__(self)
+
+		if allowedDomains is None:
+			allowedDomains = []
+
 		self.putChild('io', _HttpIo(clock, streamTracker))
-		self.putChild('xdrframe', XDRFrame(fileCache, allowedDomains))
-		self.putChild('xdrframe_dev', XDRFrameDev(fileCache, allowedDomains))
+		self.putChild('xdrframe', XDRFrame(allowedDomains, fileCache))
+		self.putChild('xdrframe_dev', XDRFrameDev(allowedDomains, fileCache))
 
 		flashConnector = FilePath(__file__).\
 			sibling('compiled_client').child('FlashConnector.swf')
 		self.putChild('FlashConnector.swf', BetterFile(flashConnector.path))
+
+		# User can load minerva-client.js from anywhere, but provide it
+		# in _minerva/ for convenience.  (Or if user is using Closure
+		# Library for their application, they will load their own JS instead
+		# the standalone minerva-client.js.)
+		minervaClient = FilePath(__file__).\
+			sibling('compiled_client').child('minerva-client.js')
+		self.putChild('minerva-client.js', BetterFile(minervaClient.path))
 
 
 

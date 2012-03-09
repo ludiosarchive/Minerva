@@ -353,7 +353,7 @@ def makeMinervaAndHttp(reactor, fileCache, socketPorts, domain, closureLibrary):
 	if domain:
 		allowedDomains.append(domain)
 
-	webPort = WebPort(clock, tracker, fileCache, allowedDomains)
+	webPort = WebPort(clock, tracker, allowedDomains, fileCache)
 	stf = ServerTransportFactory(clock, tracker, policyString=policyString)
 
 	mainSocketPort = socketPorts[0] if socketPorts else None
