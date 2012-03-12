@@ -35,7 +35,17 @@ class DemoFactory(object):
 class MyDemo(resource.Resource):
 	def render_GET(self, request):
 		return r"""<!doctype html>
-<div id="minerva-elements"></div>
+<div id="minerva-elements"></div> <!-- required container -->
+
+Send restricted string to server:
+<input type="text" id="textinput">
+<input type="button" value="Send" onclick="stream.sendString(byId('textinput').value)">
+
+<p>If it's not working, look at your browser's Console
+(Chrome: <kbd>F12</kbd> -> Console tab; Firefox: <kbd>ctrl-shift-k</kbd>)</p>
+
+<pre id="output"></pre>
+
 <script src="/_minerva/minerva-client.js"></script>
 <script>
 var byId = function(id) { return document.getElementById(id); };
@@ -43,6 +53,7 @@ var logMessage = function(msg) {
 	byId('output').appendChild(document.createTextNode(msg));
 	if(window.console && console.log) { console.log(msg); }
 };
+window.onerror = logMessage;
 
 var DemoProtocol = function() {};
 DemoProtocol.prototype.streamStarted = function(stream) {
@@ -60,15 +71,6 @@ var stream = new Minerva.ClientStream(new Minerva.HttpEndpoint("/_minerva/"));
 stream.bindToProtocol(protocol);
 stream.start();
 </script>
-
-Send restricted string to server:
-<input type="text" id="textinput">
-<input type="button" value="Send" onclick="stream.sendString(byId('textinput').value)">
-
-<p>If it's not working, look at your browser's Console
-(Chrome: <kbd>F12</kbd> -> Console tab; Firefox: <kbd>ctrl-shift-k</kbd>)</p>
-
-<pre id="output"></pre>
 """
 
 
