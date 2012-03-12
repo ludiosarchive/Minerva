@@ -50,7 +50,7 @@ Send restricted string to server:
 <script>
 var byId = function(id) { return document.getElementById(id); };
 var logMessage = function(msg) {
-	byId('output').appendChild(document.createTextNode(msg));
+	byId('output').appendChild(document.createTextNode(msg + "\n"));
 	if(window.console && console.log) { console.log(msg); }
 };
 window.onerror = logMessage;
@@ -63,7 +63,7 @@ DemoProtocol.prototype.streamReset = function(reasonString, applicationLevel) {
 	logMessage("Stream reset: " + reasonString);
 };
 DemoProtocol.prototype.stringReceived = function(s) {
-	logMessage("Received from server: " + s + "\n");
+	logMessage("Received from server: " + s);
 };
 
 var protocol = new DemoProtocol();
