@@ -978,10 +978,28 @@ cw.net.ClientStream.prototype.getUserContext = function() {
  */
 cw.net.ClientStream.prototype.bindToProtocol = function(proto) {
 	if(cw.net.STANDALONE_CLIENT_BUILD_) {
+		if(!goog.isDef(proto['streamStarted'])) {
+			throw Error("Protocol is missing required method streamStarted");
+		}
+		if(!goog.isDef(proto['streamReset'])) {
+			throw Error("Protocol is missing required method streamReset");
+		}
+		if(!goog.isDef(proto['stringReceived'])) {
+			throw Error("Protocol is missing required method stringReceived");
+		}
 		this.onstarted = goog.bind(proto['streamStarted'], proto);
 		this.onreset = goog.bind(proto['streamReset'], proto);
 		this.onstring = goog.bind(proto['stringReceived'], proto);
 	} else {
+		if(!goog.isDef(proto.streamStarted)) {
+			throw Error("Protocol is missing required method streamStarted");
+		}
+		if(!goog.isDef(proto.streamReset)) {
+			throw Error("Protocol is missing required method streamReset");
+		}
+		if(!goog.isDef(proto.stringReceived)) {
+			throw Error("Protocol is missing required method stringReceived");
+		}
 		this.onstarted = goog.bind(proto.streamStarted, proto);
 		this.onreset = goog.bind(proto.streamReset, proto);
 		this.onstring = goog.bind(proto.stringReceived, proto);
