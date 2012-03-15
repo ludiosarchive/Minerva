@@ -6,7 +6,7 @@ log.startLogging(sys.stdout)
 from twisted.web import resource, server
 from twisted.internet import reactor
 
-from minerva.mserver import WebPort, StreamTracker
+from minerva.mserver import WebPort, StreamTracker, QANProtocolWrapper
 
 try:
 	import simplejson as json
@@ -14,13 +14,14 @@ except ImportError:
 	import json
 
 
-def sendJsonTo(protocol, payload):
-	protocol.stream.sendString(json.dumps(payload))
+def notifyJsonTo(protocol, payload):
+	protocol.qanHelper.notify(json.dumps(payload))
 
-# This is the server-side protocol where you'll receive the client's strings.
+# This is the server-side protocol where you'll receive the client's questions and notifications.
 class DemoProtocol(object):
-	def streamStarted(self, stream):
+	def streamStarted(self, stream, qanHelper):
 		self.stream = stream
+		self.qanHelper = qanHelper
 		self.id = self.factory.clientCounter
 		self.factory.clients[self.id] = self
 
@@ -28,27 +29,29 @@ class DemoProtocol(object):
 		log.msg("Stream reset: %r" % (reasonString,))
 		del self.factory.clients[self.id]
 
-	def stringReceived(self, s):
+	def bodyReceived(self, s, isQuestion):
 		payload = json.loads(s)
-		print "Received from client #%d: %r" % (self.id, payload)
+		print "Received from client #%d: %r, isQuestion=%r" % (self.id, payload, isQuestion)
 
 		action = payload[0]
 		if action == u'broadcast':
 			_, text = payload
 			for protocol in self.factory.clients.itervalues():
 				if protocol == self:
-					sendJsonTo(protocol, u"You told everyone: %s" % (text,))
+					notifyJsonTo(protocol, u"You told everyone: %s" % (text,))
 				else:
-					sendJsonTo(protocol, u"Client #%d told everyone: %s" % (self.id, text))
+					notifyJsonTo(protocol, u"Client #%d told everyone: %s" % (self.id, text))
 		elif action == u'privmsg':
 			_, recipient, text = payload
 			try:
 				protocol = self.factory.clients[recipient]
 			except KeyError:
-				sendJsonTo(self, u"Sorry, #%d isn't connected." % (recipient,))
+				notifyJsonTo(self, u"Sorry, #%d isn't connected." % (recipient,))
 			else:
-				sendJsonTo(self, u"You told #%d: %s" % (recipient, text))
-				sendJsonTo(protocol, u"Client #%d told you: %s" % (self.id, text))
+				notifyJsonTo(self, u"You told #%d: %s" % (recipient, text))
+				notifyJsonTo(protocol, u"Client #%d told you: %s" % (self.id, text))
+		elif action == u'listclients':
+			return json.dumps(self.factory.clients.keys())
 
 
 # The factory can be used to store data and instantiate objects
@@ -62,7 +65,7 @@ class DemoFactory(object):
 		self.clientCounter += 1
 		protocol = DemoProtocol()
 		protocol.factory = self
-		return protocol
+		return QANProtocolWrapper(protocol)
 
 
 class MyDemo(resource.Resource):
@@ -78,6 +81,9 @@ Send Unicode string to everyone:
 Send Unicode string to client #<input type="text" id="recipient" size=2>:
 <input type="text" id="textinput_privmsg">
 <input type="button" value="Send" onclick="privmsgString(parseInt(byId('recipient').value), byId('textinput_privmsg').value)">
+<br>
+
+<input type="button" value="Get list of clients" onclick="getClients()">
 
 <p>If it's not working, look at your browser's Console
 (Chrome: <kbd>F12</kbd> -> Console tab; Firefox: <kbd>ctrl-shift-k</kbd>)</p>
@@ -94,27 +100,42 @@ var logMessage = function(msg) {
 window.onerror = logMessage;
 
 var DemoProtocol = function() {};
-DemoProtocol.prototype.streamStarted = function(stream) {
+DemoProtocol.prototype.streamStarted = function(stream, qanHelper) {
 	this.stream = stream;
+	this.qanHelper = qanHelper;
 };
 DemoProtocol.prototype.streamReset = function(reasonString, applicationLevel) {
 	logMessage("Stream reset: " + reasonString);
 };
-DemoProtocol.prototype.stringReceived = function(s) {
-	logMessage("Received from server: " + Minerva.JSON.parse(s));
+DemoProtocol.prototype.bodyReceived = function(s, isQuestion) {
+	logMessage("Received " + (isQuestion ? "question" : "notification") +
+		" from server: " + Minerva.JSON.parse(s));
 };
 
 var broadcastString = function(s) {
-	stream.sendString(Minerva.JSON.serialize(['broadcast', s]));
+	protocol.qanHelper.notify(Minerva.JSON.serialize(['broadcast', s]));
 };
 
 var privmsgString = function(id, s) {
-	stream.sendString(Minerva.JSON.serialize(['privmsg', id, s]));
+	protocol.qanHelper.notify(Minerva.JSON.serialize(['privmsg', id, s]));
+};
+
+var getClients = function() {
+	// .ask returns a Minerva.Deferred (goog.async.Deferred) object
+	var d = protocol.qanHelper.ask(Minerva.JSON.serialize(['listclients']));
+	d.addCallback(function(json) {
+		var clients = Minerva.JSON.parse(json);
+		logMessage("Connected clients: " + clients.join(", "));
+	});
+	d.addErrback(function(e) {
+		logMessage("Ask error: " + e);
+	});
 };
 
 var protocol = new DemoProtocol();
 var stream = new Minerva.ClientStream(new Minerva.HttpEndpoint("/_minerva/"));
-stream.bindToProtocol(protocol);
+var wrapper = new Minerva.QANProtocolWrapper(protocol);
+stream.bindToProtocol(wrapper);
 stream.start();
 </script>
 """

@@ -46,9 +46,9 @@ class DemoFactory(object):
 
 	def buildProtocol(self):
 		self.clientCounter += 1
-		stream = DemoProtocol()
-		stream.factory = self
-		return stream
+		protocol = DemoProtocol()
+		protocol.factory = self
+		return protocol
 
 
 class MyDemo(resource.Resource):

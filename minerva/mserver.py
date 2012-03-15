@@ -200,7 +200,7 @@ class QANProtocolWrapper(object):
 		self.stream.reset("QANHelper said: %s" % (reason,))
 
 
-	def streamStarted(stream):
+	def streamStarted(self, stream):
 		self.stream = stream
 		self.qanHelper = QANHelper(
 			self.qanProtocol.bodyReceived,
@@ -210,7 +210,7 @@ class QANProtocolWrapper(object):
 		self.qanProtocol.streamStarted(self.stream, self.qanHelper)
 
 
-	def streamReset(reasonString, applicationLevel):
+	def streamReset(self, reasonString, applicationLevel):
 		self.qanHelper.failAll("Stream reset "
 			"applicationLevel=%r, reason: %s" % (applicationLevel, reasonString))
 		self.qanProtocol.streamReset(reasonString, applicationLevel)

@@ -35,9 +35,9 @@ class DemoProtocol(object):
 # shared by the connected protocols.
 class DemoFactory(object):
 	def buildProtocol(self):
-		stream = DemoProtocol()
-		stream.factory = self
-		return stream
+		protocol = DemoProtocol()
+		protocol.factory = self
+		return protocol
 
 
 class MyDemo(resource.Resource):

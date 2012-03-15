@@ -587,11 +587,18 @@ cw.net.QANProtocolWrapper.prototype.streamStarted = function(stream) {
 	this.qanHelper = new cw.net.QANHelper(
 		/* Coerce because QANHelper works with any type, but IQANProtocol
 		 * always get a string. */
-		/** @type {function(*, boolean)} */ (this.qanProtocol.bodyReceived),
-		this.logError_,
-		this.sendQANFrame_,
-		this.fatalError_);
-	this.qanProtocol.streamStarted(this.stream, this.qanHelper);
+		/** @type {function(*, boolean)} */ (
+			cw.net.STANDALONE_CLIENT_BUILD_ ?
+				goog.bind(this.qanProtocol['bodyReceived'], this.qanProtocol) :
+				goog.bind(this.qanProtocol.bodyReceived, this.qanProtocol)),
+		goog.bind(this.logError_, this),
+		goog.bind(this.sendQANFrame_, this),
+		goog.bind(this.fatalError_, this));
+	if(cw.net.STANDALONE_CLIENT_BUILD_) {
+		this.qanProtocol['streamStarted'].call(this.qanProtocol, this.stream, this.qanHelper);
+	} else {
+		this.qanProtocol.streamStarted(this.stream, this.qanHelper);
+	}
 };
 
 /**
@@ -602,7 +609,11 @@ cw.net.QANProtocolWrapper.prototype.streamReset = function(reasonString, applica
 	this.qanHelper.failAll("Stream reset " +
 		"applicationLevel=" + cw.repr.repr(applicationLevel) +
 		", reason: " + reasonString);
-	this.qanProtocol.streamReset(reasonString, applicationLevel);
+	if(cw.net.STANDALONE_CLIENT_BUILD_) {
+		this.qanProtocol['streamReset'].call(this.qanProtocol, reasonString, applicationLevel);
+	} else {
+		this.qanProtocol.streamReset(reasonString, applicationLevel);
+	}
 };
 
 /**

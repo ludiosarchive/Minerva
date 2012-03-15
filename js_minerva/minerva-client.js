@@ -27,8 +27,9 @@ goog.exportProperty(cw.net.QANHelper.prototype, 'notify', cw.net.QANHelper.proto
 goog.exportProperty(cw.net.QANHelper.prototype, 'failAll', cw.net.QANHelper.prototype.failAll);
 
 goog.exportSymbol('Minerva.QANProtocolWrapper', cw.net.QANProtocolWrapper);
-goog.exportProperty(cw.net.QANProtocolWrapper.prototype, 'stream', cw.net.QANProtocolWrapper.prototype.stream);
-goog.exportProperty(cw.net.QANProtocolWrapper.prototype, 'qanHelper', cw.net.QANProtocolWrapper.prototype.qanHelper);
+goog.exportProperty(cw.net.QANProtocolWrapper.prototype, 'streamStarted', cw.net.QANProtocolWrapper.prototype.streamStarted);
+goog.exportProperty(cw.net.QANProtocolWrapper.prototype, 'streamReset', cw.net.QANProtocolWrapper.prototype.streamReset);
+goog.exportProperty(cw.net.QANProtocolWrapper.prototype, 'stringReceived', cw.net.QANProtocolWrapper.prototype.stringReceived);
 
 goog.exportSymbol('Minerva.Deferred', goog.async.Deferred);
 goog.exportProperty(goog.async.Deferred.prototype, 'cancel', goog.async.Deferred.prototype.cancel);
