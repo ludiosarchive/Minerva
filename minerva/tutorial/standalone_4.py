@@ -72,7 +72,8 @@ class MyDemo(resource.Resource):
 
 Send Unicode string to everyone:
 <input type="text" id="textinput_broadcast">
-<input type="button" value="Send" onclick="broadcastString(byId('textinput_broadcast').value)"><br>
+<input type="button" value="Send" onclick="broadcastString(byId('textinput_broadcast').value)">
+<br>
 
 Send Unicode string to client #<input type="text" id="recipient" size=2>:
 <input type="text" id="textinput_privmsg">
