@@ -351,12 +351,12 @@ cw.net.HelloFrame.decode = function(frameString) {
 	// there was no leading/trailing whitespace.
 	var startsWithCurly = cw.string.startsWithAlt(json, "{");
 	var endsWithCurly = goog.string.endsWith(json, "}");
-	if(!startsWithCurly || !endsWithCurly || !goog.json.isValid_(json)) {
-		throw new cw.net.InvalidHello("Dangerous JSON or doesn't end with }");
+	if(!startsWithCurly || !endsWithCurly) {
+		throw new cw.net.InvalidHello("Bad JSON; missing outer braces");
 	}
 	/** @preserveTry */
 	try {
-		var blob = eval('(' + json + ')');
+		var blob = goog.json.parse(json);
 	} catch(e) {
 		e = goog.debug.normalizeErrorObject(e);
 		throw new cw.net.InvalidHello("Un-eval'able JSON: " + e.name + ": " + e.message);
