@@ -4,6 +4,7 @@
  */
 goog.provide('minerva_client');
 
+goog.require('goog.async.Deferred');
 goog.require('goog.debug.Logger');
 goog.require('goog.debug.LogManager');
 goog.require('goog.debug.DivConsole');
@@ -11,12 +12,43 @@ goog.require('goog.json');
 goog.require('cw.net.ClientStream');
 goog.require('cw.repr');
 goog.require('cw.eventual');
-goog.require('cw.net.QANHelper'); // TODO: remove this after something else require()s it
+goog.require('cw.net.QANHelper');
+goog.require('cw.net.QANProtocolWrapper');
 goog.require('cw.net.demo.getEndpoint'); // TODO: remove this
 goog.require('cw.net.demo.getEndpointByQueryArgs'); // TODO: remove this
 
 goog.exportSymbol('Minerva.HttpEndpoint', cw.net.HttpEndpoint);
 goog.exportSymbol('Minerva.SocketEndpoint', cw.net.SocketEndpoint);
+goog.exportSymbol('Minerva.QANHelper', cw.net.QANHelper);
+
+goog.exportProperty(cw.net.QANHelper.prototype, 'handleQANFrame', cw.net.QANHelper.prototype.handleQANFrame);
+goog.exportProperty(cw.net.QANHelper.prototype, 'ask', cw.net.QANHelper.prototype.ask);
+goog.exportProperty(cw.net.QANHelper.prototype, 'notify', cw.net.QANHelper.prototype.notify);
+goog.exportProperty(cw.net.QANHelper.prototype, 'failAll', cw.net.QANHelper.prototype.failAll);
+
+goog.exportSymbol('Minerva.QANProtocolWrapper', cw.net.QANProtocolWrapper);
+goog.exportProperty(cw.net.QANProtocolWrapper.prototype, 'stream', cw.net.QANProtocolWrapper.prototype.stream);
+goog.exportProperty(cw.net.QANProtocolWrapper.prototype, 'qanHelper', cw.net.QANProtocolWrapper.prototype.qanHelper);
+
+goog.exportSymbol('Minerva.Deferred', goog.async.Deferred);
+goog.exportProperty(goog.async.Deferred.prototype, 'cancel', goog.async.Deferred.prototype.cancel);
+goog.exportProperty(goog.async.Deferred.prototype, 'callback', goog.async.Deferred.prototype.callback);
+goog.exportProperty(goog.async.Deferred.prototype, 'errback', goog.async.Deferred.prototype.errback);
+goog.exportProperty(goog.async.Deferred.prototype, 'addErrback', goog.async.Deferred.prototype.addErrback);
+goog.exportProperty(goog.async.Deferred.prototype, 'addCallback', goog.async.Deferred.prototype.addCallback);
+goog.exportProperty(goog.async.Deferred.prototype, 'addCallbacks', goog.async.Deferred.prototype.addCallbacks);
+goog.exportProperty(goog.async.Deferred.prototype, 'chainDeferred', goog.async.Deferred.prototype.chainDeferred);
+goog.exportProperty(goog.async.Deferred.prototype, 'awaitDeferred', goog.async.Deferred.prototype.awaitDeferred);
+goog.exportProperty(goog.async.Deferred.prototype, 'branch', goog.async.Deferred.prototype.branch);
+goog.exportProperty(goog.async.Deferred.prototype, 'addBoth', goog.async.Deferred.prototype.addBoth);
+goog.exportProperty(goog.async.Deferred.prototype, 'hasFired', goog.async.Deferred.prototype.hasFired);
+
+goog.exportSymbol('Minerva.Deferred.succeed', goog.async.Deferred.succeed);
+goog.exportSymbol('Minerva.Deferred.fail', goog.async.Deferred.fail);
+goog.exportSymbol('Minerva.Deferred.cancelled', goog.async.Deferred.cancelled);
+
+goog.exportSymbol('Minerva.Deferred.AlreadyCalledError', goog.async.Deferred.AlreadyCalledError);
+goog.exportSymbol('Minerva.Deferred.CancelledError', goog.async.Deferred.CancelledError);
 
 goog.exportSymbol('Minerva.ClientStream', cw.net.ClientStream);
 goog.exportProperty(cw.net.ClientStream.prototype, 'getUserContext', cw.net.ClientStream.prototype.getUserContext);
