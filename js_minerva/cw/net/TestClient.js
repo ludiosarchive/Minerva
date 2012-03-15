@@ -243,6 +243,21 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 	},
 
 	/**
+	 * If sendString is called with anything but a string, it throws an Error
+	 */
+	function test_sendStringWithWrongType(self) {
+		var proto = new cw.net.TestClient.RecordingProtocol();
+		var stream = new cw.net.ClientStream(
+			fakeHttpEndpoint, self.streamPolicy_, self.callQueue_);
+		stream.bindToProtocol(proto);
+		proto.setStream(stream);
+		var badStrings = [null, undefined, 0, /./, true, [], {}];
+		goog.array.forEach(badStrings, function(string) {
+			self.assertThrows(Error, function() { stream.sendString(string); });
+		});
+	},
+
+	/**
 	 * If sendString is called with a string that has characters outside
 	 * of the restricted string range, it throws an Error.
 	 */

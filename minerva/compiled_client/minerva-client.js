@@ -3412,7 +3412,7 @@ p.Ze = function() {
 p.ae = function(a, b) {
   t(b) || (b = j);
   3 < this.w && f(Error("sendString: Can't send in state " + this.w));
-  b && !/^([ -~]*)$/.test(a) && f(Error("sendString: string has illegal chars: " + O(a)));
+  b && (x(a) || f(Error("sendString: not a string: " + O(a))), /^([ -~]*)$/.test(a) || f(Error("sendString: string has illegal chars: " + O(a))));
   this.Z.append(a);
   Kf(this)
 };

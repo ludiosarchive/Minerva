@@ -1239,9 +1239,14 @@ cw.net.ClientStream.prototype.sendString = function(string, validate) {
 	if(this.state_ > cw.net.StreamState_.STARTED) {
 		throw Error("sendString: Can't send in state " + this.state_);
 	}
-	if(validate && !cw.net.isRestrictedString(string)) {
-		throw Error("sendString: string " +
-			"has illegal chars: " + cw.repr.repr(string));
+	if(validate) {
+		if(!goog.isString(string)) {
+			throw Error("sendString: not a string: " + cw.repr.repr(string));
+		}
+		if(!cw.net.isRestrictedString(string)) {
+			throw Error("sendString: string " +
+				"has illegal chars: " + cw.repr.repr(string));
+		}
 	}
 	this.queue_.append(string);
 	this.tryToSendSoon_();
