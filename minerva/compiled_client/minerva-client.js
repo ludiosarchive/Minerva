@@ -915,13 +915,13 @@ var Yb = new Wb(s.window);
 function Zb(a) {
   return ja(a) || "object" == typeof a && ja(a.call) && ja(a.apply)
 }
-;function $b(a) {
-  var b = [];
-  ac(new bc, a, b);
-  return b.join("")
+;function $b(a, b) {
+  var c = [];
+  ac(new bc(b), a, c);
+  return c.join("")
 }
-function bc() {
-  this.Gb = i
+function bc(a) {
+  this.Gb = a
 }
 function ac(a, b, c) {
   switch(typeof b) {
@@ -2532,21 +2532,21 @@ q.d = function() {
   this.Ib.b();
   delete this.u
 };
-var Ce = [];
+var Be = [];
 function De() {
   var a = new M;
-  Ce.push(a);
+  Be.push(a);
   return a
 }
 function Ee(a) {
-  var b = Ce;
-  Ce = [];
+  var b = Be;
+  Be = [];
   fb(b, function(b) {
     Ob(b, a)
   })
 }
 function Fe(a, b) {
-  if(Ce.length) {
+  if(Be.length) {
     return De()
   }
   var c = new oe(b + "FlashConnector.swf?cb=" + Ge);
@@ -3451,8 +3451,8 @@ function If(a, b, c) {
         }
       }
     }
-  }catch(Be) {
-    return Be instanceof X || g(Be), a.a.z(a.l() + " is closing soon because got InvalidFrame: " + O(b)), a.Ya = j
+  }catch(Ce) {
+    return Ce instanceof X || g(Ce), a.a.z(a.l() + " is closing soon because got InvalidFrame: " + O(b)), a.Ya = j
   }
   return m
 }
@@ -3940,6 +3940,18 @@ y("Minerva.LogManager", V);
 V.getRoot = V.dc;
 y("Minerva.DivConsole", qd);
 qd.prototype.setCapturing = qd.prototype.Ce;
+y("Minerva.JSON", {});
+y("Minerva.JSON.parse", function(a) {
+  a = "" + a;
+  if(/^\s*$/.test(a) ? 0 : /^[\],:{}\s\u2028\u2029]*$/.test(a.replace(/\\["\\\/bfnrtu]/g, "@").replace(/"[^"\\\n\r\u2028\u2029\x00-\x08\x10-\x1f\x80-\x9f]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, "]").replace(/(?:^|:|,)(?:[\s\u2028\u2029]*\[)+/g, ""))) {
+    try {
+      return eval("(" + a + ")")
+    }catch(b) {
+    }
+  }
+  g(Error("Invalid JSON string: " + a))
+});
+y("Minerva.JSON.serialize", $b);
 y("Minerva.bind", x);
 y("Minerva.repr", O);
 y("Minerva.theCallQueue", Yb);

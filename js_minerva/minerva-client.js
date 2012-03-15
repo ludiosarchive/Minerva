@@ -7,6 +7,7 @@ goog.provide('minerva_client');
 goog.require('goog.debug.Logger');
 goog.require('goog.debug.LogManager');
 goog.require('goog.debug.DivConsole');
+goog.require('goog.json');
 goog.require('cw.net.ClientStream');
 goog.require('cw.repr');
 goog.require('cw.eventual');
@@ -55,6 +56,12 @@ goog.exportProperty(goog.debug.LogManager, 'getRoot', goog.debug.LogManager.getR
 
 goog.exportSymbol('Minerva.DivConsole', goog.debug.DivConsole);
 goog.exportProperty(goog.debug.DivConsole.prototype, 'setCapturing', goog.debug.DivConsole.prototype.setCapturing);
+
+// Expose goog.json, because the browser's native JSON object is useless,
+// because it does not encode Unicode to ASCII \uXXXX escapes.
+goog.exportSymbol('Minerva.JSON', {});
+goog.exportSymbol('Minerva.JSON.parse', goog.json.parse);
+goog.exportSymbol('Minerva.JSON.serialize', goog.json.serialize);
 
 goog.exportSymbol('Minerva.bind', goog.bind);
 goog.exportSymbol('Minerva.repr', cw.repr.repr);
