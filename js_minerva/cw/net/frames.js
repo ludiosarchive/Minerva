@@ -17,6 +17,7 @@ goog.provide('cw.net.ResetFrame');
 goog.provide('cw.net.TransportKillFrame');
 goog.provide('cw.net.InvalidFrame');
 goog.provide('cw.net.HttpFormat');
+goog.provide('cw.net.isRestrictedString');
 goog.provide('cw.net.decodeFrameFromClient');
 goog.provide('cw.net.decodeFrameFromServer');
 
@@ -746,7 +747,7 @@ cw.net.YouCloseItFrame.prototype.encodeToPieces = function(sb) {
  * 	within inclusive range 0x20 " " - 0x7E "~".
  * @private
  */
-cw.net.isRestrictedString_ = function(string) {
+cw.net.isRestrictedString = function(string) {
 	return /^([ -~]*)$/.test(string);
 };
 
@@ -778,7 +779,7 @@ goog.inherits(cw.net.ResetFrame, cw.record.Record);
 cw.net.ResetFrame.decode = function(frameString) {
 	var reasonString = frameString.substr(0, frameString.length - 3);
 
-	if(reasonString.length > 255 || !cw.net.isRestrictedString_(reasonString)) {
+	if(reasonString.length > 255 || !cw.net.isRestrictedString(reasonString)) {
 		throw new cw.net.InvalidFrame("bad reasonString");
 	}
 

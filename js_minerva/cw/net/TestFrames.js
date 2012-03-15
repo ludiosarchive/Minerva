@@ -27,6 +27,7 @@ goog.require('cw.net.ResetFrame');
 goog.require('cw.net.TransportKillFrame');
 goog.require('cw.net.InvalidFrame');
 goog.require('cw.net.decodeFrameFromServer');
+goog.require('cw.net.isRestrictedString');
 
 
 // anti-clobbering for JScript; aliases
@@ -62,13 +63,13 @@ var rep = goog.string.repeat;
 cw.UnitTest.TestCase.subclass(cw.net.TestFrames, 'IsRestrictedStringTests').methods(
 
 	function test_isRestrictedString(self) {
-		self.assertTrue(cw.net.isRestrictedString_(""));
-		self.assertTrue(cw.net.isRestrictedString_("hi"));
-		self.assertTrue(cw.net.isRestrictedString_(" ~"));
-		self.assertFalse(cw.net.isRestrictedString_("hi\t"));
-		self.assertFalse(cw.net.isRestrictedString_("hi\n"));
-		self.assertFalse(cw.net.isRestrictedString_("\n"));
-		self.assertFalse(cw.net.isRestrictedString_("hi\nhi"));
+		self.assertTrue(cw.net.isRestrictedString(""));
+		self.assertTrue(cw.net.isRestrictedString("hi"));
+		self.assertTrue(cw.net.isRestrictedString(" ~"));
+		self.assertFalse(cw.net.isRestrictedString("hi\t"));
+		self.assertFalse(cw.net.isRestrictedString("hi\n"));
+		self.assertFalse(cw.net.isRestrictedString("\n"));
+		self.assertFalse(cw.net.isRestrictedString("hi\nhi"));
 	}
 );
 

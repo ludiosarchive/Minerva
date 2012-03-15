@@ -189,7 +189,17 @@ def stringToQANFrame(frameString):
 
 
 def isAnswerFrame(qanFrame):
+	"""
+	Is C{qanFrame} an L{OkayAnswer}, L{KnownErrorAnswer}, or L{UnknownErrorAnswer}?
+	"""
 	return isinstance(qanFrame, (OkayAnswer, KnownErrorAnswer, UnknownErrorAnswer))
+
+
+def frameHasBody(qanFrame):
+	"""
+	Does this C{qanFrame} have a body?  (Everything but L{Cancellation} does.)
+	"""
+	return not isinstance(qanFrame, Cancellation)
 
 
 class KnownError(Exception):
@@ -344,9 +354,10 @@ class QANHelper(object):
 			with L{KnownError} or L{UnknownError} or L{QuestionFailed}.
 		@rtype: L{defer.Deferred}
 		"""
-		self._qidCounter += 1
-		qid = self._qidCounter
+		qid = self._qidCounter + 1
+		# Note: _sendQANFrame may raise exception if body is invalid
 		self._sendQANFrame(Question(body, qid))
+		self._qidCounter += 1
 
 		assert qid not in self._ourQuestions
 		d = defer.Deferred(lambda _: self._sendCancel(qid))

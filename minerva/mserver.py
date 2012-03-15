@@ -180,11 +180,15 @@ class QANProtocolWrapper(object):
 	"""
 	implements(IStringProtocol)
 
-	def __init__(self, qanProtocol):
+	def __init__(self, qanProtocol, validateBodies=True):
 		"""
 		@param qanProtocol: An object that implements L{IQANProtocol}.
+		@param validateBodies: Validate locally-created bodies of questions
+			and answers?  Default C{True}.  Set to C{False} if you're
+			sure your application works correctly.
 		"""
 		self.qanProtocol = qanProtocol
+		self._validateBodies = validateBodies
 
 
 	def _logError(self, message, failure):
@@ -193,7 +197,7 @@ class QANProtocolWrapper(object):
 
 
 	def _sendQANFrame(self, qanFrame):
-		self.stream.sendString(qanFrameToString(qanFrame))
+		self.stream.sendString(qanFrameToString(qanFrame), self._validateBodies)
 
 
 	def _fatalError(self, reason):

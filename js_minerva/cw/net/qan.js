@@ -13,6 +13,8 @@
 
 goog.provide('cw.net.stringToQANFrame');
 goog.provide('cw.net.qanFrameToString');
+goog.provide('cw.net.isAnswerFrame');
+goog.provide('cw.net.frameHasBody');
 goog.provide('cw.net.InvalidQANFrame');
 goog.provide('cw.net.QANHelper');
 goog.provide('cw.net.KnownError');
@@ -262,6 +264,7 @@ cw.net.stringToQANFrame = function(frameString) {
 	}
 };
 
+
 /**
  * @param {!cw.net.QANFrame} qanFrame
  * @return {boolean} Is qanFrame an OkayAnswer, KnownErrorAnswer, or
@@ -272,6 +275,15 @@ cw.net.isAnswerFrame = function(qanFrame) {
 		qanFrame instanceof cw.net.OkayAnswer ||
 		qanFrame instanceof cw.net.KnownErrorAnswer ||
 		qanFrame instanceof cw.net.UnknownErrorAnswer);
+};
+
+
+/**
+ * @param {!cw.net.QANFrame} qanFrame
+ * @return {boolean} Does this qanFrame have a body?  (Everything but Cancellation does.)
+ */
+cw.net.frameHasBody = function(qanFrame) {
+	return !(qanFrame instanceof cw.net.Cancellation);
 };
 
 
@@ -556,9 +568,10 @@ cw.net.QANHelper.prototype.sendCancel_ = function(qid) {
  * 	{@code QuestionFailed}.
  */
 cw.net.QANHelper.prototype.ask = function(body) {
-	this.qidCounter_ += 1;
-	var qid = this.qidCounter_;
+	var qid = this.qidCounter_ + 1;
 	this.sendQANFrame_(new cw.net.Question(body, qid));
+	// Note: sendQANFrame_ may raise exception if body is invalid
+	this.qidCounter_ += 1;
 
 	goog.asserts.assert(!this.ourQuestions_.containsKey(qid));
 	var that = this;

@@ -55,6 +55,7 @@ goog.require('cw.net.FlashSocketConduit');
 goog.require('cw.net.theXDRTracker');
 goog.require('cw.net.stringToQANFrame');
 goog.require('cw.net.qanFrameToString');
+goog.require('cw.net.frameHasBody');
 goog.require('cw.net.QANHelper');
 goog.require('cw.net.breaker_FlashConnector_swf');
 goog.require('goog.ui.media.FlashObject');
@@ -72,6 +73,7 @@ goog.require('cw.net.ResetFrame');
 goog.require('cw.net.TransportKillFrame');
 goog.require('cw.net.InvalidFrame');
 goog.require('cw.net.HttpFormat');
+goog.require('cw.net.isRestrictedString');
 goog.require('cw.net.decodeFrameFromServer');
 
 
@@ -505,14 +507,21 @@ cw.net.IQANProtocol.prototype.bodyReceived = function(body, isQuestion) {
  * See {@code IQANProtocol}.
  *
  * @param {*} qanProtocol
- * @param {boolean} throwIntoWindow If true, QANProtocolWrapper
+ * @param {boolean=} validateBodies Validate locally-created bodies of questions
+ * 	and answers?  Default true.  Set to {@code false} if you're sure your
+ * 	application works correctly.
+ * @param {boolean=} throwIntoWindow If true, QANProtocolWrapper
  * 	will log errors as WARNINGs, without also throwing the errors into the
  * 	window.  Default is true.
  *
  * @implements {cw.net.IStringProtocol}
  * @constructor
  */
-cw.net.QANProtocolWrapper = function(qanProtocol, throwIntoWindow) {
+cw.net.QANProtocolWrapper = function(qanProtocol, validateBodies, throwIntoWindow) {
+	if(!goog.isDef(validateBodies)) {
+		validateBodies = true;
+	}
+
 	if(!goog.isDef(throwIntoWindow)) {
 		throwIntoWindow = true;
 	}
@@ -521,6 +530,12 @@ cw.net.QANProtocolWrapper = function(qanProtocol, throwIntoWindow) {
 	 * @type {!cw.net.IQANProtocol}
 	 */
 	this.qanProtocol = /** @type {!cw.net.IQANProtocol} */ (qanProtocol);
+
+	/**
+	 * @type {boolean}
+	 * @private
+	 */
+	this.validateBodies_ = validateBodies;
 
 	/**
 	 * @type {boolean}
@@ -563,7 +578,7 @@ cw.net.QANProtocolWrapper.prototype.logError_ = function(message, error) {
  * @param {!cw.net.QANFrame} qanFrame
  */
 cw.net.QANProtocolWrapper.prototype.sendQANFrame_ = function(qanFrame) {
-	this.stream.sendString(cw.net.qanFrameToString(qanFrame));
+	this.stream.sendString(cw.net.qanFrameToString(qanFrame), this.validateBodies_);
 };
 
 /**
@@ -1224,7 +1239,7 @@ cw.net.ClientStream.prototype.sendString = function(string, validate) {
 	if(this.state_ > cw.net.StreamState_.STARTED) {
 		throw Error("sendString: Can't send in state " + this.state_);
 	}
-	if(validate && !cw.net.isRestrictedString_(string)) {
+	if(validate && !cw.net.isRestrictedString(string)) {
 		throw Error("sendString: string " +
 			"has illegal chars: " + cw.repr.repr(string));
 	}
@@ -2137,7 +2152,7 @@ cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedString
 		if(frame instanceof cw.net.StringFrame) {
 			// Check that the string does not have illegal characters.
 			// If it does, it's probably because of HTTP response corruption.
-			if(!cw.net.isRestrictedString_(frame.string)) {
+			if(!cw.net.isRestrictedString(frame.string)) {
 				this.hadProblems_ = true;
 				return true;
 			}
