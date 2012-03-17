@@ -453,7 +453,7 @@ class ServerStream(object):
 		Called by a transport to tell me that it has received *already sorted*
 		(seqNum, string) L{pairs}.
 		"""
-		assert transport in self._transports
+		assert transport in self._transports, self._transports
 
 		if self.disconnected:
 			return
