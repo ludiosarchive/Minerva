@@ -192,8 +192,6 @@ class DemoProtocol(object):
 
 
 	def stringReceived(self, s):
-		# Remember, we cannot raise an exception here.
-
 		if s.startswith('echo:'):
 			self.stream.sendString(s.replace('echo:', '', 1))
 

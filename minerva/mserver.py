@@ -108,7 +108,6 @@ class SubprotocolProtocol(object):
 
 
 	def stringsReceived(self, strings):
-		# Remember, we cannot raise an exception here.
 		##print "stringsReceived", strings
 
 		if self._childProtocol is not None:
@@ -461,7 +460,11 @@ class ServerStream(object):
 		items, hitLimit = self._incoming.give(
 			pairs, self.maxUndeliveredStrings, self.maxUndeliveredBytes)
 		if items:
-			_callStringsOrStringReceived(self._protocol, items)
+			try:
+				_callStringsOrStringReceived(self._protocol, items)
+			except Exception:
+				log.msg("Peer's strings caused uncaught exception")
+				log.err()
 		# We deliver the deliverable strings even if the receive window is overflowing,
 		# just in case the peer sent something useful.
 		# Note: Underneath the stringsReceived call (above), someone may have

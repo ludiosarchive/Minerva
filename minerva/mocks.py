@@ -157,9 +157,11 @@ class MockServerStream(object):
 class _MockStringProtocol(object):
 	implements(IStringProtocol)
 
-	def __init__(self, callFrom=(), callWhat=()):
+	def __init__(self, callFrom=(), callWhat=(), raiseFrom=(), raiseWhat=None):
 		self._callFrom = callFrom
 		self._callWhat = callWhat
+		self._raiseFrom = raiseFrom
+		self._raiseWhat = raiseWhat
 
 
 	def _callStuff(self):
@@ -178,6 +180,8 @@ class _MockStringProtocol(object):
 		self.stream = stream
 		if 'streamStarted' in self._callFrom:
 			self._callStuff()
+		if 'streamStarted' in self._raiseFrom:
+			raise self._raiseWhat()
 
 
 	def getNew(self):
@@ -186,6 +190,8 @@ class _MockStringProtocol(object):
 
 	def streamReset(self, reasonString, applicationLevel):
 		self.log.append(['streamReset', reasonString, applicationLevel])
+		if 'streamReset' in self._raiseFrom:
+			raise self._raiseWhat()
 
 
 
@@ -195,6 +201,8 @@ class MockStringsProtocol(_MockStringProtocol):
 		self.log.append(['stringsReceived', strings])
 		if 'stringsReceived' in self._callFrom:
 			self._callStuff()
+		if 'stringsReceived' in self._raiseFrom:
+			raise self._raiseWhat()
 
 
 
@@ -204,6 +212,8 @@ class MockStringProtocol(_MockStringProtocol):
 		self.log.append(['stringReceived', s])
 		if 'stringReceived' in self._callFrom:
 			self._callStuff()
+		if 'stringReceived' in self._raiseFrom:
+			raise self._raiseWhat()
 
 
 

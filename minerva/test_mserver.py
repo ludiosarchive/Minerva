@@ -249,6 +249,33 @@ class ServerStreamTests(unittest.TestCase):
 		], i.getNew())
 
 
+	def test_stringReceivedRaisesException(self):
+		"""
+		If stringReceived raises an exception, it is logged.
+		"""
+		class MyFactory(MockStringFactory):
+			def buildProtocol(self):
+				obj = self.protocol(
+					raiseFrom=('stringReceived',),
+					raiseWhat=ZeroDivisionError)
+				obj.factory = self
+				return obj
+
+		factory = MyFactory()
+		s = ServerStream(self._clock, 'some fake id', factory)
+		t = DummySocketLikeTransport()
+		s.transportOnline(t, False, None)
+
+		s.stringsReceived(t, [(0, sf('string0'))])
+		errs = self.flushLoggedErrors(ZeroDivisionError)
+		self.assertEqual(len(errs), 1)
+
+		# and again
+		s.stringsReceived(t, [(1, sf('string1'))])
+		errs = self.flushLoggedErrors(ZeroDivisionError)
+		self.assertEqual(len(errs), 1)
+
+
 	def test_exhaustedReceiveWindowTooManyStrings(self):
 		"""
 		If too many strings are stuck in Incoming, the transport that received
