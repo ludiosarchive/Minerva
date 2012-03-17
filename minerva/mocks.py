@@ -158,6 +158,10 @@ class _MockStringProtocol(object):
 	implements(IStringProtocol)
 
 	def __init__(self, callFrom=(), callWhat=(), raiseFrom=(), raiseWhat=None):
+		assert isinstance(callFrom, tuple), callFrom
+		assert isinstance(callWhat, tuple), callWhat
+		assert isinstance(raiseFrom, tuple), raiseFrom
+
 		self._callFrom = callFrom
 		self._callWhat = callWhat
 		self._raiseFrom = raiseFrom

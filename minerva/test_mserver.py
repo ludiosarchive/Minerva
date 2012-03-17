@@ -276,6 +276,63 @@ class ServerStreamTests(unittest.TestCase):
 		self.assertEqual(len(errs), 1)
 
 
+	def test_streamStartedRaisesException(self):
+		"""
+		If streamStarted raises an exception, it is logged, and the stream is reset.
+		"""
+		class MyFactory(MockStringFactory):
+			def buildProtocol(self):
+				obj = self.protocol(
+					raiseFrom=('streamStarted',),
+					raiseWhat=ZeroDivisionError)
+				obj.factory = self
+				return obj
+
+		factory = MyFactory()
+		s = ServerStream(self._clock, 'some fake id', factory)
+		t = DummySocketLikeTransport()
+		s.transportOnline(t, False, None)
+
+		errs = self.flushLoggedErrors(ZeroDivisionError)
+		self.assertEqual(len(errs), 1)
+
+		i = list(factory.instances)[0]
+		self.assertEqual([
+			['streamStarted', s],
+			['streamReset', 'streamStarted raised uncaught exception', False],
+		], i.log)
+
+
+	def test_streamStartedResetsAndRaisesException(self):
+		"""
+		If streamStarted resets the stream and raises an exception,
+		it is logged, and the stream is reset with the original reset message.
+		"""
+		class MyFactory(MockStringFactory):
+			def buildProtocol(self):
+				obj = self.protocol(
+					callFrom=('streamStarted',),
+					callWhat=('reset',),
+					raiseFrom=('streamStarted',),
+					raiseWhat=ZeroDivisionError)
+				obj.factory = self
+				return obj
+
+		factory = MyFactory()
+		s = ServerStream(self._clock, 'some fake id', factory)
+		t = DummySocketLikeTransport()
+		s.transportOnline(t, False, None)
+
+		errs = self.flushLoggedErrors(ZeroDivisionError)
+		self.assertEqual(len(errs), 1)
+
+		i = list(factory.instances)[0]
+		self.assertEqual([
+			['streamStarted', s],
+			['streamReset', 'reset forced by mock protocol', True],
+		], i.log)
+
+
 	def test_exhaustedReceiveWindowTooManyStrings(self):
 		"""
 		If too many strings are stuck in Incoming, the transport that received

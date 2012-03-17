@@ -426,7 +426,8 @@ class ServerStream(object):
 		Called by ServerStream if it has given up on the stream.  This sends
 		ResetFrame to any open transports.
 		"""
-		assert not self.disconnected, self
+		if self.disconnected:
+			return
 		_cancelDc(self, '_sendSoonDc')
 		self.disconnected = True
 		# .copy() because _transports shrinks as transports call
@@ -519,8 +520,15 @@ class ServerStream(object):
 		# to upload strings without ever having set up a primary transport.
 		if not self._protocol:
 			self._protocol = self._streamProtocolFactory.buildProtocol()
-			self._protocol.streamStarted(self)
-		# Remember streamStarted can do anything to us, including reset or sendString.
+			try:
+				self._protocol.streamStarted(self)
+				# Remember: streamStarted can do anything to us,
+				# including reset or sendString.
+			except Exception:
+				log.msg("streamStarted raised uncaught exception; resetting stream")
+				log.err()
+				self._internalReset("streamStarted raised uncaught exception")
+				return
 
 		# TODO: do we really need _primaryTransport to still be connected?
 		# Can't we just remember what its transportNumber and ourSeqNum were?
