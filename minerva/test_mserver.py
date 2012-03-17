@@ -553,7 +553,9 @@ class ServerStreamTests(unittest.TestCase):
 
 		self.assertRaises(ValueError, lambda: s.sendString('bad\t'))
 		self.assertRaises(ValueError, lambda: s.sendString('bad\n'))
-		self.assertRaises(TypeError, lambda: s.sendString(u'bad\t'))
+		self.assertRaises(TypeError, lambda: s.sendString(u'bad'))
+		self.assertRaises(TypeError, lambda: s.sendString(3))
+		self.assertRaises(TypeError, lambda: s.sendString(None))
 
 		# Now with validation off
 		s.sendString('okay\t', validate=False)

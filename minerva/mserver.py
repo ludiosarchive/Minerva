@@ -346,8 +346,8 @@ class ServerStream(object):
 		@type validate: C{bool}
 		"""
 		if validate:
-			if isinstance(string, unicode):
-				raise TypeError("String %r must be a str, not unicode" % (string,))
+			if not isinstance(string, str):
+				raise TypeError("not a str: %r" % (string,))
 			if not isRestrictedString(string):
 				raise ValueError("String %r contains illegal characters.  "
 					"Only 0x20 (SPACE) - 0x7E (~) is allowed.  "
