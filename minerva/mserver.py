@@ -460,7 +460,7 @@ class ServerStream(object):
 			try:
 				_callStringsOrStringReceived(self._protocol, items)
 			except Exception:
-				log.msg("Peer's strings caused uncaught exception")
+				log.msg("stringReceived raised uncaught exception")
 				log.err()
 		# We deliver the deliverable strings even if the receive window is overflowing,
 		# just in case the peer sent something useful.
