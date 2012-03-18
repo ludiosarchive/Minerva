@@ -503,6 +503,23 @@ cw.net.IQANProtocol.prototype.bodyReceived = function(body, isQuestion) {
 
 
 /**
+ * @private
+ */
+cw.net.throwErrorIntoWindow_ = function(error) {
+	goog.global.setTimeout(function() {
+		// The stack trace is clobbered when the error is rethrown.  Append
+		// the stack trace to the message if available.  Since no one is
+		// capturing this error, the stack trace will be printed to the
+		// debug console.
+		if (goog.DEBUG && goog.isDef(error.message) && error.stack) {
+			error.message += '\n' + error.stack;
+		}
+		throw error;
+	}, 0);
+};
+
+
+/**
  * This is an {@code IStringProtocol} that makes your {@code IQANProtocol} work.
  * See {@code IQANProtocol}.
  *
@@ -558,19 +575,10 @@ cw.net.QANProtocolWrapper.prototype.logger_ =
 cw.net.QANProtocolWrapper.prototype.logError_ = function(message, error) {
 	this.logger_.warning(message, error);
 
+	// Since the user of Minerva might not have a logger set up, throw
+	// the error into the window as well.  goog.async.Deferred does this too.
 	if(this.throwIntoWindow_) {
-		// Since the user of Minerva might not have a logger set up, throw
-		// the error into the window as well.  goog.async.Deferred does this too.
-		goog.global.setTimeout(function() {
-			// The stack trace is clobbered when the error is rethrown.  Append
-			// the stack trace to the message if available.  Since no one is
-			// capturing this error, the stack trace will be printed to the
-			// debug console.
-			if (goog.DEBUG && goog.isDef(error.message) && error.stack) {
-				error.message += '\n' + error.stack;
-			}
-			throw error;
-		}, 0);
+		cw.net.throwErrorIntoWindow_(error);
 	}
 };
 
@@ -1609,7 +1617,13 @@ cw.net.ClientStream.prototype.stringsReceived_ = function(transport, pairs, avoi
 		for(var i=0; i < items.length; i++) {
 			var s = items[i];
 			if(this.onstring) {
-				this.onstring.call(this.userContext_, s);
+				try {
+					this.onstring.call(this.userContext_, s);
+				} catch(error) {
+					this.logger_.warning(
+						"onstring raised uncaught exception", error);
+					cw.net.throwErrorIntoWindow_(error);
+				}
 			}
 			// Under onstring, the state may have changed completely!
 			// The ClientStream may be RESETTING or disposed.
