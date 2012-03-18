@@ -366,6 +366,14 @@ class ServerStream(object):
 		self._tryToSendSoon()
 
 
+	def _finishReset(self, reasonString, applicationLevel):
+		self._fireNotifications()
+		try:
+			self._protocol.streamReset(reasonString, applicationLevel)
+		finally:
+			del self._protocol
+
+
 	# Called by the application only. Internal Minerva code uses _internalReset.
 	# This assumes _protocol has been instantiated.
 	def reset(self, reasonString):
@@ -387,12 +395,7 @@ class ServerStream(object):
 		# ServerStream.transportOffline
 		for t in self._transports.copy():
 			t.writeReset(reasonString, applicationLevel=True)
-		self._fireNotifications()
-		# Call application code last, to mitigate disaster if it raises an exception.
-		try:
-			self._protocol.streamReset(reasonString, True)
-		finally:
-			del self._protocol
+		self._finishReset(reasonString, True)
 
 
 	# Called by transports.
@@ -412,12 +415,7 @@ class ServerStream(object):
 		# ServerStream.transportOffline
 		for t in self._transports.copy():
 			t.closeGently()
-		self._fireNotifications()
-		# Call application code last, to mitigate disaster if it raises an exception.
-		try:
-			self._protocol.streamReset(reasonString, applicationLevel)
-		finally:
-			del self._protocol
+		self._finishReset(reasonString, applicationLevel)
 
 
 	# This assumes _protocol has been instantiated.
@@ -434,12 +432,7 @@ class ServerStream(object):
 		# ServerStream.transportOffline
 		for t in self._transports.copy():
 			t.writeReset(reasonString, False)
-		self._fireNotifications()
-		# Call application code last, to mitigate disaster if it raises an exception.
-		try:
-			self._protocol.streamReset(reasonString, False)
-		finally:
-			del self._protocol
+		self._finishReset(reasonString, False)
 
 
 	def timedOut(self):
