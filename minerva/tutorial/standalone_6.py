@@ -97,7 +97,6 @@ Send Unicode string to client #<input type="text" id="recipient" size=2>:
 <br>
 
 <input type="button" value="Get list of clients" onclick="getClients('listclients')">
-
 <input type="button" value="Get list of clients after 1 sec" onclick="getClients('listclients_in_1_sec')">
 
 <p>If it's not working, look at your browser's Console
