@@ -61,6 +61,7 @@ DemoProtocol.prototype.streamStarted = function(stream) {
 };
 DemoProtocol.prototype.streamReset = function(reasonString, applicationLevel) {
 	logMessage("Stream reset: " + reasonString);
+	logMessage("Reload the page to reconnect.");
 };
 DemoProtocol.prototype.stringReceived = function(s) {
 	logMessage("Received from server: " + s);

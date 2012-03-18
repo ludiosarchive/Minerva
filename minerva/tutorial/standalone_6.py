@@ -120,6 +120,7 @@ DemoProtocol.prototype.streamStarted = function(stream, qanHelper) {
 };
 DemoProtocol.prototype.streamReset = function(reasonString, applicationLevel) {
 	logMessage("Stream reset: " + reasonString);
+	logMessage("Reload the page to reconnect.");
 };
 DemoProtocol.prototype.bodyReceived = function(s, isQuestion) {
 	logMessage("Received " + (isQuestion ? "question" : "notification") +
