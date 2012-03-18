@@ -370,6 +370,9 @@ class ServerStream(object):
 		self._fireNotifications()
 		try:
 			self._protocol.streamReset(reasonString, applicationLevel)
+		except Exception:
+			log.msg("streamReset raised uncaught exception")
+			log.err()
 		finally:
 			del self._protocol
 
