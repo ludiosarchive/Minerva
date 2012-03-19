@@ -1883,7 +1883,7 @@ function T(a, b) {
   this.value = b
 }
 T.prototype.toString = o("name");
-var qd = new T("OFF", Infinity), rd = new T("SHOUT", 1200), sd = new T("SEVERE", 1E3), td = new T("WARNING", 900), vd = new T("INFO", 800), wd = new T("CONFIG", 700), xd = new T("FINE", 500), yd = new T("FINER", 400), zd = new T("FINEST", 300), Ad = new T("ALL", 0);
+var qd = new T("OFF", Infinity), rd = new T("SHOUT", 1200), sd = new T("SEVERE", 1E3), td = new T("WARNING", 900), ud = new T("INFO", 800), wd = new T("CONFIG", 700), xd = new T("FINE", 500), yd = new T("FINER", 400), zd = new T("FINEST", 300), Ad = new T("ALL", 0);
 function U(a) {
   return V.sd(a)
 }
@@ -1960,7 +1960,7 @@ p.v = function(a, b) {
   this.log(td, a, b)
 };
 p.info = function(a, b) {
-  this.log(vd, a, b)
+  this.log(ud, a, b)
 };
 p.ve = function(a, b) {
   this.log(wd, a, b)
@@ -2040,7 +2040,7 @@ Cd.prototype.le = function(a) {
     case td.value:
       e = "dbg-w";
       break;
-    case vd.value:
+    case ud.value:
       e = "dbg-i";
       break;
     default:
@@ -3711,8 +3711,8 @@ function Wf(a, b, c) {
                 if(c.length) {
                   Vf(a, c);
                   if(!v(c)) {
-                    for(var ud = c.length - 1;0 <= ud;ud--) {
-                      delete c[ud]
+                    for(var vd = c.length - 1;0 <= vd;vd--) {
+                      delete c[vd]
                     }
                   }
                   c.length = 0
@@ -4239,7 +4239,7 @@ T.OFF = qd;
 T.SHOUT = rd;
 T.SEVERE = sd;
 T.WARNING = td;
-T.INFO = vd;
+T.INFO = ud;
 T.CONFIG = wd;
 T.FINE = xd;
 T.FINER = yd;
@@ -4261,6 +4261,7 @@ z("Minerva.JSON.parse", function(a) {
   f(Error("Invalid JSON string: " + a))
 });
 z("Minerva.JSON.serialize", Vb);
+z("Minerva.JSON.asciify", Vb);
 z("Minerva.bind", y);
 z("Minerva.repr", O);
 z("Minerva.theCallQueue", Tb);

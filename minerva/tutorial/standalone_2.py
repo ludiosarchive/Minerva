@@ -76,7 +76,7 @@ DemoProtocol.prototype.stringReceived = function(s) {
 };
 
 var sendString = function(s) {
-	stream.sendString(Minerva.JSON.serialize(s));
+	stream.sendString(Minerva.JSON.asciify(s));
 };
 
 var protocol = new DemoProtocol();

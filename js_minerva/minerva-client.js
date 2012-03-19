@@ -12,6 +12,7 @@ goog.require('goog.json');
 goog.require('cw.net.ClientStream');
 goog.require('cw.repr');
 goog.require('cw.eventual');
+goog.require('cw.json');
 goog.require('cw.net.QANHelper');
 goog.require('cw.net.QANProtocolWrapper');
 goog.require('cw.net.demo.getEndpoint'); // TODO: remove this
@@ -90,11 +91,10 @@ goog.exportProperty(goog.debug.LogManager, 'getRoot', goog.debug.LogManager.getR
 goog.exportSymbol('Minerva.DivConsole', goog.debug.DivConsole);
 goog.exportProperty(goog.debug.DivConsole.prototype, 'setCapturing', goog.debug.DivConsole.prototype.setCapturing);
 
-// Expose goog.json, because the browser's native JSON object is useless,
-// because it does not encode Unicode to ASCII \uXXXX escapes.
 goog.exportSymbol('Minerva.JSON', {});
 goog.exportSymbol('Minerva.JSON.parse', goog.json.parse);
 goog.exportSymbol('Minerva.JSON.serialize', goog.json.serialize);
+goog.exportSymbol('Minerva.JSON.asciify', cw.json.asciify);
 
 goog.exportSymbol('Minerva.bind', goog.bind);
 goog.exportSymbol('Minerva.repr', cw.repr.repr);

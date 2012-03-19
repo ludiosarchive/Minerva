@@ -106,11 +106,11 @@ DemoProtocol.prototype.stringReceived = function(s) {
 };
 
 var broadcastString = function(s) {
-	stream.sendString(Minerva.JSON.serialize(['broadcast', s]));
+	stream.sendString(Minerva.JSON.asciify(['broadcast', s]));
 };
 
 var privmsgString = function(id, s) {
-	stream.sendString(Minerva.JSON.serialize(['privmsg', id, s]));
+	stream.sendString(Minerva.JSON.asciify(['privmsg', id, s]));
 };
 
 var protocol = new DemoProtocol();

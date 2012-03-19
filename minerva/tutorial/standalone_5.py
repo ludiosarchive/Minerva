@@ -114,16 +114,16 @@ DemoProtocol.prototype.bodyReceived = function(s, isQuestion) {
 };
 
 var broadcastString = function(s) {
-	protocol.qanHelper.notify(Minerva.JSON.serialize(['broadcast', s]));
+	protocol.qanHelper.notify(Minerva.JSON.asciify(['broadcast', s]));
 };
 
 var privmsgString = function(id, s) {
-	protocol.qanHelper.notify(Minerva.JSON.serialize(['privmsg', id, s]));
+	protocol.qanHelper.notify(Minerva.JSON.asciify(['privmsg', id, s]));
 };
 
 var getClients = function() {
 	// .ask returns a Minerva.Deferred (goog.async.Deferred) object
-	var d = protocol.qanHelper.ask(Minerva.JSON.serialize(['listclients']));
+	var d = protocol.qanHelper.ask(Minerva.JSON.asciify(['listclients']));
 	d.addCallback(function(json) {
 		var clients = Minerva.JSON.parse(json);
 		logMessage("Connected clients: " + clients.join(", "));
