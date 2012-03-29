@@ -1481,6 +1481,23 @@ cw.net.ClientStream.prototype.transportOffline_ = function(transport) {
 };
 
 /**
+ * @param {string} reasonString
+ * @param {boolean} applicationLevel
+ * @private
+ */
+cw.net.ClientStream.prototype.callOnReset_ = function(reasonString, applicationLevel) {
+	if(this.onreset) {
+		try {
+			this.onreset.call(this.userContext_, reasonString, applicationLevel);
+		} catch(error) {
+			this.logger_.warning(
+				"onreset raised uncaught exception", error);
+			cw.net.throwErrorIntoWindow_(error);
+		}
+	}
+};
+
+/**
  * Reset (disconnect) the stream with reason {@code reasonString}.
  * Any strings queued for sending will never be sent.
  *
@@ -1534,9 +1551,7 @@ cw.net.ClientStream.prototype.reset = function(reasonString) {
 		// Comment above about primaryTransport_.flush_() applies here too.
 	}
 
-	if(this.onreset) {
-		this.onreset.call(this.userContext_, reasonString, true/* applicationLevel */);
-	}
+	this.callOnReset_(reasonString, true/* applicationLevel */);
 };
 
 /**
@@ -1555,9 +1570,7 @@ cw.net.ClientStream.prototype.disposeAllTransports_ = function() {
  * @private
  */
 cw.net.ClientStream.prototype.doReset_ = function(reasonString, applicationLevel) {
-	if(this.onreset) {
-		this.onreset.call(this.userContext_, reasonString, applicationLevel);
-	}
+	this.callOnReset_(reasonString, applicationLevel);
 	// Keep in mind both the "Minerva does reset" and "client app calls
 	// reset" cases, and keep the onreset and ondisconnect call
 	// order sane.
