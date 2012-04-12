@@ -21,6 +21,7 @@ goog.provide('cw.net.HttpEndpoint');
 goog.provide('cw.net.ExpandedHttpEndpoint_');
 goog.provide('cw.net.Endpoint');
 goog.provide('cw.net.IStringProtocol');
+goog.provide('cw.net.TransportInfo');
 goog.provide('cw.net.QANProtocolWrapper');
 goog.provide('cw.net.HttpStreamingMode');
 goog.provide('cw.net.IStreamPolicy');
@@ -43,6 +44,7 @@ goog.require('goog.userAgent');
 goog.require('cw.clock');
 goog.require('cw.dethrobber');
 goog.require('cw.eventual');
+goog.require('cw.record');
 goog.require('cw.repr');
 goog.require('cw.string');
 goog.require('cw.net.SACK');
@@ -411,9 +413,6 @@ cw.net.IStringProtocol = function() {
  *
  * You'll want to keep the stream around with {@code self.stream = stream}.
  *
- * You must *not* raise any exception.  Wrap your code in try/except
- * if necessary.
- *
  * @param {!cw.net.ClientStream} stream The stream associated with this protocol
  */
 cw.net.IStringProtocol.prototype.streamStarted = function(stream) {
@@ -456,9 +455,6 @@ cw.net.IQANProtocol = function() {
  *
  * You'll want to keep the stream around with {@code this.stream = stream}.
  * You'll want to keep the QANHelper around with {@code this.qanHelper = qanHelper}.
- *
- * You must *not* raise any exception.  Wrap your code in try/except
- * if necessary.
  *
  * You must not call {@code stream.sendString}; use {@code qanHelper.ask} or
  * {@code qanHelper.notify} for all of your communication.
@@ -702,6 +698,27 @@ cw.net.UserContext.prototype.__reprPush__ = function(sb, stack) {
 
 
 /**
+ * @param {boolean} isPrimary
+ * @param {boolean} streamingFromPeer
+ * @param {boolean} streamingToPeer
+ * @extends {cw.record.Record}
+ * @constructor
+ */
+cw.net.TransportInfo = function(isPrimary, streamingFromPeer, streamingToPeer) {
+	cw.record.Record.call(this, 'TransportInfo', [isPrimary, streamingFromPeer, streamingToPeer]);
+	/** @type {boolean} */
+	this.isPrimary = isPrimary;
+	/** @type {boolean} */
+	this.streamingFromPeer = streamingFromPeer;
+	/** @type {boolean} */
+	this.streamingToPeer = streamingToPeer;
+
+};
+goog.inherits(cw.net.TransportInfo, cw.record.Record);
+
+
+
+/**
  * The client-side representation of a Minerva stream.
  *
  * ClientStream is sort-of analogous to {@code twisted.internet.tcp.Connection}.
@@ -849,9 +866,6 @@ cw.net.ClientStream.prototype.maxUndeliveredBytes = 1 * 1024 * 1024;
 /**
  * The function to call when the ClientStream has received a string.
  *
- * You must *not* throw any error.  Wrap your code in try/catch
- * if necessary.
- *
  * @type {?function(string):*}
  */
 cw.net.ClientStream.prototype.onstring = null;
@@ -859,19 +873,29 @@ cw.net.ClientStream.prototype.onstring = null;
 /**
  * The function to call when you call {@code ClientStream.start}
  *
- * You must *not* raise any exception.  Wrap your code in try/except
- * if necessary.
- *
  * @type {?function(!cw.net.ClientStream):*}
  */
 cw.net.ClientStream.prototype.onstarted = null;
 
 /**
+ * The function to call when a new transport is created.
+ *
+ * @type {?function(!cw.net.TransportInfo):*}
+ */
+cw.net.ClientStream.prototype.ontransportcreated = null;
+
+/**
+ * The function to call when a transport is destroyed.
+ *
+ * @type {?function(!cw.net.TransportInfo):*}
+ */
+cw.net.ClientStream.prototype.ontransportdestroyed = null;
+
+
+/**
  * The function to call when this stream has reset, either internally by
  * ClientStream, or a call to ClientStream.reset, or by a ResetFrame from the
  * peer.
- *
- * You must *not* throw any error.  Wrap your code in try/catch if necessary.
  *
  * The first parameter is a textual reason for why the stream has reset.  This
  * string contains only characters in inclusive range 0x20 - 0x7E.
@@ -1008,9 +1032,12 @@ cw.net.ClientStream.prototype.getUserContext = function() {
 
 /**
  * @param {!cw.net.IStringProtocol} proto The protocol to bind this
- * 	ClientStream's `onstring` and `onreset` to.
+ * 	ClientStream's {@code on*} methods to.  If you changed your
+ * 	protocol's methods, you must call {@code bindToProtocol} again.
  */
 cw.net.ClientStream.prototype.bindToProtocol = function(proto) {
+	// In standalone Minerva, we use 'quotedMethods' because the user will
+	// have normal method names, not Compiler-munged method names.
 	if(cw.net.STANDALONE_CLIENT_BUILD_) {
 		if(!goog.isDef(proto['streamStarted'])) {
 			throw Error("Protocol is missing required method streamStarted");
@@ -1024,6 +1051,11 @@ cw.net.ClientStream.prototype.bindToProtocol = function(proto) {
 		this.onstarted = goog.bind(proto['streamStarted'], proto);
 		this.onreset = goog.bind(proto['streamReset'], proto);
 		this.onstring = goog.bind(proto['stringReceived'], proto);
+		// Optional methods
+		this.ontransportcreated = goog.isDef(proto['transportCreated']) ?
+			goog.bind(proto['transportCreated'], proto) : null;
+		this.ontransportdestroyed = goog.isDef(proto['transportDestroyed']) ?
+			goog.bind(proto['transportDestroyed'], proto) : null;
 	} else {
 		if(!goog.isDef(proto.streamStarted)) {
 			throw Error("Protocol is missing required method streamStarted");
@@ -1037,6 +1069,11 @@ cw.net.ClientStream.prototype.bindToProtocol = function(proto) {
 		this.onstarted = goog.bind(proto.streamStarted, proto);
 		this.onreset = goog.bind(proto.streamReset, proto);
 		this.onstring = goog.bind(proto.stringReceived, proto);
+		// Optional methods
+		this.ontransportcreated = goog.isDef(proto.transportCreated) ?
+			goog.bind(proto.transportCreated, proto) : null;
+		this.ontransportdestroyed = goog.isDef(proto.transportDestroyed) ?
+			goog.bind(proto.transportDestroyed, proto) : null;
 	}
 };
 
@@ -1164,7 +1201,10 @@ cw.net.ClientStream.prototype.tryToSend_ = function() {
 			} else {
 				this.logger_.finest(
 					"tryToSend_: creating secondary to send " + sendingWhat);
-				this.secondaryTransport_ = this.createNewTransport_(false);
+				this.secondaryTransport_ = this.createNewTransport_(false, true);
+				if(!this.secondaryTransport_) {
+					return;
+				}
 				// No need to writeSack_ because a sack is included in the HelloFrame.
 				if(maybeNeedToSendStrings) {
 					this.secondaryTransport_.writeStrings_(
@@ -1299,15 +1339,37 @@ endpoint, becomePrimary) {
 /**
  * @param {boolean} becomePrimary Whether this transport should become
  * 	primary transport.
- * @return {!cw.net.ClientTransport} The newly-created transport.
+ * @param {boolean} tellProtocol Call ontransportcreated? (if defined)
+ * @return {cw.net.ClientTransport} The newly-created transport, or null, if
+ * 	a transport was abandoned because ontransportcreated called reset/dispose.
  */
-cw.net.ClientStream.prototype.createNewTransport_ = function(becomePrimary) {
+cw.net.ClientStream.prototype.createNewTransport_ = function(becomePrimary, tellProtocol) {
 	var transportType = this.getTransportType_();
 	this.transportCount_ += 1;
 	var transport = this.instantiateTransport_(
 		this.callQueue_, this, this.transportCount_, transportType,
 			this.endpoint_, becomePrimary);
 	this.logger_.finest("Created: " + transport.getDescription_());
+	var info = new cw.net.TransportInfo(
+		/*isPrimary=*/becomePrimary,
+		/*streamingFromPeer=*/transport.s2cStreaming,
+		/*streamingToPeer=*/transport.canFlushMoreThanOnce_);
+	if(tellProtocol) {
+		if(this.ontransportcreated) {
+			try {
+				this.ontransportcreated.call(this.userContext_, info);
+			} catch(error) {
+				this.logger_.warning(
+					"ontransportcreated raised uncaught exception", error);
+				cw.net.throwErrorIntoWindow_(error);
+			}
+		}
+		// Under ontransportcreated, the state may have changed completely!
+		// The ClientStream may be RESETTING or disposed.
+		if(this.isResettingOrDisposed_()) {
+			return null;
+		}
+	}
 	this.transports_.add(transport);
 	return transport;
 };
@@ -1458,7 +1520,10 @@ cw.net.ClientStream.prototype.transportOffline_ = function(transport) {
 			this.primaryTransport_ = null;
 			if(!times) {
 				var highestSeqNumSent = this.getHighestSeqNumSent_();
-				this.primaryTransport_ = this.createNewTransport_(true);
+				this.primaryTransport_ = this.createNewTransport_(true, true);
+				if(!this.primaryTransport_) {
+					return;
+				}
 				// No need to writeSack_ because a sack is included in the HelloFrame.
 				this.primaryTransport_.writeStrings_(this.queue_, highestSeqNumSent + 1);
 			} else {
@@ -1545,7 +1610,7 @@ cw.net.ClientStream.prototype.reset = function(reasonString) {
 		}
 
 		this.logger_.info("reset: Creating resettingTransport_ for sending ResetFrame.");
-		this.resettingTransport_ = this.createNewTransport_(false);
+		this.resettingTransport_ = this.createNewTransport_(false, false);
 		this.resettingTransport_.writeReset_(reasonString, true/* applicationLevel */);
 		this.resettingTransport_.flush_();
 		// Comment above about primaryTransport_.flush_() applies here too.
@@ -1795,7 +1860,10 @@ cw.net.ClientStream.prototype.expandSocketEndpoint_ = function() {
 
 cw.net.ClientStream.prototype.startFirstTransport_ = function() {
 	this.state_ = cw.net.StreamState_.STARTED;
-	this.primaryTransport_ = this.createNewTransport_(true);
+	this.primaryTransport_ = this.createNewTransport_(true, true);
+	if(!this.primaryTransport_) {
+		return;
+	}
 	this.primaryTransport_.writeStrings_(this.queue_, null);
 	this.primaryTransport_.flush_();
 };

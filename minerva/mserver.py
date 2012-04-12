@@ -230,29 +230,28 @@ class QANProtocolWrapper(object):
 
 
 
-# server attrs: isPrimary, streamingToPeer, streamFromPeer, host, request (in case someone wants to look at headers)
-# client attrs: isPrimary, streamingToPeer, streamingFromPeer
+# server attrs: isPrimary, streamingFromPeer, streamingToPeer, host, requestHeaders
+# client attrs: isPrimary, streamingFromPeer, streamingToPeer
 
 class TransportInfo(tuple):
 	__slots__ = ()
 	_MARKER = object()
 
 	isPrimary = property(operator.itemgetter(1))
-	streamingToPeer = property(operator.itemgetter(2))
-	streamingFromPeer = property(operator.itemgetter(3))
+	streamingFromPeer = property(operator.itemgetter(2))
+	streamingToPeer = property(operator.itemgetter(3))
 	host = property(operator.itemgetter(4))
-	request = property(operator.itemgetter(5))
-	_transport = property(operator.itemgetter(6))
+	requestHeaders = property(operator.itemgetter(5))
 
-	def __new__(cls, isPrimary, streamingToPeer, streamingFromPeer, host, request, _transport):
+	def __new__(cls, isPrimary, streamingFromPeer, streamingToPeer, host, requestHeaders):
 		return tuple.__new__(cls, (cls._MARKER,
-						   isPrimary, streamingToPeer, streamingFromPeer, host, request, _transport))
+						   isPrimary, streamingFromPeer, streamingToPeer, host, requestHeaders))
 
 
 	def __repr__(self):
-		return ('%s(isPrimary=%r, streamingToPeer=%r, streamingFromPeer='
-			  '%r, host=%r, request=%r, _transport=%r)') % (
-		self.__class__.__name__, self[1], self[2], self[3], self[4], self[5], self[6])
+		return ('%s(isPrimary=%r, streamingFromPeer=%r, streamingToPeer='
+			  '%r, host=%r, requestHeaders=%r)') % (
+		self.__class__.__name__, self[1], self[2], self[3], self[4], self[5])
 
 
 
@@ -552,12 +551,41 @@ class ServerStream(object):
 				log.err()
 				self._internalReset("streamStarted raised uncaught exception")
 				return
+		if self.disconnected:
+			return
+
+		info = TransportInfo(
+			isPrimary=wantsStrings,
+			streamingFromPeer=transport.isStreamingFromPeer(),
+			streamingToPeer=transport.isStreamingToPeer(),
+			host=transport.getHost(),
+			requestHeaders=\
+				transport.writable.requestHeaders if transport.isHttp() else None)
+
+		# streamStarted is called because transportCreated, despite the fact that
+		# the transport led to stream creation, for two reasons:
+		# 1) to present a nicer abstraction to the user, where streamStarted is always
+		# called first.
+		# 2) to match the behavior on the client side, where streamStarted is always
+		# called first, due to .start() leading directly to streamStarted.
+
+		transportCreated = getattr(self._protocol, 'transportCreated', None)
+		if transportCreated is not None:
+			try:
+				self._protocol.transportCreated(info)
+				# Remember: transportCreated can do anything to us,
+				# including reset or sendString.
+			except Exception:
+				log.msg("transportCreated raised uncaught exception")
+				log.err()
+		if self.disconnected:
+			return
 
 		# TODO: do we really need _primaryTransport to still be connected?
 		# Can't we just remember what its transportNumber and ourSeqNum were?
 		# That way, a transport can succeed the older even if it was disconnected
 		# in the meantime.
-		if wantsStrings and not self.disconnected:
+		if wantsStrings:
 			if \
 			succeedsTransport is not None and \
 			self._primaryTransport and \
@@ -1603,6 +1631,14 @@ class ServerTransport(object):
 		if self.writable is None:
 			raise RuntimeError("Don't know if this is HTTP or not. Maybe ask later.")
 		return self._mode == HTTP
+
+
+	def isStreamingFromPeer(self):
+		return not self.isHttp()
+
+
+	def isStreamingToPeer(self):
+		return self._streamingResponse
 
 
 	def getHost(self):
