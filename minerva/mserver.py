@@ -10,6 +10,7 @@ See minerva.test_mserver for the tests.
 import sys
 import re
 import time
+import operator
 from functools import partial
 
 from zope.interface import Attribute, implements
@@ -226,6 +227,32 @@ class QANProtocolWrapper(object):
 			self.stream.reset("Bad QAN frame.  Did peer send a non-QAN string?")
 		else:
 			self.qanHelper.handleQANFrame(qanFrame)
+
+
+
+# server attrs: isPrimary, streamingToPeer, streamFromPeer, host, request (in case someone wants to look at headers)
+# client attrs: isPrimary, streamingToPeer, streamingFromPeer
+
+class TransportInfo(tuple):
+	__slots__ = ()
+	_MARKER = object()
+
+	isPrimary = property(operator.itemgetter(1))
+	streamingToPeer = property(operator.itemgetter(2))
+	streamingFromPeer = property(operator.itemgetter(3))
+	host = property(operator.itemgetter(4))
+	request = property(operator.itemgetter(5))
+	_transport = property(operator.itemgetter(6))
+
+	def __new__(cls, isPrimary, streamingToPeer, streamingFromPeer, host, request, _transport):
+		return tuple.__new__(cls, (cls._MARKER,
+						   isPrimary, streamingToPeer, streamingFromPeer, host, request, _transport))
+
+
+	def __repr__(self):
+		return ('%s(isPrimary=%r, streamingToPeer=%r, streamingFromPeer='
+			  '%r, host=%r, request=%r, _transport=%r)') % (
+		self.__class__.__name__, self[1], self[2], self[3], self[4], self[5], self[6])
 
 
 
@@ -1576,6 +1603,10 @@ class ServerTransport(object):
 		if self.writable is None:
 			raise RuntimeError("Don't know if this is HTTP or not. Maybe ask later.")
 		return self._mode == HTTP
+
+
+	def getHost(self):
+		return self.writable.getHost()
 
 
 

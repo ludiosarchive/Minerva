@@ -226,3 +226,25 @@ class IQANProtocol(Interface):
 		@rtype: C{str} or L{Deferred} or C{None}.
 		@raise KnownError: When an error-answer is desired.
 		"""
+
+
+
+class IStreamTransportCreated(Interface):
+	def transportCreated(self, transportInfo):
+		"""
+		@param transportInfo: A L{TransportInfo} object with information
+			about the transport that was just created.
+		"""
+
+
+
+class IStreamTransportDestroyed(Interface):
+	def transportDestroyed(self, transportInfo):
+		"""
+		@param transportInfo: A L{TransportInfo} object with information
+			about the transport that was just destroyed.
+		"""
+
+
+# In the future, there might be an ITrackerTransportCreated, to watch
+# transports that never even attach to a Stream.
