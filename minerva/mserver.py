@@ -234,6 +234,13 @@ class QANProtocolWrapper(object):
 # client attrs: isPrimary, streamingFromPeer, streamingToPeer
 
 class TransportInfo(tuple):
+	"""
+	Contains information about the transport.  Passed to user's C{transportCreated}
+	and C{transportDestroyed} methods.
+
+	Do not index or slice this object (its tuple-ness is an implementation detail);
+	use the named properties only.
+	"""
 	__slots__ = ()
 	_MARKER = object()
 
