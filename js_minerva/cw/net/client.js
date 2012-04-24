@@ -698,14 +698,17 @@ cw.net.UserContext.prototype.__reprPush__ = function(sb, stack) {
 
 
 /**
+ * @param {number} transportNumber
  * @param {boolean} isPrimary
  * @param {boolean} streamingFromPeer
  * @param {boolean} streamingToPeer
  * @extends {cw.record.Record}
  * @constructor
  */
-cw.net.TransportInfo = function(isPrimary, streamingFromPeer, streamingToPeer) {
-	cw.record.Record.call(this, 'TransportInfo', [isPrimary, streamingFromPeer, streamingToPeer]);
+cw.net.TransportInfo = function(transportNumber, isPrimary, streamingFromPeer, streamingToPeer) {
+	cw.record.Record.call(this, 'TransportInfo', [transportNumber, isPrimary, streamingFromPeer, streamingToPeer]);
+	/** @type {number} */
+	this.transportNumber = transportNumber;
 	/** @type {boolean} */
 	this.isPrimary = isPrimary;
 	/** @type {boolean} */
@@ -1351,6 +1354,7 @@ cw.net.ClientStream.prototype.createNewTransport_ = function(becomePrimary, tell
 			this.endpoint_, becomePrimary);
 	this.logger_.finest("Created: " + transport.getDescription_());
 	var info = new cw.net.TransportInfo(
+		/*transportNumber=*/transport.transportNumber,
 		/*isPrimary=*/becomePrimary,
 		/*streamingFromPeer=*/transport.s2cStreaming,
 		/*streamingToPeer=*/transport.canFlushMoreThanOnce_);

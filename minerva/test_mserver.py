@@ -145,8 +145,9 @@ def _makeTransportWithDecoder(parser, faceFactory):
 
 class TransportInfoTests(unittest.TestCase):
 	def test_repr(self):
-		ti = TransportInfo(True, False, True, 'not a real host', 'not a real headers')
-		self.assertEqual("TransportInfo(isPrimary=True, streamingFromPeer=False, "
+		ti = TransportInfo(3, True, False, True, 'not a real host', 'not a real headers')
+		self.assertEqual("TransportInfo(transportNumber=3, "
+			"isPrimary=True, streamingFromPeer=False, "
 			"streamingToPeer=True, host='not a real host', "
 			"requestHeaders='not a real headers')", repr(ti))
 

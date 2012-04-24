@@ -230,8 +230,8 @@ class QANProtocolWrapper(object):
 
 
 
-# server attrs: isPrimary, streamingFromPeer, streamingToPeer, host, requestHeaders
-# client attrs: isPrimary, streamingFromPeer, streamingToPeer
+# server attrs: transportNumber, isPrimary, streamingFromPeer, streamingToPeer, host, requestHeaders
+# client attrs: transportNumber, isPrimary, streamingFromPeer, streamingToPeer
 
 class TransportInfo(tuple):
 	"""
@@ -244,21 +244,22 @@ class TransportInfo(tuple):
 	__slots__ = ()
 	_MARKER = object()
 
-	isPrimary = property(operator.itemgetter(1))
-	streamingFromPeer = property(operator.itemgetter(2))
-	streamingToPeer = property(operator.itemgetter(3))
-	host = property(operator.itemgetter(4))
-	requestHeaders = property(operator.itemgetter(5))
+	transportNumber = property(operator.itemgetter(1))
+	isPrimary = property(operator.itemgetter(2))
+	streamingFromPeer = property(operator.itemgetter(3))
+	streamingToPeer = property(operator.itemgetter(4))
+	host = property(operator.itemgetter(5))
+	requestHeaders = property(operator.itemgetter(6))
 
-	def __new__(cls, isPrimary, streamingFromPeer, streamingToPeer, host, requestHeaders):
+	def __new__(cls, transportNumber, isPrimary, streamingFromPeer, streamingToPeer, host, requestHeaders):
 		return tuple.__new__(cls, (cls._MARKER,
-						   isPrimary, streamingFromPeer, streamingToPeer, host, requestHeaders))
+			transportNumber, isPrimary, streamingFromPeer, streamingToPeer, host, requestHeaders))
 
 
 	def __repr__(self):
-		return ('%s(isPrimary=%r, streamingFromPeer=%r, streamingToPeer='
+		return ('%s(transportNumber=%r, isPrimary=%r, streamingFromPeer=%r, streamingToPeer='
 			  '%r, host=%r, requestHeaders=%r)') % (
-		self.__class__.__name__, self[1], self[2], self[3], self[4], self[5])
+		self.__class__.__name__, self[1], self[2], self[3], self[4], self[5], self[6])
 
 
 
@@ -562,6 +563,7 @@ class ServerStream(object):
 			return
 
 		info = TransportInfo(
+			transportNumber=transport.transportNumber,
 			isPrimary=wantsStrings,
 			streamingFromPeer=transport.isStreamingFromPeer(),
 			streamingToPeer=transport.isStreamingToPeer(),
