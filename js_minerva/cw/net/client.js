@@ -1353,13 +1353,9 @@ cw.net.ClientStream.prototype.createNewTransport_ = function(becomePrimary, tell
 		this.callQueue_, this, this.transportCount_, transportType,
 			this.endpoint_, becomePrimary);
 	this.logger_.finest("Created: " + transport.getDescription_());
-	var info = new cw.net.TransportInfo(
-		/*transportNumber=*/transport.transportNumber,
-		/*isPrimary=*/becomePrimary,
-		/*streamingFromPeer=*/transport.s2cStreaming,
-		/*streamingToPeer=*/transport.canFlushMoreThanOnce_);
 	if(tellProtocol) {
 		if(this.ontransportcreated) {
+			var info = transport.getInfo();
 			try {
 				this.ontransportcreated.call(this.userContext_, info);
 			} catch(error) {
@@ -1492,6 +1488,29 @@ cw.net.ClientStream.prototype.transportOffline_ = function(transport) {
 	}
 	this.logger_.fine('Offline: ' + transport.getDescription_());
 
+	var wasResettingTransport = (this.state_ == cw.net.StreamState_.RESETTING &&
+		transport.wroteResetFrame_);
+
+	// We don't tell the user about transportCreated for resettingTransport_s,
+	// so don't tell them about transportDestroyed for them either.
+	if(transport instanceof cw.net.ClientTransport && !wasResettingTransport) {
+		if(this.ontransportdestroyed) {
+			var info = transport.getInfo();
+			try {
+				this.ontransportdestroyed.call(this.userContext_, info);
+			} catch(error) {
+				this.logger_.warning(
+					"ontransportdestroyed raised uncaught exception", error);
+				cw.net.throwErrorIntoWindow_(error);
+			}
+		}
+		// Under ontransportdestroyed, the state may have changed completely!
+		// The ClientStream may be RESETTING or disposed.
+		if(this.isResettingOrDisposed_()) {
+			return null;
+		}
+	}
+
 	if(!transport.penalty_) {
 		this.streamPenalty_ = 0;
 	} else {
@@ -1505,8 +1524,7 @@ cw.net.ClientStream.prototype.transportOffline_ = function(transport) {
 	}
 
 	if(this.state_ > cw.net.StreamState_.STARTED) {
-		if(this.state_ == cw.net.StreamState_.RESETTING &&
-		transport.wroteResetFrame_) {
+		if(wasResettingTransport) {
 			this.logger_.fine('Disposing because resettingTransport_ is done.');
 			this.dispose();
 		} else {
@@ -2819,6 +2837,17 @@ cw.net.ClientTransport.prototype.writeReset_ = function(reasonString, applicatio
 	var resetFrame = new cw.net.ResetFrame(reasonString, applicationLevel);
 	this.writeFrame_(resetFrame);
 	this.wroteResetFrame_ = true;
+};
+
+/**
+ * @return {!cw.net.TransportInfo}
+ */
+cw.net.ClientTransport.prototype.getInfo = function() {
+	return new cw.net.TransportInfo(
+		/*transportNumber=*/this.transportNumber,
+		/*isPrimary=*/this.becomePrimary_,
+		/*streamingFromPeer=*/this.s2cStreaming,
+		/*streamingToPeer=*/this.canFlushMoreThanOnce_);
 };
 
 
