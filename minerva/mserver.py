@@ -571,7 +571,7 @@ class ServerStream(object):
 			requestHeaders=\
 				transport.writable.requestHeaders if transport.isHttp() else None)
 
-		# streamStarted is called because transportCreated, despite the fact that
+		# streamStarted is called before transportCreated, despite the fact that
 		# the transport led to stream creation, for two reasons:
 		# 1) to present a nicer abstraction to the user, where streamStarted is always
 		# called first.
