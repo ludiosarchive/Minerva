@@ -562,15 +562,6 @@ class ServerStream(object):
 		if self.disconnected:
 			return
 
-		info = TransportInfo(
-			transportNumber=transport.transportNumber,
-			isPrimary=wantsStrings,
-			streamingFromPeer=transport.isStreamingFromPeer(),
-			streamingToPeer=transport.isStreamingToPeer(),
-			host=transport.getHost(),
-			requestHeaders=\
-				transport.writable.requestHeaders if transport.isHttp() else None)
-
 		# streamStarted is called before transportCreated, despite the fact that
 		# the transport led to stream creation, for two reasons:
 		# 1) to present a nicer abstraction to the user, where streamStarted is always
@@ -581,7 +572,7 @@ class ServerStream(object):
 		transportCreated = getattr(self._protocol, 'transportCreated', None)
 		if transportCreated is not None:
 			try:
-				self._protocol.transportCreated(info)
+				self._protocol.transportCreated(transport.getInfo())
 				# Remember: transportCreated can do anything to us,
 				# including reset or sendString.
 			except Exception:
@@ -615,6 +606,7 @@ class ServerStream(object):
 			self._transports.remove(transport)
 		except KeyError:
 			raise RuntimeError("Cannot take %r offline; it wasn't registered" % (transport,))
+
 		if transport is self._primaryTransport:
 			# Is this really needed? Why would a transport send signals after it is offline?
 			self._unregisterProducerOnPrimary()
@@ -629,6 +621,16 @@ class ServerStream(object):
 
 			if self._producer and self._streamingProducer:
 				self._producer.pauseProducing()
+
+		transportDestroyed = getattr(self._protocol, 'transportDestroyed', None)
+		if transportDestroyed is not None:
+			try:
+				self._protocol.transportDestroyed(transport.getInfo())
+			# Remember: transportDestroyed can do anything to us,
+			# including reset or sendString.
+			except Exception:
+				log.msg("transportDestroyed raised uncaught exception")
+				log.err()
 
 
 	def _unregisterProducerOnPrimary(self):
@@ -1652,6 +1654,17 @@ class ServerTransport(object):
 
 	def getHost(self):
 		return self.writable.getHost()
+
+
+	def getInfo(self):
+		return TransportInfo(
+			transportNumber=self.transportNumber,
+			isPrimary=self._wantsStrings,
+			streamingFromPeer=self.isStreamingFromPeer(),
+			streamingToPeer=self.isStreamingToPeer(),
+			host=self.getHost(),
+			requestHeaders=\
+				self.writable.requestHeaders if self.isHttp() else None)
 
 
 
