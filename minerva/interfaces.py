@@ -77,9 +77,6 @@ class IStringProtocol(Interface):
 
 		You'll want to keep the stream around with C{self.stream = stream}.
 
-		You must *not* raise any exception.  Wrap your code in try/except
-		if necessary.
-
 		@param stream: the L{ServerStream} that was started.
 		@type stream: L{ServerStream}
 		"""
@@ -90,9 +87,6 @@ class IStringProtocol(Interface):
 		Called when this stream has reset, either internally by
 		L{ServerStream}, or a call to ServerStream.reset, or by a reset
 		frame from the peer.
-
-		You must *not* raise any exception.  Wrap your code in try/except
-		if necessary.
 
 		@param reasonString: The reason the stream reset.
 			String contains only bytes in inclusive range 0x20 - 0x7E.
@@ -119,8 +113,7 @@ class IStringProtocol(Interface):
 
 		Called whenever one or more strings are received.
 
-		You must *not* raise any exception.  Wrap your code in try/except
-		if necessary. You may mutate the list and keep references to it.
+		If you need to, you may mutate the list and keep references to it.
 
 		This is `stringsReceived` instead of `stringReceived` only as an
 		optimization for CPython.  The number of strings you will receive at
@@ -174,9 +167,6 @@ class IQANProtocol(Interface):
 		You'll want to keep the stream around with C{self.stream = stream}.
 		You'll want to keep the QANHelper around with C{self.qanHelper = qanHelper}.
 
-		You must *not* raise any exception.  Wrap your code in try/except
-		if necessary.
-
 		You must not call C{stream.sendString}; use C{qanHelper.ask} or
 		C{qanHelper.notify} for all of your communication.
 
@@ -193,9 +183,6 @@ class IQANProtocol(Interface):
 		Called when this stream has reset, either internally by
 		L{ServerStream}, or a call to ServerStream.reset, or by a reset
 		frame from the peer.
-
-		You must *not* raise any exception.  Wrap your code in try/except
-		if necessary.
 
 		@param reasonString: The reason the stream reset.
 			String contains only bytes in inclusive range 0x20 - 0x7E.
@@ -226,3 +213,25 @@ class IQANProtocol(Interface):
 		@rtype: C{str} or L{Deferred} or C{None}.
 		@raise KnownError: When an error-answer is desired.
 		"""
+
+
+
+class IStreamTransportCreated(Interface):
+	def transportCreated(self, transportInfo):
+		"""
+		@param transportInfo: A L{TransportInfo} object with information
+			about the transport that was just created.
+		"""
+
+
+
+class IStreamTransportDestroyed(Interface):
+	def transportDestroyed(self, transportInfo):
+		"""
+		@param transportInfo: A L{TransportInfo} object with information
+			about the transport that was just destroyed.
+		"""
+
+
+# In the future, there might be an ITrackerTransportCreated, to watch
+# transports that never even attach to a Stream.

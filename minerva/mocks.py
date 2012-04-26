@@ -319,6 +319,18 @@ class DummySocketLikeTransport(object):
 		self._paused = True
 
 
+	def getHost(self):
+		return None # TODO: return a real host
+
+
+	def isStreamingFromPeer(self):
+		return True
+
+
+	def isStreamingToPeer(self):
+		return True
+
+
 
 class DummyStreamTracker(object):
 

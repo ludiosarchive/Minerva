@@ -32,9 +32,9 @@ from minerva.test_decoders import diceString
 from minerva.decoders import Int32StringDecoder, DelimitedStringDecoder
 
 from minerva.mserver import (
-	ServerStream, StreamTracker, NoSuchStream, StreamAlreadyExists,
-	IServerTransport, ServerTransport, ServerTransportFactory, _HttpIo,
-	HTTP_RESPONSE_PREAMBLE,
+	TransportInfo, ServerStream, StreamTracker, NoSuchStream,
+	StreamAlreadyExists,IServerTransport, ServerTransport,
+	ServerTransportFactory, _HttpIo, HTTP_RESPONSE_PREAMBLE,
 )
 
 from minerva.interfaces import IConsumerWithoutWrite, IStringProtocol, IStringFactory
@@ -141,6 +141,16 @@ def _makeTransportWithDecoder(parser, faceFactory):
 	transport.sendFrames = sendFrames
 	transport.makeConnection(tcpTransport)
 	return transport
+
+
+class TransportInfoTests(unittest.TestCase):
+	def test_repr(self):
+		ti = TransportInfo(3, True, False, True, 'not a real host', 'not a real headers')
+		self.assertEqual("TransportInfo(transportNumber=3, "
+			"isPrimary=True, streamingFromPeer=False, "
+			"streamingToPeer=True, host='not a real host', "
+			"requestHeaders='not a real headers')", repr(ti))
+
 
 
 class ServerStreamTests(unittest.TestCase):

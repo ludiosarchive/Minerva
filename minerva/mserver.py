@@ -10,6 +10,7 @@ See minerva.test_mserver for the tests.
 import sys
 import re
 import time
+import operator
 from functools import partial
 
 from zope.interface import Attribute, implements
@@ -226,6 +227,39 @@ class QANProtocolWrapper(object):
 			self.stream.reset("Bad QAN frame.  Did peer send a non-QAN string?")
 		else:
 			self.qanHelper.handleQANFrame(qanFrame)
+
+
+
+# server attrs: transportNumber, isPrimary, streamingFromPeer, streamingToPeer, host, requestHeaders
+# client attrs: transportNumber, isPrimary, streamingFromPeer, streamingToPeer
+
+class TransportInfo(tuple):
+	"""
+	Contains information about the transport.  Passed to user's C{transportCreated}
+	and C{transportDestroyed} methods.
+
+	Do not index or slice this object (its tuple-ness is an implementation detail);
+	use the named properties only.
+	"""
+	__slots__ = ()
+	_MARKER = object()
+
+	transportNumber = property(operator.itemgetter(1))
+	isPrimary = property(operator.itemgetter(2))
+	streamingFromPeer = property(operator.itemgetter(3))
+	streamingToPeer = property(operator.itemgetter(4))
+	host = property(operator.itemgetter(5))
+	requestHeaders = property(operator.itemgetter(6))
+
+	def __new__(cls, transportNumber, isPrimary, streamingFromPeer, streamingToPeer, host, requestHeaders):
+		return tuple.__new__(cls, (cls._MARKER,
+			transportNumber, isPrimary, streamingFromPeer, streamingToPeer, host, requestHeaders))
+
+
+	def __repr__(self):
+		return ('%s(transportNumber=%r, isPrimary=%r, streamingFromPeer=%r, streamingToPeer='
+			  '%r, host=%r, requestHeaders=%r)') % (
+		self.__class__.__name__, self[1], self[2], self[3], self[4], self[5], self[6])
 
 
 
@@ -525,12 +559,33 @@ class ServerStream(object):
 				log.err()
 				self._internalReset("streamStarted raised uncaught exception")
 				return
+		if self.disconnected:
+			return
+
+		# streamStarted is called before transportCreated, despite the fact that
+		# the transport led to stream creation, for two reasons:
+		# 1) to present a nicer abstraction to the user, where streamStarted is always
+		# called first.
+		# 2) to match the behavior on the client side, where streamStarted is always
+		# called first, due to .start() leading directly to streamStarted.
+
+		transportCreated = getattr(self._protocol, 'transportCreated', None)
+		if transportCreated is not None:
+			try:
+				self._protocol.transportCreated(transport.getInfo())
+				# Remember: transportCreated can do anything to us,
+				# including reset or sendString.
+			except Exception:
+				log.msg("transportCreated raised uncaught exception")
+				log.err()
+		if self.disconnected:
+			return
 
 		# TODO: do we really need _primaryTransport to still be connected?
 		# Can't we just remember what its transportNumber and ourSeqNum were?
 		# That way, a transport can succeed the older even if it was disconnected
 		# in the meantime.
-		if wantsStrings and not self.disconnected:
+		if wantsStrings:
 			if \
 			succeedsTransport is not None and \
 			self._primaryTransport and \
@@ -551,6 +606,7 @@ class ServerStream(object):
 			self._transports.remove(transport)
 		except KeyError:
 			raise RuntimeError("Cannot take %r offline; it wasn't registered" % (transport,))
+
 		if transport is self._primaryTransport:
 			# Is this really needed? Why would a transport send signals after it is offline?
 			self._unregisterProducerOnPrimary()
@@ -565,6 +621,19 @@ class ServerStream(object):
 
 			if self._producer and self._streamingProducer:
 				self._producer.pauseProducing()
+
+		# Note: protocol may not receive a `transportDestroyed` event for transports
+		# connected during the stream reset.
+		if not self.disconnected:
+			transportDestroyed = getattr(self._protocol, 'transportDestroyed', None)
+			if transportDestroyed is not None:
+				try:
+					self._protocol.transportDestroyed(transport.getInfo())
+				# Remember: transportDestroyed can do anything to us,
+				# including reset or sendString.
+				except Exception:
+					log.msg("transportDestroyed raised uncaught exception")
+					log.err()
 
 
 	def _unregisterProducerOnPrimary(self):
@@ -1576,6 +1645,29 @@ class ServerTransport(object):
 		if self.writable is None:
 			raise RuntimeError("Don't know if this is HTTP or not. Maybe ask later.")
 		return self._mode == HTTP
+
+
+	def isStreamingFromPeer(self):
+		return not self.isHttp()
+
+
+	def isStreamingToPeer(self):
+		return self._streamingResponse
+
+
+	def getHost(self):
+		return self.writable.getHost()
+
+
+	def getInfo(self):
+		return TransportInfo(
+			transportNumber=self.transportNumber,
+			isPrimary=self._wantsStrings,
+			streamingFromPeer=self.isStreamingFromPeer(),
+			streamingToPeer=self.isStreamingToPeer(),
+			host=self.getHost(),
+			requestHeaders=\
+				self.writable.requestHeaders if self.isHttp() else None)
 
 
 
