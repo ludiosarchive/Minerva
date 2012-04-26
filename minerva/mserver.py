@@ -622,15 +622,18 @@ class ServerStream(object):
 			if self._producer and self._streamingProducer:
 				self._producer.pauseProducing()
 
-		transportDestroyed = getattr(self._protocol, 'transportDestroyed', None)
-		if transportDestroyed is not None:
-			try:
-				self._protocol.transportDestroyed(transport.getInfo())
-			# Remember: transportDestroyed can do anything to us,
-			# including reset or sendString.
-			except Exception:
-				log.msg("transportDestroyed raised uncaught exception")
-				log.err()
+		# Note: protocol may not receive a `transportDestroyed` event for transports
+		# connected during the stream reset.
+		if not self.disconnected:
+			transportDestroyed = getattr(self._protocol, 'transportDestroyed', None)
+			if transportDestroyed is not None:
+				try:
+					self._protocol.transportDestroyed(transport.getInfo())
+				# Remember: transportDestroyed can do anything to us,
+				# including reset or sendString.
+				except Exception:
+					log.msg("transportDestroyed raised uncaught exception")
+					log.err()
 
 
 	def _unregisterProducerOnPrimary(self):
