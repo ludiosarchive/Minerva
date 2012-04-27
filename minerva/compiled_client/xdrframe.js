@@ -219,7 +219,7 @@ function Na(a) {
   }
   return b
 }
-var Oa = "constructor,hasOwnProperty,isPrototypeOf,propertyIsEnumerable,toLocaleString,toString,valueOf".split(",");
+var Oa = "constructor hasOwnProperty isPrototypeOf propertyIsEnumerable toLocaleString toString valueOf".split(" ");
 function Pa(a, b) {
   for(var c, d, f = 1;f < arguments.length;f++) {
     d = arguments[f];
@@ -1467,7 +1467,7 @@ m = nc.prototype;
 m.i = j;
 m.I = -1;
 m.ea = k;
-m.ga = "Content-Length,Server,Date,Expires,Keep-Alive,Content-Type,Transfer-Encoding,Cache-Control".split(",");
+m.ga = "Content-Length Server Date Expires Keep-Alive Content-Type Transfer-Encoding Cache-Control".split(" ");
 function oc(a) {
   var b = Yb(a.aa), c = b[0], b = b[1], d = q.parent;
   d ? (d.__XHRMaster_onframes(a.r, c, b), 1 != b && a.f()) : a.f()
