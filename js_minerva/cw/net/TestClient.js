@@ -11,6 +11,7 @@ goog.require('goog.dom');
 goog.require('goog.string');
 goog.require('goog.json');
 goog.require('goog.userAgent');
+goog.require('goog.userAgent.flash');
 goog.require('goog.Uri');
 goog.require('goog.async.Deferred');
 goog.require('goog.async.DeferredList');
@@ -19,6 +20,7 @@ goog.require('goog.net.XhrLite');
 goog.require('cw.repr');
 goog.require('cw.clock');
 goog.require('cw.eventual');
+goog.require('cw.net.MINIMUM_FLASH_VERSION');
 goog.require('cw.loadflash');
 goog.require('goog.ui.media.FlashObject');
 goog.require('cw.cookie');
@@ -655,6 +657,14 @@ cw.net.TestClient.RealHttpTests.subclass(cw.net.TestClient, 'RealHttpStreamingTe
  * Test ClientStream and ClientTransport with real Flash socket connections.
  */
 cw.net.TestClient._RealNetworkTests.subclass(cw.net.TestClient, 'RealFlashSocketTests').methods(
+
+	function setUp(self) {
+		if(!goog.userAgent.flash.isVersion(cw.net.MINIMUM_FLASH_VERSION)) {
+			throw new cw.UnitTest.SkipTest("Flash " + cw.net.MINIMUM_FLASH_VERSION +
+				"+ required for Minerva's Flash socket support");
+		}
+		return cw.net.TestClient.RealFlashSocketTests.upcall(self, 'setUp', []);
+	},
 
 	function getEndpoint_(self) {
 		// Grab the main socket port we need to use from the server

@@ -11,6 +11,7 @@
 
 goog.provide('cw.net.IFlashSocketProtocol');
 goog.provide('cw.net.FlashSocket');
+goog.provide('cw.net.MINIMUM_FLASH_VERSION');
 goog.provide('cw.net.loadFlashConnector');
 goog.provide('cw.net.FlashSocketTracker');
 goog.provide('cw.net.FlashSocketConduit');
@@ -677,6 +678,12 @@ cw.net.errbackFlashConnectorDeferreds_ = function(error) {
 };
 
 /**
+ * Minimum Flash version required for Minerva's Flash socket support.
+ * @type {string}
+ */
+cw.net.MINIMUM_FLASH_VERSION = '9';
+
+/**
  * @param {!cw.eventual.CallQueue} callQueue
  * @param {string} webPortPath
  * @return {!goog.async.Deferred} Deferred that fires with an object or embed
@@ -707,7 +714,7 @@ cw.net.loadFlashConnector = function(callQueue, webPortPath) {
 	}
 
 	cw.net.flashConnectorObjectDeferred_ = cw.loadflash.loadFlashObjectWithTimeout(
-		callQueue.clock, flashObject, '9', renderInto, 8000);
+		callQueue.clock, flashObject, cw.net.MINIMUM_FLASH_VERSION, renderInto, 8000);
 
 	// Must create this Deferred before adding callbacks, or else immediate
 	// failure in loadFlashObjectWithTimeout will result in the returned

@@ -6,4 +6,4 @@
 ../closure-library/closure/bin/build/closurebuilder.py: JavaScript compilation succeeded.
 Used closure-compiler r1923
 Used closure-library r1780
-Used Coreweb 0215ed14fcfaffd282d91fa9319a2eab477b6587 | 2012-04-08 | Rebuild JS with newer Library/Compiler
+Used Coreweb 6724d3530038f12da13bf1ced47220718a058cf5 | 2012-04-27 | Make test_incorrectDontEnumInheritance pass in IE9 running in compatibility mode

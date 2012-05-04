@@ -15,6 +15,7 @@ goog.require('cw.eventual');
 goog.require('cw.json');
 goog.require('cw.net.QANHelper');
 goog.require('cw.net.QANProtocolWrapper');
+goog.require('cw.net.MINIMUM_FLASH_VERSION');
 goog.require('cw.net.demo.getEndpoint'); // TODO: remove this
 goog.require('cw.net.demo.getEndpointByQueryArgs'); // TODO: remove this
 
@@ -99,6 +100,8 @@ goog.exportSymbol('Minerva.JSON.asciify', cw.json.asciify);
 goog.exportSymbol('Minerva.bind', goog.bind);
 goog.exportSymbol('Minerva.repr', cw.repr.repr);
 goog.exportSymbol('Minerva.theCallQueue', cw.eventual.theCallQueue);
+
+goog.exportSymbol('Minerva.MINIMUM_FLASH_VERSION', cw.net.MINIMUM_FLASH_VERSION);
 
 // TODO: remove this
 goog.exportSymbol('Minerva.getEndpoint', cw.net.demo.getEndpoint);
