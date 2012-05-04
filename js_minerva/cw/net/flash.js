@@ -655,12 +655,25 @@ cw.net.newFlashConnectorDeferred_ = function() {
 /**
  * @private
  */
-cw.net.fireFlashConnectorDeferreds_ = function(bridge) {
+cw.net.callbackFlashConnectorDeferreds_ = function(bridge) {
 	var deferreds = cw.net.flashConnectorDeferreds_;
 	cw.net.flashConnectorDeferreds_ = [];
 	goog.array.forEach(deferreds, function(d) {
 		d.callback(bridge);
 	});
+	return null;
+};
+
+/**
+ * @private
+ */
+cw.net.errbackFlashConnectorDeferreds_ = function(error) {
+	var deferreds = cw.net.flashConnectorDeferreds_;
+	cw.net.flashConnectorDeferreds_ = [];
+	goog.array.forEach(deferreds, function(d) {
+		d.errback(error);
+	});
+	return null;
 };
 
 /**
@@ -696,10 +709,15 @@ cw.net.loadFlashConnector = function(callQueue, webPortPath) {
 	cw.net.flashConnectorObjectDeferred_ = cw.loadflash.loadFlashObjectWithTimeout(
 		callQueue.clock, flashObject, '9', renderInto, 8000);
 
-	cw.net.flashConnectorObjectDeferred_.addCallback(
-		cw.net.fireFlashConnectorDeferreds_);
+	// Must create this Deferred before adding callbacks, or else immediate
+	// failure in loadFlashObjectWithTimeout will result in the returned
+	// Deferred never firing (due to flashConnectorDeferreds_ being empty.)
+	var connectorDeferred = cw.net.newFlashConnectorDeferred_();
 
-	return cw.net.newFlashConnectorDeferred_();
+	cw.net.flashConnectorObjectDeferred_.addCallbacks(
+		cw.net.callbackFlashConnectorDeferreds_, cw.net.errbackFlashConnectorDeferreds_);
+
+	return connectorDeferred;
 };
 
 
