@@ -523,19 +523,23 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 
 	function test_stream(self) {
 		var proto = self.makeProtocol_();
-		var stream = new cw.net.ClientStream(
-			self.endpoint_, self.streamPolicy_);
-		stream.bindToProtocol(proto);
-		proto.setStream(stream);
-		stream.start();
-		stream.sendString('echo_twice:hello world');
 
 		var d = new goog.async.Deferred();
-		stream.ondisconnect = goog.bind(d.callback, d);
 		d.addCallback(function() {
 			self.runAssertions_(stream, proto);
 			stream.dispose();
 		});
+
+		var stream = new cw.net.ClientStream(
+			self.endpoint_, self.streamPolicy_);
+		stream.bindToProtocol(proto);
+		proto.setStream(stream);
+		stream.ondisconnect = goog.bind(d.callback, d);
+		// If cannot expand endpoint (e.g. Flash not available), stream may
+		// call ondisconnect immediately
+		stream.start();
+		stream.sendString('echo_twice:hello world');
+
 		return d;
 	},
 
@@ -545,19 +549,23 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 	 */
 	function test_streamWithStringInFirstTransport(self) {
 		var proto = self.makeProtocol_();
+
+		var d = new goog.async.Deferred();
+		d.addCallback(function() {
+			self.runAssertions_(stream, proto);
+			stream.dispose();
+		});
+
 		var stream = new cw.net.ClientStream(
 			self.endpoint_, self.streamPolicy_);
 		stream.bindToProtocol(proto);
 		proto.setStream(stream);
 		stream.sendString('echo_twice:hello world');
+		stream.ondisconnect = goog.bind(d.callback, d);
+		// If cannot expand endpoint (e.g. Flash not available), stream may
+		// call ondisconnect immediately
 		stream.start();
 
-		var d = new goog.async.Deferred();
-		stream.ondisconnect = goog.bind(d.callback, d);
-		d.addCallback(function() {
-			self.runAssertions_(stream, proto);
-			stream.dispose();
-		});
 		return d;
 	},
 
@@ -575,13 +583,6 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 			origStreamReset.call(this, reasonString, applicationLevel);
 		};
 
-		var stream = new cw.net.ClientStream(
-			self.endpoint_, self.streamPolicy_);
-		stream.bindToProtocol(proto);
-		proto.setStream(stream);
-		stream.sendString('reset_me:test_streamReset');
-		stream.start();
-
 		function streamResetAssertions() {
 			self.assertEqual(2, proto.log.length);
 			self.assertEqual("streamStarted", proto.log[0][0]);
@@ -589,11 +590,21 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 		}
 
 		var d = new goog.async.Deferred();
-		stream.ondisconnect = goog.bind(d.callback, d);
 		d.addCallback(function() {
 			streamResetAssertions();
 			stream.dispose();
 		});
+
+		var stream = new cw.net.ClientStream(
+			self.endpoint_, self.streamPolicy_);
+		stream.bindToProtocol(proto);
+		proto.setStream(stream);
+		stream.sendString('reset_me:test_streamReset');
+		stream.ondisconnect = goog.bind(d.callback, d);
+		// If cannot expand endpoint (e.g. Flash not available), stream may
+		// call ondisconnect immediately
+		stream.start();
+
 		return d;
 	}
 );
