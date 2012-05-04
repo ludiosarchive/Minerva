@@ -1790,6 +1790,7 @@ cw.net.ClientStream.prototype.earlyFailure_ = function(err) {
 	this.logger_.severe('Failed to start ' + cw.repr.repr(this) +
 		'; error was ' + cw.repr.repr(err.message));
 	this.dispose();
+	return null;
 };
 
 /**
