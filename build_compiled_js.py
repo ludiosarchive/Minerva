@@ -2,6 +2,8 @@
 
 from coreweb._closurebuild.compiler import compile, get_git_rev
 
+import build_depsjs
+
 roots = ["../Coreweb/js_coreweb", "js_minerva"]
 extra_lines = ["Used Coreweb " + get_git_rev("../Coreweb")]
 
