@@ -1,4 +1,5 @@
-(function(){function f(a) {
+(function() {
+function f(a) {
   throw a;
 }
 var i = void 0, j = !0, k = null, m = !1;
@@ -17,7 +18,8 @@ function ba(a) {
     return a
   }
 }
-var p, ca = ca || {}, s = this;
+var p;
+var ca = ca || {}, s = this;
 function da(a) {
   for(var a = a.split("."), b = s, c;c = a.shift();) {
     if(b[c] != k) {
@@ -4333,4 +4335,5 @@ y("Minerva.getEndpointByQueryArgs", function() {
   }
   return $f(0, a, b, "/_minerva/")
 });
+
 })();
