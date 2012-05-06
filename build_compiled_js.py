@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 
-from os.path import join
-
 from coreweb._closurebuild.compiler import compile
 
-roots = [join("..", "Coreweb", "js_coreweb"), "js_minerva"]
+roots = ["../Coreweb/js_coreweb", "js_minerva"]
 
 compile(
 	 roots=roots
