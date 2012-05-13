@@ -655,15 +655,16 @@ cw.net.QANProtocolWrapper.prototype.stringReceived = function(s) {
 
 /**
  * States that a ClientStream can be in.
- * @enum {number}
+ * @enum {string}
  * @private
  */
 cw.net.StreamState_ = {
-	UNSTARTED: 1,
-	WAITING_RESOURCES: 2,
-	STARTED: 3,
-	RESETTING: 4,
-	DISCONNECTED: 5
+	// Note that these strings are used for < and > comparison
+	UNSTARTED: "1_UNSTARTED",
+	WAITING_RESOURCES: "2_WAITING_RESOURCES",
+	STARTED: "3_STARTED",
+	RESETTING: "4_RESETTING",
+	DISCONNECTED: "5_DISCONNECTED"
 };
 
 
@@ -1846,8 +1847,9 @@ cw.net.ClientStream.prototype.start = function() {
  * @param {!Array.<!cw.net.XDRFrame>} xdrFrames
  */
 cw.net.ClientStream.prototype.expandHttpEndpoint_ = function(xdrFrames) {
-	goog.asserts.assert(this.state_ == cw.net.StreamState_.WAITING_RESOURCES,
-		"Expected stream state WAITING_RESOURCES, was " + this.state_);
+	var waitResState = cw.net.StreamState_.WAITING_RESOURCES;
+	goog.asserts.assert(this.state_ == waitResState,
+		"Expected stream state " + waitResState + ", was " + this.state_);
 
 	goog.asserts.assert(xdrFrames.length == 2,
 		"Wrong xdrFrames.length: " + xdrFrames.length);

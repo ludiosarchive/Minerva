@@ -308,7 +308,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 		stream.start();
 		stream.reset("a reasonString");
 		self.assertThrows(Error, function() { stream.sendString("a string"); },
-			"sendString: Can't send in state 4");
+			"sendString: Can't send in state 4_RESETTING");
 	},
 
 	/**
@@ -324,7 +324,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, 'ClientStreamTests').methods(
 		stream.start();
 		stream.reset("a reasonString");
 		self.assertThrows(Error, function() { stream.reset("a reasonString"); },
-			"reset: Can't send reset in state 4");
+			"reset: Can't send reset in state 4_RESETTING");
 	},
 
 	// TODO: add test: if secondary is sending strings, and primary closes,

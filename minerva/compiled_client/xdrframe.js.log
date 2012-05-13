@@ -2,4 +2,4 @@ Compiling with the following arguments: ['--compilation_level=ADVANCED_OPTIMIZAT
 0 error(s), 0 warning(s), 97.4% typed
 Used closure-compiler r1954
 Used closure-library r1809
-Used Coreweb d8d2d3e3a49a1349cd3e795e17abb10a0c6a96c9 | 2012-05-06 | _closurebuild: Add support for writing out extra log lines
+Used Coreweb 7888824ed0882a84da11846e0e938af81d4f7620 | 2012-05-06 | Bump __version__
