@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.8.1: http://docutils.sourceforge.net/" />
+<title>Minerva FAQ</title>
+<link rel="stylesheet" href="style.css" type="text/css" />
+</head>
+<body>
+<div class="document" id="minerva-faq">
+<h1 class="title">Minerva FAQ</h1>
+
+<div class="section" id="what-is-minerva">
+<h1>What is Minerva?</h1>
+<p>Minerva is a Comet server (written in Python/<a class="reference external" href="http://twistedmatrix.com/">Twisted</a>) and client (in JavaScript).  Unlike most other Comet servers, Minerva delivers data reliably and in-order even when running over HTTP.  Minerva also solves other Comet-over-HTTP problems by including subdomain support to work around <a class="reference external" href="http://www.browserscope.org/?category=network">browser limits for active HTTP requests per hostname</a>, and aggressive timeouts to avoid long hangs.</p>
+</div>
+<div class="section" id="how-do-i-write-an-application-that-uses-minerva">
+<h1>How do I write an application that uses Minerva?</h1>
+<p>See [this tutorial] for actual instructions; the overview version is:</p>
+<ol class="arabic simple">
+<li>On the server, install Minerva and its dependencies.</li>
+<li>Write a server-side protocol in Python that handles a stream of strings.  Make the server serve the JS client code and expose a Minerva endpoint.</li>
+<li>Write a client-side protocol in JavaScript that handles a stream of strings.  Make your client connect to the Minerva endpoint.</li>
+</ol>
+<p>If you've written any sort of network protocol in a non-blocking framework before, the process should be very familiar.</p>
+</div>
+<div class="section" id="why-bother-running-comet-over-http-rather-than-just-using-websocket-and-a-flash-fallback">
+<h1>Why bother running Comet over HTTP, rather than just using WebSocket and a Flash fallback?</h1>
+<p>If a user reaches your website over HTTP, they can almost certainly connect to a Minerva HTTP endpoint (as long as they have JavaScript enabled, of course).  This isn't the case for WebSocket or Flash Sockets; intermediaries (outbound firewalls, transparent HTTP proxies, anti-virus software) will sometimes block non-HTTP traffic.  For WebSocket, Google <a class="reference external" href="http://www.ietf.org/mail-archive/web/tls/current/msg05593.html&quot;">reported success rates</a> of  67% (port 80) to 95% (port 443).</p>
+<p>And of course, many users run older browsers with no WebSocket support, and might also have Flash disabled or in click-to-play mode.</p>
+</div>
+<div class="section" id="what-http-comet-related-problems-does-minerva-solve">
+<h1>What HTTP/Comet-related problems does Minerva solve?</h1>
+<ul class="simple">
+<li>Reliable and in-order data delivery, using a scheme much like TCP's ACKs and windows.</li>
+<li>Subdomain iframe management; these iframes are used to make XHR requests on different domains, bypassing browser limits.  This is essential for connectivity in multiple tabs.</li>
+<li>Robust timeout logic: stuck requests and sockets are detected and aborted.</li>
+<li>QAN (&quot;question-answer-notify&quot;): an optional protocol wrapper that allows for either side to send a request and wait for the reply.  This works even server-&gt;client and allows unlimited in-flight requests.</li>
+</ul>
+</div>
+<div class="section" id="what-problems-does-minerva-not-solve">
+<h1>What problems does Minerva not solve?</h1>
+<ul class="simple">
+<li>Data serialization: Minerva does not serialize/deserialize objects; this is left to your protocol.</li>
+<li>State synchronization between client and server: again, this is left to your protocol.</li>
+<li>Sending Unicode: use JSON or another serializer and make sure it serializes to the visible ASCII range.</li>
+</ul>
+</div>
+<div class="section" id="what-exactly-is-the-problem-with-most-primitive-comet-over-http-approaches">
+<h1>What exactly is the problem with most primitive Comet-over-HTTP approaches?</h1>
+<p>These approaches tend to work like this:</p>
+<p>Server side:</p>
+<pre class="literal-block">
+unsent_messages = []
+
+def render_GET(self, request):
+      # [... code to handle client-&gt;server data omitted ...]
+
+      # Send queued messages to client and clear the queue
+      unsent = unsent_messages
+      unsent_messages = []
+      return json.dumps(unsent)
+</pre>
+<p>The client side opens an XHR to the server in a loop to get new server-&gt;client messages, or whenever it needs to send a client-&gt;server message.  There are at least two major problems here:</p>
+<ol class="arabic simple">
+<li>Just because the server responded to a request, does not necessarily mean that the client ever received the HTTP response.  You need full ACK logic for both directions to prevent data loss and reordering.</li>
+<li>There's no mechanism for ensuring that client-&gt;server data is received in order by the server.  This is needed because if the client sends request A and request B, request B can arrive first.</li>
+</ol>
+</div>
+<div class="section" id="can-i-use-minerva-without-closure-library">
+<h1>Can I use Minerva without Closure Library?</h1>
+<p>Yes; the Minerva client comes in the normal (use with Closure Library) and standalone versions.</p>
+</div>
+<div class="section" id="can-i-use-minerva-without-python-twisted">
+<h1>Can I use Minerva without Python/Twisted?</h1>
+<p>No, but you can proxy data from a Minerva server to your own application server.</p>
+</div>
+<div class="section" id="why-the-restricted-string-limitations-no-unicode-etc">
+<h1>Why the &quot;restricted string&quot; limitations (no Unicode, etc)?</h1>
+<p>Some transports have problems transmitting all of Unicode correctly.  These behaviors were observed:</p>
+<ul class="simple">
+<li>XDomainRequest converting non-Character codepoints and invalid UTF-16 surrogates to <tt class="docutils literal">U+FFFD</tt>.</li>
+<li>IE6-8 and Opera failing to receive any data after a <tt class="docutils literal">U+0000</tt> (<tt class="docutils literal">NULL</tt>) in an XMLHttpRequest response.</li>
+<li>The Flash ExternalInterface bridge converting invalid UTF-16 surrogates to <tt class="docutils literal">U+FFFD</tt>.</li>
+<li>Old versions of Firefox incorrectly decoding a Unicode <tt class="docutils literal">.responseText</tt> while the XHR is in the <tt class="docutils literal">INTERACTIVE</tt> state.</li>
+<li>Google has observed some HTTP proxies corrupting Unicode in <tt class="docutils literal">.js</tt> payloads.</li>
+</ul>
+<p>To ensure compatibility everywhere, Minerva transmits only a subset of ASCII: <tt class="docutils literal">0x20</tt> (<tt class="docutils literal">SPACE</tt>) - <tt class="docutils literal">0x7E</tt> (<tt class="docutils literal">~</tt>).  To avoid having two serialization steps (one for Unicode), your application is responsible for all serialization/deserialization.  JSON is a good option for most applications.  Use these APIs to ensure ASCII-only JSON output:</p>
+<blockquote>
+<p>On the client side, use <tt class="docutils literal">Minerva.JSON.asciify</tt> (standalone Minerva), or <tt class="docutils literal">cw.json.asciify</tt>.</p>
+<p>In Python, use <tt class="docutils literal">simplejson.dumps</tt> or <tt class="docutils literal">json.dumps</tt>, which outputs ASCII by default.</p>
+</blockquote>
+<p>If you are sending octets, use a Base64 encoder/decoder.</p>
+</div>
+<div class="section" id="i-d-like-to-read-the-code-where-do-i-start">
+<h1>I'd like to read the code.  Where do I start?</h1>
+<p>The guts of the server are implemented in <a class="reference external" href="https://github.com/ludios/Minerva/blob/master/minerva/mserver.py">mserver.py</a> and the client in <a class="reference external" href="https://github.com/ludios/Minerva/blob/master/js_minerva/cw/net/client.js">client.js</a>.  Consider reading it in <a class="reference external" href="http://www.jetbrains.com/idea/">IDEA</a> so that you can jump to function definitions quickly.  Your understanding may be assisted by <a class="reference external" href="./website/data_flow.png">a sketch of how Minerva works</a>, the <a class="reference external" href="./website/protocol.htm">frame types used by the Minerva protocol</a>, and by playing with <tt class="docutils literal"><span class="pre">/chatapp/?mode=http</span></tt> on the <tt class="docutils literal">minerva_site</tt> server.  Understanding the separation between the stream and the transports is critical.</p>
+</div>
+<div class="section" id="what-other-software-has-any-kind-of-comet-implementation">
+<h1>What other software has any kind of Comet implementation?</h1>
+<p>Free:
+<a class="reference external" href="http://demo.liftweb.net/chat">Lift's Comet support</a>,
+<a class="reference external" href="http://bazaar.launchpad.net/~divmod-dev/divmod.org/trunk/files/head:/Nevow/">Divmod Nevow's</a> Athena (homepage dead),
+<a class="reference external" href="http://atmosphere.java.net/">Atmosphere</a>,
+<a class="reference external" href="https://code.google.com/p/gwt-comet/">gwt-comet</a>,
+<a class="reference external" href="http://socket.io/">Socket.IO</a>,
+<a class="reference external" href="http://pushmodule.slact.net/">nginx_http_push_module</a>,
+<a class="reference external" href="http://meteorserver.org/">Meteor</a>,
+<a class="reference external" href="http://persvr.org/">Perservere's</a>,
+<a class="reference external" href="https://code.google.com/p/gwteventservice/">gwteventservice</a>,
+<a class="reference external" href="http://labs.gameclosure.com/orbited2/">Orbited</a>,
+<a class="reference external" href="https://github.com/mcarter/hookbox">HookBox</a>,
+<a class="reference external" href="https://github.com/mcarter/js.io">js.io</a>,
+<a class="reference external" href="http://www.ape-project.org/">APE (Ajax Push Engine</a>,
+<a class="reference external" href="http://directwebremoting.org/">DWR (Direct Web Remoting</a>,
+<a class="reference external" href="http://www.icepush.org/">ICEpush</a>,
+<a class="reference external" href="https://encrypted.google.com/search?hl=en&amp;q=closure+BrowserChannel">BrowserChannel</a>.</p>
+<p>Commercial:
+<a class="reference external" href="https://code.google.com/appengine/docs/python/channel/overview.html">GAE's Channel API</a>,
+<a class="reference external" href="http://migratory.ro/">Migratory Push Server&lt;/a&gt; (supports very high</a>,
+<a class="reference external" href="http://www.stream-hub.com/">StreamHub</a>,
+<a class="reference external" href="http://www.frozenmountain.com/websync/">WebSync&lt;/a&gt;</a>,
+<a class="reference external" href="http://www.freeliberator.com/index.php">Liberator</a>,
+<a class="reference external" href="http://kaazing.com/">Kaazing</a>,
+<a class="reference external" href="http://www.lightstreamer.com/">Lightstreamer</a>,
+<a class="reference external" href="http://java.dzone.com/announcements/zk-35-supports-comet-server-pu">ZK's push support</a>.</p>
+</div>
+</div>
+</body>
+</html>
