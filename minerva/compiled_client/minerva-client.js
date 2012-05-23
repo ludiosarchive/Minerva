@@ -2084,11 +2084,11 @@ function td(a, b) {
 ;function ud(a, b) {
   var c;
   if(a instanceof ud) {
-    this.L = u(b) ? b : a.L, wd(this, a.ta), c = a.Ja, W(this), this.Ja = c, xd(this, a.ka), yd(this, a.Ua), zd(this, a.na), Ad(this, a.Q.S()), c = a.Aa, W(this), this.Aa = c
+    this.L = u(b) ? b : a.L, vd(this, a.ta), c = a.Ja, W(this), this.Ja = c, xd(this, a.ka), yd(this, a.Ua), zd(this, a.na), Ad(this, a.Q.S()), c = a.Aa, W(this), this.Aa = c
   }else {
     if(a && (c = ("" + a).match(sd))) {
       this.L = !!b;
-      wd(this, c[1] || "", j);
+      vd(this, c[1] || "", j);
       var d = c[2] || "";
       W(this);
       this.Ja = d ? decodeURIComponent(d) : "";
@@ -2134,7 +2134,7 @@ p.toString = function() {
 p.S = function() {
   return new ud(this)
 };
-function wd(a, b, c) {
+function vd(a, b, c) {
   W(a);
   a.ta = c ? b ? decodeURIComponent(b) : "" : b;
   a.ta && (a.ta = a.ta.replace(/:$/, ""))
@@ -2976,7 +2976,7 @@ function Te(a, b) {
   var l = e;
   e = g;
   g = l.S();
-  (h = !!e.ta) ? wd(g, e.ta) : h = !!e.Ja;
+  (h = !!e.ta) ? vd(g, e.ta) : h = !!e.Ja;
   if(h) {
     var n = e.Ja;
     W(g);
@@ -3265,6 +3265,9 @@ mf.prototype.v = function(a, b) {
   M(this.Ya, a, b);
   a.push(">")
 };
+mf.prototype.toString = function() {
+  return N(this)
+};
 function nf(a, b, c, d) {
   P.call(this, "TransportInfo", [a, b, c, d]);
   this.fa = a
@@ -3318,6 +3321,9 @@ p.v = function(a, b) {
   a.push(", resetting=");
   M(this.kb, a, b);
   a.push(">")
+};
+p.toString = function() {
+  return N(this)
 };
 p.Je = o("Ia");
 p.pe = function(a) {
@@ -3767,8 +3773,8 @@ function Ff(a, b, c) {
                 if(c.length) {
                   Ef(a, c);
                   if(!fa(c)) {
-                    for(var vd = c.length - 1;0 <= vd;vd--) {
-                      delete c[vd]
+                    for(var wd = c.length - 1;0 <= wd;wd--) {
+                      delete c[wd]
                     }
                   }
                   c.length = 0
@@ -4287,6 +4293,7 @@ $.prototype.bindToProtocol = $.prototype.pe;
 $.prototype.start = $.prototype.start;
 $.prototype.sendString = $.prototype.ae;
 $.prototype.reset = $.prototype.reset;
+$.prototype.dispose = $.prototype.b;
 y("Minerva.Logger", S);
 S.Level = T;
 S.getLogger = U;

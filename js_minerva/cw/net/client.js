@@ -696,6 +696,12 @@ cw.net.UserContext.prototype.__reprPush__ = function(sb, stack) {
 	sb.push(">");
 };
 
+/**
+ * @return {string}
+ */
+cw.net.UserContext.prototype.toString = function() {
+	return cw.repr.repr(this);
+};
 
 
 /**
@@ -1024,6 +1030,13 @@ cw.net.ClientStream.prototype.__reprPush__ = function(sb, stack) {
 	sb.push(', resetting=');
 	cw.repr.reprPush(this.resettingTransport_, sb, stack);
 	sb.push('>');
+};
+
+/**
+ * @return {string}
+ */
+cw.net.ClientStream.prototype.toString = function() {
+	return cw.repr.repr(this);
 };
 
 /**

@@ -59,6 +59,7 @@ goog.exportProperty(cw.net.ClientStream.prototype, 'bindToProtocol', cw.net.Clie
 goog.exportProperty(cw.net.ClientStream.prototype, 'start', cw.net.ClientStream.prototype.start);
 goog.exportProperty(cw.net.ClientStream.prototype, 'sendString', cw.net.ClientStream.prototype.sendString);
 goog.exportProperty(cw.net.ClientStream.prototype, 'reset', cw.net.ClientStream.prototype.reset);
+goog.exportProperty(cw.net.ClientStream.prototype, 'dispose', cw.net.ClientStream.prototype.dispose);
 // 5 more read-write properties are in RWPropertiesClientStream
 
 goog.exportSymbol('Minerva.Logger', goog.debug.Logger);
