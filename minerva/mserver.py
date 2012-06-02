@@ -932,6 +932,38 @@ class IServerTransport(IConsumerWithoutWrite):
 		"""
 
 
+	def isStreamingFromPeer():
+		"""
+		@return: Whether the peer can send us data more than once over this
+			transport.
+		@rtype: bool
+		"""
+
+
+	def isStreamingToPeer():
+		"""
+		@return: Whether we can send the peer data more than once over this
+			transport.
+		@rtype: bool
+		"""
+
+
+	def getHost():
+		"""
+		Get the host of the peer.
+
+		@return: An L{IAddress} provider.
+		"""
+
+
+	def getInfo():
+		"""
+		@return: A L{TransportInfo} object with information about this
+			transport.
+		@rtype: L{TransportInfo}
+		"""
+
+
 
 def _sanitizeHelloFrame(helloFrame, isHttp):
 	"""
@@ -1647,24 +1679,39 @@ class ServerTransport(object):
 
 
 	def isHttp(self):
+		"""
+		@see L{IServerTransport.isHttp}
+		"""
 		if self.writable is None:
 			raise RuntimeError("Don't yet know whether this is an HTTP transport")
 		return self._mode == HTTP
 
 
 	def isStreamingFromPeer(self):
+		"""
+		@see L{IServerTransport.isStreamingFromPeer}
+		"""
 		return not self.isHttp()
 
 
 	def isStreamingToPeer(self):
+		"""
+		@see L{IServerTransport.isStreamingToPeer}
+		"""
 		return self._streamingResponse
 
 
 	def getHost(self):
+		"""
+		@see L{IServerTransport.getHost}
+		"""
 		return self.writable.getHost()
 
 
 	def getInfo(self):
+		"""
+		@see L{IServerTransport.getInfo}
+		"""
 		return TransportInfo(
 			transportNumber=self.transportNumber,
 			isPrimary=self._wantsStrings,
