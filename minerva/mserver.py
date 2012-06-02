@@ -344,7 +344,7 @@ class ServerStream(object):
 		if self._primaryTransport:
 			start = None if self._pretendAcked is None else self._pretendAcked + 1
 			# Note: writeStrings may be called even if there's nothing
-			# in the queue to write. See Minerva git history before 2010-05-23
+			# in the queue to write.  See Minerva git history before 2010-05-23
 			# if you're interested in the crazy logic that was here before, to
 			# avoid calling writeStrings when not necessary.
 			self._primaryTransport.writeStrings(self.queue, start)
@@ -411,7 +411,7 @@ class ServerStream(object):
 			del self._protocol
 
 
-	# Called by the application only. Internal Minerva code uses _internalReset.
+	# Called by the application only.  Internal Minerva code uses _internalReset.
 	# This assumes _protocol has been instantiated.
 	def reset(self, reasonString):
 		"""
@@ -439,7 +439,7 @@ class ServerStream(object):
 	# This assumes _protocol has been instantiated.
 	def resetFromPeer(self, reasonString, applicationLevel):
 		"""
-		Private. Do not call this.
+		Private.  Do not call this.
 
 		ServerTransport calls this when it gets a reset frame from client.
 		ServerTransport still needs to call transportOffline after this.
@@ -478,7 +478,7 @@ class ServerStream(object):
 
 	def stringsReceived(self, transport, pairs):
 		"""
-		Private. Do not call this.
+		Private.  Do not call this.
 
 		Called by a transport to tell me that it has received *already sorted*
 		(seqNum, string) L{pairs}.
@@ -507,10 +507,10 @@ class ServerStream(object):
 
 	def sackReceived(self, sack):
 		"""
-		Private. Do not call this.
+		Private.  Do not call this.
 
 		Minerva transports call this when they get a HelloFrame.sack
-		or SackFrame from client. C{sack} is a L{window.SACK}.
+		or SackFrame from client.  C{sack} is a L{window.SACK}.
 
 		Returns C{True} if SACK was bad, C{False} otherwise.
 		"""
@@ -534,7 +534,7 @@ class ServerStream(object):
 
 	def transportOnline(self, transport, wantsStrings, succeedsTransport):
 		"""
-		Private. Do not call this.
+		Private.  Do not call this.
 
 		Called by faces to tell me that new transport C{transport} has connected.
 		This is called even for very-short-term C2S HTTP transports.
@@ -598,7 +598,7 @@ class ServerStream(object):
 
 	def transportOffline(self, transport):
 		"""
-		Private. Do not call this.
+		Private.  Do not call this.
 
 		Called by faces to tell me that new transport C{transport} has disconnected.
 		"""
@@ -639,7 +639,7 @@ class ServerStream(object):
 	def _unregisterProducerOnPrimary(self):
 		"""
 		Keep in mind that this is called whenever you unregister a producer
-		on ServerStream, too. self._primaryPaused does not change.
+		on ServerStream, too.  self._primaryPaused does not change.
 		"""
 		if self._primaryHasProducer:
 			self._primaryTransport.unregisterProducer()
@@ -692,7 +692,7 @@ class ServerStream(object):
 		"""
 		Notify when finishing the request.
 
-		@return: A deferred. The deferred's callback chain willl be fired when
+		@return: A deferred.  The deferred's callback chain willl be fired when
 		this ServerStream is finished -- always with a C{None} value.
 		"""
 		self._notifications.append(defer.Deferred())
@@ -719,7 +719,7 @@ class ServerStream(object):
 
 		If C{streaming} is C{True}, C{producer} should provide the
 		L{IPushProducer} interface.  Otherwise, it is assumed that producer
-		provides the L{IPullProducer} interface. In this case, C{producer}
+		provides the L{IPullProducer} interface.  In this case, C{producer}
 		won't be asked to pauseProducing(), but it has to be careful to
 		write() data only when its resumeProducing() method is called.
 		"""
@@ -754,9 +754,9 @@ class ServerStream(object):
 	# called ONLY by the primary transport in response to TCP pressure
 	def pauseProducing(self):
 		"""
-		Private. Do not call this.
+		Private.  Do not call this.
 
-		We assume this is called only by the primary transport. Also, the pause
+		We assume this is called only by the primary transport.  Also, the pause
 		status is no longer relevant after the primary transport detaches.
 		"""
 		self._primaryPaused = True
@@ -767,7 +767,7 @@ class ServerStream(object):
 	# called ONLY by the primary transport in response to TCP pressure
 	def resumeProducing(self):
 		"""
-		Private. Do not call this.
+		Private.  Do not call this.
 
 		We assume this is called only by the primary transport.
 		"""
@@ -874,7 +874,7 @@ class IServerTransport(IConsumerWithoutWrite):
 		"""
 		Write strings in queue C{queue} to the peer.
 		This usually does not write strings that were already written to
-		the peer over this transport. The exception is when `start` is
+		the peer over this transport.  The exception is when `start` is
 		now lower (or None) compared to the previous `start`.
 
 		@param queue: an L{abstract.Queue}
@@ -886,7 +886,7 @@ class IServerTransport(IConsumerWithoutWrite):
 
 	def closeGently():
 		"""
-		Close this transport. Usually happens if the transport is no longer
+		Close this transport.  Usually happens if the transport is no longer
 		useful (due to HTTP limitations), or because a new active S2C
 		transport has connected.
 
@@ -897,7 +897,7 @@ class IServerTransport(IConsumerWithoutWrite):
 	def causedRwinOverflow():
 		"""
 		Close this transport because it has caused our receive window to
-		overflow. This provides a strong hint to the client that they should
+		overflow.  This provides a strong hint to the client that they should
 		connect a new transport and send deliverable strings.
 		"""
 
@@ -1063,7 +1063,7 @@ class ServerTransport(object):
 			_cancelDc(self, '_maxOpenDc')
 			_cancelDc(self, '_heartbeatDc')
 
-			# Tell ServerStream this transport is offline. Whether we
+			# Tell ServerStream this transport is offline.  Whether we
 			# still have a TCP connection open to the peer is irrelevant.
 			if self._stream:
 				self._stream.transportOffline(self)
@@ -1216,7 +1216,7 @@ class ServerTransport(object):
 
 		if requestNewStream:
 			# If we send StreamCreatedFrame, it *must* be the first frame
-			# we send. If we send something else like a SackFrame first, and
+			# we send.  If we send something else like a SackFrame first, and
 			# transport abruptly disconnects after that frame, client may get
 			# into an inconsistent state.
 			self._toSend += self._encodeFrame(StreamCreatedFrame())
@@ -1412,7 +1412,7 @@ class ServerTransport(object):
 				self._peerSeqNum = frame.seqNum - 1
 
 			else:
-				# Deliver the strings before processing client's reset frame. This
+				# Deliver the strings before processing client's reset frame.  This
 				# is an implementation detail that may change.
 				if nonlocal['bunchedStrings']:
 					handleStrings()
@@ -1539,7 +1539,7 @@ class ServerTransport(object):
 		self.writable.unregisterProducer()
 
 
-	# called by Twisted. We trust Twisted to only call this if we registered
+	# called by Twisted.  We trust Twisted to only call this if we registered
 	# a push producer with self.writable
 	def pauseProducing(self):
 		self._paused = True
@@ -1643,7 +1643,7 @@ class ServerTransport(object):
 
 	def isHttp(self):
 		if self.writable is None:
-			raise RuntimeError("Don't know if this is HTTP or not. Maybe ask later.")
+			raise RuntimeError("Don't yet know whether this is an HTTP transport")
 		return self._mode == HTTP
 
 
@@ -1701,7 +1701,7 @@ class ServerTransportFactory(protocol.ServerFactory):
 
 	def setPolicyString(self, policyString):
 		"""
-		Set the Flash/Silverlight socket policy to C{policyString}. Existing
+		Set the Flash/Silverlight socket policy to C{policyString}.  Existing
 		open connections will serve the old policy (though this is of little
 		consequence).
 

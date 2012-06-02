@@ -31,7 +31,7 @@ except ImportError:
 
 class NoOriginHeader(BetterResource):
 	"""
-	For testing XDR. See Minerva/js/CW/Net/TestNet.js
+	For testing XDR.  See Minerva/js/CW/Net/TestNet.js
 	"""
 	isLeaf = True
 	def render_GET(self, request):
@@ -45,7 +45,7 @@ class NoOriginHeader(BetterResource):
 
 class SimpleResponse(BetterResource):
 	"""
-	For testing XHR. See Minerva/js/CW/Net/TestNet.js
+	For testing XHR.  See Minerva/js/CW/Net/TestNet.js
 	"""
 	isLeaf = True
 	def render_GET(self, request):
@@ -66,7 +66,7 @@ class SimpleResponse(BetterResource):
 
 class UnicodeRainbow(BetterResource):
 	"""
-	For testing XHR. See Minerva/js/CW/Net/TestNet.js
+	For testing XHR.  See Minerva/js/CW/Net/TestNet.js
 	"""
 	isLeaf = True
 
@@ -207,7 +207,7 @@ class DemoProtocol(object):
 		elif s.startswith('string_then_reset_me:'):
 			reasonString = s.split(':', 1)[1]
 			# Send a string which will effectively close a long-polling
-			# primary transport. In this case, the client will usually
+			# primary transport.  In this case, the client will usually
 			# not see a ResetFrame.
 			self.stream.sendString("about to reset with reasonString " + reasonString)
 			self.stream.reset(reasonString)

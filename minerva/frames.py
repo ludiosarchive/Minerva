@@ -134,8 +134,8 @@ def helloDataToHelloFrame(helloData):
 	try:
 		# Any line here can raise KeyError; additional exceptions marked with 'e:'
 
-		# requestNewStream is always optional. If missing or False/0, transport
-		# is intended to attach to an existing stream.
+		# requestNewStream is always optional.  If missing or False/0,
+		# transport is intended to attach to an existing stream.
 		obj.requestNewStream = ensureBool( # e: ValueError
 			helloData[Hello_requestNewStream]) if \
 			Hello_requestNewStream in helloData else False
@@ -161,9 +161,9 @@ def helloDataToHelloFrame(helloData):
 	if obj.protocolVersion != 2:
 		raise InvalidHello("bad protocolVersion")
 
-	# Hello_succeedsTransport is always optional. If missing, the client does not
-	# want to get S2C strings over this transport. If None, the client does,
-	# but the transport does not succeed an existing primary transport. If a
+	# Hello_succeedsTransport is always optional.  If missing, the client does not
+	# want to get S2C strings over this transport.  If None, the client does,
+	# but the transport does not succeed an existing primary transport.  If a
 	# number, the transport might succeed an existing primary transport.
 	if Hello_succeedsTransport in helloData:
 		obj.succeedsTransport = helloData[Hello_succeedsTransport]
@@ -181,7 +181,7 @@ def helloDataToHelloFrame(helloData):
 	except KeyError:
 		obj.httpFormat = None
 
-	# needPaddingBytes is always optional. If missing, 0.
+	# needPaddingBytes is always optional.  If missing, 0.
 	if Hello_needPaddingBytes in helloData:
 		try:
 			obj.needPaddingBytes = ensureNonNegIntLimit(
@@ -396,7 +396,7 @@ class InvalidSackString(Exception):
 
 def sackStringToSack(sackString):
 	"""
-	C{sackString} is a C{str}. Returns a L{window.SACK}.
+	C{sackString} is a C{str}.  Returns a L{window.SACK}.
 	"""
 	try:
 		# If not enough args for split, Python raises ValueError
@@ -410,7 +410,7 @@ def sackStringToSack(sackString):
 
 def sackToSackString(sack):
 	"""
-	C{sack} is a L{window.SACK}. Returns a C{str}.
+	C{sack} is a L{window.SACK}.  Returns a C{str}.
 	"""
 	return ','.join(str(s) for s in sack.sackList) + '|' + str(sack.ackNumber)
 

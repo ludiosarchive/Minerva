@@ -204,7 +204,7 @@ class ServerStreamTests(unittest.TestCase):
 	def test_streamCallsStreamStarted(self):
 		"""
 		When the ServerStream is instantiated, it doesn't automatically
-		create an IStringProtocol instance. When the first transport
+		create an IStringProtocol instance.  When the first transport
 		attaches, ServerStream calls the `streamStarted` method on the
 		IStringProtocol instance.
 		"""
@@ -346,7 +346,7 @@ class ServerStreamTests(unittest.TestCase):
 	def test_exhaustedReceiveWindowTooManyStrings(self):
 		"""
 		If too many strings are stuck in Incoming, the transport that received
-		"the last straw" is killed with C{tk_rwin_overflow}. ServerStream._incoming
+		"the last straw" is killed with C{tk_rwin_overflow}.  ServerStream._incoming
 		keeps only 50 of them.
 		"""
 		factory = MockStringsFactory()
@@ -726,7 +726,7 @@ class ServerStreamTests(unittest.TestCase):
 			s.registerProducer(producer1, streaming=streaming)
 
 			# pauseProducing/resumeProducing calls are sent directly to
-			# producer, even when it is a pull producer. We trust
+			# producer, even when it is a pull producer.  We trust
 			# Twisted to not make invalid calls on pull producers.
 			s.pauseProducing()
 			s.pauseProducing()
@@ -794,8 +794,8 @@ class ServerStreamTests(unittest.TestCase):
 	def test_lackOfPrimaryTransportPausesPushProducer(self):
 		"""
 		If L{ServerStream} has no primary transport attached, a newly-registered
-		push producer is paused. After a primary transport attaches to
-		L{ServerStream}, the push producer is resumed. After it goes offline,
+		push producer is paused.  After a primary transport attaches to
+		L{ServerStream}, the push producer is resumed.  After it goes offline,
 		the push producer is paused again.
 		"""
 		factory, s, t1 = self._makeStuff()
@@ -886,7 +886,7 @@ class ServerStreamTests(unittest.TestCase):
 
 	def test_newPrimaryTransportResumesAndLeavesGoodState(self):
 		"""
-		Similar to L{test_newPrimaryTransportResumesIfNecessary}. Make
+		Similar to L{test_newPrimaryTransportResumesIfNecessary}.  Make
 		sure ServerStream doesn't do strange things (like resumeProducing twice
 		in a row when another transport connects.)
 		"""
@@ -1441,7 +1441,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 
 	def _testExtraDataReceivedIgnored(self, transport):
 		"""
-		Write an invalid frame to C{transport}. Assert that we don't
+		Write an invalid frame to C{transport}.  Assert that we don't
 		get a reply, and that the underlying TCP transport isn't disconnecting.
 
 		If the Minerva transport is shutting down (because it received bad
@@ -1576,7 +1576,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 
 	def test_validHelloButSentTwice(self):
 		"""
-		Client can only send hello frame once. If they send it more than once,
+		Client can only send hello frame once.  If they send it more than once,
 		they get C{tk_invalid_frame_type_or_arguments}.
 		"""
 		frame0 = _makeHelloFrame()
@@ -1595,7 +1595,7 @@ class _BaseServerTransportTests(_BaseHelpers):
 	def test_validHelloButSentTwiceAtSameTime(self):
 		"""
 		Client can only send hello frame once (even if both arrive in the
-		same dataReceived call). If they send it more than once, they get
+		same dataReceived call).  If they send it more than once, they get
 		C{tk_invalid_frame_type_or_arguments}.
 		"""
 		frame0 = _makeHelloFrame()
@@ -2107,7 +2107,7 @@ class TransportProducerTests(unittest.TestCase):
 
 	def test_stopProducingIgnored(self):
 		"""
-		Verify that stopProducing does nothing at all. This test kind of sucks.
+		Verify that stopProducing does nothing at all.  This test kind of sucks.
 		"""
 		def getState(transport):
 			return dict(
@@ -2485,7 +2485,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 	def test_lastSackSeenByClient(self):
 		"""
 		If client's 'lastSackSeenByClient' is not the current SACK, a SACK
-		is written to the client. If it is the current SACK, it is not written to
+		is written to the client.  If it is the current SACK, it is not written to
 		the client.
 		"""
 		for clientLosesSack in (True, False):
@@ -2555,7 +2555,7 @@ class IntegrationTests(_BaseHelpers, unittest.TestCase):
 	def test_stringThenResetWritesSACK(self):
 		"""
 		If client sends strings and a reset frame, the strings are sack'ed
-		before the transport is terminated. Also test that the protocol
+		before the transport is terminated.  Also test that the protocol
 		gets the right calls.
 		"""
 		transport0 = self._makeTransport()
@@ -3022,7 +3022,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		gets a SACK frame and the strings.
 
 		Iif not streamingResponse, the request is finished after both
-		frame types are sent. If streamingResponse, frames are written
+		frame types are sent.  If streamingResponse, frames are written
 		and the request is kept open.
 		"""
 		for streaming in (False, True):
@@ -3117,7 +3117,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 		r"""
 		If S2C strings become available after the transport connects, and if
 		not streamingResponse, the request is finished after string(s)
-		are sent. If streamingResponse, strings are written and the
+		are sent.  If streamingResponse, strings are written and the
 		request is kept open.
 		"""
 		for streaming in (False, True):
@@ -3126,7 +3126,7 @@ class HttpTests(_BaseHelpers, unittest.TestCase):
 			self._resetStreamTracker(realObjects=True)
 			resource = self._makeResource()
 
-			# Make an initial request that only creates the ServerStream. This
+			# Make an initial request that only creates the ServerStream.  This
 			# makes the rest of this test case simpler because we don't
 			# have to worry about first transport being closed (in the
 			# non-streaming case) due to StreamCreatedFrame being written.

@@ -278,7 +278,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestWindow, 'IncomingTests').methods(
 	 * out-of-order in one {@code Incoming.give} call.
 	 *
 	 * You should *not* pass .give unsorted sequences in production code,
-	 * because you may hit the item/size limit. It will also be slower because
+	 * because you may hit the item/size limit.  It will also be slower because
 	 * it must modify a dictionary more frequently.
 	 */
 	function test_outOfOrderJustOneCall(self) {

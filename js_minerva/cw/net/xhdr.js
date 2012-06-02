@@ -110,20 +110,20 @@ cw.net.Timeout.prototype.name = 'cw.net.Timeout';
 
 
 // Without CORS support for XMLHttpRequest, or XDomainRequest, we have to create
-// an iframe for each domain that we want to make XHR requests to. This is because we
+// an iframe for each domain that we want to make XHR requests to.  This is because we
 // can "bridge" subdomain domains with document.domain, but XHR requests must go
 // to the same scheme:host:port
 // Safari 4, Chrome 2, Firefox 3.5 have CORS.
 // IE has XDomainRequest
 
 // We might even able to pull the XHR object out of the iframe and kill the
-// iframe. But this needs to be tested. (Also it sucks because the browser will
+// iframe.  But this needs to be tested. (Also it sucks because the browser will
 // have to leave the iframe un-GCed)
 
 
 
 // Per top-level page: We'll have to keep track of which iframes we've created for subdomain
-// access. We might want more than one sometimes, if we're doing diagnostics.
+// access.  We might want more than one sometimes, if we're doing diagnostics.
 
 
 // More globally: Somehow we'll have to keep track of which subdomains are "in use"
@@ -164,9 +164,9 @@ cw.net.IUsableSomething.prototype.canCrossDomains_ = function() {
  *
  * @param {string} verb The HTTP verb: exactly "GET" or exactly "POST".
  * @param {string} url The URL to request.
- * @param {string=} post The data to POST. Use "" (empty string) if using {@code verb} != "POST".
+ * @param {string=} post The data to POST.  Use "" (empty string) if using {@code verb} != "POST".
  * @param {undefined|function(!cw.net.XHRLike, (number|null), (number|null))=} progressCallback
- * 	If not undefined, is a callable function. Whenever data is received, the
+ * 	If not undefined, is a callable function.  Whenever data is received, the
  * 	function will be called with arguments
  *          (this.object_, bytes available in responseText, total response size in bytes)
  *
@@ -175,7 +175,7 @@ cw.net.IUsableSomething.prototype.canCrossDomains_ = function() {
  *   {@code this.object_.responseText} to determine progress information.
  *
  *   Note that (bytes available in responseText [Number]) may suddenly become
- *   {@code null} due to a Firefox bug. When this happens, you should check
+ *   {@code null} due to a Firefox bug.  When this happens, you should check
  *   {@code responseText} for new data, just as if you always got {@code null}.
  *
  *   The callback will be called when the last chunk is received, too.
@@ -183,7 +183,7 @@ cw.net.IUsableSomething.prototype.canCrossDomains_ = function() {
  * 	If undefined, {@code progressCallback} will not be called.
  *
  * @return {goog.async.Deferred} A Deferred that fires with callback or errback.
- * It's not safe to make another request until this Deferred fires. Do not rely
+ * It's not safe to make another request until this Deferred fires.  Do not rely
  * only on {@code progressCallback}.
  */
 cw.net.IUsableSomething.prototype.request_ = function(verb, url, post, progressCallback) {
@@ -191,7 +191,7 @@ cw.net.IUsableSomething.prototype.request_ = function(verb, url, post, progressC
 };
 
 /**
- * Abort the current request. If none is active, or request was already aborted, this is a no-op.
+ * Abort the current request.  If none is active, or request was already aborted, this is a no-op.
  */
 cw.net.IUsableSomething.prototype.abort_ = function() {
 
@@ -217,7 +217,7 @@ Disadvantages:
  * An object that can perform XDomainRequest requests.
  *
  * TODO: implement timeout? Should we rely on XDR's timeout?
- * Probably not: it might be buggy or become buggier. We also
+ * Probably not: it might be buggy or become buggier.  We also
  *    want to be able to test with our own deterministic clock.
  *
  * @constructor
@@ -251,7 +251,7 @@ cw.net.UsableXDR.prototype.canCrossDomains_ = function() {
 cw.net.UsableXDR.prototype.finishAndReset_ = function(errorOrNull) {
 	if(!this.requestActive_) {
 		// Both UsableXDR.abort and handler_XDR_onload_/handler_XDR_onerror_
-		// may call finishAndReset_. Sometimes UsableXHR.abort will beat the
+		// may call finishAndReset_.  Sometimes UsableXHR.abort will beat the
 		// handlers to the punch.
 		// XDomainRequest.abort() won't fire anything after aborting.
 		// After `onerror' on an XDomainRequest, nothing else will be fired.
@@ -329,14 +329,14 @@ cw.net.UsableXDR.prototype.request_ = function(verb, url, post, progressCallback
 	 * And calling .abort() like this is forbidden, although strangely an error
 	 * is not thrown:
 	 * "The abort method may be called in the time after the send method has
-	 * been called, and before the onload event is raised. An error is returned if
+	 * been called, and before the onload event is raised.  An error is returned if
 	 * it is called outside of this interval."
 	 * - http://msdn.microsoft.com/en-us/library/cc288129%28VS.85%29.aspx
 	 *
 	 * So, we make a new XDomainRequest object every time.
 	 *
 	 * When reusing the object, the crash happens at `this.finishAndReset_()'
-	 * in {@code handler_XDR_onload_}. It crashes persist, change code to
+	 * in {@code handler_XDR_onload_}.  It crashes persist, change code to
 	 * liberally use {@code CallQueue.eventually}
 	 */
 
@@ -344,7 +344,7 @@ cw.net.UsableXDR.prototype.request_ = function(verb, url, post, progressCallback
 	var x = this.object_;
 
 	x.open(verb, url);
-	x.timeout = 3600*1000; // 1 hour. We'll do our own timeouts.
+	x.timeout = 3600*1000; // 1 hour.  We'll do our own timeouts.
 
 	x.onerror = goog.bind(this.handler_XDR_onerror_, this);
 	x.onprogress = goog.bind(this.handler_XDR_onprogress_, this);
@@ -374,10 +374,10 @@ cw.net.UsableXDR.prototype.abort_ = function() {
 
 
 /**
- * An object that can perform XMLHttpRequests requests. IE's XMLHTTP
+ * An object that can perform XMLHttpRequests requests.  IE's XMLHTTP
  * objects are also supported.
  *
- * TODO: cancel a request onunload in IE. This might be needed to
+ * TODO: cancel a request onunload in IE.  This might be needed to
  * avoid a memory leak.
  *
  * TODO: implement timeout?
@@ -411,7 +411,7 @@ cw.net.UsableXHR.prototype.canCrossDomains_ = function() {
  * {@see cw.net.IUsableSomething.request_}
  */
 cw.net.UsableXHR.prototype.request_ = function(verb, url, post, progressCallback) {
-	// TODO: send as few headers possible for each browser. This requires custom
+	// TODO: send as few headers possible for each browser.  This requires custom
 	// per-browser if/elif'ing
 
 	if(this.requestActive_) {
@@ -438,8 +438,8 @@ cw.net.UsableXHR.prototype.request_ = function(verb, url, post, progressCallback
 
 	// Just because we attach `onprogress', doesn't mean it will ever fire.
 	// Even in browsers that support `onprogress', a bug in the browser
-	// or a browser extension may block its firing. This has been observed
-	// in a Firefox 3.5.3 install with a lot of extensions. We do assume that
+	// or a browser extension may block its firing.  This has been observed
+	// in a Firefox 3.5.3 install with a lot of extensions.  We do assume that
 	// if it fires once with good numbers, it will keep firing with good numbers
 	// until the request is over.
 	try {
@@ -450,7 +450,7 @@ cw.net.UsableXHR.prototype.request_ = function(verb, url, post, progressCallback
 	// TODO: maybe attach onerror too, to detect some network errors.
 
 	// IE6-8 and Opera 10 (9? 8?) incorrectly send the fragment as part
-	// of the request. The fragment should never be sent to the server.
+	// of the request.  The fragment should never be sent to the server.
 	// Only XHR/XMLHTTP are buggy this way; this does not apply to
 	// XDomainRequest
 	url = url.replace(/#.*/g, "");
@@ -477,7 +477,7 @@ cw.net.UsableXHR.prototype.request_ = function(verb, url, post, progressCallback
 cw.net.UsableXHR.prototype.finishAndReset_ = function(errorOrNull) {
 	if(!this.requestActive_) {
 		// Both UsableXHR.abort and handler_onreadystatechange_
-		// may call finishAndReset_. Sometimes UsableXHR.abort will beat the
+		// may call finishAndReset_.  Sometimes UsableXHR.abort will beat the
 		// handlers to the punch.
 
 		// Opera 10 won't fire anything after aborting, probably because it
@@ -507,7 +507,7 @@ cw.net.UsableXHR.prototype.abort_ = function() {
 		// - http://msdn.microsoft.com/en-us/library/ms535920%28VS.85%29.aspx
 		this.object_.abort();
 		// We run the risk that the XHR object can't be reused immediately after
-		// we call .abort() on it. If this happens in a major browser, we need
+		// we call .abort() on it.  If this happens in a major browser, we need
 		// to give on up reusing XMLHttpRequest objects.
 		this.finishAndReset_(new cw.net.RequestAborted());
 	}
@@ -543,9 +543,9 @@ cw.net.UsableXHR.prototype.handler_onprogress_ = function(ev) {
 	}
 
 	// In Firefox 3.5.3, Safari 4, and Chrome 3.0.195.21, onprogress fires before
-	// onreadystatechange. Only in Firefox 3.5.3, the responseText is still stale until
-	// onreadystatechange is fired. Only in Firefox 3.5.3, sometimes onprogress
-	// fires with `undefined' for e.position and e.totalSize. When this happens,
+	// onreadystatechange.  Only in Firefox 3.5.3, the responseText is still stale until
+	// onreadystatechange is fired.  Only in Firefox 3.5.3, sometimes onprogress
+	// fires with `undefined' for e.position and e.totalSize.  When this happens,
 	// we must call progressCallback because the length of responseText is longer
 	// than the last this.position_ (though we do not know the new position right now).
 	// This strange `undefined' event happens once or twice per request.
@@ -583,7 +583,7 @@ cw.net.UsableXHR.prototype.handler_onreadystatechange_ = function() {
 	// TODO: detect network disconnections (IE error codes, what about other browsers?)
 
 	// Note: we can't detect if the response body is complete because responseText is unicode
-	// and Content-length is bytes. We can't even detect it for the "0 characters received" case
+	// and Content-length is bytes.  We can't even detect it for the "0 characters received" case
 	// because U+FEFF is stripped in Safari 3 and U+0000 is stripped in Opera 9.5 (maybe 10 too).
 
 	if(readyState == 4) {
@@ -604,7 +604,7 @@ cw.net.UsableXHR.prototype.handler_onreadystatechange_ = function() {
  *
  * @param {string} verb The HTTP method: exactly "GET" or exactly "POST"
  * @param {string} url The URL to fetch.
- * @param {string} post The data to POST. Use "" (empty string) if
+ * @param {string} post The data to POST.  Use "" (empty string) if
  * 	using {@code verb} "GET".
  *
  * @return {!goog.async.Deferred} A Deferred that fires with the response

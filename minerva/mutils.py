@@ -179,7 +179,7 @@ def optParameterDomain(longName, shortName):
 	# for example.)  We require that the document.domain be
 	# manually specified.
 	return [longName, shortName, None, "The domain to set document.domain " +
-		"values to. Do not include the port number.  If this option is " +
+		"values to.  Do not include the port number.  If this option is " +
 		"not specified, Minerva over HTTP might work simultaneously " +
 		"in just one or two tabs."]
 

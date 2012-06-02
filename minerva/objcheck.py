@@ -82,7 +82,7 @@ def strToIntInRange(value, lower, upper):
 def ensureInt(value):
 	"""
 	Convert C{value} from a L{float} to an equivalent L{int}/L{long} if
-	possible, else raise L{ValueError}. C{int}s and C{long}s pass through.
+	possible, else raise L{ValueError}.  C{int}s and C{long}s pass through.
 
 	@rtype: L{int} or L{long}
 	@return: non-float equivalent of C{value}

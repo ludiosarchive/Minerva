@@ -1,5 +1,5 @@
 /*
-Copyright (c) The Minerva Authors. See the accompanying LICENSE.txt.
+Copyright (c) The Minerva Authors.  See the accompanying LICENSE.txt.
 
 Copyright (c) 2008-2009, Maries Ionel Cristian
 

@@ -88,9 +88,9 @@ cw.Class.subclass(cw.net.TestXHDR, 'MockXDR').pmethods({
 	},
 
 	open: function(verb, url) {
-		// XDR is always async. It doesn't have this 3rd `true' argument, but append it anyway
-		// just to make things easier to test. Doing this makes the XDR mock log look
-		// like the XHR mock log.
+		// XDR is always async.  It doesn't have this 3rd `true' argument,
+		// but append it anyway just to make things easier to test.  Doing
+		// this makes the XDR mock log look like the XHR mock log.
 		this.log.push(['open', verb, url, true]);
 	},
 
@@ -193,7 +193,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseUsableXHDRLogicTests').meth
 	 * {@code self.xhdr.abort} is called multiple times.
 	 *
 	 * We use a dummy because calling .abort_() multiple times on a browser's
-	 * XHR object doesn't throw an exception or do anything important. We still
+	 * XHR object doesn't throw an exception or do anything important.  We still
 	 * want to prevent it from happening.
 	 */
 	function test_abortCalledOnlyOnce(self) {
@@ -233,7 +233,7 @@ cw.net.TestXHDR._BaseUsableXHDRLogicTests.subclass(cw.net.TestXHDR, 'UsableXHRLo
 
 	/**
 	 * The implementation clears the {@code onreadystatechange} property
-	 * of the XHR object after the request is _done_. This is necessary to
+	 * of the XHR object after the request is _done_.  This is necessary to
 	 * avoid memory leaks in IE.
 	 */
 	function test_onreadystatechangeResetAfterFinish(self) {
@@ -250,7 +250,7 @@ cw.net.TestXHDR._BaseUsableXHDRLogicTests.subclass(cw.net.TestXHDR, 'UsableXHRLo
 
 	/**
 	 * The implementations clears the {@code onreadystatechange} property
-	 * of the XHR object after the request is _aborted_. This is necessary to
+	 * of the XHR object after the request is _aborted_.  This is necessary to
 	 * avoid memory leaks in IE.
 	 */
 	function test_onreadystatechangeResetAfterAborted(self) {
@@ -411,7 +411,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 	 * Calling {@code .abort_()} multiple times is okay.
 	 *
 	 * Note that we can't assert that an aborted request doesn't actually make
-	 * it to the server. This is because some browsers send the XHR requests
+	 * it to the server.  This is because some browsers send the XHR requests
 	 * really fast, and are done before you call .abort_().
 	 */
 	function test_abort(self) {
@@ -422,7 +422,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestXHDR, '_BaseRealRequestTests').methods(
 		self.assertIdentical(undefined, self.xhdr.abort_());
 		self.assertIdentical(undefined, self.xhdr.abort_());
 
-		// Note that errback won't always get fired. Sometimes it'll be callback
+		// Note that errback won't always get fired.  Sometimes it'll be callback
 		// because browser couldn't abort before the request finished.
 		requestD.addErrback(function(e) {
 			return null;
@@ -528,8 +528,8 @@ cw.net.TestXHDR._BaseRealRequestTests.subclass(cw.net.TestXHDR, 'UsableXDRRealRe
 		});
 	},
 
-	// A lot more codepoints are banned for XDR. Banned codepoints are replaced with
-	// U+FFFD REPLACEMENT CHARACTER.
+	// A lot more codepoints are banned for XDR.  Banned codepoints are
+	// replaced with U+FFFD REPLACEMENT CHARACTER.
 
 	// Other than bad surrogates, the "forbidden" codepoint ranges are:
 	// U+FDD0 - U+FDEF, U+FFF0 - U+FFF8, U+FFFE, U+FFFF.

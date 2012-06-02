@@ -2,7 +2,7 @@
  * @fileoverview Minerva client for web browsers.
  *
  * If you make modifications, keep in mind that the unit tests are not
- * complete enough to prevent regressions. You may want to use
+ * complete enough to prevent regressions.  You may want to use
  * the /chatapp/ page to check the behavior, and DemosMinerva's
  * demos, as well as a tools like HttpFox, Firebug, and Wireshark.
  *
@@ -1570,7 +1570,7 @@ cw.net.ClientStream.prototype.transportOffline_ = function(transport) {
 			this.secondaryTransport_ = null;
 			if(!times) {
 				// More data might have been queued while the secondary transport
-				// was getting a response. It's also possible that the server didn't
+				// was getting a response.  It's also possible that the server didn't
 				// ACK what we just sent, so we have to send it again.
 				this.tryToSend_();
 			} else {
@@ -1776,7 +1776,7 @@ cw.net.ClientStream.prototype.stringsReceived_ = function(transport, pairs, avoi
 
 /**
  * Called by transports to tell me that server has received at least some of
- *	our C2S strings. This method possibly removes some queued items from
+ *	our C2S strings.  This method possibly removes some queued items from
  * 	our send queue.
  * @param {!cw.net.SACK} sack
  * @return {boolean} Whether the SACK was bad
@@ -2297,7 +2297,7 @@ cw.net.ClientTransport.prototype.handleFrame_ = function(frameStr, bunchedString
 			this.peerSeqNum_ += 1;
 			// Because we may have received multiple Minerva strings, collect
 			// them into a Array and then deliver them all at once to ClientStream.
-			// This does *not* add any latency. It does reduce the number of funcalls.
+			// This does *not* add any latency.  It does reduce the number of funcalls.
 			bunchedStrings.push([this.peerSeqNum_, frame.string]);
 		} else if(frame instanceof cw.net.SackFrame) {
 			if(this.stream_.sackReceived_(frame.sack)) {
@@ -2689,7 +2689,7 @@ cw.net.ClientTransport.prototype.makeFlashConnection_ = function(frames) {
  * If necessary, make the initial connection/HTTP request.
  *
  * This can be called after calling {@link #writeStrings_} and/or
- * {@link #writeReset_} on a non-started transport. For transports
+ * {@link #writeReset_} on a non-started transport.  For transports
  * with streaming upload, you can of course also call those methods
  * after starting.
  *
@@ -2828,7 +2828,7 @@ cw.net.ClientTransport.prototype.abortToStopSpinner_ = function() {
 
 /**
  * Close this transport because it has caused our receive window to
- * overflow. We don't want to keep the transport open because otherwise
+ * overflow.  We don't want to keep the transport open because otherwise
  * the server will assume that the strings it sent over the transport
  * will eventually get ACKed.
  * @private

@@ -58,10 +58,10 @@ cw.net.SACK.prototype.__reprPush__ = function(sb, stack) {
 
 /**
  * A send queue which assigns a monotonically increasing integer
- * to each item. It keeps items until they are SACKed.
+ * to each item.  It keeps items until they are SACKed.
  *
  * Useful if you need to queue items that may need to be sent
- * multiple times (if a connection/transport fails). It keeps track
+ * multiple times (if a connection/transport fails).  It keeps track
  * of how much memory the Queue is using, in case you want to
  * do flow control.
  *
@@ -125,7 +125,7 @@ cw.net.Queue.prototype.__reprPush__ = function(sb, stack) {
 
 /**
  * @return {!Array.<number>} Sorted array of seqNums for every
- * 	item in the queue. Caller *must not* modify the returned Array.
+ * 	item in the queue.  Caller *must not* modify the returned Array.
  */
 cw.net.Queue.prototype.getQueuedKeys = function() {
 	var keys = this.items_.getKeys();
@@ -140,7 +140,7 @@ cw.net.Queue.prototype.getQueuedKeys = function() {
  * 	items before {@code start} will be skipped.
  *
  * @return {!Array.<!Array.<number|string>>} Array of [seqNum, item] for every
- * 	item in the queue. Caller may modify the returned Array.
+ * 	item in the queue.  Caller may modify the returned Array.
  *
  * If you care about performance in JScript, you may want to use
  * {@code getQueuedKeys} and create a for loop similar to the one in
@@ -168,9 +168,9 @@ cw.net.Queue.prototype.getItems = function(start) {
  *
  * @param {!cw.net.SACK} sack
  * @return {boolean} True if ackNumber or any sackNumber was higher
- * than the highest seqNum in the queue. This would indicate a
- * "bad SACK". Note that as many items as possible are removed
- * even in the "bad SACK" case. If not bad SACK, return {@code false}.
+ * than the highest seqNum in the queue.  This would indicate a
+ * "bad SACK".  Note that as many items as possible are removed
+ * even in the "bad SACK" case.  If not bad SACK, return {@code false}.
  */
 cw.net.Queue.prototype.handleSACK = function(sack) {
 	var ackNum = sack.ackNumber;
@@ -243,12 +243,12 @@ cw.net.Queue.prototype.getMaxConsumption = function() {
 /**
  * A receive window which can accept in-order (but possibly with gaps)
  * numbered items, compute a SACK tuple for those items, and return
- * an Array of in-order deliverable items. It keeps track of how much
+ * an Array of in-order deliverable items.  It keeps track of how much
  * memory the undeliverable items are using, and can reject items if
  * they would push Incoming over an item or memory size limit.
  *
  * This is used to ensure that strings are delivered to the local *Stream
- * reliably and in-order. Caller is responsible for protecting against
+ * reliably and in-order.  Caller is responsible for protecting against
  * resource exhaustion attacks by checking the `hitLimit` value, or calling
  * {@link #getUndeliverableCount} or {@link #getMaxConsumption}.
  *
@@ -292,7 +292,7 @@ cw.net.Incoming.prototype.size_ = 0;
 cw.net.Incoming.prototype.give = function(numAndItemSeq, itemLimit, sizeLimit) {
 	// TODO: maybe immediately reject items that have little chance
 	// of delivery (seqNum far above lastAck + itemLimit) to further
-	// reduce the possibility of ACAs. Right now we have enough ACA
+	// reduce the possibility of ACAs.  Right now we have enough ACA
 	// protection if itemLimit is no more than ~50.
 
 	var deliverable = [];
@@ -376,7 +376,7 @@ cw.net.Incoming.prototype.getMaxConsumption = function() {
 
 
 /**
- * Marker for values that are missing. Never use this in your application code.
+ * Marker for values that are missing.  Never use this in your application code.
  * @type {!Object}
  * @private
  */

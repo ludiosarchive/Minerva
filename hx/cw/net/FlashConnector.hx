@@ -1,5 +1,5 @@
 /**
- * Copyright (c) The Minerva Authors. See the accompanying LICENSE.txt.
+ * Copyright (c) The Minerva Authors.  See the accompanying LICENSE.txt.
  *
  * Copyright (c) 2008-2009, Maries Ionel Cristian
  *
@@ -55,7 +55,7 @@ import flash.system.Security;
 // TODO: reject frames over a certain size, to prevent accidental DoS
 
 // TODO: make sure Flash doesn't disconnect when there's a big unread
-// frame. If it disconnects, we'll have to do our own buffering.
+// frame.  If it disconnects, we'll have to do our own buffering.
 
 // TODO: unit test everything, especially handle_data
 
@@ -186,7 +186,7 @@ class FlashConnection {
 					// We expect that payload is JSON most of the time,
 					// which is more likely to have double quotes.
 					outBuffer += "'";
-					// haXe has no .replace. We might want to call AS3/Flash 9's
+					// haXe has no .replace.  We might want to call AS3/Flash 9's
 					// native String.replace(/regex/g, ...) in the future.
 					outBuffer += socket.readUTFBytes(
 						expecting).split("\\").join("\\\\").split("'").join("\\'");
@@ -303,7 +303,7 @@ class FlashConnector {
 	}
 
 	/**
-	 * Close a socket. Returns "OK" if close succeeded.
+	 * Close a socket.  Returns "OK" if close succeeded.
 	 */
 	public static inline function close(instance_id:String):String {
 		var conn = connections.get(instance_id);
@@ -339,8 +339,8 @@ class FlashConnector {
 	}
 
 	/**
-	 * Set callbackFunc. You must do this before calling other EI-exposed
-	 * functions. Returns "OK" if setting callbackFunc succeeded.
+	 * Set callbackFunc.  You must do this before calling other EI-exposed
+	 * functions.  Returns "OK" if setting callbackFunc succeeded.
 	 */
 	public static inline function setCallbackFunc(f:String):String {
 		callbackFunc = f;

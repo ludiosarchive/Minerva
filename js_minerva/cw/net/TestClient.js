@@ -573,7 +573,7 @@ cw.UnitTest.TestCase.subclass(cw.net.TestClient, '_RealNetworkTests').methods(
 
 	/**
 	 * Send a string that makes the server application reset the stream;
-	 * verify that our ClientStream is reset. Note that we might not get a
+	 * verify that our ClientStream is reset.  Note that we might not get a
 	 * ResetFrame because our primary transport might not be connected.
 	 * (Though perhaps not in practice in this specific test case).
 	 */

@@ -57,7 +57,7 @@ class DelimitedStringDecoder(object):
 		self._buffer += data
 		completeStrings = []
 		# Stop the "dribble in bytes slowly" attack (where entire buffer is
-		# repeatedly scanned for \n). This trick works here because our
+		# repeatedly scanned for \n).  This trick works here because our
 		# delimiter is 1 byte.
 		if de not in data:
 			if len(self._buffer) > m:
@@ -131,7 +131,7 @@ class IntNStringDecoder(object):
 
 		# This function will sometimes unpack the prefix many times for
 		# the same string, depending on how many getNewFrames calls it
-		# takes to arrive. struct.unpack is fast in CPython 2.7, so this
+		# takes to arrive.  struct.unpack is fast in CPython 2.7, so this
 		# doesn't matter.
 
 		self._buffer += data

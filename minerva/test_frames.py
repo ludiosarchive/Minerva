@@ -243,7 +243,7 @@ class HelloFrameTests(unittest.TestCase, ReallyEqualMixin):
 		# Need to make some options explicit for equality to work
 		hello = _makeHelloFrame(dict(
 			httpFormat=FORMAT_XHR,
-			# for equality in JS, need boolean instead of number. Do the
+			# for equality in JS, need boolean instead of number.  Do the
 			# same here for consistency.
 			requestNewStream=True,
 			streamingResponse=True,

@@ -139,7 +139,7 @@ class MockServerStream(object):
 		"""
 		Notify when finishing the request
 
-		@return: A deferred. The deferred will be triggered when the
+		@return: A deferred.  The deferred will be triggered when the
 		stream is finished -- always with a C{None} value.
 		"""
 		self.log.append(['notifyFinish'])

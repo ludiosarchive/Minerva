@@ -106,9 +106,9 @@ class Queue(object):
 		Remove all items that are no longer needed, based on C{sack}.
 
 		Returns C{True} if ackNumber or any sackNumber was higher
-		than the highest seqNum in the queue. This would indicate a
-		"bad SACK". Note that as many items as possible are removed
-		even in the "bad SACK" case. If not bad SACK, returns C{False}.
+		than the highest seqNum in the queue.  This would indicate a
+		"bad SACK".  Note that as many items as possible are removed
+		even in the "bad SACK" case.  If not bad SACK, returns C{False}.
 
 		@param sack: SACK information
 		@type sack: L{SACK}
@@ -178,19 +178,19 @@ class Incoming(object):
 	"""
 	A receive window which can accept in-order (but possibly with gaps)
 	numbered items, compute a SACK tuple for those items, and return
-	an Array of in-order deliverable items. It keeps track of how much
+	an Array of in-order deliverable items.  It keeps track of how much
 	memory the undeliverable items are using, and can reject items if
 	they would push Incoming over an item or memory size limit.
 
 	This is used to ensure that strings are delivered to the local *Stream
-	reliably and in-order. Caller is responsible for protecting against
+	reliably and in-order.  Caller is responsible for protecting against
 	resource exhaustion attacks by checking the `hitLimit` value, or calling
 	{@link #getUndeliverableCount} or {@link #getMaxConsumption}.
 
 	Not-currently-deliverable L{StringFragment}s will be be converted to
 	C{str}s while in Incoming, and converted back when you retrieve them.
 	This is done because L{StringFragment}s may be referencing a giant
-	C{str}, which we don't want to keep around. It's also easier to get the
+	C{str}, which we don't want to keep around.  It's also easier to get the
 	size-in-memory of a C{str}.
 	"""
 	__slots__ = ('_lastAck', '_cached', '_size')
@@ -217,7 +217,7 @@ class Incoming(object):
 		"""
 		# TODO: maybe immediately reject items that have little chance
 		# of delivery (seqNum far above lastAck + itemLimit) to further
-		# reduce the possibility of ACAs. Right now we have enough ACA
+		# reduce the possibility of ACAs.  Right now we have enough ACA
 		# protection if itemLimit is no more than ~50.
 
 		deliverable = []

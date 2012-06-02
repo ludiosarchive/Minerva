@@ -161,7 +161,7 @@ class QueueTests(unittest.TestCase):
 
 	def test_handleSACKBothAckAndSackNumRemoveItems(self):
 		"""
-		Another handleSACK test. This covers a wrong-variable-in-loop bug
+		Another handleSACK test.  This covers a wrong-variable-in-loop bug
 		we had.
 		"""
 		q = Queue()
@@ -255,7 +255,7 @@ class IncomingTests(unittest.TestCase):
 		out-of-order in one L{Incoming.give} call.
 
 		You should *not* pass .give unsorted sequences in production code,
-		because you may hit the item/size limit. It will also be slower because
+		because you may hit the item/size limit.  It will also be slower because
 		it must modify a dictionary more frequently.
 		"""
 		i = Incoming()

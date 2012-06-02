@@ -63,7 +63,7 @@ cw.net.InvalidHello.prototype.name = 'cw.net.InvalidHello';
 
 
 /**
- * HelloFrame properties. Keep in sync with minerva.frames.HelloFrameArguments
+ * HelloFrame properties.  Keep in sync with minerva.frames.HelloFrameArguments
  * @enum {string}
  * @private
  */
@@ -114,16 +114,16 @@ cw.net.ensureNonNegIntegralInt_ = function(value) {
 
 /**
  * Convert arbitrary JSON-decoded blob of objects into a
- * {@code cw.net.HelloFrame}. Throws {@code cw.net.InvalidHello}
+ * {@code cw.net.HelloFrame}.  Throws {@code cw.net.InvalidHello}
  * if there were errors in the blob of objects.
  *
  * This was translated from the Python code
- * {@code minerva.frames.helloDataToHelloFrame}. Major changes are:
+ * {@code minerva.frames.helloDataToHelloFrame}.  Major changes are:
  * 	- use of ensureIntInRange instead of ensureNonNegIntLimit
  *	- JavaScript conveniently returns undefined for missing properties, so
  * 	  we pass those through to ensure...()
  *   - We avoid `value = ensureIntInRange(value)` because unlike in Python,
- * 	  all numbers are floats anyway. In the Python code we were concerned
+ * 	  all numbers are floats anyway.  In the Python code we were concerned
  *     about converting floats to ints/longs.
  *
  * @param {!goog.structs.Map} helloData a Map of a blob of objects
@@ -160,7 +160,7 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	}
 	obj.lastSackSeenByClient = lastSackSeen;
 
-	// requestNewStream is always optional. If missing or False/0, transport
+	// requestNewStream is always optional.  If missing or False/0, transport
 	// is intended to attach to an existing stream.
 	var requestNewStream = cw.checktype.ensureBool(helloData.get(HP.requestNewStream, false));
 	if(requestNewStream == null) {
@@ -196,9 +196,9 @@ cw.net.helloDataToHelloFrame_ = function(helloData) {
 	}
 	obj.streamId = streamId;
 
-	// succeedsTransport is always optional. If missing, the client does not
-	// want to get S2C strings over this transport. If null, the client does,
-	// but the transport does not succeed an existing primary transport. If a
+	// succeedsTransport is always optional.  If missing, the client does not
+	// want to get S2C strings over this transport.  If null, the client does,
+	// but the transport does not succeed an existing primary transport.  If a
 	// number, the transport might succeed an existing primary transport.
 	var eeds = helloData.get(HP.succeedsTransport, MISSING_);
 	if(eeds != MISSING_) {
@@ -274,7 +274,7 @@ cw.net.frameEncodeMethod_ = function() {
 
 
 /**
- * We do nothing in this constructor. Caller is responsible for setting
+ * We do nothing in this constructor.  Caller is responsible for setting
  * the correct properties.
  * @constructor
  */
