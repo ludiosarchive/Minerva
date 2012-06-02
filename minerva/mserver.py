@@ -680,7 +680,7 @@ class ServerStream(object):
 
 	def getSACK(self):
 		"""
-		Private, but no side-effects.
+		Private.  Do not call this.
 
 		@return: the SACK information for C2S strings.
 		@rtype: list
