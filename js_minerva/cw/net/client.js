@@ -1,6 +1,8 @@
 /**
  * @fileoverview Minerva client for web browsers.
  *
+ * The Minerva server, {@code mserver.py}, is good companion reading.
+ *
  * If you make modifications, keep in mind that the unit tests are not
  * complete enough to prevent regressions.  You may want to use
  * the /chatapp/ page to check the behavior, and DemosMinerva's
