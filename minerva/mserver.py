@@ -1870,7 +1870,20 @@ _defaultFileCache = FileCache(time.time, 0.1)
 
 class WebPort(BetterResource):
 	"""
-	You must put this resource into your Site's resource tree so that Minerva
+	L{WebPort} serves multiple resources that allow for browser<->Minerva
+	server communication:
+
+	-	io: used by Minerva client's HTTP transports to send and receive Minerva frames.
+
+	-	xdrframe: cross-subdomain communication helper; compiled JS.
+
+	-	xdrframe_dev: cross-subdomain communication helper; uncompiled JS.
+
+	-	FlashConnector.swf: resource required by Minerva client's Flash transport.
+
+	-	minerva-client.js: standalone Minerva client, available here for convenience.
+
+	You must put this resource into your L{Site}'s resource tree so that Minerva
 	clients can connect to your Minerva server.
 	"""
 	def __init__(self, clock, streamTracker, allowedDomains=None, fileCache=_defaultFileCache):
