@@ -273,11 +273,11 @@ class ServerStream(object):
 	ServerStream is sort-of analogous to L{twisted.internet.tcp.Connection}.
 	ServerStream can span many TCP connections/HTTP requests.
 
-	The producer/consumer here is designed to deal with TCP bandwidth
-	pressure (and "lack of any S2C transport" pressure).  It does not help
-	with any kind of application-level pressure.  Applications that want
-	high-volume streaming should implement an application-level
-	producer/consumer system.
+	The (incomplete) producer/consumer code here is designed to deal with
+	TCP bandwidth pressure (and "lack of any S2C transport" pressure).
+	It does not help with any kind of application-level pressure.
+	Applications that want high-volume streaming should implement an
+	application-level producer/consumer system.
 	"""
 	# Don't implement IPushProducer or IPullProducer because we don't
 	# expect stopProducing.
