@@ -536,8 +536,9 @@ class ServerStream(object):
 		"""
 		Private.  Do not call this.
 
-		Called by faces to tell me that new transport C{transport} has connected.
-		This is called even for very-short-term C2S HTTP transports.
+		Called by L{ServerTransport} to tell me that new transport
+		C{transport} has connected.  This is called even for very-short-term
+		C2S HTTP transports.
 
 		If L{wantsStrings} is truthy, this transport wants to receive strings.
 
