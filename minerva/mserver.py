@@ -374,8 +374,8 @@ class ServerStream(object):
 		@type string: C{str}
 
 		@param validate: Raise C{TypeError} or C{ValueError} if string is
-			not a str and restricted string?  Default true.  Set this to `false`
-			for a slight speedup.
+			not a C{str} and restricted string?  Default C{True}.  Set
+			this to C{False} for a slight speedup.
 		@type validate: C{bool}
 		"""
 		if validate:
