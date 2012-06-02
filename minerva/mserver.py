@@ -1802,8 +1802,8 @@ class XDRFrame(BetterResource):
 	document.domain).  It is capable of making XHR requests.
 	"""
 	isLeaf = True
-	dictionary = {'dev_mode': False}
-	templateFile = FilePath(__file__).sibling('xdrframe.html')
+	_templateVars = {'dev_mode': False}
+	_templateFile = FilePath(__file__).sibling('xdrframe.html')
 
 	def __init__(self, allowedDomains, fileCache):
 		self._allowedDomains = allowedDomains
@@ -1822,14 +1822,14 @@ class XDRFrame(BetterResource):
 				domain, self._allowedDomains))
 
 		template, _ = self._fileCache.getContent(
-			self.templateFile.path, transform=_contentToTemplate)
+			self._templateFile.path, transform=_contentToTemplate)
 		rendered = template.render(dict(
 			htmldumps=htmldumps,
 			cacheBreakLink=partial(
 				getCacheBrokenHref, self._fileCache, request),
 			domain=domain,
 			frameIdStr=frameIdStr,
-			**self.dictionary))
+			**self._templateVars))
 		return rendered.encode('utf-8')
 
 
@@ -1839,7 +1839,7 @@ class XDRFrameDev(XDRFrame):
 	Like XDRFrame, except load the uncompiled JavaScript code, instead of
 	the compiled xdrframe.js.
 	"""
-	dictionary = {'dev_mode': True}
+	_templateVars = {'dev_mode': True}
 
 
 
