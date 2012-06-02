@@ -693,7 +693,7 @@ class ServerStream(object):
 		"""
 		Notify when finishing the request.
 
-		@return: A deferred.  The deferred's callback chain willl be fired when
+		@return: A deferred.  The deferred's callback chain will be fired when
 		this ServerStream is finished -- always with a C{None} value.
 		"""
 		self._notifications.append(defer.Deferred())
