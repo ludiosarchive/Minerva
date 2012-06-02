@@ -790,7 +790,11 @@ class StreamAlreadyExists(Exception):
 
 class StreamTracker(object):
 	"""
-	I'm responsible for constructing and keeping track of L{ServerStream}s.
+	L{StreamTracker} constructs and keeps track of L{ServerStream}s.
+	This is needed to get a reference to the right L{ServerStream} based on
+	the stream ID sent by the client.
+
+	L{StreamTracker} also disconnects inactive streams.
 
 	You do not want to subclass this.
 	"""
