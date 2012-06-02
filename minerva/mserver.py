@@ -1741,10 +1741,12 @@ class ServerTransportFactory(protocol.ServerFactory):
 
 	def __init__(self, clock, streamTracker, policyString=None):
 		"""
-		@param clock: must provide L{IReactorTime}
+		@param clock: an L{IReactorTime} provider.
+
 		@param streamTracker: The L{StreamTracker} that will know about all
 			active L{ServerStream}s.
 		@type streamTracker: L{StreamTracker}
+
 		@param policyString: a Flash/Silverlight policy file as a string,
 			sent in response to <policy-file-request/>C{NULL}.
 		@type policyString: C{str} or C{NoneType}
