@@ -63,26 +63,30 @@ Jump to:
 
 <ul>
 
-<li>	Reliable and in-order message delivery: Both client and server attach
-		sequence numbers to messages and send/receive ACKs.  Messages never get lost or
-		re-ordered, even when the HTTP transports are used.
+<li>	Reliable and in-order message delivery over HTTP.  Both client and server use
+		TCP-like ACK logic to ensure reliability. Minerva doesn't make these incorrect assumptions:
+		<ul>
+			<li>If an HTTP response is sent, it will be received by the client.
+			<li>If an HTTP response is received, it will be fully received.
+			<li>If HTTP requests A and B are made, the server will see A first.
+		</ul>
 
-<li>	Serialization-agnostic: Your application isn't forced to use JSON, XML, or
-		anything else.
-
-<li>	Cross-browser: Minerva works in old and new versions of IE, Firefox, Chrome,
-		Safari, and Opera.  Minerva disables the page-loading spinner in all browsers.
-
-<li>	Multiple transports: Minerva runs over HTTP <a href="https://secure.wikimedia.org/wikipedia/en/wiki/Push_technology#Long_polling">long-polling</a>, HTTP streaming, and
-		Flash sockets.  Its design easily supports new transports.
-
-<li>	Robust timeout logic: Stuck requests and sockets are detected and aborted.
-
-<li>	Handles tab addicts: To work around browsers' per-domain active
+<li>	Support for many connections per domain: To work around browsers' per-domain active
 		request limits (usually just 4-6 requests), Minerva can send HTTP
 		requests to random subdomains.  Your web application will work as
-		usual when you open it in a dozen tabs.  If you want to use this on
-		your HTTPS site, a wildcard cert is required.
+		usual when you open it in a dozen tabs.  (For HTTPS, a wildcard cert is required.)
+
+<li>	Serialization-agnostic: You're free to use JSON, Base64, or your own serialization
+		format.  And there's no double-serialization to get in your way.
+
+<li>	Cross-browser: Minerva works in old and new versions of IE, Firefox, Chrome,
+		Safari, and Opera.  We aim to keep Minerva working in every JavaScript runtime
+		that can make HTTP requests.
+
+<!--<li>	Multiple transports: Minerva runs over HTTP <a href="https://secure.wikimedia.org/wikipedia/en/wiki/Push_technology#Long_polling">long-polling</a>, HTTP streaming, and
+		Flash sockets.  Its design easily supports new transports.-->
+
+<li>	Robust timeout logic: Stuck requests and sockets are detected and aborted.
 
 <li>	Licensed under <a href="http://www.apache.org/licenses/LICENSE-2.0.html">Apache License, Version 2.0</a>.
 
