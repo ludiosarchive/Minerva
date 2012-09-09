@@ -8,8 +8,8 @@ import minerva
 # includes a twistd plugin (which are installed to twisted/plugins/),
 # setuptools/distribute writes a Package.egg-info/top_level.txt that includes
 # "twisted".  If you later uninstall Package with `pip uninstall Package`,
-# pip removes all of twisted/ instead of just Package's twistd plugins.  See
-# https://github.com/pypa/pip/issues/355
+# pip <1.2 removes all of twisted/ instead of just Package's twistd plugins.
+# See https://github.com/pypa/pip/issues/355 (now fixed)
 #
 # To work around this problem, we monkeypatch
 # setuptools.command.egg_info.write_toplevel_names to not write the line
