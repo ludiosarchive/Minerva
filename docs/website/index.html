@@ -21,6 +21,10 @@
 	Some uses for Minerva: chat applications, games, real-time collaboration, dashboards, monitoring systems.
 </p>
 
+<p style="color: darkred">
+	<strong>Update 2013-07-11: Minerva still works, but it is no longer updated.</strong>  There is some minimal documentation (<a href="https://github.com/ludios/Minerva/tree/master/minerva/tutorial">tutorial files</a> and <a href="https://github.com/ludios/DemosMinerva">DemosMinerva</a>) for the curious.  We recommend using WebSocket, RTC Data Channels, Flash socket fallback, and/or a reliable Comet protocol like Google's BrowserChannel.  It's important to use a Comet implementation that guarantees in-order delivery of all data using ACKs in both directions.
+</p>
+
 <!-- TODO: just link to all demos directly here -->
 <a class="button" href="http://demosminerva.ludios.org/">
 View demos
@@ -38,22 +42,11 @@ On GitHub
 Bug tracker
 </a>
 
-<!--
-<a class="button" href="code.html">
-Get the code
-</a>
-
-<a class="button" href="list.html">
-Mailing list
-</a>
--->
-
 <br style="clear:both">
 
 <p>
 Jump to:
 <a href="#h-highlights">Highlights</a> <span class="spacer">&bull;</span>
-<a href="#h-mailing-irc">Mailing list and IRC</a> <span class="spacer">&bull;</span>
 <a href="#h-disclaimers">Disclaimers</a> <span class="spacer">&bull;</span>
 <a href="#h-faq">FAQ</a> <span class="spacer">&bull;</span>
 <a href="#h-contact">Contact</a>
@@ -92,28 +85,6 @@ Jump to:
 
 </ul>
 
-
-<h2 id="h-mailing-irc">Mailing list and IRC</h2>
-
-<p>
-	The mailing list is <strong><a href="https://groups.google.com/a/ludios.org/group/minerva-etc/topics">minerva-etc</a></strong>;
-	you can post and subscribe through Google's interface.  If you have trouble posting, let <a href="mailto:ivan@ludios.org?subject=Problems with minerva-etc">Ivan</a> know.
-</p>
-
-<p>
-	If you want to subscribe without a Google account, send an email to
-	<a href="mailto:minerva-etc+subscribe@ludios.org">minerva-etc+subscribe@ludios.org</a>;
-	you should receive a confirmation within ~10 minutes.  Then, send your
-	message to <a href="mailto:minerva-etc@ludios.org">minerva-etc@ludios.org</a>.
-	To unsubscribe, email <a href="mailto:minerva-etc+unsubscribe@ludios.org">minerva-etc+unsubscribe@ludios.org</a>.
-</p>
-
-<p>
-The IRC channel is <code>##minerva</code> (two hashes) on
-<code>irc.freenode.net</code>.  You may want to stick around (or use the mailing list).
-If you have a Twisted-related question, try asking in <code>#twisted</code> or
-<code>#twisted.web</code>.
-</p>
 
 <h2 id="h-disclaimers">Disclaimers</h2>
 
@@ -207,6 +178,7 @@ maximizing connection count.  There are three mitigating factors:</p>
 No, but the Minerva protocol does solve the same problems as BrowserChannel.
 </p>
 
+<!--
 <h3>Minerva's <code>WebPort</code> uses twisted.web.  Should I expose
 twisted.web to the Internet?</h3>
 
@@ -223,6 +195,7 @@ for three reasons:
 	<li>nginx is a lot harder to DoS than twisted.web.
 </ol>
 </p>
+-->
 
 <h3>I'd like to read the code.  Where do I start?</h3>
 
@@ -267,7 +240,7 @@ Free:
 <a href="http://www.ape-project.org/">APE (Ajax Push Engine)</a>,
 <a href="http://directwebremoting.org/">DWR (Direct Web Remoting)</a>,
 <a href="http://www.icepush.org/">ICEpush</a>,
-Google's <a href="https://encrypted.google.com/search?hl=en&q=closure+BrowserChannel">BrowserChannel</a> (no server available).
+Google's <a href="https://encrypted.google.com/search?hl=en&q=closure+BrowserChannel">BrowserChannel</a> (several servers available).
 </p>
 
 <p>
@@ -280,17 +253,6 @@ Commercial:
 <a href="http://kaazing.com/">Kaazing</a>,
 <a href="http://www.lightstreamer.com/">Lightstreamer</a>,
 <a href="http://java.dzone.com/announcements/zk-35-supports-comet-server-pu">ZK's push support</a>.
-</p>
-
-<p>
-We don't endorse any of these, but many have interesting implementations and features.
-</p>
-
-<h2 id="h-contact">Contact</h2>
-
-<p>
-Ivan Kozik: <a href="mailto:ivan@ludios.org">ivan@ludios.org</a>.  Consider
-mailing the mailing list for most questions.
 </p>
 
 </ul>
