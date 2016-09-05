@@ -8,14 +8,13 @@ on top of Twisted.  The JavaScript client uses Closure Library.
 Some uses for Minerva: chat applications, games, real-time collaboration,
 dashboards, monitoring systems.
 
-Read more: http://ludios.org/minerva/
+Read more: https://ludios.org/minerva/
 
 
-Highlights
-----------
+## Highlights
 
 *	Reliable and in-order message delivery: The Minerva client and server attach
- 	sequence numbers to messages and send/receive ACKs.  Messages never get lost or
+	sequence numbers to messages and send/receive ACKs.  Messages never get lost or
 	re-ordered, even when the HTTP transports are used.
 
 *	Serialization-agnostic: Your application isn't forced to use JSON, XML, or
@@ -30,14 +29,13 @@ Highlights
 *	Robust timeout logic: Stuck requests and sockets are detected and aborted.
 
 *	Handles tab addicts: To work around browsers' per-domain active request
- 	limits (usually just 4-6 requests), Minerva can send HTTP requests to random
- 	subdomains.  Your web application will work as usual when you open it in a
+	limits (usually just 4-6 requests), Minerva can send HTTP requests to random
+	subdomains.  Your web application will work as usual when you open it in a
 	dozen tabs.  If you want to use this on your HTTPS site, a wildcard cert is required.
 
 
 
-Intial setup
-============
+## Intial setup
 
 More documentation on how to build an application using Minerva is
 coming soon.  For now, here are some instructions on how to get
@@ -76,7 +74,9 @@ Optional modules:
 
 To start the server, run:
 
-`twistd -n minerva_site -t tcp:8111:interface=127.0.0.1 --closure-library=/abspath/closure-library`
+```
+twistd -n minerva_site -t tcp:8111:interface=127.0.0.1 --closure-library=/abspath/closure-library
+```
 
 or on Windows:
 
@@ -95,8 +95,7 @@ chat amongst each other.
 
 
 
-Running the tests
-=================
+## Running the tests
 
 Server tests: `trial minerva`
 
@@ -104,8 +103,7 @@ Cient tests: Start the test server as described in "Initial setup", then browse 
 
 
 
-Recompiling the compiled .js and .swf files
-===========================================
+## Recompiling the compiled .js and .swf files
 
 If you want to recompile the compiled-JavaScript and .swf files, you also need:
 
@@ -119,12 +117,3 @@ Then run:
 ./build_compiled_js.sh
 ./build_swfs.sh
 ```
-
-
-
-Contributing
-============
-
-Patches and pull requests are welcome.
-
-This coding standard applies: http://ludios.org/coding-standard/
